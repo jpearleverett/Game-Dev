@@ -625,7 +625,12 @@ export default function CaseFileScreen({
       });
     }
   }, [resolvedSelectionKey, selectedOptionDetails]);
-  const summaryOptionDetails = selectedOptionDetails || lockedOptionSnapshot;
+    const summaryOptionDetails = selectedOptionDetails || lockedOptionSnapshot;
+    const showGoHomeButton = Boolean(
+      isThirdSubchapter &&
+        resolvedSelectionKey &&
+        typeof onReturnHome === "function",
+    );
   const pulseChoice = useCallback(
     (optionKey) => {
       const anim = ensureChoiceAnim(optionKey);
@@ -2364,76 +2369,102 @@ export default function CaseFileScreen({
                     </View>
                   ) : null}
 
-                {nextCaseButtonEnabled ? (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.footerRibbon,
-                      styles.footerRibbonButton,
-                      footerRibbonStyle,
-                      pressed && styles.footerRibbonPressed,
+                  <View
+                    style={[
+                      styles.footerRow,
+                      showGoHomeButton && styles.footerRowSplit,
+                      showGoHomeButton && { gap: scaleSpacing(SPACING.md) },
                     ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Next case ready"
-                    accessibilityHint="Opens the next subchapter briefing"
-                    onPress={handleNextCaseRibbonPress}
                   >
-                    <Text
-                      style={[
-                        styles.footerLabel,
-                        {
-                          fontSize: footerLabelSize,
-                          color: palette.badgeText,
-                        },
-                      ]}
-                    >
-                      {unlockLabel.toUpperCase()}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.footerValue,
-                        {
-                          fontSize: footerValueSize,
-                          color: palette.accent,
-                        },
-                      ]}
-                    >
-                      {unlockValue}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.footerHint,
-                        { color: palette.badgeText, fontSize: slugSize },
-                      ]}
-                    >
-                      Tap to review the next briefing
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View style={[styles.footerRibbon, footerRibbonStyle]}>
-                    <Text
-                      style={[
-                        styles.footerLabel,
-                        {
-                          fontSize: footerLabelSize,
-                          color: palette.badgeText,
-                        },
-                      ]}
-                    >
-                      {unlockLabel.toUpperCase()}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.footerValue,
-                        {
-                          fontSize: footerValueSize,
-                          color: palette.accent,
-                        },
-                      ]}
-                    >
-                      {unlockValue}
-                    </Text>
+                    {nextCaseButtonEnabled ? (
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.footerRibbon,
+                          styles.footerRibbonButton,
+                          footerRibbonStyle,
+                          showGoHomeButton && styles.footerRibbonGrow,
+                          pressed && styles.footerRibbonPressed,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Next case ready"
+                        accessibilityHint="Opens the next subchapter briefing"
+                        onPress={handleNextCaseRibbonPress}
+                      >
+                        <Text
+                          style={[
+                            styles.footerLabel,
+                            {
+                              fontSize: footerLabelSize,
+                              color: palette.badgeText,
+                            },
+                          ]}
+                        >
+                          {unlockLabel.toUpperCase()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.footerValue,
+                            {
+                              fontSize: footerValueSize,
+                              color: palette.accent,
+                            },
+                          ]}
+                        >
+                          {unlockValue}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.footerHint,
+                            { color: palette.badgeText, fontSize: slugSize },
+                          ]}
+                        >
+                          Tap to review the next briefing
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <View
+                        style={[
+                          styles.footerRibbon,
+                          footerRibbonStyle,
+                          showGoHomeButton && styles.footerRibbonGrow,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.footerLabel,
+                            {
+                              fontSize: footerLabelSize,
+                              color: palette.badgeText,
+                            },
+                          ]}
+                        >
+                          {unlockLabel.toUpperCase()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.footerValue,
+                            {
+                              fontSize: footerValueSize,
+                              color: palette.accent,
+                            },
+                          ]}
+                        >
+                          {unlockValue}
+                        </Text>
+                      </View>
+                    )}
+                    {showGoHomeButton ? (
+                      <SecondaryButton
+                        label="Go Home"
+                        onPress={onReturnHome}
+                        size={compact ? "compact" : "default"}
+                        style={[
+                          styles.goHomeButton,
+                          compact && styles.goHomeButtonFullWidth,
+                        ]}
+                      />
+                    ) : null}
                   </View>
-                )}
               </View>
             </LinearGradient>
           </LinearGradient>
@@ -3019,6 +3050,14 @@ const styles = StyleSheet.create({
     gap: 4,
     alignItems: "flex-start",
   },
+  footerRow: {
+    width: "100%",
+  },
+  footerRowSplit: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "stretch",
+  },
   footerRibbonButton: {
     shadowColor: "#000",
     shadowOpacity: 0.42,
@@ -3029,6 +3068,10 @@ const styles = StyleSheet.create({
   footerRibbonPressed: {
     transform: [{ translateY: 2 }],
     opacity: 0.92,
+  },
+  footerRibbonGrow: {
+    flex: 1,
+    minWidth: 0,
   },
   footerLabel: {
     fontFamily: FONTS.mono,
@@ -3042,6 +3085,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primarySemiBold,
     textTransform: "uppercase",
     letterSpacing: 1.2,
+  },
+  goHomeButton: {
+    flexShrink: 0,
+    alignSelf: "flex-start",
+  },
+  goHomeButtonFullWidth: {
+    alignSelf: "stretch",
+    flexGrow: 1,
   },
     decisionSection: {
       position: "relative",
