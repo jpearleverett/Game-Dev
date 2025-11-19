@@ -788,6 +788,15 @@ export default function CaseFileScreen({
       showNextBriefingCTA,
     storyLocked,
   ]);
+    const handleNextCaseRibbonPress = useCallback(() => {
+      if (!nextCaseButtonEnabled) {
+        return;
+      }
+      if (Haptics?.selectionAsync) {
+        Haptics.selectionAsync().catch(() => {});
+      }
+      onContinueStory?.();
+    }, [nextCaseButtonEnabled, onContinueStory]);
   const handleSelectOption = useCallback(
     (option) => {
       if (!option || !awaitingDecision || !onSelectDecision || !caseNumber) {
@@ -1005,6 +1014,18 @@ export default function CaseFileScreen({
       unlockLabel = 'Case status';
       unlockValue = 'Active';
     }
+    const nextCaseButtonEnabled = Boolean(
+      pendingStoryAdvance &&
+        !hasUnlockTimer &&
+        typeof onContinueStory === "function",
+    );
+    const footerRibbonStyle = {
+      borderRadius: metaBadgeRadius,
+      paddingHorizontal: metaBadgePaddingH,
+      paddingVertical: metaBadgePaddingV,
+      borderColor: palette.border,
+      backgroundColor: palette.metricBackground,
+    };
 
   return (
     <ScreenSurface variant="desk" accentColor={palette.accent}>
@@ -2343,41 +2364,76 @@ export default function CaseFileScreen({
                     </View>
                   ) : null}
 
-                <View
-                  style={[
-                    styles.footerRibbon,
-                    {
-                      borderRadius: metaBadgeRadius,
-                      paddingHorizontal: metaBadgePaddingH,
-                      paddingVertical: metaBadgePaddingV,
-                      borderColor: palette.border,
-                      backgroundColor: palette.metricBackground,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.footerLabel,
-                      {
-                        fontSize: footerLabelSize,
-                        color: palette.badgeText,
-                      },
+                {nextCaseButtonEnabled ? (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.footerRibbon,
+                      styles.footerRibbonButton,
+                      footerRibbonStyle,
+                      pressed && styles.footerRibbonPressed,
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Next case ready"
+                    accessibilityHint="Opens the next subchapter briefing"
+                    onPress={handleNextCaseRibbonPress}
                   >
-                    {unlockLabel.toUpperCase()}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.footerValue,
-                      {
-                        fontSize: footerValueSize,
-                        color: palette.accent,
-                      },
-                    ]}
-                  >
-                    {unlockValue}
-                  </Text>
-                </View>
+                    <Text
+                      style={[
+                        styles.footerLabel,
+                        {
+                          fontSize: footerLabelSize,
+                          color: palette.badgeText,
+                        },
+                      ]}
+                    >
+                      {unlockLabel.toUpperCase()}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.footerValue,
+                        {
+                          fontSize: footerValueSize,
+                          color: palette.accent,
+                        },
+                      ]}
+                    >
+                      {unlockValue}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.footerHint,
+                        { color: palette.badgeText, fontSize: slugSize },
+                      ]}
+                    >
+                      Tap to review the next briefing
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={[styles.footerRibbon, footerRibbonStyle]}>
+                    <Text
+                      style={[
+                        styles.footerLabel,
+                        {
+                          fontSize: footerLabelSize,
+                          color: palette.badgeText,
+                        },
+                      ]}
+                    >
+                      {unlockLabel.toUpperCase()}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.footerValue,
+                        {
+                          fontSize: footerValueSize,
+                          color: palette.accent,
+                        },
+                      ]}
+                    >
+                      {unlockValue}
+                    </Text>
+                  </View>
+                )}
               </View>
             </LinearGradient>
           </LinearGradient>
@@ -2963,6 +3019,17 @@ const styles = StyleSheet.create({
     gap: 4,
     alignItems: "flex-start",
   },
+  footerRibbonButton: {
+    shadowColor: "#000",
+    shadowOpacity: 0.42,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
+  },
+  footerRibbonPressed: {
+    transform: [{ translateY: 2 }],
+    opacity: 0.92,
+  },
   footerLabel: {
     fontFamily: FONTS.mono,
     letterSpacing: 2,
@@ -2970,6 +3037,11 @@ const styles = StyleSheet.create({
   footerValue: {
     fontFamily: FONTS.secondaryBold,
     letterSpacing: 3,
+  },
+  footerHint: {
+    fontFamily: FONTS.primarySemiBold,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
     decisionSection: {
       position: "relative",
