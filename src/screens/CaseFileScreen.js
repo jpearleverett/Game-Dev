@@ -416,6 +416,8 @@ export default function CaseFileScreen({
   }, [storyMeta]);
   const subchapterIndex = Number(storyMeta?.subchapter);
   const isThirdSubchapter = subchapterIndex === 3;
+  const isEarlySubchapter =
+    Number.isFinite(subchapterIndex) && subchapterIndex >= 1 && subchapterIndex <= 2;
 
   const summaryContent = useMemo(() => {
     if (storySummary?.lines?.length) {
@@ -519,6 +521,13 @@ export default function CaseFileScreen({
       storyActiveCaseNumber &&
       caseNumber &&
       storyActiveCaseNumber !== caseNumber,
+  );
+  const showNextBriefingCTA = Boolean(
+    pendingStoryAdvance &&
+      isStoryMode &&
+      isEarlySubchapter &&
+      typeof onContinueStory === "function" &&
+      !storyLocked,
   );
   const nextStoryLabel =
     storyCampaign?.chapter != null && storyCampaign?.subchapter != null
@@ -743,20 +752,20 @@ export default function CaseFileScreen({
         summaryOptionDetails.title || "Recorded choice"
       }`
     : null;
-  const storyPromptConfig = useMemo(() => {
-    if (!isStoryMode) {
-      return null;
-    }
-    if (pendingStoryAdvance) {
-      return {
-        title: "Next Chapter Ready",
-        body: `${nextStoryLabel} is staged on the evidence board.`,
-        hint: "Continue when you're ready to keep chasing the Confessor.",
-        actionLabel: "Continue Investigation",
-        actionIcon: "▶",
-        onPress: typeof onContinueStory === "function" ? onContinueStory : null,
-      };
-    }
+    const storyPromptConfig = useMemo(() => {
+      if (!isStoryMode) {
+        return null;
+      }
+      if (pendingStoryAdvance && !showNextBriefingCTA) {
+        return {
+          title: "Next Chapter Ready",
+          body: `${nextStoryLabel} is staged on the evidence board.`,
+          hint: "Continue when you're ready to keep chasing the Confessor.",
+          actionLabel: "Continue Investigation",
+          actionIcon: "▶",
+          onPress: typeof onContinueStory === "function" ? onContinueStory : null,
+        };
+      }
     if (isThirdSubchapter && storyLocked) {
       return {
         title: "Chapter Locked",
@@ -775,7 +784,8 @@ export default function CaseFileScreen({
     nextStoryLabel,
     onContinueStory,
     onReturnHome,
-    pendingStoryAdvance,
+      pendingStoryAdvance,
+      showNextBriefingCTA,
     storyLocked,
   ]);
   const handleSelectOption = useCallback(
@@ -1834,6 +1844,47 @@ export default function CaseFileScreen({
                   </View>
                 ) : null}
 
+                {showNextBriefingCTA ? (
+                  <View
+                    style={[
+                      styles.nextBriefingCard,
+                      {
+                        borderRadius: blockRadius,
+                        borderColor: palette.border,
+                        padding: scaleSpacing(SPACING.md),
+                        gap: scaleSpacing(SPACING.xs),
+                        marginTop: scaleSpacing(SPACING.xs),
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.nextBriefingLabel,
+                        { color: palette.accent, fontSize: slugSize },
+                      ]}
+                    >
+                      Next Briefing Ready
+                    </Text>
+                    <Text
+                      style={[
+                        styles.nextBriefingBody,
+                        {
+                          color: palette.highlightText,
+                          fontSize: narrativeSize,
+                          lineHeight: narrativeLineHeight,
+                        },
+                      ]}
+                    >
+                      {`HQ queued ${nextStoryLabel}. Tap below to review the briefing.`}
+                    </Text>
+                    <PrimaryButton
+                      label="Proceed to Briefing"
+                      onPress={onContinueStory}
+                      fullWidth
+                    />
+                  </View>
+                ) : null}
+
             {storyPromptConfig ? (
               <View
                 style={[
@@ -2643,6 +2694,19 @@ const styles = StyleSheet.create({
   storyPromptHint: {
     fontFamily: FONTS.mono,
     letterSpacing: 1.4,
+  },
+  nextBriefingCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8, 4, 2, 0.88)",
+  },
+  nextBriefingLabel: {
+    fontFamily: FONTS.monoBold,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  nextBriefingBody: {
+    fontFamily: FONTS.primary,
+    letterSpacing: 0.6,
   },
   themeGrid: {
     flexDirection: "row",
