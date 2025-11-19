@@ -26,6 +26,7 @@ import { gameReducer, initialState } from './gameReducer';
 const GameContext = createContext(null);
 
 export { STATUS };
+export const GAME_STATUS = STATUS;
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);

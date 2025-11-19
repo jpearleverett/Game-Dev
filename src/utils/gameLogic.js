@@ -5,6 +5,7 @@ import {
 import {
     formatCaseNumber,
     ROOT_PATH_KEY,
+    normalizeStoryPathKey,
 } from '../data/storyContent';
 import { getBoardProfile } from '../utils/caseNumbers';
 
@@ -115,11 +116,6 @@ export function normalizeStoryCampaignShape(campaign) {
     }
     return merged;
 }
-
-// Helper needed for normalizeStoryCampaignShape if not exported from storyContent
-// Checking imports... normalizeStoryPathKey is imported from ../data/storyContent in original file.
-// I need to make sure I import it here too.
-import { normalizeStoryPathKey } from '../data/storyContent';
 
 export function extractOutlierWords(board, requiredCount = 4) {
     if (!board) return [];
