@@ -1010,22 +1010,17 @@ export default function CaseSolvedScreen({
                 />
               </>
             ) : (
-              <>
-                <PrimaryButton
-                  label="Read Case File"
-                  onPress={() => onReadCaseFile?.()}
-                  icon="📁"
-                />
-                <SecondaryButton
-                  label="Share Results"
-                  onPress={() => onShare?.(shareMessage)}
-                  icon="📤"
-                />
-                <SecondaryButton
-                  label="Return to Desk"
-                  onPress={onReturnHome}
-                  icon="🏠"
-                />
+                <>
+                  <PrimaryButton
+                    label="Read Case File"
+                    onPress={() => onReadCaseFile?.()}
+                    icon="📁"
+                  />
+                  <SecondaryButton
+                    label="Share Results"
+                    onPress={() => onShare?.(shareMessage)}
+                    icon="📤"
+                  />
               {hasStoryCampaign && awaitingDecision ? (
                 <Text style={styles.storyStatusText}>
                   Branch choice available in the case file.
