@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { Audio } from 'expo-av';
 
 const SOUND_FILES = {
@@ -148,7 +148,7 @@ export function useAudioController(activeScreen, settings) {
     };
   }, [activeScreen, settings.musicVolume, settings.ambienceVolume]);
 
-  const playVictory = async () => {
+  const playVictory = useCallback(async () => {
     await stopLoop(deskMusicRef);
     await stopLoop(boardMusicRef);
     await stopLoop(narrativeMusicRef);
@@ -159,33 +159,33 @@ export function useAudioController(activeScreen, settings) {
     await sound.setVolumeAsync(settings.musicVolume);
     await sound.setPositionAsync(0);
     await sound.playAsync();
-  };
+  }, [settings.musicVolume]);
 
-  const playSelect = async () => {
+  const playSelect = useCallback(async () => {
     if (settings.sfxVolume <= 0) return;
     const sound = await ensureSound(selectRef, SOUND_FILES.select, { isLooping: false });
     await sound.setVolumeAsync(settings.sfxVolume);
     await sound.setPositionAsync(0);
     await sound.playAsync();
-  };
+  }, [settings.sfxVolume]);
 
-  const playSubmit = async () => {
+  const playSubmit = useCallback(async () => {
     if (settings.sfxVolume <= 0) return;
     const sound = await ensureSound(submitRef, SOUND_FILES.submit, { isLooping: false });
     await sound.setVolumeAsync(settings.sfxVolume);
     await sound.setPositionAsync(0);
     await sound.playAsync();
-  };
+  }, [settings.sfxVolume]);
 
-  const playFailure = async () => {
+  const playFailure = useCallback(async () => {
     if (settings.sfxVolume <= 0) return;
     const sound = await ensureSound(failureRef, SOUND_FILES.failure, { isLooping: false });
     await sound.setVolumeAsync(settings.sfxVolume);
     await sound.setPositionAsync(0);
     await sound.playAsync();
-  };
+  }, [settings.sfxVolume]);
 
-  const stopAll = async () => {
+  const stopAll = useCallback(async () => {
     const loops = [deskMusicRef, boardMusicRef, narrativeMusicRef, rainRef, lampRef];
     for (const ref of loops) {
       await stopLoop(ref);
@@ -196,13 +196,13 @@ export function useAudioController(activeScreen, settings) {
         await ref.current?.stopAsync();
       } catch (e) {}
     }
-  };
+  }, []);
 
-  return {
+  return useMemo(() => ({
     playVictory,
     playSelect,
     playSubmit,
     playFailure,
     stopAll,
-  };
+  }), [playVictory, playSelect, playSubmit, playFailure, stopAll]);
 }

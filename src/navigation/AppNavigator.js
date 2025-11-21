@@ -1,0 +1,277 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useGame, GAME_STATUS } from '../context/GameContext';
+import { useNavigationActions } from '../hooks/useNavigationActions';
+import { COLORS } from '../constants/colors';
+
+// Screens
+import SplashScreen from '../screens/SplashScreen';
+import PrologueScreen from '../screens/PrologueScreen';
+import DeskScreen from '../screens/DeskScreen';
+import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
+import CaseSolvedScreen from '../screens/CaseSolvedScreen';
+import CaseFileScreen from '../screens/CaseFileScreen';
+import ArchiveScreen from '../screens/ArchiveScreen';
+import StatsScreen from '../screens/StatsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import MenuScreen from '../screens/MenuScreen';
+import StoryCampaignScreen from '../screens/StoryCampaignScreen';
+
+const Stack = createNativeStackNavigator();
+
+export default function AppNavigator({ fontsReady, audio }) {
+  const game = useGame();
+  const {
+    hydrationComplete,
+    activeCase,
+    attemptsRemaining,
+    selectedWords,
+    confirmedOutliers,
+    lockedMainWords,
+    submissionHistory,
+    progress,
+    cases,
+    status,
+    toggleWordSelection,
+    markCaseBriefingSeen,
+    selectStoryDecision,
+    unlockNextCaseIfReady,
+    mode,
+  } = game;
+
+  if (!fontsReady) {
+    return (
+      <View style={styles.loadingSurface}>
+        <Text style={styles.loadingText}>Loading Noir...</Text>
+      </View>
+    );
+  }
+
+  if (!hydrationComplete) {
+    return (
+      <View style={styles.loadingSurface}>
+        <Text style={styles.loadingText}>Preparing Case Files...</Text>
+      </View>
+    );
+  }
+
+  const isStoryMode = mode === 'story';
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'fade', // Default to fade for a smoother, noir feel
+        contentStyle: { backgroundColor: COLORS.background },
+      }}
+      initialRouteName="Splash"
+    >
+      <Stack.Screen name="Splash">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <SplashScreen
+              onContinue={actions.handleSplashContinue}
+              reducedMotion={progress.settings.reducedMotion}
+              bootReady={fontsReady && hydrationComplete}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Prologue">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <PrologueScreen
+              onBegin={actions.handlePrologueComplete}
+              reducedMotion={progress.settings.reducedMotion}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Desk">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <DeskScreen
+              activeCase={activeCase}
+              progress={progress}
+              onStartCase={actions.handleStartCase}
+              onOpenArchive={() => navigation.navigate('Archive')}
+              onOpenStats={() => navigation.navigate('Stats')}
+              onOpenSettings={() => navigation.navigate('Settings')}
+              onOpenMenu={() => navigation.navigate('Menu')}
+              onOpenNarrative={() => navigation.navigate('CaseFile')}
+              onOpenStoryCampaign={actions.handleOpenStoryHub}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Board">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <EvidenceBoardScreen
+              activeCase={activeCase}
+              cases={cases}
+              storyProgress={progress.storyCampaign}
+              solvedCaseIds={progress.solvedCaseIds}
+              attemptsRemaining={attemptsRemaining}
+              selectedWords={selectedWords}
+              confirmedOutliers={confirmedOutliers}
+              lockedMainWords={lockedMainWords}
+              status={status}
+              colorBlindMode={progress.settings.colorBlindMode}
+              highContrast={progress.settings.highContrast}
+              hintsEnabled={progress.settings.hintsEnabled}
+              premiumUnlocked={progress.premiumUnlocked}
+              reducedMotion={progress.settings.reducedMotion}
+              briefingSeen={Boolean(activeCase && progress.seenBriefings && progress.seenBriefings[activeCase.id])}
+              onBriefingSeen={markCaseBriefingSeen}
+              onToggleWord={actions.handleToggleWord}
+              onSubmitGuess={actions.handleSubmit}
+              onBack={actions.handleBoardBack}
+              onSkipToResults={() => navigation.navigate('Solved')}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Solved">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <CaseSolvedScreen
+              activeCase={activeCase}
+              status={status}
+              submissionHistory={submissionHistory}
+              confirmedOutliers={confirmedOutliers}
+              onReadCaseFile={() => navigation.navigate('CaseFile')}
+              onShare={actions.handleShareResults}
+              onReturnHome={actions.handleReturnHome}
+              isStoryMode={isStoryMode}
+              storyCampaign={progress.storyCampaign}
+              onAdvanceStory={actions.handleStoryContinue}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="CaseFile">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <CaseFileScreen
+              activeCase={activeCase}
+              nextUnlockAt={progress.nextUnlockAt}
+              storyCampaign={progress.storyCampaign}
+              solvedCaseIds={progress.solvedCaseIds}
+              onSelectDecision={selectStoryDecision}
+              isStoryMode={isStoryMode}
+              onContinueStory={actions.handleStoryContinue}
+              onReturnHome={actions.handleReturnHome}
+              onBack={() => {
+                 if (status === GAME_STATUS.SOLVED || status === GAME_STATUS.FAILED) {
+                     navigation.navigate('Solved');
+                 } else {
+                     navigation.navigate(isStoryMode ? 'Story' : 'Desk');
+                 }
+              }}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Archive">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <ArchiveScreen
+              cases={cases}
+              progress={progress}
+              onSelectCase={actions.handleSelectArchiveCase}
+              onBack={() => navigation.navigate('Desk')}
+              onUnlockPremium={() => navigation.navigate('Settings')}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Stats">
+        {({ navigation }) => {
+          return (
+            <StatsScreen
+              progress={progress}
+              onBack={() => navigation.navigate('Desk')}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Menu">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <MenuScreen
+              onBack={() => navigation.navigate('Desk')}
+              onReplayTutorial={actions.handleReplayTutorial}
+              onShare={actions.handleShareResults}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Settings">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <SettingsScreen
+              settings={progress.settings}
+              premiumUnlocked={progress.premiumUnlocked}
+              onUpdateSettings={actions.handleSettingsUpdate}
+              onResetProgress={actions.handleResetProgress}
+              onReplayTutorial={actions.handleReplayTutorial}
+              onPurchasePremium={actions.handlePurchasePremium}
+              onRestorePremium={actions.handleRestorePremium}
+              onBack={() => navigation.navigate('Desk')}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Story">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <StoryCampaignScreen
+              storyCampaign={progress.storyCampaign}
+              onContinueStory={actions.handleStoryContinue}
+              onStartStory={actions.handleStoryStart}
+              onRestartStory={actions.handleStoryRestart}
+              onBack={actions.handleExitStory}
+              onExitToDesk={actions.handleExitStory}
+            />
+          );
+        }}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
+const styles = StyleSheet.create({
+  loadingSurface: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: COLORS.textSecondary,
+    fontFamily: 'WorkSans_500Medium',
+    letterSpacing: 2.4,
+  },
+});

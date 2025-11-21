@@ -10,6 +10,7 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
   const stampRotation = useRef(new Animated.Value(0)).current;
   const stampOpacity = useRef(new Animated.Value(0)).current;
   const tapPromptOpacity = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!visible) {
@@ -18,6 +19,7 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
       stampRotation.setValue(0);
       stampOpacity.setValue(0);
       tapPromptOpacity.setValue(0);
+      shakeAnim.setValue(0);
       return;
     }
 
@@ -68,6 +70,15 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
             bounciness: 6,
             useNativeDriver: true,
           }),
+          // Trigger shake when scale hits 1 (approx)
+          Animated.sequence([
+             Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+             Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+             Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+             Animated.timing(shakeAnim, { toValue: -4, duration: 50, useNativeDriver: true }),
+             Animated.timing(shakeAnim, { toValue: 2, duration: 50, useNativeDriver: true }),
+             Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+          ])
         ]),
         // Rotation: slight tilt
         Animated.spring(stampRotation, {
@@ -131,7 +142,7 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
     <Pressable style={styles.overlay} onPress={onContinue}>
       <Animated.View style={[styles.overlayBackground, { opacity: overlayOpacity }]} />
       
-      <View style={styles.contentContainer}>
+      <Animated.View style={[styles.contentContainer, { transform: [{ translateX: shakeAnim }] }]}>
         <Animated.View
           style={[
             styles.stampContainer,
@@ -160,7 +171,7 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
         <Animated.View style={[styles.tapPromptContainer, { opacity: tapPromptOpacity }]}>
           <Text style={styles.tapPromptText}>TAP TO CONTINUE</Text>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }

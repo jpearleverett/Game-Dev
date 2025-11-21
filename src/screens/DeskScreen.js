@@ -504,7 +504,7 @@ export default function DeskScreen({
                 <View
                   style={[styles.actionBlock, { marginTop: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.sm) }]}
                 >
-                  <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} fullWidth />
+                  <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} disabled={storyLocked} fullWidth />
                 </View>
 
                 <View style={[styles.progressRow, { marginTop: scaleSpacing(SPACING.sm) }]}>

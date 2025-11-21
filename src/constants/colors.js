@@ -1,10 +1,10 @@
 export const COLORS = {
-  background: '#050608',
-  backgroundAlt: '#070a10',
-  surface: '#11141c',
-  surfaceSubtle: '#151922',
-  surfaceAlt: '#1b1f29',
-  deskSurface: '#161922',
+  background: '#1F1B18',
+  backgroundAlt: '#24201D',
+  surface: '#26221E',
+  surfaceSubtle: '#2C2824',
+  surfaceAlt: '#322E2A',
+  deskSurface: '#26221E',
   detectiveBlue: '#1b2738',
   detectiveBlueDark: '#111927',
   amberLight: '#f1c572',
@@ -44,7 +44,7 @@ export const COLORS = {
 
 export const CARD_STATES = {
   default: {
-    backgroundColor: '#f5e7cf',
+    backgroundColor: '#E8DCC5',
     borderColor: 'rgba(140, 104, 70, 0.45)',
     textColor: '#3d2414',
     lineColor: 'rgba(150, 108, 71, 0.26)',
@@ -54,7 +54,7 @@ export const CARD_STATES = {
   },
   selected: {
     backgroundColor: '#fff2d2',
-    borderColor: '#d45b5d',
+    borderColor: '#B71C1C',
     textColor: '#451816',
     lineColor: 'rgba(198, 93, 86, 0.28)',
     pin: '#b7443f',

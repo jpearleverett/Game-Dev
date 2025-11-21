@@ -59,7 +59,7 @@ const HIGH_CONTRAST_STATE_MAP = {
   },
 };
 
-export default function WordCard({
+function WordCard({
   word,
   state = 'default',
   onToggle,
@@ -93,7 +93,14 @@ export default function WordCard({
 
   const interactive = !disabled && state !== 'lockedMain' && state !== 'lockedOutlier';
   const celebrationProgress = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const celebrationActive = celebrating && state === 'lockedOutlier';
+
+  const randomRotation = useMemo(() => {
+    const range = 1.2; 
+    const deg = (Math.random() * range * 2) - range;
+    return `${deg}deg`;
+  }, []);
 
   useEffect(() => {
     if (!celebrationActive) {
@@ -162,9 +169,25 @@ export default function WordCard({
 
   const handlePress = useCallback(() => {
     if (!interactive) return;
+    
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.92,
+        duration: 80,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     Haptics.selectionAsync().catch(() => {});
     onToggle?.(word);
-  }, [interactive, onToggle, word]);
+  }, [interactive, onToggle, word, scaleAnim]);
 
   const handleLongPress = useCallback(() => {
     if (!interactive) return;
@@ -210,11 +233,11 @@ export default function WordCard({
   }, [state, outlierBadge?.color]);
 
   const cardPaddingVertical = scaleSpacing(compact ? 4 : 6);
-  const cardPaddingHorizontal = scaleSpacing(compact ? 4 : 6);
-  const baseLabelSize = compact ? FONT_SIZES.xl + 14 : FONT_SIZES.xl + 18;
-  const selectedLabelBoost = state === 'selected' ? 6 : 0;
+  const cardPaddingHorizontal = scaleSpacing(compact ? 2 : 3);
+  const baseLabelSize = compact ? FONT_SIZES.md : FONT_SIZES.lg;
+  const selectedLabelBoost = state === 'selected' ? 2 : 0;
   const labelFontSize = moderateScale(baseLabelSize + selectedLabelBoost);
-  const labelLetterSpacing = compact ? 2.2 : 2.4;
+  const labelLetterSpacing = compact ? 1.0 : 1.2;
   const cardRadius = scaleRadius(compact ? RADIUS.md : RADIUS.lg);
 
   return (
@@ -241,9 +264,12 @@ export default function WordCard({
             paddingVertical: cardPaddingVertical,
             paddingHorizontal: cardPaddingHorizontal,
             shadowColor: palette.shadow || COLORS.shadowStrong,
+            transform: [
+               { rotate: randomRotation },
+               { scale: celebrationActive ? cardScale : scaleAnim }
+            ]
           },
           state === 'selected' ? styles.cardElevated : styles.cardShadow,
-          celebrationActive ? { transform: [{ scale: cardScale }] } : undefined,
         ]}
       >
         <LinearGradient
@@ -311,17 +337,16 @@ export default function WordCard({
         )}
 
         {statusBadge && (
-          <View style={styles.badgeContainer}>
-            <View style={styles.badgeTack} />
+          <View style={styles.badgeContainerTop}>
             <Text
               style={[
                 styles.badge,
                 badgeVariantStyle,
-                { fontSize: moderateScale(FONT_SIZES.xs) },
+                { fontSize: moderateScale(FONT_SIZES.xs * 0.7) },
               ]}
               numberOfLines={1}
               adjustsFontSizeToFit
-              minimumFontScale={0.75}
+              minimumFontScale={0.7}
             >
               {statusBadge}
             </Text>
@@ -349,6 +374,8 @@ export default function WordCard({
   );
 }
 
+export default React.memo(WordCard);
+
 const styles = StyleSheet.create({
   pressable: {
     width: '100%',
@@ -368,10 +395,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardShadow: {
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+        width: 0,
+        height: 6,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 5.84,
+    elevation: 8,
   },
   cardElevated: {
     shadowOpacity: 0.4,
@@ -440,32 +471,23 @@ const styles = StyleSheet.create({
     height: '46%',
     zIndex: 2,
   },
-  badgeContainer: {
+  badgeContainerTop: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    alignItems: 'flex-end',
+    top: 2,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
     zIndex: 5,
-  },
-  badgeTack: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(32, 20, 12, 0.85)',
-    marginBottom: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 2 },
   },
   badge: {
     fontFamily: FONTS.monoBold,
-    letterSpacing: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    letterSpacing: 1.5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(20, 12, 6, 0.2)',
+    textAlign: 'center',
   },
   badgeOutlier: {
     backgroundColor: 'rgba(241, 197, 114, 0.9)',

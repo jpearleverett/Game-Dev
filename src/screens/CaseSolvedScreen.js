@@ -149,6 +149,7 @@ export default function CaseSolvedScreen({
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
   const solved = status === GAME_STATUS.SOLVED;
   const caseNumber = activeCase?.caseNumber;
+  const isSubchapter1 = Number(activeCase?.storyMeta?.subchapter) === 1;
   const hasStoryCampaign = Boolean(storyCampaign);
   const awaitingDecision = Boolean(
     hasStoryCampaign &&
@@ -971,7 +972,7 @@ export default function CaseSolvedScreen({
               },
             ]}
           >
-            {isStoryMode ? (
+            {isStoryMode && isSubchapter1 ? (
               <>
                   <PrimaryButton
                     label={storyActionLabel}

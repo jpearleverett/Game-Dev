@@ -27,32 +27,6 @@ SEASON_ONE_CASES.forEach((caseData) => {
     CASE_ID_TO_NUMBER.set(caseData.id, caseData.caseNumber);
 });
 
-export function resolveStoryPathKey(caseNumber, storyCampaign) {
-    if (!caseNumber) {
-        return ROOT_PATH_KEY;
-    }
-    if (!storyCampaign) {
-        return ROOT_PATH_KEY;
-    }
-    const chapterSegment = caseNumber.slice(0, 3);
-    const chapterNumber = parseInt(chapterSegment, 10);
-    if (Number.isNaN(chapterNumber)) {
-        return storyCampaign.currentPathKey || ROOT_PATH_KEY;
-    }
-    const historyKey =
-        storyCampaign.pathHistory && storyCampaign.pathHistory[chapterNumber];
-    if (historyKey) {
-        return historyKey;
-    }
-    if (
-        chapterNumber === storyCampaign.chapter &&
-        storyCampaign.currentPathKey
-    ) {
-        return storyCampaign.currentPathKey;
-    }
-    return storyCampaign.currentPathKey || ROOT_PATH_KEY;
-}
-
 export function computeNextUnlockAt() {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -194,3 +168,5 @@ export function generateBoardGrid(caseData) {
     }
     return grid;
 }
+
+export { formatCaseNumber };

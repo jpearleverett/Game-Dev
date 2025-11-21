@@ -29,24 +29,25 @@ const RAW_SEASON_ONE_CASES = [
         polaroids: [
           {
             id: '001A-confessor-arrival',
-            imageKey: 'midnightConfessor',
-            title: 'Midnight Confessor Arrival',
-            subtitle: 'Perfumed stranger outside Jack\'s door',
-            detail: '',
+            imageKey: 'silas', // Fallback or placeholder if silence not avail, but using mapped keys
+            imageKey: 'silence',
+            title: 'MIDNIGHT VISITOR',
+            subtitle: '2:47 AM ARRIVAL',
+            detail: 'Perfumed stranger. No knock. Just the slide of paper under the door and the scent of expensive French perfume lingering like a ghost.',
           },
           {
             id: '001A-eleanor-call',
-            imageKey: 'eleanorBellamy',
-            title: 'Eleanor\'s Emergency Call',
-            subtitle: 'Greystone inmate pleads for help',
-            detail: '',
+            imageKey: 'sparkle',
+            title: 'ELEANOR\'S PLEA',
+            subtitle: 'GREYSTONE EMERGENCY',
+            detail: 'Sarah called at 3 AM. Eleanor Bellamy poisoned with ricin. She swore she was framed eight years ago. She swore there was a woman in red.',
           },
           {
             id: '001A-ultimatum-envelope',
-            imageKey: 'blackEnvelope',
-            title: 'Twelve-Day Ultimatum',
-            subtitle: 'Black envelope sealed in red wax',
-            detail: '',
+            imageKey: 'default',
+            title: 'BLACK ENVELOPE',
+            subtitle: 'THE ULTIMATUM',
+            detail: '"Twelve days. Twelve cases. One you closed without certainty." Heavy stock. Red wax seal. The game piece that started the clock.',
           },
         ],
       },
@@ -185,24 +186,24 @@ The woman in red. Always the woman in red. Jack's certainty turned to ash.`,
         polaroids: [
           {
             id: '001B-visitation-booth',
-            imageKey: 'eleanorBellamy',
-            title: 'Greystone Visitation Booth',
-            subtitle: 'Eleanor shackled and coughing from ricin',
-            detail: '',
+            imageKey: 'sparkle',
+            title: 'GREYSTONE VISIT',
+            subtitle: 'DYING DECLARATION',
+            detail: 'Eleanor looked like charcoal sketches of her former self. Shackled. Coughing blood. "Mrs. died when you sent me here."',
           },
           {
             id: '001B-scarlet-visitor',
-            imageKey: 'midnightConfessor',
-            title: 'Scarlet Visitor Log',
-            subtitle: 'Woman in red noted by Greystone guards',
-            detail: '',
+            imageKey: 'silence',
+            title: 'SCARLET VISITOR',
+            subtitle: 'PRISON LOG',
+            detail: 'A woman in red visited three weeks ago. Told Eleanor that Jack Halloway would come. That he would finally learn what certainty costs.',
           },
           {
             id: '001B-ricin-note',
-            imageKey: 'blackEnvelope',
-            title: 'Ricin Warning Note',
-            subtitle: '"Ask her about the woman in red" message',
-            detail: '',
+            imageKey: 'default',
+            title: 'RICIN NOTE',
+            subtitle: 'TRAY MESSAGE',
+            detail: '"The widow knows the truth. Ask her about the woman in red." Found under her dinner tray. A prompt, not just a threat.',
           },
         ],
       },
@@ -364,24 +365,24 @@ Maya called, terrified. Then silence. Victoria had her. The widow's truth, too l
         polaroids: [
           {
             id: '001C-ruined-study',
-            imageKey: 'harborPrecinct',
-            title: 'Bellamy Estate Study',
-            subtitle: 'Safe cracked and ledgers scattered',
-            detail: '',
+            imageKey: 'default',
+            title: 'BELLAMY STUDY',
+            subtitle: 'CRACKED SAFE',
+            detail: 'Richard\'s study. The safe was empty. The jewelry catalog was missing. Proof that the sapphire necklace was never recorded in his meticulous logs.',
           },
           {
             id: '001C-day-one-pawn',
-            imageKey: 'blackEnvelope',
-            title: 'Day One Pawn Marker',
-            subtitle: 'Chess token left on Richard\'s desk',
-            detail: '',
+            imageKey: 'silence',
+            title: 'OBSIDIAN PAWN',
+            subtitle: 'GAME PIECE',
+            detail: 'Left on the desk. "DAY ONE: THE INNOCENT SUFFER." A heavy stone token marking the first casualty of the Confessor\'s lesson.',
           },
           {
             id: '001C-sarah-sweep',
-            imageKey: 'sarahReeves',
-            title: 'Sarah Reeves Sweep',
-            subtitle: 'Flashlight search through broken glass',
-            detail: '',
+            imageKey: 'voice',
+            title: 'SARAH REEVES',
+            subtitle: 'PARTNER SWEEP',
+            detail: 'Sarah beat me to the scene. Found the break-in. Warned me that seven years ago, Emily Cross disappeared.',
           },
         ],
       },
@@ -595,24 +596,24 @@ Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be 
         polaroids: [
           {
             id: '002A-claire-dossier',
-            imageKey: 'claireThornhill',
-            title: 'Claire Thornhill Dossier',
-            subtitle: 'Daughter reopening her father\'s case',
-            detail: '',
+            imageKey: 'voice',
+            title: 'CLAIRE THORNHILL',
+            subtitle: 'DAUGHTER\'S GRIEF',
+            detail: 'Waitress at the Blueline. Eyes full of rage. She\'s been documenting my failures for four years, ever since her father died in my custody.',
           },
           {
             id: '002A-silas-surveillance',
-            imageKey: 'silasReed',
-            title: 'Silas Reed Surveillance',
-            subtitle: 'Partner caught on Thornhill ledgers',
-            detail: '',
+            imageKey: 'keeper',
+            title: 'SILAS REED',
+            subtitle: 'PARTNER SIGNATURE',
+            detail: 'Claire\'s evidence points to Silas. He signed the witness statements. He handled the transfer records. He smoothed the edges.',
           },
           {
             id: '002A-blueline-backroom',
-            imageKey: 'bluelineDiner',
-            title: 'Blueline Diner Backroom',
-            subtitle: 'Claire\'s evidence spread across the booth',
-            detail: '',
+            imageKey: 'default',
+            title: 'BLUELINE DINER',
+            subtitle: 'MIDNIGHT COFFEE',
+            detail: 'A booth patched with duct tape. Claire served coffee and truth. "Trust is just another word for blindness," she said.',
           },
         ],
       },
@@ -842,24 +843,24 @@ Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing 
         polaroids: [
           {
             id: '002B-silas-confession',
-            imageKey: 'silasReed',
-            title: 'Silas\'s Confession Tape',
-            subtitle: 'Admits to framing Marcus Thornhill',
-            detail: '',
+            imageKey: 'keeper',
+            title: 'SILAS CONFESSES',
+            subtitle: 'MARINA BALCONY',
+            detail: 'Twenty-third floor. A glass of bourbon and a ruined career. He was blackmailed. "I sacrificed a stranger to save my family."',
           },
           {
             id: '002B-encrypted-orders',
-            imageKey: 'blackEnvelope',
-            title: 'Encrypted Orders Ledger',
-            subtitle: 'Seven-year directives signed "M.C."',
-            detail: '',
+            imageKey: 'buyer',
+            title: 'SHADOW LEDGER',
+            subtitle: 'BLACKMAIL ORDERS',
+            detail: 'Encrypted files sent to Silas. Directives to frame Thornhill. "Sign here. Backdate this." The price of his secret.',
           },
           {
             id: '002B-marina-balcony',
-            imageKey: 'harborPrecinct',
-            title: 'Marina District Balcony',
-            subtitle: 'Silas meets Jack above the harbor',
-            detail: '',
+            imageKey: 'default',
+            title: 'MARINA TOWER',
+            subtitle: 'THE FALL',
+            detail: 'The view from the balcony costs six figures. Silas paid for it with Marcus Thornhill\'s life. Now he pays with his own.',
           },
         ],
       },
@@ -1084,24 +1085,24 @@ The system protects itself. Victoria taught Silas that lesson first.`,
         polaroids: [
           {
             id: '002C-maya-hostage',
-            imageKey: 'mayaBellamy',
-            title: 'Maya Bellamy Hostage',
-            subtitle: 'Tea service leverage inside the penthouse',
-            detail: '',
+            imageKey: 'sparkle',
+            title: 'MAYA BELLAMY',
+            subtitle: 'PENTHOUSE GUEST',
+            detail: 'Drinking tea on a white leather sofa. Confused, terrified, but unharmed. A pawn used to demonstrate reach.',
           },
           {
             id: '002C-victoria-reveal',
-            imageKey: 'victoriaAshford',
-            title: 'Victoria Ashford Reveal',
-            subtitle: 'Emily Cross alive in scarlet dress',
-            detail: '',
+            imageKey: 'silence',
+            title: 'VICTORIA ASHFORD',
+            subtitle: 'THE REVEAL',
+            detail: 'Emily Cross, alive. In a deep red dress. "Certainty is just another word for blindness." She built an empire to teach this lesson.',
           },
           {
             id: '002C-blackwell-skyline',
-            imageKey: 'harborPrecinct',
-            title: 'Blackwell Penthouse Skyline',
-            subtitle: 'Ashford empire watching over Ashport',
-            detail: '',
+            imageKey: 'default',
+            title: 'BLACKWELL VIEW',
+            subtitle: 'CITY OVERLOOK',
+            detail: 'The entire city looks like a toy set from up here. Victoria watches Ashport burn from the highest tower.',
           },
         ],
       },
@@ -1386,24 +1387,24 @@ Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindne
         polaroids: [
           {
             id: '003A-archive-raid',
-            imageKey: 'sarahReeves',
-            title: 'Sarah\'s Archive Raid',
-            subtitle: 'Condemned precinct files unlocked',
-            detail: '',
+            imageKey: 'voice',
+            title: 'SARAH REEVES',
+            subtitle: 'ARCHIVE BREACH',
+            detail: 'She didn\'t wait for permission. Broke into the condemned precinct. Pulled every file I ever touched.',
           },
           {
             id: '003A-waterlogged-files',
-            imageKey: 'harborPrecinct',
-            title: 'Waterlogged Witness Files',
-            subtitle: 'Reports Sarah drags back into daylight',
-            detail: '',
+            imageKey: 'default',
+            title: 'BURIED FILES',
+            subtitle: 'CONDEMNED PRECINCT',
+            detail: 'Water-damaged boxes. "Dismissed Witness." "Unreliable." The pattern was there in the damp paper. I just refused to see it.',
           },
           {
             id: '003A-flash-drive',
-            imageKey: 'blackEnvelope',
-            title: 'Condemned Precinct Flash Drive',
-            subtitle: 'Evidence handed to Jack at dawn',
-            detail: '',
+            imageKey: 'default',
+            title: 'BLACK DRIVE',
+            subtitle: 'THE EVIDENCE',
+            detail: 'Sarah handed it to me at dawn. Twenty-one cases. Every single one had a witness I ignored or a clue I buried.',
           },
         ],
       },
@@ -1562,24 +1563,24 @@ Helen Price prosecuted all five innocents. The Queen built her crown on Jack's f
         polaroids: [
           {
             id: '003B-marcus-backroom',
-            imageKey: 'marcusWebb',
-            title: 'Marcus Webb Backroom',
-            subtitle: 'Antique dealer spilling secrets',
-            detail: '',
+            imageKey: 'buyer',
+            title: 'MARCUS WEBB',
+            subtitle: 'ANTIQUE DEALER',
+            detail: 'He deals in secrets and old money. Loved Richard Bellamy for fifteen years. Stayed silent while Eleanor went to prison.',
           },
           {
             id: '003B-emily-portrait',
-            imageKey: 'emilyCross',
-            title: 'Emily Cross Gallery Portrait',
-            subtitle: 'Society photo Marcus kept hidden',
-            detail: '',
+            imageKey: 'sparkle',
+            title: 'EMILY CROSS',
+            subtitle: 'GALLERY PORTRAIT',
+            detail: 'Young. Talented. Richard\'s hand on her shoulder, too possessive. The photo proves the affair—and the motive.',
           },
           {
             id: '003B-ledger',
-            imageKey: 'blackEnvelope',
-            title: 'Bellamy Embezzlement Ledger',
-            subtitle: 'Proof that framed Eleanor Bellamy',
-            detail: '',
+            imageKey: 'default',
+            title: 'SECRET LEDGER',
+            subtitle: 'EMBEZZLEMENT',
+            detail: 'Richard was stealing from his clients to pay blackmail. Marcus had the proofs. Cowardice kept them hidden in a drawer.',
           },
         ],
       },
@@ -1759,24 +1760,24 @@ Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed 
         polaroids: [
           {
             id: '003C-helen-breakdown',
-            imageKey: 'helenPrice',
-            title: 'Helen Price Breakdown',
-            subtitle: 'Queen of Convictions begging for immunity',
-            detail: '',
+            imageKey: 'lex',
+            title: 'HELEN PRICE',
+            subtitle: 'THE QUEEN',
+            detail: 'Fifty-three wins. Zero losses. The Queen of Convictions. Now just a terrified woman in a stained suit, realizing her kingdom is ash.',
           },
           {
             id: '003C-annotated-dossier',
-            imageKey: 'blackEnvelope',
-            title: 'Annotated Case Dossier',
-            subtitle: 'Victoria\'s notes on every rigged conviction',
-            detail: '',
+            imageKey: 'default',
+            title: 'RED DOSSIER',
+            subtitle: 'ANNOTATED FILES',
+            detail: 'Victoria delivered it herself. Every manufactured conviction circled in red ink. A roadmap of our corruption.',
           },
           {
             id: '003C-interview-room',
-            imageKey: 'harborPrecinct',
-            title: 'Interview Room Three',
-            subtitle: 'Where Helen confesses behind glass',
-            detail: '',
+            imageKey: 'default',
+            title: 'INTERVIEW THREE',
+            subtitle: 'CONFESSION ROOM',
+            detail: 'Where we used to break suspects. Now Helen sits there, breaking herself. The glass is one-way, but the truth goes both directions.',
           },
         ],
       },
@@ -1941,32 +1942,31 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
       'Confession brings cameras and questions and the cold certainty that sorry changes nothing.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '004A-price-podium',
-          imageKey: 'helenPrice',
-          title: 'Helen Price at Podium',
-          subtitle: 'Confession broadcast to Ashport press',
-          detail: '',
-        },
-        {
-          id: '004A-press-row',
-          imageKey: 'harborPrecinct',
-          title: 'Press Row Flashbulbs',
-          subtitle: 'Cameras capturing the Queen\'s fall',
-          detail: '',
-        },
-        {
-          id: '004A-surveillance-clip',
-          imageKey: 'blackEnvelope',
-          title: 'Grange Torture Footage',
-          subtitle: 'Clip Helen plays to melt her crown',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '004A-price-podium',
+                imageKey: 'lex',
+                title: 'CITY HALL',
+                subtitle: 'PUBLIC FALL',
+                detail: 'Helen at the podium. The flashbulbs are blinding. She\'s reading the statement we wrote, dismantling her own legend line by line.',
+              },
+              {
+                id: '004A-press-row',
+                imageKey: 'default',
+                title: 'PRESS ROW',
+                subtitle: 'THE VULTURES',
+                detail: 'They smell blood. A hundred cameras capturing the exact moment the "Queen of Convictions" abdicates.',
+              },
+              {
+                id: '004A-surveillance-clip',
+                imageKey: 'default',
+                title: 'TORTURE TAPE',
+                subtitle: 'THE PROOF',
+                detail: 'The footage Victoria supplied. It shows Grange\'s methods. It shows what we allowed to happen in the name of "results."',
+              },
+            ],
+          },    board: {
       mainWords: [
         'CROWN',
         'THRONE',
@@ -2117,32 +2117,31 @@ Victoria played checkmate. Confessions became prologue. The real monster exposed
       "Some arrests are the moment when good men realize they've been working for evil.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '004B-sarah-briefing',
-          imageKey: 'sarahReeves',
-          title: 'Sarah Reeves Briefing',
-          subtitle: 'Integrity Project briefing room',
-          detail: '',
-        },
-        {
-          id: '004B-witness-binder',
-          imageKey: 'blackEnvelope',
-          title: 'Witness Binder Stack',
-          subtitle: 'Twelve affidavits for FBI review',
-          detail: '',
-        },
-        {
-          id: '004B-grange-arrest',
-          imageKey: 'harborPrecinct',
-          title: 'Deputy Chief in Cuffs',
-          subtitle: 'Grange arrested live on stream',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '004B-sarah-briefing',
+                imageKey: 'voice',
+                title: 'FBI BRIEFING',
+                subtitle: 'SARAH\'S MOVE',
+                detail: 'Sarah found twenty-three victims in seventy-two hours. Handed the binder to Agent Martinez. She didn\'t wait for my permission.',
+              },
+              {
+                id: '004B-witness-binder',
+                imageKey: 'default',
+                title: 'WITNESS BINDER',
+                subtitle: 'DISMISSED VOICES',
+                detail: 'Twelve witnesses I marked "unreliable." Sex workers. Addicts. Homeless. Sarah listened. They led her straight to Grange\'s operation.',
+              },
+              {
+                id: '004B-grange-arrest',
+                imageKey: 'keeper',
+                title: 'GRANGE ARRESTED',
+                subtitle: 'NOON RAID',
+                detail: 'Deputy Chief William Grange. Badge visible. Knife in hand on the tape. Arrested at noon. The system finally eating its own.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'AFFIDAVIT',
         'TESTIMONY',
@@ -2263,32 +2262,31 @@ Sarah walked away. Starting her own firm. Jack had made her better by being wors
       'Some meetings are the moment you realize the person offering salvation is the one who damned you first.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '004C-victoria-lesson',
-          imageKey: 'victoriaAshford',
-          title: 'Victoria\'s Penthouse Lesson',
-          subtitle: 'Scarlet lecturer framed by the skyline',
-          detail: '',
-        },
-        {
-          id: '004C-portrait-reveal',
-          imageKey: 'harborPrecinct',
-          title: 'Portrait of Jack Halloway',
-          subtitle: 'Commissioned indictment of a detective',
-          detail: '',
-        },
-        {
-          id: '004C-lisa-envelope',
-          imageKey: 'lisaChen',
-          title: 'Lisa Chen Envelope',
-          subtitle: 'Evidence bundle for Day Five',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '004C-victoria-lesson',
+                imageKey: 'silence',
+                title: 'VICTORIA ASHFORD',
+                subtitle: 'PENTHOUSE LESSON',
+                detail: 'She poured bourbon with a shaking hand. Admitted I surprised her. "For six hours, I thought you\'d beaten me."',
+              },
+              {
+                id: '004C-portrait-reveal',
+                imageKey: 'sparkle',
+                title: 'LUCIA MARTINEZ',
+                subtitle: 'VICTIM NINETEEN',
+                detail: 'Nursing student. Engaged. Taken three months after I closed the Cross case. Died because I stopped looking.',
+              },
+              {
+                id: '004C-lisa-envelope',
+                imageKey: 'default',
+                title: 'DAY FIVE',
+                subtitle: 'NEXT ENVELOPE',
+                detail: 'Black paper. Red seal. Inside: Dr. Lisa Chen. The woman my best friend destroyed to protect himself.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'PENTHOUSE',
         'WINDOW',
@@ -2465,32 +2463,31 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
       "The evidence doesn't lie. Except when it's manufactured by your best friend for twenty years.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '005A-lisa-release',
-          imageKey: 'lisaChen',
-          title: 'Dr. Lisa Chen Released',
-          subtitle: 'Scientist walking free after eight years',
-          detail: '',
-        },
-        {
-          id: '005A-victoria-orders',
-          imageKey: 'blackEnvelope',
-          title: 'Victoria\'s Day Five Orders',
-          subtitle: 'Fresh black envelope with new demands',
-          detail: '',
-        },
-        {
-          id: '005A-evidence-drive',
-          imageKey: 'harborPrecinct',
-          title: 'Evidence Drive Inventory',
-          subtitle: '217 tainted cases catalogued',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '005A-lisa-release',
+                imageKey: 'lex',
+                title: 'LISA CHEN',
+                subtitle: 'GREYSTONE RELEASE',
+                detail: 'Released at 9:15 AM. Four years older. Thinner. Harder. "Statistically speaking, I calculated a 73% probability you\'d appear."',
+              },
+              {
+                id: '005A-victoria-orders',
+                imageKey: 'default',
+                title: 'BLACK ENVELOPE',
+                subtitle: 'DAY FIVE ORDERS',
+                detail: '"The real fraud was her supervisor—your friend." Victoria\'s handwriting. Elegant. Mocking. Truthful.',
+              },
+              {
+                id: '005A-evidence-drive',
+                imageKey: 'default',
+                title: 'FLASH DRIVE',
+                subtitle: 'THE EVIDENCE',
+                detail: 'Two hundred seventeen cases. At least sixty provably false. Tom Wade wasn\'t just efficient. He was a mass murderer using the state as his weapon.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'EVIDENCE',
         'DNA',
@@ -2633,32 +2630,31 @@ At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
       "Some phone calls come at two AM from friends who've decided confession beats capture.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '005B-helios-warehouse',
-          imageKey: 'harborPrecinct',
-          title: 'Helios Warehouse',
-          subtitle: 'Hidden forensic lab beneath the docks',
-          detail: '',
-        },
-        {
-          id: '005B-sarah-command',
-          imageKey: 'sarahReeves',
-          title: 'Sarah\'s Command Center',
-          subtitle: 'Integrity Project war room',
-          detail: '',
-        },
-        {
-          id: '005B-tom-wade-call',
-          imageKey: 'tomWade',
-          title: 'Tom Wade on the Line',
-          subtitle: 'Confession crackling through static',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '005B-helios-warehouse',
+                imageKey: 'default',
+                title: 'HELIOS LAB',
+                subtitle: 'PHANTOM WAREHOUSE',
+                detail: 'Registered to a shell company. Inside: a full forensic lab. DNA sequencers. Samples labeled with my case numbers. The factory floor of my career.',
+              },
+              {
+                id: '005B-sarah-command',
+                imageKey: 'voice',
+                title: 'SARAH REEVES',
+                subtitle: 'THE REAL DETECTIVE',
+                detail: 'She found it in three days. Cross-referenced property records. Did the work I was too arrogant to do. "You\'re contaminated evidence, Jack."',
+              },
+              {
+                id: '005B-tom-wade-call',
+                imageKey: 'keeper',
+                title: 'TOM WADE',
+                subtitle: '2 AM CALL',
+                detail: '"I\'m not a monster, Jack. I\'m a soldier." He confessed. Justified it. Said he saved society by ensuring convictions. Then the line went dead.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'WAREHOUSE',
         'SHELL',
@@ -2849,32 +2845,31 @@ Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usual
       "Some bodies tell lies. And some tell the story of friends who became monsters while you weren't looking.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '005C-marine-rope',
-          imageKey: 'blackEnvelope',
-          title: 'Marine Rope Sample',
-          subtitle: 'Wrong knot from Victoria\'s staging',
-          detail: '',
-        },
-        {
-          id: '005C-dna-scrapings',
-          imageKey: 'blackEnvelope',
-          title: 'DNA Scrapings Vials',
-          subtitle: 'Collected beneath Tom\'s fingernails',
-          detail: '',
-        },
-        {
-          id: '005C-marina-map',
-          imageKey: 'harborPrecinct',
-          title: 'Ashport Marina Holdings',
-          subtitle: 'Shell companies tied to Victoria',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '005C-marine-rope',
+                imageKey: 'default',
+                title: 'MARINE ROPE',
+                subtitle: 'STAGED SUICIDE',
+                detail: 'Tom never owned a boat. The rope was marine-grade. Traced back to a marina owned by one of Victoria\'s shell companies.',
+              },
+              {
+                id: '005C-dna-scrapings',
+                imageKey: 'default',
+                title: 'DEFENSIVE DNA',
+                subtitle: 'UNDER NAILS',
+                detail: 'Foreign DNA under Tom\'s fingernails. Female. Victoria didn\'t just order it. She was there. She made sure he didn\'t choose his own ending.',
+              },
+              {
+                id: '005C-marina-map',
+                imageKey: 'silence',
+                title: 'VICTORIA ASHFORD',
+                subtitle: 'THE EXECUTIONER',
+                detail: '"He didn\'t get to choose his ending. Just like I didn\'t get to choose mine." She admitted it. And she knew I wouldn\'t arrest her yet.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'EVIDENCE',
         'LEVERAGE',
@@ -3013,32 +3008,31 @@ Best friends make you weapons you don't know you've become.`,
       "The people we love pay for the enemies we make. That's not philosophy. That's arithmetic with bodies.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '006A-margaret-porch',
-          imageKey: 'margaretHalloway',
-          title: 'Margaret Halloway',
-          subtitle: 'Ex-wife rebuilding after retaliation',
-          detail: '',
-        },
-        {
-          id: '006A-carjacked-sedan',
-          imageKey: 'harborPrecinct',
-          title: 'Carjacked Sedan Evidence',
-          subtitle: 'Scene of Thornhill\'s revenge strike',
-          detail: '',
-        },
-        {
-          id: '006A-kitchen-wall',
-          imageKey: 'blackEnvelope',
-          title: 'Kitchen Photo Wall',
-          subtitle: 'New family stitched together without Jack',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '006A-margaret-porch',
+                imageKey: 'sparkle',
+                title: 'MARGARET PRICE',
+                subtitle: 'THE EX-WIFE',
+                detail: 'New husband. New life. She looked at me like a bill she thought she\'d paid. "You look like garbage," she said.',
+              },
+              {
+                id: '006A-carjacked-sedan',
+                imageKey: 'default',
+                title: 'CARJACKING REPORT',
+                subtitle: 'FIVE YEARS AGO',
+                detail: 'She was held at gunpoint. Terrorized. It wasn\'t random. It was Marcus Thornhill\'s revenge against me, taken out on her.',
+              },
+              {
+                id: '006A-kitchen-wall',
+                imageKey: 'default',
+                title: 'EMMA HALLOWAY',
+                subtitle: 'MY DAUGHTER',
+                detail: 'Six years old. Blonde pigtails. "Who\'s that?" she asked. "Just someone who used to know mommy." I\'m a stranger to my own child.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'ALIMONY',
         'SETTLEMENT',
@@ -3187,32 +3181,31 @@ Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life wi
       "Some investigations require drinking with the one person who understands what it's like when everything burns.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '006B-murphys-booth',
-          imageKey: 'murphysBar',
-          title: 'Murphy\'s Bar Back Booth',
-          subtitle: 'Neutral ground for uneasy truce',
-          detail: '',
-        },
-        {
-          id: '006B-job-offer',
-          imageKey: 'blackEnvelope',
-          title: 'Deputy Director Offer',
-          subtitle: 'Victoria\'s promise slid across the table',
-          detail: '',
-        },
-        {
-          id: '006B-wade-case-box',
-          imageKey: 'blackEnvelope',
-          title: 'Wade Evidence Box',
-          subtitle: 'DNA, rope, confession compiled',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '006B-murphys-booth',
+                imageKey: 'voice',
+                title: 'SARAH REEVES',
+                subtitle: 'MURPHY\'S BAR',
+                detail: 'She looked exhausted. Victoria offered her Deputy Director. "I\'m considering it. She\'s actually effective."',
+              },
+              {
+                id: '006B-job-offer',
+                imageKey: 'silence',
+                title: 'JOB OFFER',
+                subtitle: 'DEPUTY DIRECTOR',
+                detail: 'Three times her salary. Real resources. Victoria was recruiting the only person who could actually stop her.',
+              },
+              {
+                id: '006B-wade-case-box',
+                imageKey: 'default',
+                title: 'WADE EVIDENCE',
+                subtitle: 'THE LEVERAGE',
+                detail: 'I gave Sarah the proof Victoria killed Tom. "Use it. Burn her if she touches you." I chose Sarah over the game.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'BARSTOOL',
         'ULTIMATUM',
@@ -3361,32 +3354,31 @@ Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
       'Some revelations come from staring at old case files until your eyes finally see what they refused to see.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '006C-silas-arraignment',
-          imageKey: 'silasReed',
-          title: 'Silas Reed Arraignment',
-          subtitle: 'Guilty plea recorded in open court',
-          detail: '',
-        },
-        {
-          id: '006C-emily-scar-study',
-          imageKey: 'victoriaAshford',
-          title: 'Emily Scar Study',
-          subtitle: 'Matching injury proving Victoria\'s identity',
-          detail: '',
-        },
-        {
-          id: '006C-cross-files',
-          imageKey: 'blackEnvelope',
-          title: 'Cross Case Files',
-          subtitle: 'Autopsy, photos, redacted transcripts',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '006C-silas-arraignment',
+                imageKey: 'keeper',
+                title: 'SILAS REED',
+                subtitle: 'GUILTY PLEA',
+                detail: 'He wept in open court. His family wouldn\'t look at him. I did that. I created the world where he broke.',
+              },
+              {
+                id: '006C-emily-scar-study',
+                imageKey: 'silence',
+                title: 'VICTORIA / EMILY',
+                subtitle: 'THE SCAR',
+                detail: 'Above the left eyebrow. Same bone structure. Same eyes. Victoria Ashford is Emily Cross. The woman I declared dead.',
+              },
+              {
+                id: '006C-cross-files',
+                imageKey: 'default',
+                title: 'CROSS FILE',
+                subtitle: 'CLOSED TOO SOON',
+                detail: 'I closed her case while she was being tortured. She survived. Rebuilt herself. And came back to teach me.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'COURTHOUSE',
         'ARRAIGNMENT',
@@ -3539,32 +3531,31 @@ Everyone you love pays for crimes they didn't commit.`,
       'The courtroom is theater. And sometimes the truth is just the opening act before the real show.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '007A-appeals-chamber',
-          imageKey: 'harborPrecinct',
-          title: 'Appeals Court Chamber',
-          subtitle: 'Judge Rosen presiding over reversal',
-          detail: '',
-        },
-        {
-          id: '007A-exhibit-folder',
-          imageKey: 'blackEnvelope',
-          title: 'Exhibit Folder',
-          subtitle: 'Shell records introduced at appeal',
-          detail: '',
-        },
-        {
-          id: '007A-eleanor-freed',
-          imageKey: 'eleanorBellamy',
-          title: 'Eleanor Bellamy Freed',
-          subtitle: 'Conviction overturned in open court',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '007A-appeals-chamber',
+                imageKey: 'sparkle',
+                title: 'APPEALS COURT',
+                subtitle: 'THE GAMBIT',
+                detail: 'I took the stand. Told them my word was worthless. Presented Victoria\'s evidence instead. "Believe the documents, not me."',
+              },
+              {
+                id: '007A-exhibit-folder',
+                imageKey: 'default',
+                title: 'EXHIBIT A',
+                subtitle: 'THE PROOF',
+                detail: 'Receipts. Security footage. Everything Victoria gathered. Authentic. Irrefutable. The truth I was too lazy to find.',
+              },
+              {
+                id: '007A-eleanor-freed',
+                imageKey: 'sparkle',
+                title: 'ELEANOR FREED',
+                subtitle: 'CONVICTION OVERTURNED',
+                detail: 'She walked out. Didn\'t thank me. Just acknowledged that I\'d finally done my job. Eight years too late.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'TESTIMONY',
         'EVIDENCE',
@@ -3663,32 +3654,31 @@ Evidence beats testimony. Victoria's manipulation worked. Results matter more th
       'Some partnerships survive lies. But none survive the moment you admit you used someone.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '007B-sarah-packing',
-          imageKey: 'sarahReeves',
-          title: 'Sarah Reeves Packing Up',
-          subtitle: 'Office boxes stacked to leave precinct',
-          detail: '',
-        },
-        {
-          id: '007B-integrity-roadmap',
-          imageKey: 'blackEnvelope',
-          title: 'Integrity Project Roadmap',
-          subtitle: 'Claire and Lisa planning the rebuild',
-          detail: '',
-        },
-        {
-          id: '007B-shell-architect',
-          imageKey: 'harborPrecinct',
-          title: 'Shell Corporation Architect',
-          subtitle: 'Whistleblower stepping into the light',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '007B-sarah-packing',
+                imageKey: 'voice',
+                title: 'SARAH LEAVES',
+                subtitle: 'PACKING BOXES',
+                detail: 'She declined Victoria\'s offer. Declined me too. "I\'m a better detective than both of you."',
+              },
+              {
+                id: '007B-integrity-roadmap',
+                imageKey: 'lex',
+                title: 'INTEGRITY PROJECT',
+                subtitle: 'NEW TEAM',
+                detail: 'Claire Thornhill. Lisa Chen. Eleanor Bellamy. Sarah\'s building an army from the people I destroyed.',
+              },
+              {
+                id: '007B-shell-architect',
+                imageKey: 'default',
+                title: 'PRICE FIRM',
+                subtitle: 'THE ARCHITECTS',
+                detail: 'Sarah found the link. Geoffrey Price\'s law firm built Victoria\'s shell companies. Helen\'s father. The rot goes deep.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'PARTNER',
         'BADGE',
@@ -3771,32 +3761,31 @@ Victoria offered Deputy Director. Sarah said no. She's a better detective than b
       'Day Seven ends with absence. The partner is gone. What remains is just the work.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '007C-empty-desk',
-          imageKey: 'harborPrecinct',
-          title: 'Jack\'s Empty Desk',
-          subtitle: 'Late-night rain streaking the window',
-          detail: '',
-        },
-        {
-          id: '007C-stacked-files',
-          imageKey: 'blackEnvelope',
-          title: 'Stacked Innocence Files',
-          subtitle: 'Five exonerations waiting in order',
-          detail: '',
-        },
-        {
-          id: '007C-day-seven-text',
-          imageKey: 'blackEnvelope',
-          title: 'Day Seven Text Alert',
-          subtitle: 'Confessor noting who\'s missing',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '007C-empty-desk',
+                imageKey: 'default',
+                title: 'EMPTY DESK',
+                subtitle: 'PARTNER GONE',
+                detail: 'For the first time in eight years, her chair is empty. No backup. No conscience. Just me and the work.',
+              },
+              {
+                id: '007C-stacked-files',
+                imageKey: 'default',
+                title: 'FIVE FILES',
+                subtitle: 'INNOCENT VICTIMS',
+                detail: 'Five people I framed. Five lives I need to fix. And now I have to do it alone.',
+              },
+              {
+                id: '007C-day-seven-text',
+                imageKey: 'silence',
+                title: 'E.C. TEXT',
+                subtitle: 'DAY SEVEN ENDS',
+                detail: '"Truth without power is just noise." She signed it E.C. Emily Cross. She knows I know.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'OFFICE',
         'SILENCE',
@@ -3871,32 +3860,31 @@ Truth without power is just noise. Confessing doesn't equal redemption.`,
       "The law doesn't care about truth. Only proof. And proof is just evidence someone chose to believe.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '008A-fbi-at-dawn',
-          imageKey: 'harborPrecinct',
-          title: 'FBI at Dawn',
-          subtitle: 'Agents surrounding Jack\'s doorway',
-          detail: '',
-        },
-        {
-          id: '008A-federal-holding',
-          imageKey: 'harborPrecinct',
-          title: 'Federal Holding Cell',
-          subtitle: 'Nathan Thornhill across the bench',
-          detail: '',
-        },
-        {
-          id: '008A-victoria-note',
-          imageKey: 'blackEnvelope',
-          title: 'Victoria\'s Holding Note',
-          subtitle: '"Fight the system" scrawled in red',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '008A-fbi-at-dawn',
+                imageKey: 'default',
+                title: 'FBI RAID',
+                subtitle: '6 AM ARREST',
+                detail: 'They came for Tom Wade\'s murder. I knew they would. I went peacefully.',
+              },
+              {
+                id: '008A-federal-holding',
+                imageKey: 'keeper',
+                title: 'NATHAN THORNHILL',
+                subtitle: 'CELLMATE',
+                detail: 'Marcus Thornhill\'s nephew. Nineteen. Serving twenty years. "You\'re that cop. You framed my uncle."',
+              },
+              {
+                id: '008A-victoria-note',
+                imageKey: 'default',
+                title: 'HANDWRITTEN NOTE',
+                subtitle: 'FROM VICTORIA',
+                detail: '"Fight for it. They couldn\'t. You can." She gave me the resources to fight my own arrest. A lesson in privilege.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'ARREST',
         'WARRANT',
@@ -3983,31 +3971,31 @@ The system makes fighting so expensive most people can't. But Jack could. Becaus
       'Some releases come from the person who framed you deciding the lesson is over.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '008B-release-order',
-          imageKey: 'blackEnvelope',
-          title: 'Release Order File',
-          subtitle: 'Thirty-six hours then out',
-          detail: '',
-        },
-        {
-          id: '008B-emily-message',
-          imageKey: 'emilyCross',
-          title: 'Emily Cross Message',
-          subtitle: 'Four days left warning',
-          detail: '',
-        },
-        {
-          id: '008B-sarah-question',
-          imageKey: 'sarahReeves',
-          title: 'Sarah\'s Question',
-          subtitle: 'Join Victoria or refuse her empire?',
-          detail: '',
-        },
-      ],
-    },
+      evidenceBoard: {
+        polaroids: [
+          {
+            id: '008B-release-order',
+            imageKey: 'default',
+            title: 'RELEASE ORDER',
+            subtitle: '36 HOURS LATER',
+            detail: 'I walked out. Charges dropped. Evidence "misplaced." Not because I was innocent. Because Victoria decided the lesson was over.',
+          },
+          {
+            id: '008B-emily-message',
+            imageKey: 'silence',
+            title: 'EMILY CROSS',
+            subtitle: 'THE LESSON',
+            detail: 'She showed me the difference between victims who can\'t fight and victims who aren\'t allowed to fight.',
+          },
+          {
+            id: '008B-missing-time',
+            imageKey: 'default',
+            title: 'LOST TIME',
+            subtitle: 'THE COST',
+            detail: 'Thirty-six hours. Nathan Thornhill has twenty years. I got a glimpse. He gets the life.',
+          },
+        ],
+      },
     board: {
       mainWords: [
         'FOOTAGE',
@@ -4085,32 +4073,31 @@ Some choices aren't between good and evil. They're between two different kinds o
       "The law doesn't care about truth. Only proof. And the proof she offers tastes like power.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '008C-forked-road',
-          imageKey: 'blackEnvelope',
-          title: 'Forked Road Diagram',
-          subtitle: 'Path to Victoria versus path to law',
-          detail: '',
-        },
-        {
-          id: '008C-pending-cases',
-          imageKey: 'blackEnvelope',
-          title: 'Pending Appeals Board',
-          subtitle: 'Five innocents still inside',
-          detail: '',
-        },
-        {
-          id: '008C-victoria-gallery',
-          imageKey: 'victoriaAshford',
-          title: 'Victoria\'s Gallery Offer',
-          subtitle: 'Promise of power showcased in glass',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '008C-forked-road',
+                imageKey: 'default',
+                title: 'FORKED ROAD',
+                subtitle: 'TWO PATHS',
+                detail: 'Join Victoria and watch corrupt justice work. Or refuse and watch the innocent suffer in procedural purgatory.',
+              },
+              {
+                id: '008C-pending-cases',
+                imageKey: 'default',
+                title: 'FIVE FILES',
+                subtitle: 'STILL WAITING',
+                detail: 'Eleanor. Marcus. Lisa. James. Teresa. Their lives hang in the balance of my indecision. Four days left.',
+              },
+              {
+                id: '008C-victoria-gallery',
+                imageKey: 'silence',
+                title: 'GALLERY INVITE',
+                subtitle: 'PERFECT EVIDENCE',
+                detail: 'Museum-quality paper. "A Retrospective Exhibition." Victoria wants me to see my career framed on a wall.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'OPTION',
         'ALLIANCE',
@@ -4185,32 +4172,31 @@ Victoria could destroy Jack anytime. Making him live is worse.`,
       "Some exhibitions exist only to show you what you've destroyed.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '009A-gallery-entry',
-          imageKey: 'harborPrecinct',
-          title: 'Gallery Entry Installation',
-          subtitle: 'Cases displayed as public art',
-          detail: '',
-        },
-        {
-          id: '009A-forged-reports',
-          imageKey: 'blackEnvelope',
-          title: 'Forged Lab Reports',
-          subtitle: 'Tom Wade edits under protective glass',
-          detail: '',
-        },
-        {
-          id: '009A-empty-eyes',
-          imageKey: 'victoriaAshford',
-          title: 'Empty Eyes Portrait',
-          subtitle: 'Victoria\'s painting of Jack\'s guilt',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '009A-gallery-entry',
+                imageKey: 'default',
+                title: 'THE GALLERY',
+                subtitle: 'EXHIBIT A',
+                detail: 'Eleanor\'s sapphire necklace. Displayed like a trophy. "How $200,000 bought eight years of innocence."',
+              },
+              {
+                id: '009A-forged-reports',
+                imageKey: 'sparkle',
+                title: 'MRS. MARTINEZ',
+                subtitle: 'THE MOTHER',
+                detail: '"She looks like me." Lucia\'s mother stood by the photo. Eleven months her daughter screamed. I stopped looking.',
+              },
+              {
+                id: '009A-empty-eyes',
+                imageKey: 'silence',
+                title: 'THE PORTRAIT',
+                subtitle: 'EMPTY EYES',
+                detail: 'Ten feet tall. Charcoal. My face. But the eyes were dead. "I painted this while I was held," she said.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'GALLERY',
         'EXHIBIT',
@@ -4351,32 +4337,31 @@ Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
       'Corruption stays hidden until someone lights the match. Today, Ashport learns what happens when all the secrets burn at once.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '009B-city-hall',
-          imageKey: 'harborPrecinct',
-          title: 'City Hall Under Siege',
-          subtitle: 'Riots and raids ignite Ashport',
-          detail: '',
-        },
-        {
-          id: '009B-sarah-podium',
-          imageKey: 'sarahReeves',
-          title: 'Sarah Reeves at Podium',
-          subtitle: 'FBI briefing turning revenge legit',
-          detail: '',
-        },
-        {
-          id: '009B-helen-note',
-          imageKey: 'helenPrice',
-          title: 'Helen Price Final Note',
-          subtitle: 'Apology released posthumously',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '009B-city-hall',
+                imageKey: 'default',
+                title: 'CITY HALL',
+                subtitle: 'FBI RAID',
+                detail: 'Swarming with agents. Warrants executed. Records seized. The Price firm at the center of the web.',
+              },
+              {
+                id: '009B-sarah-podium',
+                imageKey: 'voice',
+                title: 'SARAH REEVES',
+                subtitle: 'THE PRESSER',
+                detail: 'She stood at the podium. "Systematic corruption spanning two decades." She stole Victoria\'s narrative and made it justice.',
+              },
+              {
+                id: '009B-helen-note',
+                imageKey: 'lex',
+                title: 'HELEN PRICE',
+                subtitle: 'THE END',
+                detail: 'Suicide note released by her lawyer. Fifteen pages of confession. She couldn\'t live with what her family built.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'PRESS',
         'WARRANT',
@@ -4523,32 +4508,31 @@ Victoria called—furious, vulnerable. Sarah proved you don't need to become a m
       'Some packages are hand-delivered at midnight like confessions nobody asked for.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '009C-blood-recorder',
-          imageKey: 'blackEnvelope',
-          title: 'Bloodstained Recorder',
-          subtitle: 'Emily\'s captivity pressed to tape',
-          detail: '',
-        },
-        {
-          id: '009C-ec-scrawl',
-          imageKey: 'emilyCross',
-          title: 'E.C. Scrawl',
-          subtitle: '"Listen and learn" instruction',
-          detail: '',
-        },
-        {
-          id: '009C-midnight-rain',
-          imageKey: 'harborPrecinct',
-          title: 'Midnight Rain Living Room',
-          subtitle: 'Sarah\'s couch under stormlight',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '009C-blood-recorder',
+                imageKey: 'default',
+                title: 'THE RECORDER',
+                subtitle: 'BLOODSTAINED',
+                detail: 'Old. Scratched. Red ribbon. "Listen to what you couldn\'t find seven years ago."',
+              },
+              {
+                id: '009C-ec-scrawl',
+                imageKey: 'silence',
+                title: 'EMILY CROSS',
+                subtitle: 'THE TAPE',
+                detail: 'Forty-seven days in. She begged for help. Then Grange played my voice closing her case. Then she screamed.',
+              },
+              {
+                id: '009C-midnight-rain',
+                imageKey: 'voice',
+                title: 'SARAH REEVES',
+                subtitle: 'THE WITNESS',
+                detail: 'We sat in the dark. Listened to Emily scream. "She\'s not trying to destroy you," Sarah said. "She\'s trying to save you."',
+              },
+            ],
+          },    board: {
       mainWords: [
         'PACKAGE',
         'RECORDER',
@@ -4703,32 +4687,31 @@ Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`
       "Art galleries exist to show you what you can't look away from. Even when you want to.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '010A-agent-martinez',
-          imageKey: 'agentMartinez',
-          title: 'Agent Martinez Briefing',
-          subtitle: 'Dawn raid countdown on Victoria',
-          detail: '',
-        },
-        {
-          id: '010A-wade-evidence',
-          imageKey: 'tomWade',
-          title: 'Tom Wade Evidence Locker',
-          subtitle: 'DNA, rope, confession sealed',
-          detail: '',
-        },
-        {
-          id: '010A-appeal-dockets',
-          imageKey: 'blackEnvelope',
-          title: 'Appeal Dockets Stack',
-          subtitle: 'Five innocents waiting for release',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '010A-agent-martinez',
+                imageKey: 'buyer',
+                title: 'AGENT MARTINEZ',
+                subtitle: 'THE CALL',
+                detail: '"We\'re moving on Victoria Ashford at dawn." The FBI was ready. The evidence was piled high.',
+              },
+              {
+                id: '010A-wade-evidence',
+                imageKey: 'default',
+                title: 'TOM\'S MURDER',
+                subtitle: 'THE LEVERAGE',
+                detail: 'I had the DNA. The rope fibers. The proof Victoria killed Tom. I could end it right now.',
+              },
+              {
+                id: '010A-appeal-dockets',
+                imageKey: 'default',
+                title: 'FIVE DOCKETS',
+                subtitle: 'THE INNOCENTS',
+                detail: 'Eleanor. James. Lisa. Marcus. Teresa. Their freedom depended on Victoria\'s files remaining clean for 24 hours.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'PHONECALL',
         'WARRANT',
@@ -4863,32 +4846,31 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
       "Some meetings happen when you finally admit you're staring at your own reflection.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '010B-recorded-confession',
-          imageKey: 'harborPrecinct',
-          title: 'Recorded Confession Playback',
-          subtitle: 'Jack admits obstruction to buy time',
-          detail: '',
-        },
-        {
-          id: '010B-twentyfour-deal',
-          imageKey: 'blackEnvelope',
-          title: 'Twenty-Four Hour Deal',
-          subtitle: 'Emily asks for one more day alive',
-          detail: '',
-        },
-        {
-          id: '010B-five-case-files',
-          imageKey: 'blackEnvelope',
-          title: 'Five Case Files Spread',
-          subtitle: 'Eleanor, Lisa, James, Marcus, Teresa',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '010B-recorded-confession',
+                imageKey: 'default',
+                title: 'THE CHOICE',
+                subtitle: 'OBSTRUCTION',
+                detail: '"I\'m asking you to wait twenty-four hours." I told Martinez. I chose the five innocents over the one guilty.',
+              },
+              {
+                id: '010B-twentyfour-deal',
+                imageKey: 'silence',
+                title: 'THE CALL',
+                subtitle: 'TO VICTORIA',
+                detail: '"Give me twenty-four hours of Emily, not Victoria." I warned her. Trusted her not to run.',
+              },
+              {
+                id: '010B-five-case-files',
+                imageKey: 'default',
+                title: 'FIVE LIVES',
+                subtitle: 'THE WAGER',
+                detail: 'I bet my career, my freedom, and my soul on the hope that mercy was worth the risk.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'MERCY',
         'JUSTICE',
@@ -5027,32 +5009,31 @@ Victoria kept her promise. Didn't run. Jack chose five innocents over doing his 
       'Day Ten ends with questions that have no good solutions.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '010C-exoneration-orders',
-          imageKey: 'blackEnvelope',
-          title: 'Exoneration Orders Signed',
-          subtitle: 'Lisa, James, Eleanor walk free',
-          detail: '',
-        },
-        {
-          id: '010C-fbi-testimony',
-          imageKey: 'harborPrecinct',
-          title: 'FBI Testimony Transcript',
-          subtitle: 'Martinez recording in evidence',
-          detail: '',
-        },
-        {
-          id: '010C-emily-promise',
-          imageKey: 'emilyCross',
-          title: 'Emily\'s Promise Warehouse',
-          subtitle: 'Agreement before surrender',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '010C-exoneration-orders',
+                imageKey: 'sparkle',
+                title: 'ELEANOR FREED',
+                subtitle: '2 PM APPEAL',
+                detail: 'It worked. The evidence held. Eleanor walked out. James walked out. Lisa walked out.',
+              },
+              {
+                id: '010C-fbi-testimony',
+                imageKey: 'buyer',
+                title: 'AGENT MARTINEZ',
+                subtitle: 'THE CALL',
+                detail: '"She didn\'t run." Martinez sounded shocked. Victoria stayed put. My gamble paid off.',
+              },
+              {
+                id: '010C-emily-promise',
+                imageKey: 'silence',
+                title: 'EMILY CROSS',
+                subtitle: 'PROMISE KEPT',
+                detail: '"I\'m ready for arrest. Thank you for the impossible choice." She kept her word. She was Emily at the end.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'EXONERATION',
         'VACATED',
@@ -5207,32 +5188,31 @@ Some choices are between legal and right. Sometimes those are mutually exclusive
       "The day before the end is always the longest. Because you know what's coming. And you can't stop it.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '011A-fbi-interview',
-          imageKey: 'harborPrecinct',
-          title: 'FBI Interview Room',
-          subtitle: 'Recorder humming between agents',
-          detail: '',
-        },
-        {
-          id: '011A-wade-evidence',
-          imageKey: 'tomWade',
-          title: 'Wade Case Evidence Spread',
-          subtitle: 'DNA, rope, confession reexamined',
-          detail: '',
-        },
-        {
-          id: '011A-ec-exchange',
-          imageKey: 'emilyCross',
-          title: 'Emily Cross Exchange',
-          subtitle: 'Warehouse invitation for final bargain',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '011A-fbi-interview',
+                imageKey: 'buyer',
+                title: 'FBI ROOM',
+                subtitle: 'THE CONFESSION',
+                detail: 'I gave them everything. The gun. The badge. The truth. "I prioritized outcome over procedure."',
+              },
+              {
+                id: '011A-wade-evidence',
+                imageKey: 'default',
+                title: 'WADE FILE',
+                subtitle: 'EVIDENCE LOG',
+                detail: 'DNA. Rope fibers. Victoria\'s confession tape. The case against her was airtight. I handed it over.',
+              },
+              {
+                id: '011A-ec-exchange',
+                imageKey: 'silence',
+                title: 'EMILY TEXT',
+                subtitle: 'ONE LAST REQUEST',
+                detail: '"Come say goodbye." She wanted one last meeting. Before prison. Before the end.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'TESTIMONY',
         'TRANSCRIPT',
@@ -5351,32 +5331,31 @@ Jack chose five innocents over one guilty. Even if it destroyed him. Especially 
       "The last night is always the longest. Because you know what you're about to do. And you know you can't take it back.",
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '011B-margaret-call',
-          imageKey: 'margaretHalloway',
-          title: 'Margaret\'s Call',
-          subtitle: 'Pride and fear in equal measure',
-          detail: '',
-        },
-        {
-          id: '011B-integrity-plan',
-          imageKey: 'blackEnvelope',
-          title: 'Integrity Project Plan',
-          subtitle: 'Rebecca Moss strategy binder',
-          detail: '',
-        },
-        {
-          id: '011B-emily-rain',
-          imageKey: 'emilyCross',
-          title: 'Emily in the Rain',
-          subtitle: 'Jeans, sweatshirt, confession in the dark',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '011B-margaret-call',
+                imageKey: 'sparkle',
+                title: 'MARGARET CALL',
+                subtitle: 'PRIDE AND FEAR',
+                detail: '"You chose them over yourself." She understood. For the first time in years, she was proud.',
+              },
+              {
+                id: '011B-integrity-plan',
+                imageKey: 'voice',
+                title: 'SARAH TEXT',
+                subtitle: 'LEGAL DEFENSE',
+                detail: 'Rebecca Moss will represent me. Necessity defense. "What you did was heroic." Sarah never gave up on me.',
+              },
+              {
+                id: '011B-emily-rain',
+                imageKey: 'silence',
+                title: 'EMILY CROSS',
+                subtitle: 'THE RAIN',
+                detail: '2 AM. Jeans and sweatshirt. No mask. "I needed you to see something." She was finally just herself.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'MIDNIGHT',
         'RAIN',
@@ -5505,32 +5484,31 @@ She needed him to see Emily once last time. At dawn FBI arrested her. She went p
       'Day Eleven ends with a dawn that no longer waits for your doubts.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '011C-necessity-notes',
-          imageKey: 'blackEnvelope',
-          title: 'Necessity Defense Notes',
-          subtitle: 'Rebecca builds the argument',
-          detail: '',
-        },
-        {
-          id: '011C-sarah-support',
-          imageKey: 'sarahReeves',
-          title: 'Sarah\'s Support Ride',
-          subtitle: 'Conviction Integrity car waiting',
-          detail: '',
-        },
-        {
-          id: '011C-emily-dawn-message',
-          imageKey: 'emilyCross',
-          title: 'Emily\'s Dawn Message',
-          subtitle: '"See you in twelve years" text',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '011C-necessity-notes',
+                imageKey: 'default',
+                title: 'LEGAL STRATEGY',
+                subtitle: 'NECESSITY DEFENSE',
+                detail: 'Rebecca Moss: "You chose the lesser harm." Eleanor, James, and Lisa prepared to testify for me.',
+              },
+              {
+                id: '011C-sarah-support',
+                imageKey: 'voice',
+                title: 'SARAH REEVES',
+                subtitle: 'THE RIDE',
+                detail: 'She drove me to the courthouse. 8:30 AM. "When you get out, you work with us." A future, waiting.',
+              },
+              {
+                id: '011C-emily-dawn-message',
+                imageKey: 'silence',
+                title: 'EMILY TEXT',
+                subtitle: 'THE FAREWELL',
+                detail: '"See you in twelve years." She was ready. Arrested at dawn. Peaceful. Human.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'ARRAIGNMENT',
         'DEFENSE',
@@ -5637,32 +5615,31 @@ Some endings are just acknowledgments that being seen matters.`,
       'The twelfth day. The last case. The final move. Can monsters ever become human again?',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '012A-warehouse-floor',
-          imageKey: 'harborPrecinct',
-          title: 'Lamplight Warehouse Floor',
-          subtitle: 'Rain-soaked concrete underfoot',
-          detail: '',
-        },
-        {
-          id: '012A-unloaded-revolver',
-          imageKey: 'blackEnvelope',
-          title: 'Unloaded Revolver',
-          subtitle: 'Choice without bullets on the table',
-          detail: '',
-        },
-        {
-          id: '012A-burned-contract',
-          imageKey: 'blackEnvelope',
-          title: 'Burned Contract',
-          subtitle: 'Victoria sets her empire ablaze',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '012A-warehouse-floor',
+                imageKey: 'default',
+                title: 'THE WAREHOUSE',
+                subtitle: 'FINAL SCENE',
+                detail: 'Rain on the roof. Concrete floor. The place where Tom died. Where Victoria was born. Where Emily returned.',
+              },
+              {
+                id: '012A-unloaded-revolver',
+                imageKey: 'default',
+                title: 'THE GUN',
+                subtitle: 'EMPTY CHAMBER',
+                detail: 'I gave her the choice. But I removed the bullets. Protecting her from becoming a killer one last time.',
+              },
+              {
+                id: '012A-burned-contract',
+                imageKey: 'silence',
+                title: 'EMILY CROSS',
+                subtitle: 'THE TEARS',
+                detail: 'She pulled the trigger. Click. Then she cried. Laughed. And finally let Victoria go.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'WAREHOUSE',
         'TRIGGER',
@@ -5831,32 +5808,31 @@ Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in
       'Some endings are clean. Some are messy. And some are just pauses between moves in a game that never ends.',
     ],
 
-    evidenceBoard: {
-      polaroids: [
-        {
-          id: '012B-lucia-countdown',
-          imageKey: 'harborPrecinct',
-          title: 'Lucia\'s Countdown Cards',
-          subtitle: 'Birthday tally kept in prison letters',
-          detail: '',
-        },
-        {
-          id: '012B-dismissed-ledger',
-          imageKey: 'blackEnvelope',
-          title: 'Dismissed Evidence Ledger',
-          subtitle: 'Sarah\'s book rewriting procedure',
-          detail: '',
-        },
-        {
-          id: '012B-prison-letters',
-          imageKey: 'blackEnvelope',
-          title: 'Prison Letters Stack',
-          subtitle: 'Eleanor, Teresa, Mrs. Martinez replies',
-          detail: '',
-        },
-      ],
-    },
-    board: {
+          evidenceBoard: {
+            polaroids: [
+              {
+                id: '012B-lucia-countdown',
+                imageKey: 'sparkle',
+                title: 'LUCIA CARD',
+                subtitle: 'YEAR SEVEN',
+                detail: 'Mrs. Martinez sent it. 5,113 days. A reminder that understanding doesn\'t resurrect the dead.',
+              },
+              {
+                id: '012B-dismissed-ledger',
+                imageKey: 'lex',
+                title: 'LISA CHEN',
+                subtitle: 'THE PAPER',
+                detail: '"The Halloway Effect." She published a paper on my corruption. It\'s brilliant. And accurate.',
+              },
+              {
+                id: '012B-prison-letters',
+                imageKey: 'voice',
+                title: 'SARAH LETTER',
+                subtitle: 'YEAR THREE',
+                detail: '"You taught me how to be a bad detective. I\'m using that to be a good one." She fixed everything I broke.',
+              },
+            ],
+          },    board: {
       mainWords: [
         'PRISON',
         'LETTER',

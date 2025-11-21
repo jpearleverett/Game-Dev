@@ -17,6 +17,32 @@ export function normalizeStoryPathKey(token) {
   return cleaned || ROOT_PATH_KEY;
 }
 
+export function resolveStoryPathKey(caseNumber, storyCampaign) {
+    if (!caseNumber) {
+        return ROOT_PATH_KEY;
+    }
+    if (!storyCampaign) {
+        return ROOT_PATH_KEY;
+    }
+    const chapterSegment = caseNumber.slice(0, 3);
+    const chapterNumber = parseInt(chapterSegment, 10);
+    if (Number.isNaN(chapterNumber)) {
+        return storyCampaign.currentPathKey || ROOT_PATH_KEY;
+    }
+    const historyKey =
+        storyCampaign.pathHistory && storyCampaign.pathHistory[chapterNumber];
+    if (historyKey) {
+        return historyKey;
+    }
+    if (
+        chapterNumber === storyCampaign.chapter &&
+        storyCampaign.currentPathKey
+    ) {
+        return storyCampaign.currentPathKey;
+    }
+    return storyCampaign.currentPathKey || ROOT_PATH_KEY;
+}
+
 export function formatCaseNumber(chapter, subchapter) {
   const letters = ['A', 'B', 'C'];
   const letter = letters[subchapter - 1] || letters[0];
