@@ -390,12 +390,13 @@ export default function EvidenceBoardScreen({
   const [evidenceAnchors, setEvidenceAnchors] = useState({});
   const [stringSources, setStringSources] = useState({});
 
-  const stringPulse = useRef(new Animated.Value(0)).current;
+  // Lazy initialization to prevent object creation on every render
+  const stringPulse = useState(() => new Animated.Value(0))[0];
   
-  // Tutorial Hand Animation
-  const handOpacity = useRef(new Animated.Value(0)).current;
-  const handTranslateY = useRef(new Animated.Value(0)).current;
-  const handTranslateX = useRef(new Animated.Value(0)).current;
+  // Tutorial Hand Animation - Lazy init
+  const handOpacity = useState(() => new Animated.Value(0))[0];
+  const handTranslateY = useState(() => new Animated.Value(0))[0];
+  const handTranslateX = useState(() => new Animated.Value(0))[0];
 
   useEffect(() => {
     if (activeCase?.caseNumber === 1 && !solved && !failed) {

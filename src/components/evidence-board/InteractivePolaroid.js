@@ -17,9 +17,9 @@ export default function InteractivePolaroid({
   const [expanded, setExpanded] = useState(false);
   const [flipped, setFlipped] = useState(false);
   
-  // Animation values
-  const expandAnim = useRef(new Animated.Value(0)).current;
-  const flipAnim = useRef(new Animated.Value(0)).current;
+  // Animation values - lazy initialization to prevent object creation on every render
+  const expandAnim = useState(() => new Animated.Value(0))[0];
+  const flipAnim = useState(() => new Animated.Value(0))[0];
   
   const polaroidWidth = size;
   const polaroidHeight = size * 1.18;
@@ -90,50 +90,6 @@ export default function InteractivePolaroid({
     }).start(() => setFlipped(!flipped));
   };
 
-  // Modal Content
-  const ExpandedView = () => (
-    <Modal transparent visible={expanded} onRequestClose={handleClose}>
-      <View style={styles.modalOverlay}>
-        <Pressable style={styles.backdrop} onPress={handleClose} />
-        
-        <Animated.View style={[styles.modalContent, {
-          transform: [{ scale: expandAnim }]
-        }]}>
-          <Pressable onPress={handleFlip} style={styles.modalCardContainer}>
-            {/* Front Face */}
-            <Animated.View style={[styles.modalCard, styles.modalCardFront, { 
-              transform: [{ rotateY: frontInterpolate }],
-              opacity: frontOpacity
-            }]}>
-              <View style={styles.tapeTopModal} />
-              <View style={styles.imageWrapperModal}>
-                <Image 
-                  source={entry.image} 
-                  style={styles.imageModal} 
-                  contentFit="cover"
-                  transition={200}
-                />
-              </View>
-              <Text style={styles.labelModal}>{entry.label}</Text>
-              <Text style={styles.hintText}>Tap to Flip</Text>
-            </Animated.View>
-
-            {/* Back Face */}
-            <Animated.View style={[styles.modalCard, styles.modalCardBack, { 
-              transform: [{ rotateY: backInterpolate }],
-              opacity: backOpacity
-            }]}>
-              <Text style={styles.backTitle}>ARCHIVE NOTES</Text>
-              <View style={styles.divider} />
-              <Text style={styles.backText}>{entry.detail || "No additional intel available."}</Text>
-              <Text style={styles.hintText}>Tap to Return</Text>
-            </Animated.View>
-          </Pressable>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-
   return (
     <>
       <View
@@ -157,7 +113,47 @@ export default function InteractivePolaroid({
           </View>
         </Pressable>
       </View>
-      <ExpandedView />
+      
+      <Modal transparent visible={expanded} onRequestClose={handleClose}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.backdrop} onPress={handleClose} />
+          
+          <Animated.View style={[styles.modalContent, {
+            transform: [{ scale: expandAnim }]
+          }]}>
+            <Pressable onPress={handleFlip} style={styles.modalCardContainer}>
+              {/* Front Face */}
+              <Animated.View style={[styles.modalCard, styles.modalCardFront, { 
+                transform: [{ rotateY: frontInterpolate }],
+                opacity: frontOpacity
+              }]}>
+                <View style={styles.tapeTopModal} />
+                <View style={styles.imageWrapperModal}>
+                  <Image 
+                    source={entry.image} 
+                    style={styles.imageModal} 
+                    contentFit="cover"
+                    transition={200}
+                  />
+                </View>
+                <Text style={styles.labelModal}>{entry.label}</Text>
+                <Text style={styles.hintText}>Tap to Flip</Text>
+              </Animated.View>
+
+              {/* Back Face */}
+              <Animated.View style={[styles.modalCard, styles.modalCardBack, { 
+                transform: [{ rotateY: backInterpolate }],
+                opacity: backOpacity
+              }]}>
+                <Text style={styles.backTitle}>ARCHIVE NOTES</Text>
+                <View style={styles.divider} />
+                <Text style={styles.backText}>{entry.detail || "No additional intel available."}</Text>
+                <Text style={styles.hintText}>Tap to Return</Text>
+              </Animated.View>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </>
   );
 }

@@ -10,7 +10,8 @@ const StringLine = React.memo(({ connector, thickness, delay = 0 }) => {
     Math.pow(connector.to.y - connector.from.y, 2)
   );
   
-  const animatedValue = useRef(new Animated.Value(1)).current;
+  // Lazy initialization to avoid creating Animated.Value on every render
+  const animatedValue = React.useState(() => new Animated.Value(1))[0];
 
   useEffect(() => {
     const animation = Animated.timing(animatedValue, {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 
@@ -11,7 +11,10 @@ export default function NeonSign({ title = 'Dead Letters', style, logoSource }) 
   const { moderateScale, scaleSpacing, scaleRadius, sizeClass } = useResponsiveLayout();
   const SIGN_SCALE = 0.84;
   const LOGO_SCALE = 1.0;
-  const intensity = useRef(new Animated.Value(1)).current;
+  
+  // Lazy initialization to prevent object creation on every render
+  const intensity = useState(() => new Animated.Value(1))[0];
+  
   const { glowOpacity, rimOpacity, highlightOpacity } = useMemo(
     () => ({
       glowOpacity: intensity.interpolate({
