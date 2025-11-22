@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import WordCard from '../WordCard';
 
@@ -9,13 +9,90 @@ function deriveWordState(word, { selectedWords, confirmedOutliers, lockedMainWor
   return 'default';
 }
 
+const BoardGridCell = React.memo(({
+  item,
+  widthPercent,
+  tilePadding,
+  onLayoutWordFactory,
+  tilt,
+  wordState,
+  cardDisabled,
+  branchWordLookup,
+  branchMetaByKey,
+  onToggleWord,
+  onHintRequest,
+  hintsActive,
+  colorBlindMode,
+  highContrast,
+  celebratingOutliers,
+  celebrationDelay,
+}) => {
+  
+  const handleLayout = useCallback((e) => {
+      onLayoutWordFactory(item.id, item.word)(e);
+  }, [onLayoutWordFactory, item.id, item.word]);
+
+  const branchKey = branchWordLookup
+    ? branchWordLookup[
+        item.word && typeof item.word === 'string'
+          ? item.word.toUpperCase()
+          : ''
+      ]
+    : null;
+  const branchMeta = branchMetaByKey ? branchMetaByKey[branchKey] : null;
+  
+  // Memoize the badge object to ensure strict equality if data hasn't changed
+  // Although this is created inside render, useMemo helps if this component re-renders for other reasons
+  // but actually since we are inside the component, we compute it.
+  const outlierBadge = useMemo(() => {
+    return wordState === 'lockedOutlier' && branchMeta
+      ? {
+          label: branchMeta.badgeLabel,
+          color: branchMeta.color,
+        }
+      : null;
+  }, [wordState, branchMeta]);
+
+  return (
+    <View
+      onLayout={handleLayout}
+      style={{
+        width: widthPercent,
+        paddingHorizontal: tilePadding,
+        paddingVertical: tilePadding,
+      }}
+    >
+      <Animated.View
+        style={[
+          styles.cardWrapper,
+          { transform: [{ rotate: `${tilt}deg` }] },
+        ]}
+      >
+        <WordCard
+          word={item.word}
+          state={wordState}
+          onToggle={onToggleWord}
+          onHint={hintsActive ? onHintRequest : undefined}
+          colorBlindMode={colorBlindMode}
+          highContrast={highContrast}
+          hintsActive={hintsActive}
+          celebrating={celebratingOutliers}
+          celebrationDelay={celebrationDelay}
+          disabled={cardDisabled}
+          outlierBadge={outlierBadge}
+        />
+      </Animated.View>
+    </View>
+  );
+});
+
 function BoardGrid({
   wordCells,
   columns,
   tilePadding,
   marginTop,
   onLayoutGrid,
-  onLayoutWord, // Function: (id, word) => (event) => void
+  onLayoutWord, // This is the factory function
   wordTilts,
   selectedWords,
   confirmedOutliers,
@@ -31,6 +108,9 @@ function BoardGrid({
   branchWordLookup,
   branchMetaByKey,
 }) {
+  
+  const widthPercent = `${100 / columns}%`;
+
   return (
     <View
       style={[
@@ -50,54 +130,28 @@ function BoardGrid({
           lockedMainWords,
         });
         const cardDisabled = wordState === 'default' && selectionLimitReached;
-
-        const branchKey = branchWordLookup
-          ? branchWordLookup[
-              item.word && typeof item.word === 'string'
-                ? item.word.toUpperCase()
-                : ''
-            ]
-          : null;
-        const branchMeta = branchMetaByKey ? branchMetaByKey[branchKey] : null;
-        const outlierBadge =
-          wordState === 'lockedOutlier' && branchMeta
-            ? {
-                label: branchMeta.badgeLabel,
-                color: branchMeta.color,
-              }
-            : null;
+        const delay = celebrationDelays[item.id] || 0;
 
         return (
-          <View
+          <BoardGridCell
             key={item.id}
-            onLayout={onLayoutWord(item.id, item.word)}
-            style={{
-              width: `${100 / columns}%`,
-              paddingHorizontal: tilePadding,
-              paddingVertical: tilePadding,
-            }}
-          >
-            <Animated.View
-              style={[
-                styles.cardWrapper,
-                { transform: [{ rotate: `${tilt}deg` }] },
-              ]}
-            >
-              <WordCard
-                word={item.word}
-                state={wordState}
-                onToggle={onToggleWord}
-                onHint={hintsActive ? onHintRequest : undefined}
-                colorBlindMode={colorBlindMode}
-                highContrast={highContrast}
-                hintsActive={hintsActive}
-                celebrating={celebratingOutliers}
-                celebrationDelay={celebrationDelays[item.id] || 0}
-                disabled={cardDisabled}
-                outlierBadge={outlierBadge}
-              />
-            </Animated.View>
-          </View>
+            item={item}
+            widthPercent={widthPercent}
+            tilePadding={tilePadding}
+            onLayoutWordFactory={onLayoutWord}
+            tilt={tilt}
+            wordState={wordState}
+            cardDisabled={cardDisabled}
+            branchWordLookup={branchWordLookup}
+            branchMetaByKey={branchMetaByKey}
+            onToggleWord={onToggleWord}
+            onHintRequest={onHintRequest}
+            hintsActive={hintsActive}
+            colorBlindMode={colorBlindMode}
+            highContrast={highContrast}
+            celebratingOutliers={celebratingOutliers}
+            celebrationDelay={delay}
+          />
         );
       })}
     </View>

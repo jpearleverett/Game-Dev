@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useMemo, useEffect } from 'react';
+import { useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
 import { dedupeWords, generateBoardGrid, STATUS, getCaseNumberById } from '../utils/gameLogic';
 import { getBoardProfile } from '../utils/caseNumbers';
 import { getStoryEntry, resolveStoryPathKey } from '../data/storyContent';
@@ -14,16 +14,36 @@ export function useGameLogic(cases, progress, updateProgress) {
       if (state.hydrationComplete) return; // Already hydrated
   }, []);
 
+  // Memoize story campaign to prevent unnecessary re-calcs if only timestamp changed
+  // We serialize specific fields that matter for the evidence board content
+  const storyCampaign = progress.storyCampaign || createBlankStoryCampaign();
+  const storyCampaignRef = useRef(storyCampaign);
+  
+  const stableStoryCampaign = useMemo(() => {
+    const current = storyCampaign;
+    const prev = storyCampaignRef.current;
+    
+    // Check meaningful changes for board generation
+    if (
+        current.chapter !== prev.chapter ||
+        current.subchapter !== prev.subchapter ||
+        current.activeCaseNumber !== prev.activeCaseNumber ||
+        current.currentPathKey !== prev.currentPathKey ||
+        (current.completedCaseNumbers || []).length !== (prev.completedCaseNumbers || []).length
+    ) {
+        storyCampaignRef.current = current;
+        return current;
+    }
+    return prev;
+  }, [storyCampaign.chapter, storyCampaign.subchapter, storyCampaign.activeCaseNumber, storyCampaign.currentPathKey, (storyCampaign.completedCaseNumbers || []).length]);
+
   // Derived Active Case
   const activeCase = useMemo(() => {
     const baseCase = cases.find((c) => c.id === state.activeCaseId) || cases[0] || null;
     if (!baseCase) return null;
 
-    // Story Context & Merging
-    const storyCampaign = progress.storyCampaign || createBlankStoryCampaign();
-    
     // Merge dynamic story data (outliers, narrative, themes)
-    const mergedCase = mergeCaseWithStory(baseCase, storyCampaign, getStoryEntry);
+    const mergedCase = mergeCaseWithStory(baseCase, stableStoryCampaign, getStoryEntry);
 
     // Resolve Board Grid
     const layout = state.boardLayouts[baseCase.id];
@@ -37,7 +57,7 @@ export function useGameLogic(cases, progress, updateProgress) {
         grid: resolvedGrid,
       },
     };
-  }, [state.activeCaseId, cases, state.boardLayouts, progress.storyCampaign]);
+  }, [state.activeCaseId, cases, state.boardLayouts, stableStoryCampaign]);
 
   const assignBoardLayout = useCallback(
     (caseData, { force = false, skipDispatch = false } = {}) => {
@@ -61,8 +81,8 @@ export function useGameLogic(cases, progress, updateProgress) {
     let targetCase = cases.find((c) => c.id === caseId) || cases[0];
     if (!targetCase) return;
     
-    const storyCampaign = progress.storyCampaign || createBlankStoryCampaign();
-    targetCase = mergeCaseWithStory(targetCase, storyCampaign, getStoryEntry);
+    // Use the memoized stable campaign here as well
+    targetCase = mergeCaseWithStory(targetCase, stableStoryCampaign, getStoryEntry);
     
     if (targetCase.id !== state.activeCaseId) {
         const grid = assignBoardLayout(targetCase, { force: true, skipDispatch: true });
@@ -81,7 +101,7 @@ export function useGameLogic(cases, progress, updateProgress) {
           payload: { attemptsRemaining: targetCase.attempts },
         });
     }
-  }, [cases, assignBoardLayout, state.activeCaseId, progress.storyCampaign]);
+  }, [cases, assignBoardLayout, state.activeCaseId, stableStoryCampaign]);
 
   const toggleWordSelection = useCallback((word) => {
     if (state.status !== STATUS.IN_PROGRESS) return;
@@ -174,8 +194,7 @@ export function useGameLogic(cases, progress, updateProgress) {
       if (!targetCase) return;
       
       // Merge story data
-      const storyCampaign = progress.storyCampaign || createBlankStoryCampaign();
-      targetCase = mergeCaseWithStory(targetCase, storyCampaign, getStoryEntry);
+      targetCase = mergeCaseWithStory(targetCase, stableStoryCampaign, getStoryEntry);
 
       const grid = assignBoardLayout(targetCase, { skipDispatch: true });
       dispatch({
@@ -186,7 +205,7 @@ export function useGameLogic(cases, progress, updateProgress) {
               layout: { caseId: targetCase.id, grid }
           }
       });
-  }, [cases, assignBoardLayout, progress.storyCampaign]);
+  }, [cases, assignBoardLayout, stableStoryCampaign]);
 
   return {
     gameState: state,

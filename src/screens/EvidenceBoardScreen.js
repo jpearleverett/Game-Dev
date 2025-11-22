@@ -533,21 +533,21 @@ export default function EvidenceBoardScreen({
   const connectors = useMemo(() => {
     if (!objectiveAnchor || !boardLayout) return [];
     const lines = [];
-    selectedWords.forEach((word, index) => {
+    selectedWords.forEach((word) => {
       const anchorsForWord = wordAnchors[word];
       if (!anchorsForWord || !anchorsForWord.length) return;
       const sourceId = stringSources[word];
       const origin = (sourceId && evidenceAnchors[sourceId]) || objectiveAnchor;
       if (!origin) return;
       const anchor = anchorsForWord[0];
-      lines.push({ id: `active-${word}-${index}`, from: origin, to: anchor, tone: "active" });
+      lines.push({ id: `active-${word}`, from: origin, to: anchor, tone: "active" });
     });
-    confirmedOutliers.forEach((word, index) => {
+    confirmedOutliers.forEach((word) => {
       const anchorsForWord = wordAnchors[word];
       if (!anchorsForWord || !anchorsForWord.length) return;
       const slotEntry = Object.values(confirmedSlotAnchors).find((slot) => slot.word === word);
       if (!slotEntry) return;
-      lines.push({ id: `outlier-${word}-${index}`, from: anchorsForWord[0], to: slotEntry, tone: "confirmed" });
+      lines.push({ id: `outlier-${word}`, from: anchorsForWord[0], to: slotEntry, tone: "confirmed" });
     });
     Object.values(evidenceAnchors).forEach((anchor) => {
       lines.push({ id: `decor-${anchor.id}`, from: objectiveAnchor, to: anchor, tone: "decor" });

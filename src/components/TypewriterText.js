@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Text, View, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Text, View, StyleSheet, Pressable, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 
@@ -18,15 +18,18 @@ export default function TypewriterText({
   const indexRef = useRef(0);
   const timerRef = useRef(null);
   const cursorTimerRef = useRef(null);
+  const hapticThrottleRef = useRef(0);
   
   // Reset when text changes or activity status changes
   useEffect(() => {
+    // If finished, show full text immediately and stop timers
     if (isFinished) {
       setDisplayedText(text);
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
 
+    // If not active, clear text and reset
     if (!isActive) {
       setDisplayedText('');
       indexRef.current = 0;
@@ -34,6 +37,7 @@ export default function TypewriterText({
       return;
     }
 
+    // Starting a new sequence
     setDisplayedText('');
     indexRef.current = 0;
     
@@ -47,7 +51,13 @@ export default function TypewriterText({
     };
   }, [text, delay, isActive, isFinished]);
 
+  // Cursor blink effect - only run if active
   useEffect(() => {
+    if (!isActive || isFinished) {
+      if (cursorTimerRef.current) clearInterval(cursorTimerRef.current);
+      return;
+    }
+    
     cursorTimerRef.current = setInterval(() => {
       setCursorVisible((v) => !v);
     }, 500);
@@ -55,7 +65,7 @@ export default function TypewriterText({
     return () => {
       if (cursorTimerRef.current) clearInterval(cursorTimerRef.current);
     };
-  }, []);
+  }, [isActive, isFinished]);
 
   const startTyping = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -66,9 +76,13 @@ export default function TypewriterText({
         indexRef.current += 1;
         setDisplayedText(text.slice(0, indexRef.current));
         
-        // Haptics on space or every 3rd character
-        if (char === ' ' || indexRef.current % 3 === 0) {
-             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        // Throttled Haptics
+        const now = Date.now();
+        if (now - hapticThrottleRef.current > 70) { // Max 14 hits per second
+             if (char === ' ' || indexRef.current % 3 === 0) {
+                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                 hapticThrottleRef.current = now;
+             }
         }
       } else {
         if (timerRef.current) clearInterval(timerRef.current);
@@ -89,6 +103,10 @@ export default function TypewriterText({
   const isTyping = displayedText.length < text.length;
   const showCursor = (isTyping || cursorVisible) && isActive && !isFinished;
 
+  // Optimization: Single text node structure
+  // We use a transparent copy only if absolutely needed for layout, but here we can usually get away with just one.
+  // If layout jump is an issue, we can wrap in a View with minHeight.
+  
   if (inline) {
     return (
       <Text style={style}>
@@ -102,23 +120,12 @@ export default function TypewriterText({
 
   return (
     <Pressable onPress={handlePress} disabled={!isTyping}>
-      <View>
-        {/* Invisible text to force layout height to full size immediately */}
-        <Text style={[style, { opacity: 0 }]} accessibilityElementsHidden={true}>
-          {text}
-          <Text>_</Text>
+        <Text style={style}>
+          {displayedText}
+          {showCursor && (
+            <Text style={{ color: COLORS.accentSecondary }}>_</Text>
+          )}
         </Text>
-
-        {/* Visible text overlay */}
-        <View style={StyleSheet.absoluteFill}>
-          <Text style={style}>
-            {displayedText}
-            {showCursor && (
-              <Text style={{ color: COLORS.accentSecondary }}>_</Text>
-            )}
-          </Text>
-        </View>
-      </View>
     </Pressable>
   );
 }

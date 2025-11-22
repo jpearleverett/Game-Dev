@@ -183,6 +183,150 @@ export default function NarrativePager({
 
   if (!pages.length) return null;
 
+  const renderItem = useCallback(({ item, index }) => {
+    const isLastPage = index === pages.length - 1;
+    const entryNumber = String(item.segmentIndex + 1).padStart(2, "0");
+    const entryLabel =
+      item.totalPagesForSegment > 1
+        ? `Journal Entry ${entryNumber} - Page ${String(item.pageIndex + 1).padStart(2, "0")}/${String(item.totalPagesForSegment).padStart(2, "0")}`
+        : `Journal Entry ${entryNumber}`;
+    
+    const showReveal = showDecisionPrompt && isLastPage;
+
+    // Only render typewriter if this page is active or very close to active
+    // This prevents off-screen typewriters from consuming resources
+    const isActive = index === activePage;
+
+    return (
+      <View
+        style={[
+          styles.page,
+          {
+            width: pageWidth || "100%",
+            paddingHorizontal: pagePaddingH,
+            paddingVertical: pagePaddingV,
+            borderRadius: blockRadius,
+            marginRight: isLastPage ? 0 : pageGap,
+          },
+        ]}
+      >
+        {/* Tap Zones */}
+        <Pressable
+          style={[styles.tapZone, styles.tapZoneLeft]}
+          disabled={index === 0}
+          onPress={() => triggerPageFlip(-1)}
+        />
+        <Pressable
+          style={[styles.tapZone, styles.tapZoneRight]}
+          disabled={isLastPage}
+          onPress={() => triggerPageFlip(1)}
+        />
+
+        {/* Backgrounds */}
+        <Image source={NOISE_TEXTURE} style={[styles.noise, { borderRadius: blockRadius }]} />
+        <LinearGradient
+          colors={["rgba(0, 0, 0, 0.12)", "transparent"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.32, y: 1 }}
+          style={[styles.gradient, { borderRadius: blockRadius }]}
+        />
+
+        {/* Decorative Tape */}
+        <View style={[styles.tape, styles.tapeLeft, { width: tapeWidth * 0.68 }]} />
+        <View style={[styles.tape, styles.tapeRight, { width: tapeWidth * 0.54 }]} />
+
+        {/* Binder Rings */}
+        <View style={[styles.ringColumn, { left: -(ringSize * 0.58), width: ringSize }]}>
+          {Array.from({ length: BINDER_RING_COUNT }).map((_, i) => (
+            <View
+              key={`ring-${i}`}
+              style={[styles.ring, { width: ringSize, height: ringSize, borderRadius: ringSize / 2 }]}
+            />
+          ))}
+        </View>
+
+        {/* Content */}
+        <View style={{ gap: scaleSpacing(SPACING.xs) }}>
+          <Text
+            style={[
+              styles.label,
+              {
+                fontSize: shrinkFont(moderateScale(FONT_SIZES.xs)),
+                color: "#5a3c26",
+                letterSpacing: compact ? 1.8 : 2.4,
+              },
+            ]}
+          >
+            {entryLabel.toUpperCase()}
+          </Text>
+
+          <TypewriterText
+            text={item.text}
+            speed={8}
+            delay={100}
+            isActive={isActive}
+            isFinished={completedPages.has(index)}
+            onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
+            style={{
+              fontSize: narrativeSize,
+              lineHeight: narrativeLineHeight,
+              fontFamily: FONTS.primary,
+              color: "#2b1a10",
+            }}
+          />
+          {completedPages.has(index) && !isLastPage && (
+            <View style={styles.nextPageCueContainer}>
+                <PulsingArrow />
+            </View>
+          )}
+        </View>
+
+        {/* Page Number */}
+        <View style={styles.pageStamp}>
+          <Text style={[styles.pageStampText, { fontSize: slugSize }]}>
+            {`PAGE ${String(index + 1).padStart(2, "0")}`}
+          </Text>
+        </View>
+
+        {/* Decision Button */}
+        {showReveal && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.choiceButton,
+              { borderRadius: blockRadius, marginTop: scaleSpacing(SPACING.md) },
+              pressed && styles.choiceButtonPressed,
+            ]}
+            onPress={onRevealDecision}
+          >
+            <Text style={{ fontFamily: FONTS.monoBold, color: "#3a1c06", fontSize: narrativeSize }}>
+              Seal Your Path
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }, [
+    activePage,
+    completedPages,
+    showDecisionPrompt,
+    pageWidth,
+    pagePaddingH,
+    pagePaddingV,
+    blockRadius,
+    pageGap,
+    tapeWidth,
+    ringSize,
+    scaleSpacing,
+    narrativeSize,
+    narrativeLineHeight,
+    slugSize,
+    moderateScale,
+    compact,
+    pages.length,
+    triggerPageFlip,
+    onRevealDecision
+  ]);
+
   return (
     <View
       onLayout={handleLayout}
@@ -214,129 +358,14 @@ export default function NarrativePager({
           showsHorizontalScrollIndicator={false}
           snapToAlignment="center"
           decelerationRate="fast"
-          renderItem={({ item, index }) => {
-            const isLastPage = index === pages.length - 1;
-            const isFirstPage = index === 0;
-            const entryNumber = String(item.segmentIndex + 1).padStart(2, "0");
-            const entryLabel =
-              item.totalPagesForSegment > 1
-                ? `Journal Entry ${entryNumber} - Page ${String(item.pageIndex + 1).padStart(2, "0")}/${String(item.totalPagesForSegment).padStart(2, "0")}`
-                : `Journal Entry ${entryNumber}`;
-            
-            const showReveal = showDecisionPrompt && isLastPage;
-
-            return (
-              <View
-                style={[
-                  styles.page,
-                  {
-                    width: pageWidth || "100%",
-                    paddingHorizontal: pagePaddingH,
-                    paddingVertical: pagePaddingV,
-                    borderRadius: blockRadius,
-                    marginRight: isLastPage ? 0 : pageGap,
-                  },
-                ]}
-              >
-                {/* Tap Zones */}
-                <Pressable
-                  style={[styles.tapZone, styles.tapZoneLeft]}
-                  disabled={index === 0}
-                  onPress={() => triggerPageFlip(-1)}
-                />
-                <Pressable
-                  style={[styles.tapZone, styles.tapZoneRight]}
-                  disabled={isLastPage}
-                  onPress={() => triggerPageFlip(1)}
-                />
-
-                {/* Backgrounds */}
-                <Image source={NOISE_TEXTURE} style={[styles.noise, { borderRadius: blockRadius }]} />
-                <LinearGradient
-                  colors={["rgba(0, 0, 0, 0.12)", "transparent"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0.32, y: 1 }}
-                  style={[styles.gradient, { borderRadius: blockRadius }]}
-                />
-
-                {/* Decorative Tape */}
-                <View style={[styles.tape, styles.tapeLeft, { width: tapeWidth * 0.68 }]} />
-                <View style={[styles.tape, styles.tapeRight, { width: tapeWidth * 0.54 }]} />
-
-                {/* Binder Rings */}
-                <View style={[styles.ringColumn, { left: -(ringSize * 0.58), width: ringSize }]}>
-                  {Array.from({ length: BINDER_RING_COUNT }).map((_, i) => (
-                    <View
-                      key={`ring-${i}`}
-                      style={[styles.ring, { width: ringSize, height: ringSize, borderRadius: ringSize / 2 }]}
-                    />
-                  ))}
-                </View>
-
-                {/* Content */}
-                <View style={{ gap: scaleSpacing(SPACING.xs) }}>
-                  <Text
-                    style={[
-                      styles.label,
-                      {
-                        fontSize: shrinkFont(moderateScale(FONT_SIZES.xs)),
-                        color: "#5a3c26",
-                        letterSpacing: compact ? 1.8 : 2.4,
-                      },
-                    ]}
-                  >
-                    {entryLabel.toUpperCase()}
-                  </Text>
-
-                  <TypewriterText
-                    text={item.text}
-                    speed={8}
-                    delay={100}
-                    isActive={index === activePage}
-                    isFinished={completedPages.has(index)}
-                    onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
-                    style={{
-                      fontSize: narrativeSize,
-                      lineHeight: narrativeLineHeight,
-                      fontFamily: FONTS.primary,
-                      color: "#2b1a10",
-                    }}
-                    // Drop cap logic simplified for refactor, can be re-added if needed
-                  />
-                  {completedPages.has(index) && !isLastPage && (
-                    <View style={styles.nextPageCueContainer}>
-                        <PulsingArrow />
-                    </View>
-                  )}
-                </View>
-
-                {/* Page Number */}
-                <View style={styles.pageStamp}>
-                  <Text style={[styles.pageStampText, { fontSize: slugSize }]}>
-                    {`PAGE ${String(index + 1).padStart(2, "0")}`}
-                  </Text>
-                </View>
-
-                {/* Decision Button */}
-                {showReveal && (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.choiceButton,
-                      { borderRadius: blockRadius, marginTop: scaleSpacing(SPACING.md) },
-                      pressed && styles.choiceButtonPressed,
-                    ]}
-                    onPress={onRevealDecision}
-                  >
-                    <Text style={{ fontFamily: FONTS.monoBold, color: "#3a1c06", fontSize: narrativeSize }}>
-                      Seal Your Path
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          }}
+          renderItem={renderItem}
           viewabilityConfig={viewabilityConfig.current}
           onViewableItemsChanged={handleViewableItemsChanged.current}
+          // OPTIMIZATIONS
+          initialNumToRender={1}
+          maxToRenderPerBatch={1}
+          windowSize={3}
+          removeClippedSubviews={true}
         />
       </Animated.View>
 
