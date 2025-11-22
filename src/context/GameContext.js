@@ -1,18 +1,25 @@
-import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
+import { resolveStoryPathKey, ROOT_PATH_KEY } from '../data/storyContent';
 import { usePersistence } from '../hooks/usePersistence';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { useStoryEngine } from '../hooks/useStoryEngine';
 import * as Haptics from 'expo-haptics';
+import { analytics } from '../services/AnalyticsService';
 
-const GameContext = createContext(null);
+const GameStateContext = createContext(null);
+const GameDispatchContext = createContext(null);
 
 export { STATUS };
 export const GAME_STATUS = STATUS;
 
 export function GameProvider({ children }) {
   const audioRef = React.useRef(null);
+
+  useEffect(() => {
+    analytics.init();
+  }, []);
 
   const setAudioController = useCallback((controller) => {
     audioRef.current = controller;
@@ -32,7 +39,7 @@ export function GameProvider({ children }) {
   const {
     gameState,
     activeCase,
-    toggleWordSelection,
+    toggleWordSelection: coreToggleWordSelection,
     submitGuess: coreSubmitGuess,
     resetBoardForCase,
     initializeGame,
@@ -48,16 +55,16 @@ export function GameProvider({ children }) {
 
   const [mode, setMode] = useState('daily');
 
+  // Helper to get current path key for analytics
+  const getCurrentPathKey = useCallback((caseNumber) => {
+      if (!progress.storyCampaign || !caseNumber) return ROOT_PATH_KEY;
+      return resolveStoryPathKey(caseNumber, progress.storyCampaign);
+  }, [progress.storyCampaign]);
+
   // Initialize game state when persistence is ready
   useEffect(() => {
     if (hydrationComplete && !gameState.hydrationComplete) {
-      // Determine initial case ID
       let initialCaseId = progress.currentCaseId;
-      
-      // If story mode was active or we want to default to story logic, check here.
-      // For now, we stick to the daily case unless we were in story mode? 
-      // The original code defaulted to 'currentCaseId' which is the daily track.
-      
       initializeGame(progress, initialCaseId);
     }
   }, [hydrationComplete, gameState.hydrationComplete, progress, initializeGame]);
@@ -76,20 +83,25 @@ export function GameProvider({ children }) {
           
           setActiveCaseInternal(targetCase.id);
           setMode('story');
+          
+          // Analytics
+          const pathKey = getCurrentPathKey(caseNumber);
+          analytics.logLevelStart(targetCase.id, 'story', pathKey);
+          
           return { ok: true, caseId: targetCase.id };
       } 
       
       // Daily Mode Logic
-      // (Simplified for now, assumes normal daily flow)
       const targetCaseId = progress.currentCaseId;
       const targetCase = SEASON_ONE_CASES.find(c => c.id === targetCaseId) || SEASON_ONE_CASES[0];
       
       setActiveCaseInternal(targetCase.id);
       setMode('daily');
+      analytics.logLevelStart(targetCase.id, 'daily');
       return { ok: true, caseId: targetCase.id };
 
     },
-    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId]
+    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey]
   );
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
@@ -107,14 +119,17 @@ export function GameProvider({ children }) {
   const openStoryCase = useCallback((caseId) => {
       const targetCase = SEASON_ONE_CASES.find(c => c.id === caseId);
       if (!targetCase) return false;
+      
       setActiveCaseInternal(targetCase.id);
       setMode('story');
+      
+      const pathKey = getCurrentPathKey(targetCase.caseNumber);
+      analytics.logLevelStart(targetCase.id, 'story', pathKey);
       return true;
-  }, [setActiveCaseInternal]);
+  }, [setActiveCaseInternal, getCurrentPathKey]);
 
   const exitStoryCampaign = useCallback(() => {
       setMode('daily');
-      // Revert to daily case
       const dailyCaseId = progress.currentCaseId;
       setActiveCaseInternal(dailyCaseId);
   }, [progress.currentCaseId, setActiveCaseInternal]);
@@ -128,7 +143,7 @@ export function GameProvider({ children }) {
       const nowIso = new Date().toISOString();
       if (nowIso >= progress.nextUnlockAt) {
           const currentUnlocked = progress.unlockedCaseIds || [];
-          const seasonCount = SEASON_ONE_CASES.length; // Use length from data
+          const seasonCount = SEASON_ONE_CASES.length; 
           if (currentUnlocked.length < seasonCount) {
                const nextId = currentUnlocked.length + 1;
                updateProgress({
@@ -141,15 +156,25 @@ export function GameProvider({ children }) {
 
   const advanceToCase = useCallback((caseId) => {
       setActiveCaseInternal(caseId);
-      // We don't necessarily change mode here, usually used in Archives (daily mode)
   }, [setActiveCaseInternal]);
 
-  // Wrapped Submit Logic handling consequences
+  const toggleWordSelection = useCallback((word) => {
+    coreToggleWordSelection(word);
+  }, [coreToggleWordSelection]);
+
   const submitGuess = useCallback(() => {
       const result = coreSubmitGuess();
       if (!result) return;
 
       const { status: nextStatus, attemptsUsed, caseId } = result;
+
+      // Analytics
+      const pathKey = getCurrentPathKey(activeCase.caseNumber);
+      if (nextStatus === STATUS.SOLVED) {
+        analytics.logLevelComplete(caseId, mode, attemptsUsed, true, pathKey);
+      } else if (nextStatus === STATUS.FAILED) {
+        analytics.logLevelComplete(caseId, mode, attemptsUsed, false, pathKey);
+      }
 
       if (nextStatus === STATUS.SOLVED) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -174,8 +199,7 @@ export function GameProvider({ children }) {
                   new Set([...(currentStory.completedCaseNumbers || []), activeCase.caseNumber])
               );
               
-              // Check if this was the last case of a subchapter
-              const isFinalSubchapter = currentStory.subchapter >= 3; // Hardcoded rule from original
+              const isFinalSubchapter = currentStory.subchapter >= 3; 
               
               let updatedStory = {
                   ...currentStory,
@@ -237,18 +261,18 @@ export function GameProvider({ children }) {
               updateProgress(newStats);
           }
       }
-  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress]);
+  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, getCurrentPathKey]);
 
-  const value = {
-    // State
+  const stateValue = useMemo(() => ({
     ...gameState,
     progress,
     hydrationComplete,
     activeCase,
     mode,
-    cases: SEASON_ONE_CASES, // Expose cases for UI
-    
-    // Actions
+    cases: SEASON_ONE_CASES,
+  }), [gameState, progress, hydrationComplete, activeCase, mode]);
+
+  const dispatchValue = useMemo(() => ({
     toggleWordSelection,
     submitGuess,
     resetBoardForCase,
@@ -259,8 +283,6 @@ export function GameProvider({ children }) {
     setPremiumUnlocked,
     clearProgress,
     markCaseBriefingSeen,
-    
-    // Story Actions
     enterStoryCampaign,
     continueStoryCampaign,
     openStoryCase,
@@ -268,15 +290,58 @@ export function GameProvider({ children }) {
     ensureDailyStoryCase,
     selectStoryDecision: storySelectDecision,
     setAudioController,
-  };
+  }), [
+    toggleWordSelection,
+    submitGuess,
+    resetBoardForCase,
+    advanceToCase,
+    unlockNextCaseIfReady,
+    updateSettings,
+    markPrologueSeen,
+    setPremiumUnlocked,
+    clearProgress,
+    markCaseBriefingSeen,
+    enterStoryCampaign,
+    continueStoryCampaign,
+    openStoryCase,
+    exitStoryCampaign,
+    ensureDailyStoryCase,
+    storySelectDecision,
+    setAudioController,
+  ]);
 
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+  return (
+    <GameDispatchContext.Provider value={dispatchValue}>
+      <GameStateContext.Provider value={stateValue}>
+        {children}
+      </GameStateContext.Provider>
+    </GameDispatchContext.Provider>
+  );
 }
 
 export function useGame() {
-  const context = useContext(GameContext);
-  if (!context) {
+  const state = useContext(GameStateContext);
+  const dispatch = useContext(GameDispatchContext);
+  
+  if (!state || !dispatch) {
     throw new Error('useGame must be used within a GameProvider');
+  }
+  
+  return useMemo(() => ({ ...state, ...dispatch }), [state, dispatch]);
+}
+
+export function useGameState() {
+  const context = useContext(GameStateContext);
+  if (!context) {
+    throw new Error('useGameState must be used within a GameProvider');
+  }
+  return context;
+}
+
+export function useGameDispatch() {
+  const context = useContext(GameDispatchContext);
+  if (!context) {
+    throw new Error('useGameDispatch must be used within a GameProvider');
   }
   return context;
 }

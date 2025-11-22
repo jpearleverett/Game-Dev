@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { FONTS, FONT_SIZES } from '../../constants/typography';
 import * as Haptics from 'expo-haptics';
 
@@ -106,7 +107,12 @@ export default function InteractivePolaroid({
             }]}>
               <View style={styles.tapeTopModal} />
               <View style={styles.imageWrapperModal}>
-                <Image source={entry.image} style={styles.imageModal} resizeMode="cover" />
+                <Image 
+                  source={entry.image} 
+                  style={styles.imageModal} 
+                  contentFit="cover"
+                  transition={200}
+                />
               </View>
               <Text style={styles.labelModal}>{entry.label}</Text>
               <Text style={styles.hintText}>Tap to Flip</Text>
@@ -138,7 +144,12 @@ export default function InteractivePolaroid({
           <View style={[styles.polaroid, { transform: [{ rotate: `${entry.rotation}deg` }] }]}>
             <View style={styles.tapeTop} />
             <View style={styles.imageWrapper}>
-              <Image source={entry.image} style={styles.image} resizeMode="cover" />
+              <Image 
+                source={entry.image} 
+                style={styles.image} 
+                contentFit="cover"
+                transition={200}
+              />
             </View>
             <Text style={[styles.label, { fontSize: size * 0.075 }]} numberOfLines={2}>
               {entry.label}

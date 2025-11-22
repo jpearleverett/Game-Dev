@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 
-export default function StringLayer({
+function StringLayer({
   connectors,
   stringThickness,
   reducedMotion,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   stringLineActive: {
     backgroundColor: "rgba(204, 36, 52, 0.9)",
-  },
+    },
   stringLineConfirmed: {
     backgroundColor: "rgba(241, 182, 88, 0.9)",
   },
@@ -86,3 +86,5 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(188, 62, 96, 0.6)",
   },
 });
+
+export default React.memo(StringLayer);
