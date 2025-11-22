@@ -171,6 +171,7 @@ export default function DeskScreen({
   onOpenSettings,
   onOpenMenu,
   onOpenStoryCampaign,
+  onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
@@ -273,6 +274,15 @@ export default function DeskScreen({
 
   const handleStoryPress = handleQuickPress(onOpenStoryCampaign);
   const handleSettingsPress = handleQuickPress(onOpenSettings);
+  
+  const handleBribe = async () => {
+      if (onBribe) {
+          const success = await onBribe();
+          if (success) {
+              Alert.alert("Bribe Accepted", "The clerk slides the file across the desk.");
+          }
+      }
+  };
 
   const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -504,7 +514,11 @@ export default function DeskScreen({
                 <View
                   style={[styles.actionBlock, { marginTop: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.sm) }]}
                 >
-                  <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} disabled={storyLocked} fullWidth />
+                  {storyLocked ? (
+                     <PrimaryButton label="Bribe Clerk ($0.99)" icon="💵" onPress={handleBribe} fullWidth />
+                  ) : (
+                     <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} fullWidth />
+                  )}
                 </View>
 
                 <View style={[styles.progressRow, { marginTop: scaleSpacing(SPACING.sm) }]}>

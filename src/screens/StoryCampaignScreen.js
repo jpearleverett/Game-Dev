@@ -45,6 +45,9 @@ export default function StoryCampaignScreen({
   onRestartStory,
   onBack,
   onExitToDesk,
+  onBribe,
+  onPurchaseFullUnlock,
+  premiumUnlocked,
 }) {
   const { moderateScale, sizeClass, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -153,6 +156,19 @@ export default function StoryCampaignScreen({
               onPress={hasHistory ? handleRestart : onStartStory}
               style={compact ? { alignSelf: 'stretch' } : null}
             />
+            {!premiumUnlocked && (
+                 <SecondaryButton
+                    label="Unlock All ($6.99)"
+                    icon="🔓"
+                    onPress={async () => {
+                        const success = await onPurchaseFullUnlock();
+                        if (success) {
+                            setTimeout(() => Alert.alert("Access Granted", "All chapters are now available."), 300);
+                        }
+                    }}
+                    style={compact ? { alignSelf: 'stretch' } : null}
+                 />
+            )}
           </View>
       </View>
 
@@ -204,11 +220,16 @@ export default function StoryCampaignScreen({
         <BribeModal 
             visible={bribeModalVisible} 
             onClose={() => setBribeModalVisible(false)}
-            onBribe={() => {
-                // Placeholder for IAP logic
-                setBribeModalVisible(false);
-                Alert.alert("Clerk Bribed", "The file is yours.");
-                // logic to unlock would go here
+            onBribe={async () => {
+                if (onBribe) {
+                    const success = await onBribe();
+                    if (success) {
+                        setBribeModalVisible(false);
+                        setTimeout(() => Alert.alert("Clerk Bribed", "The file is yours."), 300);
+                    } else {
+                        Alert.alert("Transaction Failed", "The clerk refused your money.");
+                    }
+                }
             }}
         />
     </ScreenSurface>
