@@ -78,7 +78,9 @@ export default function CaseBriefOverlay({
 
   return (
     <View style={styles.overlay} pointerEvents={visible ? 'auto' : 'none'}>
-      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
+      </Animated.View>
       
       <Animated.View 
         style={[
@@ -183,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F1EA', // Cream paper color
     borderRadius: 2,
     overflow: 'hidden',
-    flex: 1,
+    flexShrink: 1,
   },
   paperContent: {
     padding: SPACING.xl,
