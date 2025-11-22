@@ -1,23 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import {
-  useFonts,
-  WorkSans_400Regular,
-  WorkSans_500Medium,
-  WorkSans_600SemiBold,
-  WorkSans_700Bold,
-} from '@expo-google-fonts/work-sans';
-import {
-  PlayfairDisplay_400Regular,
-  PlayfairDisplay_600SemiBold,
-  PlayfairDisplay_700Bold,
-} from '@expo-google-fonts/playfair-display';
-import { CourierPrime_400Regular, CourierPrime_700Bold } from '@expo-google-fonts/courier-prime';
 import { GameProvider, useGame } from './src/context/GameContext';
 import { COLORS } from './src/constants/colors';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAudioController } from './src/hooks/useAudioController';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import useCachedResources from './src/hooks/useCachedResources';
 
 const ROUTE_TO_AUDIO_KEY = {
   Splash: 'splash',
@@ -63,6 +52,10 @@ function AppContent({ fontsReady }) {
     setCurrentRoute(route.name);
   };
 
+  if (!fontsReady) {
+    return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" />
@@ -74,21 +67,17 @@ function AppContent({ fontsReady }) {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    WorkSans_400Regular,
-    WorkSans_500Medium,
-    WorkSans_600SemiBold,
-    WorkSans_700Bold,
-    PlayfairDisplay_400Regular,
-    PlayfairDisplay_600SemiBold,
-    PlayfairDisplay_700Bold,
-    CourierPrime_400Regular,
-    CourierPrime_700Bold,
-  });
+  const isLoadingComplete = useCachedResources();
+
+  if (!isLoadingComplete) {
+    return null;
+  }
 
   return (
-    <GameProvider>
-      <AppContent fontsReady={fontsLoaded} />
-    </GameProvider>
+    <ErrorBoundary>
+      <GameProvider>
+        <AppContent fontsReady={true} />
+      </GameProvider>
+    </ErrorBoundary>
   );
 }

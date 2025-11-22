@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import WordCard from '../WordCard';
 
@@ -9,7 +9,7 @@ function deriveWordState(word, { selectedWords, confirmedOutliers, lockedMainWor
   return 'default';
 }
 
-export default function BoardGrid({
+function BoardGrid({
   wordCells,
   columns,
   tilePadding,
@@ -119,3 +119,5 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 });
+
+export default React.memo(BoardGrid);
