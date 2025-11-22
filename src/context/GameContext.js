@@ -7,6 +7,7 @@ import { useGameLogic } from '../hooks/useGameLogic';
 import { useStoryEngine } from '../hooks/useStoryEngine';
 import * as Haptics from 'expo-haptics';
 import { analytics } from '../services/AnalyticsService';
+import { purchaseService } from '../services/PurchaseService';
 
 const GameStateContext = createContext(null);
 const GameDispatchContext = createContext(null);
@@ -137,6 +138,69 @@ export function GameProvider({ children }) {
   const ensureDailyStoryCase = useCallback(() => {
       return activateStoryCase({ mode: 'daily' });
   }, [activateStoryCase]);
+
+  const purchaseBribe = useCallback(async () => {
+      try {
+          const offerings = await purchaseService.getOfferings();
+          const bribePackage = offerings?.current?.availablePackages?.find(
+              p => p.product.identifier === 'com.deadletters.bribe_clerk'
+          );
+          
+          if (!bribePackage) throw new Error('Bribe package not found');
+  
+          const { customerInfo } = await purchaseService.purchasePackage(bribePackage);
+          
+          if (customerInfo.entitlements.active['com.deadletters.bribe_clerk']?.isActive) {
+               const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
+               updateProgress({
+                   storyCampaign: {
+                       ...currentStory,
+                       nextStoryUnlockAt: null 
+                   }
+               });
+               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+               return true;
+          }
+          return false;
+      } catch (e) {
+          if (!e.userCancelled) {
+            console.warn('Bribe purchase failed', e);
+          }
+          return false;
+      }
+  }, [progress.storyCampaign, updateProgress]);
+
+  const purchaseFullUnlock = useCallback(async () => {
+       try {
+          const offerings = await purchaseService.getOfferings();
+          const fullPackage = offerings?.current?.availablePackages?.find(
+              p => p.product.identifier === 'com.deadletters.full_unlock'
+          );
+          
+          if (!fullPackage) throw new Error('Full unlock package not found');
+  
+          const { customerInfo } = await purchaseService.purchasePackage(fullPackage);
+          
+          if (customerInfo.entitlements.active['com.deadletters.full_unlock']?.isActive) {
+               updateProgress({
+                   premiumUnlocked: true,
+                   storyCampaign: {
+                       ...normalizeStoryCampaignShape(progress.storyCampaign),
+                       fullUnlock: true,
+                       nextStoryUnlockAt: null
+                   }
+               });
+               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+               return true;
+          }
+          return false;
+      } catch (e) {
+          if (!e.userCancelled) {
+            console.warn('Full unlock purchase failed', e);
+          }
+          return false;
+      }
+  }, [progress.storyCampaign, updateProgress]);
 
   const unlockNextCaseIfReady = useCallback(() => {
       if (!progress.nextUnlockAt) return;
@@ -290,6 +354,8 @@ export function GameProvider({ children }) {
     ensureDailyStoryCase,
     selectStoryDecision: storySelectDecision,
     setAudioController,
+    purchaseBribe,
+    purchaseFullUnlock,
   }), [
     toggleWordSelection,
     submitGuess,
@@ -308,6 +374,8 @@ export function GameProvider({ children }) {
     ensureDailyStoryCase,
     storySelectDecision,
     setAudioController,
+    purchaseBribe,
+    purchaseFullUnlock,
   ]);
 
   return (

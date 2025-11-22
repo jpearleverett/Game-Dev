@@ -38,6 +38,8 @@ export default function AppNavigator({ fontsReady, audio }) {
     selectStoryDecision,
     unlockNextCaseIfReady,
     mode,
+    purchaseBribe,
+    purchaseFullUnlock,
   } = game;
 
   if (!fontsReady) {
@@ -106,6 +108,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenMenu={() => navigation.navigate('Menu')}
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
+              onBribe={purchaseBribe}
             />
           );
         }}
@@ -254,6 +257,9 @@ export default function AppNavigator({ fontsReady, audio }) {
               onRestartStory={actions.handleStoryRestart}
               onBack={actions.handleExitStory}
               onExitToDesk={actions.handleExitStory}
+              onBribe={purchaseBribe}
+              onPurchaseFullUnlock={purchaseFullUnlock}
+              premiumUnlocked={progress.premiumUnlocked}
             />
           );
         }}

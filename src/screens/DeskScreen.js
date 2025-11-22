@@ -9,6 +9,7 @@ import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
 import NeonSign from '../components/NeonSign';
+import DustLayer from '../components/DustLayer';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/layout';
@@ -171,6 +172,7 @@ export default function DeskScreen({
   onOpenSettings,
   onOpenMenu,
   onOpenStoryCampaign,
+  onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
@@ -217,16 +219,16 @@ export default function DeskScreen({
             ? (solved ? 'Review Case Results' : 'Review Case Debrief')
             : 'Open Case File';
     const primaryIcon = pendingStoryAdvance
-      ? '▶'
+      ? <MaterialCommunityIcons name="arrow-right-circle" size={20} color={COLORS.textSecondary} />
       : awaitingDecision
-        ? '☍'
+        ? <MaterialCommunityIcons name="source-branch" size={20} color={COLORS.textSecondary} />
         : storyLocked
-          ? '⏳'
+          ? <MaterialCommunityIcons name="timer-sand" size={20} color={COLORS.textSecondary} />
           : completed
             ? solved
-              ? '🗂️'
-              : '🗃️'
-            : '🔍';
+              ? <MaterialCommunityIcons name="file-document-check" size={20} color={COLORS.textSecondary} />
+              : <MaterialCommunityIcons name="file-document-alert" size={20} color={COLORS.textSecondary} />
+            : <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textSecondary} />;
 
     const statusLine = useMemo(() => {
       if (awaitingDecision) {
@@ -273,6 +275,15 @@ export default function DeskScreen({
 
   const handleStoryPress = handleQuickPress(onOpenStoryCampaign);
   const handleSettingsPress = handleQuickPress(onOpenSettings);
+  
+  const handleBribe = async () => {
+      if (onBribe) {
+          const success = await onBribe();
+          if (success) {
+              Alert.alert("Bribe Accepted", "The clerk slides the file across the desk.");
+          }
+      }
+  };
 
   const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -369,6 +380,7 @@ export default function DeskScreen({
           },
         ]}
       >
+        <DustLayer />
         <LinearGradient
           colors={['rgba(58, 36, 18, 0.96)', 'rgba(28, 16, 8, 0.98)']}
           start={{ x: 0.12, y: 0 }}
@@ -504,7 +516,16 @@ export default function DeskScreen({
                 <View
                   style={[styles.actionBlock, { marginTop: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.sm) }]}
                 >
-                  <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} disabled={storyLocked} fullWidth />
+                  {storyLocked ? (
+                     <PrimaryButton 
+                        label="Bribe Clerk ($0.99)" 
+                        icon={<MaterialCommunityIcons name="cash-multiple" size={20} color={COLORS.textSecondary} />} 
+                        onPress={handleBribe} 
+                        fullWidth 
+                     />
+                  ) : (
+                     <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} fullWidth />
+                  )}
                 </View>
 
                 <View style={[styles.progressRow, { marginTop: scaleSpacing(SPACING.sm) }]}>
@@ -642,7 +663,12 @@ export default function DeskScreen({
             <Text style={styles.storyTitle}>Story Campaign</Text>
             <Text style={styles.storySubtitle}>Work the full arc without the nightly wait.</Text>
           </View>
-          <PrimaryButton label="Enter" icon="🕰️" onPress={handleStoryPress} fullWidth={compact || medium} />
+          <PrimaryButton 
+            label="Enter" 
+            icon={<MaterialCommunityIcons name="book-open-page-variant" size={20} color={COLORS.textSecondary} />} 
+            onPress={handleStoryPress} 
+            fullWidth={compact || medium} 
+          />
         </View>
 
         <View style={[styles.footerSpacer, { height: footerSpacing }]} />

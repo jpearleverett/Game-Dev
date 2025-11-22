@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 
 // This is a facade for an analytics service (like Firebase, Amplitude, or Mixpanel).
 // In a real implementation, you would initialize the SDKs here.
@@ -13,7 +14,17 @@ class AnalyticsService {
 
   init() {
     // Simulate initialization
-    console.log('[Analytics] Initializing...');
+    // In production: firebase.analytics().setAnalyticsCollectionEnabled(true);
+    
+    const deviceInfo = {
+        deviceModel: Device.modelName,
+        osVersion: Device.osVersion,
+        manufacturer: Device.manufacturer
+    };
+    
+    this.setUserProperties(deviceInfo);
+    
+    console.log('[Analytics] Initialized with device info:', deviceInfo);
     this.initialized = true;
     this.flushQueue();
   }
@@ -39,12 +50,14 @@ class AnalyticsService {
       event: eventName,
       params: {
         ...params,
+        ...this.userProperties, // Attach user props to context if needed
         platform: Platform.OS,
         timestamp: Date.now(),
       },
     };
 
-    // In production, replace this with: analytics().logEvent(eventName, params);
+    // In production: analytics().logEvent(eventName, params);
+    // Amplitude: amplitude.getInstance().logEvent(eventName, params);
     if (__DEV__) {
       // console.log(`[Analytics Event]: ${eventName}`, JSON.stringify(params, null, 2));
     }

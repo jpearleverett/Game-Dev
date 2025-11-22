@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
@@ -54,7 +55,12 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
               {item.unlocked ? (
                 <SecondaryButton
                   label={item.solved || item.failed ? 'Review Case' : 'Investigate'}
-                  icon={item.solved ? '✓' : item.failed ? '✖' : '▶'}
+                  icon={item.solved 
+                    ? <MaterialCommunityIcons name="check" size={18} color={COLORS.textSecondary} /> 
+                    : item.failed 
+                      ? <MaterialCommunityIcons name="close" size={18} color={COLORS.textSecondary} /> 
+                      : <MaterialCommunityIcons name="magnify" size={18} color={COLORS.textSecondary} />
+                  }
                   onPress={() => onSelectCase?.(item.id)}
                 />
               ) : (
@@ -65,7 +71,9 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
         </View>
 
         <View style={styles.futureBlock}>
-          <Text style={styles.futureTitle}>Season 2: The Setup {premiumUnlocked ? '' : '🔒'}</Text>
+          <Text style={styles.futureTitle}>
+            Season 2: The Setup {premiumUnlocked ? '' : <MaterialCommunityIcons name="lock" size={16} color={COLORS.textSecondary} />}
+          </Text>
           <Text style={styles.futureMeta}>14 cases · Premium archive</Text>
           {premiumUnlocked ? (
             <Text style={styles.futureCopy}>Season 2 cases unlock on launch day. Enjoy early access as a premium detective.</Text>
@@ -75,7 +83,9 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
         </View>
 
         <View style={styles.futureBlock}>
-          <Text style={styles.futureTitle}>Season 3: The Fall {premiumUnlocked ? '' : '🔒'}</Text>
+          <Text style={styles.futureTitle}>
+            Season 3: The Fall {premiumUnlocked ? '' : <MaterialCommunityIcons name="lock" size={16} color={COLORS.textSecondary} />}
+          </Text>
           <Text style={styles.futureMeta}>14 cases · Premium archive</Text>
           {premiumUnlocked ? (
             <Text style={styles.futureCopy}>Season 3 will release after the investigation concludes. Your key keeps it ready.</Text>
