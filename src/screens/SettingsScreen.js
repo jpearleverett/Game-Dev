@@ -102,7 +102,7 @@ export default function SettingsScreen({
             {premiumUnlocked ? (
               <PrimaryButton label="Premium Active" disabled arrow={false} />
             ) : (
-              <PrimaryButton label="Purchase Archive Key ($4.99)" onPress={onPurchasePremium} />
+              <PrimaryButton label="Purchase Archive Key ($6.99)" onPress={onPurchasePremium} />
             )}
             <SecondaryButton label="Restore Purchase" onPress={onRestorePremium} />
           </View>

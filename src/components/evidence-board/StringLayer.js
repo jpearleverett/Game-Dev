@@ -1,5 +1,50 @@
-import React from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Animated, Easing } from 'react-native';
+import Svg, { Line } from 'react-native-svg';
+
+const AnimatedLine = Animated.createAnimatedComponent(Line);
+
+const StringLine = React.memo(({ connector, thickness, delay = 0 }) => {
+  const length = Math.sqrt(
+    Math.pow(connector.to.x - connector.from.x, 2) + 
+    Math.pow(connector.to.y - connector.from.y, 2)
+  );
+  
+  const animatedValue = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(animatedValue, {
+      toValue: 0,
+      duration: 600,
+      delay,
+      useNativeDriver: false,
+      easing: Easing.out(Easing.cubic),
+    }).start();
+  }, [delay]);
+
+  const strokeDashoffset = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, length]
+  });
+  
+  let color = "rgba(188, 62, 96, 0.6)";
+  if (connector.tone === "active") color = "rgba(204, 36, 52, 0.9)";
+  else if (connector.tone === "confirmed") color = "rgba(241, 182, 88, 0.9)";
+
+  return (
+    <AnimatedLine
+      x1={connector.from.x}
+      y1={connector.from.y}
+      x2={connector.to.x}
+      y2={connector.to.y}
+      stroke={color}
+      strokeWidth={thickness}
+      strokeDasharray={[length, length]}
+      strokeDashoffset={strokeDashoffset}
+      strokeLinecap="round"
+    />
+  );
+});
 
 function StringLayer({
   connectors,
@@ -25,40 +70,16 @@ function StringLayer({
         { opacity: containerOpacity },
       ]}
     >
-      {connectors.map((connector) => {
-        const dx = connector.to.x - connector.from.x;
-        const dy = connector.to.y - connector.from.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        if (!length || length === 0) {
-          return null;
-        }
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-        const centerX = (connector.from.x + connector.to.x) / 2;
-        const centerY = (connector.from.y + connector.to.y) / 2;
-        const toneStyle =
-          connector.tone === "active"
-            ? styles.stringLineActive
-            : connector.tone === "confirmed"
-            ? styles.stringLineConfirmed
-            : styles.stringLineDecor;
-        
-        return (
-          <View
-            key={connector.id}
-            style={[
-              styles.stringLineBase,
-              toneStyle,
-              {
-                width: length,
-                left: centerX - length / 2,
-                top: centerY - stringThickness / 2,
-                transform: [{ rotate: `${angle}deg` }],
-                height: stringThickness,
-              },
-            ]}
-          />
-        );
-      })}
+      <Svg style={StyleSheet.absoluteFill}>
+        {connectors.map((connector, index) => (
+           <StringLine
+             key={connector.id}
+             connector={connector}
+             thickness={stringThickness}
+             delay={index * 30}
+           />
+        ))}
+      </Svg>
     </Animated.View>
   );
 }
@@ -67,23 +88,6 @@ const styles = StyleSheet.create({
   stringLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 5,
-  },
-  stringLineBase: {
-    position: "absolute",
-    borderRadius: 999,
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  stringLineActive: {
-    backgroundColor: "rgba(204, 36, 52, 0.9)",
-    },
-  stringLineConfirmed: {
-    backgroundColor: "rgba(241, 182, 88, 0.9)",
-  },
-  stringLineDecor: {
-    backgroundColor: "rgba(188, 62, 96, 0.6)",
   },
 });
 
