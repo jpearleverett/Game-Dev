@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { Modal, StyleSheet, Text, View, Image, Animated, Pressable } from 'react-native';
-import { BlurView } from 'expo-blur'; // Use if available, otherwise fallback to View with opacity/blurRadius on Image
 import PrimaryButton from './PrimaryButton';
 import SecondaryButton from './SecondaryButton';
 import { COLORS } from '../constants/colors';
