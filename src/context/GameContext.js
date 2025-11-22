@@ -136,8 +136,20 @@ export function GameProvider({ children }) {
   }, [progress.currentCaseId, setActiveCaseInternal]);
 
   const ensureDailyStoryCase = useCallback(() => {
+      // If there is a pending story case, sync to it so Daily Mode reflects current progress
+      const story = normalizeStoryCampaignShape(progress.storyCampaign);
+      if (story.activeCaseNumber && !story.awaitingDecision) {
+          const storyCase = SEASON_ONE_CASES.find(c => c.caseNumber === story.activeCaseNumber);
+          if (storyCase && storyCase.id !== progress.currentCaseId) {
+              // Sync daily case to story case
+              setActiveCaseInternal(storyCase.id);
+              setMode('daily');
+              updateProgress({ currentCaseId: storyCase.id });
+              return { ok: true, caseId: storyCase.id };
+          }
+      }
       return activateStoryCase({ mode: 'daily' });
-  }, [activateStoryCase]);
+  }, [progress.storyCampaign, progress.currentCaseId, activateStoryCase, setActiveCaseInternal, updateProgress]);
 
   const purchaseBribe = useCallback(async () => {
       try {
@@ -152,12 +164,24 @@ export function GameProvider({ children }) {
           
           if (customerInfo.entitlements.active['com.deadletters.bribe_clerk']?.isActive) {
                const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
-               updateProgress({
+               
+               // Determine if we should also advance the case immediately
+               let updates = {
                    storyCampaign: {
                        ...currentStory,
                        nextStoryUnlockAt: null 
                    }
-               });
+               };
+
+               if (currentStory.activeCaseNumber) {
+                   const nextCase = SEASON_ONE_CASES.find(c => c.caseNumber === currentStory.activeCaseNumber);
+                   if (nextCase) {
+                       setActiveCaseInternal(nextCase.id);
+                       updates.currentCaseId = nextCase.id;
+                   }
+               }
+               
+               updateProgress(updates);
                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                return true;
           }
@@ -168,7 +192,7 @@ export function GameProvider({ children }) {
           }
           return false;
       }
-  }, [progress.storyCampaign, updateProgress]);
+  }, [progress.storyCampaign, updateProgress, setActiveCaseInternal]);
 
   const purchaseFullUnlock = useCallback(async () => {
        try {
@@ -220,7 +244,10 @@ export function GameProvider({ children }) {
 
   const advanceToCase = useCallback((caseId) => {
       setActiveCaseInternal(caseId);
-  }, [setActiveCaseInternal]);
+      if (mode === 'daily') {
+          updateProgress({ currentCaseId: caseId });
+      }
+  }, [setActiveCaseInternal, mode, updateProgress]);
 
   const toggleWordSelection = useCallback((word) => {
     coreToggleWordSelection(word);
