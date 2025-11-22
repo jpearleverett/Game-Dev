@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
@@ -24,7 +24,7 @@ const StringLine = React.memo(({ connector, thickness, delay = 0 }) => {
     
     animation.start();
     return () => animation.stop();
-  }, [delay]);
+  }, []); // Run only on mount
 
   const strokeDashoffset = animatedValue.interpolate({
     inputRange: [0, 1],
@@ -47,6 +47,19 @@ const StringLine = React.memo(({ connector, thickness, delay = 0 }) => {
       strokeDashoffset={strokeDashoffset}
       strokeLinecap="round"
     />
+  );
+}, (prevProps, nextProps) => {
+  const pC = prevProps.connector;
+  const nC = nextProps.connector;
+  
+  return (
+    pC.id === nC.id &&
+    pC.tone === nC.tone &&
+    Math.abs(pC.from.x - nC.from.x) < 0.1 &&
+    Math.abs(pC.from.y - nC.from.y) < 0.1 &&
+    Math.abs(pC.to.x - nC.to.x) < 0.1 &&
+    Math.abs(pC.to.y - nC.to.y) < 0.1 &&
+    prevProps.thickness === nextProps.thickness
   );
 });
 
