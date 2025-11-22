@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -92,8 +92,10 @@ function WordCard({
   const cardLines = useMemo(() => Array.from({ length: 6 }).map((_, index) => index), []);
 
   const interactive = !disabled && state !== 'lockedMain' && state !== 'lockedOutlier';
-  const celebrationProgress = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  // Lazy initialization to prevent object creation on every render
+  const celebrationProgress = useState(() => new Animated.Value(0))[0];
+  const scaleAnim = useState(() => new Animated.Value(1))[0];
   const celebrationActive = celebrating && state === 'lockedOutlier';
 
   const randomRotation = useMemo(() => {
