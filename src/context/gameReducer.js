@@ -53,10 +53,11 @@ export function gameReducer(state, action) {
             if (!caseId || !Array.isArray(grid)) {
                 return state;
             }
+            // Performance Optimization: Only keep the current board layout to prevent
+            // state bloat and memory leaks after playing multiple puzzles.
             return {
                 ...state,
                 boardLayouts: {
-                    ...state.boardLayouts,
                     [caseId]: grid,
                 },
                 lastUpdated: Date.now(),
@@ -139,12 +140,19 @@ export function gameReducer(state, action) {
         }
 
         case 'ADVANCE_CASE': {
-            const { progress, activeCaseId, attemptsRemaining } = action.payload;
+            const { progress, activeCaseId, attemptsRemaining, layout } = action.payload;
+            
+            let nextLayouts = state.boardLayouts;
+            if (layout && layout.caseId && Array.isArray(layout.grid)) {
+                 nextLayouts = { [layout.caseId]: layout.grid };
+            }
+
             return {
                 ...state,
-                progress,
+                progress: progress || state.progress, // progress is optional
                 activeCaseId,
                 attemptsRemaining,
+                boardLayouts: nextLayouts,
                 confirmedOutliers: [],
                 lockedMainWords: [],
                 selectedWords: [],

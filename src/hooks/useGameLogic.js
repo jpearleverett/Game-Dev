@@ -40,45 +40,45 @@ export function useGameLogic(cases, progress, updateProgress) {
   }, [state.activeCaseId, cases, state.boardLayouts, progress.storyCampaign]);
 
   const assignBoardLayout = useCallback(
-    (caseData, { force = false } = {}) => {
+    (caseData, { force = false, skipDispatch = false } = {}) => {
       if (!caseData?.id) return null;
       const existing = state.boardLayouts[caseData.id];
       if (existing && !force) return existing;
       
       const grid = generateBoardGrid(caseData);
-      dispatch({
-        type: 'SET_BOARD_LAYOUT',
-        payload: { caseId: caseData.id, grid },
-      });
+      if (!skipDispatch) {
+        dispatch({
+            type: 'SET_BOARD_LAYOUT',
+            payload: { caseId: caseData.id, grid },
+        });
+      }
       return grid;
     },
     [state.boardLayouts]
   );
 
   const resetBoardForCase = useCallback((caseId) => {
-    // We need to re-merge here to ensure the reset grid respects the current story path
-    // However, resetBoardForCase is usually called for the *current* case, so using activeCase logic is best.
-    // But we might not have access to the fully merged object inside this callback easily without recalculating.
-    
     let targetCase = cases.find((c) => c.id === caseId) || cases[0];
     if (!targetCase) return;
     
     const storyCampaign = progress.storyCampaign || createBlankStoryCampaign();
     targetCase = mergeCaseWithStory(targetCase, storyCampaign, getStoryEntry);
     
-    assignBoardLayout(targetCase, { force: true });
-    dispatch({
-      type: 'RESET_BOARD',
-      payload: { attemptsRemaining: targetCase.attempts },
-    });
-    
     if (targetCase.id !== state.activeCaseId) {
+        const grid = assignBoardLayout(targetCase, { force: true, skipDispatch: true });
         dispatch({
             type: 'ADVANCE_CASE',
             payload: {
                 activeCaseId: targetCase.id,
-                attemptsRemaining: targetCase.attempts
+                attemptsRemaining: targetCase.attempts,
+                layout: { caseId: targetCase.id, grid }
             }
+        });
+    } else {
+        assignBoardLayout(targetCase, { force: true });
+        dispatch({
+          type: 'RESET_BOARD',
+          payload: { attemptsRemaining: targetCase.attempts },
         });
     }
   }, [cases, assignBoardLayout, state.activeCaseId, progress.storyCampaign]);
@@ -177,12 +177,13 @@ export function useGameLogic(cases, progress, updateProgress) {
       const storyCampaign = progress.storyCampaign || createBlankStoryCampaign();
       targetCase = mergeCaseWithStory(targetCase, storyCampaign, getStoryEntry);
 
-      assignBoardLayout(targetCase);
+      const grid = assignBoardLayout(targetCase, { skipDispatch: true });
       dispatch({
           type: 'ADVANCE_CASE',
           payload: {
               activeCaseId: targetCase.id,
-              attemptsRemaining: targetCase.attempts
+              attemptsRemaining: targetCase.attempts,
+              layout: { caseId: targetCase.id, grid }
           }
       });
   }, [cases, assignBoardLayout, progress.storyCampaign]);
