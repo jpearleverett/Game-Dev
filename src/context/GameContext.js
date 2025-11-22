@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
+import { resolveStoryPathKey, ROOT_PATH_KEY } from '../data/storyContent';
 import { usePersistence } from '../hooks/usePersistence';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { useStoryEngine } from '../hooks/useStoryEngine';
@@ -54,16 +55,16 @@ export function GameProvider({ children }) {
 
   const [mode, setMode] = useState('daily');
 
+  // Helper to get current path key for analytics
+  const getCurrentPathKey = useCallback((caseNumber) => {
+      if (!progress.storyCampaign || !caseNumber) return ROOT_PATH_KEY;
+      return resolveStoryPathKey(caseNumber, progress.storyCampaign);
+  }, [progress.storyCampaign]);
+
   // Initialize game state when persistence is ready
   useEffect(() => {
     if (hydrationComplete && !gameState.hydrationComplete) {
-      // Determine initial case ID
       let initialCaseId = progress.currentCaseId;
-      
-      // If story mode was active or we want to default to story logic, check here.
-      // For now, we stick to the daily case unless we were in story mode? 
-      // The original code defaulted to 'currentCaseId' which is the daily track.
-      
       initializeGame(progress, initialCaseId);
     }
   }, [hydrationComplete, gameState.hydrationComplete, progress, initializeGame]);
@@ -82,12 +83,15 @@ export function GameProvider({ children }) {
           
           setActiveCaseInternal(targetCase.id);
           setMode('story');
-          analytics.logLevelStart(targetCase.id, 'story');
+          
+          // Analytics
+          const pathKey = getCurrentPathKey(caseNumber);
+          analytics.logLevelStart(targetCase.id, 'story', pathKey);
+          
           return { ok: true, caseId: targetCase.id };
       } 
       
       // Daily Mode Logic
-      // (Simplified for now, assumes normal daily flow)
       const targetCaseId = progress.currentCaseId;
       const targetCase = SEASON_ONE_CASES.find(c => c.id === targetCaseId) || SEASON_ONE_CASES[0];
       
@@ -97,7 +101,7 @@ export function GameProvider({ children }) {
       return { ok: true, caseId: targetCase.id };
 
     },
-    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId]
+    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey]
   );
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
@@ -115,15 +119,17 @@ export function GameProvider({ children }) {
   const openStoryCase = useCallback((caseId) => {
       const targetCase = SEASON_ONE_CASES.find(c => c.id === caseId);
       if (!targetCase) return false;
+      
       setActiveCaseInternal(targetCase.id);
       setMode('story');
-      analytics.logLevelStart(targetCase.id, 'story');
+      
+      const pathKey = getCurrentPathKey(targetCase.caseNumber);
+      analytics.logLevelStart(targetCase.id, 'story', pathKey);
       return true;
-  }, [setActiveCaseInternal]);
+  }, [setActiveCaseInternal, getCurrentPathKey]);
 
   const exitStoryCampaign = useCallback(() => {
       setMode('daily');
-      // Revert to daily case
       const dailyCaseId = progress.currentCaseId;
       setActiveCaseInternal(dailyCaseId);
   }, [progress.currentCaseId, setActiveCaseInternal]);
@@ -137,7 +143,7 @@ export function GameProvider({ children }) {
       const nowIso = new Date().toISOString();
       if (nowIso >= progress.nextUnlockAt) {
           const currentUnlocked = progress.unlockedCaseIds || [];
-          const seasonCount = SEASON_ONE_CASES.length; // Use length from data
+          const seasonCount = SEASON_ONE_CASES.length; 
           if (currentUnlocked.length < seasonCount) {
                const nextId = currentUnlocked.length + 1;
                updateProgress({
@@ -150,15 +156,12 @@ export function GameProvider({ children }) {
 
   const advanceToCase = useCallback((caseId) => {
       setActiveCaseInternal(caseId);
-      // We don't necessarily change mode here, usually used in Archives (daily mode)
   }, [setActiveCaseInternal]);
 
   const toggleWordSelection = useCallback((word) => {
     coreToggleWordSelection(word);
-    // analytics.logWordSelected(word); // Optional: might be too noisy
   }, [coreToggleWordSelection]);
 
-  // Wrapped Submit Logic handling consequences
   const submitGuess = useCallback(() => {
       const result = coreSubmitGuess();
       if (!result) return;
@@ -166,10 +169,11 @@ export function GameProvider({ children }) {
       const { status: nextStatus, attemptsUsed, caseId } = result;
 
       // Analytics
+      const pathKey = getCurrentPathKey(activeCase.caseNumber);
       if (nextStatus === STATUS.SOLVED) {
-        analytics.logLevelComplete(caseId, mode, attemptsUsed, true);
+        analytics.logLevelComplete(caseId, mode, attemptsUsed, true, pathKey);
       } else if (nextStatus === STATUS.FAILED) {
-        analytics.logLevelComplete(caseId, mode, attemptsUsed, false);
+        analytics.logLevelComplete(caseId, mode, attemptsUsed, false, pathKey);
       }
 
       if (nextStatus === STATUS.SOLVED) {
@@ -195,8 +199,7 @@ export function GameProvider({ children }) {
                   new Set([...(currentStory.completedCaseNumbers || []), activeCase.caseNumber])
               );
               
-              // Check if this was the last case of a subchapter
-              const isFinalSubchapter = currentStory.subchapter >= 3; // Hardcoded rule from original
+              const isFinalSubchapter = currentStory.subchapter >= 3; 
               
               let updatedStory = {
                   ...currentStory,
@@ -258,7 +261,7 @@ export function GameProvider({ children }) {
               updateProgress(newStats);
           }
       }
-  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress]);
+  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, getCurrentPathKey]);
 
   const stateValue = useMemo(() => ({
     ...gameState,
@@ -324,7 +327,6 @@ export function useGame() {
     throw new Error('useGame must be used within a GameProvider');
   }
   
-  // Merge for backward compatibility
   return useMemo(() => ({ ...state, ...dispatch }), [state, dispatch]);
 }
 

@@ -1,15 +1,13 @@
 import { BRANCHING_OUTLIER_SETS } from '../data/branchingOutliers';
 import { resolveStoryPathKey, ROOT_PATH_KEY } from '../data/storyContent';
-import { getCaseNumberById } from './gameLogic'; // Ensure this is safe or copy it
+import { getCaseNumberById } from './gameLogic'; 
 import { getBoardProfile } from './caseNumbers';
 
 /**
- * Merges the raw case data with story-specific overrides (branching outliers, narrative text).
- * 
- * @param {Object} baseCase The static case definition from cases.js
- * @param {Object} storyCampaign The current story progress object
- * @param {Function} getStoryEntryFn Dependency injection for getStoryEntry to avoid circular imports if needed
- * @returns {Object} A new case object with dynamic properties merged in
+ * Merges the raw case data with story-specific overrides.
+ * Handles both:
+ * 1. Narrative Branching (Deep Paths like 'AA', 'AP') -> Overrides text/polaroids
+ * 2. Decision Puzzles (C-Cases) -> Injecting multiple outlier sets for the user to find
  */
 export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
     if (!baseCase) return null;
@@ -17,52 +15,64 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
     const caseNumber = baseCase.caseNumber || getCaseNumberById(baseCase.id);
     
     // 1. Resolve Path Key
-    // If no story campaign, we default to ROOT or whatever the case has.
     const pathKey = storyCampaign 
         ? resolveStoryPathKey(caseNumber, storyCampaign) 
         : ROOT_PATH_KEY;
 
-    // 2. Fetch Narrative Metadata (Text, Decisions)
+    // 2. Fetch Narrative Metadata (Text, Decisions, EvidenceBoard Overrides)
     let storyMeta = null;
     if (getStoryEntryFn && caseNumber) {
         storyMeta = getStoryEntryFn(caseNumber, pathKey);
     }
 
-    // 3. Check for Branching Outlier Sets
-    // These override the static board.outlierWords
+    // 3. Handle Branching Outlier Sets (The "Puzzle" Logic)
     let branchingBoardOverrides = {};
     const branchingSet = BRANCHING_OUTLIER_SETS[caseNumber];
     
     if (branchingSet && branchingSet.sets) {
-        // We need to map the pathKey (e.g., 'A', 'B', 'PATHA') to the optionKey in the sets ('A', 'B')
-        // Heuristic: Check if pathKey contains 'A' or 'B'
-        const normalizedPath = String(pathKey).toUpperCase();
+        // CASE TYPE: DECISION POINT (e.g., 001C)
+        // For these cases, the user must see ALL options (A and B) on the board.
+        // We do NOT filter by path history here, because the user is making the choice *now*.
         
-        // Find the matching set
-        const targetSet = branchingSet.sets.find(s => {
-            // strict match or fuzzy match
-            return s.optionKey === normalizedPath || normalizedPath.includes(s.optionKey);
-        }) || branchingSet.sets[0]; // Default to first if no match found
+        const allSets = branchingSet.sets;
+        
+        // Flatten all words from all sets to create the master outlier list
+        const allOutlierWords = allSets.reduce((acc, set) => {
+            return [...acc, ...(set.words || [])];
+        }, []);
 
-        if (targetSet) {
-            branchingBoardOverrides = {
-                outlierWords: targetSet.words,
-                // If the set has a specific theme, we might want to expose it
-                branchingTheme: targetSet.theme,
-                // We might also want to override descriptions if the game supports it
-                clueSummaries: {
-                    ...(baseCase.clueSummaries || {}),
-                    outliers: {
-                        ...(baseCase.clueSummaries?.outliers || {}),
-                        ...(targetSet.descriptions || {})
-                    }
+        branchingBoardOverrides = {
+            // The board needs to know the sets to color-code them (Red vs Blue paths)
+            branchingOutlierSets: allSets,
+            outlierWords: allOutlierWords,
+            
+            // Clue summaries might need to be merged so hints work for both paths
+            clueSummaries: {
+                ...(baseCase.clueSummaries || {}),
+                outliers: {
+                    ...(baseCase.clueSummaries?.outliers || {}),
+                    // Merge descriptions from all sets
+                    ...allSets.reduce((acc, set) => ({ ...acc, ...(set.descriptions || {}) }), {})
                 }
-            };
-        }
+            }
+        };
+    } else if (storyMeta && storyMeta.board) {
+        // CASE TYPE: NARRATIVE VARIANT (e.g., 010A-AA vs 010A-AP)
+        // If the narrative JSON provides specific board data for a path, we use it.
+        // This allows "Path A" to have different puzzle words than "Path B" if data exists.
+        branchingBoardOverrides = {
+            ...storyMeta.board
+        };
     }
 
     // 4. Merge Board Profile (Dynamic columns/rows)
     const boardProfile = getBoardProfile(caseNumber);
+    
+    // For branching boards, we might need to force larger dimensions if word count is high
+    if (branchingSet && branchingSet.sets.length >= 2) {
+        // Optional: Ensure profile has enough slots for 2 sets of outliers + main words
+        // The getBoardProfile utility usually handles 'branching: true' logic based on case number suffixes
+    }
 
     // 5. Construct the Final Object
     const merged = {
@@ -75,12 +85,14 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
         },
     };
 
-    // 6. Merge Story Metadata
+    // 6. Merge Story Metadata (Narrative, Polaroids)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
         merged.storyDecision = storyMeta.decision || null;
         merged.narrative = storyMeta.narrative ? [storyMeta.narrative] : merged.narrative;
         merged.bridgeText = storyMeta.bridgeText ? [storyMeta.bridgeText] : merged.bridgeText;
+        
+        // IMPORTANT: Narrative evidenceBoard (Polaroids) overrides the static one
         if (storyMeta.evidenceBoard) {
             merged.evidenceBoard = storyMeta.evidenceBoard;
         }

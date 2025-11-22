@@ -46,7 +46,7 @@ class AnalyticsService {
 
     // In production, replace this with: analytics().logEvent(eventName, params);
     if (__DEV__) {
-      console.log(`[Analytics Event]: ${eventName}`, JSON.stringify(params, null, 2));
+      // console.log(`[Analytics Event]: ${eventName}`, JSON.stringify(params, null, 2));
     }
   }
 
@@ -58,18 +58,23 @@ class AnalyticsService {
   }
 
   // Specific Game Events
-  logLevelStart(caseId, mode) {
-    this.logEvent('level_start', { caseId, mode });
+  logLevelStart(caseId, mode, pathKey = 'ROOT') {
+    this.logEvent('level_start', { caseId, mode, pathKey });
   }
 
-  logLevelComplete(caseId, mode, attemptsUsed, success) {
+  logLevelComplete(caseId, mode, attemptsUsed, success, pathKey = 'ROOT') {
     this.logEvent('level_complete', {
       caseId,
       mode,
       attemptsUsed,
       success,
       result: success ? 'solved' : 'failed',
+      pathKey
     });
+  }
+
+  logDecision(caseId, decisionKey) {
+    this.logEvent('story_decision', { caseId, decisionKey });
   }
 
   logWordSelected(word, isCorrect) {
