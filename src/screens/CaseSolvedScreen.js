@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import ScreenSurface from "../components/ScreenSurface";
 import PrimaryButton from "../components/PrimaryButton";
@@ -205,7 +206,9 @@ export default function CaseSolvedScreen({
   } else if (storyLocked) {
     storyActionLabel = "Chapter Locked";
   }
-  const storyActionIcon = solved ? "▶" : "↻";
+  const storyActionIcon = solved 
+    ? <MaterialCommunityIcons name="play" size={20} color={COLORS.textSecondary} />
+    : <MaterialCommunityIcons name="replay" size={20} color={COLORS.textSecondary} />;
   const storyActionDisabled = awaitingDecision || storyLocked;
 
   const { sizeClass, isLandscape, moderateScale, scaleSpacing, scaleRadius } =
@@ -997,17 +1000,17 @@ export default function CaseSolvedScreen({
                 <SecondaryButton
                   label="Read Case File"
                   onPress={() => onReadCaseFile?.()}
-                  icon="📁"
+                  icon={<MaterialCommunityIcons name="folder-text" size={20} color={COLORS.textSecondary} />}
                 />
                 <SecondaryButton
                   label="Share Results"
                   onPress={() => onShare?.(shareMessage)}
-                  icon="📤"
+                  icon={<MaterialCommunityIcons name="share-variant" size={20} color={COLORS.textSecondary} />}
                 />
                 <SecondaryButton
                   label="Return to Story Hub"
                   onPress={onReturnHome}
-                  icon="🗂️"
+                  icon={<MaterialCommunityIcons name="folder-table" size={20} color={COLORS.textSecondary} />}
                 />
               </>
             ) : (
@@ -1015,12 +1018,12 @@ export default function CaseSolvedScreen({
                   <PrimaryButton
                     label="Read Case File"
                     onPress={() => onReadCaseFile?.()}
-                    icon="📁"
+                    icon={<MaterialCommunityIcons name="folder-text" size={20} color={COLORS.textSecondary} />}
                   />
                   <SecondaryButton
                     label="Share Results"
                     onPress={() => onShare?.(shareMessage)}
-                    icon="📤"
+                    icon={<MaterialCommunityIcons name="share-variant" size={20} color={COLORS.textSecondary} />}
                   />
               {hasStoryCampaign && awaitingDecision ? (
                 <Text style={styles.storyStatusText}>

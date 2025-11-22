@@ -105,9 +105,13 @@ export default function PrimaryButton({
             <View style={styles.gloss} pointerEvents="none" />
             <View style={[styles.content, responsiveStyles.content]}>
               {icon ? (
-                <Text style={[styles.icon, responsiveStyles.icon, { color: disabled ? palette.glyphDisabled : palette.glyph }]}>
-                  {icon}
-                </Text>
+                typeof icon === 'string' ? (
+                  <Text style={[styles.icon, responsiveStyles.icon, { color: disabled ? palette.glyphDisabled : palette.glyph }]}>
+                    {icon}
+                  </Text>
+                ) : (
+                  <View style={styles.iconWrapper}>{icon}</View>
+                )
               ) : null}
               <Text
                 style={[styles.label, responsiveStyles.label, { color: disabled ? palette.textDisabled : palette.text }]}

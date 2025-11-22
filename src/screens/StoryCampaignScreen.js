@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
@@ -138,7 +139,12 @@ export default function StoryCampaignScreen({
           <View style={[styles.heroActions, (compact || medium) && styles.heroActionsStack]}>
             <PrimaryButton
               label={resumeAvailable ? 'Continue Story' : hasStarted ? 'Resume Story' : 'Start Story'}
-              icon={resumeAvailable ? '▶' : hasStarted ? '⏵' : '★'}
+              icon={resumeAvailable 
+                ? <MaterialCommunityIcons name="play-circle-outline" size={20} color={COLORS.textSecondary} />
+                : hasStarted 
+                  ? <MaterialCommunityIcons name="play" size={20} color={COLORS.textSecondary} />
+                  : <MaterialCommunityIcons name="star" size={20} color={COLORS.textSecondary} />
+              }
               disabled={awaitingDecision}
               onPress={() => {
                 if (resumeAvailable) {
@@ -152,14 +158,14 @@ export default function StoryCampaignScreen({
             />
             <SecondaryButton
               label={hasHistory ? 'Restart Campaign' : 'Start Fresh'}
-              icon="↺"
+              icon={<MaterialCommunityIcons name="refresh" size={20} color={COLORS.textSecondary} />}
               onPress={hasHistory ? handleRestart : onStartStory}
               style={compact ? { alignSelf: 'stretch' } : null}
             />
             {!premiumUnlocked && (
                  <SecondaryButton
                     label="Unlock All ($6.99)"
-                    icon="🔓"
+                    icon={<MaterialCommunityIcons name="lock-open-variant" size={20} color={COLORS.textSecondary} />}
                     onPress={async () => {
                         const success = await onPurchaseFullUnlock();
                         if (success) {

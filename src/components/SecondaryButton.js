@@ -90,7 +90,11 @@ export default function SecondaryButton({
             </Text>
           ) : null}
           {icon ? (
-            <Text style={[styles.glyph, responsiveStyles.glyph, { color: COLORS.textSecondary }]}>{icon}</Text>
+            typeof icon === 'string' ? (
+              <Text style={[styles.glyph, responsiveStyles.glyph, { color: COLORS.textSecondary }]}>{icon}</Text>
+            ) : (
+              <View style={styles.iconWrapper}>{icon}</View>
+            )
           ) : null}
           <Text
             style={[styles.label, responsiveStyles.label]}

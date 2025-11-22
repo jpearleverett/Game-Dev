@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import { COLORS } from '../constants/colors';
@@ -77,7 +78,10 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
   return (
     <ScreenSurface variant="default">
       <View style={styles.header}>
-        <Text style={styles.envelope}>📧 NEW MESSAGE</Text>
+        <View style={styles.headerRow}>
+            <MaterialCommunityIcons name="email-alert-outline" size={24} color={COLORS.cigaretteSmoke} />
+            <Text style={styles.envelope}>NEW MESSAGE</Text>
+        </View>
         <View style={styles.divider} />
         <Text style={styles.meta}>From: Unknown</Text>
         <Text style={styles.meta}>Subject: Remember?</Text>
@@ -90,7 +94,11 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
         ))}
       </ScrollView>
       <View style={styles.footer}>
-        <PrimaryButton label="Begin Investigation" onPress={onBegin} icon="▶" />
+        <PrimaryButton 
+            label="Begin Investigation" 
+            onPress={onBegin} 
+            icon={<MaterialCommunityIcons name="arrow-right" size={20} color={COLORS.textSecondary} />} 
+        />
       </View>
     </ScreenSurface>
   );
@@ -99,6 +107,11 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
 const styles = StyleSheet.create({
   header: {
     marginBottom: SPACING.lg,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   envelope: {
     fontFamily: FONTS.primaryBold,
