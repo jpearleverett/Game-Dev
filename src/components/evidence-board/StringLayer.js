@@ -13,13 +13,16 @@ const StringLine = React.memo(({ connector, thickness, delay = 0 }) => {
   const animatedValue = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.timing(animatedValue, {
+    const animation = Animated.timing(animatedValue, {
       toValue: 0,
       duration: 600,
       delay,
       useNativeDriver: false,
       easing: Easing.out(Easing.cubic),
-    }).start();
+    });
+    
+    animation.start();
+    return () => animation.stop();
   }, [delay]);
 
   const strokeDashoffset = animatedValue.interpolate({
