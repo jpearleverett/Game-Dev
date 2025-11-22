@@ -15,6 +15,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
+import { COLORS } from "../constants/colors";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { GAME_STATUS } from "../context/GameContext";
 import { createCasePalette } from "../theme/casePalette";
