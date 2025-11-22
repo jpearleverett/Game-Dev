@@ -1,1035 +1,301 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-
-import PrimaryButton from './PrimaryButton';
-import SecondaryButton from './SecondaryButton';
+import { Animated, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { FONTS, FONT_SIZES } from '../constants/typography';
-import { RADIUS, SPACING } from '../constants/layout';
+import { SPACING, RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
-import { createCasePalette } from '../theme/casePalette';
-
-const FONT_TWEAK_FACTOR = 0.95;
-const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
-
-function parseDailyIntro(dailyIntro) {
-  if (typeof dailyIntro !== 'string' || !dailyIntro.trim()) {
-    return null;
-  }
-
-  const lines = dailyIntro
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (!lines.length) {
-    return null;
-  }
-
-  const [slug, focus, ...rest] = lines;
-  return {
-    slug,
-    focus: focus || null,
-    annotation: rest.length ? rest.join('\n') : null,
-  };
-}
+import PrimaryButton from './PrimaryButton';
 
 export default function CaseBriefOverlay({
   visible,
   caseData,
   onDismiss,
-  onOpenCaseFile,
   reducedMotion = false,
 }) {
   const [shouldRender, setShouldRender] = useState(visible);
-  const backdropOpacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const contentOpacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const contentTranslate = useRef(new Animated.Value(visible ? 0 : 24)).current;
+  const fadeAnim = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const slideAnim = useRef(new Animated.Value(visible ? 0 : 20)).current;
 
   useEffect(() => {
     if (visible) {
       setShouldRender(true);
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (!shouldRender) {
-      return;
-    }
-
-    if (reducedMotion) {
-      backdropOpacity.setValue(visible ? 1 : 0);
-      contentOpacity.setValue(visible ? 1 : 0);
-      contentTranslate.setValue(0);
-      if (!visible) {
-        setShouldRender(false);
-      }
-      return;
-    }
-
-    if (visible) {
       Animated.parallel([
-        Animated.timing(backdropOpacity, {
+        Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 260,
+          duration: reducedMotion ? 0 : 300,
           useNativeDriver: true,
         }),
-        Animated.timing(contentOpacity, {
-          toValue: 1,
-          duration: 340,
-          useNativeDriver: true,
-        }),
-        Animated.spring(contentTranslate, {
+        Animated.timing(slideAnim, {
           toValue: 0,
-          damping: 18,
-          stiffness: 160,
-          mass: 0.9,
+          duration: reducedMotion ? 0 : 400,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(backdropOpacity, {
+        Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 200,
+          duration: reducedMotion ? 0 : 200,
           useNativeDriver: true,
         }),
-        Animated.timing(contentOpacity, {
-          toValue: 0,
-          duration: 200,
+        Animated.timing(slideAnim, {
+          toValue: 20,
+          duration: reducedMotion ? 0 : 200,
           useNativeDriver: true,
         }),
-        Animated.timing(contentTranslate, {
-          toValue: 24,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) {
-          setShouldRender(false);
-        }
-      });
+      ]).start(() => setShouldRender(false));
     }
-  }, [visible, reducedMotion, shouldRender, backdropOpacity, contentOpacity, contentTranslate]);
+  }, [visible, reducedMotion]);
 
-  const {
-    moderateScale,
-    scaleSpacing,
-    scaleRadius,
-    sizeClass,
-    containerPadding,
-    surfacePadding,
-    surfaceRadius,
-    isTablet,
-  } = useResponsiveLayout();
+  const { moderateScale, scaleSpacing } = useResponsiveLayout();
 
-  const compact = sizeClass === 'xsmall' || sizeClass === 'small';
-  const palette = useMemo(() => createCasePalette(caseData), [caseData]);
-  const dailyIntro = useMemo(() => parseDailyIntro(caseData?.dailyIntro), [caseData?.dailyIntro]);
-  const bridgeEntries = useMemo(() => {
-    if (!caseData?.bridgeText || !Array.isArray(caseData.bridgeText)) {
-      return [];
-    }
-    return caseData.bridgeText.filter(Boolean);
+  const content = useMemo(() => {
+    if (!caseData) return null;
+    
+    // Recap logic
+    const recapText = caseData.dailyIntro || '';
+    const cleanRecap = recapText
+        .replace(/PREVIOUSLY:/i, '')
+        .trim()
+        .split('\n')
+        .slice(0, 3) // Keep it short
+        .join('\n');
+
+    // Objectives
+    const objectives = caseData.briefing?.objectives || [];
+    const summary = caseData.briefing?.summary || 'Review the evidence board. Identify the outliers.';
+
+    return {
+      caseNumber: caseData.caseNumber || '---',
+      title: caseData.title || 'Classified',
+      recap: cleanRecap,
+      summary,
+      objectives,
+    };
   }, [caseData]);
 
-  const primaryObjectives = useMemo(() => {
-    if (!caseData?.briefing?.objectives || !Array.isArray(caseData.briefing.objectives)) {
-      return [];
-    }
-    return caseData.briefing.objectives.filter((entry) => typeof entry === 'string' && entry.trim().length > 0);
-  }, [caseData?.briefing?.objectives]);
-
-  const fallbackObjectives = useMemo(() => {
-    const missions = [];
-    const mainName = caseData?.mainTheme?.name ? caseData.mainTheme.name.toLowerCase() : null;
-    const outlierName = caseData?.outlierTheme?.name ? caseData.outlierTheme.name.toLowerCase() : null;
-    if (mainName) {
-      missions.push(`Trace every ${mainName} cue on the board to confirm the main thread.`);
-    }
-    if (outlierName) {
-      missions.push(`Isolate references to ${outlierName}—they often point to the outliers you need to tag.`);
-    }
-    missions.push('Lock your selections before the attempt counter runs dry to keep the investigation on track.');
-    return missions;
-  }, [caseData?.mainTheme?.name, caseData?.outlierTheme?.name]);
-
-  const objectivesToShow = primaryObjectives.length > 0 ? primaryObjectives : fallbackObjectives;
-
-  const summaryText = useMemo(() => {
-    const customSummary = caseData?.briefing?.summary;
-    if (typeof customSummary === 'string' && customSummary.trim().length > 0) {
-      return customSummary.trim();
-    }
-    const intro = typeof caseData?.dailyIntro === 'string' ? caseData.dailyIntro : '';
-    if (!intro) {
-      return null;
-    }
-    const sanitized = intro
-      .replace(/\r/g, '')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    if (!sanitized.length) {
-      return null;
-    }
-    return sanitized.slice(0, 3).join('\n');
-  }, [caseData?.briefing?.summary, caseData?.dailyIntro]);
-
-  const clueSummary = caseData?.clueSummaries?.main || null;
-  const clueOutliers = useMemo(() => {
-    const entries = caseData?.clueSummaries?.outliers;
-    if (!entries) return [];
-    return Object.entries(entries).filter(([word, detail]) => Boolean(word) && Boolean(detail));
-  }, [caseData]);
-
-  const outlierWords = caseData?.board?.outlierWords || [];
-  const detailedIntelUnlocked = Boolean(caseData?.allowBriefingSpoilers);
-
-  const metrics = useMemo(() => {
-    const items = [
-      {
-        id: 'attempts',
-        label: 'Attempts',
-        value: caseData?.attempts != null ? `${caseData.attempts}` : '—',
-      },
-      {
-        id: 'outliers',
-        label: 'Outliers',
-        value: outlierWords.length ? `${outlierWords.length}` : '—',
-      },
-    ];
-    return items;
-  }, [caseData?.attempts, outlierWords.length]);
-
-  const handleDismiss = () => {
-    onDismiss?.();
-  };
-
-  if (!shouldRender || !caseData) {
-    return null;
-  }
-
-  const cardRadius = scaleRadius(surfaceRadius);
-  const sectionRadius = scaleRadius(RADIUS.lg);
-  const badgeRadius = scaleRadius(RADIUS.md);
-  const objectiveBadgeRadius = scaleRadius(RADIUS.sm);
-  const headingSize = shrinkFont(moderateScale(compact ? FONT_SIZES.lg : FONT_SIZES.title));
-  const heroTitleSize = shrinkFont(
-    moderateScale(compact ? FONT_SIZES.display : FONT_SIZES.display + (sizeClass === 'xlarge' ? 6 : 2)),
-  );
-  const bodySize = shrinkFont(moderateScale(FONT_SIZES.md));
-  const smallBodySize = shrinkFont(moderateScale(FONT_SIZES.sm));
-  const badgeLabelSize = shrinkFont(moderateScale(FONT_SIZES.xs));
-  const heroTitleLetterSpacing = compact ? 2.2 : 4;
-  const heroSlugLetterSpacing = compact ? 2.6 : 4;
-  const badgeLetterSpacing = compact ? 1.6 : 2;
-  const bodyLineHeight = Math.round(bodySize * (compact ? 1.45 : 1.56));
-  const smallBodyLineHeight = Math.round(smallBodySize * (compact ? 1.38 : 1.46));
-  const summaryLineHeight = Math.round(bodySize * (compact ? 1.52 : 1.64));
-  const metricValueSize = shrinkFont(moderateScale(FONT_SIZES.lg));
-  const metricValueLineHeight = Math.round(metricValueSize * 1.18);
-
-  const topPadding = scaleSpacing(compact ? SPACING.lg : SPACING.xl);
-  const bottomPadding = scaleSpacing(compact ? SPACING.xl : SPACING.xxl) + surfacePadding;
-  const pagePaddingHorizontal = isTablet
-    ? containerPadding + scaleSpacing(compact ? SPACING.sm : SPACING.md)
-    : scaleSpacing(0);
-  const heroInnerPadding = surfacePadding + scaleSpacing(compact ? SPACING.xs : SPACING.sm);
-  const verticalGap = scaleSpacing(compact ? SPACING.lg : SPACING.xl);
-  const sectionGap = scaleSpacing(compact ? SPACING.md : SPACING.lg);
-  const inlineGap = scaleSpacing(SPACING.sm);
-  const badgeSpacing = scaleSpacing(SPACING.xs);
-  const calloutPadding = scaleSpacing(SPACING.sm);
-
-  const caseNumber = String(caseData.caseNumber || '---').padStart(3, '0');
-  const seasonLabel = caseData?.season != null ? `Season ${caseData.season}` : null;
-  const dayLabel = caseData?.day != null ? `Day ${caseData.day}` : null;
+  if (!shouldRender || !content) return null;
 
   return (
-    <View style={styles.root} pointerEvents="box-none">
-      <Animated.View pointerEvents="none" style={[styles.backdropContainer, { opacity: backdropOpacity }]}>
-        <LinearGradient
-          colors={[palette.overlayStart, palette.overlayMid, palette.overlayEnd]}
-          locations={[0, 0.55, 1]}
-          style={styles.backdropGradient}
-        />
-        <View style={styles.backdropTint} />
-      </Animated.View>
-
-      <Animated.View
-        pointerEvents={visible ? 'auto' : 'none'}
+    <View style={styles.overlay} pointerEvents={visible ? 'auto' : 'none'}>
+      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+      
+      <Animated.View 
         style={[
-          styles.contentLayer,
-          {
-            opacity: contentOpacity,
-            transform: [{ translateY: contentTranslate }],
-          },
+          styles.container, 
+          { 
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }] 
+          }
         ]}
       >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingTop: topPadding,
-              paddingBottom: bottomPadding,
-              paddingHorizontal: pagePaddingHorizontal,
-              gap: verticalGap,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          <View
-            style={[
-              styles.heroSection,
-              {
-                borderRadius: cardRadius,
-                padding: heroInnerPadding,
-                backgroundColor: palette.surface,
-                borderColor: palette.border,
-                gap: sectionGap,
-              },
-            ]}
+        <View style={styles.paperSheet}>
+          {/* Decorative Tape/Stamp */}
+          <View style={styles.stampContainer}>
+            <Text style={styles.stampText}>CONFIDENTIAL</Text>
+          </View>
+
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.paperContent}
           >
-            <View
-              style={[
-                styles.heroHeaderRow,
-                compact
-                  ? {
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: scaleSpacing(SPACING.xs),
-                    }
-                  : {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: scaleSpacing(SPACING.sm),
-                    },
-                {
-                  marginBottom: scaleSpacing(SPACING.sm),
-                },
-              ]}
-            >
-                <Text
-                  style={[
-                    styles.heroSlug,
-                    {
-                      fontSize: smallBodySize,
-                      color: palette.primary,
-                      letterSpacing: heroSlugLetterSpacing,
-                      lineHeight: smallBodyLineHeight,
-                    },
-                  ]}
-                >
-                  {dailyIntro?.slug || 'CASE BRIEFING'}
-                </Text>
-                <View
-                  style={[
-                    styles.heroBadgeRow,
-                    {
-                      gap: badgeSpacing,
-                    },
-                    compact
-                      ? {
-                          width: '100%',
-                          justifyContent: 'flex-start',
-                        }
-                      : {
-                          justifyContent: 'flex-end',
-                        },
-                  ]}
-                >
-                  {seasonLabel ? (
-                    <View
-                      style={[
-                        styles.heroBadge,
-                        {
-                          borderRadius: badgeRadius,
-                          borderColor: palette.border,
-                          backgroundColor: palette.badgeBackground,
-                          paddingHorizontal: scaleSpacing(SPACING.sm),
-                          paddingVertical: scaleSpacing(SPACING.xs),
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.heroBadgeText,
-                          {
-                            fontSize: badgeLabelSize,
-                            color: palette.badgeText,
-                            letterSpacing: badgeLetterSpacing,
-                          },
-                        ]}
-                      >
-                        {seasonLabel.toUpperCase()}
-                      </Text>
-                    </View>
-                    ) : null}
-                  {dayLabel ? (
-                    <View
-                      style={[
-                        styles.heroBadge,
-                        {
-                          borderRadius: badgeRadius,
-                          borderColor: palette.border,
-                          backgroundColor: palette.badgeBackground,
-                          paddingHorizontal: scaleSpacing(SPACING.sm),
-                          paddingVertical: scaleSpacing(SPACING.xs),
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.heroBadgeText,
-                          {
-                            fontSize: badgeLabelSize,
-                            color: palette.badgeText,
-                            letterSpacing: badgeLetterSpacing,
-                          },
-                        ]}
-                      >
-                        {dayLabel.toUpperCase()}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
+            {/* Header */}
+            <View style={styles.headerBlock}>
+              <Text style={styles.label}>CASE FILE:</Text>
+              <Text style={styles.headerTitle}>{content.caseNumber} — {content.title.toUpperCase()}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Recap (Optional) */}
+            {content.recap ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>PRIOR EVENTS</Text>
+                <Text style={styles.bodyText}>{content.recap}</Text>
               </View>
+            ) : null}
 
-              <View
-                style={[
-                  styles.heroTitleBlock,
-                  {
-                    gap: scaleSpacing(SPACING.xs),
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.heroTitle,
-                    {
-                      fontSize: heroTitleSize,
-                      color: palette.highlightText,
-                      letterSpacing: heroTitleLetterSpacing,
-                      lineHeight: Math.round(heroTitleSize * (compact ? 1.08 : 1.12)),
-                    },
-                  ]}
-                >
-                  {caseData.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.caseNumber,
-                    {
-                      fontSize: badgeLabelSize,
-                      color: palette.badgeText,
-                      letterSpacing: badgeLetterSpacing,
-                    },
-                  ]}
-                >
-                  Case File #{caseNumber}
-                </Text>
-              </View>
+            {/* Mission Summary */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>CURRENT OBJECTIVE</Text>
+              <Text style={styles.bodyTextHighlight}>{content.summary}</Text>
+            </View>
 
-              {summaryText ? (
-                <View
-                  style={[
-                    styles.summaryCard,
-                    {
-                      borderRadius: sectionRadius,
-                      borderColor: palette.border,
-                      backgroundColor: palette.surfaceAlt,
-                      padding: calloutPadding,
-                      gap: scaleSpacing(SPACING.xs),
-                    },
-                  ]}
-                >
-                  {summaryText.split('\n').map((line, index) => (
-                    <Text
-                      key={`${line}-${index}`}
-                      style={[
-                        styles.heroSummaryLine,
-                        {
-                          fontSize: bodySize,
-                          color: palette.subtleText,
-                          lineHeight: summaryLineHeight,
-                        },
-                      ]}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-
-              {dailyIntro?.annotation ? (
-                <View
-                  style={[
-                    styles.heroCallout,
-                    {
-                      borderRadius: badgeRadius,
-                      borderColor: palette.border,
-                      backgroundColor: palette.surfaceAlt,
-                      padding: calloutPadding,
-                      gap: scaleSpacing(SPACING.xs),
-                      borderLeftColor: palette.accent,
-                      borderLeftWidth: 2,
-                    },
-                  ]}
-                >
-                  {dailyIntro.annotation.split('\n').map((line, index) => (
-                    <Text
-                      key={`${line}-${index}`}
-                      style={[
-                        styles.heroCalloutText,
-                        {
-                          fontSize: smallBodySize,
-                          color: palette.badgeText,
-                          lineHeight: smallBodyLineHeight,
-                        },
-                      ]}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-
-              <View style={[styles.glowBar, { backgroundColor: palette.glow }]} />
-
-              <View
-                style={[
-                  styles.metricRow,
-                  {
-                    gap: inlineGap,
-                  },
-                ]}
-              >
-                {metrics.map((metric) => (
-                  <View
-                    key={metric.id}
-                    style={[
-                      styles.metricCard,
-                      {
-                        borderRadius: badgeRadius,
-                        borderColor: palette.border,
-                        backgroundColor: palette.metricBackground,
-                        paddingHorizontal: scaleSpacing(SPACING.md),
-                        paddingVertical: scaleSpacing(SPACING.sm),
-                        gap: scaleSpacing(SPACING.xs),
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.metricLabel,
-                        {
-                          fontSize: badgeLabelSize,
-                          color: palette.badgeText,
-                          letterSpacing: badgeLetterSpacing,
-                        },
-                      ]}
-                    >
-                      {metric.label}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.metricValue,
-                        {
-                          fontSize: metricValueSize,
-                          color: palette.highlightText,
-                          lineHeight: metricValueLineHeight,
-                        },
-                      ]}
-                    >
-                      {metric.value}
-                    </Text>
+            {/* Directives List */}
+            {content.objectives.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>DIRECTIVES</Text>
+                {content.objectives.map((obj, index) => (
+                  <View key={index} style={styles.objectiveRow}>
+                    <Text style={styles.objectiveBullet}>{index + 1}.</Text>
+                    <Text style={styles.objectiveText}>{obj}</Text>
                   </View>
                 ))}
               </View>
+            )}
 
-            {objectivesToShow.length > 0 ? (
-              <View
-                style={[
-                  styles.sectionCard,
-                  {
-                    borderRadius: sectionRadius,
-                    borderColor: palette.border,
-                    backgroundColor: palette.surfaceAlt,
-                    padding: surfacePadding + scaleSpacing(compact ? 0 : SPACING.xs),
-                    gap: scaleSpacing(SPACING.sm),
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionHeading,
-                    {
-                      fontSize: headingSize,
-                      color: palette.primary,
-                    },
-                  ]}
-                >
-                  Primary Objectives
-                </Text>
-                <View style={[styles.objectiveList, { gap: inlineGap }]}>
-                  {objectivesToShow.map((objective, index) => (
-                    <View
-                      key={`${objective}-${index}`}
-                      style={[
-                        styles.objectiveRow,
-                        {
-                          gap: inlineGap,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.objectiveBadge,
-                          {
-                            borderRadius: objectiveBadgeRadius,
-                            borderColor: palette.border,
-                            backgroundColor: palette.badgeBackground,
-                            paddingHorizontal: scaleSpacing(SPACING.sm),
-                            paddingVertical: scaleSpacing(SPACING.xs),
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.objectiveBadgeText,
-                            {
-                              fontSize: smallBodySize,
-                              color: palette.accent,
-                            letterSpacing: badgeLetterSpacing,
-                            lineHeight: smallBodyLineHeight,
-                            },
-                          ]}
-                        >
-                          {index + 1 < 10 ? `0${index + 1}` : index + 1}
-                        </Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.objectiveCopy,
-                          {
-                            fontSize: bodySize,
-                            color: palette.highlightText,
-                          },
-                        ]}
-                      >
-                        {objective}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {bridgeEntries.length > 0 ? (
-              <View
-                style={[
-                  styles.sectionCard,
-                  {
-                    borderRadius: sectionRadius,
-                    borderColor: palette.border,
-                    backgroundColor: palette.surfaceAlt,
-                    padding: surfacePadding + scaleSpacing(compact ? 0 : SPACING.xs),
-                    gap: scaleSpacing(SPACING.sm),
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionHeading,
-                    {
-                      fontSize: headingSize,
-                      color: palette.primary,
-                    },
-                  ]}
-                >
-                  Detailed Intel
-                </Text>
-                {detailedIntelUnlocked ? (
-                  <View style={[styles.bridgeList, { gap: inlineGap }]}>
-                    {bridgeEntries.map((entry, index) => (
-                      <View
-                        key={`${entry}-${index}`}
-                        style={[
-                          styles.bridgeRow,
-                          {
-                            gap: inlineGap,
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.bridgeBadge,
-                            {
-                              borderRadius: objectiveBadgeRadius,
-                              borderColor: palette.border,
-                              backgroundColor: palette.badgeBackground,
-                              paddingHorizontal: scaleSpacing(SPACING.sm),
-                              paddingVertical: scaleSpacing(SPACING.xs),
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.bridgeBadgeText,
-                              {
-                                fontSize: smallBodySize,
-                                color: palette.accent,
-                            letterSpacing: badgeLetterSpacing,
-                            lineHeight: smallBodyLineHeight,
-                              },
-                            ]}
-                          >
-                            {index + 1 < 10 ? `0${index + 1}` : index + 1}
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            styles.bridgeText,
-                            {
-                              fontSize: bodySize,
-                              color: palette.subtleText,
-                            },
-                          ]}
-                        >
-                          {entry}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text
-                    style={[
-                      styles.lockedCopy,
-                      {
-                        fontSize: bodySize,
-                        color: palette.badgeText,
-                      },
-                    ]}
-                  >
-                    Close the case to unlock the full field notes from the investigation.
-                  </Text>
-                )}
-              </View>
-            ) : null}
-
-            {(clueSummary || clueOutliers.length > 0) ? (
-              <View
-                style={[
-                  styles.sectionCard,
-                  {
-                    borderRadius: sectionRadius,
-                    borderColor: palette.border,
-                    backgroundColor: palette.surfaceAlt,
-                    padding: surfacePadding + scaleSpacing(compact ? 0 : SPACING.xs),
-                    gap: scaleSpacing(SPACING.sm),
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionHeading,
-                    {
-                      fontSize: headingSize,
-                      color: palette.primary,
-                    },
-                  ]}
-                >
-                  Key Evidence
-                </Text>
-                {detailedIntelUnlocked ? (
-                  <>
-                    {clueSummary ? (
-                      <Text
-                        style={[
-                          styles.copyPrimary,
-                          {
-                            fontSize: bodySize,
-                            color: palette.subtleText,
-                          },
-                        ]}
-                      >
-                        {clueSummary}
-                      </Text>
-                    ) : null}
-                    {clueOutliers.length > 0 ? (
-                      <View style={[styles.evidenceList, { gap: inlineGap }]}>
-                        {clueOutliers.map(([word, detail]) => (
-                          <View
-                            key={word}
-                            style={[
-                              styles.evidenceRow,
-                              {
-                                gap: inlineGap,
-                              },
-                            ]}
-                          >
-                            <View
-                              style={[
-                                styles.evidenceBadge,
-                                {
-                                  borderRadius: badgeRadius,
-                                  borderColor: palette.accent,
-                                  backgroundColor: 'rgba(241, 197, 114, 0.16)',
-                                  paddingHorizontal: scaleSpacing(SPACING.md),
-                                  paddingVertical: scaleSpacing(SPACING.xs),
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.evidenceBadgeText,
-                                  {
-                                    fontSize: smallBodySize,
-                                    color: palette.accent,
-                              letterSpacing: badgeLetterSpacing,
-                              lineHeight: smallBodyLineHeight,
-                                  },
-                                ]}
-                              >
-                                {word}
-                              </Text>
-                            </View>
-                            <Text
-                              style={[
-                                styles.evidenceDetail,
-                                {
-                                  fontSize: smallBodySize,
-                                  color: palette.subtleText,
-                                },
-                              ]}
-                            >
-                              {detail}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : null}
-                  </>
-                ) : (
-                  <Text
-                    style={[
-                      styles.lockedCopy,
-                      {
-                        fontSize: bodySize,
-                        color: palette.badgeText,
-                      },
-                    ]}
-                  >
-                    Solve the board to receive the evidence digest and outlier breakdown.
-                  </Text>
-                )}
-                </View>
-              ) : null}
-
-              <View style={[styles.footerActions, { gap: inlineGap }]}>
-                <PrimaryButton
-                  label="Begin Investigation"
-                  icon="▶"
-                  arrow={false}
-                  onPress={handleDismiss}
-                  fullWidth
-                />
-                {onOpenCaseFile ? (
-                  <SecondaryButton
-                    label="Review Case File"
-                    icon="📁"
-                    onPress={onOpenCaseFile}
-                    style={styles.secondaryAction}
-                  />
-                ) : null}
-              </View>
+            {/* Footer Signature */}
+            <View style={styles.footerSection}>
+              <Text style={styles.signatureLabel}>APPROVED FOR INVESTIGATION</Text>
+              <Text style={styles.signature}>Jack Halloway</Text>
             </View>
           </ScrollView>
-        </Animated.View>
-      </View>
+
+          {/* Action Button */}
+          <View style={styles.actionContainer}>
+            <PrimaryButton 
+              label="ACCEPT ASSIGNMENT" 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onDismiss();
+              }} 
+              fullWidth
+            />
+          </View>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  overlay: {
     ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
   },
-  backdropContainer: {
+  backdrop: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 5, 2, 0.85)',
   },
-  backdropGradient: {
-    ...StyleSheet.absoluteFillObject,
+  container: {
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  backdropTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(4, 5, 8, 0.55)',
-  },
-  contentLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  scroll: {
+  paperSheet: {
+    backgroundColor: '#F4F1EA', // Cream paper color
+    borderRadius: 2,
+    overflow: 'hidden',
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
+  paperContent: {
+    padding: SPACING.xl,
+    paddingBottom: SPACING.xxl * 2,
   },
-  heroSection: {
-    borderWidth: 1,
-    overflow: 'hidden',
-    alignSelf: 'stretch',
+  stampContainer: {
+    position: 'absolute',
+    top: SPACING.lg,
+    right: SPACING.lg,
+    borderWidth: 2,
+    borderColor: '#C0392B', // Stamp Red
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    transform: [{ rotate: '-12deg' }],
+    opacity: 0.8,
+    zIndex: 10,
   },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    width: '100%',
-  },
-  heroSlug: {
+  stampText: {
     fontFamily: FONTS.monoBold,
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-  },
-  heroBadge: {
-    borderWidth: 1,
-  },
-  heroBadgeText: {
-    fontFamily: FONTS.mono,
-    letterSpacing: 1.6,
-  },
-  heroTitleBlock: {
-    width: '100%',
-  },
-  heroTitle: {
-    fontFamily: FONTS.secondaryBold,
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-  },
-  caseNumber: {
-    fontFamily: FONTS.mono,
+    color: '#C0392B',
+    fontSize: FONT_SIZES.xs,
     letterSpacing: 2,
   },
-  summaryCard: {
-    borderWidth: 1,
+  headerBlock: {
+    marginBottom: SPACING.md,
   },
-  heroSummaryLine: {
-    fontFamily: FONTS.primary,
-  },
-  heroCallout: {
-    borderWidth: 1,
-  },
-  heroCalloutText: {
+  label: {
     fontFamily: FONTS.mono,
-    letterSpacing: 1.4,
+    fontSize: FONT_SIZES.xs,
+    color: '#888',
+    marginBottom: 4,
+    letterSpacing: 1,
   },
-  glowBar: {
-    height: 2,
-    borderRadius: 2,
+  headerTitle: {
+    fontFamily: FONTS.monoBold, // Typewriter style header
+    fontSize: FONT_SIZES.lg,
+    color: '#1A1A1A',
+    letterSpacing: 0.5,
   },
-  metricRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  divider: {
+    height: 1,
+    backgroundColor: '#D3CFC6',
+    marginBottom: SPACING.lg,
   },
-  metricCard: {
-    minWidth: 120,
-    borderWidth: 1,
+  section: {
+    marginBottom: SPACING.lg,
   },
-  metricLabel: {
-    fontFamily: FONTS.mono,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  metricValue: {
-    fontFamily: FONTS.secondaryBold,
-    letterSpacing: 2.4,
-  },
-  sectionCard: {
-    borderWidth: 1,
-    alignSelf: 'stretch',
-  },
-  sectionHeading: {
+  sectionLabel: {
     fontFamily: FONTS.monoBold,
-    letterSpacing: 3,
+    fontSize: FONT_SIZES.xs,
+    color: '#555',
+    marginBottom: SPACING.sm,
     textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0DDD5',
+    paddingBottom: 4,
+    alignSelf: 'flex-start',
   },
-  copyPrimary: {
-    fontFamily: FONTS.primary,
-    lineHeight: 22,
+  bodyText: {
+    fontFamily: FONTS.primary, // Serif/Playfair
+    fontSize: FONT_SIZES.md,
+    color: '#333',
+    lineHeight: 24,
   },
-  objectiveList: {
-    flexDirection: 'column',
+  bodyTextHighlight: {
+    fontFamily: FONTS.primaryMedium,
+    fontSize: FONT_SIZES.md + 1,
+    color: '#111',
+    lineHeight: 26,
+    fontStyle: 'italic',
   },
   objectiveRow: {
     flexDirection: 'row',
+    marginBottom: SPACING.sm,
     alignItems: 'flex-start',
   },
-  objectiveBadge: {
-    borderWidth: 1,
+  objectiveBullet: {
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZES.md,
+    color: '#555',
+    marginRight: SPACING.sm,
+    marginTop: 2,
   },
-  objectiveBadgeText: {
-    fontFamily: FONTS.monoBold,
-    letterSpacing: 2,
-  },
-  objectiveCopy: {
+  objectiveText: {
+    fontFamily: FONTS.primary,
+    fontSize: FONT_SIZES.md,
+    color: '#222',
     flex: 1,
-    fontFamily: FONTS.primary,
     lineHeight: 22,
   },
-  bridgeList: {
-    flexDirection: 'column',
+  footerSection: {
+    marginTop: SPACING.lg,
+    alignItems: 'flex-end',
+    opacity: 0.7,
   },
-  bridgeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  signatureLabel: {
+    fontFamily: FONTS.mono,
+    fontSize: 10,
+    color: '#888',
+    marginBottom: 4,
   },
-  bridgeBadge: {
-    borderWidth: 1,
+  signature: {
+    fontFamily: FONTS.handwriting || FONTS.secondary, // Fallback if handwriting not loaded
+    fontSize: 24,
+    color: '#000080', // Blue ink
+    transform: [{ rotate: '-5deg' }],
   },
-  bridgeBadgeText: {
-    fontFamily: FONTS.monoBold,
-    letterSpacing: 2,
-  },
-  bridgeText: {
-    flex: 1,
-    fontFamily: FONTS.primary,
-    lineHeight: 22,
-  },
-  lockedCopy: {
-    fontFamily: FONTS.primary,
-    lineHeight: 22,
-  },
-  evidenceList: {
-    flexDirection: 'column',
-  },
-  evidenceRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  evidenceBadge: {
-    borderWidth: 1,
-  },
-  evidenceBadgeText: {
-    fontFamily: FONTS.monoBold,
-    letterSpacing: 2,
-  },
-  evidenceDetail: {
-    flex: 1,
-    fontFamily: FONTS.primary,
-    lineHeight: 22,
-  },
-  footerActions: {
-    marginTop: SPACING.md,
-  },
-  secondaryAction: {
-    alignSelf: 'center',
+  actionContainer: {
+    padding: SPACING.lg,
+    backgroundColor: '#F4F1EA',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E0D6',
   },
 });
