@@ -1,18 +1,24 @@
-import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { usePersistence } from '../hooks/usePersistence';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { useStoryEngine } from '../hooks/useStoryEngine';
 import * as Haptics from 'expo-haptics';
+import { analytics } from '../services/AnalyticsService';
 
-const GameContext = createContext(null);
+const GameStateContext = createContext(null);
+const GameDispatchContext = createContext(null);
 
 export { STATUS };
 export const GAME_STATUS = STATUS;
 
 export function GameProvider({ children }) {
   const audioRef = React.useRef(null);
+
+  useEffect(() => {
+    analytics.init();
+  }, []);
 
   const setAudioController = useCallback((controller) => {
     audioRef.current = controller;
@@ -32,7 +38,7 @@ export function GameProvider({ children }) {
   const {
     gameState,
     activeCase,
-    toggleWordSelection,
+    toggleWordSelection: coreToggleWordSelection,
     submitGuess: coreSubmitGuess,
     resetBoardForCase,
     initializeGame,
@@ -76,6 +82,7 @@ export function GameProvider({ children }) {
           
           setActiveCaseInternal(targetCase.id);
           setMode('story');
+          analytics.logLevelStart(targetCase.id, 'story');
           return { ok: true, caseId: targetCase.id };
       } 
       
@@ -86,6 +93,7 @@ export function GameProvider({ children }) {
       
       setActiveCaseInternal(targetCase.id);
       setMode('daily');
+      analytics.logLevelStart(targetCase.id, 'daily');
       return { ok: true, caseId: targetCase.id };
 
     },
@@ -109,6 +117,7 @@ export function GameProvider({ children }) {
       if (!targetCase) return false;
       setActiveCaseInternal(targetCase.id);
       setMode('story');
+      analytics.logLevelStart(targetCase.id, 'story');
       return true;
   }, [setActiveCaseInternal]);
 
@@ -144,12 +153,24 @@ export function GameProvider({ children }) {
       // We don't necessarily change mode here, usually used in Archives (daily mode)
   }, [setActiveCaseInternal]);
 
+  const toggleWordSelection = useCallback((word) => {
+    coreToggleWordSelection(word);
+    // analytics.logWordSelected(word); // Optional: might be too noisy
+  }, [coreToggleWordSelection]);
+
   // Wrapped Submit Logic handling consequences
   const submitGuess = useCallback(() => {
       const result = coreSubmitGuess();
       if (!result) return;
 
       const { status: nextStatus, attemptsUsed, caseId } = result;
+
+      // Analytics
+      if (nextStatus === STATUS.SOLVED) {
+        analytics.logLevelComplete(caseId, mode, attemptsUsed, true);
+      } else if (nextStatus === STATUS.FAILED) {
+        analytics.logLevelComplete(caseId, mode, attemptsUsed, false);
+      }
 
       if (nextStatus === STATUS.SOLVED) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -239,16 +260,16 @@ export function GameProvider({ children }) {
       }
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress]);
 
-  const value = {
-    // State
+  const stateValue = useMemo(() => ({
     ...gameState,
     progress,
     hydrationComplete,
     activeCase,
     mode,
-    cases: SEASON_ONE_CASES, // Expose cases for UI
-    
-    // Actions
+    cases: SEASON_ONE_CASES,
+  }), [gameState, progress, hydrationComplete, activeCase, mode]);
+
+  const dispatchValue = useMemo(() => ({
     toggleWordSelection,
     submitGuess,
     resetBoardForCase,
@@ -259,8 +280,6 @@ export function GameProvider({ children }) {
     setPremiumUnlocked,
     clearProgress,
     markCaseBriefingSeen,
-    
-    // Story Actions
     enterStoryCampaign,
     continueStoryCampaign,
     openStoryCase,
@@ -268,15 +287,59 @@ export function GameProvider({ children }) {
     ensureDailyStoryCase,
     selectStoryDecision: storySelectDecision,
     setAudioController,
-  };
+  }), [
+    toggleWordSelection,
+    submitGuess,
+    resetBoardForCase,
+    advanceToCase,
+    unlockNextCaseIfReady,
+    updateSettings,
+    markPrologueSeen,
+    setPremiumUnlocked,
+    clearProgress,
+    markCaseBriefingSeen,
+    enterStoryCampaign,
+    continueStoryCampaign,
+    openStoryCase,
+    exitStoryCampaign,
+    ensureDailyStoryCase,
+    storySelectDecision,
+    setAudioController,
+  ]);
 
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+  return (
+    <GameDispatchContext.Provider value={dispatchValue}>
+      <GameStateContext.Provider value={stateValue}>
+        {children}
+      </GameStateContext.Provider>
+    </GameDispatchContext.Provider>
+  );
 }
 
 export function useGame() {
-  const context = useContext(GameContext);
-  if (!context) {
+  const state = useContext(GameStateContext);
+  const dispatch = useContext(GameDispatchContext);
+  
+  if (!state || !dispatch) {
     throw new Error('useGame must be used within a GameProvider');
+  }
+  
+  // Merge for backward compatibility
+  return useMemo(() => ({ ...state, ...dispatch }), [state, dispatch]);
+}
+
+export function useGameState() {
+  const context = useContext(GameStateContext);
+  if (!context) {
+    throw new Error('useGameState must be used within a GameProvider');
+  }
+  return context;
+}
+
+export function useGameDispatch() {
+  const context = useContext(GameDispatchContext);
+  if (!context) {
+    throw new Error('useGameDispatch must be used within a GameProvider');
   }
   return context;
 }
