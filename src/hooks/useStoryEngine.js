@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
 import { resolveStoryPathKey, getStoryEntry } from '../data/storyContent';
+import { saveStoredProgress } from '../storage/progressStorage';
 
 export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) {
   
@@ -71,7 +72,15 @@ export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) 
         storyCampaign: updatedStory,
         nextUnlockAt: updatedStory.nextStoryUnlockAt
     });
-  }, [storyCampaign, updateProgress]);
+    
+    // Force persistent save immediately to prevent save scumming
+    saveStoredProgress({
+        ...progress,
+        storyCampaign: updatedStory,
+        nextUnlockAt: updatedStory.nextStoryUnlockAt
+    }).catch(() => {});
+
+  }, [storyCampaign, updateProgress, progress]);
 
   // This logic was previously in 'activateStoryCase'
   const activateStoryCase = useCallback(({ skipLock = false } = {}) => {

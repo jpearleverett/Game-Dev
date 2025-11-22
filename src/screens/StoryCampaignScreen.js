@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
+import BribeModal from '../components/BribeModal';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING } from '../constants/layout';
@@ -48,6 +49,8 @@ export default function StoryCampaignScreen({
   const { moderateScale, sizeClass, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
   const medium = sizeClass === 'medium';
+
+  const [bribeModalVisible, setBribeModalVisible] = useState(false);
 
   const campaign = useMemo(
     () => ({
@@ -133,15 +136,14 @@ export default function StoryCampaignScreen({
             <PrimaryButton
               label={resumeAvailable ? 'Continue Story' : hasStarted ? 'Resume Story' : 'Start Story'}
               icon={resumeAvailable ? '▶' : hasStarted ? '⏵' : '★'}
-              disabled={
-                awaitingDecision ||
-                (!resumeAvailable && hasStarted && Boolean(campaign.nextStoryUnlockAt))
-              }
+              disabled={awaitingDecision}
               onPress={() => {
                 if (resumeAvailable) {
                   onContinueStory?.();
                 } else if (!hasStarted) {
                   onStartStory?.();
+                } else if (Boolean(campaign.nextStoryUnlockAt)) {
+                  setBribeModalVisible(true);
                 }
               }}
             />
@@ -198,6 +200,17 @@ export default function StoryCampaignScreen({
             </Text>
           )}
         </ScrollView>
+        
+        <BribeModal 
+            visible={bribeModalVisible} 
+            onClose={() => setBribeModalVisible(false)}
+            onBribe={() => {
+                // Placeholder for IAP logic
+                setBribeModalVisible(false);
+                Alert.alert("Clerk Bribed", "The file is yours.");
+                // logic to unlock would go here
+            }}
+        />
     </ScreenSurface>
   );
 }

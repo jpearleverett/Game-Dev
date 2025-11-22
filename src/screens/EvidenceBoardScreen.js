@@ -59,6 +59,7 @@ const BOARD_CORNER_TL = require("../../assets/images/ui/decorative/corner-orname
 const BOARD_CORNER_TR = require("../../assets/images/ui/decorative/corner-ornament-tr.png");
 const BOARD_CORNER_BL = require("../../assets/images/ui/decorative/corner-ornament-bl.png");
 const BOARD_CORNER_BR = require("../../assets/images/ui/decorative/corner-ornament-br.png");
+const POINTER_HAND = require("../../assets/images/tutorial/pointer-hand.png");
 const POLAROID_ASPECT_RATIO = 1.18;
 const CASE_TITLE_OVERLAP_RATIO = -0.05;
 const POLAROID_IMAGES = {
@@ -390,6 +391,38 @@ export default function EvidenceBoardScreen({
   const [stringSources, setStringSources] = useState({});
 
   const stringPulse = useRef(new Animated.Value(0)).current;
+  
+  // Tutorial Hand Animation
+  const handOpacity = useRef(new Animated.Value(0)).current;
+  const handTranslateY = useRef(new Animated.Value(0)).current;
+  const handTranslateX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (activeCase?.caseNumber === 1 && !solved && !failed) {
+       // Delay start
+       const timer = setTimeout(() => {
+         Animated.sequence([
+           // Appear at Header
+           Animated.parallel([
+             Animated.timing(handOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+             Animated.timing(handTranslateY, { toValue: 120, duration: 0, useNativeDriver: true }),
+             Animated.timing(handTranslateX, { toValue: 20, duration: 0, useNativeDriver: true }), // Slightly offset
+           ]),
+           // Move to Grid
+           Animated.timing(handTranslateY, { toValue: 300, duration: 1200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+           // Pulse/Tap
+           Animated.sequence([
+             Animated.timing(handTranslateY, { toValue: 310, duration: 150, useNativeDriver: true }),
+             Animated.timing(handTranslateY, { toValue: 300, duration: 150, useNativeDriver: true }),
+           ]),
+           Animated.delay(500),
+           // Fade out
+           Animated.timing(handOpacity, { toValue: 0, duration: 400, useNativeDriver: true })
+         ]).start();
+       }, 1500);
+       return () => clearTimeout(timer);
+    }
+  }, [activeCase?.caseNumber, solved, failed]);
 
   const sizeConfig = useMemo(() => {
     if (isTablet) {
@@ -632,6 +665,18 @@ export default function EvidenceBoardScreen({
                       stringOpacityActive={stringOpacityActive}
                       stringOpacityIdle={stringOpacityIdle}
                     />
+                    
+                    <Animated.Image
+                        source={POINTER_HAND}
+                        style={[
+                            styles.tutorialHand,
+                            {
+                                opacity: handOpacity,
+                                transform: [{ translateY: handTranslateY }, { translateX: handTranslateX }]
+                            }
+                        ]}
+                        pointerEvents="none"
+                    />
                   </View>
                 </LinearGradient>
               </LinearGradient>
@@ -681,4 +726,14 @@ const styles = StyleSheet.create({
   hintActive: { color: COLORS.accentSecondary },
   hintMuted: { color: "rgba(198, 182, 160, 0.6)" },
   celebrationBlocker: { ...StyleSheet.absoluteFillObject, zIndex: 900, backgroundColor: "transparent" },
+  tutorialHand: {
+    position: "absolute",
+    top: 0,
+    left: "50%",
+    width: 60,
+    height: 60,
+    marginLeft: -30,
+    zIndex: 100,
+    resizeMode: 'contain',
+  },
 });

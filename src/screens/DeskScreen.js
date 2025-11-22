@@ -622,7 +622,7 @@ export default function DeskScreen({
             <Text style={[styles.quickValue, { fontSize: quickValueFont, letterSpacing: quickValueLetter }]}>
               {progress.streak} days
             </Text>
-            <Text style={[styles.quickMeta, { fontSize: quickMetaFont, letterSpacing: quickMetaLetter }]}>Current streak</Text>
+            <Text style={[styles.quickMeta, { fontSize: quickMetaFont, letterSpacing: quickMetaLetter }]}>Days on the Force</Text>
           </Pressable>
         </View>
 

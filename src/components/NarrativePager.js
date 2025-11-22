@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Audio } from 'expo-av';
 import { LinearGradient } from "expo-linear-gradient";
 
 import TypewriterText from "./TypewriterText";
@@ -20,6 +21,25 @@ const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.
 const BINDER_RING_COUNT = 4;
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
+
+function PulsingArrow() {
+  const opacity = useRef(new Animated.Value(0.2)).current;
+  
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.2, duration: 800, useNativeDriver: true })
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <Animated.Text style={[styles.nextPageCue, { opacity }]}>
+      &gt;&gt;
+    </Animated.Text>
+  );
+}
 
 export default function NarrativePager({
   pages,
@@ -35,6 +55,7 @@ export default function NarrativePager({
   const [narrativeWidth, setNarrativeWidth] = useState(0);
   const [activePage, setActivePage] = useState(0);
   const [completedPages, setCompletedPages] = useState(new Set());
+  const [sound, setSound] = useState();
   
   const listRef = useRef(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -79,11 +100,33 @@ export default function NarrativePager({
     }
   });
 
+  async function playPageFlipSound() {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/audio/sfx/ui/page-flip.mp3')
+      );
+      setSound(sound);
+      await sound.playAsync();
+    } catch (error) {
+      console.log("Error playing page flip sound:", error);
+    }
+  }
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
   const triggerPageFlip = useCallback(
     (direction) => {
       if (!direction || flipLockRef.current) return;
       const targetIndex = activePage + direction;
       if (targetIndex < 0 || targetIndex > pages.length - 1) return;
+
+      playPageFlipSound();
 
       flipLockRef.current = true;
       flipAnim.setValue(0);
@@ -260,6 +303,11 @@ export default function NarrativePager({
                     }}
                     // Drop cap logic simplified for refactor, can be re-added if needed
                   />
+                  {completedPages.has(index) && !isLastPage && (
+                    <View style={styles.nextPageCueContainer}>
+                        <PulsingArrow />
+                    </View>
+                  )}
                 </View>
 
                 {/* Page Number */}
@@ -418,5 +466,15 @@ const styles = StyleSheet.create({
   choiceButtonPressed: {
     opacity: 0.8,
     transform: [{ scale: 0.98 }],
+  },
+  nextPageCueContainer: {
+    alignItems: 'flex-end',
+    marginTop: 4,
+    marginRight: 8,
+  },
+  nextPageCue: {
+    fontFamily: FONTS.monoBold,
+    fontSize: 16,
+    color: '#8a6a4b',
   },
 });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Pressable } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 
 export default function TypewriterText({ 
@@ -61,13 +62,28 @@ export default function TypewriterText({
     
     timerRef.current = setInterval(() => {
       if (indexRef.current < text.length) {
+        const char = text[indexRef.current];
         indexRef.current += 1;
         setDisplayedText(text.slice(0, indexRef.current));
+        
+        // Haptics on space or every 3rd character
+        if (char === ' ' || indexRef.current % 3 === 0) {
+             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        }
       } else {
         if (timerRef.current) clearInterval(timerRef.current);
         onComplete?.();
       }
     }, speed);
+  };
+
+  const handlePress = () => {
+    if (isTyping) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setDisplayedText(text);
+        indexRef.current = text.length; // Ensure we mark as done
+        onComplete?.();
+    }
   };
 
   const isTyping = displayedText.length < text.length;
@@ -85,22 +101,24 @@ export default function TypewriterText({
   }
 
   return (
-    <View>
-      {/* Invisible text to force layout height to full size immediately */}
-      <Text style={[style, { opacity: 0 }]} accessibilityElementsHidden={true}>
-        {text}
-        <Text>_</Text>
-      </Text>
-
-      {/* Visible text overlay */}
-      <View style={StyleSheet.absoluteFill}>
-        <Text style={style}>
-          {displayedText}
-          {showCursor && (
-            <Text style={{ color: COLORS.accentSecondary }}>_</Text>
-          )}
+    <Pressable onPress={handlePress} disabled={!isTyping}>
+      <View>
+        {/* Invisible text to force layout height to full size immediately */}
+        <Text style={[style, { opacity: 0 }]} accessibilityElementsHidden={true}>
+          {text}
+          <Text>_</Text>
         </Text>
+
+        {/* Visible text overlay */}
+        <View style={StyleSheet.absoluteFill}>
+          <Text style={style}>
+            {displayedText}
+            {showCursor && (
+              <Text style={{ color: COLORS.accentSecondary }}>_</Text>
+            )}
+          </Text>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
