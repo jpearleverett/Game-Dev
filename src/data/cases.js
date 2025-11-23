@@ -2996,14 +2996,14 @@ And that mattered.
 Tom confessed at 2 AM, then hung himself. Or Victoria staged it. Jack chose learning over certainty.
 Best friends make you weapons you don't know you've become.`,
     briefing: {
-      summary:
-        'Margaret lays out the bill for Jack’s certainty, revealing how Thornhill’s retaliation turned their marriage into collateral damage.',
-      objectives: [
-        'Log the financial and emotional debts Margaret lists so Day Six’s board mirrors what she paid.',
-        'Trace how wealth and security markers—mortgage, tuition, fences—became targets once Jack made enemies.',
-        'Finish the grid before school pickup so the narrative lands before Emma walks back in.',
-      ],
-    },
+        summary:
+          'Margaret paid the price for your career. Itemize the costs she lists to understand the debt.',
+        objectives: [
+          'Inventory the financial damages Margaret suffered.',
+          'Trace the specific \'Costs\' that replaced her security.',
+          'Calculate the price of your certainty.',
+        ],
+      },
     bridgeText: [
       "The people we love pay for the enemies we make. That's not philosophy. That's arithmetic with bodies.",
     ],
@@ -3169,14 +3169,14 @@ I left before Margaret could see my hands shaking.
 She told Jack she was terrified to leave the house. Divorced him because staying married was dangerous.
 Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life without him.`,
     briefing: {
-      summary:
-        'At Murphy’s Bar, Jack hands Sarah the leverage to burn Victoria, choosing her freedom over his own penance.',
-      objectives: [
-        'Track the offers, threats, and numbers Sarah lays out so the board reflects the recruitment pressure.',
-        'Capture Jack’s surrender of the Tom Wade evidence as a turning point in their partnership.',
-        'Solve before last call so the narrative drop lands with Sarah’s unanswered decision.',
-      ],
-    },
+        summary:
+          'Sarah is being recruited. Track the negotiation terms at the bar to see the price of her loyalty.',
+        objectives: [
+          'Listen to Victoria\'s offer through Sarah.',
+          'Identify the \'Leverage\' terms used to buy a partner.',
+          'Weigh the value of the job against the cost of the soul.',
+        ],
+      },
     bridgeText: [
       "Some investigations require drinking with the one person who understands what it's like when everything burns.",
     ],
@@ -3342,14 +3342,14 @@ I'd made an active move. And won.
 Jack showed her Tom's murder evidence. Made a choice: threatened Victoria to protect Sarah.
 Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
     briefing: {
-      summary:
-        'Jack watches his former partner plead guilty, then finally admits Victoria is Emily Cross before Day Seven begins.',
-      objectives: [
-        'Trace the courtroom fallout—arraignment, pleas, families—to show how corruption shatters more than suspects.',
-        'Document the photo comparisons and scars that confirm Victoria’s true identity.',
-        'Solve before dawn so the epiphany that E.C. stands for Emily Cross lands with maximum weight.',
-      ],
-    },
+        summary:
+          'The face is the same. Find the physical matches between Victoria and the cold case file.',
+        objectives: [
+          'Compare the penthouse photos with the morgue files.',
+          'Identify the \'Features\' that prove they are the same woman.',
+          'Confirm the identity of the ghost you created.',
+        ],
+      },
     bridgeText: [
       'Some revelations come from staring at old case files until your eyes finally see what they refused to see.',
     ],
@@ -3519,14 +3519,14 @@ And tomorrow I'd learn that being right about being wrong meant nothing if the s
 Jack laid photos side by side. Victoria Ashford is Emily Cross—the ghost he declared dead.
 Everyone you love pays for crimes they didn't commit.`,
     briefing: {
-      summary:
-        'Jack takes the stand at Eleanor’s appeal, admitting his word means nothing while presenting Victoria’s evidence to free her.',
-      objectives: [
-        'Catalog the courtroom machinery—judges, recesses, exhibits—that turned truth into a strategy.',
-        'Track the forged records and shell companies that expose the original deception.',
-        'Finish the grid before the verdict so the narrative lands with Eleanor walking free.',
-      ],
-    },
+        summary:
+          'Your testimony is worthless. Sequence the documents Victoria provided to win the appeal.',
+        objectives: [
+          'Present the shell company records to the judge.',
+          'Sequence the \'Evidence\' that proves the frame-up.',
+          'Win the appeal using the killer\'s proof.',
+        ],
+      },
     bridgeText: [
       'The courtroom is theater. And sometimes the truth is just the opening act before the real show.',
     ],
@@ -3642,14 +3642,14 @@ Or maybe that was exactly what Victoria wanted me to believe.
 Three-hour recess. Documents verified authentic. Motion granted. Eleanor freed after eight years.
 Evidence beats testimony. Victoria's manipulation worked. Results matter more than Jack's pride.`,
     briefing: {
-      summary:
-        'Sarah packs up her office, declining Victoria’s offer while building a new integrity project with the people Jack failed.',
-      objectives: [
-        'Track the allies she names—Claire, Lisa, Eleanor—to map the new team taking shape.',
-        'Log the shell corporations and timelines that prove Victoria’s network is wider than Jack feared.',
-        'Solve before Sarah walks out so the puzzle lands with the partnership officially over.',
-      ],
-    },
+        summary:
+          'Sarah is packing up. Identify the team she is building from the people you destroyed.',
+        objectives: [
+          'Review the roster of the new Integrity Project.',
+          'Identify the \'Allies\' Sarah has recruited against you.',
+          'Watch your partner become your competition.',
+        ],
+      },
     bridgeText: [
       'Some partnerships survive lies. But none survive the moment you admit you used someone.',
     ],
@@ -3749,14 +3749,14 @@ And she was ahead of both of us.
 Ashport Conviction Integrity Project. Claire, Lisa, Eleanor. Building something real with people Jack destroyed.
 Victoria offered Deputy Director. Sarah said no. She's a better detective than both of them.`,
     briefing: {
-      summary:
-        'Night falls on Day Seven with Jack alone in his office, realizing the cost of telling the truth when power refuses to listen.',
-      objectives: [
-        'Catalog the empty office details—files, lights, rain—that underscore his isolation.',
-        'Highlight the remaining cases and victims to keep the stakes present even without allies.',
-        'Close the board before the Midnight Confessor’s text arrives to emphasize the silence.',
-      ],
-    },
+        summary:
+          'The office is empty. Catalog the silence to understand what you\'ve lost.',
+        objectives: [
+          'Survey the empty desks in the precinct.',
+          'Catalog the \'Absence\' left by your choices.',
+          'Face the silence of working alone.',
+        ],
+      },
     bridgeText: [
       'Day Seven ends with absence. The partner is gone. What remains is just the work.',
     ],
@@ -3848,14 +3848,14 @@ Day Seven was over. And I was alone.
 The people Jack destroyed, rebuilding without him. Sarah ahead now. Jack alone, partnerless.
 Truth without power is just noise. Confessing doesn't equal redemption.`,
     briefing: {
-      summary:
-        'Jack is arrested for Tom Wade’s murder and forced to navigate federal holding, meeting Nathan Thornhill and learning how Victoria orchestrates even his lessons.',
-      objectives: [
-        'Trace the support network—Nathan, lawyers, motions—that proves who can fight back and who cannot.',
-        'Highlight the procedural steps Jack files so players feel the grind the innocent face.',
-        'Solve before the thirty-six-hour clock expires to mirror the urgency of securing release.',
-      ],
-    },
+        summary:
+          'You are now experiencing the system you upheld. Navigate the legal maze to find the tools Victoria provided.',
+        objectives: [
+          'Process your own arrest warrant.',
+          'Navigate the \'Procedure\' of federal holding.',
+          'Find the loopholes Victoria left for you.',
+        ],
+      },
     bridgeText: [
       "The law doesn't care about truth. Only proof. And proof is just evidence someone chose to believe.",
     ],
@@ -3959,14 +3959,14 @@ And I'd spent thirty years never asking which was which.
 Victoria left a note—tools the innocent never had. Jack filed motions for thirty-six hours.
 The system makes fighting so expensive most people can't. But Jack could. Because Victoria gave him resources.`,
     briefing: {
-      summary:
-        'Thirty-six hours later Jack walks out because Victoria decides the lesson is over, proving who really controls the justice machine.',
-      objectives: [
-        'Document the timeline of filings and the sudden appearance of exculpatory footage.',
-        'Track the texts from Victoria and Sarah to show how power shifts offstage.',
-        'Solve before the gates open to capture the sensation of conditional freedom.',
-      ],
-    },
+        summary:
+          'Freedom isn\'t free; it\'s granted by the puppet master. Trace the mechanics of your sudden release.',
+        objectives: [
+          'Analyze the release order for Victoria\'s signature.',
+          'Trace the \'Control\' mechanisms she used to free you.',
+          'Walk out of the cell she opened.',
+        ],
+      },
     bridgeText: [
       'Some releases come from the person who framed you deciding the lesson is over.',
     ],
@@ -4061,14 +4061,14 @@ Some choices aren't between good and evil. They're between two different kinds o
     attempts: 4,
     dailyIntro: ``,
     briefing: {
-      summary:
-        'Freed but indebted, Jack weighs the looming offer from Victoria against the justice she delivers, with four days left to decide.',
-      objectives: [
-        'Collect the options and consequences Sarah and Victoria lay out so the puzzle feels like a strategic ledger.',
-        'Highlight the remaining innocent cases and the cost of joining versus resisting.',
-        'Close the board before dawn to mirror the dwindling time to choose.',
-      ],
-    },
+        summary:
+          'Two paths lie ahead. Weigh the options before the deadline expires.',
+        objectives: [
+          'Compare Victoria\'s offer with the solitary path.',
+          'Weigh the \'Options\' on the table.',
+          'Decide whose evil you can live with.',
+        ],
+      },
     bridgeText: [
       "The law doesn't care about truth. Only proof. And the proof she offers tastes like power.",
     ],
@@ -4160,14 +4160,14 @@ And I had four days to decide whether that made me complicit or redeemed.
 Thirty-six hours filing motions, learning powerlessness. Victoria released him. Eleanor's appeal processed.
 Victoria could destroy Jack anytime. Making him live is worse.`,
     briefing: {
-      summary:
-        'Victoria unveils a gallery of Jack’s cases, forcing him to confront every failure as public art and dangling an ultimatum to join her empire.',
-      objectives: [
-        'Document each exhibit—necklace, lab reports, timelines—to catalog the evidence she weaponised as art.',
-        'Meet the people in the gallery, especially Lucia’s mother, to feel the personal cost of Jack’s certainty.',
-        'Hold the board until the contract ultimatum lands so the narrative hits with the weight of the choice ahead.',
-      ],
-    },
+        summary:
+          'Your failures are on display. Catalog the exhibits to understand the artist\'s message.',
+        objectives: [
+          'Walk through the gallery of your closed cases.',
+          'Catalog the \'Exhibits\' of innocent lives lost.',
+          'Face the portrait of your own blindness.',
+        ],
+      },
     bridgeText: [
       "Some exhibitions exist only to show you what you've destroyed.",
     ],
@@ -4325,14 +4325,14 @@ Then my phone buzzed. News alert. City Hall on fire.
 Jack's portrait: ten feet tall, eyes empty. Victoria offered him Deputy Director. Join her empire.
 Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
     briefing: {
-      summary:
-        'Sarah exposes Ashport’s corruption network on live television, turning Victoria’s revenge map into a legitimate federal takedown.',
-      objectives: [
-        'Track the raids, arrests, and shell corporations Sarah details during the press conference.',
-        'Record how Helen Price, Marcus Webb, and the Price law firm fit into the collapsing power structure.',
-        'Hold the board through Victoria’s furious call to feel the moment her control fractures.',
-      ],
-    },
+        summary:
+          'Sarah has stolen the spotlight. Track the corruption network she exposes on live TV.',
+        objectives: [
+          'Follow the money trail Sarah reveals to the press.',
+          'Track the \'Corruption\' network crumbling in real time.',
+          'Watch your partner become the hero.',
+        ],
+      },
     bridgeText: [
       'Corruption stays hidden until someone lights the match. Today, Ashport learns what happens when all the secrets burn at once.',
     ],
@@ -4675,14 +4675,14 @@ Sarah was quiet. Then: "I listened to that recording and realized something. Vic
 Sarah struck—FBI raids, Helen dead. The recording: Emily screaming, Jack's voice closing her case.
 Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`,
     briefing: {
-      summary:
-        'FBI schedules Victoria’s arrest, forcing Jack to weigh Tom Wade’s murder evidence against the appeals that depend on her documentation.',
-      objectives: [
-        'Record the legal levers—warrants, appeals, filing deadlines—that make the decision impossible.',
-        'Track which innocents still rely on Victoria’s evidence so the stakes stay personal.',
-        'Finish the grid before midnight to mirror Jack’s shrinking window to choose.',
-      ],
-    },
+        summary:
+          'The FBI is ready to move. Calculate the costs of arresting Victoria too soon.',
+        objectives: [
+          'Review the FBI\'s raid timeline.',
+          'Calculate the \'Cost\' of immediate justice.',
+          'Realize that doing your job means dooming the innocent.',
+        ],
+      },
     bridgeText: [
       "Art galleries exist to show you what you can't look away from. Even when you want to.",
     ],
@@ -4997,14 +4997,14 @@ Knowing I'd never actually know if "right" existed.
 Called Victoria: warned her FBI was coming. Twenty-four hours of Emily, not Victoria. Don't make me regret this.
 Victoria kept her promise. Didn't run. Jack chose five innocents over doing his job.`,
     briefing: {
-      summary:
-        'Jack watches five innocents walk free, then turns himself in, accepting obstruction charges as the price of choosing mercy over procedure.',
-      objectives: [
-        'Log each courtroom victory to keep the freed names unforgettable.',
-        'Note the legal fallout—charges, defenses, promises—awaiting Jack after his confession.',
-        'Solve before Day Eleven begins to underline the cost of doing the right wrong thing.',
-      ],
-    },
+        summary:
+          'The prisoners are walking free. Record the release orders to confirm the trade was real.',
+        objectives: [
+          'Verify the release papers for the five innocents.',
+          'Record the \'Freedom\' purchased with your silence.',
+          'Turn yourself in.',
+        ],
+      },
     bridgeText: [
       'Day Ten ends with questions that have no good solutions.',
     ],
@@ -5319,14 +5319,14 @@ And knowing I'd never regret it.
 Martinez charged him with obstruction. But all five innocents freed by 5 PM. Eleanor, James, Lisa, Marcus, Teresa.
 Jack chose five innocents over one guilty. Even if it destroyed him. Especially if it destroyed him.`,
     briefing: {
-      summary:
-        'The longest night brings Margaret’s call, Sarah’s plan, and Emily’s final visit as Jack waits to see whether mercy was a mistake.',
-      objectives: [
-        'Record the allies who rally—Margaret, Sarah, Rebecca Moss—before dawn.',
-        'Trace Emily’s rain-soaked visit that proves she kept the twenty-four-hour promise.',
-        'Capture the emotional ledger of trust that sets the stage for Day Twelve.',
-      ],
-    },
+        summary:
+          'The last night is the longest. Catalog the final messages before silence falls.',
+        objectives: [
+          'Read the final texts from your former life.',
+          'Catalog the \'Goodbyes\' arriving in the dark.',
+          'Wait for the rain to bring a visitor.',
+        ],
+      },
     bridgeText: [
       "The last night is always the longest. Because you know what you're about to do. And you know you can't take it back.",
     ],
@@ -5472,14 +5472,14 @@ Keeping her promise.`,
 At 2 AM Victoria appeared—not the penthouse predator. Hair down, jeans, Emily for the first time.
 She needed him to see Emily once last time. At dawn FBI arrested her. She went peacefully.`,
     briefing: {
-      summary:
-        'Morning brings arraignment preparations, Rebecca Moss’s strategy, and Emily’s final text as both she and Jack accept the price of choosing mercy over certainty.',
-      objectives: [
-        'Track the legal plan Rebecca outlines—necessity, competing harms, witness testimony.',
-        'Record the promises Sarah and Victoria make before the arraignments.',
-        'Finish the board before the courthouse doors open to feel the inevitability of consequence.',
-      ],
-    },
+        summary:
+          'Court is in session. Review the defense strategy that might save you.',
+        objectives: [
+          'Listen to Rebecca Moss\'s opening statement.',
+          'Review the \'Defense\' strategy of Necessity.',
+          'Stand for arraignment.',
+        ],
+      },
     bridgeText: [
       'Day Eleven ends with a dawn that no longer waits for your doubts.',
     ],
@@ -5796,14 +5796,14 @@ And I called Sarah. "It's done. I'm ready to confess. To turn myself in. To face
 She picked it up. Aimed. Pulled the trigger. Empty. He'd stacked the deck to protect her.
 Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in, face consequences.`,
     briefing: {
-      summary:
-        'Seven years in prison give Jack a front-row seat to the ripple effects: freed innocents rebuilding, families recalibrating, and Emily disappearing into new identities.',
-      objectives: [
-        'Catalogue the lives changed—Eleanor, Marcus’s family, Lisa, James, Teresa—as the system repairs itself.',
-        'Note the letters, cards, and news clippings that keep Jack accountable.',
-        'Blend the statistics of reform with the human cost so the puzzle feels like long-term consequence.',
-      ],
-    },
+        summary:
+          'Seven years have passed. Audit the legacy of your choice.',
+        objectives: [
+          'Review the post-prison files.',
+          'Audit the \'Legacy\' of the Integrity Project.',
+          'See what grew from the ashes.',
+        ],
+      },
     bridgeText: [
       'Some endings are clean. Some are messy. And some are just pauses between moves in a game that never ends.',
     ],
@@ -6007,14 +6007,14 @@ And maybe that was right.
 Mrs. Martinez sent cards—days Lucia would still be alive. Lisa wrote papers. James started Second Look.
 Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed to Canada. Gone or rebuilt.`,
     briefing: {
-      summary:
-        'Jack steps out of prison into Sarah’s probationary job offer, a hostile welcome committee, and a chess piece reminder that the work never ends.',
-      objectives: [
-        'Document the board vote that puts Jack on probation under Lisa’s supervision.',
-        'Trace the rules of his new role—no shortcuts, full transparency, constant oversight.',
-        'End the puzzle with the fallen white king so players feel the unresolved future with Emma.',
-      ],
-    },
+        summary:
+          'A new career begins. Learn the rules of your second chance.',
+        objectives: [
+          'Read the terms of your probation.',
+          'Learn the \'Rules\' of working for Sarah.',
+          'Pick up the Fallen King.',
+        ],
+      },
     bridgeText: [
       'Seven years is long enough to change. Long enough to become someone who might deserve a second chance.',
     ],
