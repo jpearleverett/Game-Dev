@@ -184,19 +184,25 @@ export default function CaseFileScreen({
     if (typeof metaNarrative === "string" && metaNarrative.trim()) return [metaNarrative];
     if (Array.isArray(activeCase?.narrative)) {
       const original = activeCase.narrative.filter(Boolean);
-      // Check if we should prepend Intel Log (puzzle callback)
-      // Only if outlierWords exist and it's not already there (simple check)
+      
       if (original.length > 0 && activeCase.board?.outlierWords?.length > 0) {
         const outliers = activeCase.board.outlierWords.slice(0, 4).join(". ");
+        
+        // Check for {puzzle_callback} placeholder
+        if (original[0].includes("{puzzle_callback}")) {
+           const updatedFirstPage = original[0].replace("{puzzle_callback}", outliers);
+           return [updatedFirstPage, ...original.slice(1)];
+        }
+        
+        // Fallback: Prepend if no placeholder found
         const intro = `INTEL LOG: ${outliers}. The pattern was undeniable.\n\n`;
-        // We create a new array to avoid mutating the original data object reference
         return [intro + original[0], ...original.slice(1)];
       }
       return original;
     }
     if (typeof activeCase?.narrative === "string" && activeCase.narrative.trim()) return [activeCase.narrative];
     return [];
-  }, [storyMeta, activeCase?.narrative]);
+  }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords]);
 
   const pageCharLimit = compact ? 620 : 900;
   const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);

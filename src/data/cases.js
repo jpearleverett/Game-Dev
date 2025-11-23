@@ -418,7 +418,7 @@ Maya called, terrified. Then silence. Victoria had her. The widow's truth, too l
         },
       },
       narrative: [
-          `Pawn. Knight. Bishop. Check. The Confessor was playing chess, and I was just a piece on the board.
+          `I analyzed the outliers. {puzzle_callback}. The pieces were on the board.
 
 The Bellamy estate sat on three acres of manicured despair. Once upon a time, it had been the kind of house that appeared in architectural magazines—Victorian bones with modern renovations, the perfect marriage of old money and new taste. Now it was a mausoleum. Eight years of abandonment had turned elegance into rot. Overgrown hedges. Windows dark as dead eyes. The fountain in the circular driveway was dry, full of dead leaves and the skeletons of small things that had crawled in looking for water and never found it.
 
@@ -1134,7 +1134,7 @@ The system protects itself. Victoria taught Silas that lesson first.`,
         },
       },
       narrative: [
-          `Tea. View. Camera. Props. The whole penthouse was a stage, and she was the director.
+          `I reviewed the environment. {puzzle_callback}. The stage was set.
 
 The text arrived at sunset. When the light was dying. When Ashport turned from gray to black without bothering with beauty in between.
 
@@ -1800,7 +1800,7 @@ Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed 
         outliers: { PAYOFF: 'Money for silence.', KICKBACK: 'The price of a conviction.', BRIBE: 'Buying the verdict.', GRAFT: 'The rot in the system.' },
       },
       narrative: [
-          `Payoff. Kickback. Bribe. The money trail led straight to the judge's bench.
+          `I followed the money. {puzzle_callback}. The corruption was visible.
 
 I was halfway to my car—walking through rain that had turned to sleet, the city trying to decide between drowning us and freezing us—when Sarah called.
 
@@ -2296,7 +2296,7 @@ Sarah walked away. Starting her own firm. Jack had made her better by being wors
       outliers: { HOLLOW: 'Jack\'s eyes in the portrait.', VOID: 'Where his soul should be.', DEAD: 'How he looked at victims.', EMPTY: 'The cost of certainty.' },
     },
       narrative: [
-        `Hollow. Void. Dead. Empty. The portrait captured the truth I'd been trying to hide.
+        `I looked at the portrait. {puzzle_callback}. The image spoke to me.
 
 The Blackwell Building. Penthouse. Victoria's kingdom of glass and steel.
 
@@ -2870,7 +2870,7 @@ Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usual
       outliers: { HUNT: 'Jack goes on the offensive.', TRAP: 'Setting the snare.', CHASE: 'Running her down.', STRIKE: 'The counter-move.' },
     },
     narrative: [
-      `Hunt. Trap. Chase. Action. It was time to stop reacting and start fighting back.
+      `I chose my counter-move. {puzzle_callback}. It was time to act.
 
 I sat in the rain outside the warehouse. Tom's body inside. The weight of thirty years pressing down.
 
@@ -3385,7 +3385,7 @@ Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
       },
     },
     narrative: [
-      `Reveal. Epiphany. Awakening. Vision. I stared at the photos until the face stared back. Victoria was Emily.
+      `I stared at the evidence. {puzzle_callback}. The truth was undeniable.
 
 Before going home, I stopped at the courthouse. Silas Reed's arraignment.
 
@@ -3798,7 +3798,7 @@ Victoria offered Deputy Director. Sarah said no. She's a better detective than b
       },
     },
     narrative: [
-      `Absence. Void. Vacancy. Echo. The office was quiet. Too quiet. Just me and the ghosts.
+      `I felt the void. {puzzle_callback}. The absence was louder than words.
 
 I sat in my office for the first time in eight years without Sarah Reeves having my back.
 
@@ -4116,7 +4116,7 @@ Some choices aren't between good and evil. They're between two different kinds o
       },
     },
     narrative: [
-      `Lure. Bait. Hook. Trap. I walked into the meeting knowing it was a setup. I had to.
+      `I reviewed the terms. {puzzle_callback}. The trap was sprung.
 
 Four days left.
 
@@ -4552,7 +4552,7 @@ Victoria called—furious, vulnerable. Sarah proved you don't need to become a m
       outliers: { CAPTURE: 'The abduction event.', SCREAM: 'The sound on the tape.', PHONECALL: 'Jack\'s voice closing the case.', SILENCE: 'The end of the recording.' },
     },
     narrative: [
-      `Capture. Scream. Phonecall. Silence. The tape told the story of her final hours.
+      `I listened to the tape. {puzzle_callback}. The story was told.
 
 The package arrived at Sarah's house that night. She called me at 11 PM.
 
@@ -5054,7 +5054,7 @@ Victoria kept her promise. Didn't run. Jack chose five innocents over doing his 
       },
     },
     narrative: [
-      `Cost. Price. Loss. Debt. Every choice has a price tag. I just had to decide if I could afford it.
+      `I weighed the cost. {puzzle_callback}. The price was set.
 
 Day Eleven, 10 AM. Lisa Chen's exoneration hearing.
 
@@ -5535,7 +5535,7 @@ She needed him to see Emily once last time. At dawn FBI arrested her. She went p
       },
     },
     narrative: [
-      `Debt. Owed. Due. Bill. The final account was due. And I was short.
+      `I accepted the burden. {puzzle_callback}. The weight was heavy.
 
 Day Twelve, 6 AM. My phone rang. Agent Martinez.
 
@@ -6072,7 +6072,7 @@ Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed
       },
     },
     narrative: [
-      `Chance. Risk. Maybe. Hope. The future isn't written. That's the terrifying part.
+      `I looked at the future. {puzzle_callback}. It was unwritten.
 
 They released me on a Tuesday. Gray sky. Cold wind. Seven years older. Seven years different.
 
