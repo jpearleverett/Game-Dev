@@ -5,6 +5,7 @@ import {
   FlatList,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -248,7 +249,14 @@ export default function NarrativePager({
         </View>
 
         {/* Content */}
-        <View style={{ gap: scaleSpacing(SPACING.xs) }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            gap: scaleSpacing(SPACING.xs),
+            paddingBottom: scaleSpacing(SPACING.xxl),
+          }}
+          showsVerticalScrollIndicator={false}
+        >
           <Text
             style={[
               styles.label,
@@ -281,30 +289,30 @@ export default function NarrativePager({
                 <PulsingArrow />
             </View>
           )}
-        </View>
+
+          {/* Decision Button */}
+          {showReveal && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.choiceButton,
+                { borderRadius: blockRadius, marginTop: scaleSpacing(SPACING.md) },
+                pressed && styles.choiceButtonPressed,
+              ]}
+              onPress={onRevealDecision}
+            >
+              <Text style={{ fontFamily: FONTS.monoBold, color: "#3a1c06", fontSize: narrativeSize }}>
+                Seal Your Path
+              </Text>
+            </Pressable>
+          )}
+        </ScrollView>
 
         {/* Page Number */}
-        <View style={styles.pageStamp}>
+        <View style={styles.pageStamp} pointerEvents="none">
           <Text style={[styles.pageStampText, { fontSize: slugSize }]}>
             {`PAGE ${String(index + 1).padStart(2, "0")}`}
           </Text>
         </View>
-
-        {/* Decision Button */}
-        {showReveal && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.choiceButton,
-              { borderRadius: blockRadius, marginTop: scaleSpacing(SPACING.md) },
-              pressed && styles.choiceButtonPressed,
-            ]}
-            onPress={onRevealDecision}
-          >
-            <Text style={{ fontFamily: FONTS.monoBold, color: "#3a1c06", fontSize: narrativeSize }}>
-              Seal Your Path
-            </Text>
-          </Pressable>
-        )}
       </View>
     );
   }, [
