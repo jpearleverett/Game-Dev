@@ -187,7 +187,8 @@ export default function CaseFileScreen({
     return [];
   }, [storyMeta, activeCase?.narrative]);
 
-  const narrativePages = useMemo(() => paginateNarrativeSegments(narrative), [narrative]);
+  const pageCharLimit = compact ? 620 : 900;
+  const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);
 
   // Game State Logic
   const caseNumber = activeCase?.caseNumber;

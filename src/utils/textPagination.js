@@ -1,4 +1,5 @@
-const MAX_NARRATIVE_PAGE_CHARACTERS = 480;
+const MAX_NARRATIVE_PAGE_CHARACTERS = 850;
+const PARAGRAPH_BREAK_WEIGHT = 50;
 
 export function paginateNarrativeSegments(
   segments,
@@ -55,6 +56,7 @@ export function paginateNarrativeSegments(
 
     const pageParagraphs = [];
     let currentPage = [];
+    let currentWeight = 0;
 
     const flushCurrentPage = () => {
       if (!currentPage.length) {
@@ -62,17 +64,22 @@ export function paginateNarrativeSegments(
       }
       pageParagraphs.push(currentPage.join("\n\n"));
       currentPage = [];
+      currentWeight = 0;
     };
 
     normalizedParagraphs.forEach((paragraph) => {
-      const candidate = currentPage.concat(paragraph).join("\n\n");
-      if (candidate.length <= maxCharacters || currentPage.length === 0) {
+      const isFirst = currentPage.length === 0;
+      const addedWeight = paragraph.length + (isFirst ? 0 : 2 + PARAGRAPH_BREAK_WEIGHT);
+
+      if (currentWeight + addedWeight <= maxCharacters || isFirst) {
         currentPage.push(paragraph);
+        currentWeight += addedWeight;
         return;
       }
 
       flushCurrentPage();
       currentPage.push(paragraph);
+      currentWeight = paragraph.length;
     });
 
     flushCurrentPage();
