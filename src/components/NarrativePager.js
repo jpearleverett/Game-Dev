@@ -208,7 +208,7 @@ export default function NarrativePager({
             height: pageHeight,
             paddingHorizontal: pagePaddingH,
             paddingTop: pagePaddingV,
-            paddingBottom: pagePaddingV + scaleSpacing(SPACING.sm),
+            paddingBottom: pagePaddingV + scaleSpacing(SPACING.md),
             borderRadius: blockRadius,
             marginRight: isLastPage ? 0 : pageGap,
           },
