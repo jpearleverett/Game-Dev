@@ -3035,7 +3035,9 @@ Best friends make you weapons you don't know you've become.`,
       },
     },
     narrative: [
-      `Day Six started with rain and regret.
+      `Target. Payback. Retaliate. Threat. Margaret wasn't random. She was collateral damage in a war I didn't know I was fighting.
+
+Day Six started with rain and regret.
 
 Margaret Halloway—now Margaret Price—lived in Riverside with her husband David and daughter Emma. White picket fence. Everything I couldn't give her when we were married because I was too busy being Ashport's greatest detective.
 
@@ -3208,7 +3210,9 @@ Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life wi
       },
     },
     narrative: [
-      `Sarah met me at Murphy's Bar at noon. She looked worse than I'd ever seen her. Dark circles. Unwashed hair. The kind of exhaustion that comes from not sleeping because closing your eyes means seeing things you can't unsee.
+      `Alone. Exile. Distance. Silence. Sarah was considering the offer. I had to give her a reason to say no.
+
+Sarah met me at Murphy's Bar at noon. She looked worse than I'd ever seen her. Dark circles. Unwashed hair. The kind of exhaustion that comes from not sleeping because closing your eyes means seeing things you can't unsee.
 
 "You look like shit," I said.
 
@@ -3381,7 +3385,9 @@ Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
       },
     },
     narrative: [
-      `Before going home, I stopped at the courthouse. Silas Reed's arraignment.
+      `Reveal. Epiphany. Awakening. Vision. I stared at the photos until the face stared back. Victoria was Emily.
+
+Before going home, I stopped at the courthouse. Silas Reed's arraignment.
 
 My former partner sat in orange, hands cuffed, looking smaller than I'd ever seen him. When they read the charges—conspiracy, evidence tampering, accessory to false imprisonment—he wept.
 
@@ -3558,7 +3564,9 @@ Everyone you love pays for crimes they didn't commit.`,
       },
     },
     narrative: [
-      `Eleanor Bellamy's appeal. Ten AM. I wasn't playing by Victoria's rules anymore.
+      `Forged. Concealed. Shell. Staged. The documents proved everything. My word meant nothing, but the paper trail was ironclad.
+
+Eleanor Bellamy's appeal. Ten AM. I wasn't playing by Victoria's rules anymore.
 
 Rebecca Moss called me to the stand. "Detective Halloway. You arrested my client eight years ago. Now you say she's innocent. Why should we believe you?"
 
@@ -3681,7 +3689,9 @@ Evidence beats testimony. Victoria's manipulation worked. Results matter more th
       },
     },
     narrative: [
-      `Sarah's office. Empty boxes. Her detective shield on the desk like evidence of a crime.
+      `Defection. Sever. Recruit. Leverage. Sarah didn't just leave. She built a better team.
+
+Sarah's office. Empty boxes. Her detective shield on the desk like evidence of a crime.
 
 "You're leaving."
 
@@ -3788,7 +3798,9 @@ Victoria offered Deputy Director. Sarah said no. She's a better detective than b
       },
     },
     narrative: [
-      `I sat in my office for the first time in eight years without Sarah Reeves having my back.
+      `Absence. Void. Vacancy. Echo. The office was quiet. Too quiet. Just me and the ghosts.
+
+I sat in my office for the first time in eight years without Sarah Reeves having my back.
 
 The silence was deafening.
 
@@ -3887,7 +3899,9 @@ Truth without power is just noise. Confessing doesn't equal redemption.`,
       },
     },
     narrative: [
-      `FBI at my door. 6 AM. Expected.
+      `Payoff. Bribed. Leverage. Influence. Money buys justice. Or at least a good lawyer.
+
+FBI at my door. 6 AM. Expected.
 
 "Jack Halloway. You're here for Tom Wade's murder. I'll come peacefully."
 
@@ -3999,7 +4013,9 @@ The system makes fighting so expensive most people can't. But Jack could. Becaus
       },
     },
     narrative: [
-      `Thirty-six hours later: "You're being released. New evidence. Security footage showing you elsewhere during Tom's death."
+      `Dominance. Force. Puppet. Strings. Grange wasn't just a bad cop. He was a sadist.
+
+Thirty-six hours later: "You're being released. New evidence. Security footage showing you elsewhere during Tom's death."
 
 Victoria.
 
@@ -4100,7 +4116,9 @@ Some choices aren't between good and evil. They're between two different kinds o
       },
     },
     narrative: [
-      `Four days left.
+      `Lure. Bait. Hook. Trap. I walked into the meeting knowing it was a setup. I had to.
+
+Four days left.
 
 The system was reforming without me. Victoria orchestrated every reversal, every release, every lesson I thought I was learning on my own.
 
@@ -4199,7 +4217,9 @@ Victoria could destroy Jack anytime. Making him live is worse.`,
       },
     },
     narrative: [
-      `Day Nine started with an invitation. Black envelope. Museum-quality paper.
+      `Shadow. Nameless. Mask. Void. The killer had no face. Just a pattern.
+
+Day Nine started with an invitation. Black envelope. Museum-quality paper.
 
 **You are cordially invited to: PERFECT EVIDENCE - A Retrospective Exhibition. Featuring: The Works of Victoria Ashford. Lamplight Gallery, 9 AM.**
 
@@ -4364,7 +4384,9 @@ Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
       },
     },
     narrative: [
-      `I left the gallery and my phone rang. Sarah.
+      `Redact. Classified. Seal. Order. The government erased the operation. But they couldn't erase the memories.
+
+I left the gallery and my phone rang. Sarah.
 
 "Turn on the news. Now."
 
@@ -4711,7 +4733,9 @@ Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`
       },
     },
     narrative: [
-      `Day Ten started with a phone call from FBI Agent Martinez.
+      `Stranger. Outsider. Drifter. Alien. The profile was wrong. We were looking for a ghost.
+
+Day Ten started with a phone call from FBI Agent Martinez.
 
 "Detective Halloway. We need to talk. About Victoria Ashford."
 
@@ -5030,7 +5054,9 @@ Victoria kept her promise. Didn't run. Jack chose five innocents over doing his 
       },
     },
     narrative: [
-      `Day Eleven, 10 AM. Lisa Chen's exoneration hearing.
+      `Cost. Price. Loss. Debt. Every choice has a price tag. I just had to decide if I could afford it.
+
+Day Eleven, 10 AM. Lisa Chen's exoneration hearing.
 
 I sat in the back of the courtroom. Watching. Praying my choice had been right.
 
@@ -5209,7 +5235,9 @@ Some choices are between legal and right. Sometimes those are mutually exclusive
       },
     },
     narrative: [
-      `I walked into FBI headquarters at 6 PM. Agent Martinez waited with three other agents and a stenographer.
+      `Guilt. Sin. Penance. Shame. The confession was the easy part. Living with it was the sentence.
+
+I walked into FBI headquarters at 6 PM. Agent Martinez waited with three other agents and a stenographer.
 
 "Detective Halloway. You're here to give testimony regarding Victoria Ashford?"
 
@@ -5352,7 +5380,9 @@ Jack chose five innocents over one guilty. Even if it destroyed him. Especially 
       },
     },
     narrative: [
-      `That night, I sat in my apartment, knowing tomorrow would bring arrests for us both.
+      `Trust. Faith. Bond. Hope. Redemption isn't earned. It's given by those you hurt.
+
+That night, I sat in my apartment, knowing tomorrow would bring arrests for us both.
 
 Margaret called. "Jack. I heard from Sarah. You're facing obstruction charges."
 
@@ -5505,7 +5535,9 @@ She needed him to see Emily once last time. At dawn FBI arrested her. She went p
       },
     },
     narrative: [
-      `Day Twelve, 6 AM. My phone rang. Agent Martinez.
+      `Debt. Owed. Due. Bill. The final account was due. And I was short.
+
+Day Twelve, 6 AM. My phone rang. Agent Martinez.
 
 "Detective Halloway. We're taking Victoria Ashford into custody in thirty minutes. Your arraignment is at 10 AM. Be at the courthouse. Don't make us come find you."
 
@@ -5826,7 +5858,9 @@ Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in
       },
     },
     narrative: [
-      `I turned myself in to FBI that afternoon. Confessed to everything. Evidence tampering. False reports. Corruption. Conspiracy.
+      `Legacy. Future. Build. Grow. The case was over. The work was just beginning.
+
+I turned myself in to FBI that afternoon. Confessed to everything. Evidence tampering. False reports. Corruption. Conspiracy.
 
 They charged me with eighteen counts. Gave me a deal: seven years in exchange for full cooperation.
 
@@ -6038,7 +6072,9 @@ Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed
       },
     },
     narrative: [
-      `They released me on a Tuesday. Gray sky. Cold wind. Seven years older. Seven years different.
+      `Chance. Risk. Maybe. Hope. The future isn't written. That's the terrifying part.
+
+They released me on a Tuesday. Gray sky. Cold wind. Seven years older. Seven years different.
 
 Sarah was waiting outside. Not alone.
 
