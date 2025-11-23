@@ -77,6 +77,7 @@ export default function NarrativePager({
   const slugSize = shrinkFont(moderateScale(FONT_SIZES.xs));
   const arrowSize = Math.max(40, Math.round(scaleSpacing(compact ? SPACING.xl : SPACING.xxl)));
   const arrowFontSize = Math.round(arrowSize * 0.48);
+  const pageHeight = Math.round(moderateScale(compact ? 450 : 540));
 
   const handleLayout = useCallback((event) => {
     const { width } = event.nativeEvent.layout;
@@ -203,6 +204,7 @@ export default function NarrativePager({
           styles.page,
           {
             width: pageWidth || "100%",
+            height: pageHeight,
             paddingHorizontal: pagePaddingH,
             paddingVertical: pagePaddingV,
             borderRadius: blockRadius,
@@ -324,7 +326,8 @@ export default function NarrativePager({
     compact,
     pages.length,
     triggerPageFlip,
-    onRevealDecision
+    onRevealDecision,
+    pageHeight
   ]);
 
   return (
