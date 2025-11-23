@@ -79,7 +79,9 @@ const RAW_SEASON_ONE_CASES = [
       },
     },
     narrative: [
-        `Rain fell on Ashport the way memory falls on the guilty—relentless, cold, and impossible to outrun. My office sat four floors above street level, a corner box that smelled like yesterday's cigarettes and broken promises. Three hundred a month bought me water-stained walls and a view of Murphy's Bar, where neon script bled red through the window—GIRLS and DRINKS flickering like a dying heartbeat, painting everything in the color of old sins.
+        `I scanned the items on my desk. Letter. Note. Message. Dispatch. All methods of communication. All pointing to one thing: the game had begun.
+
+Rain fell on Ashport the way memory falls on the guilty—relentless, cold, and impossible to outrun. My office sat four floors above street level, a corner box that smelled like yesterday's cigarettes and broken promises. Three hundred a month bought me water-stained walls and a view of Murphy's Bar, where neon script bled red through the window—GIRLS and DRINKS flickering like a dying heartbeat, painting everything in the color of old sins.
 
 The clock said 2:47 AM. My body said older than that.
 
@@ -235,7 +237,9 @@ The woman in red. Always the woman in red. Jack's certainty turned to ash.`,
         },
       },
         narrative: [
-          `Greystone Correctional squatted on the edge of Ashport like a tombstone in a suit. The smell hit me twenty yards from the entrance—industrial cleaner trying to mask the rot underneath, like perfume on a corpse. Inside was worse. Fluorescent lights that turned skin cadaver-gray. Cinder block walls painted that particular shade of institutional green that only exists in prisons and morgues. The air tasted like despair and disinfectant.
+          `I looked at the list I'd just compiled. Sapphire. Necklace. Jewel. None of these fit Eleanor's life. Just like I suspected.
+
+Greystone Correctional squatted on the edge of Ashport like a tombstone in a suit. The smell hit me twenty yards from the entrance—industrial cleaner trying to mask the rot underneath, like perfume on a corpse. Inside was worse. Fluorescent lights that turned skin cadaver-gray. Cinder block walls painted that particular shade of institutional green that only exists in prisons and morgues. The air tasted like despair and disinfectant.
 
 Eleanor Bellamy looked like God had sketched her in charcoal and then smudged the edges. Eight years inside had carved away everything soft—the widow who'd worn pearls to her arraignment was gone. What remained was bone, fury, and the kind of emptiness that comes from screaming so long you forget what your voice used to sound like.
 
@@ -352,9 +356,9 @@ Maya called, terrified. Then silence. Victoria had her. The widow's truth, too l
         summary:
           'The Confessor left a calling card on the desk. Decode the specific game pieces she is using to describe your team.',
         objectives: [
-          'Analyze the crime scene for the Confessor\'s metaphorical signature.',
-          'Decode the four chess pieces she is using to mock your investigation.',
-          'Secure the grid to understand the game she is playing.',
+          'Analyze the chess board left by the Confessor.',
+          'Identify the four pieces representing the players in this game.',
+          'Decipher the metaphor to understand the threat.',
         ],
       },
       bridgeText: [
@@ -414,7 +418,9 @@ Maya called, terrified. Then silence. Victoria had her. The widow's truth, too l
         },
       },
       narrative: [
-          `The Bellamy estate sat on three acres of manicured despair. Once upon a time, it had been the kind of house that appeared in architectural magazines—Victorian bones with modern renovations, the perfect marriage of old money and new taste. Now it was a mausoleum. Eight years of abandonment had turned elegance into rot. Overgrown hedges. Windows dark as dead eyes. The fountain in the circular driveway was dry, full of dead leaves and the skeletons of small things that had crawled in looking for water and never found it.
+          `I analyzed the outliers. {puzzle_callback}. The pieces were on the board.
+
+The Bellamy estate sat on three acres of manicured despair. Once upon a time, it had been the kind of house that appeared in architectural magazines—Victorian bones with modern renovations, the perfect marriage of old money and new taste. Now it was a mausoleum. Eight years of abandonment had turned elegance into rot. Overgrown hedges. Windows dark as dead eyes. The fountain in the circular driveway was dry, full of dead leaves and the skeletons of small things that had crawled in looking for water and never found it.
 
 The front door was open. Not kicked in. Not forced. Just open. An invitation or a trap. In my experience, they were usually the same thing.
 
@@ -583,9 +589,9 @@ Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be 
         summary:
           'The suicide scene feels staged. Find the four cleaning supplies that shouldn\'t be in a dirty holding cell.',
         objectives: [
-          'Examine the crime scene photos for inconsistencies in the \'suicide\'.',
-          'Find the cleaning supplies Silas used to scrub the evidence.',
-          'Isolate the chemical traces to prove this was a cover-up.',
+          'Examine the crime scene photos for inconsistencies.',
+          'Locate the cleaning agents used to wipe the evidence.',
+          'Prove the scene was sanitized before the police arrived.',
         ],
       },
       bridgeText: [
@@ -640,7 +646,9 @@ Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be 
         outliers: { BLEACH: 'Used to clean the cell.', WIPE: 'Removes fingerprints.', SCRUB: 'Erases biological evidence.', SOLVENT: 'Dissolves residue.' },
       },
       narrative: [
-          `Dawn broke like a wound over Ashport. Bruised sky hemorrhaging gray light through my office window. I hadn't slept. Hadn't tried. Sleep was for people who didn't have ghosts cataloging their failures.
+          `Bleach. Wipe. Scrub. Solvent. The smell of cleaning supplies was the first thing I noticed. Someone had scrubbed this crime scene clean.
+
+Dawn broke like a wound over Ashport. Bruised sky hemorrhaging gray light through my office window. I hadn't slept. Hadn't tried. Sleep was for people who didn't have ghosts cataloging their failures.
 
 My office smelled wrong—perfume lingering like accusations. That French cologne again, expensive and deliberate. Victoria had been here. While I was at Greystone watching Eleanor cough blood, Victoria had walked through my sanctuary, touching my things, leaving her scent like a territorial predator marking prey.
 
@@ -825,9 +833,9 @@ Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing 
         summary:
           'Silas didn\'t do this for money. Find the words describing the leverage used against him.',
         objectives: [
-          'Investigate Silas\'s background for signs of coercion.',
-          'Find the words describing the leverage used against him.',
-          'Expose the blackmail material to understand his true motive.',
+          'Investigate Silas\'s personal records for coercion.',
+          'Identify the threats used to force his compliance.',
+          'Uncover the blackmail material holding him hostage.',
         ],
       },
       bridgeText: [
@@ -882,7 +890,9 @@ Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing 
           outliers: { THREAT: 'The leverage used against him.', PHOTO: 'The evidence of his affair.', SECRET: 'What he wanted to hide.', EXPOSURE: 'The fear that drove him.' },
         },
       narrative: [
-          `The Marina District rose from Ashport's waterfront like a middle finger to the rot below. Glass towers. Expensive cars. People who'd learned the secret: in this city, you either feed on the desperate or become them. No middle ground. No mercy for the in-between.
+          `Threat. Photo. Secret. Exposure. Silas wasn't paid off. He was coerced.
+
+The Marina District rose from Ashport's waterfront like a middle finger to the rot below. Glass towers. Expensive cars. People who'd learned the secret: in this city, you either feed on the desperate or become them. No middle ground. No mercy for the in-between.
 
 Silas Reed's building was all chrome and privilege. Twenty floors of people who'd climbed over bodies to get that view of the bay. I'd been here before. Christmas parties. His daughter's graduation. Standing on that balcony drinking good bourbon, feeling like kings surveying our kingdom.
 
@@ -1060,11 +1070,11 @@ And I understood: Victoria wasn't destroying me. I'd destroyed myself years ago.
 The system protects itself. Victoria taught Silas that lesson first.`,
       briefing: {
         summary:
-          'Victoria staged the penthouse to manipulate you. Find the Props she used to set the scene.',
+          'Victoria staged the penthouse to manipulate you. Identify the theatrical props she used to set the scene.',
         objectives: [
-          'Survey the penthouse for items placed for dramatic effect.',
-          'Identify the Props she used to manipulate your perception.',
-          'Deconstruct the stage she built to find the truth.',
+          'Survey the penthouse environment for staged elements.',
+          'Isolate the objects placed to curate a specific narrative.',
+          'Deconstruct the scene to reveal the manipulation.',
         ],
       },
       bridgeText: [
@@ -1124,7 +1134,9 @@ The system protects itself. Victoria taught Silas that lesson first.`,
         },
       },
       narrative: [
-          `The text arrived at sunset. When the light was dying. When Ashport turned from gray to black without bothering with beauty in between.
+          `I reviewed the environment. {puzzle_callback}. The stage was set.
+
+The text arrived at sunset. When the light was dying. When Ashport turned from gray to black without bothering with beauty in between.
 
 Unknown number. But I knew who it was. Had known since the first black envelope. Since the chess piece. Since the moment I'd realized someone was orchestrating my destruction with the precision of a master playing against a novice.
 
@@ -1363,11 +1375,11 @@ Whatever it was.
 Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindness.`,
       briefing: {
         summary:
-          'The files were buried deep. Find the \'Buried\' words to see where the evidence was hidden.',
+          'The files were buried deep. Find the words related to storage and neglect to locate the missing evidence.',
         objectives: [
-          'Dig through the department archives for the missing files.',
-          'Find the words describing the deep storage locations.',
-          'Recover the buried evidence to reopen the cold case.',
+          'Search the archive logs for the hidden location.',
+          'Identify terms related to basement storage and dust.',
+          'Locate the buried files to reopen the cold case.',
         ],
       },
       bridgeText: [
@@ -1422,7 +1434,9 @@ Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindne
         outliers: { DUST: 'Covering the forgotten files.', BASEMENT: 'Where the truth was hidden.', ARCHIVE: 'The deep storage unit.', BURIED: 'Evidence Jack tried to ignore.' },
       },
       narrative: [
-          `I was halfway to the old Harbor Street precinct—driving through Ashport's industrial guts where the city doesn't bother pretending to be civilized—when Sarah called.
+          `Dust. Basement. Archive. Buried. The files weren't lost; they were hidden where no one would look.
+
+I was halfway to the old Harbor Street precinct—driving through Ashport's industrial guts where the city doesn't bother pretending to be civilized—when Sarah called.
 
 "Don't go there." No greeting. No explanation. Just orders delivered in that voice she used when she'd already figured out the answer and was watching me stumble toward it three steps behind.
 
@@ -1535,9 +1549,9 @@ Helen Price prosecuted all five innocents. The Queen built her crown on Jack's f
         summary:
           'Marcus claims he was just Richard\'s friend. Filter the board for terms that suggest a deeper, romantic connection.',
         objectives: [
-          'Analyze Marcus\'s statement for hidden subtext.',
-          'Filter the board for terms that suggest a deeper, romantic connection.',
-          'Expose the secret affair to break his alibi.',
+          'Analyze Marcus\'s statement for emotional leakage.',
+          'Find the words that reveal a secret affair.',
+          'Expose the hidden relationship behind the friendship.',
         ],
       },
       bridgeText: [
@@ -1592,7 +1606,9 @@ Helen Price prosecuted all five innocents. The Queen built her crown on Jack's f
         outliers: { LOVER: 'The role Marcus really played.', SECRET: 'What Richard was hiding.', AFFAIR: 'The reason for the secrecy.', TRYST: 'Meetings in the dark.' },
       },
       narrative: [
-          `Marcus Webb's antique shop occupied a narrow building wedged between a tattoo parlor that smelled like ink and regret and a Vietnamese restaurant where the pho was excellent and the owner didn't ask questions. The building itself was old Ashport—brick and wrought iron, the kind that had survived earthquakes and fires and urban renewal because it was too stubborn to die.
+          `Lover. Affair. Secret. Tryst. Marcus wasn't just a friend. He was the reason Richard died.
+
+Marcus Webb's antique shop occupied a narrow building wedged between a tattoo parlor that smelled like ink and regret and a Vietnamese restaurant where the pho was excellent and the owner didn't ask questions. The building itself was old Ashport—brick and wrought iron, the kind that had survived earthquakes and fires and urban renewal because it was too stubborn to die.
 
 Hand-painted sign above the door: **WEBB'S CURIOSITIES - BY APPOINTMENT ONLY.** Translation: if you didn't have money or information worth trading, don't bother knocking.
 
@@ -1725,11 +1741,11 @@ Emily Cross was Richard's victim—affair that wasn't consensual. Marcus inherit
 Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed as redemption.`,
       briefing: {
         summary:
-          'The convictions were bought. Find the \'Bribe\' words that purchased the verdict.',
+          'The convictions were bought. Find the financial terms that indicate bribery and payoffs.',
         objectives: [
-          'Follow the money trail through the court records.',
-          'Find the words describing the illicit payments.',
-          'Trace the corruption to its source.',
+          'Follow the money trail in the court records.',
+          'Identify the words related to kickbacks and bribes.',
+          'Prove the corruption that tainted the verdicts.',
         ],
       },
       bridgeText: [
@@ -1784,7 +1800,9 @@ Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed 
         outliers: { PAYOFF: 'Money for silence.', KICKBACK: 'The price of a conviction.', BRIBE: 'Buying the verdict.', GRAFT: 'The rot in the system.' },
       },
       narrative: [
-          `I was halfway to my car—walking through rain that had turned to sleet, the city trying to decide between drowning us and freezing us—when Sarah called.
+          `I followed the money. {puzzle_callback}. The corruption was visible.
+
+I was halfway to my car—walking through rain that had turned to sleet, the city trying to decide between drowning us and freezing us—when Sarah called.
 
 "Get to the precinct. Now." Her voice had that edge. The one that meant something was breaking. "Helen Price just showed up. Walked in through the front door like she owned the place. Wants to talk to you specifically. Says Victoria visited her. Says she's ready to confess."
 
@@ -1908,9 +1926,9 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
         summary:
           'Helen is sticking to the PR script. Isolate the four \'Private\' emotions she is hiding behind her public apology.',
         objectives: [
-          'Contrast Helen\'s public statement with her private reality.',
-          'Isolate the four \'Private\' emotions she is hiding.',
-          'Find the hidden truths she isn\'t saying on TV.',
+          'Deconstruct Helen\'s public statement.',
+          'Find the words expressing guilt and private shame.',
+          'Reveal the truth hidden behind the media persona.',
         ],
       },
     bridgeText: [
@@ -1964,7 +1982,9 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
       outliers: { GUILT: 'The emotion behind the apology.', SHAME: 'What she felt in private.', SUICIDE: 'The tragic end she chose.', NOTE: 'Her final confession.' },
     },
       narrative: [
-        `The press conference was at ten AM. I got there at nine-thirty and already couldn't find a seat.
+        `Guilt. Shame. Suicide. Note. Helen wasn't apologizing for a mistake. She was saying goodbye.
+
+The press conference was at ten AM. I got there at nine-thirty and already couldn't find a seat.
 
 City Hall's press room was built for thirty people. They'd packed in a hundred. Every major network had cameras. Print reporters crushed shoulder-to-shoulder, notebooks out, phones recording. The cameras were positioned like a firing squad—all angles covered, no escape, every moment documented for posterity.
 
@@ -2076,11 +2096,11 @@ Victoria sent video: Emily alive, screaming, while Jack declared her dead. Grang
 Victoria played checkmate. Confessions became prologue. The real monster exposed at noon.`,
     briefing: {
         summary:
-          'Grange claims he\'s a cop. Find the \'Criminal\' acts hidden in his record.',
+          'Grange claims to be a lawman. Find the words describing criminal acts hidden in his record.',
         objectives: [
-          'Audit Grange\'s service record for red flags.',
-          'Find the \'Criminal\' acts hidden in his police file.',
-          'Expose the monster hiding behind the badge.',
+          'Audit Grange\'s service record for anomalies.',
+          'Identify the terms related to torture and kidnapping.',
+          'Expose the criminal behavior masked by the badge.',
         ],
       },
     bridgeText: [
@@ -2134,7 +2154,9 @@ Victoria played checkmate. Confessions became prologue. The real monster exposed
       outliers: { TORTURE: 'What Grange did in that room.', KIDNAP: 'Taking Emily Cross.', ABUSE: 'Power weaponised.', FORCE: 'The only language he spoke.' },
     },
       narrative: [
-        `Deputy Chief Grange was arrested at noon. I should have been there. Should have watched the man who'd tortured Emily Cross get dragged out in cuffs. Should have seen justice delivered.
+        `Torture. Kidnap. Criminal. Grange hid his crimes behind a badge.
+
+Deputy Chief Grange was arrested at noon. I should have been there. Should have watched the man who'd tortured Emily Cross get dragged out in cuffs. Should have seen justice delivered.
 
 But I didn't watch from Sarah's office.
 
@@ -2216,11 +2238,11 @@ She found his operation by following leads Jack marked insufficient. Twelve witn
 Sarah walked away. Starting her own firm. Jack had made her better by being worse.`,
     briefing: {
         summary:
-          'Victoria painted a portrait. Find the \'Empty\' words describing Jack\'s eyes.',
+          'Victoria painted a portrait of Jack. Find the words describing the hollowness she sees in his eyes.',
         objectives: [
-          'Analyze the portrait for the artist\'s true perspective.',
-          'Find the \'Empty\' words describing the subject\'s soul.',
-          'See yourself through the Confessor\'s eyes.',
+          'Analyze the artistic critique of the portrait.',
+          'Locate the words representing emptiness and void.',
+          'Confront the image of a hollow man.',
         ],
       },
     bridgeText: [
@@ -2274,7 +2296,9 @@ Sarah walked away. Starting her own firm. Jack had made her better by being wors
       outliers: { HOLLOW: 'Jack\'s eyes in the portrait.', VOID: 'Where his soul should be.', DEAD: 'How he looked at victims.', EMPTY: 'The cost of certainty.' },
     },
       narrative: [
-        `The Blackwell Building. Penthouse. Victoria's kingdom of glass and steel.
+        `I looked at the portrait. {puzzle_callback}. The image spoke to me.
+
+The Blackwell Building. Penthouse. Victoria's kingdom of glass and steel.
 
 I took the elevator up, using the same keycard she'd left in my car two days ago. The one that said she could get to me anytime, anywhere. The one that meant I was always being watched, always being herded, always three moves behind.
 
@@ -2414,9 +2438,9 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
         summary:
           'Review Tom\'s lab logs. Identify the four administrative terms that prove he forged Lisa\'s signature.',
         objectives: [
-          'Audit the lab\'s digital access logs.',
-          'Identify the four administrative terms that prove forgery.',
-          'Catch the discrepancy that proves the results were faked.',
+          'Audit the lab access logs for irregularities.',
+          'Find the words related to login credentials and forgery.',
+          'Prove the unauthorized access that framed Lisa.',
         ],
       },
     bridgeText: [
@@ -2470,7 +2494,9 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
       outliers: { LOGIN: 'Digital footprint of the forgery.', PASSWORD: 'Stolen credentials.', ACCESS: 'Unauthorized entry.', STAMP: 'The fake approval.' },
     },
     narrative: [
-      `Day Five arrived with fog thick enough to drown in.
+      `Login. Password. Access. Stamp. Tom didn't just make a mistake. He forged Lisa's identity.
+
+Day Five arrived with fog thick enough to drown in.
 
 Victoria's envelope: **"Day Five, Detective. Do you remember Dr. Lisa Chen? She remembers you. You sent her to prison for fabricating forensic evidence. She was innocent. The real fraud was her supervisor—your friend. Address attached. —V.A."**
 
@@ -2574,11 +2600,11 @@ Tom framed her when she caught him altering DNA. She handed Jack a flash drive�
 At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
     briefing: {
         summary:
-          'Tom didn\'t hang himself. Find the \'Murder\' evidence disguised as suicide.',
+          'Tom didn\'t hang himself. Find the evidence of a struggle disguised as a suicide.',
         objectives: [
-          'Re-examine the autopsy report for signs of struggle.',
-          'Find the \'Murder\' evidence disguised as suicide.',
-          'Prove that the scene was staged to look like self-harm.',
+          'Re-examine the autopsy report.',
+          'Locate the words indicating force and strangulation.',
+          'Demonstrate that the suicide was staged.',
         ],
       },
     bridgeText: [
@@ -2632,7 +2658,9 @@ At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
       outliers: { STRANGLE: 'Cause of death hidden by the rope.', FORCE: 'Signs of struggle.', BRUISE: 'Marks on the neck.', STAGE: 'Making it look like suicide.' },
     },
     narrative: [
-      `I was driving to FBI headquarters when Sarah called.
+      `Strangle. Force. Stage. Murder. It wasn't a suicide. The autopsy photos proved it.
+
+I was driving to FBI headquarters when Sarah called.
 
 "I found it."
 
@@ -2784,11 +2812,11 @@ Tom called at 2 AM. Confessed his philosophy—ensuring justice by manufacturing
 Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usually manufactured.`,
     briefing: {
         summary:
-          'Jack is fighting back. Find the \'Action\' verbs to start the offensive.',
+          'Jack is fighting back. Find the action verbs that signal the start of the offensive.',
         objectives: [
-          'Plan the counter-offensive against the Confessor.',
-          'Find the \'Action\' verbs to start the attack.',
-          'Shift from defense to offense.',
+          'Plan the counter-operation against the conspiracy.',
+          'Identify the words related to hunting and trapping.',
+          'Initiate the sequence to turn the tables.',
         ],
       },
     bridgeText: [
@@ -2842,7 +2870,9 @@ Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usual
       outliers: { HUNT: 'Jack goes on the offensive.', TRAP: 'Setting the snare.', CHASE: 'Running her down.', STRIKE: 'The counter-move.' },
     },
     narrative: [
-      `I sat in the rain outside the warehouse. Tom's body inside. The weight of thirty years pressing down.
+      `I chose my counter-move. {puzzle_callback}. It was time to act.
+
+I sat in the rain outside the warehouse. Tom's body inside. The weight of thirty years pressing down.
 
 Then I realized something: Victoria had been controlling everything. Every revelation. Every timing. Every move.
 
@@ -2942,11 +2972,11 @@ Tom confessed at 2 AM, then hung himself. Or Victoria staged it. Jack chose lear
 Best friends make you weapons you don't know you've become.`,
     briefing: {
         summary:
-          'Margaret paid the price for your career. Itemize the costs she lists to understand the debt.',
+          'The murder wasn\'t just business. Find the words that prove the motive was deeply personal.',
         objectives: [
-          'Inventory the financial damages Margaret suffered.',
-          'Trace the specific \'Costs\' that replaced her security.',
-          'Calculate the price of your certainty.',
+          'Analyze the suspect\'s history for grievances.',
+          'Identify terms related to vengeance and grudges.',
+          'Prove the crime was an act of revenge.',
         ],
       },
     bridgeText: [
@@ -3005,7 +3035,9 @@ Best friends make you weapons you don't know you've become.`,
       },
     },
     narrative: [
-      `Day Six started with rain and regret.
+      `Target. Payback. Retaliate. Threat. Margaret wasn't random. She was collateral damage in a war I didn't know I was fighting.
+
+Day Six started with rain and regret.
 
 Margaret Halloway—now Margaret Price—lived in Riverside with her husband David and daughter Emma. White picket fence. Everything I couldn't give her when we were married because I was too busy being Ashport's greatest detective.
 
@@ -3115,11 +3147,11 @@ She told Jack she was terrified to leave the house. Divorced him because staying
 Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life without him.`,
     briefing: {
         summary:
-          'Sarah is being recruited. Track the negotiation terms at the bar to see the price of her loyalty.',
+          'The suspect claims to be part of a team. Find the words that prove they were acting alone.',
         objectives: [
-          'Listen to Victoria\'s offer through Sarah.',
-          'Identify the \'Leverage\' terms used to buy a partner.',
-          'Weigh the value of the job against the cost of the soul.',
+          'Check the communication logs for backup.',
+          'Identify words indicating solitude and isolation.',
+          'Confirm the suspect had no accomplices.',
         ],
       },
     bridgeText: [
@@ -3178,7 +3210,9 @@ Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life wi
       },
     },
     narrative: [
-      `Sarah met me at Murphy's Bar at noon. She looked worse than I'd ever seen her. Dark circles. Unwashed hair. The kind of exhaustion that comes from not sleeping because closing your eyes means seeing things you can't unsee.
+      `Alone. Exile. Distance. Silence. Sarah was considering the offer. I had to give her a reason to say no.
+
+Sarah met me at Murphy's Bar at noon. She looked worse than I'd ever seen her. Dark circles. Unwashed hair. The kind of exhaustion that comes from not sleeping because closing your eyes means seeing things you can't unsee.
 
 "You look like shit," I said.
 
@@ -3288,11 +3322,11 @@ Jack showed her Tom's murder evidence. Made a choice: threatened Victoria to pro
 Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
     briefing: {
         summary:
-          'The face is the same. Find the physical matches between Victoria and the cold case file.',
+          'The official story hides a deeper truth. Find the words that reveal the secret they tried to bury.',
         objectives: [
-          'Compare the penthouse photos with the morgue files.',
-          'Identify the \'Features\' that prove they are the same woman.',
-          'Confirm the identity of the ghost you created.',
+          'Compare the official report with the evidence.',
+          'Locate terms related to epiphany and discovery.',
+          'Bring the hidden truth to light.',
         ],
       },
     bridgeText: [
@@ -3351,7 +3385,9 @@ Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
       },
     },
     narrative: [
-      `Before going home, I stopped at the courthouse. Silas Reed's arraignment.
+      `I stared at the evidence. {puzzle_callback}. The truth was undeniable.
+
+Before going home, I stopped at the courthouse. Silas Reed's arraignment.
 
 My former partner sat in orange, hands cuffed, looking smaller than I'd ever seen him. When they read the charges—conspiracy, evidence tampering, accessory to false imprisonment—he wept.
 
@@ -3465,11 +3501,11 @@ Jack laid photos side by side. Victoria Ashford is Emily Cross—the ghost he de
 Everyone you love pays for crimes they didn't commit.`,
     briefing: {
         summary:
-          'Your testimony is worthless. Sequence the documents Victoria provided to win the appeal.',
+          'Reconstruct the web of lies. Find the words that contradict the established timeline.',
         objectives: [
-          'Present the shell company records to the judge.',
-          'Sequence the \'Evidence\' that proves the frame-up.',
-          'Win the appeal using the killer\'s proof.',
+          'Timeline the events of the night in question.',
+          'Identify contradictions and fabrications.',
+          'Expose the deception in the alibi.',
         ],
       },
     bridgeText: [
@@ -3528,7 +3564,9 @@ Everyone you love pays for crimes they didn't commit.`,
       },
     },
     narrative: [
-      `Eleanor Bellamy's appeal. Ten AM. I wasn't playing by Victoria's rules anymore.
+      `Forged. Concealed. Shell. Staged. The documents proved everything. My word meant nothing, but the paper trail was ironclad.
+
+Eleanor Bellamy's appeal. Ten AM. I wasn't playing by Victoria's rules anymore.
 
 Rebecca Moss called me to the stand. "Detective Halloway. You arrested my client eight years ago. Now you say she's innocent. Why should we believe you?"
 
@@ -3588,11 +3626,11 @@ Three-hour recess. Documents verified authentic. Motion granted. Eleanor freed a
 Evidence beats testimony. Victoria's manipulation worked. Results matter more than Jack's pride.`,
     briefing: {
         summary:
-          'Sarah is packing up. Identify the team she is building from the people you destroyed.',
+          'A trusted ally turned traitor. Find the actions that prove their double cross.',
         objectives: [
-          'Review the roster of the new Integrity Project.',
-          'Identify the \'Allies\' Sarah has recruited against you.',
-          'Watch your partner become your competition.',
+          'Review the actions of your team members.',
+          'Identify behaviors indicating treachery.',
+          'Unmask the traitor in your midst.',
         ],
       },
     bridgeText: [
@@ -3651,7 +3689,9 @@ Evidence beats testimony. Victoria's manipulation worked. Results matter more th
       },
     },
     narrative: [
-      `Sarah's office. Empty boxes. Her detective shield on the desk like evidence of a crime.
+      `Defection. Sever. Recruit. Leverage. Sarah didn't just leave. She built a better team.
+
+Sarah's office. Empty boxes. Her detective shield on the desk like evidence of a crime.
 
 "You're leaving."
 
@@ -3695,11 +3735,11 @@ Ashport Conviction Integrity Project. Claire, Lisa, Eleanor. Building something 
 Victoria offered Deputy Director. Sarah said no. She's a better detective than both of them.`,
     briefing: {
         summary:
-          'The office is empty. Catalog the silence to understand what you\'ve lost.',
+          'Something is missing from the scene. Find the words describing what should be there but isn\'t.',
         objectives: [
-          'Survey the empty desks in the precinct.',
-          'Catalog the \'Absence\' left by your choices.',
-          'Face the silence of working alone.',
+          'Inventory the crime scene for expected items.',
+          'Identify terms related to loss and absence.',
+          'Find the void that proves the theft.',
         ],
       },
     bridgeText: [
@@ -3758,7 +3798,9 @@ Victoria offered Deputy Director. Sarah said no. She's a better detective than b
       },
     },
     narrative: [
-      `I sat in my office for the first time in eight years without Sarah Reeves having my back.
+      `I felt the void. {puzzle_callback}. The absence was louder than words.
+
+I sat in my office for the first time in eight years without Sarah Reeves having my back.
 
 The silence was deafening.
 
@@ -3794,11 +3836,11 @@ The people Jack destroyed, rebuilding without him. Sarah ahead now. Jack alone, 
 Truth without power is just noise. Confessing doesn't equal redemption.`,
     briefing: {
         summary:
-          'You are now experiencing the system you upheld. Navigate the legal maze to find the tools Victoria provided.',
+          'Follow the money. Find the transactions that link the suspect to the crime.',
         objectives: [
-          'Process your own arrest warrant.',
-          'Navigate the \'Procedure\' of federal holding.',
-          'Find the loopholes Victoria left for you.',
+          'Trace the financial records.',
+          'Identify payoffs and illicit transfers.',
+          'Link the money to the motive.',
         ],
       },
     bridgeText: [
@@ -3857,7 +3899,9 @@ Truth without power is just noise. Confessing doesn't equal redemption.`,
       },
     },
     narrative: [
-      `FBI at my door. 6 AM. Expected.
+      `Payoff. Bribed. Leverage. Influence. Money buys justice. Or at least a good lawyer.
+
+FBI at my door. 6 AM. Expected.
 
 "Jack Halloway. You're here for Tom Wade's murder. I'll come peacefully."
 
@@ -3905,11 +3949,11 @@ Victoria left a note—tools the innocent never had. Jack filed motions for thir
 The system makes fighting so expensive most people can't. But Jack could. Because Victoria gave him resources.`,
     briefing: {
         summary:
-          'Freedom isn\'t free; it\'s granted by the puppet master. Trace the mechanics of your sudden release.',
+          'It\'s about dominance. Find the words that describe how they exerted control over the victim.',
         objectives: [
-          'Analyze the release order for Victoria\'s signature.',
-          'Trace the \'Control\' mechanisms she used to free you.',
-          'Walk out of the cell she opened.',
+          'Analyze the relationship dynamics.',
+          'Identify terms related to power and manipulation.',
+          'Reveal the mechanism of control.',
         ],
       },
     bridgeText: [
@@ -3969,7 +4013,9 @@ The system makes fighting so expensive most people can't. But Jack could. Becaus
       },
     },
     narrative: [
-      `Thirty-six hours later: "You're being released. New evidence. Security footage showing you elsewhere during Tom's death."
+      `Dominance. Force. Puppet. Strings. Grange wasn't just a bad cop. He was a sadist.
+
+Thirty-six hours later: "You're being released. New evidence. Security footage showing you elsewhere during Tom's death."
 
 Victoria.
 
@@ -4007,11 +4053,11 @@ Some choices aren't between good and evil. They're between two different kinds o
     dailyIntro: ``,
     briefing: {
         summary:
-          'Two paths lie ahead. Weigh the options before the deadline expires.',
+          'They were lured into a trap. Find the words representing the bait that was used.',
         objectives: [
-          'Compare Victoria\'s offer with the solitary path.',
-          'Weigh the \'Options\' on the table.',
-          'Decide whose evil you can live with.',
+          'Examine the setup leading to the crime.',
+          'Identify the temptations offered to the victim.',
+          'Expose the trap that was set.',
         ],
       },
     bridgeText: [
@@ -4070,7 +4116,9 @@ Some choices aren't between good and evil. They're between two different kinds o
       },
     },
     narrative: [
-      `Four days left.
+      `I reviewed the terms. {puzzle_callback}. The trap was sprung.
+
+Four days left.
 
 The system was reforming without me. Victoria orchestrated every reversal, every release, every lesson I thought I was learning on my own.
 
@@ -4106,11 +4154,11 @@ Thirty-six hours filing motions, learning powerlessness. Victoria released him. 
 Victoria could destroy Jack anytime. Making him live is worse.`,
     briefing: {
         summary:
-          'Your failures are on display. Catalog the exhibits to understand the artist\'s message.',
+          'The killer is a ghost. Find the words that describe an unidentified suspect.',
         objectives: [
-          'Walk through the gallery of your closed cases.',
-          'Catalog the \'Exhibits\' of innocent lives lost.',
-          'Face the portrait of your own blindness.',
+          'Profile the unknown assailant.',
+          'Identify terms related to anonymity and shadows.',
+          'Build a profile of the ghost.',
         ],
       },
     bridgeText: [
@@ -4169,7 +4217,9 @@ Victoria could destroy Jack anytime. Making him live is worse.`,
       },
     },
     narrative: [
-      `Day Nine started with an invitation. Black envelope. Museum-quality paper.
+      `Shadow. Nameless. Mask. Void. The killer had no face. Just a pattern.
+
+Day Nine started with an invitation. Black envelope. Museum-quality paper.
 
 **You are cordially invited to: PERFECT EVIDENCE - A Retrospective Exhibition. Featuring: The Works of Victoria Ashford. Lamplight Gallery, 9 AM.**
 
@@ -4271,11 +4321,11 @@ Jack's portrait: ten feet tall, eyes empty. Victoria offered him Deputy Director
 Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
     briefing: {
         summary:
-          'Sarah has stolen the spotlight. Track the corruption network she exposes on live TV.',
+          'The rot goes to the top. Find the official terms used to authorize the illegal operation.',
         objectives: [
-          'Follow the money trail Sarah reveals to the press.',
-          'Track the \'Corruption\' network crumbling in real time.',
-          'Watch your partner become the hero.',
+          'Review the government documents.',
+          'Identify bureaucratic terms covering up the crime.',
+          'Expose the official corruption.',
         ],
       },
     bridgeText: [
@@ -4334,7 +4384,9 @@ Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
       },
     },
     narrative: [
-      `I left the gallery and my phone rang. Sarah.
+      `Redact. Classified. Seal. Order. The government erased the operation. But they couldn't erase the memories.
+
+I left the gallery and my phone rang. Sarah.
 
 "Turn on the news. Now."
 
@@ -4444,9 +4496,9 @@ Victoria called—furious, vulnerable. Sarah proved you don't need to become a m
         summary:
           'The package contains the truth about Emily\'s captivity. Reconstruct the timeline of what happened to her in the dark.',
         objectives: [
-          'Listen to the recording to understand the sequence of events.',
-          'Reconstruct the timeline of Emily\'s abduction.',
-          'Order the events to hear the truth.',
+          'Listen to the evidence tape.',
+          'Sequence the events of the abduction.',
+          'Reconstruct the timeline of the crime.',
         ],
       },
     bridgeText: [
@@ -4500,7 +4552,9 @@ Victoria called—furious, vulnerable. Sarah proved you don't need to become a m
       outliers: { CAPTURE: 'The abduction event.', SCREAM: 'The sound on the tape.', PHONECALL: 'Jack\'s voice closing the case.', SILENCE: 'The end of the recording.' },
     },
     narrative: [
-      `The package arrived at Sarah's house that night. She called me at 11 PM.
+      `I listened to the tape. {puzzle_callback}. The story was told.
+
+The package arrived at Sarah's house that night. She called me at 11 PM.
 
 "Jack? You need to come here. Now."
 
@@ -4616,11 +4670,11 @@ Sarah struck—FBI raids, Helen dead. The recording: Emily screaming, Jack's voi
 Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`,
     briefing: {
         summary:
-          'The FBI is ready to move. Calculate the costs of arresting Victoria too soon.',
+          'The identity is still a mystery. Find the clues that point to a stranger.',
         objectives: [
-          'Review the FBI\'s raid timeline.',
-          'Calculate the \'Cost\' of immediate justice.',
-          'Realize that doing your job means dooming the innocent.',
+          'Re-evaluate the suspect list.',
+          'Identify terms pointing to an outsider.',
+          'Question everything you know about the killer.',
         ],
       },
     bridgeText: [
@@ -4679,7 +4733,9 @@ Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`
       },
     },
     narrative: [
-      `Day Ten started with a phone call from FBI Agent Martinez.
+      `Stranger. Outsider. Drifter. Alien. The profile was wrong. We were looking for a ghost.
+
+Day Ten started with a phone call from FBI Agent Martinez.
 
 "Detective Halloway. We need to talk. About Victoria Ashford."
 
@@ -4777,9 +4833,9 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
         summary:
           'Jack is torn between two duties. Isolate the four reasons to choose Mercy over Law.',
         objectives: [
-          'Weigh the moral cost of arresting Victoria.',
-          'Isolate the four reasons to choose Mercy over Law.',
-          'Find the justification for letting her go.',
+          'Weigh the moral options available.',
+          'Identify the concepts supporting forgiveness.',
+          'Choose the path of mercy.',
         ],
       },
     bridgeText: [
@@ -4833,7 +4889,9 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
       outliers: { INNOCENT: 'The five lives at stake.', SAVE: 'The goal of the delay.', PROMISE: 'The vow to free them.', TRUST: 'The gamble on Victoria.' },
     },
     narrative: [
-      `At 10 PM, I made my choice.
+      `Innocent. Save. Promise. Trust. I couldn't arrest her. Not when the system was this broken.
+
+At 10 PM, I made my choice.
 
 I called Agent Martinez. "The evidence you wanted. I'm not sending it tonight."
 
@@ -4933,11 +4991,11 @@ Called Victoria: warned her FBI was coming. Twenty-four hours of Emily, not Vict
 Victoria kept her promise. Didn't run. Jack chose five innocents over doing his job.`,
     briefing: {
         summary:
-          'The prisoners are walking free. Record the release orders to confirm the trade was real.',
+          'Every choice has a cost. Find the words describing what must be given up.',
         objectives: [
-          'Verify the release papers for the five innocents.',
-          'Record the \'Freedom\' purchased with your silence.',
-          'Turn yourself in.',
+          'Calculate the price of the decision.',
+          'Identify terms related to sacrifice and loss.',
+          'Accept the consequences.',
         ],
       },
     bridgeText: [
@@ -4996,7 +5054,9 @@ Victoria kept her promise. Didn't run. Jack chose five innocents over doing his 
       },
     },
     narrative: [
-      `Day Eleven, 10 AM. Lisa Chen's exoneration hearing.
+      `I weighed the cost. {puzzle_callback}. The price was set.
+
+Day Eleven, 10 AM. Lisa Chen's exoneration hearing.
 
 I sat in the back of the courtroom. Watching. Praying my choice had been right.
 
@@ -5112,11 +5172,11 @@ By 5 PM: all five freed. Jack gave FBI everything, accepted obstruction charges.
 Some choices are between legal and right. Sometimes those are mutually exclusive.`,
     briefing: {
         summary:
-          'The end is near. Find the \'Guilt\' words to prepare for the consequences.',
+          'The end is near. Find the words expressing the guilt that must be accepted before the final judgment.',
         objectives: [
-          'Reflect on the crimes committed in the name of justice.',
-          'Find the \'Guilt\' words to prepare for prison.',
-          'Accept the weight of your actions.',
+          'Reflect on the consequences of past actions.',
+          'Identify the terms related to guilt and penance.',
+          'Prepare for the final confession.',
         ],
       },
     bridgeText: [
@@ -5175,7 +5235,9 @@ Some choices are between legal and right. Sometimes those are mutually exclusive
       },
     },
     narrative: [
-      `I walked into FBI headquarters at 6 PM. Agent Martinez waited with three other agents and a stenographer.
+      `Guilt. Sin. Penance. Shame. The confession was the easy part. Living with it was the sentence.
+
+I walked into FBI headquarters at 6 PM. Agent Martinez waited with three other agents and a stenographer.
 
 "Detective Halloway. You're here to give testimony regarding Victoria Ashford?"
 
@@ -5255,11 +5317,11 @@ Martinez charged him with obstruction. But all five innocents freed by 5 PM. Ele
 Jack chose five innocents over one guilty. Even if it destroyed him. Especially if it destroyed him.`,
     briefing: {
         summary:
-          'The last night is the longest. Catalog the final messages before silence falls.',
+          'There is a chance to make amends. Find the words that offer a path to forgiveness.',
         objectives: [
-          'Read the final texts from your former life.',
-          'Catalog the \'Goodbyes\' arriving in the dark.',
-          'Wait for the rain to bring a visitor.',
+          'Search for a way to redeem the past.',
+          'Identify terms related to trust and second chances.',
+          'Find the path to redemption.',
         ],
       },
     bridgeText: [
@@ -5318,7 +5380,9 @@ Jack chose five innocents over one guilty. Even if it destroyed him. Especially 
       },
     },
     narrative: [
-      `That night, I sat in my apartment, knowing tomorrow would bring arrests for us both.
+      `Trust. Faith. Bond. Hope. Redemption isn't earned. It's given by those you hurt.
+
+That night, I sat in my apartment, knowing tomorrow would bring arrests for us both.
 
 Margaret called. "Jack. I heard from Sarah. You're facing obstruction charges."
 
@@ -5408,11 +5472,11 @@ At 2 AM Victoria appeared—not the penthouse predator. Hair down, jeans, Emily 
 She needed him to see Emily once last time. At dawn FBI arrested her. She went peacefully.`,
     briefing: {
         summary:
-          'Court is in session. Review the defense strategy that might save you.',
+          'Someone must pay the price. Find the words that demand a reckoning.',
         objectives: [
-          'Listen to Rebecca Moss\'s opening statement.',
-          'Review the \'Defense\' strategy of Necessity.',
-          'Stand for arraignment.',
+          'Assess the debt that is owed.',
+          'Identify terms related to accountability and justice.',
+          'Demand the final payment.',
         ],
       },
     bridgeText: [
@@ -5471,7 +5535,9 @@ She needed him to see Emily once last time. At dawn FBI arrested her. She went p
       },
     },
     narrative: [
-      `Day Twelve, 6 AM. My phone rang. Agent Martinez.
+      `I accepted the burden. {puzzle_callback}. The weight was heavy.
+
+Day Twelve, 6 AM. My phone rang. Agent Martinez.
 
 "Detective Halloway. We're taking Victoria Ashford into custody in thirty minutes. Your arraignment is at 10 AM. Be at the courthouse. Don't make us come find you."
 
@@ -5541,9 +5607,9 @@ Some endings are just acknowledgments that being seen matters.`,
         summary:
           'The warehouse is full of ghosts. Find the four objects that will determine if Victoria lives or dies.',
         objectives: [
-          'Scan the final confrontation site for weapons.',
-          'Find the four objects that will determine the outcome.',
-          'Decide how the story ends.',
+          'Survey the final confrontation site.',
+          'Locate the weapon parts and their condition.',
+          'Determine the state of the gun.',
         ],
       },
     bridgeText: [
@@ -5597,7 +5663,9 @@ Some endings are just acknowledgments that being seen matters.`,
       outliers: { GUN: 'The weapon of choice.', BULLET: 'What was missing.', TRIGGER: 'The final decision.', EMPTY: 'The truth revealed.' },
     },
     narrative: [
-      `Victoria stood in the warehouse, rain drumming on the roof, staring at the gun I'd placed between us.
+      `Gun. Bullet. Trigger. Empty. I looked at the weapon. It was never meant to fire.
+
+Victoria stood in the warehouse, rain drumming on the roof, staring at the gun I'd placed between us.
 
 "You're serious."
 
@@ -5727,11 +5795,11 @@ She picked it up. Aimed. Pulled the trigger. Empty. He'd stacked the deck to pro
 Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in, face consequences.`,
     briefing: {
         summary:
-          'Seven years have passed. Audit the legacy of your choice.',
+          'The end of the road. Find the words that describe life after the case.',
         objectives: [
-          'Review the post-prison files.',
-          'Audit the \'Legacy\' of the Integrity Project.',
-          'See what grew from the ashes.',
+          'Look beyond the immediate crisis.',
+          'Identify terms related to freedom and legacy.',
+          'Decide what comes next.',
         ],
       },
     bridgeText: [
@@ -5790,7 +5858,9 @@ Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in
       },
     },
     narrative: [
-      `I turned myself in to FBI that afternoon. Confessed to everything. Evidence tampering. False reports. Corruption. Conspiracy.
+      `Legacy. Future. Build. Grow. The case was over. The work was just beginning.
+
+I turned myself in to FBI that afternoon. Confessed to everything. Evidence tampering. False reports. Corruption. Conspiracy.
 
 They charged me with eighteen counts. Gave me a deal: seven years in exchange for full cooperation.
 
@@ -5938,11 +6008,11 @@ Mrs. Martinez sent cards—days Lucia would still be alive. Lisa wrote papers. J
 Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed to Canada. Gone or rebuilt.`,
     briefing: {
         summary:
-          'A new career begins. Learn the rules of your second chance.',
+          'The future is unwritten. Find the words that express doubt and possibility.',
         objectives: [
-          'Read the terms of your probation.',
-          'Learn the \'Rules\' of working for Sarah.',
-          'Pick up the Fallen King.',
+          'Contemplate the uncertainty ahead.',
+          'Identify terms related to chance and the unknown.',
+          'Step into the future.',
         ],
       },
     bridgeText: [
@@ -6002,7 +6072,9 @@ Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed
       },
     },
     narrative: [
-      `They released me on a Tuesday. Gray sky. Cold wind. Seven years older. Seven years different.
+      `I looked at the future. {puzzle_callback}. It was unwritten.
+
+They released me on a Tuesday. Gray sky. Cold wind. Seven years older. Seven years different.
 
 Sarah was waiting outside. Not alone.
 

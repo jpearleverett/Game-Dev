@@ -440,46 +440,66 @@ export default function CaseSolvedScreen({
                   pointerEvents="none"
                 />
 
-                <View
-                  style={[
-                    styles.boardInner,
-                    {
-                      gap: sectionGapValue,
-                      paddingHorizontal: boardContentPaddingValue,
-                      paddingVertical: boardContentPaddingValue,
-                    },
-                  ]}
-                >
                   <View
-                    pointerEvents="none"
                     style={[
-                      styles.boardPin,
-                      styles.boardPinLeft,
+                      styles.boardInner,
                       {
-                        width: pinSize,
-                        height: pinSize,
-                        borderRadius: pinSize / 2,
-                        top: -pinOffset,
+                        gap: sectionGapValue,
+                        paddingHorizontal: boardContentPaddingValue,
+                        paddingVertical: boardContentPaddingValue,
                       },
                     ]}
-                  />
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.boardPin,
-                      styles.boardPinRight,
-                      {
-                        width: pinSize,
-                        height: pinSize,
-                        borderRadius: pinSize / 2,
-                        top: -pinOffset,
-                      },
-                    ]}
-                  />
-
-                  <View
-                    style={[styles.boardHeaderRow, { gap: headerGapValue }]}
                   >
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.boardPin,
+                        styles.boardPinLeft,
+                        {
+                          width: pinSize,
+                          height: pinSize,
+                          borderRadius: pinSize / 2,
+                          top: -pinOffset,
+                        },
+                      ]}
+                    />
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.boardPin,
+                        styles.boardPinRight,
+                        {
+                          width: pinSize,
+                          height: pinSize,
+                          borderRadius: pinSize / 2,
+                          top: -pinOffset,
+                        },
+                      ]}
+                    />
+
+                    {solved ? (
+                      <View
+                        style={[
+                          styles.intelBanner,
+                          {
+                            marginBottom: scaleSpacing(SPACING.sm),
+                            padding: scaleSpacing(SPACING.sm),
+                            borderRadius: slipRadius,
+                          }
+                        ]}
+                      >
+                        <Text style={[styles.intelTitle, { fontSize: metaLabelSize }]}>
+                          SUCCESS: INTEL ACQUIRED
+                        </Text>
+                        <Text style={[styles.intelName, { fontSize: subtitleSize }]}>
+                          "{activeCase.outlierTheme.name}"
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    <View
+                      style={[styles.boardHeaderRow, { gap: headerGapValue }]}
+                    >
                     <View
                       style={[
                         styles.boardStamp,
@@ -1411,5 +1431,26 @@ const styles = StyleSheet.create({
   },
   actionColumn: {
     alignSelf: "stretch",
+  },
+  intelBanner: {
+    width: "100%",
+    backgroundColor: "rgba(20, 50, 20, 0.9)",
+    borderWidth: 1,
+    borderColor: "#4ade80",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  intelTitle: {
+    fontFamily: FONTS.monoBold,
+    color: "#4ade80",
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  intelName: {
+    fontFamily: FONTS.secondaryBold,
+    color: "#f0fdf4",
+    textTransform: "uppercase",
+    textAlign: "center",
   },
 });
