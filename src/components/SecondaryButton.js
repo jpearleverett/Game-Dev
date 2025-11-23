@@ -13,16 +13,19 @@ export default function SecondaryButton({
   icon,
   arrow = false,
   size = 'default',
+  disabled = false,
 }) {
   const { moderateScale, scaleRadius, sizeClass } = useResponsiveLayout();
 
   const handlePress = useCallback(() => {
+    if (disabled) return;
     onPress?.();
-  }, [onPress]);
+  }, [onPress, disabled]);
 
   const handlePressIn = useCallback(() => {
+    if (disabled) return;
     Haptics.selectionAsync().catch(() => {});
-  }, []);
+  }, [disabled]);
 
   const responsiveStyles = useMemo(() => {
     const paddingVerticalBase =
@@ -62,11 +65,13 @@ export default function SecondaryButton({
     <Pressable
       onPress={handlePress}
       onPressIn={handlePressIn}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.wrapper,
         responsiveStyles.wrapper,
         style,
-        pressed && styles.wrapperPressed,
+        pressed && !disabled && styles.wrapperPressed,
+        disabled && { opacity: 0.5 },
       ]}
     >
       {({ pressed }) => (
@@ -75,8 +80,8 @@ export default function SecondaryButton({
             styles.inner,
             responsiveStyles.inner,
             {
-              backgroundColor: pressed ? 'rgba(30, 33, 42, 0.9)' : 'rgba(21, 24, 32, 0.85)',
-              borderColor: pressed ? COLORS.panelOutline : COLORS.panelAperture,
+              backgroundColor: pressed && !disabled ? 'rgba(30, 33, 42, 0.9)' : 'rgba(21, 24, 32, 0.85)',
+              borderColor: pressed && !disabled ? COLORS.panelOutline : COLORS.panelAperture,
             },
           ]}
         >
