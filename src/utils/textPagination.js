@@ -1,4 +1,4 @@
-const MAX_NARRATIVE_PAGE_CHARACTERS = 520;
+const MAX_NARRATIVE_PAGE_CHARACTERS = 480;
 
 export function paginateNarrativeSegments(
   segments,
