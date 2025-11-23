@@ -1,409 +1,516 @@
 export const BRANCHING_OUTLIER_SETS = {
   '001C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Evidence Lead',
-        theme: {
-          name: 'LEDGER TRAIL',
-          icon: '📑',
-          summary: 'Follow Maya’s paperwork to build a case before you swing at Silas.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "I need the evidence.",
+            "theme": {
+                "name": "I NEED THE EVIDENCE. I'M GOING TO SEE THE DAUGHTER.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Choose I need the evidence. I'm going to see the daughter."
+            },
+            "words": [
+                "EVIDENCE",
+                "DAUGHTER",
+                "CAUTIOUS",
+                "GOING"
+            ],
+            "descriptions": {
+                "EVIDENCE": "EVIDENCE relates to I need the evidence. I'm going to see the daughter..",
+                "DAUGHTER": "DAUGHTER relates to I need the evidence. I'm going to see the daughter..",
+                "CAUTIOUS": "CAUTIOUS relates to I need the evidence. I'm going to see the daughter..",
+                "GOING": "GOING relates to I need the evidence. I'm going to see the daughter.."
+            }
         },
-        words: ['LEDGER', 'DOSSIER', 'AFFIDAVIT', 'CATALOG'],
-        descriptions: {
-          LEDGER: 'LEDGER is the Thornhill book that proves the planted sapphire never existed.',
-          DOSSIER: 'DOSSIER highlights Maya’s curated packet that sends you to the Blueline Diner.',
-          AFFIDAVIT: 'AFFIDAVIT reminds you to gather sworn statements before you charge in.',
-          CATALOG: 'CATALOG is the missing inventory that exposes how Victoria forged the evidence.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Confrontation Lead',
-        theme: {
-          name: 'PENTHOUSE SHOWDOWN',
-          icon: '⚔️',
-          summary: 'Kick Silas’s door in and force the truth out before he burns the trail.',
-        },
-        words: ['CONFRONT', 'INTERROGATE', 'PRESSURE', 'THREAT'],
-        descriptions: {
-          CONFRONT: 'CONFRONT is storming Silas’s penthouse before he can shred the transfers.',
-          INTERROGATE: 'INTERROGATE captures the face-to-face grilling you promise to deliver.',
-          PRESSURE: 'PRESSURE mirrors the heat you put on your former partner to choose a side.',
-          THREAT: 'THREAT is the leverage Victoria holds if you go in angry and empty-handed.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "I need to look him i",
+            "theme": {
+                "name": "I NEED TO LOOK HIM IN THE EYE. I'M GOING TO SILAS.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Choose I need to look him in the eye. I'm going to Silas."
+            },
+            "words": [
+                "CONFRONTATIONAL",
+                "INSTINCT",
+                "LEVERAGE",
+                "GOING"
+            ],
+            "descriptions": {
+                "CONFRONTATIONAL": "CONFRONTATIONAL relates to I need to look him in the eye. I'm going to Silas..",
+                "INSTINCT": "INSTINCT relates to I need to look him in the eye. I'm going to Silas..",
+                "LEVERAGE": "LEVERAGE relates to I need to look him in the eye. I'm going to Silas..",
+                "GOING": "GOING relates to I need to look him in the eye. I'm going to Silas.."
+            }
+        }
+    ]
+},
   '002C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Lawful Response',
-        theme: {
-          name: 'BADGE & WARRANT',
-          icon: '⚖️',
-          summary: 'Bring Silas in by the book and let the courts drag Victoria into the light.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "Silas, you're bait. ",
+            "theme": {
+                "name": "SILAS, YOU'RE BAIT. CALL VICTORIA.",
+                "icon": "\u2694\ufe0f",
+                "summary": "High risk. Maya could get hurt. (Aggressive-Bait)"
+            },
+            "words": [
+                "AGGRESSIVE",
+                "VICTORIA",
+                "SILAS",
+                "BAIT"
+            ],
+            "descriptions": {
+                "AGGRESSIVE": "AGGRESSIVE relates to Silas, you're bait. Call Victoria..",
+                "VICTORIA": "VICTORIA relates to Silas, you're bait. Call Victoria..",
+                "SILAS": "SILAS relates to Silas, you're bait. Call Victoria..",
+                "BAIT": "BAIT relates to Silas, you're bait. Call Victoria.."
+            }
         },
-        words: ['WARRANT', 'CUSTODY', 'CHARGES', 'TRIBUNAL'],
-        descriptions: {
-          WARRANT: 'WARRANT is the clean paperwork Claire keeps begging you to file.',
-          CUSTODY: 'CUSTODY locks Silas down so his intel can’t vanish with him.',
-          CHARGES: 'CHARGES keep the case prosecutable even if Maya disappears.',
-          TRIBUNAL: 'TRIBUNAL is the oversight hearing that only exists if you stay lawful.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Risked Revenge',
-        theme: {
-          name: 'HOSTAGE RUN',
-          icon: '🚨',
-          summary: 'Delay the arrest, chase Maya, and accept that rage—not procedure—sets the pace.',
-        },
-        words: ['SAFEHOUSE', 'HOSTAGE', 'BREACH', 'ESCORT'],
-        descriptions: {
-          SAFEHOUSE: 'SAFEHOUSE is the rumor that Maya’s being shuffled between Victoria’s properties.',
-          HOSTAGE: 'HOSTAGE keeps the urgency high—you move first or Maya pays.',
-          BREACH: 'BREACH signals the tactical door-kick you plan at the penthouse.',
-          ESCORT: 'ESCORT is the extraction run that only works if Silas plays bait.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "We go to the penthou",
+            "theme": {
+                "name": "WE GO TO THE PENTHOUSE. GUNS OUT. NOW.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Direct confrontation. No leverage. (Aggressive-Vigilante)"
+            },
+            "words": [
+                "CONFRONTATION",
+                "AGGRESSIVE",
+                "PENTHOUSE",
+                "VIGILANTE"
+            ],
+            "descriptions": {
+                "CONFRONTATION": "CONFRONTATION relates to We go to the penthouse. Guns out. Now..",
+                "AGGRESSIVE": "AGGRESSIVE relates to We go to the penthouse. Guns out. Now..",
+                "PENTHOUSE": "PENTHOUSE relates to We go to the penthouse. Guns out. Now..",
+                "VIGILANTE": "VIGILANTE relates to We go to the penthouse. Guns out. Now.."
+            }
+        }
+    ]
+},
   '003C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Paper Trail',
-        theme: {
-          name: 'AUDIT PATH',
-          icon: '📊',
-          summary: 'Track Helen’s payoffs through filings, ledgers, and notarized lies.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "You confess publicly",
+            "theme": {
+                "name": "YOU CONFESS PUBLICLY. NOW.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Choose You confess publicly. Now."
+            },
+            "words": [
+                "PUBLICLY",
+                "CONFESS",
+                "NONE",
+                "ACTION"
+            ],
+            "descriptions": {
+                "PUBLICLY": "PUBLICLY relates to You confess publicly. Now..",
+                "CONFESS": "CONFESS relates to You confess publicly. Now..",
+                "NONE": "NONE relates to You confess publicly. Now..",
+                "ACTION": "ACTION relates to You confess publicly. Now.."
+            }
         },
-        words: ['AUDIT', 'FILING', 'NOTARY', 'SUBPOENA'],
-        descriptions: {
-          AUDIT: 'AUDIT uncovers the phantom promotions bought with hush money.',
-          FILING: 'FILING is the docket entry that vanishes unless you document it tonight.',
-          NOTARY: 'NOTARY proves the signatures that tied Tom Wade to Helen’s bribe.',
-          SUBPOENA: 'SUBPOENA is the tool Rebecca needs if you hand her the paperwork.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Public Exposure',
-        theme: {
-          name: 'SPOTLIGHT BLAST',
-          icon: '📣',
-          summary: 'Leak everything to the press and let the city learn what corruption costs.',
-        },
-        words: ['HEADLINE', 'SPOTLIGHT', 'BULLETIN', 'CAMERA'],
-        descriptions: {
-          HEADLINE: 'HEADLINE is the front-page confession that forces the mayor to listen.',
-          SPOTLIGHT: 'SPOTLIGHT drags the grand jury into public glare before they’re ready.',
-          BULLETIN: 'BULLETIN alerts every precinct that Jack’s legend is built on forged certainty.',
-          CAMERA: 'CAMERA is the proof Silas fears most—undeniable footage on the evening news.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "Give me Tom. Now.",
+            "theme": {
+                "name": "GIVE ME TOM. NOW.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Choose Give me Tom. Now."
+            },
+            "words": [
+                "NONE",
+                "TOM",
+                "ACTION",
+                "ACTION"
+            ],
+            "descriptions": {
+                "NONE": "NONE relates to Give me Tom. Now..",
+                "TOM": "TOM relates to Give me Tom. Now..",
+                "ACTION": "ACTION relates to Give me Tom. Now.."
+            }
+        }
+    ]
+},
   '004C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Rebuild Trust',
-        theme: {
-          name: 'VOW REPAIR',
-          icon: '🤝',
-          summary: 'Patch the bond with Sarah before Victoria weaponises your silence.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "Let the FBI handle i",
+            "theme": {
+                "name": "LET THE FBI HANDLE IT. I'M COMPROMISED.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Grange is arrested by feds. You retain a shred of legality and trust with Sarah. (Methodical-Lawful)"
+            },
+            "words": [
+                "COMPROMISED",
+                "METHODICAL",
+                "ARRESTED",
+                "LEGALITY"
+            ],
+            "descriptions": {
+                "COMPROMISED": "COMPROMISED relates to Let the FBI handle it. I'm compromised..",
+                "METHODICAL": "METHODICAL relates to Let the FBI handle it. I'm compromised..",
+                "ARRESTED": "ARRESTED relates to Let the FBI handle it. I'm compromised..",
+                "LEGALITY": "LEGALITY relates to Let the FBI handle it. I'm compromised.."
+            }
         },
-        words: ['LOYALTY', 'PROMISE', 'REPAIR', 'BRIDGE'],
-        descriptions: {
-          LOYALTY: 'LOYALTY is the oath you broke when you hid the Bellamy file.',
-          PROMISE: 'PROMISE reminds Sarah you still know how to back her play.',
-          REPAIR: 'REPAIR is the late-night conversation that keeps the partnership alive.',
-          BRIDGE: 'BRIDGE is the fragile trust you’re rebuilding word by word.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Weaponized Revenge',
-        theme: {
-          name: 'SCAR TACTIC',
-          icon: '🗡️',
-          summary: 'Use betrayal as a blade and make Victoria bleed for every slight.',
-        },
-        words: ['SABOTAGE', 'PAYBACK', 'SCAR', 'BURN'],
-        descriptions: {
-          SABOTAGE: 'SABOTAGE is leaking Victoria’s op to her own investors.',
-          PAYBACK: 'PAYBACK tallies every year Eleanor spent in Greystone.',
-          SCAR: 'SCAR is the reminder you leave on anyone siding with Victoria.',
-          BURN: 'BURN is torching leverage even if it means losing Sarah for good.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "We take him. Togethe",
+            "theme": {
+                "name": "WE TAKE HIM. TOGETHER. ONE LAST BUST.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "High risk. If caught, your confession is tainted. You get the immediate satisfaction of justice. (Methodical-Action)"
+            },
+            "words": [
+                "SATISFACTION",
+                "CONFESSION",
+                "METHODICAL",
+                "IMMEDIATE"
+            ],
+            "descriptions": {
+                "SATISFACTION": "SATISFACTION relates to We take him. Together. One last bust..",
+                "CONFESSION": "CONFESSION relates to We take him. Together. One last bust..",
+                "METHODICAL": "METHODICAL relates to We take him. Together. One last bust..",
+                "IMMEDIATE": "IMMEDIATE relates to We take him. Together. One last bust.."
+            }
+        }
+    ]
+},
   '005C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Keep Faith',
-        theme: {
-          name: 'COVENANT WATCH',
-          icon: '🕯️',
-          summary: 'Hold the fragile alliances together so reform still has a pulse.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "I'll handle the Jame",
+            "theme": {
+                "name": "I'LL HANDLE THE JAMES SULLIVAN CASE REVIEW IMMEDIATELY.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Choose I'll handle the James Sullivan case review immediately."
+            },
+            "words": [
+                "IMMEDIATELY",
+                "SULLIVAN",
+                "HANDLE",
+                "REVIEW"
+            ],
+            "descriptions": {
+                "IMMEDIATELY": "IMMEDIATELY relates to I'll handle the James Sullivan case review immediately..",
+                "SULLIVAN": "SULLIVAN relates to I'll handle the James Sullivan case review immediately..",
+                "HANDLE": "HANDLE relates to I'll handle the James Sullivan case review immediately..",
+                "REVIEW": "REVIEW relates to I'll handle the James Sullivan case review immediately.."
+            }
         },
-        words: ['COVENANT', 'DEVOTION', 'STEADFAST', 'ALLIANCE'],
-        descriptions: {
-          COVENANT: 'COVENANT is the promise to the innocents you already freed.',
-          DEVOTION: 'DEVOTION mirrors the loyalty Maya expects once she tells the truth.',
-          STEADFAST: 'STEADFAST means you hold the line even when Victoria tempts you.',
-          ALLIANCE: 'ALLIANCE signals Sarah and Rebecca will help if you don’t burn them.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Break Everything',
-        theme: {
-          name: 'ASHES PLAN',
-          icon: '🔥',
-          summary: 'Detonate the system, accept collateral damage, and hope redemption survives.',
-        },
-        words: ['BETRAYAL', 'RUIN', 'ASHES', 'RUPTURE'],
-        descriptions: {
-          BETRAYAL: 'BETRAYAL is the cost of weaponising Tom Wade’s confession.',
-          RUIN: 'RUIN is the city you’re willing to wreck to end Victoria’s reign.',
-          ASHES: 'ASHES warns that once you torch the badge, there’s no way back.',
-          RUPTURE: 'RUPTURE severs every alliance except the one you have with revenge.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "We need to find Tere",
+            "theme": {
+                "name": "WE NEED TO FIND TERESA WADE'S DEFENSE ATTORNEY FIRST.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Choose We need to find Teresa Wade's defense attorney first."
+            },
+            "words": [
+                "ATTORNEY",
+                "DEFENSE",
+                "TERESA",
+                "WADE"
+            ],
+            "descriptions": {
+                "ATTORNEY": "ATTORNEY relates to We need to find Teresa Wade's defense attorney first..",
+                "DEFENSE": "DEFENSE relates to We need to find Teresa Wade's defense attorney first..",
+                "TERESA": "TERESA relates to We need to find Teresa Wade's defense attorney first..",
+                "WADE": "WADE relates to We need to find Teresa Wade's defense attorney first.."
+            }
+        }
+    ]
+},
   '006C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Measured Insight',
-        theme: {
-          name: 'CASEFILE CLARITY',
-          icon: '🗂️',
-          summary: 'Lay every transcript on the table and let evidence—not guilt—decide.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "Present only the rea",
+            "theme": {
+                "name": "PRESENT ONLY THE REAL SLUGS AND TOM'S PRIOR CONFESSION.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Choose Present only the real slugs and Tom's prior confession."
+            },
+            "words": [
+                "CONFESSION",
+                "SLUGS",
+                "PRIOR",
+                "NONE"
+            ],
+            "descriptions": {
+                "CONFESSION": "CONFESSION relates to Present only the real slugs and Tom's prior confession..",
+                "SLUGS": "SLUGS relates to Present only the real slugs and Tom's prior confession..",
+                "PRIOR": "PRIOR relates to Present only the real slugs and Tom's prior confession..",
+                "NONE": "NONE relates to Present only the real slugs and Tom's prior confession.."
+            }
         },
-        words: ['ANALYSIS', 'TRANSCRIPT', 'BRIEFING', 'EVIDENCE'],
-        descriptions: {
-          ANALYSIS: 'ANALYSIS pieces together how Emily orchestrated seven years of leverage.',
-          TRANSCRIPT: 'TRANSCRIPT is the official record that nails down the confession wording.',
-          BRIEFING: 'BRIEFING keeps the task force aligned on facts, not rage.',
-          EVIDENCE: 'EVIDENCE demands you prove every accusation before you make it.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Gut Realization',
-        theme: {
-          name: 'BONE-DEEP INSTINCT',
-          icon: '⚡',
-          summary: 'Trust the ache in your ribs when the paper trail takes too long.',
-        },
-        words: ['INTUITION', 'SPASM', 'VISION', 'WHISPER'],
-        descriptions: {
-          INTUITION: 'INTUITION is the chill that says Emily survived because of you.',
-          SPASM: 'SPASM is the physical recoil when the truth hits harder than bullets.',
-          VISION: 'VISION flashes the future you’re barreling toward if you hesitate.',
-          WHISPER: 'WHISPER is Emily’s voice daring you to act before the courts can blink.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "Present the slugs AN",
+            "theme": {
+                "name": "PRESENT THE SLUGS AND THE GRANGE LEDGER.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Choose Present the slugs AND the Grange Ledger."
+            },
+            "words": [
+                "GRANGE",
+                "LEDGER",
+                "SLUGS",
+                "NONE"
+            ],
+            "descriptions": {
+                "GRANGE": "GRANGE relates to Present the slugs AND the Grange Ledger..",
+                "LEDGER": "LEDGER relates to Present the slugs AND the Grange Ledger..",
+                "SLUGS": "SLUGS relates to Present the slugs AND the Grange Ledger..",
+                "NONE": "NONE relates to Present the slugs AND the Grange Ledger.."
+            }
+        }
+    ]
+},
   '007C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Echoing Loss',
-        theme: {
-          name: 'KEEPSAKE ECHO',
-          icon: '🕰️',
-          summary: 'Sit with the grief, honor the missing, and let that guide the choice.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "I'll use Tom's offsh",
+            "theme": {
+                "name": "I'LL USE TOM'S OFFSHORE FUNDS TO PAY THE DEFENSE.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Jack corrupts himself further but secures freedom and the final victim's case. Leads to money laundering charges later. (Dirty Money Path)"
+            },
+            "words": [
+                "LAUNDERING",
+                "OFFSHORE",
+                "CORRUPTS",
+                "DEFENSE"
+            ],
+            "descriptions": {
+                "LAUNDERING": "LAUNDERING relates to I'll use Tom's offshore funds to pay the defense..",
+                "OFFSHORE": "OFFSHORE relates to I'll use Tom's offshore funds to pay the defense..",
+                "CORRUPTS": "CORRUPTS relates to I'll use Tom's offshore funds to pay the defense..",
+                "DEFENSE": "DEFENSE relates to I'll use Tom's offshore funds to pay the defense.."
+            }
         },
-        words: ['MEMENTO', 'ECHO', 'REMNANT', 'GHOST'],
-        descriptions: {
-          MEMENTO: 'MEMENTO is Sarah’s badge, waiting on your desk like a dare.',
-          ECHO: 'ECHO is the empty apartment that answers when you call her name.',
-          REMNANT: 'REMNANT is the evidence pile she left behind for you to finish.',
-          GHOST: 'GHOST is the partner-shaped hole pushing you toward patience.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Deeper Void',
-        theme: {
-          name: 'OBLIVION STARE',
-          icon: '🌑',
-          summary: 'Lean into the silence—cut every tether and become the weapon.',
-        },
-        words: ['VOID', 'ABYSS', 'VACUUM', 'SILENCE'],
-        descriptions: {
-          VOID: 'VOID is the isolation Victoria wants for you.',
-          ABYSS: 'ABYSS is what stares back when you choose vengeance over healing.',
-          VACUUM: 'VACUUM shows how power rushes to fill the space Sarah left.',
-          SILENCE: 'SILENCE is the warning: once you sever empathy, nothing echoes back.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "I refuse to touch th",
+            "theme": {
+                "name": "I REFUSE TO TOUCH THE DIRTY MONEY. I'LL RELY ON PUBLIC DEFENSE.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Jack maintains legal purity but risks his freedom and Teresa Wade's case. (Moral Purity Path)"
+            },
+            "words": [
+                "MAINTAINS",
+                "DEFENSE",
+                "FREEDOM",
+                "REFUSE"
+            ],
+            "descriptions": {
+                "MAINTAINS": "MAINTAINS relates to I refuse to touch the dirty money. I'll rely on public defense..",
+                "DEFENSE": "DEFENSE relates to I refuse to touch the dirty money. I'll rely on public defense..",
+                "FREEDOM": "FREEDOM relates to I refuse to touch the dirty money. I'll rely on public defense..",
+                "REFUSE": "REFUSE relates to I refuse to touch the dirty money. I'll rely on public defense.."
+            }
+        }
+    ]
+},
   '008C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Calculated Offer',
-        theme: {
-          name: 'CONTRACT HOOK',
-          icon: '📜',
-          summary: 'Sign the deal, take the power, and try to control what it turns you into.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "I refuse. I accept p",
+            "theme": {
+                "name": "I REFUSE. I ACCEPT PRISON.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Choose I refuse. I accept prison."
+            },
+            "words": [
+                "REFUSE",
+                "ACCEPT",
+                "PRISON",
+                "NONE"
+            ],
+            "descriptions": {
+                "REFUSE": "REFUSE relates to I refuse. I accept prison..",
+                "ACCEPT": "ACCEPT relates to I refuse. I accept prison..",
+                "PRISON": "PRISON relates to I refuse. I accept prison..",
+                "NONE": "NONE relates to I refuse. I accept prison.."
+            }
         },
-        words: ['CLAUSE', 'RETAINER', 'BID', 'OPTION'],
-        descriptions: {
-          CLAUSE: 'CLAUSE is the loophole Victoria hides in the fine print.',
-          RETAINER: 'RETAINER is the hush-money retainer she pays to keep you onboard.',
-          BID: 'BID is the political favor you’re auctioning off.',
-          OPTION: 'OPTION keeps a clean exit open—if you notice it in time.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Surrendered Power',
-        theme: {
-          name: 'SUBMISSION COST',
-          icon: '🧎',
-          summary: 'Drop the badge, hand her the narrative, and hope sacrifice buys salvation.',
-        },
-        words: ['YIELD', 'OBEY', 'SERVE', 'SACRIFICE'],
-        descriptions: {
-          YIELD: 'YIELD is the moment you accept her rules.',
-          OBEY: 'OBEY means every order comes from someone who beat you.',
-          SERVE: 'SERVE marks the shift from detective to enforcer.',
-          SACRIFICE: 'SACRIFICE is betting your soul to get Emily free.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "I accept. I will joi",
+            "theme": {
+                "name": "I ACCEPT. I WILL JOIN YOU.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Choose I accept. I will join you."
+            },
+            "words": [
+                "ACCEPT",
+                "NONE",
+                "ACTION",
+                "ACTION"
+            ],
+            "descriptions": {
+                "ACCEPT": "ACCEPT relates to I accept. I will join you..",
+                "NONE": "NONE relates to I accept. I will join you..",
+                "ACTION": "ACTION relates to I accept. I will join you.."
+            }
+        }
+    ]
+},
   '009C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Confession Lead',
-        theme: {
-          name: 'TESTIMONY ARC',
-          icon: '🎙️',
-          summary: 'Follow the recordings, stack the statements, and win the courtroom war.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "I refuse. I accept p",
+            "theme": {
+                "name": "I REFUSE. I ACCEPT PRISON.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Choose I refuse. I accept prison."
+            },
+            "words": [
+                "REFUSE",
+                "ACCEPT",
+                "PRISON",
+                "NONE"
+            ],
+            "descriptions": {
+                "REFUSE": "REFUSE relates to I refuse. I accept prison..",
+                "ACCEPT": "ACCEPT relates to I refuse. I accept prison..",
+                "PRISON": "PRISON relates to I refuse. I accept prison..",
+                "NONE": "NONE relates to I refuse. I accept prison.."
+            }
         },
-        words: ['CONFESSION', 'ADMISSION', 'TESTIMONY', 'TRUTH'],
-        descriptions: {
-          CONFESSION: 'CONFESSION is Emily forcing you to hear your own complicity.',
-          ADMISSION: 'ADMISSION captures Sarah telling the judges what you all covered up.',
-          TESTIMONY: 'TESTIMONY is Rebecca’s plan to free the wrongfully convicted.',
-          TRUTH: 'TRUTH is the raw tape the city can’t un-hear.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Shock Lead',
-        theme: {
-          name: 'JOLT PATH',
-          icon: '⚡',
-          summary: 'Let the revelation hit like thunder and move before the echo fades.',
-        },
-        words: ['SHOCK', 'FLASH', 'REVEAL', 'AFTERMATH'],
-        descriptions: {
-          SHOCK: 'SHOCK is Jack’s voice on the tape, undeniable and damning.',
-          FLASH: 'FLASH is the split-second decision that follows.',
-          REVEAL: 'REVEAL is dragging Emily into the light alongside you.',
-          AFTERMATH: 'AFTERMATH is the wreckage you accept to keep momentum.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "I accept. I will joi",
+            "theme": {
+                "name": "I ACCEPT. I WILL JOIN YOU.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Choose I accept. I will join you."
+            },
+            "words": [
+                "ACCEPT",
+                "NONE",
+                "ACTION",
+                "ACTION"
+            ],
+            "descriptions": {
+                "ACCEPT": "ACCEPT relates to I accept. I will join you..",
+                "NONE": "NONE relates to I accept. I will join you..",
+                "ACTION": "ACTION relates to I accept. I will join you.."
+            }
+        }
+    ]
+},
   '010C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Mercy Choice',
-        theme: {
-          name: 'MERCY PACT',
-          icon: '🕊️',
-          summary: 'Take the fall, buy freedom for the innocents, and hope grace is real.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "Leak the Ledger to t",
+            "theme": {
+                "name": "LEAK THE LEDGER TO THE PRESS.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Five innocents are freed; Jack is convicted and loses any chance of appeal. (Justice Path)"
+            },
+            "words": [
+                "INNOCENTS",
+                "CONVICTED",
+                "JUSTICE",
+                "LEDGER"
+            ],
+            "descriptions": {
+                "INNOCENTS": "INNOCENTS relates to Leak the Ledger to the Press..",
+                "CONVICTED": "CONVICTED relates to Leak the Ledger to the Press..",
+                "JUSTICE": "JUSTICE relates to Leak the Ledger to the Press..",
+                "LEDGER": "LEDGER relates to Leak the Ledger to the Press.."
+            }
         },
-        words: ['MERCY', 'PARDON', 'GRACE', 'LENIENCE'],
-        descriptions: {
-          MERCY: 'MERCY is Jack choosing cuffs over compromise.',
-          PARDON: 'PARDON is the appeal you trade your freedom for.',
-          GRACE: 'GRACE keeps Emily from rotting in another cell.',
-          LENIENCE: 'LENIENCE is the slim chance a judge shows restraint.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Accountable Choice',
-        theme: {
-          name: 'RECKONING LEDGER',
-          icon: '⚖️',
-          summary: 'Stand trial, own the sins, and rebuild the system from the witness stand.',
-        },
-        words: ['VERDICT', 'SENTENCE', 'RECKONING', 'JUSTICE'],
-        descriptions: {
-          VERDICT: 'VERDICT is the public ruling you demand.',
-          SENTENCE: 'SENTENCE is the years you accept to prove the point.',
-          RECKONING: 'RECKONING is forcing the department to admit what it did.',
-          JUSTICE: 'JUSTICE is the restored balance you chase, even in chains.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "Keep silent and rely",
+            "theme": {
+                "name": "KEEP SILENT AND RELY ON THE LEGAL APPEAL.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Jack maintains legal integrity; the fate of the innocents is left to a corrupt system. (Law Path)"
+            },
+            "words": [
+                "MAINTAINS",
+                "INTEGRITY",
+                "INNOCENTS",
+                "CORRUPT"
+            ],
+            "descriptions": {
+                "MAINTAINS": "MAINTAINS relates to Keep silent and rely on the legal appeal..",
+                "INTEGRITY": "INTEGRITY relates to Keep silent and rely on the legal appeal..",
+                "INNOCENTS": "INNOCENTS relates to Keep silent and rely on the legal appeal..",
+                "CORRUPT": "CORRUPT relates to Keep silent and rely on the legal appeal.."
+            }
+        }
+    ]
+},
   '011C': {
-    attempts: 6,
-    sets: [
-      {
-        optionKey: 'A',
-        label: 'Stand Tall',
-        theme: {
-          name: 'RESOLVE LINE',
-          icon: '🛡️',
-          summary: 'Carry yourself into sentencing with spine unbroken.',
+    "attempts": 6,
+    "sets": [
+        {
+            "optionKey": "A",
+            "label": "Persuade Sarah to us",
+            "theme": {
+                "name": "PERSUADE SARAH TO USE THE ILLEGAL KEY.",
+                "icon": "\u2694\ufe0f",
+                "summary": "Sarah risks her entire career for the ultimate moral victory. (Justice Path)"
+            },
+            "words": [
+                "PERSUADE",
+                "ULTIMATE",
+                "ILLEGAL",
+                "VICTORY"
+            ],
+            "descriptions": {
+                "PERSUADE": "PERSUADE relates to Persuade Sarah to use the illegal key..",
+                "ULTIMATE": "ULTIMATE relates to Persuade Sarah to use the illegal key..",
+                "ILLEGAL": "ILLEGAL relates to Persuade Sarah to use the illegal key..",
+                "VICTORY": "VICTORY relates to Persuade Sarah to use the illegal key.."
+            }
         },
-        words: ['RESOLVE', 'STAND', 'COURAGE', 'UPRIGHT'],
-        descriptions: {
-          RESOLVE: 'RESOLVE is Jack’s last reserve of strength before prison.',
-          STAND: 'STAND is the posture Rebecca coaches you to keep.',
-          COURAGE: 'COURAGE is Emily watching to see if you falter.',
-          UPRIGHT: 'UPRIGHT is the silhouette the jury remembers.',
-        },
-      },
-      {
-        optionKey: 'B',
-        label: 'Carry Chains',
-        theme: {
-          name: 'BURDEN WALK',
-          icon: '⛓️',
-          summary: 'Accept the weight, let it grind you down, and keep moving anyway.',
-        },
-        words: ['SHACKLE', 'BURDEN', 'PENANCE', 'WEIGHT'],
-        descriptions: {
-          SHACKLE: 'SHACKLE is the literal restraint you’ve earned.',
-          BURDEN: 'BURDEN includes every life you failed.',
-          PENANCE: 'PENANCE is the work you’ll do behind bars.',
-          WEIGHT: 'WEIGHT is the cost you carry so others can walk free.',
-        },
-      },
-    ],
-  },
+        {
+            "optionKey": "B",
+            "label": "Tell Sarah to use th",
+            "theme": {
+                "name": "TELL SARAH TO USE THE KEY TO SAVE ME.",
+                "icon": "\ud83d\udee1\ufe0f",
+                "summary": "Jack is freed by Sarah's corruption, but the innocents remain jailed. (Freedom Path)"
+            },
+            "words": [
+                "CORRUPTION",
+                "INNOCENTS",
+                "FREEDOM",
+                "REMAIN"
+            ],
+            "descriptions": {
+                "CORRUPTION": "CORRUPTION relates to Tell Sarah to use the key to save me..",
+                "INNOCENTS": "INNOCENTS relates to Tell Sarah to use the key to save me..",
+                "FREEDOM": "FREEDOM relates to Tell Sarah to use the key to save me..",
+                "REMAIN": "REMAIN relates to Tell Sarah to use the key to save me.."
+            }
+        }
+    ]
+},
 };

@@ -15,7 +15,7 @@ from typing import Dict, List, Optional
 from docx import Document  # type: ignore
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCS_DIR = ROOT / "docs" / "story-revised"
+DOCS_DIR = ROOT
 OUTPUT_PATH = ROOT / "src" / "data" / "storyNarrative.json"
 
 CASE_LETTERS = {1: "A", 2: "B", 3: "C"}
@@ -226,7 +226,7 @@ def parse_docx_file(path: Path) -> List[Subchapter]:
                 pending_previously = None
             continue
 
-        if line == "[DECISION POINT]":
+        if line == "[DECISION POINT]" or line == "$$DECISION POINT$$":
             if current_sub:
                 subchapters.append(current_sub)
                 current_sub = None
@@ -235,10 +235,14 @@ def parse_docx_file(path: Path) -> List[Subchapter]:
             current_option = None
             continue
 
-        if line.startswith("OPTION") and decision_section is not None:
+        if (line.startswith("OPTION") or line.startswith("$$OPTION")) and decision_section is not None:
             if current_option:
                 decision_section["options"].append(current_option)
-            option_match = re.match(r"OPTION\s+([A-Z0-9]+)\s*:\s*(.*)", line)
+            
+            # Normalize prefix
+            clean_line = line.replace("$$OPTION", "OPTION")
+            
+            option_match = re.match(r"OPTION\s+([A-Z0-9]+)\s*:\s*(.*)", clean_line)
             if not option_match:
                 raise ValueError(f"Malformed option line '{line}' in {path}")
             key = option_match.group(1).strip()
