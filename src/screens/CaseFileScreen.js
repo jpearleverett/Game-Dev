@@ -321,7 +321,7 @@ export default function CaseFileScreen({
         onPress: typeof onContinueStory === "function" ? onContinueStory : null,
       };
     }
-    if (isThirdSubchapter && storyLocked) {
+    if (isThirdSubchapter && (storyLocked || hasLockedDecision)) {
       return {
         title: "Chapter Locked",
         body: "You've completed all three subchapters. HQ needs you home until the next chapter unlocks.",
@@ -332,7 +332,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option || !awaitingDecision) return;
