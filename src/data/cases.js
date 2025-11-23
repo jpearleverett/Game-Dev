@@ -70,7 +70,7 @@ const RAW_SEASON_ONE_CASES = [
     },
     clueSummaries: {
       main:
-        'Every main-word is a way the Midnight Confessor pushes the investigation—letters, calls, dispatches—so spotting them proves you can follow her signal.',
+        'You found the BEGINNINGS. Now read the journal to see how Jack uses it.',
       outliers: {
         ORIGIN: 'Points Jack straight back to the Emily Cross file he buried—the origin she demands he reopen.',
         START: 'Marks the first square in her twelve-day gauntlet and the moment the game truly begins.',
@@ -226,7 +226,7 @@ The woman in red. Always the woman in red. Jack's certainty turned to ash.`,
       },
       clueSummaries: {
         main:
-          'Every main-word tracks the testimony and access points that should have cleared Eleanor years ago.',
+          'You found the GEMSTONES. Now read the journal to see how Jack uses it.',
         outliers: {
           SAPPHIRE: 'Shines a light on the planted necklace that sank the trial.',
           NECKLACE: 'Names the forged heirloom that never appeared in Richard’s catalog.',
@@ -405,7 +405,7 @@ Maya called, terrified. Then silence. Victoria had her. The widow's truth, too l
       },
       clueSummaries: {
         main:
-          'Main words catalogue the evidence trail Jack ignored inside the Bellamy estate.',
+          'You found the CHESS PIECES. Now read the journal to see how Jack uses it.',
         outliers: {
           PAWN: 'Marks the first chess piece Victoria uses to grade his progress.',
           KNIGHT: 'Hints at the unseen moves already positioned against Jack.',
@@ -636,7 +636,7 @@ Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be 
       },
       clueSummaries: {
         main:
-          'Every main-word is a standard crime-scene tool, underscoring how professional the Thornhill setup looked until you start questioning it.',
+          'You found the COVER-UP. Now read the journal to see how Jack uses it.',
         outliers: { BLEACH: 'Used to clean the cell.', WIPE: 'Removes fingerprints.', SCRUB: 'Erases biological evidence.', SOLVENT: 'Dissolves residue.' },
       },
       narrative: [
@@ -878,7 +878,7 @@ Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing 
       },
         clueSummaries: {
           main:
-            'Main words trace the partnership Silas weaponised—and the duties Jack ignored.',
+            'You found the BLACKMAIL. Now read the journal to see how Jack uses it.',
           outliers: { THREAT: 'The leverage used against him.', PHOTO: 'The evidence of his affair.', SECRET: 'What he wanted to hide.', EXPOSURE: 'The fear that drove him.' },
         },
       narrative: [
@@ -1115,7 +1115,7 @@ The system protects itself. Victoria taught Silas that lesson first.`,
       },
       clueSummaries: {
         main:
-          'Main words track Victoria’s staging inside the penthouse and the leverage she flaunts.',
+          'You found the REVENGE. Now read the journal to see how Jack uses it.',
         outliers: {
           PAYBACK: 'Signals that every choice is designed to settle the score.',
           VENDETTA: 'Names the personal crusade driving the entire spectacle.',
@@ -1414,17 +1414,12 @@ Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindne
           'WITNESS',
           'TRUTH',
       ],
-        outlierWords: ['GRAVE', 'DEPTH', 'DUST', 'EARTH'],
+        outlierWords: ['DUST', 'BASEMENT', 'ARCHIVE', 'BURIED'],
     },
       clueSummaries: {
         main:
-            'Main words rebuild the identities Jack discarded when he closed cases too quickly.',
-        outliers: {
-            GRAVE: 'Marks where each testimony was buried in the archive.',
-            DEPTH: 'Signals how far Sarah had to dig to find the truth.',
-            DUST: 'Reminds Jack that ignored records still gather judgment.',
-            EARTH: 'Anchors the idea that evidence stays where you leave it—until someone cares enough to exhume it.',
-        },
+            'You found the BURIED. Now read the journal to see how Jack uses it.',
+        outliers: { DUST: 'Covering the forgotten files.', BASEMENT: 'Where the truth was hidden.', ARCHIVE: 'The deep storage unit.', BURIED: 'Evidence Jack tried to ignore.' },
       },
       narrative: [
           `I was halfway to the old Harbor Street precinct—driving through Ashport's industrial guts where the city doesn't bother pretending to be civilized—when Sarah called.
@@ -1589,17 +1584,12 @@ Helen Price prosecuted all five innocents. The Queen built her crown on Jack's f
           'MENTOR',
           'LOVER',
         ],
-        outlierWords: ['WHISPER', 'CIPHER', 'PASSWORD', 'CODE'],
+        outlierWords: ['LOVER', 'SECRET', 'AFFAIR', 'TRYST'],
       },
       clueSummaries: {
         main:
-          'Main words catalogue the secrets Marcus kept—evidence that should have cleared Eleanor years ago.',
-        outliers: {
-          WHISPER: 'Signals the quiet exchanges Marcus traded for safety.',
-          CIPHER: 'Points to the encrypted life Emily built after she disappeared.',
-          PASSWORD: 'Reminds you that access to the truth has always been gated.',
-          CODE: 'Exposes the set of rules Victoria rewrote while Jack slept on the file.',
-        },
+          'You found the SECRETS. Now read the journal to see how Jack uses it.',
+        outliers: { LOVER: 'The role Marcus really played.', SECRET: 'What Richard was hiding.', AFFAIR: 'The reason for the secrecy.', TRYST: 'Meetings in the dark.' },
       },
       narrative: [
           `Marcus Webb's antique shop occupied a narrow building wedged between a tattoo parlor that smelled like ink and regret and a Vietnamese restaurant where the pho was excellent and the owner didn't ask questions. The building itself was old Ashport—brick and wrought iron, the kind that had survived earthquakes and fires and urban renewal because it was too stubborn to die.
@@ -1786,17 +1776,12 @@ Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed 
           'VERDICT',
           'TRUTH',
       ],
-        outlierWords: ['BRIBE', 'PAYOFF', 'SCANDAL', 'FRAUD'],
+        outlierWords: ['PAYOFF', 'KICKBACK', 'BRIBE', 'GRAFT'],
     },
       clueSummaries: {
         main:
-            'Main words map the courtroom machinery Helen once commanded—now turned against her.',
-        outliers: {
-            BRIBE: 'Exposes the cash that greased Helen’s perfect record.',
-            PAYOFF: 'Links the convictions to the rewards she and Jack enjoyed.',
-            SCANDAL: 'Hints at the public collapse Sarah is orchestrating.',
-            FRAUD: 'Names the foundational lie their careers were built on.',
-        },
+            'You found the CORRUPTION. Now read the journal to see how Jack uses it.',
+        outliers: { PAYOFF: 'Money for silence.', KICKBACK: 'The price of a conviction.', BRIBE: 'Buying the verdict.', GRAFT: 'The rot in the system.' },
       },
       narrative: [
           `I was halfway to my car—walking through rain that had turned to sleet, the city trying to decide between drowning us and freezing us—when Sarah called.
@@ -1975,7 +1960,7 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
     },
     clueSummaries: {
       main:
-        'Main words dismantle the monarchy Helen built from Jack’s perfect cases.',
+        'You found the INHERITANCE. Now read the journal to see how Jack uses it.',
       outliers: { GUILT: 'The emotion behind the apology.', SHAME: 'What she felt in private.', SUICIDE: 'The tragic end she chose.', NOTE: 'Her final confession.' },
     },
       narrative: [
@@ -2141,17 +2126,12 @@ Victoria played checkmate. Confessions became prologue. The real monster exposed
         'LEVERAGE',
         'TRUTH',
       ],
-      outlierWords: ['BRIBE', 'KICKBACK', 'CONTRACTOR', 'BLACKMAIL'],
+      outlierWords: ['TORTURE', 'KIDNAP', 'ABUSE', 'FORCE'],
     },
     clueSummaries: {
       main:
-        'Main words showcase the paperwork Sarah assembled to finish the job Jack abandoned.',
-      outliers: {
-        BRIBE: 'Names the hush money flowing through Grange’s network.',
-        KICKBACK: 'Tracks the favors that kept the operation alive.',
-        CONTRACTOR: 'Points to the private teams that enforced his terror.',
-        BLACKMAIL: 'Reminds Jack that silence was weaponised against every witness he ignored.',
-      },
+        'You found the CORRUPTION. Now read the journal to see how Jack uses it.',
+      outliers: { TORTURE: 'What Grange did in that room.', KIDNAP: 'Taking Emily Cross.', ABUSE: 'Power weaponised.', FORCE: 'The only language he spoke.' },
     },
       narrative: [
         `Deputy Chief Grange was arrested at noon. I should have been there. Should have watched the man who'd tortured Emily Cross get dragged out in cuffs. Should have seen justice delivered.
@@ -2286,17 +2266,12 @@ Sarah walked away. Starting her own firm. Jack had made her better by being wors
         'CURRICULUM',
         'POWER',
       ],
-      outlierWords: ['BETRAYAL', 'TRUST', 'DEBT', 'REVENGE'],
+      outlierWords: ['HOLLOW', 'VOID', 'DEAD', 'EMPTY'],
     },
     clueSummaries: {
       main:
-        'Main words capture every element Victoria choreographs to keep Jack off balance.',
-      outliers: {
-        BETRAYAL: 'Names the core lesson—trust is a blade she now wields.',
-        TRUST: 'Reminds Jack this meeting exists because he broke everyone’s faith.',
-        DEBT: 'Signals the reckoning she insists he still owes.',
-        REVENGE: 'Defines the engine driving her twelve-day curriculum.',
-      },
+        'You found the BETRAYAL. Now read the journal to see how Jack uses it.',
+      outliers: { HOLLOW: 'Jack\'s eyes in the portrait.', VOID: 'Where his soul should be.', DEAD: 'How he looked at victims.', EMPTY: 'The cost of certainty.' },
     },
       narrative: [
         `The Blackwell Building. Penthouse. Victoria's kingdom of glass and steel.
@@ -2491,7 +2466,7 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
     },
     clueSummaries: {
       main:
-        'Main words catalogue the forensic workflow Lisa watched Tom corrupt—samples, analysis, reports now under review.',
+        'You found the TAMPERING. Now read the journal to see how Jack uses it.',
       outliers: { LOGIN: 'Digital footprint of the forgery.', PASSWORD: 'Stolen credentials.', ACCESS: 'Unauthorized entry.', STAMP: 'The fake approval.' },
     },
     narrative: [
@@ -2653,7 +2628,7 @@ At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
     },
     clueSummaries: {
       main:
-        'Main words map Sarah’s discovery—warehouses, shell fronts, gear—that proves Wade industrialised forensic fraud.',
+        'You found the FABRICATION. Now read the journal to see how Jack uses it.',
       outliers: { STRANGLE: 'Cause of death hidden by the rope.', FORCE: 'Signs of struggle.', BRUISE: 'Marks on the neck.', STAGE: 'Making it look like suicide.' },
     },
     narrative: [
@@ -2859,17 +2834,12 @@ Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usual
         'CONFRONT',
         'CHOICE',
       ],
-      outlierWords: ['BETRAYAL', 'LOYALTY', 'TRUST', 'REVENGE'],
+      outlierWords: ['HUNT', 'TRAP', 'CHASE', 'STRIKE'],
     },
     clueSummaries: {
       main:
-        'Main words track Jack’s first offensive move—following rope fibers, marina ledgers, and leverage shifts to confront Victoria.',
-      outliers: {
-        BETRAYAL: 'Names the core wound—friends weaponised each other until murder felt justified.',
-        LOYALTY: 'Asks who Jack still owes after Tom’s staged death.',
-        TRUST: 'Reminds the player that blind faith created every victim in this arc.',
-        REVENGE: 'Signals Victoria’s motive for executing Tom instead of letting courts decide.',
-      },
+        'You found the BETRAYAL. Now read the journal to see how Jack uses it.',
+      outliers: { HUNT: 'Jack goes on the offensive.', TRAP: 'Setting the snare.', CHASE: 'Running her down.', STRIKE: 'The counter-move.' },
     },
     narrative: [
       `I sat in the rain outside the warehouse. Tom's body inside. The weight of thirty years pressing down.
@@ -3026,7 +2996,7 @@ Best friends make you weapons you don't know you've become.`,
     },
     clueSummaries: {
       main:
-        'Main words follow the comforts Margaret fought to rebuild—mortgage, savings, stability—after Jack’s enemies weaponised their wealth.',
+        'You found the REVENGE. Now read the journal to see how Jack uses it.',
       outliers: {
         TARGET: 'Marks the moment Thornhill aimed at Margaret instead of Jack.',
         PAYBACK: 'Connects the carjacking to revenge for a framed conviction.',
@@ -3199,7 +3169,7 @@ Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life wi
     },
     clueSummaries: {
       main:
-        'Main words lock in the negotiation—offers, salaries, threats—that define Sarah and Jack’s confrontation at Murphy’s.',
+        'You found the ISOLATION. Now read the journal to see how Jack uses it.',
       outliers: {
         ALONE: 'Warns that whichever path Sarah chooses leaves someone isolated.',
         EXILE: 'Foreshadows careers and friendships lost once Victoria reacts.',
@@ -3372,7 +3342,7 @@ Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
     },
     clueSummaries: {
       main:
-        'Main words chart Jack’s confirmation—courtroom consequences and the side-by-side files that prove Victoria is Emily.',
+        'You found the REVELATION. Now read the journal to see how Jack uses it.',
       outliers: {
         REVEAL: 'Signals the mask dropping when Jack says her name aloud.',
         EPIPHANY: 'Marks the shock that he closed the case while she was still alive.',
@@ -3549,7 +3519,7 @@ Everyone you love pays for crimes they didn't commit.`,
     },
     clueSummaries: {
       main:
-        'Main words chart the courtroom gambit that frees Eleanor—testimony, exhibits, and a verdict built on real proof.',
+        'You found the DECEPTION. Now read the journal to see how Jack uses it.',
       outliers: {
         FORGED: 'Calls out the fabricated records Jack once trusted.',
         CONCEALED: 'Highlights the evidence the prosecution buried eight years ago.',
@@ -3672,7 +3642,7 @@ Evidence beats testimony. Victoria's manipulation worked. Results matter more th
     },
     clueSummaries: {
       main:
-        'Main words follow Sarah’s choice—packing boxes, funding a new project, and walking away from the badge.',
+        'You found the BETRAYAL. Now read the journal to see how Jack uses it.',
       outliers: {
         DEFECTION: 'Signals how Victoria tried to flip her with promises of power.',
         SEVER: 'Marks the break from Jack and the department.',
@@ -3779,7 +3749,7 @@ Victoria offered Deputy Director. Sarah said no. She's a better detective than b
     },
     clueSummaries: {
       main:
-        'Main words capture the empty office—rain on the window, whiskey on the desk, and files waiting without allies.',
+        'You found the ABSENCE. Now read the journal to see how Jack uses it.',
       outliers: {
         ABSENCE: 'Marks Sarah’s departure and the missing partnership.',
         VOID: 'Highlights the emotional crater left after the appeal.',
@@ -3878,7 +3848,7 @@ Truth without power is just noise. Confessing doesn't equal redemption.`,
     },
     clueSummaries: {
       main:
-        'Main words walk through the arrest and legal scramble—warrants, filings, and the allies Jack suddenly needs.',
+        'You found the PAYOFF. Now read the journal to see how Jack uses it.',
       outliers: {
         PAYOFF: 'Points to how Victoria bankrolls the fight the innocent never could afford.',
         BRIBED: 'Hints at the corrupted system that kept Marcus Thornhill caged.',
@@ -3990,7 +3960,7 @@ The system makes fighting so expensive most people can't. But Jack could. Becaus
     },
     clueSummaries: {
       main:
-        'Main words capture the engineered release—fresh footage, open gates, and the messages that dictate Jack’s next move.',
+        'You found the CONTROL. Now read the journal to see how Jack uses it.',
       outliers: {
         PUPPET: 'Shows Jack walking free only because Victoria allows it.',
         STRINGS: 'Calls out the invisible pull she maintains.',
@@ -4091,7 +4061,7 @@ Some choices aren't between good and evil. They're between two different kinds o
     },
     clueSummaries: {
       main:
-        'Main words arrange the strategic choices—alliances, costs, and the ticking clock toward Victoria’s offer.',
+        'You found the TEMPTATION. Now read the journal to see how Jack uses it.',
       outliers: {
         TEMPT: 'Signals the allure of joining the Confessor’s empire.',
         BARGAIN: 'Marks the price attached to every potential partnership.',
@@ -4190,7 +4160,7 @@ Victoria could destroy Jack anytime. Making him live is worse.`,
     },
     clueSummaries: {
       main:
-        'Main words trace Victoria’s retrospective—every curated piece, invitation, and contract that reframes Jack’s history.',
+        'You found the UNKNOWN. Now read the journal to see how Jack uses it.',
       outliers: {
         UNKNOWN: 'Points to the unanswered questions the exhibits force Jack to confront.',
         MYSTERY: 'Signals the secrets still hidden in Victoria’s narrative.',
@@ -4355,7 +4325,7 @@ Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
     },
     clueSummaries: {
       main:
-        'Main words chronicle Sarah’s federal takedown—press briefings, warrants, and the network collapsing on live TV.',
+        'You found the CORRUPTION. Now read the journal to see how Jack uses it.',
       outliers: {
         BRIBE: 'Highlights the financial grease that kept the system running.',
         KICKBACK: 'Shows the favors traded through Price & Associates.',
@@ -4526,7 +4496,7 @@ Victoria called—furious, vulnerable. Sarah proved you don't need to become a m
     },
     clueSummaries: {
       main:
-        'Main words sit inside the package—the recorder, the screams, and Jack’s vow to face prison after hearing the truth.',
+        'You found the REVELATION. Now read the journal to see how Jack uses it.',
       outliers: { CAPTURE: 'The abduction event.', SCREAM: 'The sound on the tape.', PHONECALL: 'Jack\'s voice closing the case.', SILENCE: 'The end of the recording.' },
     },
     narrative: [
@@ -4700,7 +4670,7 @@ Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`
     },
     clueSummaries: {
       main:
-        'Main words circle Jack’s ledger—phone calls, warrants, evidence—while he decides whose justice comes first.',
+        'You found the UNKNOWN. Now read the journal to see how Jack uses it.',
       outliers: {
         UNKNOWN: 'Highlights how neither option guarantees a righteous outcome.',
         AMBIGUITY: 'Keeps the moral fog front and centre for players.',
@@ -4859,7 +4829,7 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
     },
     clueSummaries: {
       main:
-        'Main words track the moral calculus—mercy, justice, trust—in Jack’s deliberate obstruction.',
+        'You found the CHOICE. Now read the journal to see how Jack uses it.',
       outliers: { INNOCENT: 'The five lives at stake.', SAVE: 'The goal of the delay.', PROMISE: 'The vow to free them.', TRUST: 'The gamble on Victoria.' },
     },
     narrative: [
@@ -5017,7 +4987,7 @@ Victoria kept her promise. Didn't run. Jack chose five innocents over doing his 
     },
     clueSummaries: {
       main:
-        'Main words follow the dominoes—orders vacated, testimonies filed—as mercy ripples through the courts.',
+        'You found the SACRIFICE. Now read the journal to see how Jack uses it.',
       outliers: {
         SACRIFICE: 'Marks Jack giving up his freedom to free others.',
         PENANCE: 'Signals the personal cost he accepts.',
@@ -5196,7 +5166,7 @@ Some choices are between legal and right. Sometimes those are mutually exclusive
     },
     clueSummaries: {
       main:
-        'Main words map the formal record—transcripts, counts, evidence—that closes Tom Wade’s murder and opens Jack’s own case.',
+        'You found the MYSTERY. Now read the journal to see how Jack uses it.',
       outliers: {
         MYSTERY: 'Reminds players Victoria still holds secrets even as charges fall.',
         UNKNOWN: 'Signals the uncertain verdict awaiting Jack.',
@@ -5339,7 +5309,7 @@ Jack chose five innocents over one guilty. Even if it destroyed him. Especially 
     },
     clueSummaries: {
       main:
-        'Main words sit in the quiet hours—calls, texts, visits—that prove trust still matters before the arrests.',
+        'You found the REDEMPTION. Now read the journal to see how Jack uses it.',
       outliers: {
         REDEMPTION: 'Marks how the night lets both Jack and Emily reach for better selves.',
         GRACE: 'Signals the compassion extended by Margaret and Sarah.',
@@ -5492,7 +5462,7 @@ She needed him to see Emily once last time. At dawn FBI arrested her. She went p
     },
     clueSummaries: {
       main:
-        'Main words sit on the courthouse steps—defenses, pleas, testimony—that define what comes after mercy.',
+        'You found the SACRIFICE. Now read the journal to see how Jack uses it.',
       outliers: {
         SACRIFICE: 'Marks Jack and Emily accepting the cost of their choices.',
         PENANCE: 'Signals the years they expect to serve.',
@@ -5623,7 +5593,7 @@ Some endings are just acknowledgments that being seen matters.`,
     },
     clueSummaries: {
       main:
-        'Main words sit inside the warehouse endgame—gun, rain, trust—as Jack pushes Victoria toward a final decision.',
+        'You found the UNANSWERED. Now read the journal to see how Jack uses it.',
       outliers: { GUN: 'The weapon of choice.', BULLET: 'What was missing.', TRIGGER: 'The final decision.', EMPTY: 'The truth revealed.' },
     },
     narrative: [
@@ -5811,7 +5781,7 @@ Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in
     },
     clueSummaries: {
       main:
-        'Main words track the seven-year ledger—letters, foundations, programs—that chart the fallout of Jack’s choices.',
+        'You found the FREEDOM. Now read the journal to see how Jack uses it.',
       outliers: {
         FREEDOM: 'Marks the lives reclaimed even as the pain lingers.',
         SPITE: 'Captures James Sullivan channeling anger into change.',
@@ -6023,7 +5993,7 @@ Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed
     },
     clueSummaries: {
       main:
-        'Main words catalogue Jack’s new reality—probationary work, oversight, the chess piece that keeps him honest.',
+        'You found the UNCERTAINTY. Now read the journal to see how Jack uses it.',
       outliers: {
         UNCERTAINTY: 'Says tomorrow is unwritten even after redemption efforts.',
         SECONDCHANCE: 'Marks the fragile opportunity Sarah and the others grant him.',
