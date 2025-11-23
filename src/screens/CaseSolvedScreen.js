@@ -978,31 +978,31 @@ export default function CaseSolvedScreen({
           >
             {isStoryMode && isSubchapter1 ? (
               <>
-                  <PrimaryButton
-                    label={storyActionLabel}
-                    icon={storyActionIcon}
-                    disabled={storyActionDisabled}
-                    onPress={() => {
-                      if (!storyActionDisabled) {
-                        onAdvanceStory?.();
-                      }
-                    }}
-                  />
-                  {awaitingDecision ? (
-                    <Text style={styles.storyStatusText}>
-                      Open the case file to choose your next path.
-                    </Text>
-                  ) : null}
-                  {storyLocked && !awaitingDecision ? (
-                    <Text style={styles.storyStatusText}>
-                      Next chapter unlocks after the current lock expires.
-                    </Text>
-                  ) : null}
-                <SecondaryButton
+                <PrimaryButton
                   label="Read Case File"
                   onPress={() => onReadCaseFile?.()}
                   icon={<MaterialCommunityIcons name="folder-text" size={20} color={COLORS.textSecondary} />}
                 />
+                <SecondaryButton
+                  label={storyActionLabel}
+                  icon={storyActionIcon}
+                  disabled={storyActionDisabled}
+                  onPress={() => {
+                    if (!storyActionDisabled) {
+                      onAdvanceStory?.();
+                    }
+                  }}
+                />
+                {awaitingDecision ? (
+                  <Text style={styles.storyStatusText}>
+                    Open the case file to choose your next path.
+                  </Text>
+                ) : null}
+                {storyLocked && !awaitingDecision ? (
+                  <Text style={styles.storyStatusText}>
+                    Next chapter unlocks after the current lock expires.
+                  </Text>
+                ) : null}
                 <SecondaryButton
                   label="Share Results"
                   onPress={() => onShare?.(shareMessage)}
