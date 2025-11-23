@@ -14,11 +14,11 @@ const RAW_SEASON_ONE_CASES = [
         `Some confessions arrive at midnight. Some arrive seven years late. All of them cost something.`,
       briefing: {
         summary:
-          'A midnight ultimatum drags Jack back into the Confessor\'s game the moment the black envelope hits his desk.',
+          'A mysterious envelope appeared at your door. Scan the items on your desk to identify the four methods the Confessor is using to stalk you.',
         objectives: [
-          'Trace every communication channel the Confessor weaponises to pull Jack onto the board.',
-          'Flag the opening moves that signal how Day One will unfold.',
-          'Lock the grid before attempts expire to earn the narrative drop.',
+          'Scan your desk for the specific communication channels the Confessor weaponises.',
+          'Isolate the four specific methods she used to deliver her ultimatum.',
+          'Lock the grid to prove you can hear her signal.',
         ],
       },
       bridgeText: [
@@ -172,11 +172,11 @@ Sarah called—Eleanor Bellamy poisoned at Greystone. Evidence stolen. Twelve fi
 The woman in red. Always the woman in red. Jack's certainty turned to ash.`,
       briefing: {
         summary:
-          'Eleanor Bellamy finally speaks on her own terms, forcing Jack to confront the precision of the frame he ignored.',
+          'Eleanor claims she was framed. Profile her financial status. Isolate the four luxury items that don\'t fit a struggling widow\'s budget.',
         objectives: [
-          "Follow Eleanor's account to catalogue every voice that contradicts Jack's original case file.",
-          'Highlight the gemstone anomalies that prove evidence can be manufactured.',
-          'Secure the full testimony before attempts run out to trigger Victoria’s next move.',
+          'Review the case file for items that don\'t match Eleanor\'s financial profile.',
+          'Identify the four expensive objects planted in her safety deposit box.',
+          'Clear the board to expose the evidence that was manufactured.',
         ],
       },
       bridgeText: [
@@ -350,11 +350,11 @@ She told him about the woman in red—elegant, dangerous, building evidence.
 Maya called, terrified. Then silence. Victoria had her. The widow's truth, too late to matter.`,
       briefing: {
         summary:
-          'Another break-in at the Bellamy estate exposes the falsified evidence Jack once accepted without question.',
+          'The Confessor left a calling card on the desk. Decode the specific game pieces she is using to describe your team.',
         objectives: [
-          'Comb the estate for every overlooked clue that proves the frame was staged.',
-          'Track the Confessor’s chess metaphors to anticipate her next move.',
-          'Secure the grid before your attempts expire to unlock the next narrative drop.',
+          'Analyze the crime scene for the Confessor\'s metaphorical signature.',
+          'Decode the four chess pieces she is using to mock your investigation.',
+          'Secure the grid to understand the game she is playing.',
         ],
       },
       bridgeText: [
@@ -581,11 +581,11 @@ I just didn't know the score yet.
 Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be manufactured.`,
       briefing: {
         summary:
-          'Claire Thornhill reopens her father’s case, demanding Jack dismantle the crime scene he once accepted without question.',
+          'The suicide scene feels staged. Find the four cleaning supplies that shouldn\'t be in a dirty holding cell.',
         objectives: [
-          'Group the legitimate scene tools to rebuild how the investigation should have looked.',
-          'Spot every sign of a cover-up that kept Silas Reed’s involvement buried.',
-          'Beat the attempt timer so Claire releases the files that expose the frame.',
+          'Examine the crime scene photos for inconsistencies in the \'suicide\'.',
+          'Find the cleaning supplies Silas used to scrub the evidence.',
+          'Isolate the chemical traces to prove this was a cover-up.',
         ],
       },
       bridgeText: [
@@ -828,11 +828,11 @@ Claire served coffee at midnight, delivered rage with cream and sugar. Her fathe
 Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing with ghosts.`,
       briefing: {
         summary:
-          'Silas Reed confesses to framing Marcus Thornhill, forcing Jack to confront the blind trust that fuelled the cover-up.',
+          'Silas didn\'t do this for money. Find the words describing the leverage used against him.',
         objectives: [
-          'Trace Silas’s confession to map every point where leverage replaced evidence.',
-          'Tag the blackmail vocabulary that reveals how the frame was maintained.',
-          'Solve the grid before your attempts expire so Silas turns himself in.',
+          'Investigate Silas\'s background for signs of coercion.',
+          'Find the words describing the leverage used against him.',
+          'Expose the blackmail material to understand his true motive.',
         ],
       },
       bridgeText: [
@@ -1070,11 +1070,11 @@ And I understood: Victoria wasn't destroying me. I'd destroyed myself years ago.
 The system protects itself. Victoria taught Silas that lesson first.`,
       briefing: {
         summary:
-          'Victoria lures Jack to the penthouse with Maya Bellamy as bait, showcasing how far she’ll go to control the board.',
+          'Victoria staged the penthouse to manipulate you. Find the Props she used to set the scene.',
         objectives: [
-          'Read the Confessor’s staging inside the penthouse to expose how revenge fuels her plan.',
-          'Track every threat leveled at Maya so you can predict the next victim.',
-          'Solve quickly to capture the evidence before Victoria changes the script again.',
+          'Survey the penthouse for items placed for dramatic effect.',
+          'Identify the Props she used to manipulate your perception.',
+          'Deconstruct the stage she built to find the truth.',
         ],
       },
       bridgeText: [
@@ -1373,11 +1373,11 @@ Whatever it was.
 Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindness.`,
       briefing: {
         summary:
-          'Sarah raids the condemned precinct, unearthing every statement Jack once buried to keep his record perfect.',
+          'The files were buried deep. Find the \'Buried\' words to see where the evidence was hidden.',
         objectives: [
-          'Catalogue the witnesses Sarah rediscovered so the case file finally tells the truth.',
-          'Surface the details Jack ignored—the ones that show certainty was manufactured.',
-          'Solve before attempts expire to keep pace with Sarah’s investigation.',
+          'Dig through the department archives for the missing files.',
+          'Find the words describing the deep storage locations.',
+          'Recover the buried evidence to reopen the cold case.',
         ],
       },
       bridgeText: [
@@ -1548,11 +1548,11 @@ Every case had the same pattern—evidence appearing perfectly, witnesses marked
 Helen Price prosecuted all five innocents. The Queen built her crown on Jack's fraud.`,
       briefing: {
         summary:
-          'Marcus Webb lays out Emily Cross’s past, revealing the secrets Jack ignored when he rushed to close her case.',
+          'Marcus claims he was just Richard\'s friend. Filter the board for terms that suggest a deeper, romantic connection.',
         objectives: [
-          'Track every detail Marcus preserved about Emily’s relationship with Richard.',
-          'Expose the hidden secrets that prove the frame was deliberate.',
-          'Solve quickly so Marcus testifies before fear silences him again.',
+          'Analyze Marcus\'s statement for hidden subtext.',
+          'Filter the board for terms that suggest a deeper, romantic connection.',
+          'Expose the secret affair to break his alibi.',
         ],
       },
       bridgeText: [
@@ -1745,11 +1745,11 @@ Emily Cross was Richard's victim—affair that wasn't consensual. Marcus inherit
 Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed as redemption.`,
       briefing: {
         summary:
-          'Helen Price cracks, offering a confession that exposes how far the justice system bent for Jack’s certainty.',
+          'The convictions were bought. Find the \'Bribe\' words that purchased the verdict.',
         objectives: [
-          'Document Helen’s admissions so every innocent person she prosecuted can be freed.',
-          'Trace the corruption trail linking Jack’s evidence to Helen’s perfect record.',
-          'Solve quickly to get Helen’s testimony in front of the FBI before she recants.',
+          'Follow the money trail through the court records.',
+          'Find the words describing the illicit payments.',
+          'Trace the corruption to its source.',
         ],
       },
       bridgeText: [
@@ -1930,14 +1930,14 @@ Even if we burned with it.
 Marcus Webb loved Richard, stayed silent. Helen Price crumbled—fifty-three wins, Jack's fraud.
 Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
     briefing: {
-      summary:
-        'Helen Price steps to the podium, and Jack watches the crown he forged for her melt in public.',
-      objectives: [
-        'Trace every royal metaphor that framed Helen’s reign and burn them down.',
-        'Collect the institutional roles she calls out so the review starts immediately.',
-        'Finish the grid before the cameras cut so you control the confession tape.',
-      ],
-    },
+        summary:
+          'Helen is sticking to the PR script. Isolate the four \'Private\' emotions she is hiding behind her public apology.',
+        objectives: [
+          'Contrast Helen\'s public statement with her private reality.',
+          'Isolate the four \'Private\' emotions she is hiding.',
+          'Find the hidden truths she isn\'t saying on TV.',
+        ],
+      },
     bridgeText: [
       'Confession brings cameras and questions and the cold certainty that sorry changes nothing.',
     ],
@@ -2105,14 +2105,14 @@ Checkmate. She'd called it. She'd been right.
 Victoria sent video: Emily alive, screaming, while Jack declared her dead. Grange visible, badge clear.
 Victoria played checkmate. Confessions became prologue. The real monster exposed at noon.`,
     briefing: {
-      summary:
-        'Sarah delivers the evidence Jack buried, proving Grange’s operation survived because the system ignored the unheard.',
-      objectives: [
-        'Catalogue every witness Sarah rehabilitates so the FBI can act on their testimony.',
-        'Spot the corruption cues that kept Grange protected for seven years.',
-        'Solve quickly so Sarah’s new Conviction Integrity Project launches with momentum.',
-      ],
-    },
+        summary:
+          'Grange claims he\'s a cop. Find the \'Criminal\' acts hidden in his record.',
+        objectives: [
+          'Audit Grange\'s service record for red flags.',
+          'Find the \'Criminal\' acts hidden in his police file.',
+          'Expose the monster hiding behind the badge.',
+        ],
+      },
     bridgeText: [
       "Some arrests are the moment when good men realize they've been working for evil.",
     ],
@@ -2250,14 +2250,14 @@ Now she knew better. And she was gone.
 She found his operation by following leads Jack marked insufficient. Twelve witnesses who didn't matter.
 Sarah walked away. Starting her own firm. Jack had made her better by being worse.`,
     briefing: {
-      summary:
-        'Victoria stages a lesson at the Blackwell penthouse, forcing Jack to stare at the portrait of the detective she believes he really is.',
-      objectives: [
-        'Track the staging elements Victoria uses to control the meeting.',
-        'Highlight the moments of betrayal that define her revenge curriculum.',
-        'Finish before she hands you Day Five’s envelope so you keep your footing.',
-      ],
-    },
+        summary:
+          'Victoria painted a portrait. Find the \'Empty\' words describing Jack\'s eyes.',
+        objectives: [
+          'Analyze the portrait for the artist\'s true perspective.',
+          'Find the \'Empty\' words describing the subject\'s soul.',
+          'See yourself through the Confessor\'s eyes.',
+        ],
+      },
     bridgeText: [
       'Some meetings are the moment you realize the person offering salvation is the one who damned you first.',
     ],
@@ -2451,14 +2451,14 @@ I drove home through rain. Always raining. The city weeping. Or washing blood aw
 Sarah brought down Grange—twenty-three victims, eight dead. Victoria's scars visible.
 Monsters wear badges. Being right about being wrong changes nothing.`,
     briefing: {
-      summary:
-        'Lisa Chen walks free with proof Tom Wade corrupted two hundred seventeen cases, forcing Jack to face the friend who weaponised him.',
-      objectives: [
-        'Document the forensic tools and locations Lisa cites so the FBI can reopen every compromised file.',
-        'Trace the relationships ruptured by Wade’s betrayal—mother, daughter, partner—to fuel the new review.',
-        'Lock in the board before the fog clears so the narrative drop hits with maximum weight.',
-      ],
-    },
+        summary:
+          'Review Tom\'s lab logs. Identify the four administrative terms that prove he forged Lisa\'s signature.',
+        objectives: [
+          'Audit the lab\'s digital access logs.',
+          'Identify the four administrative terms that prove forgery.',
+          'Catch the discrepancy that proves the results were faked.',
+        ],
+      },
     bridgeText: [
       "The evidence doesn't lie. Except when it's manufactured by your best friend for twenty years.",
     ],
@@ -2618,14 +2618,14 @@ I stood in Greystone's parking lot, holding proof that my best friend was a mons
 Tom framed her when she caught him altering DNA. She handed Jack a flash drive—two hundred seventeen cases.
 At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
     briefing: {
-      summary:
-        'Sarah exposes Tom Wade’s phantom lab and drags decades of fabricated evidence into the light while Jack listens to his friend confess.',
-      objectives: [
-        'Track every shell company, warehouse, and fake address Sarah cites so the task force can seize them.',
-        'Log the lab equipment Tom hid—sequencers, freezers, synths—to map how each case was manipulated.',
-        'Capture the emotional beats of Tom’s final call so the narrative lands when the board clears.',
-      ],
-    },
+        summary:
+          'Tom didn\'t hang himself. Find the \'Murder\' evidence disguised as suicide.',
+        objectives: [
+          'Re-examine the autopsy report for signs of struggle.',
+          'Find the \'Murder\' evidence disguised as suicide.',
+          'Prove that the scene was staged to look like self-harm.',
+        ],
+      },
     bridgeText: [
       "Some phone calls come at two AM from friends who've decided confession beats capture.",
     ],
@@ -2833,14 +2833,14 @@ And tomorrow I'd face the woman I'd failed in a completely different way.
 Tom called at 2 AM. Confessed his philosophy—ensuring justice by manufacturing it. Then hung himself.
 Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usually manufactured.`,
     briefing: {
-      summary:
-        'Jack finally pushes back, gathering proof that Victoria executed Tom Wade while choosing to keep the game alive.',
-      objectives: [
-        'Log the traces—DNA, rope, marina records—that prove the suicide was staged.',
-        'Capture the power exchanges between Jack and Victoria to show how leverage shifts.',
-        'Finish the board before dawn so Day Six unlocks with Jack no longer passive.',
-      ],
-    },
+        summary:
+          'Jack is fighting back. Find the \'Action\' verbs to start the offensive.',
+        objectives: [
+          'Plan the counter-offensive against the Confessor.',
+          'Find the \'Action\' verbs to start the attack.',
+          'Shift from defense to offense.',
+        ],
+      },
     bridgeText: [
       "Some bodies tell lies. And some tell the story of friends who became monsters while you weren't looking.",
     ],
@@ -4496,14 +4496,14 @@ And maybe that meant she could also heal.
 Sarah stole Victoria's narrative. Made it legitimate prosecution. Became the hero of her own story.
 Victoria called—furious, vulnerable. Sarah proved you don't need to become a monster to fight monsters.`,
     briefing: {
-      summary:
-        'Late at night a bloodstained recorder arrives, forcing Jack and Sarah to listen to Emily’s captivity and the moment his closure sealed her fate.',
-      objectives: [
-        'Transcribe key moments from the recording—Emily’s pleas, Jack’s phone call, Grange’s threats.',
-        'Capture the emotional fallout as Sarah reframes Victoria’s motives and Jack commits to accountability.',
-        'Solve before the tape ends so the board lands with the realization that transformation may still be possible.',
-      ],
-    },
+        summary:
+          'The package contains the truth about Emily\'s captivity. Reconstruct the timeline of what happened to her in the dark.',
+        objectives: [
+          'Listen to the recording to understand the sequence of events.',
+          'Reconstruct the timeline of Emily\'s abduction.',
+          'Order the events to hear the truth.',
+        ],
+      },
     bridgeText: [
       'Some packages are hand-delivered at midnight like confessions nobody asked for.',
     ],
@@ -4834,14 +4834,14 @@ And I didn't know which was which anymore.
 Jack had the choice: arrest Victoria now, five innocents stay convicted. Or wait twenty-four hours.
 Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.`,
     briefing: {
-      summary:
-        'Jack delays Victoria’s arrest for twenty-four hours, trusting Emily to stay put so five innocent people can walk free before he turns himself in.',
-      objectives: [
-        'Track the calls with Martinez and Victoria that frame the ethical tightrope.',
-        'List the innocents whose appeals hinge on the delay to keep their names in focus.',
-        'Solve before dawn to mirror the promise of “twenty-four hours of Emily, not Victoria.”',
-      ],
-    },
+        summary:
+          'Jack is torn between two duties. Isolate the four reasons to choose Mercy over Law.',
+        objectives: [
+          'Weigh the moral cost of arresting Victoria.',
+          'Isolate the four reasons to choose Mercy over Law.',
+          'Find the justification for letting her go.',
+        ],
+      },
     bridgeText: [
       "Some meetings happen when you finally admit you're staring at your own reflection.",
     ],
@@ -5176,14 +5176,14 @@ And sometimes those are mutually exclusive.
 By 5 PM: all five freed. Jack gave FBI everything, accepted obstruction charges. Victoria kept her promise.
 Some choices are between legal and right. Sometimes those are mutually exclusive.`,
     briefing: {
-      summary:
-        'Jack turns over every detail of Victoria’s operation at FBI headquarters while confessing to obstruction, accepting that justice and the law are no longer the same thing for him.',
-      objectives: [
-        'Log the evidence he delivers—DNA, recordings, rope fibers—to close Tom Wade’s case.',
-        'Capture the official record of his voluntary obstruction confession.',
-        'Note the warrants, counts, and timelines Martinez cites so the board mirrors the legal stakes.',
-      ],
-    },
+        summary:
+          'The end is near. Find the \'Guilt\' words to prepare for the consequences.',
+        objectives: [
+          'Reflect on the crimes committed in the name of justice.',
+          'Find the \'Guilt\' words to prepare for prison.',
+          'Accept the weight of your actions.',
+        ],
+      },
     bridgeText: [
       "The day before the end is always the longest. Because you know what's coming. And you can't stop it.",
     ],
@@ -5603,14 +5603,14 @@ Even if it destroyed me.
 They stood inches apart. Two damaged people in wreckage. Emily left to face arrest. Kept her promise.
 Some endings are just acknowledgments that being seen matters.`,
     briefing: {
-      summary:
-        'At the warehouse Jack gives Victoria an empty gun and forces the final choice: kill him and stay a monster, or walk away and let Emily Cross live again.',
-      objectives: [
-        'Log the symbolic pieces in the warehouse—gun, contract, portrait fragments.',
-        'Track the questions Jack hurls about identity, revenge, and healing.',
-        'Finish the grid before the final click of the empty trigger so the tension lands.',
-      ],
-    },
+        summary:
+          'The warehouse is full of ghosts. Find the four objects that will determine if Victoria lives or dies.',
+        objectives: [
+          'Scan the final confrontation site for weapons.',
+          'Find the four objects that will determine the outcome.',
+          'Decide how the story ends.',
+        ],
+      },
     bridgeText: [
       'The twelfth day. The last case. The final move. Can monsters ever become human again?',
     ],
