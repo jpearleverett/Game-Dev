@@ -182,7 +182,18 @@ export default function CaseFileScreen({
     const metaNarrative = storyMeta?.narrative;
     if (Array.isArray(metaNarrative)) return metaNarrative.filter(Boolean);
     if (typeof metaNarrative === "string" && metaNarrative.trim()) return [metaNarrative];
-    if (Array.isArray(activeCase?.narrative)) return activeCase.narrative.filter(Boolean);
+    if (Array.isArray(activeCase?.narrative)) {
+      const original = activeCase.narrative.filter(Boolean);
+      // Check if we should prepend Intel Log (puzzle callback)
+      // Only if outlierWords exist and it's not already there (simple check)
+      if (original.length > 0 && activeCase.board?.outlierWords?.length > 0) {
+        const outliers = activeCase.board.outlierWords.slice(0, 4).join(". ");
+        const intro = `INTEL LOG: ${outliers}. The pattern was undeniable.\n\n`;
+        // We create a new array to avoid mutating the original data object reference
+        return [intro + original[0], ...original.slice(1)];
+      }
+      return original;
+    }
     if (typeof activeCase?.narrative === "string" && activeCase.narrative.trim()) return [activeCase.narrative];
     return [];
   }, [storyMeta, activeCase?.narrative]);

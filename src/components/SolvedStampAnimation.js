@@ -4,7 +4,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { SPACING } from '../constants/layout';
 
-export default function SolvedStampAnimation({ visible, onContinue, reducedMotion = false }) {
+export default function SolvedStampAnimation({ visible, onContinue, reducedMotion = false, intelName }) {
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const stampScale = useRef(new Animated.Value(0)).current;
   const stampRotation = useRef(new Animated.Value(0)).current;
@@ -160,13 +160,20 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
             {/* Inner stamp border */}
             <View style={styles.stampInner}>
               {/* Stamp text */}
-              <Text style={styles.stampText}>SOLVED</Text>
+              <Text style={styles.stampText}>INTEL</Text>
+              <Text style={styles.subtitleText}>ACQUIRED</Text>
             </View>
           </View>
           
           {/* Ink texture overlay */}
           <View style={styles.inkTexture} />
         </Animated.View>
+
+        {intelName && (
+            <Animated.Text style={[styles.intelNameText, { opacity: stampOpacity }]}>
+                {intelName}
+            </Animated.Text>
+        )}
 
         <Animated.View style={[styles.tapPromptContainer, { opacity: tapPromptOpacity }]}>
           <Text style={styles.tapPromptText}>TAP TO CONTINUE</Text>
@@ -224,14 +231,38 @@ const styles = StyleSheet.create({
   },
   stampText: {
     fontFamily: FONTS.secondaryBold,
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: '900',
-    letterSpacing: 8,
+    letterSpacing: 6,
     color: '#d32f2f',
     textTransform: 'uppercase',
     textShadowColor: 'rgba(211, 47, 47, 0.4)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 8,
+    marginBottom: -2,
+  },
+  subtitleText: {
+    fontFamily: FONTS.monoBold,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 4,
+    color: '#d32f2f',
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(211, 47, 47, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  intelNameText: {
+    fontFamily: FONTS.monoBold,
+    fontSize: 24,
+    color: COLORS.accentSecondary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    maxWidth: 300,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   inkTexture: {
     ...StyleSheet.absoluteFillObject,
