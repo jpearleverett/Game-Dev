@@ -632,17 +632,12 @@ Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be 
           'DUST',
           'MARK',
         ],
-        outlierWords: ['BLEACH', 'WIPE', 'ALIBI', 'SCRUB'],
+        outlierWords: ['BLEACH', 'WIPE', 'SCRUB', 'SOLVENT'],
       },
       clueSummaries: {
         main:
           'Every main-word is a standard crime-scene tool, underscoring how professional the Thornhill setup looked until you start questioning it.',
-        outliers: {
-          BLEACH: 'Signals the chemical Silas used to erase traces and why the photos were too clean.',
-          WIPE: 'Points to the forced fingerprint narrative—those surfaces were scrubbed for a reason.',
-          ALIBI: 'Flags the fabricated timeline Silas constructed to keep eyes off his offshore transfers.',
-          SCRUB: 'Reminds Jack that someone actively removed evidence long after the scene was sealed.',
-        },
+        outliers: { BLEACH: 'Used to clean the cell.', WIPE: 'Removes fingerprints.', SCRUB: 'Erases biological evidence.', SOLVENT: 'Dissolves residue.' },
       },
       narrative: [
           `Dawn broke like a wound over Ashport. Bruised sky hemorrhaging gray light through my office window. I hadn't slept. Hadn't tried. Sleep was for people who didn't have ghosts cataloging their failures.
@@ -879,17 +874,12 @@ Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing 
           'EVIDENCE',
           'CONFESSION',
         ],
-        outlierWords: ['LEVERAGE', 'THREAT', 'PRESSURE', 'BARGAIN'],
+        outlierWords: ['THREAT', 'PHOTO', 'SECRET', 'EXPOSURE'],
       },
         clueSummaries: {
           main:
             'Main words trace the partnership Silas weaponised—and the duties Jack ignored.',
-          outliers: {
-            LEVERAGE: 'Names the secret Silas protected instead of the truth.',
-            THREAT: 'Highlights the ultimatum that turned a detective into an accomplice.',
-            PRESSURE: 'Captures the weight that kept him silent for seven years.',
-            BARGAIN: 'Reminds Jack that every confession Silas gave was purchased with fear.',
-          },
+          outliers: { THREAT: 'The leverage used against him.', PHOTO: 'The evidence of his affair.', SECRET: 'What he wanted to hide.', EXPOSURE: 'The fear that drove him.' },
         },
       narrative: [
           `The Marina District rose from Ashport's waterfront like a middle finger to the rot below. Glass towers. Expensive cars. People who'd learned the secret: in this city, you either feed on the desperate or become them. No middle ground. No mercy for the in-between.
@@ -1981,17 +1971,12 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
         'JEWEL',
         'LEGACY',
       ],
-      outlierWords: ['HEIR', 'LINEAGE', 'ESTATE', 'INHERITANCE'],
+      outlierWords: ['GUILT', 'SHAME', 'SUICIDE', 'NOTE'],
     },
     clueSummaries: {
       main:
         'Main words dismantle the monarchy Helen built from Jack’s perfect cases.',
-      outliers: {
-        HEIR: 'Points to the people who should inherit justice once Helen steps down.',
-        LINEAGE: 'Tracks the chain of convictions that must now be reviewed.',
-        ESTATE: 'Signals the power structures crumbling with her confession.',
-        INHERITANCE: 'Reminds Jack that every crown leaves a cost someone must pay.',
-      },
+      outliers: { GUILT: 'The emotion behind the apology.', SHAME: 'What she felt in private.', SUICIDE: 'The tragic end she chose.', NOTE: 'Her final confession.' },
     },
       narrative: [
         `The press conference was at ten AM. I got there at nine-thirty and already couldn't find a seat.
@@ -2502,17 +2487,12 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
         'REPORT',
         'LABCOAT',
       ],
-      outlierWords: ['FORGED', 'PLANTED', 'ALTERED', 'SWAPPED'],
+      outlierWords: ['LOGIN', 'PASSWORD', 'ACCESS', 'STAMP'],
     },
     clueSummaries: {
       main:
         'Main words catalogue the forensic workflow Lisa watched Tom corrupt—samples, analysis, reports now under review.',
-      outliers: {
-        FORGED: 'Flags the signatures Wade forged to frame Lisa and protect himself.',
-        PLANTED: 'Calls out the evidence he seeded into lockers and lab logs.',
-        ALTERED: 'Reminds players every clean result he touched became contaminated.',
-        SWAPPED: 'Points to the login and sample swaps that stole four years of Lisa’s life.',
-      },
+      outliers: { LOGIN: 'Digital footprint of the forgery.', PASSWORD: 'Stolen credentials.', ACCESS: 'Unauthorized entry.', STAMP: 'The fake approval.' },
     },
     narrative: [
       `Day Five arrived with fog thick enough to drown in.
@@ -2669,17 +2649,12 @@ At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
         'LEDGER',
         'FLASHDRIVE',
       ],
-      outlierWords: ['FORGERY', 'COUNTERFEIT', 'STAGED', 'DECOY'],
+      outlierWords: ['STRANGLE', 'FORCE', 'BRUISE', 'STAGE'],
     },
     clueSummaries: {
       main:
         'Main words map Sarah’s discovery—warehouses, shell fronts, gear—that proves Wade industrialised forensic fraud.',
-      outliers: {
-        FORGERY: 'Marks the fake reports that backed every perfect conviction.',
-        COUNTERFEIT: 'Highlights the substitute samples Wade swapped into evidence lockers.',
-        STAGED: 'Calls out the crime scenes he manufactured to keep cases tidy.',
-        DECOY: 'Reminds Jack how phantom addresses and labs misdirected every audit.',
-      },
+      outliers: { STRANGLE: 'Cause of death hidden by the rope.', FORCE: 'Signs of struggle.', BRUISE: 'Marks on the neck.', STAGE: 'Making it look like suicide.' },
     },
     narrative: [
       `I was driving to FBI headquarters when Sarah called.
@@ -4547,17 +4522,12 @@ Victoria called—furious, vulnerable. Sarah proved you don't need to become a m
         'PRISON',
         'REBUILD',
       ],
-      outlierWords: ['REVEAL', 'AWAKEN', 'SEE', 'UNDERSTAND'],
+      outlierWords: ['CAPTURE', 'SCREAM', 'PHONECALL', 'SILENCE'],
     },
     clueSummaries: {
       main:
         'Main words sit inside the package—the recorder, the screams, and Jack’s vow to face prison after hearing the truth.',
-      outliers: {
-        REVEAL: 'Marks the layers of Emily’s story finally exposed.',
-        AWAKEN: 'Signals Jack waking fully to his role in her suffering.',
-        SEE: 'Captures Sarah’s insight into Victoria’s motives.',
-        UNDERSTAND: 'Shows both of them grasping what transformation will require.',
-      },
+      outliers: { CAPTURE: 'The abduction event.', SCREAM: 'The sound on the tape.', PHONECALL: 'Jack\'s voice closing the case.', SILENCE: 'The end of the recording.' },
     },
     narrative: [
       `The package arrived at Sarah's house that night. She called me at 11 PM.
@@ -4885,17 +4855,12 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
         'FREEDOM',
         'OBSTRUCTION',
       ],
-      outlierWords: ['CHOICE', 'CONSEQUENCE', 'GAMBLE', 'RISK'],
+      outlierWords: ['INNOCENT', 'SAVE', 'PROMISE', 'TRUST'],
     },
     clueSummaries: {
       main:
         'Main words track the moral calculus—mercy, justice, trust—in Jack’s deliberate obstruction.',
-      outliers: {
-        CHOICE: 'Reinforces that every action locks in a side of the ledger.',
-        CONSEQUENCE: 'Foreshadows the charges Jack will face.',
-        GAMBLE: 'Names the risk of Victoria running or killing again.',
-        RISK: 'Keeps players mindful that mercy might still backfire.',
-      },
+      outliers: { INNOCENT: 'The five lives at stake.', SAVE: 'The goal of the delay.', PROMISE: 'The vow to free them.', TRUST: 'The gamble on Victoria.' },
     },
     narrative: [
       `At 10 PM, I made my choice.
@@ -5654,17 +5619,12 @@ Some endings are just acknowledgments that being seen matters.`,
         'EMILY',
         'MOVE',
       ],
-      outlierWords: ['UNANSWERED', 'QUESTION', 'MASK', 'VOID'],
+      outlierWords: ['GUN', 'BULLET', 'TRIGGER', 'EMPTY'],
     },
     clueSummaries: {
       main:
         'Main words sit inside the warehouse endgame—gun, rain, trust—as Jack pushes Victoria toward a final decision.',
-      outliers: {
-        UNANSWERED: 'Some questions stay unresolved even after the trigger falls.',
-        QUESTION: 'Mirrors the doubts plaguing both Jack and Emily.',
-        MASK: 'Signals Victoria’s persona slipping as Emily surfaces.',
-        VOID: 'Leaves space for whatever future she chooses.',
-      },
+      outliers: { GUN: 'The weapon of choice.', BULLET: 'What was missing.', TRIGGER: 'The final decision.', EMPTY: 'The truth revealed.' },
     },
     narrative: [
       `Victoria stood in the warehouse, rain drumming on the roof, staring at the gun I'd placed between us.

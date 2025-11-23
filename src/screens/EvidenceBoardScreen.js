@@ -632,7 +632,7 @@ export default function EvidenceBoardScreen({
               </View>
             </View>
 
-        <SolvedStampAnimation visible={solved && stampReady} onContinue={onSkipToResults} reducedMotion={reducedMotion} />
+        <SolvedStampAnimation visible={solved && stampReady} onContinue={onSkipToResults} reducedMotion={reducedMotion} intelName={activeCase?.outlierTheme?.name} />
           {awaitingStamp && <View style={styles.celebrationBlocker} pointerEvents="auto" />}
 
           <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: scaleSpacing(SPACING.gutter) }]}>
