@@ -79,7 +79,7 @@ const RAW_SEASON_ONE_CASES = [
       },
     },
     narrative: [
-        `I scanned the items on my desk. Letter. Note. Message. Dispatch. All methods of communication. All pointing to one thing: the game had begun.
+        `{puzzle_callback}. I scanned the items on my desk. Letter. Note. Message. Dispatch. All methods of communication. All pointing to one thing: the game had begun.
 
 Rain fell on Ashport the way memory falls on the guilty—relentless, cold, and impossible to outrun. My office sat four floors above street level, a corner box that smelled like yesterday's cigarettes and broken promises. Three hundred a month bought me water-stained walls and a view of Murphy's Bar, where neon script bled red through the window—GIRLS and DRINKS flickering like a dying heartbeat, painting everything in the color of old sins.
 
@@ -237,7 +237,7 @@ The woman in red. Always the woman in red. Jack's certainty turned to ash.`,
         },
       },
         narrative: [
-          `I looked at the list I'd just compiled. Sapphire. Necklace. Jewel. None of these fit Eleanor's life. Just like I suspected.
+          `{puzzle_callback}. I looked at the list I'd just compiled. Sapphire. Necklace. Jewel. None of these fit Eleanor's life. Just like I suspected.
 
 Greystone Correctional squatted on the edge of Ashport like a tombstone in a suit. The smell hit me twenty yards from the entrance—industrial cleaner trying to mask the rot underneath, like perfume on a corpse. Inside was worse. Fluorescent lights that turned skin cadaver-gray. Cinder block walls painted that particular shade of institutional green that only exists in prisons and morgues. The air tasted like despair and disinfectant.
 
@@ -646,7 +646,7 @@ Victoria Ashford is Emily Cross—the ghost Jack declared dead. Evidence can be 
         outliers: { BLEACH: 'Used to clean the cell.', WIPE: 'Removes fingerprints.', SCRUB: 'Erases biological evidence.', SOLVENT: 'Dissolves residue.' },
       },
       narrative: [
-          `Bleach. Wipe. Scrub. Solvent. The smell of cleaning supplies was the first thing I noticed. Someone had scrubbed this crime scene clean.
+          `{puzzle_callback}. The smell of cleaning supplies was the first thing I noticed. Someone had scrubbed this crime scene clean.
 
 Dawn broke like a wound over Ashport. Bruised sky hemorrhaging gray light through my office window. I hadn't slept. Hadn't tried. Sleep was for people who didn't have ghosts cataloging their failures.
 
@@ -890,7 +890,7 @@ Victoria's warning: Day Two coming. Jack's phone, locked in his drawer, buzzing 
           outliers: { THREAT: 'The leverage used against him.', PHOTO: 'The evidence of his affair.', SECRET: 'What he wanted to hide.', EXPOSURE: 'The fear that drove him.' },
         },
       narrative: [
-          `Threat. Photo. Secret. Exposure. Silas wasn't paid off. He was coerced.
+          `{puzzle_callback}. Silas wasn't paid off. He was coerced.
 
 The Marina District rose from Ashport's waterfront like a middle finger to the rot below. Glass towers. Expensive cars. People who'd learned the secret: in this city, you either feed on the desperate or become them. No middle ground. No mercy for the in-between.
 
@@ -1375,11 +1375,11 @@ Whatever it was.
 Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindness.`,
       briefing: {
         summary:
-          'The files were buried deep. Find the words related to storage and neglect to locate the missing evidence.',
+          'Sarah claims the evidence was never lost. Find the words that prove it was deliberately buried in the archives.',
         objectives: [
-          'Search the archive logs for the hidden location.',
-          'Identify terms related to basement storage and dust.',
-          'Locate the buried files to reopen the cold case.',
+          'Search the archive logs.',
+          'Identify terms of concealment.',
+          'Locate the buried files.',
         ],
       },
       bridgeText: [
@@ -1434,7 +1434,7 @@ Victoria held Maya like a chess piece. Offered Jack her empire. Trust is blindne
         outliers: { DUST: 'Covering the forgotten files.', BASEMENT: 'Where the truth was hidden.', ARCHIVE: 'The deep storage unit.', BURIED: 'Evidence Jack tried to ignore.' },
       },
       narrative: [
-          `Dust. Basement. Archive. Buried. The files weren't lost; they were hidden where no one would look.
+          `{puzzle_callback}. The files weren't lost; they were hidden where no one would look.
 
 I was halfway to the old Harbor Street precinct—driving through Ashport's industrial guts where the city doesn't bother pretending to be civilized—when Sarah called.
 
@@ -1549,9 +1549,9 @@ Helen Price prosecuted all five innocents. The Queen built her crown on Jack's f
         summary:
           'Marcus claims he was just Richard\'s friend. Filter the board for terms that suggest a deeper, romantic connection.',
         objectives: [
-          'Analyze Marcus\'s statement for emotional leakage.',
-          'Find the words that reveal a secret affair.',
-          'Expose the hidden relationship behind the friendship.',
+          'Analyze the relationship.',
+          'Identify romantic terms.',
+          'Expose the secret affair.',
         ],
       },
       bridgeText: [
@@ -1606,7 +1606,7 @@ Helen Price prosecuted all five innocents. The Queen built her crown on Jack's f
         outliers: { LOVER: 'The role Marcus really played.', SECRET: 'What Richard was hiding.', AFFAIR: 'The reason for the secrecy.', TRYST: 'Meetings in the dark.' },
       },
       narrative: [
-          `Lover. Affair. Secret. Tryst. Marcus wasn't just a friend. He was the reason Richard died.
+          `{puzzle_callback}. Marcus wasn't just a friend. He was the reason Richard died.
 
 Marcus Webb's antique shop occupied a narrow building wedged between a tattoo parlor that smelled like ink and regret and a Vietnamese restaurant where the pho was excellent and the owner didn't ask questions. The building itself was old Ashport—brick and wrought iron, the kind that had survived earthquakes and fires and urban renewal because it was too stubborn to die.
 
@@ -1741,11 +1741,11 @@ Emily Cross was Richard's victim—affair that wasn't consensual. Marcus inherit
 Victoria blackmailed him into testifying. Tomorrow at ten AM. Cowardice dressed as redemption.`,
       briefing: {
         summary:
-          'The convictions were bought. Find the financial terms that indicate bribery and payoffs.',
+          'Helen\'s conviction rate is perfect. Find the financial terms that bought those verdicts.',
         objectives: [
-          'Follow the money trail in the court records.',
-          'Identify the words related to kickbacks and bribes.',
-          'Prove the corruption that tainted the verdicts.',
+          'Follow the money trail.',
+          'Identify terms of bribery.',
+          'Link payment to justice.',
         ],
       },
       bridgeText: [
@@ -1926,9 +1926,9 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
         summary:
           'Helen is sticking to the PR script. Isolate the four \'Private\' emotions she is hiding behind her public apology.',
         objectives: [
-          'Deconstruct Helen\'s public statement.',
-          'Find the words expressing guilt and private shame.',
-          'Reveal the truth hidden behind the media persona.',
+          'Decode the public statement.',
+          'Identify hidden emotions.',
+          'Find the private truth.',
         ],
       },
     bridgeText: [
@@ -1982,7 +1982,7 @@ Twenty-one innocents. Tom Wade's name on every case. The system buries truth.`,
       outliers: { GUILT: 'The emotion behind the apology.', SHAME: 'What she felt in private.', SUICIDE: 'The tragic end she chose.', NOTE: 'Her final confession.' },
     },
       narrative: [
-        `Guilt. Shame. Suicide. Note. Helen wasn't apologizing for a mistake. She was saying goodbye.
+        `{puzzle_callback}. Helen wasn't apologizing for a mistake. She was saying goodbye.
 
 The press conference was at ten AM. I got there at nine-thirty and already couldn't find a seat.
 
@@ -2096,11 +2096,11 @@ Victoria sent video: Emily alive, screaming, while Jack declared her dead. Grang
 Victoria played checkmate. Confessions became prologue. The real monster exposed at noon.`,
     briefing: {
         summary:
-          'Grange claims to be a lawman. Find the words describing criminal acts hidden in his record.',
+          'Grange claims he\'s a decorated officer. Find the \'Criminal\' acts hidden in his record.',
         objectives: [
-          'Audit Grange\'s service record for anomalies.',
-          'Identify the terms related to torture and kidnapping.',
-          'Expose the criminal behavior masked by the badge.',
+          'Review the service record.',
+          'Identify illegal acts.',
+          'Expose the real monster.',
         ],
       },
     bridgeText: [
@@ -2154,7 +2154,7 @@ Victoria played checkmate. Confessions became prologue. The real monster exposed
       outliers: { TORTURE: 'What Grange did in that room.', KIDNAP: 'Taking Emily Cross.', ABUSE: 'Power weaponised.', FORCE: 'The only language he spoke.' },
     },
       narrative: [
-        `Torture. Kidnap. Criminal. Grange hid his crimes behind a badge.
+        `{puzzle_callback}. Grange hid his crimes behind a badge.
 
 Deputy Chief Grange was arrested at noon. I should have been there. Should have watched the man who'd tortured Emily Cross get dragged out in cuffs. Should have seen justice delivered.
 
@@ -2238,11 +2238,11 @@ She found his operation by following leads Jack marked insufficient. Twelve witn
 Sarah walked away. Starting her own firm. Jack had made her better by being worse.`,
     briefing: {
         summary:
-          'Victoria painted a portrait of Jack. Find the words describing the hollowness she sees in his eyes.',
+          'Victoria painted a portrait. Find the \'Empty\' words describing what she sees in Jack\'s eyes.',
         objectives: [
-          'Analyze the artistic critique of the portrait.',
-          'Locate the words representing emptiness and void.',
-          'Confront the image of a hollow man.',
+          'Analyze the portrait.',
+          'Identify terms of hollowness.',
+          'Face your reflection.',
         ],
       },
     bridgeText: [
@@ -2438,9 +2438,9 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
         summary:
           'Review Tom\'s lab logs. Identify the four administrative terms that prove he forged Lisa\'s signature.',
         objectives: [
-          'Audit the lab access logs for irregularities.',
-          'Find the words related to login credentials and forgery.',
-          'Prove the unauthorized access that framed Lisa.',
+          'Audit the lab reports.',
+          'Identify administrative forgery.',
+          'Prove the falsification.',
         ],
       },
     bridgeText: [
@@ -2494,7 +2494,7 @@ Monsters wear badges. Being right about being wrong changes nothing.`,
       outliers: { LOGIN: 'Digital footprint of the forgery.', PASSWORD: 'Stolen credentials.', ACCESS: 'Unauthorized entry.', STAMP: 'The fake approval.' },
     },
     narrative: [
-      `Login. Password. Access. Stamp. Tom didn't just make a mistake. He forged Lisa's identity.
+      `{puzzle_callback}. Tom didn't just make a mistake. He forged Lisa's identity.
 
 Day Five arrived with fog thick enough to drown in.
 
@@ -2600,11 +2600,11 @@ Tom framed her when she caught him altering DNA. She handed Jack a flash drive�
 At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
     briefing: {
         summary:
-          'Tom didn\'t hang himself. Find the evidence of a struggle disguised as a suicide.',
+          'Tom didn\'t hang himself. Find the \'Murder\' evidence disguised as suicide.',
         objectives: [
-          'Re-examine the autopsy report.',
-          'Locate the words indicating force and strangulation.',
-          'Demonstrate that the suicide was staged.',
+          'Examine the crime scene.',
+          'Identify signs of struggle.',
+          'Prove it was murder.',
         ],
       },
     bridgeText: [
@@ -2658,7 +2658,7 @@ At least sixty provably false. Best friend, mass murderer. Prison as weapon.`,
       outliers: { STRANGLE: 'Cause of death hidden by the rope.', FORCE: 'Signs of struggle.', BRUISE: 'Marks on the neck.', STAGE: 'Making it look like suicide.' },
     },
     narrative: [
-      `Strangle. Force. Stage. Murder. It wasn't a suicide. The autopsy photos proved it.
+      `{puzzle_callback}. It wasn't a suicide. The autopsy photos proved it.
 
 I was driving to FBI headquarters when Sarah called.
 
@@ -2812,11 +2812,11 @@ Tom called at 2 AM. Confessed his philosophy—ensuring justice by manufacturing
 Or Victoria staged it. Marine-grade rope. Foreign DNA. Perfect evidence is usually manufactured.`,
     briefing: {
         summary:
-          'Jack is fighting back. Find the action verbs that signal the start of the offensive.',
+          'Jack is fighting back. Find the \'Action\' verbs to start the offensive.',
         objectives: [
-          'Plan the counter-operation against the conspiracy.',
-          'Identify the words related to hunting and trapping.',
-          'Initiate the sequence to turn the tables.',
+          'Plan the counter-attack.',
+          'Identify active measures.',
+          'Start the hunt.',
         ],
       },
     bridgeText: [
