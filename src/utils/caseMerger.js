@@ -27,7 +27,16 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
 
     // 3. Handle Branching Outlier Sets (The "Puzzle" Logic)
     let branchingBoardOverrides = {};
-    const branchingSet = BRANCHING_OUTLIER_SETS[caseNumber];
+    let branchingSet = BRANCHING_OUTLIER_SETS[caseNumber];
+    
+    // If the branching set structure has path keys, resolve the specific set for the current path
+    if (branchingSet && !branchingSet.sets) {
+        if (branchingSet[pathKey]) {
+            branchingSet = branchingSet[pathKey];
+        } else if (branchingSet[ROOT_PATH_KEY]) {
+            branchingSet = branchingSet[ROOT_PATH_KEY];
+        }
+    }
     
     if (branchingSet && branchingSet.sets) {
         // CASE TYPE: DECISION POINT (e.g., 001C)
