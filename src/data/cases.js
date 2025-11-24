@@ -2972,11 +2972,11 @@ Tom confessed at 2 AM, then hung himself. Or Victoria staged it. Jack chose lear
 Best friends make you weapons you don't know you've become.`,
     briefing: {
         summary:
-          'Margaret claims she was just a passive observer. Find the words that prove she was an active participant in the financial ruin.',
+          'Margaret claims the carjacking was random violence. Find the words that prove it was a targeted act of revenge.',
         objectives: [
-          'Analyze Margaret\'s role in the finances.',
-          'Identify terms indicating active participation.',
-          'Contradict her claim of ignorance.',
+          'Analyze the attack pattern.',
+          'Identify terms of retaliation.',
+          'Prove it was payback.',
         ],
       },
     bridgeText: [
@@ -3035,7 +3035,7 @@ Best friends make you weapons you don't know you've become.`,
       },
     },
     narrative: [
-      `Target. Payback. Retaliate. Threat. Margaret wasn't random. She was collateral damage in a war I didn't know I was fighting.
+      `{puzzle_callback}. Margaret wasn't random. She was collateral damage in a war I didn't know I was fighting.
 
 Day Six started with rain and regret.
 
@@ -3147,11 +3147,11 @@ She told Jack she was terrified to leave the house. Divorced him because staying
 Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life without him.`,
     briefing: {
         summary:
-          'Sarah claims she\'s considering the job for the money. Find the words that prove she\'s doing it to protect you.',
+          'Sarah is considering the promotion. Find the words that describe the isolation she will face if she accepts.',
         objectives: [
-          'Decode Sarah\'s true motive.',
-          'Identify terms of protection and sacrifice.',
-          'Prove she isn\'t selling out.',
+          'Assess the social cost.',
+          'Identify terms of solitude.',
+          'Predict the loneliness.',
         ],
       },
     bridgeText: [
@@ -3210,7 +3210,7 @@ Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life wi
       },
     },
     narrative: [
-      `Alone. Exile. Distance. Silence. Sarah was considering the offer. I had to give her a reason to say no.
+      `{puzzle_callback}. Sarah was considering the offer. I had to give her a reason to say no.
 
 Sarah met me at Murphy's Bar at noon. She looked worse than I'd ever seen her. Dark circles. Unwashed hair. The kind of exhaustion that comes from not sleeping because closing your eyes means seeing things you can't unsee.
 
@@ -3564,7 +3564,7 @@ Everyone you love pays for crimes they didn't commit.`,
       },
     },
     narrative: [
-      `Forged. Concealed. Shell. Staged. The documents proved everything. My word meant nothing, but the paper trail was ironclad.
+      `{puzzle_callback}. The documents proved everything. My word meant nothing, but the paper trail was ironclad.
 
 Eleanor Bellamy's appeal. Ten AM. I wasn't playing by Victoria's rules anymore.
 
@@ -3689,7 +3689,7 @@ Evidence beats testimony. Victoria's manipulation worked. Results matter more th
       },
     },
     narrative: [
-      `Defection. Sever. Recruit. Leverage. Sarah didn't just leave. She built a better team.
+      `{puzzle_callback}. Sarah didn't just leave. She built a better team.
 
 Sarah's office. Empty boxes. Her detective shield on the desk like evidence of a crime.
 
@@ -3899,7 +3899,7 @@ Truth without power is just noise. Confessing doesn't equal redemption.`,
       },
     },
     narrative: [
-      `Payoff. Bribed. Leverage. Influence. Money buys justice. Or at least a good lawyer.
+      `{puzzle_callback}. Money buys justice. Or at least a good lawyer.
 
 FBI at my door. 6 AM. Expected.
 
@@ -4013,7 +4013,7 @@ The system makes fighting so expensive most people can't. But Jack could. Becaus
       },
     },
     narrative: [
-      `Dominance. Force. Puppet. Strings. Grange wasn't just a bad cop. He was a sadist.
+      `{puzzle_callback}. Grange wasn't just a bad cop. He was a sadist.
 
 Thirty-six hours later: "You're being released. New evidence. Security footage showing you elsewhere during Tom's death."
 
@@ -4154,11 +4154,11 @@ Thirty-six hours filing motions, learning powerlessness. Victoria released him. 
 Victoria could destroy Jack anytime. Making him live is worse.`,
     briefing: {
         summary:
-          'The gallery is full of art. Find the words that prove these aren\'t portraits, but confessions.',
+          'The artist is hiding in plain sight. Find the words that describe the anonymity of the creator.',
         objectives: [
-          'Analyze the exhibits.',
-          'Identify the crimes on display.',
-          'Read the confession in the paint.',
+          'Profile the artist.',
+          'Identify terms of mystery.',
+          'Unmask the ghost.',
         ],
       },
     bridgeText: [
@@ -4217,7 +4217,7 @@ Victoria could destroy Jack anytime. Making him live is worse.`,
       },
     },
     narrative: [
-      `Shadow. Nameless. Mask. Void. The killer had no face. Just a pattern.
+      `{puzzle_callback}. The killer had no face. Just a pattern.
 
 Day Nine started with an invitation. Black envelope. Museum-quality paper.
 
@@ -4321,11 +4321,11 @@ Jack's portrait: ten feet tall, eyes empty. Victoria offered him Deputy Director
 Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
     briefing: {
         summary:
-          'Sarah held a press conference. Find the words that prove she didn\'t just report the news, she made it.',
+          'Sarah exposed the network. Find the financial terms that greased the wheels of the city\'s corruption.',
         objectives: [
-          'Analyze Sarah\'s statement.',
-          'Identify terms of agency and control.',
-          'Witness the shift in power.',
+          'Follow the bribes.',
+          'Identify payment methods.',
+          'Expose the graft.',
         ],
       },
     bridgeText: [
@@ -4384,7 +4384,7 @@ Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
       },
     },
     narrative: [
-      `Redact. Classified. Seal. Order. The government erased the operation. But they couldn't erase the memories.
+      `{puzzle_callback}. The government erased the operation. But they couldn't erase the memories.
 
 I left the gallery and my phone rang. Sarah.
 
@@ -4733,7 +4733,7 @@ Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`
       },
     },
     narrative: [
-      `Stranger. Outsider. Drifter. Alien. The profile was wrong. We were looking for a ghost.
+      `{puzzle_callback}. The profile was wrong. We were looking for a ghost.
 
 Day Ten started with a phone call from FBI Agent Martinez.
 
@@ -4889,7 +4889,7 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
       outliers: { INNOCENT: 'The five lives at stake.', SAVE: 'The goal of the delay.', PROMISE: 'The vow to free them.', TRUST: 'The gamble on Victoria.' },
     },
     narrative: [
-      `Innocent. Save. Promise. Trust. I couldn't arrest her. Not when the system was this broken.
+      `{puzzle_callback}. I couldn't arrest her. Not when the system was this broken.
 
 At 10 PM, I made my choice.
 
@@ -5172,11 +5172,11 @@ By 5 PM: all five freed. Jack gave FBI everything, accepted obstruction charges.
 Some choices are between legal and right. Sometimes those are mutually exclusive.`,
     briefing: {
         summary:
-          'The end is near. Find the words expressing the guilt that must be accepted before the final judgment.',
+          'The case is closing, but the story isn\'t over. Find the words that admit what remains unfinished.',
         objectives: [
-          'Reflect on consequences.',
-          'Identify terms of penance.',
-          'Prepare for confession.',
+          'Identify unresolved threads.',
+          'Acknowledge the unknown.',
+          'Face the mystery.',
         ],
       },
     bridgeText: [
@@ -5235,7 +5235,7 @@ Some choices are between legal and right. Sometimes those are mutually exclusive
       },
     },
     narrative: [
-      `Guilt. Sin. Penance. Shame. The confession was the easy part. Living with it was the sentence.
+      `{puzzle_callback}. The confession was the easy part. Living with it was the sentence.
 
 I walked into FBI headquarters at 6 PM. Agent Martinez waited with three other agents and a stenographer.
 
@@ -5380,7 +5380,7 @@ Jack chose five innocents over one guilty. Even if it destroyed him. Especially 
       },
     },
     narrative: [
-      `Trust. Faith. Bond. Hope. Redemption isn't earned. It's given by those you hurt.
+      `{puzzle_callback}. Redemption isn't earned. It's given by those you hurt.
 
 That night, I sat in my apartment, knowing tomorrow would bring arrests for us both.
 
@@ -5663,7 +5663,7 @@ Some endings are just acknowledgments that being seen matters.`,
       outliers: { GUN: 'The weapon of choice.', BULLET: 'What was missing.', TRIGGER: 'The final decision.', EMPTY: 'The truth revealed.' },
     },
     narrative: [
-      `Gun. Bullet. Trigger. Empty. I looked at the weapon. It was never meant to fire.
+      `{puzzle_callback}. I looked at the weapon. It was never meant to fire.
 
 Victoria stood in the warehouse, rain drumming on the roof, staring at the gun I'd placed between us.
 
@@ -5858,7 +5858,7 @@ Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in
       },
     },
     narrative: [
-      `Legacy. Future. Build. Grow. The case was over. The work was just beginning.
+      `{puzzle_callback}. The case was over. The work was just beginning.
 
 I turned myself in to FBI that afternoon. Confessed to everything. Evidence tampering. False reports. Corruption. Conspiracy.
 
