@@ -65,7 +65,9 @@ export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) 
       chapter: nextChapter,
       subchapter: nextSubchapter,
       activeCaseNumber: nextCaseNumber,
-      nextStoryUnlockAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      nextStoryUnlockAt: nextChapter > 3 
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() 
+        : null
     };
 
     updateProgress({
