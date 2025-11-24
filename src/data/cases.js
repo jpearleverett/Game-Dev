@@ -2972,11 +2972,11 @@ Tom confessed at 2 AM, then hung himself. Or Victoria staged it. Jack chose lear
 Best friends make you weapons you don't know you've become.`,
     briefing: {
         summary:
-          'The murder wasn\'t just business. Find the words that prove the motive was deeply personal.',
+          'Margaret claims she was just a passive observer. Find the words that prove she was an active participant in the financial ruin.',
         objectives: [
-          'Analyze the suspect\'s history for grievances.',
-          'Identify terms related to vengeance and grudges.',
-          'Prove the crime was an act of revenge.',
+          'Analyze Margaret\'s role in the finances.',
+          'Identify terms indicating active participation.',
+          'Contradict her claim of ignorance.',
         ],
       },
     bridgeText: [
@@ -3147,11 +3147,11 @@ She told Jack she was terrified to leave the house. Divorced him because staying
 Emma ran in. Six years old. Doesn't know Jack exists. Margaret's built a life without him.`,
     briefing: {
         summary:
-          'The suspect claims to be part of a team. Find the words that prove they were acting alone.',
+          'Sarah claims she\'s considering the job for the money. Find the words that prove she\'s doing it to protect you.',
         objectives: [
-          'Check the communication logs for backup.',
-          'Identify words indicating solitude and isolation.',
-          'Confirm the suspect had no accomplices.',
+          'Decode Sarah\'s true motive.',
+          'Identify terms of protection and sacrifice.',
+          'Prove she isn\'t selling out.',
         ],
       },
     bridgeText: [
@@ -3322,11 +3322,11 @@ Jack showed her Tom's murder evidence. Made a choice: threatened Victoria to pro
 Sarah forwarded it. Victoria backed down. Jack made an active move and won.`,
     briefing: {
         summary:
-          'The official story hides a deeper truth. Find the words that reveal the secret they tried to bury.',
+          'The official report calls it a \'cold case\'. Find the words that prove it was a calculated cover-up.',
         objectives: [
-          'Compare the official report with the evidence.',
-          'Locate terms related to epiphany and discovery.',
-          'Bring the hidden truth to light.',
+          'Expose the calculated cover-up.',
+          'Identify terms of active concealment.',
+          'Rewrite the official history.',
         ],
       },
     bridgeText: [
@@ -3501,11 +3501,11 @@ Jack laid photos side by side. Victoria Ashford is Emily Cross—the ghost he de
 Everyone you love pays for crimes they didn't commit.`,
     briefing: {
         summary:
-          'Reconstruct the web of lies. Find the words that contradict the established timeline.',
+          'Victoria\'s evidence seems perfect. Find the words that show how she manufactured the timeline.',
         objectives: [
-          'Timeline the events of the night in question.',
-          'Identify contradictions and fabrications.',
-          'Expose the deception in the alibi.',
+          'Deconstruct the timeline.',
+          'Identify fabricated events.',
+          'Expose the architect\'s hand.',
         ],
       },
     bridgeText: [
@@ -3626,11 +3626,11 @@ Three-hour recess. Documents verified authentic. Motion granted. Eleanor freed a
 Evidence beats testimony. Victoria's manipulation worked. Results matter more than Jack's pride.`,
     briefing: {
         summary:
-          'A trusted ally turned traitor. Find the actions that prove their double cross.',
+          'Sarah left the force. Find the words that prove she didn\'t quit, but was recruiting.',
         objectives: [
-          'Review the actions of your team members.',
-          'Identify behaviors indicating treachery.',
-          'Unmask the traitor in your midst.',
+          'Trace Sarah\'s movements.',
+          'Identify recruitment terms.',
+          'Reveal the new alliance.',
         ],
       },
     bridgeText: [
@@ -3735,11 +3735,11 @@ Ashport Conviction Integrity Project. Claire, Lisa, Eleanor. Building something 
 Victoria offered Deputy Director. Sarah said no. She's a better detective than both of them.`,
     briefing: {
         summary:
-          'Something is missing from the scene. Find the words describing what should be there but isn\'t.',
+          'The office feels empty. Find the words that define what is missing from your life.',
         objectives: [
-          'Inventory the crime scene for expected items.',
-          'Identify terms related to loss and absence.',
-          'Find the void that proves the theft.',
+          'Inventory the void.',
+          'Identify terms of loss.',
+          'Confront the silence.',
         ],
       },
     bridgeText: [
@@ -3836,11 +3836,11 @@ The people Jack destroyed, rebuilding without him. Sarah ahead now. Jack alone, 
 Truth without power is just noise. Confessing doesn't equal redemption.`,
     briefing: {
         summary:
-          'Follow the money. Find the transactions that link the suspect to the crime.',
+          'They say money talks. Find the paper trail that bought the silence of an entire department.',
         objectives: [
-          'Trace the financial records.',
-          'Identify payoffs and illicit transfers.',
-          'Link the money to the motive.',
+          'Follow the money.',
+          'Identify bribes and payoffs.',
+          'Link the funding to the silence.',
         ],
       },
     bridgeText: [
@@ -3949,11 +3949,11 @@ Victoria left a note—tools the innocent never had. Jack filed motions for thir
 The system makes fighting so expensive most people can't. But Jack could. Because Victoria gave him resources.`,
     briefing: {
         summary:
-          'It\'s about dominance. Find the words that describe how they exerted control over the victim.',
+          'You were released early. Find the words that prove this wasn\'t luck, but a calculated move.',
         objectives: [
-          'Analyze the relationship dynamics.',
-          'Identify terms related to power and manipulation.',
-          'Reveal the mechanism of control.',
+          'Analyze the release order.',
+          'Identify terms of manipulation.',
+          'See the strings attached.',
         ],
       },
     bridgeText: [
@@ -4053,11 +4053,11 @@ Some choices aren't between good and evil. They're between two different kinds o
     dailyIntro: ``,
     briefing: {
         summary:
-          'They were lured into a trap. Find the words representing the bait that was used.',
+          'Two paths lie ahead. Find the words that define the cost of the easy way out.',
         objectives: [
-          'Examine the setup leading to the crime.',
-          'Identify the temptations offered to the victim.',
-          'Expose the trap that was set.',
+          'Weigh the options.',
+          'Identify the price of submission.',
+          'Calculate the cost of your soul.',
         ],
       },
     bridgeText: [
@@ -4154,11 +4154,11 @@ Thirty-six hours filing motions, learning powerlessness. Victoria released him. 
 Victoria could destroy Jack anytime. Making him live is worse.`,
     briefing: {
         summary:
-          'The killer is a ghost. Find the words that describe an unidentified suspect.',
+          'The gallery is full of art. Find the words that prove these aren\'t portraits, but confessions.',
         objectives: [
-          'Profile the unknown assailant.',
-          'Identify terms related to anonymity and shadows.',
-          'Build a profile of the ghost.',
+          'Analyze the exhibits.',
+          'Identify the crimes on display.',
+          'Read the confession in the paint.',
         ],
       },
     bridgeText: [
@@ -4321,11 +4321,11 @@ Jack's portrait: ten feet tall, eyes empty. Victoria offered him Deputy Director
 Sarah in the corner. Making her choice. City Hall on fire. The city burns.`,
     briefing: {
         summary:
-          'The rot goes to the top. Find the official terms used to authorize the illegal operation.',
+          'Sarah held a press conference. Find the words that prove she didn\'t just report the news, she made it.',
         objectives: [
-          'Review the government documents.',
-          'Identify bureaucratic terms covering up the crime.',
-          'Expose the official corruption.',
+          'Analyze Sarah\'s statement.',
+          'Identify terms of agency and control.',
+          'Witness the shift in power.',
         ],
       },
     bridgeText: [
@@ -4494,11 +4494,11 @@ Sarah stole Victoria's narrative. Made it legitimate prosecution. Became the her
 Victoria called—furious, vulnerable. Sarah proved you don't need to become a monster to fight monsters.`,
     briefing: {
         summary:
-          'The package contains the truth about Emily\'s captivity. Reconstruct the timeline of what happened to her in the dark.',
+          'The package contains a recording. Find the sequence of sounds that proves Emily was alive when you closed the case.',
         objectives: [
-          'Listen to the evidence tape.',
-          'Sequence the events of the abduction.',
-          'Reconstruct the timeline of the crime.',
+          'Listen to the timeline.',
+          'Sequence the scream and the click.',
+          'Reconstruct the betrayal.',
         ],
       },
     bridgeText: [
@@ -4670,11 +4670,11 @@ Sarah struck—FBI raids, Helen dead. The recording: Emily screaming, Jack's voi
 Understanding doesn't resurrect the dead. Sarah stole Victoria's endgame clean.`,
     briefing: {
         summary:
-          'The identity is still a mystery. Find the clues that point to a stranger.',
+          'The law says one thing, your conscience another. Find the words that define the gap between them.',
         objectives: [
-          'Re-evaluate the suspect list.',
-          'Identify terms pointing to an outsider.',
-          'Question everything you know about the killer.',
+          'Define the moral conflict.',
+          'Identify terms of duty vs humanity.',
+          'Measure the cost of the law.',
         ],
       },
     bridgeText: [
@@ -4833,8 +4833,8 @@ Justice or mercy. Punishment or salvation. No good answer. Four hours to decide.
         summary:
           'Jack is torn between two duties. Isolate the four reasons to choose Mercy over Law.',
         objectives: [
-          'Weigh the moral options available.',
-          'Identify the concepts supporting forgiveness.',
+          'Weigh the moral options.',
+          'Identify concepts of forgiveness.',
           'Choose the path of mercy.',
         ],
       },
@@ -4991,11 +4991,11 @@ Called Victoria: warned her FBI was coming. Twenty-four hours of Emily, not Vict
 Victoria kept her promise. Didn't run. Jack chose five innocents over doing his job.`,
     briefing: {
         summary:
-          'Every choice has a cost. Find the words describing what must be given up.',
+          'Every action has a reaction. Find the words that describe the price you must pay for doing the right thing.',
         objectives: [
-          'Calculate the price of the decision.',
-          'Identify terms related to sacrifice and loss.',
-          'Accept the consequences.',
+          'Calculate the personal cost.',
+          'Identify terms of sacrifice.',
+          'Accept the burden.',
         ],
       },
     bridgeText: [
@@ -5174,9 +5174,9 @@ Some choices are between legal and right. Sometimes those are mutually exclusive
         summary:
           'The end is near. Find the words expressing the guilt that must be accepted before the final judgment.',
         objectives: [
-          'Reflect on the consequences of past actions.',
-          'Identify the terms related to guilt and penance.',
-          'Prepare for the final confession.',
+          'Reflect on consequences.',
+          'Identify terms of penance.',
+          'Prepare for confession.',
         ],
       },
     bridgeText: [
@@ -5317,11 +5317,11 @@ Martinez charged him with obstruction. But all five innocents freed by 5 PM. Ele
 Jack chose five innocents over one guilty. Even if it destroyed him. Especially if it destroyed him.`,
     briefing: {
         summary:
-          'There is a chance to make amends. Find the words that offer a path to forgiveness.',
+          'The night is long. Find the words that offer a path to forgiveness in the dark.',
         objectives: [
-          'Search for a way to redeem the past.',
-          'Identify terms related to trust and second chances.',
-          'Find the path to redemption.',
+          'Search for redemption.',
+          'Identify terms of grace.',
+          'Find the light.',
         ],
       },
     bridgeText: [
@@ -5472,11 +5472,11 @@ At 2 AM Victoria appeared—not the penthouse predator. Hair down, jeans, Emily 
 She needed him to see Emily once last time. At dawn FBI arrested her. She went peacefully.`,
     briefing: {
         summary:
-          'Someone must pay the price. Find the words that demand a reckoning.',
+          'The sun rises on a new world. Find the words that demand a reckoning for the old one.',
         objectives: [
-          'Assess the debt that is owed.',
-          'Identify terms related to accountability and justice.',
-          'Demand the final payment.',
+          'Assess the debt.',
+          'Identify terms of accountability.',
+          'Demand payment.',
         ],
       },
     bridgeText: [
@@ -5607,9 +5607,9 @@ Some endings are just acknowledgments that being seen matters.`,
         summary:
           'The warehouse is full of ghosts. Find the four objects that will determine if Victoria lives or dies.',
         objectives: [
-          'Survey the final confrontation site.',
-          'Locate the weapon parts and their condition.',
-          'Determine the state of the gun.',
+          'Survey the scene.',
+          'Locate the weapon.',
+          'Determine the ending.',
         ],
       },
     bridgeText: [
@@ -5798,7 +5798,7 @@ Victoria laughed and cried. Jack called Sarah. Ready to confess, turn himself in
           'The end of the road. Find the words that describe life after the case.',
         objectives: [
           'Look beyond the immediate crisis.',
-          'Identify terms related to freedom and legacy.',
+          'Identify terms of legacy.',
           'Decide what comes next.',
         ],
       },
@@ -6010,8 +6010,8 @@ Sarah freed forty-three innocents. Victoria vanished—warehouse burned, crossed
         summary:
           'The future is unwritten. Find the words that express doubt and possibility.',
         objectives: [
-          'Contemplate the uncertainty ahead.',
-          'Identify terms related to chance and the unknown.',
+          'Contemplate the unknown.',
+          'Identify terms of chance.',
           'Step into the future.',
         ],
       },
