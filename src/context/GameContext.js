@@ -354,6 +354,241 @@ export function GameProvider({ children }) {
       }
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, getCurrentPathKey]);
 
+  // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
+
+  /**
+   * Unlock an ending when player reaches it
+   */
+  const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
+    const nowIso = new Date().toISOString();
+    const currentEndings = progress.endings || { unlockedEndingIds: [], endingDetails: {}, totalEndingsReached: 0 };
+    
+    // Check if already unlocked
+    const alreadyUnlocked = currentEndings.unlockedEndingIds.includes(endingId);
+    
+    const updatedEndings = {
+      ...currentEndings,
+      unlockedEndingIds: alreadyUnlocked 
+        ? currentEndings.unlockedEndingIds 
+        : [...currentEndings.unlockedEndingIds, endingId],
+      endingDetails: {
+        ...currentEndings.endingDetails,
+        [endingId]: {
+          unlockedAt: currentEndings.endingDetails[endingId]?.unlockedAt || nowIso,
+          lastReachedAt: nowIso,
+          reachCount: (currentEndings.endingDetails[endingId]?.reachCount || 0) + 1,
+          ...playthroughDetails,
+        },
+      },
+      totalEndingsReached: currentEndings.totalEndingsReached + 1,
+      firstEndingId: currentEndings.firstEndingId || endingId,
+      firstEndingAt: currentEndings.firstEndingAt || nowIso,
+    };
+
+    // Also unlock chapter select after first ending
+    const updatedCheckpoints = {
+      ...(progress.chapterCheckpoints || {}),
+      unlocked: true,
+    };
+
+    updateProgress({ 
+      endings: updatedEndings,
+      chapterCheckpoints: updatedCheckpoints,
+    });
+
+    // Log analytics
+    analytics.logEvent?.('ending_unlocked', { endingId, isNew: !alreadyUnlocked });
+    
+    return !alreadyUnlocked; // Return true if this was a new unlock
+  }, [progress.endings, progress.chapterCheckpoints, updateProgress]);
+
+  /**
+   * Unlock an achievement
+   */
+  const unlockAchievement = useCallback((achievementId, context = {}) => {
+    const nowIso = new Date().toISOString();
+    const currentAchievements = progress.achievements || { unlockedAchievementIds: [], achievementDetails: {}, totalPoints: 0 };
+    
+    // Check if already unlocked
+    if (currentAchievements.unlockedAchievementIds.includes(achievementId)) {
+      return false; // Already unlocked
+    }
+
+    // Import achievement data to get points
+    const { ACHIEVEMENTS } = require('../data/achievementsData');
+    const achievement = ACHIEVEMENTS[achievementId];
+    const points = achievement?.points || 0;
+
+    const updatedAchievements = {
+      ...currentAchievements,
+      unlockedAchievementIds: [...currentAchievements.unlockedAchievementIds, achievementId],
+      achievementDetails: {
+        ...currentAchievements.achievementDetails,
+        [achievementId]: {
+          unlockedAt: nowIso,
+          ...context,
+        },
+      },
+      totalPoints: currentAchievements.totalPoints + points,
+      lastCheckedAt: nowIso,
+    };
+
+    updateProgress({ achievements: updatedAchievements });
+
+    // Haptic feedback for achievement unlock
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    // Log analytics
+    analytics.logEvent?.('achievement_unlocked', { achievementId, points });
+
+    return true;
+  }, [progress.achievements, updateProgress]);
+
+  /**
+   * Check and unlock achievements based on current state
+   */
+  const checkAchievements = useCallback(() => {
+    const { ACHIEVEMENTS } = require('../data/achievementsData');
+    const currentAchievements = progress.achievements?.unlockedAchievementIds || [];
+    const newUnlocks = [];
+
+    // Check prologue achievement
+    if (progress.seenPrologue && !currentAchievements.includes('THE_BEGINNING')) {
+      if (unlockAchievement('THE_BEGINNING')) newUnlocks.push('THE_BEGINNING');
+    }
+
+    // Check streak achievements
+    if (progress.streak >= 5 && !currentAchievements.includes('STREAK_FIVE')) {
+      if (unlockAchievement('STREAK_FIVE')) newUnlocks.push('STREAK_FIVE');
+    }
+    if (progress.streak >= 10 && !currentAchievements.includes('STREAK_TEN')) {
+      if (unlockAchievement('STREAK_TEN')) newUnlocks.push('STREAK_TEN');
+    }
+
+    // Check total solved achievements
+    const totalSolved = progress.solvedCaseIds?.length || 0;
+    if (totalSolved >= 10 && !currentAchievements.includes('CASE_CRACKER')) {
+      if (unlockAchievement('CASE_CRACKER')) newUnlocks.push('CASE_CRACKER');
+    }
+    if (totalSolved >= 50 && !currentAchievements.includes('VETERAN_INVESTIGATOR')) {
+      if (unlockAchievement('VETERAN_INVESTIGATOR')) newUnlocks.push('VETERAN_INVESTIGATOR');
+    }
+
+    // Check perfect solve (1 attempt)
+    const perfectSolves = progress.attemptsDistribution?.[1] || 0;
+    if (perfectSolves > 0 && !currentAchievements.includes('PERFECT_DETECTIVE')) {
+      if (unlockAchievement('PERFECT_DETECTIVE')) newUnlocks.push('PERFECT_DETECTIVE');
+    }
+
+    // Check ending achievements
+    const unlockedEndings = progress.endings?.unlockedEndingIds || [];
+    
+    // First ending
+    if (unlockedEndings.length >= 1 && !currentAchievements.includes('FIRST_ENDING')) {
+      if (unlockAchievement('FIRST_ENDING')) newUnlocks.push('FIRST_ENDING');
+    }
+    
+    // Halfway
+    if (unlockedEndings.length >= 8 && !currentAchievements.includes('HALFWAY_THERE')) {
+      if (unlockAchievement('HALFWAY_THERE')) newUnlocks.push('HALFWAY_THERE');
+    }
+    
+    // Completionist
+    if (unlockedEndings.length >= 16 && !currentAchievements.includes('COMPLETIONIST')) {
+      if (unlockAchievement('COMPLETIONIST')) newUnlocks.push('COMPLETIONIST');
+    }
+
+    // Time-based hidden achievements
+    const hour = new Date().getHours();
+    if (hour >= 0 && hour < 4 && !currentAchievements.includes('NIGHT_OWL')) {
+      if (unlockAchievement('NIGHT_OWL')) newUnlocks.push('NIGHT_OWL');
+    }
+    if (hour >= 5 && hour < 7 && !currentAchievements.includes('EARLY_BIRD')) {
+      if (unlockAchievement('EARLY_BIRD')) newUnlocks.push('EARLY_BIRD');
+    }
+
+    return newUnlocks;
+  }, [progress, unlockAchievement]);
+
+  /**
+   * Save a chapter checkpoint for replay
+   */
+  const saveChapterCheckpoint = useCallback((chapter, subchapter, pathKey) => {
+    const nowIso = new Date().toISOString();
+    const currentCheckpoints = progress.chapterCheckpoints || { checkpoints: [], unlocked: false };
+    
+    // Create checkpoint snapshot
+    const checkpoint = {
+      id: `${chapter}-${subchapter}-${pathKey}-${Date.now()}`,
+      chapter,
+      subchapter,
+      pathKey,
+      savedAt: nowIso,
+      storyCampaignSnapshot: { ...progress.storyCampaign },
+    };
+
+    // Keep only the last checkpoint per chapter-path combination
+    const existingIndex = currentCheckpoints.checkpoints.findIndex(
+      cp => cp.chapter === chapter && cp.pathKey === pathKey
+    );
+
+    let updatedCheckpoints;
+    if (existingIndex >= 0) {
+      updatedCheckpoints = [...currentCheckpoints.checkpoints];
+      updatedCheckpoints[existingIndex] = checkpoint;
+    } else {
+      updatedCheckpoints = [...currentCheckpoints.checkpoints, checkpoint];
+    }
+
+    updateProgress({
+      chapterCheckpoints: {
+        ...currentCheckpoints,
+        checkpoints: updatedCheckpoints,
+      },
+    });
+  }, [progress.chapterCheckpoints, progress.storyCampaign, updateProgress]);
+
+  /**
+   * Start replay from a specific chapter checkpoint
+   */
+  const startFromChapter = useCallback((checkpoint) => {
+    if (!checkpoint?.storyCampaignSnapshot) return false;
+
+    const nowIso = new Date().toISOString();
+    
+    // Restore story campaign from checkpoint
+    const restoredCampaign = {
+      ...checkpoint.storyCampaignSnapshot,
+      // Mark this as a replay branch
+      isReplayBranch: true,
+      replayStartedAt: nowIso,
+      replayFromChapter: checkpoint.chapter,
+    };
+
+    updateProgress({
+      storyCampaign: restoredCampaign,
+      chapterCheckpoints: {
+        ...progress.chapterCheckpoints,
+        activeReplayBranch: checkpoint.id,
+      },
+    });
+
+    return true;
+  }, [progress.chapterCheckpoints, updateProgress]);
+
+  /**
+   * Update gameplay stats (for time-based achievements)
+   */
+  const updateGameplayStats = useCallback((updates) => {
+    const currentStats = progress.gameplayStats || {};
+    updateProgress({
+      gameplayStats: {
+        ...currentStats,
+        ...updates,
+      },
+    });
+  }, [progress.gameplayStats, updateProgress]);
+
   const stateValue = useMemo(() => ({
     ...gameState,
     progress,
@@ -383,6 +618,13 @@ export function GameProvider({ children }) {
     setAudioController,
     purchaseBribe,
     purchaseFullUnlock,
+    // New: Endings & Achievements
+    unlockEnding,
+    unlockAchievement,
+    checkAchievements,
+    saveChapterCheckpoint,
+    startFromChapter,
+    updateGameplayStats,
   }), [
     toggleWordSelection,
     submitGuess,
@@ -403,6 +645,12 @@ export function GameProvider({ children }) {
     setAudioController,
     purchaseBribe,
     purchaseFullUnlock,
+    unlockEnding,
+    unlockAchievement,
+    checkAchievements,
+    saveChapterCheckpoint,
+    startFromChapter,
+    updateGameplayStats,
   ]);
 
   return (
