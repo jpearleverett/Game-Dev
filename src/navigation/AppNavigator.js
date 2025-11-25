@@ -17,6 +17,10 @@ import StatsScreen from '../screens/StatsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import MenuScreen from '../screens/MenuScreen';
 import StoryCampaignScreen from '../screens/StoryCampaignScreen';
+// New screens for replayability features
+import EndingGalleryScreen from '../screens/EndingGalleryScreen';
+import ChapterSelectScreen from '../screens/ChapterSelectScreen';
+import AchievementsScreen from '../screens/AchievementsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -218,11 +222,22 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Menu">
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
+          const endingsCount = progress.endings?.unlockedEndingIds?.length || 0;
+          const achievementsCount = progress.achievements?.unlockedAchievementIds?.length || 0;
+          const hasCompletedStory = progress.chapterCheckpoints?.unlocked || false;
+          
           return (
             <MenuScreen
               onBack={() => navigation.navigate('Desk')}
               onReplayTutorial={actions.handleReplayTutorial}
               onShare={actions.handleShareResults}
+              onOpenEndingGallery={() => navigation.navigate('EndingGallery')}
+              onOpenAchievements={() => navigation.navigate('Achievements')}
+              onOpenChapterSelect={() => navigation.navigate('ChapterSelect')}
+              hasCompletedStory={hasCompletedStory}
+              endingsCount={endingsCount}
+              achievementsCount={achievementsCount}
+              totalAchievements={30}
             />
           );
         }}
@@ -260,6 +275,52 @@ export default function AppNavigator({ fontsReady, audio }) {
               onBribe={purchaseBribe}
               onPurchaseFullUnlock={purchaseFullUnlock}
               premiumUnlocked={progress.premiumUnlocked}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="EndingGallery">
+        {({ navigation }) => {
+          return (
+            <EndingGalleryScreen
+              unlockedEndingIds={progress.endings?.unlockedEndingIds || []}
+              endingDetails={progress.endings?.endingDetails || {}}
+              onBack={() => navigation.goBack()}
+              onSelectEnding={(ending) => {
+                // Could navigate to ending detail or trigger share
+              }}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="ChapterSelect">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <ChapterSelectScreen
+              storyCampaign={progress.storyCampaign}
+              checkpoints={progress.chapterCheckpoints?.checkpoints || []}
+              isUnlocked={progress.chapterCheckpoints?.unlocked || false}
+              onSelectChapter={(chapter) => {
+                // Handle chapter selection for replay
+                actions.handleChapterSelect?.(chapter);
+              }}
+              onBack={() => navigation.goBack()}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Achievements">
+        {({ navigation }) => {
+          return (
+            <AchievementsScreen
+              unlockedAchievementIds={progress.achievements?.unlockedAchievementIds || []}
+              achievementDetails={progress.achievements?.achievementDetails || {}}
+              totalPoints={progress.achievements?.totalPoints || 0}
+              onBack={() => navigation.goBack()}
             />
           );
         }}

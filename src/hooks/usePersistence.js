@@ -2,8 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   createBlankProgress,
   createBlankStoryCampaign,
+  createBlankEndingsState,
+  createBlankAchievementsState,
+  createBlankChapterCheckpoints,
+  createBlankGameplayStats,
   loadStoredProgress,
   saveStoredProgress,
+  migrateProgress,
 } from '../storage/progressStorage';
 import { normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { SEASON_ONE_CASES, SEASON_ONE_CASE_COUNT } from '../data/cases';
@@ -22,6 +27,9 @@ export function usePersistence() {
       if (!stored) {
         stored = blank;
       } else {
+        // Migrate old progress to new format
+        stored = migrateProgress(stored) || stored;
+        
         // Merge settings
         stored.settings = { ...blank.settings, ...(stored.settings || {}) };
         
@@ -40,6 +48,12 @@ export function usePersistence() {
         if (!stored.seenBriefings || typeof stored.seenBriefings !== 'object') {
           stored.seenBriefings = {};
         }
+        
+        // Ensure new state objects exist
+        if (!stored.endings) stored.endings = createBlankEndingsState();
+        if (!stored.achievements) stored.achievements = createBlankAchievementsState();
+        if (!stored.chapterCheckpoints) stored.chapterCheckpoints = createBlankChapterCheckpoints();
+        if (!stored.gameplayStats) stored.gameplayStats = createBlankGameplayStats();
       }
 
       // Ensure valid current case ID
