@@ -1,6 +1,6 @@
 export const BRANCHING_OUTLIER_SETS = {
   '001C': {
-    attempts: 4,
+    attempts: 5,
     'ROOT': {
       sets: [
         {
@@ -21,7 +21,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '002C': {
-    attempts: 4,
+    attempts: 5,
     'A': {
       sets: [
         {
@@ -60,7 +60,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '003C': {
-    attempts: 4,
+    attempts: 5,
     'AA': {
       sets: [
         {
@@ -135,7 +135,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '004C': {
-    attempts: 4,
+    attempts: 5,
     'AGGRESSIVE': {
       sets: [
         {
@@ -174,7 +174,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '005C': {
-    attempts: 4,
+    attempts: 5,
     'AF': {
       sets: [
         {
@@ -249,7 +249,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '006C': {
-    attempts: 4,
+    attempts: 5,
     'AFL': {
       sets: [
         {
@@ -396,7 +396,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '007C': {
-    attempts: 4,
+    attempts: 5,
     'AFLG': {
       sets: [
         {
@@ -687,7 +687,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '008C': {
-    attempts: 4,
+    attempts: 5,
     'AFLGC': {
       sets: [
         {
@@ -1266,7 +1266,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '009C': {
-    attempts: 4,
+    attempts: 5,
     'AGGRESSIVE': {
       sets: [
         {
@@ -1305,7 +1305,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '010C': {
-    attempts: 4,
+    attempts: 5,
     'AA': {
       sets: [
         {
@@ -1380,7 +1380,7 @@ export const BRANCHING_OUTLIER_SETS = {
     },
   },
   '011C': {
-    attempts: 4,
+    attempts: 5,
     'AAC': {
       sets: [
         {
