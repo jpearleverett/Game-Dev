@@ -1,6 +1,7 @@
 import { SEASON_ONE_CASES } from '../data/cases';
 import { createBlankProgress } from '../storage/progressStorage';
 import { STATUS, dedupeWords } from '../utils/gameLogic';
+import { isBranchingSubchapter } from '../utils/caseNumbers';
 
 export const initialState = {
     hydrationComplete: false,
@@ -81,7 +82,23 @@ export function gameReducer(state, action) {
                     if (remainingOutliers === 0) {
                         return state;
                     }
-                    if (state.selectedWords.length >= remainingOutliers) {
+                    
+                    // For C subchapters with branching outliers (2 sets of 4 = 8 total),
+                    // allow up to 8 selections initially, decreasing as outliers are found
+                    const isBranchingCSubchapter = caseData?.caseNumber && 
+                                                   isBranchingSubchapter(caseData.caseNumber) && 
+                                                   uniqueOutliers.length === 8;
+                    
+                    let maxSelections;
+                    if (isBranchingCSubchapter) {
+                        // Start with 8, decrease by confirmed outliers, but don't exceed remaining outliers
+                        maxSelections = Math.min(8 - state.confirmedOutliers.length, remainingOutliers);
+                    } else {
+                        // Regular case: limit to remaining outliers
+                        maxSelections = remainingOutliers;
+                    }
+                    
+                    if (state.selectedWords.length >= maxSelections) {
                         return state;
                     }
                 }
