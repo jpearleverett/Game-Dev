@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
-import { resolveStoryPathKey, ROOT_PATH_KEY } from '../data/storyContent';
+import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter, hasStoryContent, updateGeneratedCache } from '../data/storyContent';
 import { usePersistence } from '../hooks/usePersistence';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { useStoryEngine } from '../hooks/useStoryEngine';
+import { useStoryGeneration, GENERATION_STATUS } from '../hooks/useStoryGeneration';
 import * as Haptics from 'expo-haptics';
 import { analytics } from '../services/AnalyticsService';
 import { purchaseService } from '../services/PurchaseService';
@@ -54,7 +55,26 @@ export function GameProvider({ children }) {
     activateStoryCase: storyActivateCase,
   } = useStoryEngine(progress, updateProgress);
 
+  // Story generation hook for dynamic content
+  const {
+    status: generationStatus,
+    progress: generationProgress,
+    error: generationError,
+    isConfigured: isLLMConfigured,
+    isGenerating,
+    configureLLM,
+    needsGeneration,
+    generateForCase,
+    generateChapter,
+    pregenerate,
+    cancelGeneration,
+    clearError: clearGenerationError,
+  } = useStoryGeneration(storyCampaign);
+
   const [mode, setMode] = useState('daily');
+
+  // State for tracking if we're waiting for generation
+  const [awaitingGeneration, setAwaitingGeneration] = useState(false);
 
   // Helper to get current path key for analytics
   const getCurrentPathKey = useCallback((caseNumber) => {
@@ -70,40 +90,110 @@ export function GameProvider({ children }) {
     }
   }, [hydrationComplete, gameState.hydrationComplete, progress, initializeGame]);
 
+  /**
+   * Check and generate story content if needed for a case
+   */
+  const ensureStoryContent = useCallback(async (caseNumber, pathKey) => {
+    // Chapter 1 is static, no generation needed
+    if (!isDynamicChapter(caseNumber)) {
+      return { ok: true, generated: false };
+    }
+
+    // Check if content exists
+    const hasContent = await hasStoryContent(caseNumber, pathKey);
+    if (hasContent) {
+      return { ok: true, generated: false };
+    }
+
+    // Check if LLM is configured
+    if (!isLLMConfigured) {
+      return { ok: false, reason: 'llm-not-configured' };
+    }
+
+    // Generate the content
+    setAwaitingGeneration(true);
+    try {
+      const entry = await generateForCase(
+        caseNumber,
+        pathKey,
+        storyCampaign?.choiceHistory || []
+      );
+
+      if (entry) {
+        return { ok: true, generated: true, entry };
+      }
+      return { ok: false, reason: 'generation-failed' };
+    } catch (error) {
+      return { ok: false, reason: 'generation-error', error: error.message };
+    } finally {
+      setAwaitingGeneration(false);
+    }
+  }, [isLLMConfigured, generateForCase, storyCampaign?.choiceHistory]);
+
   const activateStoryCase = useCallback(
-    ({ skipLock = false, mode: targetMode = 'daily' } = {}) => {
+    async ({ skipLock = false, mode: targetMode = 'daily' } = {}) => {
       // Story Mode Logic
       if (targetMode === 'story') {
           const result = storyActivateCase({ skipLock });
           if (!result.ok) return result;
-          
+
           const caseNumber = result.caseNumber;
+          const pathKey = getCurrentPathKey(caseNumber);
+
+          // Check if we need to generate content for this case
+          if (isDynamicChapter(caseNumber)) {
+            const genResult = await ensureStoryContent(caseNumber, pathKey);
+            if (!genResult.ok) {
+              return {
+                ok: false,
+                reason: genResult.reason,
+                error: genResult.error,
+                caseNumber
+              };
+            }
+          }
+
           const targetCase = getCaseByNumber(caseNumber);
-          
+
           if (!targetCase) return { ok: false, reason: 'missing-case-data' };
-          
+
           setActiveCaseInternal(targetCase.id);
           setMode('story');
-          
+
           // Analytics
-          const pathKey = getCurrentPathKey(caseNumber);
           analytics.logLevelStart(targetCase.id, 'story', pathKey);
-          
+
+          // Pre-generate next chapter in background
+          const { chapter } = parseCaseNumber(caseNumber);
+          if (chapter < 12) {
+            pregenerate(chapter, pathKey, storyCampaign?.choiceHistory || []);
+          }
+
           return { ok: true, caseId: targetCase.id };
-      } 
-      
+      }
+
       // Daily Mode Logic
       const targetCaseId = progress.currentCaseId;
       const targetCase = SEASON_ONE_CASES.find(c => c.id === targetCaseId) || SEASON_ONE_CASES[0];
-      
+
       setActiveCaseInternal(targetCase.id);
       setMode('daily');
       analytics.logLevelStart(targetCase.id, 'daily');
       return { ok: true, caseId: targetCase.id };
 
     },
-    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey]
+    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey, ensureStoryContent, pregenerate, storyCampaign?.choiceHistory]
   );
+
+  // Helper to parse case number (imported from storyContent)
+  const parseCaseNumber = (caseNumber) => {
+    if (!caseNumber) return { chapter: 1, subchapter: 1 };
+    const chapterSegment = caseNumber.slice(0, 3);
+    const letter = caseNumber.slice(3, 4);
+    const chapter = parseInt(chapterSegment, 10) || 1;
+    const subchapter = { 'A': 1, 'B': 2, 'C': 3 }[letter] || 1;
+    return { chapter, subchapter };
+  };
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
     if (reset) {
@@ -596,7 +686,16 @@ export function GameProvider({ children }) {
     activeCase,
     mode,
     cases: SEASON_ONE_CASES,
-  }), [gameState, progress, hydrationComplete, activeCase, mode]);
+    // Story generation state
+    storyGeneration: {
+      status: generationStatus,
+      progress: generationProgress,
+      error: generationError,
+      isConfigured: isLLMConfigured,
+      isGenerating,
+      awaitingGeneration,
+    },
+  }), [gameState, progress, hydrationComplete, activeCase, mode, generationStatus, generationProgress, generationError, isLLMConfigured, isGenerating, awaitingGeneration]);
 
   const dispatchValue = useMemo(() => ({
     toggleWordSelection,
@@ -618,7 +717,14 @@ export function GameProvider({ children }) {
     setAudioController,
     purchaseBribe,
     purchaseFullUnlock,
-    // New: Endings & Achievements
+    // Story generation actions
+    configureLLM,
+    ensureStoryContent,
+    generateForCase,
+    generateChapter,
+    cancelGeneration,
+    clearGenerationError,
+    // Endings & Achievements
     unlockEnding,
     unlockAchievement,
     checkAchievements,
@@ -645,6 +751,12 @@ export function GameProvider({ children }) {
     setAudioController,
     purchaseBribe,
     purchaseFullUnlock,
+    configureLLM,
+    ensureStoryContent,
+    generateForCase,
+    generateChapter,
+    cancelGeneration,
+    clearGenerationError,
     unlockEnding,
     unlockAchievement,
     checkAchievements,

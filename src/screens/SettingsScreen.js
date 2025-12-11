@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
@@ -17,7 +17,22 @@ export default function SettingsScreen({
   onPurchasePremium,
   onRestorePremium,
   onBack,
+  // LLM Configuration props
+  llmConfigured = false,
+  onConfigureLLM,
 }) {
+    // LLM configuration state
+    const [llmApiKey, setLlmApiKey] = useState('');
+    const [llmProvider, setLlmProvider] = useState('openai');
+    const [showApiKey, setShowApiKey] = useState(false);
+
+    const handleSaveLLMConfig = () => {
+      if (llmApiKey.trim() && onConfigureLLM) {
+        const model = llmProvider === 'openai' ? 'gpt-4o' : 'claude-3-sonnet-20240229';
+        onConfigureLLM(llmApiKey.trim(), llmProvider, model);
+        setLlmApiKey('');
+      }
+    };
     const handleVolumeChange = (key) => (rawValue) => {
       const normalized = formatVolumeValue(rawValue);
       const currentValue = typeof settings?.[key] === 'number' ? settings[key] : 0;
@@ -105,6 +120,76 @@ export default function SettingsScreen({
               <PrimaryButton label="Purchase Archive Key ($6.99)" onPress={onPurchasePremium} />
             )}
             <SecondaryButton label="Restore Purchase" onPress={onRestorePremium} />
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>AI Story Generation</Text>
+            <Text style={styles.metaText}>
+              {llmConfigured
+                ? 'AI is configured and ready to generate dynamic story content for chapters 2-12.'
+                : 'Enter an API key to enable dynamic story generation after Chapter 1.'}
+            </Text>
+            {llmConfigured ? (
+              <View style={styles.llmStatus}>
+                <Text style={styles.llmStatusText}>AI Ready</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.providerSelector}>
+                  <Pressable
+                    style={[
+                      styles.providerOption,
+                      llmProvider === 'openai' && styles.providerOptionActive,
+                    ]}
+                    onPress={() => setLlmProvider('openai')}
+                  >
+                    <Text style={[
+                      styles.providerText,
+                      llmProvider === 'openai' && styles.providerTextActive,
+                    ]}>OpenAI</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.providerOption,
+                      llmProvider === 'anthropic' && styles.providerOptionActive,
+                    ]}
+                    onPress={() => setLlmProvider('anthropic')}
+                  >
+                    <Text style={[
+                      styles.providerText,
+                      llmProvider === 'anthropic' && styles.providerTextActive,
+                    ]}>Anthropic</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.apiKeyContainer}>
+                  <TextInput
+                    style={styles.apiKeyInput}
+                    placeholder={`Enter ${llmProvider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key`}
+                    placeholderTextColor={COLORS.textMuted}
+                    value={llmApiKey}
+                    onChangeText={setLlmApiKey}
+                    secureTextEntry={!showApiKey}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <Pressable
+                    style={styles.showKeyButton}
+                    onPress={() => setShowApiKey(!showApiKey)}
+                  >
+                    <Text style={styles.showKeyText}>{showApiKey ? 'Hide' : 'Show'}</Text>
+                  </Pressable>
+                </View>
+                <PrimaryButton
+                  label="Save API Key"
+                  onPress={handleSaveLLMConfig}
+                  disabled={!llmApiKey.trim()}
+                />
+                <Text style={styles.apiKeyHint}>
+                  Your API key is stored locally and used only for story generation.
+                  Get your key from openai.com or console.anthropic.com
+                </Text>
+              </>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -368,6 +453,87 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
+    lineHeight: LINE_HEIGHTS.relaxed,
+  },
+  // LLM Configuration Styles
+  llmStatus: {
+    backgroundColor: 'rgba(46, 125, 50, 0.2)',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 125, 50, 0.5)',
+    alignItems: 'center',
+  },
+  llmStatusText: {
+    fontFamily: FONTS.secondaryBold,
+    fontSize: FONT_SIZES.md,
+    color: '#4CAF50',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  providerSelector: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  providerOption: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.panelOutline,
+    backgroundColor: 'rgba(21, 24, 32, 0.6)',
+    alignItems: 'center',
+  },
+  providerOptionActive: {
+    borderColor: COLORS.accentPrimary,
+    backgroundColor: 'rgba(232, 213, 181, 0.1)',
+  },
+  providerText: {
+    fontFamily: FONTS.primary,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+  },
+  providerTextActive: {
+    color: COLORS.accentPrimary,
+    fontFamily: FONTS.primarySemiBold,
+  },
+  apiKeyContainer: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+  },
+  apiKeyInput: {
+    flex: 1,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.panelOutline,
+    backgroundColor: 'rgba(21, 24, 32, 0.82)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    fontFamily: FONTS.primary,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textPrimary,
+  },
+  showKeyButton: {
+    paddingHorizontal: SPACING.md,
+    justifyContent: 'center',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.panelOutline,
+    backgroundColor: 'rgba(21, 24, 32, 0.6)',
+  },
+  showKeyText: {
+    fontFamily: FONTS.primary,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  apiKeyHint: {
+    fontFamily: FONTS.primary,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    fontStyle: 'italic',
     lineHeight: LINE_HEIGHTS.relaxed,
   },
 });
