@@ -73,6 +73,12 @@ class LLMService {
 
   /**
    * Make a completion request to the LLM
+   * @param {Array} messages - Array of message objects with role and content
+   * @param {Object} options - Generation options
+   * @param {number} options.temperature - Sampling temperature (0-1)
+   * @param {number} options.maxTokens - Maximum tokens to generate
+   * @param {string} options.systemPrompt - System prompt to prepend
+   * @param {Object} options.responseSchema - JSON schema for structured output (Gemini)
    */
   async complete(messages, options = {}) {
     await this.init();
@@ -84,11 +90,12 @@ class LLMService {
     const {
       temperature = 0.8,
       maxTokens = 4000,
-      systemPrompt = null
+      systemPrompt = null,
+      responseSchema = null,
     } = options;
 
     if (this.config.provider === 'gemini') {
-      return this._geminiComplete(messages, { temperature, maxTokens, systemPrompt });
+      return this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema });
     }
 
     throw new Error(`Unknown LLM provider: ${this.config.provider}`);
@@ -96,14 +103,29 @@ class LLMService {
 
   /**
    * Google Gemini API completion
+   * Supports structured output via responseSchema for guaranteed valid JSON responses
    */
-  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt }) {
+  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema }) {
     // Gemini API endpoint
     const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
     const model = this.config.model || 'gemini-2.5-flash-preview-05-20';
 
     // Convert messages to Gemini format
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
+
+    // Build generation config
+    const generationConfig = {
+      temperature,
+      maxOutputTokens: maxTokens,
+      topP: 0.95,
+      topK: 40,
+    };
+
+    // Add structured output configuration if schema provided
+    if (responseSchema) {
+      generationConfig.responseMimeType = 'application/json';
+      generationConfig.responseSchema = responseSchema;
+    }
 
     let lastError = null;
     for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
@@ -120,12 +142,7 @@ class LLMService {
             },
             body: JSON.stringify({
               contents,
-              generationConfig: {
-                temperature,
-                maxOutputTokens: maxTokens,
-                topP: 0.95,
-                topK: 40,
-              },
+              generationConfig,
               safetySettings: [
                 {
                   category: 'HARM_CATEGORY_HARASSMENT',
