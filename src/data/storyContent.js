@@ -75,11 +75,26 @@ export function formatCaseNumber(chapter, subchapter) {
   return `${String(chapter).padStart(3, '0')}${letter}`;
 }
 
+// Cache for generated content loaded in memory (moved up for sync access)
+let generatedCache = {};
+
 export function getStoryEntry(caseNumber, pathKey) {
   if (!caseNumber) return null;
+
+  const normalizedKey = normalizeStoryPathKey(pathKey);
+
+  // For dynamic chapters, check generated cache first
+  if (isDynamicChapter(caseNumber)) {
+    const cacheKey = `${caseNumber}_${normalizedKey}`;
+    const cached = generatedCache[cacheKey];
+    if (cached) return cached;
+    // If not in cache for dynamic chapter, return null (needs async generation)
+    return null;
+  }
+
+  // For Chapter 1, use static content
   const bucket = CASE_CONTENT[caseNumber];
   if (!bucket) return null;
-  const normalizedKey = normalizeStoryPathKey(pathKey);
   return (
     bucket[normalizedKey] ||
     bucket[ROOT_PATH_KEY] ||
@@ -121,8 +136,7 @@ export function getStoryMeta(caseNumber, pathKey) {
 // ASYNC FUNCTIONS FOR DYNAMIC STORY GENERATION
 // ============================================================================
 
-// Cache for generated content loaded in memory
-let generatedCache = {};
+// Note: generatedCache is declared above getStoryEntry for sync access
 
 /**
  * Load generated story entry into cache

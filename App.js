@@ -7,6 +7,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { useAudioController } from './src/hooks/useAudioController';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import useCachedResources from './src/hooks/useCachedResources';
+import StoryGenerationOverlay from './src/components/StoryGenerationOverlay';
 
 const ROUTE_TO_AUDIO_KEY = {
   Splash: 'splash',
@@ -24,7 +25,14 @@ const ROUTE_TO_AUDIO_KEY = {
 
 function AppContent({ fontsReady }) {
   const game = useGame();
-  const { progress, unlockNextCaseIfReady, setAudioController } = game;
+  const {
+    progress,
+    unlockNextCaseIfReady,
+    setAudioController,
+    storyGeneration,
+    cancelGeneration,
+    clearGenerationError,
+  } = game;
   
   // Track current screen for audio context
   const [currentRoute, setCurrentRoute] = useState('Splash');
@@ -56,12 +64,30 @@ function AppContent({ fontsReady }) {
     return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
   }
 
+  // Determine if generation overlay should be visible
+  const showGenerationOverlay = storyGeneration?.isGenerating ||
+    storyGeneration?.status === 'error' ||
+    storyGeneration?.status === 'not_configured';
+
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" />
       <NavigationContainer onStateChange={handleStateChange}>
         <AppNavigator fontsReady={fontsReady} audio={audio} />
       </NavigationContainer>
+      <StoryGenerationOverlay
+        visible={showGenerationOverlay}
+        status={storyGeneration?.status}
+        progress={storyGeneration?.progress}
+        error={storyGeneration?.error}
+        onCancel={cancelGeneration}
+        onRetry={() => {
+          // Retry would need to re-trigger generation
+          // For now, just clear the error and let the user try again
+          clearGenerationError?.();
+        }}
+        onDismissError={clearGenerationError}
+      />
     </View>
   );
 }
