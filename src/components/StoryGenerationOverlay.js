@@ -19,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
-import { GENERATION_STATUS } from '../hooks/useStoryGeneration';
+import { GENERATION_STATUS, GENERATION_TYPE } from '../hooks/useStoryGeneration';
 
 const QUOTES = [
   '"The past is never dead. It\'s not even past." - Faulkner',
@@ -90,6 +90,8 @@ export default function StoryGenerationOverlay({
   status,
   progress,
   error,
+  generationType,
+  isPreloading,
   onCancel,
   onRetry,
   onGoToSettings,
@@ -151,9 +153,26 @@ export default function StoryGenerationOverlay({
   const hasError = status === GENERATION_STATUS.ERROR;
   const notConfigured = status === GENERATION_STATUS.NOT_CONFIGURED;
 
+  // Different messages for immediate generation vs pre-loading
+  const isPreloadingContent = isPreloading || generationType === GENERATION_TYPE.PRELOAD;
+
   const progressText = progress?.total > 0
-    ? `Generating ${progress.current}/${progress.total}...`
+    ? isPreloadingContent
+      ? `Pre-loading chapter ${progress.current}/${progress.total}...`
+      : `Generating story ${progress.current}/${progress.total}...`
     : 'Preparing story...';
+
+  const titleText = hasError
+    ? 'Generation Error'
+    : notConfigured
+      ? 'Setup Required'
+      : isPreloadingContent
+        ? 'Loading Next Chapter'
+        : 'Crafting Your Story';
+
+  const hintText = isPreloadingContent
+    ? 'Getting the next chapter ready while you play...'
+    : 'The AI is writing your unique story continuation...';
 
   return (
     <Modal
@@ -170,7 +189,7 @@ export default function StoryGenerationOverlay({
           <View style={styles.content}>
             {/* Title */}
             <Text style={styles.title}>
-              {hasError ? 'Generation Error' : notConfigured ? 'Setup Required' : 'Crafting Your Story'}
+              {titleText}
             </Text>
 
             {/* Spinner or Error Icon */}
@@ -204,7 +223,7 @@ export default function StoryGenerationOverlay({
               <>
                 <Text style={styles.statusText}>{progressText}</Text>
                 <Text style={styles.hintText}>
-                  The AI is writing your unique story continuation...
+                  {hintText}
                 </Text>
                 <Text style={styles.quoteText}>{QUOTES[quoteIndex]}</Text>
               </>
