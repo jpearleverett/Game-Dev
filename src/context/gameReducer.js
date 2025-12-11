@@ -1,7 +1,7 @@
 import { SEASON_ONE_CASES } from '../data/cases';
 import { createBlankProgress } from '../storage/progressStorage';
 import { STATUS, dedupeWords } from '../utils/gameLogic';
-import { isBranchingSubchapter } from '../utils/caseNumbers';
+import { isBranchingSubchapter, getBoardProfile } from '../utils/caseNumbers';
 
 export const initialState = {
     hydrationComplete: false,
@@ -77,20 +77,31 @@ export function gameReducer(state, action) {
                 const caseData = state.cases.find((c) => c.id === state.activeCaseId);
                 const rawOutliers = caseData?.board?.outlierWords;
                 const uniqueOutliers = Array.isArray(rawOutliers) ? dedupeWords(rawOutliers.filter(Boolean)) : [];
-                if (uniqueOutliers.length) {
-                    const remainingOutliers = Math.max(uniqueOutliers.length - state.confirmedOutliers.length, 0);
+
+                // For C subchapters (third subchapter of any chapter),
+                // the base case only has 4 outliers but the merged board has 8.
+                // Use getBoardProfile to get the correct target outlier count.
+                const isThirdSubchapter = caseData?.caseNumber &&
+                                          isBranchingSubchapter(caseData.caseNumber);
+
+                // Get the true number of outliers for this subchapter type
+                let totalOutliers;
+                if (isThirdSubchapter) {
+                    const boardProfile = getBoardProfile(caseData.caseNumber);
+                    totalOutliers = boardProfile?.outlierTarget || 8;
+                } else {
+                    totalOutliers = uniqueOutliers.length;
+                }
+
+                if (totalOutliers > 0) {
+                    const remainingOutliers = Math.max(totalOutliers - state.confirmedOutliers.length, 0);
                     if (remainingOutliers === 0) {
                         return state;
                     }
 
-                    // For C subchapters (third subchapter of any chapter),
-                    // allow up to 8 selections initially, decreasing as outliers are found
-                    const isThirdSubchapter = caseData?.caseNumber &&
-                                              isBranchingSubchapter(caseData.caseNumber);
-
                     let maxSelections;
                     if (isThirdSubchapter) {
-                        // Start with 8, decrease by confirmed outliers, but don't exceed remaining outliers
+                        // Start with 8, decrease by confirmed outliers
                         maxSelections = Math.min(8 - state.confirmedOutliers.length, remainingOutliers);
                     } else {
                         // Regular case: limit to remaining outliers
