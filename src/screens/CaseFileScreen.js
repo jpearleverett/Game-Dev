@@ -77,7 +77,8 @@ export default function CaseFileScreen({
       setCountdown(formatCountdown(unlockTarget));
     };
     tick();
-    const timer = setInterval(tick, 1000);
+    // Use 5s interval to reduce re-renders (60/min -> 12/min)
+    const timer = setInterval(tick, 5000);
     return () => clearInterval(timer);
   }, [unlockTarget]);
 

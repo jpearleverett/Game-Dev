@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
+import { selectionHaptic, notificationHaptic, Haptics } from '../utils/haptics';
 
 import { CARD_STATES, COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
@@ -98,11 +98,14 @@ function WordCard({
   const scaleAnim = useState(() => new Animated.Value(1))[0];
   const celebrationActive = celebrating && state === 'lockedOutlier';
 
-  const randomRotation = useMemo(() => {
-    const range = 1.2; 
+  // Use useRef for stable random rotation - survives re-renders without change
+  const randomRotationRef = useRef(null);
+  if (randomRotationRef.current === null) {
+    const range = 1.2;
     const deg = (Math.random() * range * 2) - range;
-    return `${deg}deg`;
-  }, []);
+    randomRotationRef.current = `${deg}deg`;
+  }
+  const randomRotation = randomRotationRef.current;
 
   useEffect(() => {
     if (!celebrationActive) {
@@ -171,7 +174,7 @@ function WordCard({
 
   const handlePress = useCallback(() => {
     if (!interactive) return;
-    
+
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.92,
@@ -187,13 +190,13 @@ function WordCard({
       }),
     ]).start();
 
-    Haptics.selectionAsync().catch(() => {});
+    selectionHaptic();
     onToggle?.(word);
   }, [interactive, onToggle, word, scaleAnim]);
 
   const handleLongPress = useCallback(() => {
     if (!interactive) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    notificationHaptic(Haptics.NotificationFeedbackType.Success);
     onHint?.(word);
   }, [interactive, onHint, word]);
 

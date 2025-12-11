@@ -185,7 +185,9 @@ export default function DeskScreen({
     }
     const update = () => setCountdown(formatCountdown(nextStoryUnlockAt));
     update();
-    const timer = setInterval(update, 1000);
+    // Use 5s interval to reduce re-renders (60/min -> 12/min)
+    // Countdown only shows hours/minutes, so 5s precision is sufficient
+    const timer = setInterval(update, 5000);
     return () => clearInterval(timer);
   }, [nextStoryUnlockAt]);
 
