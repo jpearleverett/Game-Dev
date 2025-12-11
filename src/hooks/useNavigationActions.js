@@ -140,26 +140,34 @@ export function useNavigationActions(navigation, game, audio) {
     navigation.navigate('Story');
   }, [navigation]);
 
-  const handleStoryStart = useCallback((reset = false) => {
-    const result = enterStoryCampaign(reset ? { reset: true } : {});
-    if (result) {
+  const handleStoryStart = useCallback(async (reset = false) => {
+    if (reset) {
+      // Reset doesn't need async - just resets and returns true
+      enterStoryCampaign({ reset: true });
+      return;
+    }
+    // Starting story activates case which may trigger generation
+    const result = await enterStoryCampaign({});
+    if (result?.ok) {
       navigation.navigate('Board');
     }
+    // If not ok, the overlay will show the error/not-configured state
   }, [enterStoryCampaign, navigation]);
 
   const handleStoryRestart = useCallback(() => {
     handleStoryStart(true);
   }, [handleStoryStart]);
 
-  const handleStoryContinue = useCallback(() => {
-    const opened = continueStoryCampaign();
-    if (opened) {
+  const handleStoryContinue = useCallback(async () => {
+    const result = await continueStoryCampaign();
+    if (result?.ok) {
       navigation.navigate('Board');
     }
+    // If not ok, the overlay will show the error/not-configured state
   }, [continueStoryCampaign, navigation]);
 
-  const handleStorySelectCase = useCallback((caseId) => {
-    const opened = openStoryCase(caseId);
+  const handleStorySelectCase = useCallback(async (caseId) => {
+    const opened = await openStoryCase(caseId);
     if (opened) {
       navigation.navigate('Board');
     }

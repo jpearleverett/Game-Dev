@@ -44,6 +44,9 @@ export default function AppNavigator({ fontsReady, audio }) {
     mode,
     purchaseBribe,
     purchaseFullUnlock,
+    // LLM configuration
+    storyGeneration,
+    configureLLM,
   } = game;
 
   if (!fontsReady) {
@@ -256,6 +259,8 @@ export default function AppNavigator({ fontsReady, audio }) {
               onPurchasePremium={actions.handlePurchasePremium}
               onRestorePremium={actions.handleRestorePremium}
               onBack={() => navigation.navigate('Desk')}
+              llmConfigured={storyGeneration?.isConfigured}
+              onConfigureLLM={configureLLM}
             />
           );
         }}
