@@ -21,15 +21,14 @@ export default function SettingsScreen({
   llmConfigured = false,
   onConfigureLLM,
 }) {
-    // LLM configuration state
+    // LLM configuration state (Gemini)
     const [llmApiKey, setLlmApiKey] = useState('');
-    const [llmProvider, setLlmProvider] = useState('openai');
+    const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
     const [showApiKey, setShowApiKey] = useState(false);
 
     const handleSaveLLMConfig = () => {
       if (llmApiKey.trim() && onConfigureLLM) {
-        const model = llmProvider === 'openai' ? 'gpt-4o' : 'claude-3-sonnet-20240229';
-        onConfigureLLM(llmApiKey.trim(), llmProvider, model);
+        onConfigureLLM(llmApiKey.trim(), 'gemini', geminiModel);
         setLlmApiKey('');
       }
     };
@@ -126,12 +125,12 @@ export default function SettingsScreen({
             <Text style={styles.sectionTitle}>AI Story Generation</Text>
             <Text style={styles.metaText}>
               {llmConfigured
-                ? 'AI is configured and ready to generate dynamic story content for chapters 2-12.'
-                : 'Enter an API key to enable dynamic story generation after Chapter 1.'}
+                ? 'Gemini is configured and ready to generate dynamic story content for chapters 2-12.'
+                : 'Enter your Google Gemini API key to enable dynamic story generation after Chapter 1.'}
             </Text>
             {llmConfigured ? (
               <View style={styles.llmStatus}>
-                <Text style={styles.llmStatusText}>AI Ready</Text>
+                <Text style={styles.llmStatusText}>Gemini Ready</Text>
               </View>
             ) : (
               <>
@@ -139,32 +138,32 @@ export default function SettingsScreen({
                   <Pressable
                     style={[
                       styles.providerOption,
-                      llmProvider === 'openai' && styles.providerOptionActive,
+                      geminiModel === 'gemini-2.0-flash' && styles.providerOptionActive,
                     ]}
-                    onPress={() => setLlmProvider('openai')}
+                    onPress={() => setGeminiModel('gemini-2.0-flash')}
                   >
                     <Text style={[
                       styles.providerText,
-                      llmProvider === 'openai' && styles.providerTextActive,
-                    ]}>OpenAI</Text>
+                      geminiModel === 'gemini-2.0-flash' && styles.providerTextActive,
+                    ]}>Gemini 2.0 Flash</Text>
                   </Pressable>
                   <Pressable
                     style={[
                       styles.providerOption,
-                      llmProvider === 'anthropic' && styles.providerOptionActive,
+                      geminiModel === 'gemini-1.5-pro' && styles.providerOptionActive,
                     ]}
-                    onPress={() => setLlmProvider('anthropic')}
+                    onPress={() => setGeminiModel('gemini-1.5-pro')}
                   >
                     <Text style={[
                       styles.providerText,
-                      llmProvider === 'anthropic' && styles.providerTextActive,
-                    ]}>Anthropic</Text>
+                      geminiModel === 'gemini-1.5-pro' && styles.providerTextActive,
+                    ]}>Gemini 1.5 Pro</Text>
                   </Pressable>
                 </View>
                 <View style={styles.apiKeyContainer}>
                   <TextInput
                     style={styles.apiKeyInput}
-                    placeholder={`Enter ${llmProvider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key`}
+                    placeholder="Enter Gemini API Key"
                     placeholderTextColor={COLORS.textMuted}
                     value={llmApiKey}
                     onChangeText={setLlmApiKey}
@@ -186,7 +185,7 @@ export default function SettingsScreen({
                 />
                 <Text style={styles.apiKeyHint}>
                   Your API key is stored locally and used only for story generation.
-                  Get your key from openai.com or console.anthropic.com
+                  Get your key from aistudio.google.com
                 </Text>
               </>
             )}
