@@ -192,6 +192,7 @@ export default function DeskScreen({
   const solved = progress.solvedCaseIds.includes(activeCase.id);
   const failed = progress.failedCaseIds.includes(activeCase.id);
   const completed = solved || failed;
+  const briefingSeen = Boolean(progress.seenBriefings && progress.seenBriefings[activeCase.id]);
   const completedSubchapters = Array.isArray(storyCampaign.completedCaseNumbers)
     ? storyCampaign.completedCaseNumbers.length
     : 0;
@@ -217,7 +218,9 @@ export default function DeskScreen({
           ? 'Chapter Locked'
           : completed
             ? (solved ? 'Review Case Results' : 'Review Case Debrief')
-            : 'Open Case File';
+            : briefingSeen
+              ? 'Open Case File'
+              : 'Investigate';
     const primaryIcon = pendingStoryAdvance
       ? <MaterialCommunityIcons name="arrow-right-circle" size={20} color={COLORS.textSecondary} />
       : awaitingDecision

@@ -51,9 +51,37 @@ export function GameProvider({ children }) {
 
   const {
     storyCampaign,
-    selectDecision: storySelectDecision,
+    selectDecision: storySelectDecisionCore,
     activateStoryCase: storyActivateCase,
   } = useStoryEngine(progress, updateProgress);
+
+  // Wrap selectDecision to trigger story generation after the first decision
+  const storySelectDecision = useCallback(async (optionKey) => {
+    // Get chapter info before making the decision
+    const currentChapter = storyCampaign?.chapter || 1;
+    const isFirstDecision = (storyCampaign?.choiceHistory?.length || 0) === 0;
+
+    // Make the decision
+    storySelectDecisionCore(optionKey);
+
+    // After first decision (at 1.3), trigger generation for chapter 2
+    if (isFirstDecision && currentChapter === 1 && isLLMConfigured) {
+      const nextChapter = 2;
+      const nextCaseNumber = formatCaseNumber(nextChapter, 1);
+      // The path key for chapter 2 is the option chosen at 1.3
+      const pathKey = optionKey;
+
+      // Generate content for the next chapter
+      await ensureStoryContent(nextCaseNumber, pathKey);
+
+      // Pre-generate subchapters for chapter 2
+      pregenerate(nextChapter, pathKey, [...(storyCampaign?.choiceHistory || []), {
+        caseNumber: storyCampaign?.pendingDecisionCase,
+        optionKey: optionKey,
+        timestamp: new Date().toISOString()
+      }]);
+    }
+  }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent, pregenerate]);
 
   // Story generation hook for dynamic content
   const {
@@ -141,7 +169,10 @@ export function GameProvider({ children }) {
           const pathKey = getCurrentPathKey(caseNumber);
 
           // Check if we need to generate content for this case
-          if (isDynamicChapter(caseNumber)) {
+          // Only generate for dynamic chapters AFTER the player has made their first decision
+          // (i.e., after completing 1.3 and choosing a path)
+          const hasFirstDecision = (storyCampaign?.choiceHistory?.length || 0) > 0;
+          if (isDynamicChapter(caseNumber) && hasFirstDecision) {
             const genResult = await ensureStoryContent(caseNumber, pathKey);
             if (!genResult.ok) {
               return {
@@ -163,9 +194,9 @@ export function GameProvider({ children }) {
           // Analytics
           analytics.logLevelStart(targetCase.id, 'story', pathKey);
 
-          // Pre-generate next chapter in background
+          // Pre-generate next chapter in background (only after first decision)
           const { chapter } = parseCaseNumber(caseNumber);
-          if (chapter < 12) {
+          if (chapter < 12 && hasFirstDecision) {
             pregenerate(chapter, pathKey, storyCampaign?.choiceHistory || []);
           }
 
