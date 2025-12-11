@@ -547,6 +547,7 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
 
   /**
    * Generate board data for the puzzle
+   * Ensures all words are from the narrative with no duplicates
    */
   _generateBoardData(narrative, isDecisionPoint, decision) {
     // Extract meaningful words from narrative for the puzzle
@@ -564,26 +565,55 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     const gridCols = 4;
     const gridSize = gridRows * gridCols;
 
-    // Fill grid with words
+    // Use a Set to track used words and prevent duplicates
+    const usedWords = new Set(outlierWords.map(w => w.toUpperCase()));
     const gridWords = [...outlierWords];
-    const nonOutliers = words.filter(w => !outlierWords.includes(w));
 
-    // Add non-outlier words to fill the grid
-    while (gridWords.length < gridSize && nonOutliers.length > 0) {
-      gridWords.push(nonOutliers.shift());
+    // Add non-outlier words from narrative to fill the grid
+    for (const word of words) {
+      if (gridWords.length >= gridSize) break;
+      const upperWord = word.toUpperCase();
+      if (!usedWords.has(upperWord)) {
+        gridWords.push(upperWord);
+        usedWords.add(upperWord);
+      }
     }
 
-    // Fill remaining spots with common noir words if needed
-    const fillerWords = ['SHADOW', 'TRUTH', 'LIE', 'NIGHT', 'RAIN', 'SMOKE', 'BLOOD', 'DEATH'];
-    while (gridWords.length < gridSize) {
-      const filler = fillerWords[Math.floor(Math.random() * fillerWords.length)];
-      if (!gridWords.includes(filler)) {
-        gridWords.push(filler);
+    // If still not enough words, use noir-themed filler words
+    // Extended list to ensure we always have enough unique options
+    const fillerWords = [
+      'SHADOW', 'TRUTH', 'LIE', 'NIGHT', 'RAIN', 'SMOKE', 'BLOOD', 'DEATH',
+      'GUILT', 'ALIBI', 'CRIME', 'BADGE', 'CLUE', 'FEAR', 'DARK', 'NOIR',
+      'VICE', 'DREAD', 'KNIFE', 'GLASS', 'BOOZE', 'DAME', 'GRIFT', 'HEIST',
+      'MOTIVE', 'ALIBI', 'CORPSE', 'VAULT', 'CHASE', 'BLIND', 'TRAIL', 'MARK',
+      'SNITCH', 'BRASS', 'STREET', 'ALLEY', 'DOCK', 'PIER', 'WHARF', 'TORCH',
+    ];
+
+    // Shuffle fillers and add unique ones as needed
+    const shuffledFillers = this._shuffleArray([...fillerWords]);
+    for (const filler of shuffledFillers) {
+      if (gridWords.length >= gridSize) break;
+      const upperFiller = filler.toUpperCase();
+      if (!usedWords.has(upperFiller)) {
+        gridWords.push(upperFiller);
+        usedWords.add(upperFiller);
+      }
+    }
+
+    // Final safety check - ensure exactly gridSize unique words
+    const uniqueGridWords = [...new Set(gridWords)].slice(0, gridSize);
+
+    // If somehow still not enough, generate sequential fallbacks
+    while (uniqueGridWords.length < gridSize) {
+      const fallback = `CASE${uniqueGridWords.length}`;
+      if (!usedWords.has(fallback)) {
+        uniqueGridWords.push(fallback);
+        usedWords.add(fallback);
       }
     }
 
     // Shuffle grid words
-    const shuffledWords = this._shuffleArray(gridWords.slice(0, gridSize));
+    const shuffledWords = this._shuffleArray(uniqueGridWords);
 
     // Create grid structure
     const grid = [];
@@ -607,67 +637,139 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
 
   /**
    * Extract keywords from narrative text
+   * Prioritizes nouns, verbs, and adjectives that relate to the story
    */
   _extractKeywordsFromNarrative(narrative) {
-    // Common words to exclude
+    // Comprehensive stop words to exclude (common words that don't add puzzle value)
     const stopWords = new Set([
+      // Articles, conjunctions, prepositions
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-      'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-      'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-      'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'this',
-      'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
-      'my', 'your', 'his', 'her', 'its', 'our', 'their', 'me', 'him', 'us',
-      'them', 'what', 'which', 'who', 'whom', 'when', 'where', 'why', 'how',
+      'of', 'with', 'by', 'from', 'as', 'into', 'through', 'during', 'before',
+      'after', 'above', 'below', 'between', 'under', 'over', 'out', 'off',
+      // Pronouns
+      'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us',
+      'them', 'my', 'your', 'his', 'its', 'our', 'their', 'mine', 'yours',
+      'this', 'that', 'these', 'those', 'who', 'whom', 'which', 'what',
+      // Common verbs
+      'is', 'was', 'are', 'were', 'been', 'be', 'being', 'have', 'has', 'had',
+      'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+      'must', 'shall', 'can', 'get', 'got', 'getting', 'let', 'make', 'made',
+      'say', 'said', 'says', 'tell', 'told', 'ask', 'asked', 'know', 'knew',
+      'think', 'thought', 'see', 'saw', 'seen', 'look', 'looked', 'looking',
+      'come', 'came', 'coming', 'go', 'went', 'gone', 'going', 'take', 'took',
+      'want', 'wanted', 'need', 'needed', 'seem', 'seemed', 'keep', 'kept',
+      // Adverbs and modifiers
+      'very', 'really', 'quite', 'just', 'only', 'even', 'also', 'too', 'so',
+      'now', 'then', 'here', 'there', 'when', 'where', 'why', 'how', 'well',
+      'still', 'already', 'always', 'never', 'ever', 'often', 'sometimes',
+      // Quantifiers
       'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
-      'such', 'no', 'not', 'only', 'same', 'so', 'than', 'too', 'very',
-      'just', 'also', 'now', 'here', 'there', 'then', 'once', 'again',
+      'such', 'no', 'not', 'any', 'many', 'much', 'own', 'same', 'than',
+      // Common adjectives
+      'good', 'bad', 'new', 'old', 'first', 'last', 'long', 'great', 'little',
+      'own', 'other', 'big', 'small', 'large', 'high', 'right', 'left',
+      // Time words
+      'time', 'year', 'day', 'way', 'thing', 'man', 'woman', 'life', 'world',
+      // Filler words
+      'like', 'back', 'about', 'after', 'again', 'against', 'because', 'before',
+      'between', 'down', 'even', 'find', 'found', 'give', 'gave', 'hand',
+      'head', 'eyes', 'face', 'voice', 'room', 'door', 'turn', 'turned',
+      // Story-specific common words to exclude
+      'jack', 'halloway', 'detective', 'case', 'chapter', 'story',
     ]);
 
-    // Extract words
+    // Extract words - prefer longer, more specific words
     const words = narrative
       .toUpperCase()
       .replace(/[^A-Z\s]/g, ' ')
       .split(/\s+/)
-      .filter(word => word.length >= 3 && word.length <= 12 && !stopWords.has(word.toLowerCase()));
+      .filter(word => {
+        const lowerWord = word.toLowerCase();
+        return word.length >= 4 && // Minimum 4 chars for better words
+               word.length <= 10 && // Max 10 chars for display
+               !stopWords.has(lowerWord) &&
+               !/^[AEIOU]+$/.test(word) && // Skip vowel-only
+               !/(.)\1{2,}/.test(word); // Skip words with 3+ repeated chars
+      });
 
-    // Count frequency
+    // Count frequency and track word positions for relevance
     const frequency = {};
-    words.forEach(word => {
-      frequency[word] = (frequency[word] || 0) + 1;
+    const firstOccurrence = {};
+    words.forEach((word, index) => {
+      if (!frequency[word]) {
+        frequency[word] = 0;
+        firstOccurrence[word] = index;
+      }
+      frequency[word]++;
     });
 
-    // Sort by frequency and return unique words
-    return Object.entries(frequency)
-      .sort((a, b) => b[1] - a[1])
-      .map(([word]) => word)
-      .slice(0, 50);
+    // Score words by: frequency + bonus for appearing early + bonus for length
+    const scored = Object.entries(frequency).map(([word, freq]) => {
+      const positionBonus = 1 - (firstOccurrence[word] / words.length) * 0.5;
+      const lengthBonus = Math.min(word.length / 8, 1) * 0.3;
+      const score = freq * (1 + positionBonus + lengthBonus);
+      return { word, score };
+    });
+
+    // Sort by score and return unique words
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .map(({ word }) => word)
+      .slice(0, 60); // Get more candidates for better selection
   }
 
   /**
    * Select outlier words for the puzzle
+   * Ensures no duplicates between sets for decision points
    */
   _selectOutlierWords(availableWords, count, isDecisionPoint, decision) {
-    // For decision points, create two themed sets
+    // Track used words to prevent duplicates
+    const usedWords = new Set();
+
+    // For decision points, create two distinct themed sets (4 words each)
     if (isDecisionPoint && decision?.options) {
-      const setA = this._selectThemedWords(availableWords, 4, decision.options[0]?.focus);
-      const setB = this._selectThemedWords(
-        availableWords.filter(w => !setA.includes(w)),
-        4,
-        decision.options[1]?.focus
-      );
-      return [...setA, ...setB];
+      const setA = this._selectThemedWords(availableWords, 4, decision.options[0]?.focus, usedWords);
+      setA.forEach(w => usedWords.add(w.toUpperCase()));
+
+      const remainingWords = availableWords.filter(w => !usedWords.has(w.toUpperCase()));
+      const setB = this._selectThemedWords(remainingWords, 4, decision.options[1]?.focus, usedWords);
+
+      // Ensure we have exactly 8 unique words
+      const combined = [...setA, ...setB];
+      const uniqueCombined = [...new Set(combined.map(w => w.toUpperCase()))];
+
+      // If we don't have enough, fill from remaining available words
+      const stillAvailable = availableWords.filter(w => !uniqueCombined.includes(w.toUpperCase()));
+      while (uniqueCombined.length < 8 && stillAvailable.length > 0) {
+        uniqueCombined.push(stillAvailable.shift().toUpperCase());
+      }
+
+      return uniqueCombined.slice(0, 8);
     }
 
-    // For regular subchapters, just pick 4 thematically related words
-    return availableWords.slice(0, count);
+    // For regular subchapters, pick the top scoring unique words
+    const uniqueWords = [];
+    for (const word of availableWords) {
+      const upperWord = word.toUpperCase();
+      if (!usedWords.has(upperWord)) {
+        uniqueWords.push(upperWord);
+        usedWords.add(upperWord);
+        if (uniqueWords.length >= count) break;
+      }
+    }
+    return uniqueWords;
   }
 
   /**
    * Select words related to a theme
+   * @param {Set} excludeWords - Words to exclude (already used)
    */
-  _selectThemedWords(words, count, themeFocus) {
-    if (!themeFocus) {
-      return words.slice(0, count);
+  _selectThemedWords(words, count, themeFocus, excludeWords = new Set()) {
+    // Filter out already used words
+    const availableWords = words.filter(w => !excludeWords.has(w.toUpperCase()));
+
+    if (!themeFocus || availableWords.length === 0) {
+      return availableWords.slice(0, count);
     }
 
     // Extract keywords from the theme focus
@@ -677,14 +779,36 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       .split(/\s+/)
       .filter(w => w.length >= 3);
 
-    // Find words that might relate to the theme
-    const themeRelated = words.filter(word =>
-      themeWords.some(tw => word.includes(tw) || tw.includes(word))
-    );
+    // Score words by theme relevance
+    const scored = availableWords.map(word => {
+      const upperWord = word.toUpperCase();
+      let score = 0;
 
-    // Combine theme-related and other words
-    const result = [...new Set([...themeRelated, ...words])];
-    return result.slice(0, count);
+      // Check if word matches or contains theme words
+      for (const tw of themeWords) {
+        if (upperWord === tw) score += 3;
+        else if (upperWord.includes(tw)) score += 2;
+        else if (tw.includes(upperWord)) score += 1;
+      }
+
+      return { word: upperWord, score };
+    });
+
+    // Sort by theme relevance, then take top words
+    scored.sort((a, b) => b.score - a.score);
+
+    // Get unique words up to count
+    const result = [];
+    const seen = new Set();
+    for (const { word } of scored) {
+      if (!seen.has(word)) {
+        result.push(word);
+        seen.add(word);
+        if (result.length >= count) break;
+      }
+    }
+
+    return result;
   }
 
   /**
