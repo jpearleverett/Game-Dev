@@ -32,6 +32,59 @@ const QUOTES = [
   '"Justice delayed is justice denied."',
 ];
 
+// Noir-themed error messages
+const ERROR_MESSAGES = {
+  network: [
+    "The line went dead. The city's wires don't reach this far tonight.",
+    "Static on the line. Someone doesn't want this story told.",
+    "Connection lost—like a witness who saw too much.",
+  ],
+  timeout: [
+    "Time ran out, like sand through a dead man's fingers.",
+    "The clock stopped ticking. Some stories take longer to uncover.",
+    "Patience. Even the longest night has to end.",
+  ],
+  api: [
+    "The informant backed out. Check your credentials and try again.",
+    "Access denied. The key doesn't fit this lock anymore.",
+    "Your contact's gone cold. Verify your API key in Settings.",
+  ],
+  blocked: [
+    "The story hit a wall. Some truths are too dark to tell.",
+    "Censored. The city's powers don't want this chapter written.",
+    "Content blocked—someone's pulling strings from the shadows.",
+  ],
+  generic: [
+    "The trail went cold. But every case has another angle.",
+    "Dead end. Even the best detectives hit walls sometimes.",
+    "Something went wrong in the dark. Try again, gumshoe.",
+  ],
+};
+
+function getNoirError(errorMessage) {
+  let category = 'generic';
+  if (errorMessage?.toLowerCase().includes('network') ||
+      errorMessage?.toLowerCase().includes('fetch') ||
+      errorMessage?.toLowerCase().includes('connection')) {
+    category = 'network';
+  } else if (errorMessage?.toLowerCase().includes('timeout') ||
+             errorMessage?.toLowerCase().includes('timed out')) {
+    category = 'timeout';
+  } else if (errorMessage?.toLowerCase().includes('api') ||
+             errorMessage?.toLowerCase().includes('key') ||
+             errorMessage?.toLowerCase().includes('401') ||
+             errorMessage?.toLowerCase().includes('403')) {
+    category = 'api';
+  } else if (errorMessage?.toLowerCase().includes('blocked') ||
+             errorMessage?.toLowerCase().includes('safety') ||
+             errorMessage?.toLowerCase().includes('content')) {
+    category = 'blocked';
+  }
+
+  const messages = ERROR_MESSAGES[category];
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 export default function StoryGenerationOverlay({
   visible,
   status,
@@ -39,11 +92,20 @@ export default function StoryGenerationOverlay({
   error,
   onCancel,
   onRetry,
-  onDismissError,
+  onGoToSettings,
+  onBackToHub,
 }) {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const quoteIndex = useRef(Math.floor(Math.random() * QUOTES.length)).current;
+  const noirErrorRef = useRef(null);
+
+  // Generate noir error message once per error
+  if (error && !noirErrorRef.current) {
+    noirErrorRef.current = getNoirError(error);
+  } else if (!error) {
+    noirErrorRef.current = null;
+  }
 
   useEffect(() => {
     if (visible && status === GENERATION_STATUS.GENERATING) {
@@ -150,33 +212,55 @@ export default function StoryGenerationOverlay({
 
             {hasError && (
               <>
-                <Text style={styles.errorText}>{error || 'An error occurred during generation.'}</Text>
+                <Text style={styles.errorText}>
+                  {noirErrorRef.current || "The trail went cold."}
+                </Text>
+                <Text style={styles.technicalError}>
+                  {error || 'Unknown error'}
+                </Text>
+                <Text style={styles.blockingText}>
+                  The story cannot continue until this is resolved.
+                </Text>
                 <View style={styles.buttonRow}>
                   {onRetry && (
                     <Pressable style={styles.button} onPress={onRetry}>
-                      <Text style={styles.buttonText}>Retry</Text>
+                      <Text style={styles.buttonText}>Try Again</Text>
                     </Pressable>
                   )}
-                  {onDismissError && (
-                    <Pressable style={[styles.button, styles.secondaryButton]} onPress={onDismissError}>
-                      <Text style={styles.buttonText}>Dismiss</Text>
+                  {onGoToSettings && (
+                    <Pressable style={[styles.button, styles.secondaryButton]} onPress={onGoToSettings}>
+                      <Text style={styles.buttonText}>Settings</Text>
                     </Pressable>
                   )}
                 </View>
+                {onBackToHub && (
+                  <Pressable style={styles.backButton} onPress={onBackToHub}>
+                    <Text style={styles.backText}>Return to Case Files</Text>
+                  </Pressable>
+                )}
               </>
             )}
 
             {notConfigured && (
               <>
                 <Text style={styles.configText}>
-                  To generate dynamic story content, you need to configure an AI API key.
+                  The city's secrets won't reveal themselves without the right connections.
                 </Text>
                 <Text style={styles.hintText}>
-                  Go to Settings and enter your OpenAI or Anthropic API key.
+                  To continue past Chapter 1, you need to configure your Gemini API key in Settings.
+                  The AI will write your unique story based on your choices.
                 </Text>
-                {onDismissError && (
-                  <Pressable style={styles.button} onPress={onDismissError}>
-                    <Text style={styles.buttonText}>Go to Settings</Text>
+                <Text style={styles.blockingText}>
+                  No key, no story. That's how it works in this town.
+                </Text>
+                {onGoToSettings && (
+                  <Pressable style={styles.button} onPress={onGoToSettings}>
+                    <Text style={styles.buttonText}>Open Settings</Text>
+                  </Pressable>
+                )}
+                {onBackToHub && (
+                  <Pressable style={styles.backButton} onPress={onBackToHub}>
+                    <Text style={styles.backText}>Return to Case Files</Text>
                   </Pressable>
                 )}
               </>
@@ -285,9 +369,27 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FONTS.body,
     fontSize: FONT_SIZES.md,
+    color: '#E8D5B5',
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
+    fontStyle: 'italic',
+  },
+  technicalError: {
+    fontFamily: FONTS.body,
+    fontSize: FONT_SIZES.xs,
     color: '#C83C3C',
     textAlign: 'center',
+    marginBottom: SPACING.md,
+    opacity: 0.8,
+  },
+  blockingText: {
+    fontFamily: FONTS.body,
+    fontSize: FONT_SIZES.sm,
+    color: 'rgba(232, 213, 181, 0.6)',
+    textAlign: 'center',
     marginBottom: SPACING.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   configIcon: {
     width: 80,
@@ -345,6 +447,23 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: 'rgba(232, 213, 181, 0.6)',
     textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  backButton: {
+    marginTop: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(232, 213, 181, 0.2)',
+    width: '100%',
+    alignItems: 'center',
+    marginTop: SPACING.xl,
+    paddingTop: SPACING.lg,
+  },
+  backText: {
+    fontFamily: FONTS.body,
+    fontSize: FONT_SIZES.sm,
+    color: 'rgba(232, 213, 181, 0.5)',
     letterSpacing: 1,
   },
 });
