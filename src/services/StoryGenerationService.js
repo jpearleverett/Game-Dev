@@ -13,6 +13,7 @@ import {
   saveStoryContext,
 } from '../storage/generatedStoryStorage';
 import { getStoryEntry, formatCaseNumber } from '../data/storyContent';
+import { CHARACTER_REFERENCE } from '../data/characterReference';
 
 // Story configuration
 const TOTAL_CHAPTERS = 12;
@@ -72,6 +73,21 @@ CRITICAL REQUIREMENTS:
 4. Reference previous events naturally to show continuity
 5. Build tension progressively toward the final chapter
 6. Every character action must have clear motivation
+
+CHARACTER VOICE GUIDELINES:
+- JACK HALLOWAY (protagonist): World-weary, guilt-ridden, self-deprecating internal monologue. Uses noir metaphors about rain, shadows, and sins. Terse dialogue. Example: "Rain fell on Ashport the way memory falls on the guilty."
+- VICTORIA BLACKWELL / EMILY CROSS: Elegant, calculating, always three moves ahead. Formal diction with occasional sardonic edge. Example: "Innocence doesn't matter as much as certainty."
+- SARAH REEVES: Direct, no-nonsense, increasingly independent. Confrontational when needed. Example: "I'm done being your partner, your subordinate, your anything."
+- ELEANOR BELLAMY: Bitter but resilient, voice like gravel and broken glass. Example: "Mrs. died when you sent me here."
+- SILAS REED: Defeated, alcoholic, confessional. Broken by his own cowardice.
+- HELEN PRICE: Legal precision breaking into emotional rawness as her world collapses.
+
+KEY RELATIONSHIPS TO MAINTAIN:
+- Jack and Sarah: Former partners (13 years), she eventually loses faith and walks away
+- Jack and Tom Wade: Best friends (30 years), Tom betrayed him by manufacturing evidence
+- Jack and Victoria: She orchestrates his "education" about certainty's cost
+- Victoria and Grange: He tortured her; she orchestrates his downfall
+- The Five Innocents: Eleanor Bellamy, Marcus Thornhill, Dr. Lisa Chen, James Sullivan, Teresa Wade
 
 WRITING STYLE RULES - AVOID THESE AI TELLS:
 - Never use em dashes (—). Use commas, periods, or semicolons instead.
@@ -307,6 +323,56 @@ class StoryGenerationService {
   }
 
   /**
+   * Build character reference summary for the LLM
+   */
+  _buildCharacterContext() {
+    const { protagonist, antagonist, allies, villains, victims } = CHARACTER_REFERENCE;
+
+    return `
+CHARACTER REFERENCE (maintain consistency):
+
+PROTAGONIST - ${protagonist.name}:
+- Role: ${protagonist.role}
+- Physical: ${protagonist.physicalDescription.appearance}
+- Core traits: ${protagonist.personality.coreTraits.slice(0, 4).join(', ')}
+- Key flaws: ${protagonist.personality.flaws.slice(0, 3).join(', ')}
+- Voice: ${protagonist.voiceAndStyle.narrative}
+
+ANTAGONIST - ${antagonist.name} (aliases: ${antagonist.aliases.join(', ')}):
+- Role: ${antagonist.role}
+- Physical: ${antagonist.physicalDescription.appearance}
+- Core traits: ${antagonist.personality.coreTraits.slice(0, 4).join(', ')}
+- Backstory: Art student victimized by Richard Bellamy, kidnapped/tortured by Grange, "died" 7 years ago
+- Communication: Black envelopes, red wax seal, signs as "M.C." or "V.A."
+
+KEY ALLIES:
+- Sarah Reeves: Jack's former partner (13 years), competent detective, eventually starts Conviction Integrity Project
+- Eleanor Bellamy: Wrongfully convicted widow, 8 years in Greystone, bitter but resilient
+- Maya Bellamy: Eleanor's daughter, determined to prove mother's innocence
+- Rebecca Moss: Defense attorney representing the innocents
+
+KEY ANTAGONISTS/CORRUPT OFFICIALS:
+- Tom Wade: Chief Forensic Examiner, Jack's best friend (30 years), manufactured evidence
+- Silas Reed: Jack's former partner, blackmailed into framing Marcus Thornhill
+- Helen Price: ADA "Queen of Convictions", 53 wins built on manufactured evidence
+- Deputy Chief William Grange: Serial kidnapper/torturer, held Emily captive
+- The Overseer: Shadowy figure controlling systemic corruption
+
+THE FIVE INNOCENTS (wrongfully convicted):
+1. Eleanor Bellamy - murder (framed with planted sapphire necklace)
+2. Marcus Thornhill - embezzlement (framed, committed suicide in lockup)
+3. Dr. Lisa Chen - reported evidence tampering, was silenced
+4. James Sullivan - details revealed later
+5. Teresa Wade - Tom's own daughter, convicted with his methods
+
+SECONDARY CHARACTERS:
+- Claire Thornhill: Marcus's daughter, waitress, spent 4 years proving father was framed
+- Marcus Webb: Antique dealer/information broker, secretly loved Richard Bellamy
+- Agent Luis Martinez: FBI agent investigating Ashport corruption
+- Richard Bellamy: Eleanor's dead husband, art dealer, was being blackmailed`;
+  }
+
+  /**
    * Build the generation prompt based on context
    */
   _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
@@ -342,7 +408,12 @@ class StoryGenerationService {
       });
     }
 
+    // Add character reference for consistency
+    const characterContext = this._buildCharacterContext();
+
     let prompt = `${previousSummary}
+
+${characterContext}
 
 CURRENT TASK: Write Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})
 
