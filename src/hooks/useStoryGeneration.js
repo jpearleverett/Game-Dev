@@ -198,6 +198,7 @@ export function useStoryGeneration(storyCampaign) {
 
   /**
    * Pre-generate upcoming content (call when player is likely to need it soon)
+   * Generates for BOTH paths (A and B) to ensure cache hits regardless of player choice
    */
   const pregenerate = useCallback(async (currentChapter, pathKey, choiceHistory = []) => {
     if (!isConfigured || currentChapter >= 12) {
@@ -205,16 +206,22 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     const nextChapter = currentChapter + 1;
-
-    // Check if next chapter needs generation
     const firstCaseOfNextChapter = `${String(nextChapter).padStart(3, '0')}A`;
-    const needsGen = await needsGeneration(firstCaseOfNextChapter, pathKey);
 
-    if (needsGen) {
-      // Generate in background without blocking
-      setStatus(GENERATION_STATUS.GENERATING);
-      setGenerationType(GENERATION_TYPE.PRELOAD);
-      generateChapter(nextChapter, pathKey, choiceHistory);
+    // Generate for both possible paths since we don't know which path
+    // the player will choose at the end of the current chapter
+    const pathsToGenerate = ['A', 'B'];
+
+    for (const targetPath of pathsToGenerate) {
+      const needsGen = await needsGeneration(firstCaseOfNextChapter, targetPath);
+
+      if (needsGen) {
+        // Generate in background without blocking
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
+        // Don't await - let it run in background
+        generateChapter(nextChapter, targetPath, choiceHistory);
+      }
     }
   }, [isConfigured, needsGeneration, generateChapter]);
 
