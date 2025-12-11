@@ -51,9 +51,9 @@ export function useNavigationActions(navigation, game, audio) {
     }
   }, [progress.seenPrologue, navigation]);
 
-  const handleStartCase = useCallback(() => {
+  const handleStartCase = useCallback(async () => {
     const bypassCompletedGuard = pendingDailyStoryAdvance;
-    
+
     // If the game is finished (solved/failed) and we aren't forced to move to next daily story case
     if (!bypassCompletedGuard) {
       if (status === 'solved') {
@@ -67,7 +67,7 @@ export function useNavigationActions(navigation, game, audio) {
     }
 
     if (!isStoryMode) {
-      const ensureResult = ensureDailyStoryCase?.();
+      const ensureResult = await ensureDailyStoryCase?.();
       if (!ensureResult || !ensureResult.ok) {
         navigation.navigate('CaseFile');
         return;
