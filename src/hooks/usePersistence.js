@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   createBlankProgress,
   createBlankStoryCampaign,
@@ -14,9 +14,13 @@ import { normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { SEASON_ONE_CASES, SEASON_ONE_CASE_COUNT } from '../data/cases';
 import { getCaseByNumber } from '../utils/gameLogic';
 
+// Debounce delay for auto-save (ms) - prevents excessive writes during rapid state changes
+const SAVE_DEBOUNCE_MS = 500;
+
 export function usePersistence() {
   const [progress, setProgress] = useState(createBlankProgress());
   const [hydrationComplete, setHydrationComplete] = useState(false);
+  const saveTimerRef = useRef(null);
 
   // Hydrate on mount
   useEffect(() => {
@@ -93,10 +97,26 @@ export function usePersistence() {
     hydrate();
   }, []);
 
-  // Auto-save on change
+  // Auto-save on change with debouncing to prevent excessive writes
   useEffect(() => {
     if (!hydrationComplete) return;
-    saveStoredProgress(progress);
+
+    // Clear any pending save
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    // Debounce the save operation
+    saveTimerRef.current = setTimeout(() => {
+      saveStoredProgress(progress);
+    }, SAVE_DEBOUNCE_MS);
+
+    // Cleanup on unmount or before next effect
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
   }, [progress, hydrationComplete]);
 
   const updateProgress = useCallback((updates) => {

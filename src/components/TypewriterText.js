@@ -51,21 +51,32 @@ export default function TypewriterText({
     };
   }, [text, delay, isActive, isFinished]);
 
-  // Cursor blink effect - only run if active
+  // Track whether typing is in progress
+  const isTyping = displayedText.length < text.length;
+
+  // Cursor blink effect - only run while actively typing
   useEffect(() => {
-    if (!isActive || isFinished) {
-      if (cursorTimerRef.current) clearInterval(cursorTimerRef.current);
+    // Stop cursor blink if not active, finished, or done typing
+    if (!isActive || isFinished || !isTyping) {
+      if (cursorTimerRef.current) {
+        clearInterval(cursorTimerRef.current);
+        cursorTimerRef.current = null;
+      }
       return;
     }
-    
+
+    // Only start cursor blink if actively typing
     cursorTimerRef.current = setInterval(() => {
       setCursorVisible((v) => !v);
     }, 500);
-    
+
     return () => {
-      if (cursorTimerRef.current) clearInterval(cursorTimerRef.current);
+      if (cursorTimerRef.current) {
+        clearInterval(cursorTimerRef.current);
+        cursorTimerRef.current = null;
+      }
     };
-  }, [isActive, isFinished]);
+  }, [isActive, isFinished, isTyping]);
 
   const startTyping = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -100,8 +111,8 @@ export default function TypewriterText({
     }
   };
 
-  const isTyping = displayedText.length < text.length;
-  const showCursor = (isTyping || cursorVisible) && isActive && !isFinished;
+  // Show cursor only while actively typing
+  const showCursor = isTyping && cursorVisible && isActive && !isFinished;
 
   // Optimization: Single text node structure
   // We use a transparent copy only if absolutely needed for layout, but here we can usually get away with just one.

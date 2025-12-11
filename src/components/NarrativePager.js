@@ -25,15 +25,24 @@ const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR)
 
 function PulsingArrow() {
   const opacity = useRef(new Animated.Value(0.2)).current;
-  
+  const loopRef = useRef(null);
+
   useEffect(() => {
-    Animated.loop(
+    // Store animation reference for cleanup
+    loopRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
         Animated.timing(opacity, { toValue: 0.2, duration: 800, useNativeDriver: true })
       ])
-    ).start();
-  }, []);
+    );
+    loopRef.current.start();
+
+    // CRITICAL: Stop animation on unmount to prevent memory leak
+    return () => {
+      if (loopRef.current) loopRef.current.stop();
+      opacity.stopAnimation();
+    };
+  }, [opacity]);
 
   return (
     <Animated.Text style={[styles.nextPageCue, { opacity }]}>
