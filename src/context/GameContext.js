@@ -65,24 +65,19 @@ export function GameProvider({ children }) {
     // Make the decision
     storySelectDecisionCore(optionKey);
 
-    // After first decision (at 1.3), trigger generation for chapter 2
+    // After first decision (at 1.3), trigger generation for the first case of chapter 2
+    // so it's ready immediately. The pregeneration of subsequent chapters is handled
+    // by activateStoryCase when the player enters subchapter A of any chapter.
     if (isFirstDecision && currentChapter === 1 && isLLMConfigured) {
       const nextChapter = 2;
       const nextCaseNumber = formatCaseNumber(nextChapter, 1);
       // The path key for chapter 2 is the option chosen at 1.3
       const pathKey = optionKey;
 
-      // Generate content for the next chapter
+      // Generate content for the first case of chapter 2
       await ensureStoryContent(nextCaseNumber, pathKey);
-
-      // Pre-generate subchapters for chapter 2
-      pregenerate(nextChapter, pathKey, [...(storyCampaign?.choiceHistory || []), {
-        caseNumber: storyCampaign?.pendingDecisionCase,
-        optionKey: optionKey,
-        timestamp: new Date().toISOString()
-      }]);
     }
-  }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent, pregenerate]);
+  }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent]);
 
   // Story generation hook for dynamic content
   const {
@@ -197,9 +192,10 @@ export function GameProvider({ children }) {
           // Analytics
           analytics.logLevelStart(targetCase.id, 'story', pathKey);
 
-          // Pre-generate next chapter in background (only after first decision)
-          const { chapter } = parseCaseNumber(caseNumber);
-          if (chapter < 12 && hasFirstDecision) {
+          // Pre-generate next chapter in background (only at start of chapter, i.e., subchapter A)
+          // This prevents duplicate pregeneration when activating B and C subchapters
+          const { chapter, subchapter } = parseCaseNumber(caseNumber);
+          if (chapter < 12 && hasFirstDecision && subchapter === 1) {
             pregenerate(chapter, pathKey, storyCampaign?.choiceHistory || []);
           }
 
