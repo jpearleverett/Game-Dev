@@ -25,6 +25,12 @@ export const GENERATION_STATUS = {
   NOT_CONFIGURED: 'not_configured',
 };
 
+// Generation types - distinguishes immediate needs vs background pre-loading
+export const GENERATION_TYPE = {
+  IMMEDIATE: 'immediate',  // Generating content the player needs right now
+  PRELOAD: 'preload',      // Pre-loading upcoming content in background
+};
+
 /**
  * Hook for managing story generation
  */
@@ -33,6 +39,7 @@ export function useStoryGeneration(storyCampaign) {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState(null);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [generationType, setGenerationType] = useState(GENERATION_TYPE.IMMEDIATE);
   const generationRef = useRef(null);
 
   // Check if LLM is configured on mount
@@ -94,6 +101,7 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     setStatus(GENERATION_STATUS.GENERATING);
+    setGenerationType(GENERATION_TYPE.IMMEDIATE);
     setError(null);
     setProgress({ current: 0, total: 1 });
 
@@ -205,6 +213,7 @@ export function useStoryGeneration(storyCampaign) {
     if (needsGen) {
       // Generate in background without blocking
       setStatus(GENERATION_STATUS.GENERATING);
+      setGenerationType(GENERATION_TYPE.PRELOAD);
       generateChapter(nextChapter, pathKey, choiceHistory);
     }
   }, [isConfigured, needsGeneration, generateChapter]);
@@ -232,6 +241,8 @@ export function useStoryGeneration(storyCampaign) {
     error,
     isConfigured,
     isGenerating: status === GENERATION_STATUS.GENERATING,
+    generationType,
+    isPreloading: status === GENERATION_STATUS.GENERATING && generationType === GENERATION_TYPE.PRELOAD,
 
     // Actions
     configureLLM,

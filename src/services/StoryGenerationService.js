@@ -1,8 +1,13 @@
 /**
- * Story Generation Service
+ * Story Generation Service - Advanced Version
  *
  * Handles dynamic story generation using LLM for chapters 2-12.
- * Maintains story context and ensures consistency across all generated content.
+ * Implements advanced prompting techniques:
+ * - RAG (Retrieval Augmented Generation) with story bible grounding
+ * - Few-shot learning with example passages
+ * - Smart context windowing for token efficiency
+ * - Consistency verification and self-checking
+ * - Structured output parsing with validation
  */
 
 import { llmService } from './LLMService';
@@ -13,93 +18,107 @@ import {
   saveStoryContext,
 } from '../storage/generatedStoryStorage';
 import { getStoryEntry, formatCaseNumber } from '../data/storyContent';
+import { CHARACTER_REFERENCE } from '../data/characterReference';
+import {
+  ABSOLUTE_FACTS,
+  STORY_STRUCTURE,
+  WRITING_STYLE,
+  EXAMPLE_PASSAGES,
+  CONSISTENCY_RULES,
+  GENERATION_CONFIG,
+} from '../data/storyBible';
 
 // Story configuration
 const TOTAL_CHAPTERS = 12;
 const SUBCHAPTERS_PER_CHAPTER = 3;
-const MIN_WORDS_PER_SUBCHAPTER = 500;
-const DECISION_SUBCHAPTER = 3; // Decision at end of subchapter 3
+const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum;
+const TARGET_WORDS = GENERATION_CONFIG.wordCount.target;
+const DECISION_SUBCHAPTER = 3;
 
-// The main characters and themes from Chapter 1 (hardcoded for consistency)
-const STORY_FOUNDATION = {
-  protagonist: {
-    name: 'Jack Halloway',
-    role: 'Retired Detective',
-    traits: ['world-weary', 'guilt-ridden', 'determined', 'haunted by past'],
-    physicalDesc: 'Rumpled trench coat, heavy stubble, tired eyes',
-  },
-  antagonist: {
-    name: 'The Midnight Confessor',
-    alias: 'Victoria Blackwell / Emily',
-    description: 'Elegant woman, often in red. Seeks revenge for wrongful conviction.',
-  },
-  setting: {
-    city: 'Ashport',
-    tone: 'Noir detective fiction, rain-soaked, morally gray',
-    era: 'Modern day with noir aesthetics',
-  },
-  allies: [
-    { name: 'Sarah Reeves', role: 'Former partner, still on the force' },
-    { name: 'Eleanor Bellamy', role: 'Wrongfully convicted widow' },
-    { name: 'Maya Bellamy', role: "Eleanor's daughter" },
-  ],
-  themes: [
-    'Wrongful convictions',
-    'The cost of certainty',
-    'Redemption vs revenge',
-    'Corruption in the justice system',
-    'The line between justice and vigilantism',
-  ],
-  plotElements: {
-    twelveCase: 'Twelve cases from Jack\'s career are being revisited',
-    mainMystery: 'Who is the Midnight Confessor and what do they want?',
-    stakes: 'Innocents may be freed or more may suffer based on Jack\'s choices',
-  },
-};
+// ============================================================================
+// MASTER SYSTEM PROMPT - Core instructions for the LLM
+// ============================================================================
+const MASTER_SYSTEM_PROMPT = `You are writing "The Detective Portrait," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
 
-// System prompt for story generation
-const STORY_SYSTEM_PROMPT = `You are a master noir fiction writer creating an interactive detective story. Your writing style combines:
-- Raymond Chandler's hard-boiled prose and metaphors
-- Atmospheric, rain-soaked noir settings
-- Complex moral dilemmas with no easy answers
-- Character-driven narrative with psychological depth
-- Mystery elements that build tension across chapters
+## YOUR ROLE
+You continue the story of Jack Halloway, a retired detective confronting the wrongful convictions built on his career. The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
 
-CRITICAL REQUIREMENTS:
-1. MINIMUM 500 WORDS per subchapter - this is mandatory
-2. Maintain perfect consistency with all previous story events
-3. Never contradict established facts, character traits, or plot points
-4. Reference previous events naturally to show continuity
-5. Build tension progressively toward the final chapter
-6. Every character action must have clear motivation
+## CRITICAL CONSTRAINTS - NEVER VIOLATE THESE
+1. You write ONLY from Jack Halloway's first-person perspective, present tense
+2. You NEVER contradict established facts from previous chapters
+3. You NEVER break character or acknowledge being an AI
+4. You maintain EXACT consistency with names, dates, relationships, and events
+5. You produce MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} words per subchapter (aim for ${TARGET_WORDS})
 
-WRITING STYLE RULES - AVOID THESE AI TELLS:
-- Never use em dashes (—). Use commas, periods, or semicolons instead.
-- Never use "X is not just Y, it's Z" framing or similar constructions
-- Avoid "In a world where..." or "Little did he know..." openings
-- Do not use "I couldn't help but..." or "I found myself..."
-- Avoid starting sentences with "And" or "But" excessively
-- Do not use flowery adverbs like "seemingly," "interestingly," "notably"
-- Avoid the word "delve" or "unravel"
-- Do not use "a testament to" or "serves as a reminder"
-- Write with confidence. No hedging phrases like "It seems" or "Perhaps"
-- Keep metaphors grounded and noir-appropriate, not overwrought
+## VOICE AND STYLE
+Channel Raymond Chandler's hard-boiled prose:
+- Metaphors grounded in rain, shadows, noir imagery
+- Terse, punchy dialogue that reveals character
+- World-weary internal monologue laced with self-deprecation
+- Sensory details: sounds, smells, textures of the rain-soaked city
+- Moral ambiguity without moralizing
 
-PACING GUIDE (12 chapters total):
-- Chapters 2-4: Rising action, investigate leads, uncover clues
-- Chapters 5-7: Complications, betrayals revealed, stakes escalate
-- Chapters 8-10: Confrontations, major revelations, climax approaches
-- Chapters 11-12: Resolution, final confrontation, consequences of choices
+## FORBIDDEN PATTERNS - THESE INSTANTLY BREAK IMMERSION
+NEVER use:
+- Em dashes (—). Use commas, periods, or semicolons
+- "X is not just Y, it's Z" or similar constructions
+- "In a world where..." or "Little did [anyone] know..."
+- "I couldn't help but..." or "I found myself..."
+- Excessive sentences starting with "And" or "But"
+- Adverbs: "seemingly," "interestingly," "notably," "certainly"
+- Words: "delve," "unravel," "tapestry," "myriad"
+- Phrases: "a testament to," "serves as a reminder"
+- Hedging: "It seems," "Perhaps," "Maybe," "It appears"
+- Summarizing what just happened instead of showing the next scene
 
-OUTPUT FORMAT: Write engaging prose in present tense, first person (Jack's perspective).
-Include sensory details, internal monologue, and dialogue where appropriate.`;
+## OUTPUT STRUCTURE
+Every response must follow this exact format:
+
+[TITLE]
+A evocative chapter title (2-5 words)
+[/TITLE]
+
+[BRIDGE]
+One compelling sentence hook for this subchapter
+[/BRIDGE]
+
+[NARRATIVE]
+Your full narrative prose here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
+[/NARRATIVE]
+
+[CONSISTENCY_CHECK]
+List 3-5 facts from your narrative that must remain consistent:
+- Fact 1
+- Fact 2
+- etc.
+[/CONSISTENCY_CHECK]`;
+
+// ============================================================================
+// FEW-SHOT EXAMPLES FOR STYLE GROUNDING
+// ============================================================================
+const STYLE_EXAMPLES = `
+## EXAMPLE: ATMOSPHERIC OPENING (EXCELLENT)
+"${EXAMPLE_PASSAGES.atmosphericOpening}"
+
+## EXAMPLE: DIALOGUE (EXCELLENT)
+"${EXAMPLE_PASSAGES.dialogueExample}"
+
+## EXAMPLE: INTERNAL MONOLOGUE (EXCELLENT)
+"${EXAMPLE_PASSAGES.internalMonologue}"
+
+## EXAMPLE: TENSE MOMENT (EXCELLENT)
+"${EXAMPLE_PASSAGES.tenseMoment}"
+
+---
+Study these examples. Match their rhythm, tone, and prose quality. Your writing should feel like it belongs in the same novel.
+`;
 
 class StoryGenerationService {
   constructor() {
     this.generatedStory = null;
     this.storyContext = null;
     this.isGenerating = false;
-    this.generationQueue = [];
+    this.consistencyLog = []; // Track facts for consistency checking
   }
 
   /**
@@ -115,12 +134,9 @@ class StoryGenerationService {
    * Check if a specific chapter/subchapter needs generation
    */
   needsGeneration(chapter, subchapter, pathKey) {
-    // Chapter 1 is always static (from docx)
     if (chapter <= 1) return false;
-
     const caseNumber = formatCaseNumber(chapter, subchapter);
     const key = `${caseNumber}_${pathKey}`;
-
     return !this.generatedStory?.chapters?.[key];
   }
 
@@ -133,12 +149,17 @@ class StoryGenerationService {
     return this.generatedStory.chapters[key] || null;
   }
 
+  // ==========================================================================
+  // CONTEXT BUILDING - Smart summarization for token efficiency
+  // ==========================================================================
+
   /**
-   * Build comprehensive story context from all previous content
+   * Build comprehensive story context with intelligent windowing
+   * Recent chapters get full text, older chapters get compressed summaries
    */
   async buildStoryContext(targetChapter, targetSubchapter, pathKey, choiceHistory = []) {
     const context = {
-      foundation: STORY_FOUNDATION,
+      foundation: this._buildFoundationContext(),
       previousChapters: [],
       playerChoices: [],
       currentPosition: {
@@ -146,9 +167,10 @@ class StoryGenerationService {
         subchapter: targetSubchapter,
         pathKey,
       },
+      establishedFacts: [], // Track facts that must remain consistent
     };
 
-    // Add all Chapter 1 content (static from docx)
+    // Add Chapter 1 content (static)
     for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
       const caseNum = formatCaseNumber(1, sub);
       const entry = getStoryEntry(caseNum, 'ROOT');
@@ -160,17 +182,21 @@ class StoryGenerationService {
           title: entry.title || `Chapter 1.${sub}`,
           narrative: entry.narrative,
           decision: entry.decision || null,
+          isRecent: targetChapter <= 3, // Chapter 1 is "recent" for early chapters
         });
       }
     }
 
-    // Add generated chapters 2 onwards
+    // Add generated chapters 2 onwards with smart windowing
     for (let ch = 2; ch < targetChapter; ch++) {
       const chapterPathKey = this._getPathKeyForChapter(ch, choiceHistory);
       for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
         const caseNum = formatCaseNumber(ch, sub);
         const entry = this.getGeneratedEntry(caseNum, chapterPathKey);
         if (entry?.narrative) {
+          // Recent chapters (within 2) get full text
+          // Older chapters get compressed
+          const isRecent = ch >= targetChapter - 2;
           context.previousChapters.push({
             chapter: ch,
             subchapter: sub,
@@ -178,12 +204,13 @@ class StoryGenerationService {
             title: entry.title || `Chapter ${ch}.${sub}`,
             narrative: entry.narrative,
             decision: entry.decision || null,
+            isRecent,
           });
         }
       }
     }
 
-    // Add current chapter's previous subchapters
+    // Add current chapter's previous subchapters (always full detail)
     if (targetSubchapter > 1) {
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
@@ -196,6 +223,7 @@ class StoryGenerationService {
             title: entry.title || `Chapter ${targetChapter}.${sub}`,
             narrative: entry.narrative,
             decision: entry.decision || null,
+            isRecent: true, // Current chapter always recent
           });
         }
       }
@@ -208,11 +236,332 @@ class StoryGenerationService {
       timestamp: choice.timestamp,
     }));
 
+    // Extract established facts from generated content
+    context.establishedFacts = this._extractEstablishedFacts(context.previousChapters);
+
     return context;
   }
 
   /**
-   * Generate a single subchapter
+   * Build foundation context from story bible
+   */
+  _buildFoundationContext() {
+    return {
+      protagonist: ABSOLUTE_FACTS.protagonist,
+      antagonist: ABSOLUTE_FACTS.antagonist,
+      setting: ABSOLUTE_FACTS.setting,
+      fiveInnocents: ABSOLUTE_FACTS.fiveInnocents,
+      corruptOfficials: ABSOLUTE_FACTS.corruptOfficials,
+      supportingCharacters: ABSOLUTE_FACTS.supportingCharacters,
+    };
+  }
+
+  /**
+   * Extract key facts from previous chapters for consistency
+   */
+  _extractEstablishedFacts(chapters) {
+    const facts = [];
+
+    // Add base consistency rules
+    facts.push(...CONSISTENCY_RULES);
+
+    // Extract facts from generated content
+    for (const ch of chapters) {
+      if (ch.consistencyFacts) {
+        facts.push(...ch.consistencyFacts);
+      }
+    }
+
+    return [...new Set(facts)]; // Remove duplicates
+  }
+
+  // ==========================================================================
+  // PROMPT BUILDING - Structured prompts with grounding
+  // ==========================================================================
+
+  /**
+   * Build the complete generation prompt with all context
+   */
+  _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
+    const parts = [];
+
+    // Part 1: Story Bible Grounding (RAG)
+    parts.push(this._buildGroundingSection(context));
+
+    // Part 2: Previous Story Summary (with smart windowing)
+    parts.push(this._buildStorySummarySection(context));
+
+    // Part 3: Character Reference
+    parts.push(this._buildCharacterSection());
+
+    // Part 4: Current Task Specification
+    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
+
+    // Part 5: Style Examples (Few-shot)
+    parts.push(this._buildStyleSection());
+
+    // Part 6: Consistency Checklist
+    parts.push(this._buildConsistencySection(context));
+
+    return parts.join('\n\n---\n\n');
+  }
+
+  /**
+   * Build grounding section with absolute facts
+   */
+  _buildGroundingSection(context) {
+    return `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
+
+### PROTAGONIST
+- Name: ${ABSOLUTE_FACTS.protagonist.fullName}
+- Age: ${ABSOLUTE_FACTS.protagonist.age}
+- Status: ${ABSOLUTE_FACTS.protagonist.currentStatus}
+- Career: ${ABSOLUTE_FACTS.protagonist.careerLength} as detective
+- Residence: ${ABSOLUTE_FACTS.protagonist.residence}
+- Vice: ${ABSOLUTE_FACTS.protagonist.vices[0]}
+
+### ANTAGONIST (The Midnight Confessor)
+- True Name: ${ABSOLUTE_FACTS.antagonist.trueName} (revealed later)
+- Current Alias: ${ABSOLUTE_FACTS.antagonist.aliasUsed}
+- Communication: ${ABSOLUTE_FACTS.antagonist.communication.method}, ${ABSOLUTE_FACTS.antagonist.communication.ink}
+- Age at abduction: ${ABSOLUTE_FACTS.antagonist.ageAtAbduction}
+- Torturer: ${ABSOLUTE_FACTS.antagonist.torturer}
+- Motivation: "${ABSOLUTE_FACTS.antagonist.motivation}"
+
+### SETTING
+- City: ${ABSOLUTE_FACTS.setting.city}
+- Atmosphere: ${ABSOLUTE_FACTS.setting.atmosphere}
+- Key Location: Murphy's Bar is below Jack's office
+
+### THE FIVE INNOCENTS
+1. Eleanor Bellamy - convicted of husband's murder, 8 years in Greystone
+2. Marcus Thornhill - framed for embezzlement, committed suicide in lockup
+3. Dr. Lisa Chen - reported evidence tampering, career destroyed
+4. James Sullivan - details revealed progressively
+5. Teresa Wade - Tom Wade's own daughter, convicted with his methods
+
+### KEY RELATIONSHIPS (EXACT DURATIONS)
+- Jack and Tom Wade: Best friends for 30 years
+- Jack and Sarah Reeves: Partners for 13 years
+- Jack and Silas Reed: Partners for 8 years
+- Emily's "death": 7 years ago exactly
+- Eleanor's imprisonment: 8 years exactly`;
+  }
+
+  /**
+   * Build story summary with intelligent compression
+   */
+  _buildStorySummarySection(context) {
+    let summary = '## PREVIOUS STORY EVENTS\n\n';
+
+    // Group chapters by recency
+    const recentChapters = context.previousChapters.filter(ch => ch.isRecent);
+    const olderChapters = context.previousChapters.filter(ch => !ch.isRecent);
+
+    // Summarize older chapters (compressed)
+    if (olderChapters.length > 0) {
+      summary += '### EARLIER CHAPTERS (Summary)\n';
+      for (const ch of olderChapters) {
+        summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}": `;
+        // Extract first 2-3 sentences as summary
+        const sentences = ch.narrative.match(/[^.!?]+[.!?]+/g) || [];
+        summary += sentences.slice(0, 3).join(' ').trim();
+        summary += '\n\n';
+      }
+    }
+
+    // Full text for recent chapters
+    if (recentChapters.length > 0) {
+      summary += '### RECENT CHAPTERS (Full Text - Maintain Continuity)\n';
+      for (const ch of recentChapters) {
+        summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}"\n`;
+        summary += ch.narrative + '\n';
+        if (ch.decision) {
+          summary += `[DECISION MADE: Player chose "${ch.decision.selectedOption || 'unknown'}"]\n`;
+        }
+        summary += '\n---\n\n';
+      }
+    }
+
+    // Add player choice history
+    if (context.playerChoices.length > 0) {
+      summary += '### PLAYER CHOICE HISTORY\n';
+      context.playerChoices.forEach(choice => {
+        summary += `- Chapter ${choice.chapter}: Chose path "${choice.optionKey}"\n`;
+      });
+    }
+
+    return summary;
+  }
+
+  /**
+   * Build character reference section
+   */
+  _buildCharacterSection() {
+    const { protagonist, antagonist, allies, villains } = CHARACTER_REFERENCE;
+
+    return `## CHARACTER VOICES (Match these exactly)
+
+### JACK HALLOWAY (You are writing as him)
+Voice: ${protagonist.voiceAndStyle.narrative}
+Example: "${protagonist.voiceAndStyle.examplePhrases[0]}"
+
+### VICTORIA BLACKWELL / THE CONFESSOR
+Voice: Elegant, calculating, formal diction with sardonic edge
+Example: "${antagonist.voiceAndStyle.examplePhrases[0]}"
+
+### SARAH REEVES
+Voice: Direct, no-nonsense, increasingly independent
+Example: "${allies.sarahReeves.voiceAndStyle.examplePhrases[0]}"
+
+### ELEANOR BELLAMY
+Voice: Bitter, resilient, voice like gravel and broken glass
+Example: "${allies.eleanorBellamy.voiceAndStyle.examplePhrases[0]}"
+
+### SILAS REED
+Voice: Defeated, alcoholic, confessional
+Example: "${villains.silasReed.voiceAndStyle?.examplePhrases?.[0] || 'I told myself Thornhill was probably guilty anyway.'}"`;
+  }
+
+  /**
+   * Build task specification section
+   */
+  _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
+    const chaptersRemaining = TOTAL_CHAPTERS - chapter;
+    const subchapterLabel = ['A', 'B', 'C'][subchapter - 1];
+    const pacing = this._getPacingGuidance(chapter);
+
+    let task = `## CURRENT TASK
+
+Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
+
+### STORY POSITION
+- Chapter ${chapter} of ${TOTAL_CHAPTERS} (${chaptersRemaining} remaining)
+- Subchapter ${subchapter} of 3
+- Current path: "${context.currentPosition.pathKey}"
+- Phase: ${pacing.phase}
+
+### PACING REQUIREMENTS
+${pacing.requirements.map(r => `- ${r}`).join('\n')}
+
+### WRITING REQUIREMENTS
+1. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** (aim for ${TARGET_WORDS})
+2. Continue DIRECTLY from where the last subchapter ended
+3. Maintain Jack's first-person noir voice throughout
+4. Reference specific events from previous chapters (show continuity)
+5. Include: atmospheric description, internal monologue, dialogue
+6. Build tension appropriate to ${pacing.phase} phase`;
+
+    if (isDecisionPoint) {
+      task += `
+
+### DECISION POINT REQUIREMENTS
+This subchapter MUST end with a meaningful binary choice.
+
+The decision should:
+1. Present TWO distinct paths (Option A and Option B)
+2. Both options must be morally complex - NO obvious "right" answer
+3. Each choice should have CLEAR but DIFFERENT consequences
+4. The choice must feel EARNED by the narrative, not forced
+5. Connect to the themes of wrongful conviction, certainty vs truth
+
+**Format your decision as:**
+[DECISION]
+INTRO: [1-2 sentences framing the impossible choice]
+OPTION_A_KEY: A
+OPTION_A_TITLE: [Action statement, imperative mood]
+OPTION_A_FOCUS: [What this path prioritizes/risks]
+OPTION_B_KEY: B
+OPTION_B_TITLE: [Action statement, imperative mood]
+OPTION_B_FOCUS: [What this path prioritizes/risks]
+[/DECISION]`;
+    }
+
+    return task;
+  }
+
+  /**
+   * Build style examples section (few-shot learning)
+   */
+  _buildStyleSection() {
+    return `## STYLE REFERENCE
+
+Study this example passage and match its quality:
+
+${EXAMPLE_PASSAGES.tenseMoment}
+
+**Note the:** punchy sentences, sensory grounding, character voice through action, tension without melodrama.`;
+  }
+
+  /**
+   * Build consistency verification section
+   */
+  _buildConsistencySection(context) {
+    return `## CONSISTENCY VERIFICATION
+
+Before writing, confirm you will maintain these established facts:
+${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}
+
+After writing, you MUST include a [CONSISTENCY_CHECK] block listing 3-5 NEW facts from your narrative that future chapters must maintain.`;
+  }
+
+  /**
+   * Get pacing guidance based on chapter
+   */
+  _getPacingGuidance(chapter) {
+    if (chapter <= 4) {
+      return {
+        phase: 'RISING ACTION',
+        requirements: [
+          'Continue establishing the mystery',
+          'Introduce new suspects or complications',
+          'Jack should be actively investigating',
+          'Build relationships with allies/adversaries',
+          'Plant seeds for later revelations',
+        ],
+      };
+    } else if (chapter <= 7) {
+      return {
+        phase: 'COMPLICATIONS',
+        requirements: [
+          'Escalate stakes significantly',
+          'Reveal betrayals or hidden connections',
+          'Jack faces increasing danger and doubt',
+          'Moral dilemmas become more complex',
+          'The Confessor\'s plan becomes clearer',
+        ],
+      };
+    } else if (chapter <= 10) {
+      return {
+        phase: 'CONFRONTATIONS',
+        requirements: [
+          'Major revelations about the conspiracy',
+          'Jack must confront his past mistakes directly',
+          'Allies may be lost or trust shattered',
+          'The full truth about wrongful convictions exposed',
+          'Personal cost to Jack escalates dramatically',
+        ],
+      };
+    } else {
+      return {
+        phase: 'RESOLUTION',
+        requirements: [
+          'Final confrontation approaching or occurring',
+          'All narrative threads coming together',
+          'Jack must make impossible, defining choices',
+          'The full scope of everything is revealed',
+          'Consequences of all player choices manifest',
+        ],
+      };
+    }
+  }
+
+  // ==========================================================================
+  // GENERATION AND VALIDATION
+  // ==========================================================================
+
+  /**
+   * Generate a single subchapter with validation
    */
   async generateSubchapter(chapter, subchapter, pathKey, choiceHistory = []) {
     if (!llmService.isConfigured()) {
@@ -226,38 +575,51 @@ class StoryGenerationService {
     const caseNumber = formatCaseNumber(chapter, subchapter);
     const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
 
-    // Build context from all previous story content
+    // Build comprehensive context
     const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
-    // Build the prompt
+    // Build the prompt with all context
     const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+
+    // Select appropriate temperature based on content type
+    const temperature = isDecisionPoint
+      ? GENERATION_CONFIG.temperature.decisions
+      : GENERATION_CONFIG.temperature.narrative;
 
     this.isGenerating = true;
     try {
+      // Primary generation
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          systemPrompt: STORY_SYSTEM_PROMPT,
-          temperature: 0.85,
-          maxTokens: 3000,
+          systemPrompt: MASTER_SYSTEM_PROMPT,
+          temperature,
+          maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
         }
       );
 
-      const generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+      // Parse and validate the response
+      let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
 
-      // Validate minimum word count
+      // Validate word count
       const wordCount = generatedContent.narrative.split(/\s+/).length;
       if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-        // Request expansion if too short
-        const expandedResponse = await this._expandNarrative(
+        // Request expansion
+        generatedContent.narrative = await this._expandNarrative(
           generatedContent.narrative,
           context,
-          MIN_WORDS_PER_SUBCHAPTER - wordCount
+          TARGET_WORDS - wordCount
         );
-        generatedContent.narrative = expandedResponse;
       }
 
-      // Build the full story entry
+      // Validate consistency (check for obvious violations)
+      const validationResult = this._validateConsistency(generatedContent, context);
+      if (!validationResult.valid) {
+        console.warn('Consistency warning:', validationResult.issues);
+        // In production, you might want to regenerate or fix issues
+      }
+
+      // Build the story entry
       const storyEntry = {
         chapter,
         subchapter,
@@ -268,6 +630,7 @@ class StoryGenerationService {
         bridgeText: generatedContent.bridgeText,
         decision: isDecisionPoint ? generatedContent.decision : null,
         board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision),
+        consistencyFacts: generatedContent.consistencyFacts || [],
         generatedAt: new Date().toISOString(),
         wordCount: generatedContent.narrative.split(/\s+/).length,
       };
@@ -306,155 +669,12 @@ class StoryGenerationService {
     return results;
   }
 
-  /**
-   * Build the generation prompt based on context
-   */
-  _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
-    const chaptersRemaining = TOTAL_CHAPTERS - chapter;
-    const subchapterLabel = ['A', 'B', 'C'][subchapter - 1];
-
-    // Build previous story summary
-    let previousSummary = 'PREVIOUS STORY EVENTS:\n\n';
-
-    // Recent chapters (last 2-3 for detail)
-    const recentChapters = context.previousChapters.slice(-6);
-    recentChapters.forEach(ch => {
-      previousSummary += `--- Chapter ${ch.chapter}.${ch.subchapter} (${ch.title}) ---\n`;
-      // Include full narrative for recent chapters
-      if (ch.chapter >= chapter - 1) {
-        previousSummary += ch.narrative + '\n';
-      } else {
-        // Summarize older chapters to save tokens
-        const sentences = ch.narrative.split(/[.!?]+/).slice(0, 5);
-        previousSummary += sentences.join('. ') + '...\n';
-      }
-      if (ch.decision) {
-        previousSummary += `DECISION MADE: Player chose option "${ch.decision.selectedOption || 'unknown'}"\n`;
-      }
-      previousSummary += '\n';
-    });
-
-    // Add player choices
-    if (context.playerChoices.length > 0) {
-      previousSummary += '\nPLAYER CHOICE HISTORY:\n';
-      context.playerChoices.forEach(choice => {
-        previousSummary += `- Chapter ${choice.chapter}: Chose path "${choice.optionKey}"\n`;
-      });
-    }
-
-    let prompt = `${previousSummary}
-
-CURRENT TASK: Write Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})
-
-STORY POSITION:
-- This is chapter ${chapter} of ${TOTAL_CHAPTERS} (${chaptersRemaining} chapters remaining after this)
-- Subchapter ${subchapter} of 3
-- Player is on path: "${context.currentPosition.pathKey}"
-
-PACING REQUIREMENTS:
-${this._getPacingGuidance(chapter, subchapter)}
-
-WRITING REQUIREMENTS:
-1. MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS - this is mandatory
-2. Continue directly from where the previous subchapter ended
-3. Maintain Jack Halloway's first-person noir voice
-4. Reference specific events, characters, and details from previous chapters
-5. Include atmospheric descriptions, internal monologue, and dialogue
-6. Build tension appropriate to this point in the story`;
-
-    if (isDecisionPoint) {
-      prompt += `
-
-DECISION POINT REQUIREMENTS:
-This subchapter MUST end with a meaningful choice for the player.
-The decision should:
-1. Present two distinct paths (Option A and Option B)
-2. Both options must be morally complex - no obvious "right" answer
-3. Each choice should have clear consequences that affect future chapters
-4. The choice should feel natural to the story, not forced
-
-FORMAT YOUR DECISION AS:
-[DECISION]
-INTRO: [1-2 sentences setting up the dilemma]
-OPTION_A_KEY: A
-OPTION_A_TITLE: [Short action statement, e.g., "Confront the suspect directly"]
-OPTION_A_FOCUS: [Brief description of this approach]
-OPTION_B_KEY: B
-OPTION_B_TITLE: [Short action statement, e.g., "Gather more evidence first"]
-OPTION_B_FOCUS: [Brief description of this approach]
-[/DECISION]`;
-    }
-
-    prompt += `
-
-OUTPUT FORMAT:
-[TITLE]
-Your chapter title here
-[/TITLE]
-
-[BRIDGE]
-One sentence summary/hook for this subchapter (shown before the puzzle)
-[/BRIDGE]
-
-[NARRATIVE]
-Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
-[/NARRATIVE]`;
-
-    if (isDecisionPoint) {
-      prompt += `
-
-[DECISION]
-...as described above...
-[/DECISION]`;
-    }
-
-    return prompt;
-  }
+  // ==========================================================================
+  // PARSING AND VALIDATION
+  // ==========================================================================
 
   /**
-   * Get pacing guidance based on chapter position
-   */
-  _getPacingGuidance(chapter, subchapter) {
-    if (chapter <= 3) {
-      return `EARLY STORY (Chapters 2-3):
-- Continue establishing the mystery
-- Introduce new suspects or complications
-- Jack should be actively investigating
-- Build relationships with allies/adversaries
-- Plant seeds for later revelations`;
-    } else if (chapter <= 6) {
-      return `RISING ACTION (Chapters 4-6):
-- Escalate the stakes significantly
-- Reveal betrayals or hidden connections
-- Jack faces increasing danger
-- Moral dilemmas become more complex
-- The Confessor's plan becomes clearer`;
-    } else if (chapter <= 9) {
-      return `COMPLICATIONS (Chapters 7-9):
-- Major revelations about the conspiracy
-- Jack must confront his past mistakes
-- Allies may be lost or trust broken
-- The truth about wrongful convictions exposed
-- Personal cost to Jack escalates`;
-    } else if (chapter <= 11) {
-      return `CLIMAX (Chapters 10-11):
-- Direct confrontation approaching
-- All threads coming together
-- Jack must make impossible choices
-- The full scope of the conspiracy revealed
-- Redemption or damnation hangs in balance`;
-    } else {
-      return `RESOLUTION (Chapter 12):
-- Final confrontation with the Confessor
-- Consequences of all choices manifest
-- Resolution of the main mystery
-- Jack's fate is determined
-- Provide satisfying conclusion based on player's path`;
-    }
-  }
-
-  /**
-   * Parse generated content from LLM response
+   * Parse generated content with improved extraction
    */
   _parseGeneratedContent(content, isDecisionPoint) {
     const result = {
@@ -462,6 +682,7 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       bridgeText: '',
       narrative: '',
       decision: null,
+      consistencyFacts: [],
     };
 
     // Extract title
@@ -479,14 +700,27 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     // Extract narrative
     const narrativeMatch = content.match(/\[NARRATIVE\]([\s\S]*?)\[\/NARRATIVE\]/);
     if (narrativeMatch) {
-      result.narrative = narrativeMatch[1].trim();
+      result.narrative = this._cleanNarrative(narrativeMatch[1].trim());
     } else {
-      // Fallback: use everything not in tags
-      result.narrative = content
-        .replace(/\[TITLE\][\s\S]*?\[\/TITLE\]/g, '')
-        .replace(/\[BRIDGE\][\s\S]*?\[\/BRIDGE\]/g, '')
-        .replace(/\[DECISION\][\s\S]*?\[\/DECISION\]/g, '')
-        .trim();
+      // Fallback: extract everything not in tags
+      result.narrative = this._cleanNarrative(
+        content
+          .replace(/\[TITLE\][\s\S]*?\[\/TITLE\]/g, '')
+          .replace(/\[BRIDGE\][\s\S]*?\[\/BRIDGE\]/g, '')
+          .replace(/\[DECISION\][\s\S]*?\[\/DECISION\]/g, '')
+          .replace(/\[CONSISTENCY_CHECK\][\s\S]*?\[\/CONSISTENCY_CHECK\]/g, '')
+          .trim()
+      );
+    }
+
+    // Extract consistency facts
+    const consistencyMatch = content.match(/\[CONSISTENCY_CHECK\]([\s\S]*?)\[\/CONSISTENCY_CHECK\]/);
+    if (consistencyMatch) {
+      const facts = consistencyMatch[1]
+        .split(/[-•]\s*/)
+        .map(f => f.trim())
+        .filter(f => f.length > 10);
+      result.consistencyFacts = facts;
     }
 
     // Extract decision if present
@@ -498,6 +732,57 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     }
 
     return result;
+  }
+
+  /**
+   * Clean narrative text of common LLM artifacts
+   */
+  _cleanNarrative(text) {
+    return text
+      // Remove any remaining tags
+      .replace(/\[.*?\]/g, '')
+      // Fix double spaces
+      .replace(/\s{2,}/g, ' ')
+      // Remove em dashes (replace with comma or period based on context)
+      .replace(/\s*—\s*/g, ', ')
+      // Remove any meta-commentary
+      .replace(/\(Note:.*?\)/gi, '')
+      .replace(/\[Author's note:.*?\]/gi, '')
+      .trim();
+  }
+
+  /**
+   * Validate content against established facts
+   */
+  _validateConsistency(content, context) {
+    const issues = [];
+
+    // Check for common consistency violations
+    const narrative = content.narrative.toLowerCase();
+
+    // Check character names are spelled correctly
+    if (narrative.includes('hallaway') || narrative.includes('holloway')) {
+      issues.push('Protagonist name misspelled (should be Halloway)');
+    }
+
+    if (narrative.includes('blackwood') && !narrative.includes('blackwell')) {
+      issues.push('Antagonist name might be wrong (should be Blackwell)');
+    }
+
+    // Check for timeline violations
+    if (narrative.includes('twenty years') && narrative.includes('tom wade')) {
+      issues.push('Tom Wade friendship is 30 years, not 20');
+    }
+
+    // Check setting consistency
+    if (narrative.includes('sunny') || narrative.includes('sunshine')) {
+      issues.push('Ashport should always be rainy/overcast, not sunny');
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues,
+    };
   }
 
   /**
@@ -525,7 +810,7 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     const optionBTitle = decisionText.match(/OPTION_B_TITLE:\s*(.+)/)?.[1]?.trim() || 'Option B';
     const optionBFocus = decisionText.match(/OPTION_B_FOCUS:\s*(.+)/)?.[1]?.trim() || '';
 
-    // Get current chapter from context for nextChapter calculation
+    // Get current chapter for nextChapter calculation
     const chapterMatch = decisionText.match(/chapter\s*(\d+)/i);
     const currentChapter = chapterMatch ? parseInt(chapterMatch[1]) : 2;
 
@@ -558,31 +843,56 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
   }
 
   /**
+   * Expand narrative with controlled generation
+   */
+  async _expandNarrative(narrative, context, additionalWords) {
+    const expandPrompt = `Expand this noir detective narrative by approximately ${additionalWords} more words.
+
+CURRENT TEXT:
+${narrative}
+
+REQUIREMENTS:
+1. Add atmospheric description (rain, shadows, city sounds)
+2. Expand Jack's internal monologue with self-reflection
+3. Add sensory details and physical grounding
+4. Include additional dialogue if characters are present
+5. DO NOT change the plot or ending
+6. DO NOT add new major events
+7. Maintain Jack Halloway's noir voice exactly
+
+Output ONLY the expanded narrative. No tags, no commentary.`;
+
+    const response = await llmService.complete(
+      [{ role: 'user', content: expandPrompt }],
+      {
+        systemPrompt: 'You are expanding noir fiction. Match the existing style exactly.',
+        temperature: GENERATION_CONFIG.temperature.expansion,
+        maxTokens: GENERATION_CONFIG.maxTokens.expansion,
+      }
+    );
+
+    return this._cleanNarrative(response.content);
+  }
+
+  // ==========================================================================
+  // BOARD GENERATION (Puzzle data)
+  // ==========================================================================
+
+  /**
    * Generate board data for the puzzle
-   * Ensures all words are from the narrative with no duplicates
-   * For decision points, creates branchingOutlierSets with themed sets for each option
    */
   _generateBoardData(narrative, isDecisionPoint, decision) {
-    // Extract meaningful words from narrative for the puzzle
     const words = this._extractKeywordsFromNarrative(narrative);
-
-    // For decision points, we need 8 outliers (2 sets of 4)
-    // For regular subchapters, we need 4 outliers
     const outlierCount = isDecisionPoint ? 8 : 4;
-
-    // Select outlier words based on themes
     const outlierWords = this._selectOutlierWords(words, outlierCount, isDecisionPoint, decision);
 
-    // Generate grid (4x4 for normal, 4x5 for branching)
     const gridRows = isDecisionPoint ? 5 : 4;
     const gridCols = 4;
     const gridSize = gridRows * gridCols;
 
-    // Use a Set to track used words and prevent duplicates
     const usedWords = new Set(outlierWords.map(w => w.toUpperCase()));
     const gridWords = [...outlierWords];
 
-    // Add non-outlier words from narrative to fill the grid
     for (const word of words) {
       if (gridWords.length >= gridSize) break;
       const upperWord = word.toUpperCase();
@@ -592,8 +902,6 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       }
     }
 
-    // If still not enough words, use noir-themed filler words
-    // Extended list to ensure we always have enough unique options
     const fillerWords = [
       'SHADOW', 'TRUTH', 'LIE', 'NIGHT', 'RAIN', 'SMOKE', 'BLOOD', 'DEATH',
       'GUILT', 'ALIBI', 'CRIME', 'BADGE', 'CLUE', 'FEAR', 'DARK', 'NOIR',
@@ -602,7 +910,6 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       'SNITCH', 'BRASS', 'STREET', 'ALLEY', 'DOCK', 'PIER', 'WHARF', 'TORCH',
     ];
 
-    // Shuffle fillers and add unique ones as needed
     const shuffledFillers = this._shuffleArray([...fillerWords]);
     for (const filler of shuffledFillers) {
       if (gridWords.length >= gridSize) break;
@@ -613,10 +920,8 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       }
     }
 
-    // Final safety check - ensure exactly gridSize unique words
     const uniqueGridWords = [...new Set(gridWords)].slice(0, gridSize);
 
-    // If somehow still not enough, generate sequential fallbacks
     while (uniqueGridWords.length < gridSize) {
       const fallback = `CASE${uniqueGridWords.length}`;
       if (!usedWords.has(fallback)) {
@@ -625,16 +930,13 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       }
     }
 
-    // Shuffle grid words
     const shuffledWords = this._shuffleArray(uniqueGridWords);
 
-    // Create grid structure
     const grid = [];
     for (let row = 0; row < gridRows; row++) {
       grid.push(shuffledWords.slice(row * gridCols, (row + 1) * gridCols));
     }
 
-    // Build board result
     const boardResult = {
       outlierWords: outlierWords.slice(0, isDecisionPoint ? 8 : 4),
       grid,
@@ -645,8 +947,6 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       },
     };
 
-    // For decision points, create branchingOutlierSets structure
-    // This is critical for EvidenceBoardScreen to display two colored sets
     if (isDecisionPoint && decision?.options?.length >= 2) {
       const set1Words = outlierWords.slice(0, 4);
       const set2Words = outlierWords.slice(4, 8);
@@ -688,32 +988,20 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     return boardResult;
   }
 
-  /**
-   * Truncate theme name for display
-   */
   _truncateThemeName(title) {
     if (!title) return null;
-    // Extract first few meaningful words, max 12 chars
     const words = title.split(/\s+/).slice(0, 2).join(' ');
     return words.length > 12 ? words.slice(0, 12).toUpperCase() : words.toUpperCase();
   }
 
-  /**
-   * Extract keywords from narrative text
-   * Prioritizes nouns, verbs, and adjectives that relate to the story
-   */
   _extractKeywordsFromNarrative(narrative) {
-    // Comprehensive stop words to exclude (common words that don't add puzzle value)
     const stopWords = new Set([
-      // Articles, conjunctions, prepositions
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
       'of', 'with', 'by', 'from', 'as', 'into', 'through', 'during', 'before',
       'after', 'above', 'below', 'between', 'under', 'over', 'out', 'off',
-      // Pronouns
       'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us',
       'them', 'my', 'your', 'his', 'its', 'our', 'their', 'mine', 'yours',
       'this', 'that', 'these', 'those', 'who', 'whom', 'which', 'what',
-      // Common verbs
       'is', 'was', 'are', 'were', 'been', 'be', 'being', 'have', 'has', 'had',
       'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
       'must', 'shall', 'can', 'get', 'got', 'getting', 'let', 'make', 'made',
@@ -721,41 +1009,31 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       'think', 'thought', 'see', 'saw', 'seen', 'look', 'looked', 'looking',
       'come', 'came', 'coming', 'go', 'went', 'gone', 'going', 'take', 'took',
       'want', 'wanted', 'need', 'needed', 'seem', 'seemed', 'keep', 'kept',
-      // Adverbs and modifiers
       'very', 'really', 'quite', 'just', 'only', 'even', 'also', 'too', 'so',
       'now', 'then', 'here', 'there', 'when', 'where', 'why', 'how', 'well',
       'still', 'already', 'always', 'never', 'ever', 'often', 'sometimes',
-      // Quantifiers
       'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
       'such', 'no', 'not', 'any', 'many', 'much', 'own', 'same', 'than',
-      // Common adjectives
       'good', 'bad', 'new', 'old', 'first', 'last', 'long', 'great', 'little',
-      'own', 'other', 'big', 'small', 'large', 'high', 'right', 'left',
-      // Time words
       'time', 'year', 'day', 'way', 'thing', 'man', 'woman', 'life', 'world',
-      // Filler words
-      'like', 'back', 'about', 'after', 'again', 'against', 'because', 'before',
-      'between', 'down', 'even', 'find', 'found', 'give', 'gave', 'hand',
-      'head', 'eyes', 'face', 'voice', 'room', 'door', 'turn', 'turned',
-      // Story-specific common words to exclude
-      'jack', 'halloway', 'detective', 'case', 'chapter', 'story',
+      'like', 'back', 'about', 'again', 'against', 'because', 'down', 'find',
+      'found', 'give', 'gave', 'hand', 'head', 'eyes', 'face', 'voice', 'room',
+      'door', 'turn', 'turned', 'jack', 'halloway', 'detective', 'case', 'chapter',
     ]);
 
-    // Extract words - prefer longer, more specific words
     const words = narrative
       .toUpperCase()
       .replace(/[^A-Z\s]/g, ' ')
       .split(/\s+/)
       .filter(word => {
         const lowerWord = word.toLowerCase();
-        return word.length >= 4 && // Minimum 4 chars for better words
-               word.length <= 10 && // Max 10 chars for display
+        return word.length >= 4 &&
+               word.length <= 10 &&
                !stopWords.has(lowerWord) &&
-               !/^[AEIOU]+$/.test(word) && // Skip vowel-only
-               !/(.)\1{2,}/.test(word); // Skip words with 3+ repeated chars
+               !/^[AEIOU]+$/.test(word) &&
+               !/(.)\1{2,}/.test(word);
       });
 
-    // Count frequency and track word positions for relevance
     const frequency = {};
     const firstOccurrence = {};
     words.forEach((word, index) => {
@@ -766,7 +1044,6 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       frequency[word]++;
     });
 
-    // Score words by: frequency + bonus for appearing early + bonus for length
     const scored = Object.entries(frequency).map(([word, freq]) => {
       const positionBonus = 1 - (firstOccurrence[word] / words.length) * 0.5;
       const lengthBonus = Math.min(word.length / 8, 1) * 0.3;
@@ -774,22 +1051,15 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       return { word, score };
     });
 
-    // Sort by score and return unique words
     return scored
       .sort((a, b) => b.score - a.score)
       .map(({ word }) => word)
-      .slice(0, 60); // Get more candidates for better selection
+      .slice(0, 60);
   }
 
-  /**
-   * Select outlier words for the puzzle
-   * Ensures no duplicates between sets for decision points
-   */
   _selectOutlierWords(availableWords, count, isDecisionPoint, decision) {
-    // Track used words to prevent duplicates
     const usedWords = new Set();
 
-    // For decision points, create two distinct themed sets (4 words each)
     if (isDecisionPoint && decision?.options) {
       const setA = this._selectThemedWords(availableWords, 4, decision.options[0]?.focus, usedWords);
       setA.forEach(w => usedWords.add(w.toUpperCase()));
@@ -797,11 +1067,9 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       const remainingWords = availableWords.filter(w => !usedWords.has(w.toUpperCase()));
       const setB = this._selectThemedWords(remainingWords, 4, decision.options[1]?.focus, usedWords);
 
-      // Ensure we have exactly 8 unique words
       const combined = [...setA, ...setB];
       const uniqueCombined = [...new Set(combined.map(w => w.toUpperCase()))];
 
-      // If we don't have enough, fill from remaining available words
       const stillAvailable = availableWords.filter(w => !uniqueCombined.includes(w.toUpperCase()));
       while (uniqueCombined.length < 8 && stillAvailable.length > 0) {
         uniqueCombined.push(stillAvailable.shift().toUpperCase());
@@ -810,7 +1078,6 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       return uniqueCombined.slice(0, 8);
     }
 
-    // For regular subchapters, pick the top scoring unique words
     const uniqueWords = [];
     for (const word of availableWords) {
       const upperWord = word.toUpperCase();
@@ -823,31 +1090,23 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     return uniqueWords;
   }
 
-  /**
-   * Select words related to a theme
-   * @param {Set} excludeWords - Words to exclude (already used)
-   */
   _selectThemedWords(words, count, themeFocus, excludeWords = new Set()) {
-    // Filter out already used words
     const availableWords = words.filter(w => !excludeWords.has(w.toUpperCase()));
 
     if (!themeFocus || availableWords.length === 0) {
       return availableWords.slice(0, count);
     }
 
-    // Extract keywords from the theme focus
     const themeWords = themeFocus
       .toUpperCase()
       .replace(/[^A-Z\s]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length >= 3);
 
-    // Score words by theme relevance
     const scored = availableWords.map(word => {
       const upperWord = word.toUpperCase();
       let score = 0;
 
-      // Check if word matches or contains theme words
       for (const tw of themeWords) {
         if (upperWord === tw) score += 3;
         else if (upperWord.includes(tw)) score += 2;
@@ -857,10 +1116,8 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       return { word: upperWord, score };
     });
 
-    // Sort by theme relevance, then take top words
     scored.sort((a, b) => b.score - a.score);
 
-    // Get unique words up to count
     const result = [];
     const seen = new Set();
     for (const { word } of scored) {
@@ -874,11 +1131,7 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     return result;
   }
 
-  /**
-   * Determine a theme name for the outliers
-   */
   _determineTheme(outlierWords) {
-    // Simple theme detection based on common patterns
     const themes = [
       { pattern: /EVIDENCE|PROOF|CLUE|WITNESS/, name: 'INVESTIGATION' },
       { pattern: /DEATH|KILL|MURDER|BLOOD/, name: 'VIOLENCE' },
@@ -899,58 +1152,35 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
     return 'CLUES';
   }
 
-  /**
-   * Expand narrative if too short
-   */
-  async _expandNarrative(narrative, context, additionalWords) {
-    const expandPrompt = `The following narrative needs to be expanded by approximately ${additionalWords} more words while maintaining the same style, tone, and story continuity.
+  // ==========================================================================
+  // UTILITY METHODS
+  // ==========================================================================
 
-CURRENT NARRATIVE:
-${narrative}
-
-REQUIREMENTS:
-1. Add more atmospheric description
-2. Expand internal monologue
-3. Add dialogue if appropriate
-4. Include sensory details
-5. Do not change the plot or ending
-6. Maintain Jack Halloway's noir voice
-
-Output ONLY the expanded narrative, nothing else.`;
-
-    const response = await llmService.complete(
-      [{ role: 'user', content: expandPrompt }],
-      { temperature: 0.8, maxTokens: 2000 }
-    );
-
-    return response.content;
-  }
-
-  /**
-   * Update story context after generation
-   */
   async _updateStoryContext(entry) {
     const context = this.storyContext || {
       characters: {},
       plotPoints: [],
       revelations: [],
       relationships: {},
+      consistencyFacts: [],
     };
-
-    // Extract and store important story elements
-    // This helps maintain consistency in future generations
 
     context.lastGeneratedChapter = entry.chapter;
     context.lastGeneratedSubchapter = entry.subchapter;
     context.lastPathKey = entry.pathKey;
 
+    // Store consistency facts
+    if (entry.consistencyFacts?.length > 0) {
+      context.consistencyFacts = [
+        ...(context.consistencyFacts || []),
+        ...entry.consistencyFacts,
+      ].slice(-50); // Keep last 50 facts
+    }
+
     this.storyContext = context;
     await saveStoryContext(context);
   }
 
-  /**
-   * Helper to get path key for a specific chapter
-   */
   _getPathKeyForChapter(chapter, choiceHistory) {
     const choice = choiceHistory.find(c => {
       const choiceChapter = this._extractChapterFromCase(c.caseNumber);
@@ -959,18 +1189,12 @@ Output ONLY the expanded narrative, nothing else.`;
     return choice?.optionKey || 'ROOT';
   }
 
-  /**
-   * Extract chapter number from case number
-   */
   _extractChapterFromCase(caseNumber) {
     if (!caseNumber) return 1;
     const chapterPart = caseNumber.slice(0, 3);
     return parseInt(chapterPart, 10) || 1;
   }
 
-  /**
-   * Shuffle array helper
-   */
   _shuffleArray(array) {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {

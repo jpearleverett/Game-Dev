@@ -108,6 +108,8 @@ function AppContent({ fontsReady }) {
         status={storyGeneration?.status}
         progress={storyGeneration?.progress}
         error={storyGeneration?.error}
+        generationType={storyGeneration?.generationType}
+        isPreloading={storyGeneration?.isPreloading}
         onCancel={handleCancelGeneration}
         onRetry={handleRetry}
         onGoToSettings={handleGoToSettings}

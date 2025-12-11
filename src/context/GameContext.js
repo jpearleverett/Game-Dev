@@ -90,6 +90,8 @@ export function GameProvider({ children }) {
     error: generationError,
     isConfigured: isLLMConfigured,
     isGenerating,
+    generationType,
+    isPreloading,
     configureLLM,
     needsGeneration,
     generateForCase,
@@ -724,9 +726,11 @@ export function GameProvider({ children }) {
       error: generationError,
       isConfigured: isLLMConfigured,
       isGenerating,
+      generationType,
+      isPreloading,
       awaitingGeneration,
     },
-  }), [gameState, progress, hydrationComplete, activeCase, mode, generationStatus, generationProgress, generationError, isLLMConfigured, isGenerating, awaitingGeneration]);
+  }), [gameState, progress, hydrationComplete, activeCase, mode, generationStatus, generationProgress, generationError, isLLMConfigured, isGenerating, generationType, isPreloading, awaitingGeneration]);
 
   const dispatchValue = useMemo(() => ({
     toggleWordSelection,
