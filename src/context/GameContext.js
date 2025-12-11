@@ -6,9 +6,10 @@ import { usePersistence } from '../hooks/usePersistence';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { useStoryEngine } from '../hooks/useStoryEngine';
 import { useStoryGeneration, GENERATION_STATUS } from '../hooks/useStoryGeneration';
-import * as Haptics from 'expo-haptics';
+import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { analytics } from '../services/AnalyticsService';
 import { purchaseService } from '../services/PurchaseService';
+import { ACHIEVEMENTS } from '../data/achievementsData';
 
 const GameStateContext = createContext(null);
 const GameDispatchContext = createContext(null);
@@ -305,7 +306,7 @@ export function GameProvider({ children }) {
                }
                
                updateProgress(updates);
-               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+               notificationHaptic(Haptics.NotificationFeedbackType.Success);
                return true;
           }
           return false;
@@ -337,7 +338,7 @@ export function GameProvider({ children }) {
                        nextStoryUnlockAt: null
                    }
                });
-               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+               notificationHaptic(Haptics.NotificationFeedbackType.Success);
                return true;
           }
           return false;
@@ -391,13 +392,13 @@ export function GameProvider({ children }) {
       }
 
       if (nextStatus === STATUS.SOLVED) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          notificationHaptic(Haptics.NotificationFeedbackType.Success);
           audioRef.current?.playVictory?.();
       } else if (nextStatus === STATUS.FAILED) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          notificationHaptic(Haptics.NotificationFeedbackType.Error);
           audioRef.current?.playFailure?.();
       } else {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          impactHaptic(Haptics.ImpactFeedbackStyle.Medium);
           audioRef.current?.playSubmit?.();
       }
       
@@ -531,14 +532,13 @@ export function GameProvider({ children }) {
   const unlockAchievement = useCallback((achievementId, context = {}) => {
     const nowIso = new Date().toISOString();
     const currentAchievements = progress.achievements || { unlockedAchievementIds: [], achievementDetails: {}, totalPoints: 0 };
-    
+
     // Check if already unlocked
     if (currentAchievements.unlockedAchievementIds.includes(achievementId)) {
       return false; // Already unlocked
     }
 
-    // Import achievement data to get points
-    const { ACHIEVEMENTS } = require('../data/achievementsData');
+    // Use module-scoped ACHIEVEMENTS (imported at top of file for performance)
     const achievement = ACHIEVEMENTS[achievementId];
     const points = achievement?.points || 0;
 
@@ -558,9 +558,9 @@ export function GameProvider({ children }) {
 
     updateProgress({ achievements: updatedAchievements });
 
-    // Haptic feedback for achievement unlock
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
+    // Haptic feedback for achievement unlock (throttled)
+    notificationHaptic(Haptics.NotificationFeedbackType.Success);
+
     // Log analytics
     analytics.logEvent?.('achievement_unlocked', { achievementId, points });
 
@@ -571,7 +571,7 @@ export function GameProvider({ children }) {
    * Check and unlock achievements based on current state
    */
   const checkAchievements = useCallback(() => {
-    const { ACHIEVEMENTS } = require('../data/achievementsData');
+    // Use module-scoped ACHIEVEMENTS (imported at top of file for performance)
     const currentAchievements = progress.achievements?.unlockedAchievementIds || [];
     const newUnlocks = [];
 

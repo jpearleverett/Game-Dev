@@ -109,20 +109,29 @@ export default function StoryGenerationOverlay({
     noirErrorRef.current = null;
   }
 
+  // Store animation loop references for proper cleanup
+  const spinLoopRef = useRef(null);
+  const pulseLoopRef = useRef(null);
+
   useEffect(() => {
     if (visible && status === GENERATION_STATUS.GENERATING) {
-      // Spin animation
-      Animated.loop(
+      // Reset animation values
+      spinAnim.setValue(0);
+      pulseAnim.setValue(1);
+
+      // Create and store spin animation loop
+      spinLoopRef.current = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
           duration: 2000,
           easing: Easing.linear,
           useNativeDriver: true,
         })
-      ).start();
+      );
+      spinLoopRef.current.start();
 
-      // Pulse animation
-      Animated.loop(
+      // Create and store pulse animation loop
+      pulseLoopRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.1,
@@ -137,11 +146,29 @@ export default function StoryGenerationOverlay({
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      pulseLoopRef.current.start();
     } else {
+      // Properly stop the loops using stored references
+      if (spinLoopRef.current) {
+        spinLoopRef.current.stop();
+        spinLoopRef.current = null;
+      }
+      if (pulseLoopRef.current) {
+        pulseLoopRef.current.stop();
+        pulseLoopRef.current = null;
+      }
       spinAnim.stopAnimation();
       pulseAnim.stopAnimation();
     }
+
+    // Cleanup on unmount
+    return () => {
+      if (spinLoopRef.current) spinLoopRef.current.stop();
+      if (pulseLoopRef.current) pulseLoopRef.current.stop();
+      spinAnim.stopAnimation();
+      pulseAnim.stopAnimation();
+    };
   }, [visible, status, spinAnim, pulseAnim]);
 
   const spin = spinAnim.interpolate({

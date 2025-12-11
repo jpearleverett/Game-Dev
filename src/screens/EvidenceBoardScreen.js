@@ -635,7 +635,13 @@ export default function EvidenceBoardScreen({
         <SolvedStampAnimation visible={solved && stampReady} onContinue={onSkipToResults} reducedMotion={reducedMotion} intelName={activeCase?.outlierTheme?.name} />
           {awaitingStamp && <View style={styles.celebrationBlocker} pointerEvents="auto" />}
 
-          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: scaleSpacing(SPACING.gutter) }]}>
+          <ScrollView
+            style={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: scaleSpacing(SPACING.gutter) }]}
+            removeClippedSubviews={true}
+            scrollEventThrottle={16}
+          >
             <View style={[styles.boardWrapper, { borderRadius: frameRadius, padding: framePadding }]}>
               <LinearGradient colors={["rgba(58, 36, 18, 0.96)", "rgba(28, 16, 8, 0.98)"]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={[styles.boardFrame, { borderRadius: frameRadius }]}>
                 <LinearGradient colors={["#d9b78b", "#c68f57", "#ab6b34"]} locations={[0, 0.58, 1]} start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }} style={[styles.boardSurface, { borderRadius: boardRadius, padding: boardPadding }]}>
