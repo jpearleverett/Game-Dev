@@ -23,7 +23,7 @@ export default function SettingsScreen({
 }) {
     // LLM configuration state (Gemini)
     const [llmApiKey, setLlmApiKey] = useState('');
-    const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
+    const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash-preview-05-20');
     const [showApiKey, setShowApiKey] = useState(false);
 
     const handleSaveLLMConfig = () => {
@@ -138,26 +138,38 @@ export default function SettingsScreen({
                   <Pressable
                     style={[
                       styles.providerOption,
-                      geminiModel === 'gemini-2.0-flash' && styles.providerOptionActive,
+                      geminiModel === 'gemini-2.5-flash-preview-05-20' && styles.providerOptionActive,
                     ]}
-                    onPress={() => setGeminiModel('gemini-2.0-flash')}
+                    onPress={() => setGeminiModel('gemini-2.5-flash-preview-05-20')}
                   >
                     <Text style={[
                       styles.providerText,
-                      geminiModel === 'gemini-2.0-flash' && styles.providerTextActive,
-                    ]}>Gemini 2.0 Flash</Text>
+                      geminiModel === 'gemini-2.5-flash-preview-05-20' && styles.providerTextActive,
+                    ]}>2.5 Flash</Text>
                   </Pressable>
                   <Pressable
                     style={[
                       styles.providerOption,
-                      geminiModel === 'gemini-1.5-pro' && styles.providerOptionActive,
+                      geminiModel === 'gemini-2.5-pro-preview-05-06' && styles.providerOptionActive,
                     ]}
-                    onPress={() => setGeminiModel('gemini-1.5-pro')}
+                    onPress={() => setGeminiModel('gemini-2.5-pro-preview-05-06')}
                   >
                     <Text style={[
                       styles.providerText,
-                      geminiModel === 'gemini-1.5-pro' && styles.providerTextActive,
-                    ]}>Gemini 1.5 Pro</Text>
+                      geminiModel === 'gemini-2.5-pro-preview-05-06' && styles.providerTextActive,
+                    ]}>2.5 Pro</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.providerOption,
+                      geminiModel === 'gemini-2.5-flash-lite-preview-06-17' && styles.providerOptionActive,
+                    ]}
+                    onPress={() => setGeminiModel('gemini-2.5-flash-lite-preview-06-17')}
+                  >
+                    <Text style={[
+                      styles.providerText,
+                      geminiModel === 'gemini-2.5-flash-lite-preview-06-17' && styles.providerTextActive,
+                    ]}>2.5 Flash Lite</Text>
                   </Pressable>
                 </View>
                 <View style={styles.apiKeyContainer}>
@@ -472,12 +484,14 @@ const styles = StyleSheet.create({
   },
   providerSelector: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
   },
   providerOption: {
     flex: 1,
+    minWidth: 90,
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.panelOutline,

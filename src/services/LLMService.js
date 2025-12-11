@@ -12,7 +12,7 @@ const LLM_CONFIG_KEY = 'detective_portrait_llm_config';
 // Default configuration - using Gemini
 const DEFAULT_CONFIG = {
   provider: 'gemini',
-  model: 'gemini-2.0-flash', // Gemini 2.0 Flash for fast, quality responses
+  model: 'gemini-2.5-flash-preview-05-20', // Latest Gemini 2.5 Flash
   apiKey: null,
   baseUrl: null, // For custom endpoints
   maxRetries: 3,
@@ -100,7 +100,7 @@ class LLMService {
   async _geminiComplete(messages, { temperature, maxTokens, systemPrompt }) {
     // Gemini API endpoint
     const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
-    const model = this.config.model || 'gemini-2.0-flash';
+    const model = this.config.model || 'gemini-2.5-flash-preview-05-20';
 
     // Convert messages to Gemini format
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
