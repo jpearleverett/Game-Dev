@@ -12,7 +12,7 @@ const LLM_CONFIG_KEY = 'detective_portrait_llm_config';
 // Default configuration - using Gemini
 const DEFAULT_CONFIG = {
   provider: 'gemini',
-  model: 'gemini-2.5-flash-preview-05-20', // Latest Gemini 2.5 Flash
+  model: 'gemini-2.5-flash-preview-09-2025', // Gemini 2.5 Flash
   apiKey: null,
   baseUrl: null, // For custom endpoints
   maxRetries: 3,

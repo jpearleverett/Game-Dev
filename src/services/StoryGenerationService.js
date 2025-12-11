@@ -73,6 +73,18 @@ CRITICAL REQUIREMENTS:
 5. Build tension progressively toward the final chapter
 6. Every character action must have clear motivation
 
+WRITING STYLE RULES - AVOID THESE AI TELLS:
+- Never use em dashes (—). Use commas, periods, or semicolons instead.
+- Never use "X is not just Y, it's Z" framing or similar constructions
+- Avoid "In a world where..." or "Little did he know..." openings
+- Do not use "I couldn't help but..." or "I found myself..."
+- Avoid starting sentences with "And" or "But" excessively
+- Do not use flowery adverbs like "seemingly," "interestingly," "notably"
+- Avoid the word "delve" or "unravel"
+- Do not use "a testament to" or "serves as a reminder"
+- Write with confidence. No hedging phrases like "It seems" or "Perhaps"
+- Keep metaphors grounded and noir-appropriate, not overwrought
+
 PACING GUIDE (12 chapters total):
 - Chapters 2-4: Rising action, investigate leads, uncover clues
 - Chapters 5-7: Complications, betrayals revealed, stakes escalate
