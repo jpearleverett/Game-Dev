@@ -36,6 +36,94 @@ const TARGET_WORDS = GENERATION_CONFIG.wordCount.target;
 const DECISION_SUBCHAPTER = 3;
 
 // ============================================================================
+// JSON SCHEMAS FOR STRUCTURED OUTPUT
+// These schemas force Gemini to return valid JSON, eliminating parse errors
+// ============================================================================
+
+/**
+ * Schema for regular subchapters (no decision point)
+ */
+const STORY_CONTENT_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Evocative chapter title, 2-5 words, noir style',
+    },
+    bridge: {
+      type: 'string',
+      description: 'One compelling sentence hook for this subchapter',
+    },
+    narrative: {
+      type: 'string',
+      description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words',
+    },
+    consistencyFacts: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
+    },
+  },
+  required: ['title', 'bridge', 'narrative', 'consistencyFacts'],
+};
+
+/**
+ * Schema for decision point subchapters (end of each chapter)
+ */
+const DECISION_CONTENT_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Evocative chapter title, 2-5 words, noir style',
+    },
+    bridge: {
+      type: 'string',
+      description: 'One compelling sentence hook for this subchapter',
+    },
+    narrative: {
+      type: 'string',
+      description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words, ending at a critical decision moment',
+    },
+    consistencyFacts: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
+    },
+    decision: {
+      type: 'object',
+      description: 'The binary choice presented to the player',
+      properties: {
+        intro: {
+          type: 'string',
+          description: '1-2 sentences framing the impossible choice Jack faces',
+        },
+        optionA: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "A"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            focus: { type: 'string', description: 'What this path prioritizes and what it risks' },
+          },
+          required: ['key', 'title', 'focus'],
+        },
+        optionB: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "B"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            focus: { type: 'string', description: 'What this path prioritizes and what it risks' },
+          },
+          required: ['key', 'title', 'focus'],
+        },
+      },
+      required: ['intro', 'optionA', 'optionB'],
+    },
+  },
+  required: ['title', 'bridge', 'narrative', 'consistencyFacts', 'decision'],
+};
+
+// ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
 // ============================================================================
 const MASTER_SYSTEM_PROMPT = `You are writing "The Detective Portrait," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
@@ -71,27 +159,13 @@ NEVER use:
 - Hedging: "It seems," "Perhaps," "Maybe," "It appears"
 - Summarizing what just happened instead of showing the next scene
 
-## OUTPUT STRUCTURE
-Every response must follow this exact format:
-
-[TITLE]
-A evocative chapter title (2-5 words)
-[/TITLE]
-
-[BRIDGE]
-One compelling sentence hook for this subchapter
-[/BRIDGE]
-
-[NARRATIVE]
-Your full narrative prose here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
-[/NARRATIVE]
-
-[CONSISTENCY_CHECK]
-List 3-5 facts from your narrative that must remain consistent:
-- Fact 1
-- Fact 2
-- etc.
-[/CONSISTENCY_CHECK]`;
+## OUTPUT REQUIREMENTS
+Your response will be structured as JSON (enforced by schema). Focus on:
+- "title": Evocative 2-5 word noir chapter title
+- "bridge": One compelling sentence hook
+- "narrative": Your full prose (minimum ${MIN_WORDS_PER_SUBCHAPTER} words, aim for ${TARGET_WORDS})
+- "consistencyFacts": Array of 3-5 specific facts that must remain consistent
+- "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
 
 // ============================================================================
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
@@ -456,7 +530,7 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
       task += `
 
 ### DECISION POINT REQUIREMENTS
-This subchapter MUST end with a meaningful binary choice.
+This subchapter MUST end with a meaningful binary choice (included in the "decision" field).
 
 The decision should:
 1. Present TWO distinct paths (Option A and Option B)
@@ -465,16 +539,12 @@ The decision should:
 4. The choice must feel EARNED by the narrative, not forced
 5. Connect to the themes of wrongful conviction, certainty vs truth
 
-**Format your decision as:**
-[DECISION]
-INTRO: [1-2 sentences framing the impossible choice]
-OPTION_A_KEY: A
-OPTION_A_TITLE: [Action statement, imperative mood]
-OPTION_A_FOCUS: [What this path prioritizes/risks]
-OPTION_B_KEY: B
-OPTION_B_TITLE: [Action statement, imperative mood]
-OPTION_B_FOCUS: [What this path prioritizes/risks]
-[/DECISION]`;
+For the decision object:
+- intro: 1-2 sentences framing the impossible choice Jack faces
+- optionA.title: Action statement in imperative mood (e.g., "Confront Wade directly")
+- optionA.focus: What this path prioritizes and what it risks
+- optionB.title: Action statement in imperative mood (e.g., "Gather more evidence first")
+- optionB.focus: What this path prioritizes and what it risks`;
     }
 
     return task;
@@ -502,7 +572,7 @@ ${EXAMPLE_PASSAGES.tenseMoment}
 Before writing, confirm you will maintain these established facts:
 ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}
 
-After writing, you MUST include a [CONSISTENCY_CHECK] block listing 3-5 NEW facts from your narrative that future chapters must maintain.`;
+In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative that future chapters must maintain (e.g., "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case").`;
   }
 
   /**
@@ -581,24 +651,28 @@ After writing, you MUST include a [CONSISTENCY_CHECK] block listing 3-5 NEW fact
     // Build the prompt with all context
     const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
-    // Select appropriate temperature based on content type
+    // Select appropriate temperature and schema based on content type
     const temperature = isDecisionPoint
       ? GENERATION_CONFIG.temperature.decisions
       : GENERATION_CONFIG.temperature.narrative;
+    const responseSchema = isDecisionPoint
+      ? DECISION_CONTENT_SCHEMA
+      : STORY_CONTENT_SCHEMA;
 
     this.isGenerating = true;
     try {
-      // Primary generation
+      // Primary generation with structured output
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
           systemPrompt: MASTER_SYSTEM_PROMPT,
           temperature,
           maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+          responseSchema,
         }
       );
 
-      // Parse and validate the response
+      // Parse JSON response (guaranteed valid by schema)
       let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
 
       // Validate word count
@@ -674,80 +748,85 @@ After writing, you MUST include a [CONSISTENCY_CHECK] block listing 3-5 NEW fact
   // ==========================================================================
 
   /**
-   * Parse generated content with improved extraction
+   * Parse generated content from JSON response
+   * With structured output, Gemini guarantees valid JSON matching our schema
    */
   _parseGeneratedContent(content, isDecisionPoint) {
-    const result = {
-      title: 'Untitled',
-      bridgeText: '',
-      narrative: '',
-      decision: null,
-      consistencyFacts: [],
-    };
+    try {
+      // Parse JSON response (guaranteed valid by Gemini's structured output)
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
 
-    // Extract title
-    const titleMatch = content.match(/\[TITLE\]([\s\S]*?)\[\/TITLE\]/);
-    if (titleMatch) {
-      result.title = titleMatch[1].trim();
-    }
+      // Map JSON fields to internal format
+      const result = {
+        title: parsed.title || 'Untitled',
+        bridgeText: parsed.bridge || '',
+        narrative: this._cleanNarrative(parsed.narrative || ''),
+        consistencyFacts: Array.isArray(parsed.consistencyFacts) ? parsed.consistencyFacts : [],
+        decision: null,
+      };
 
-    // Extract bridge text
-    const bridgeMatch = content.match(/\[BRIDGE\]([\s\S]*?)\[\/BRIDGE\]/);
-    if (bridgeMatch) {
-      result.bridgeText = bridgeMatch[1].trim();
-    }
-
-    // Extract narrative
-    const narrativeMatch = content.match(/\[NARRATIVE\]([\s\S]*?)\[\/NARRATIVE\]/);
-    if (narrativeMatch) {
-      result.narrative = this._cleanNarrative(narrativeMatch[1].trim());
-    } else {
-      // Fallback: extract everything not in tags
-      result.narrative = this._cleanNarrative(
-        content
-          .replace(/\[TITLE\][\s\S]*?\[\/TITLE\]/g, '')
-          .replace(/\[BRIDGE\][\s\S]*?\[\/BRIDGE\]/g, '')
-          .replace(/\[DECISION\][\s\S]*?\[\/DECISION\]/g, '')
-          .replace(/\[CONSISTENCY_CHECK\][\s\S]*?\[\/CONSISTENCY_CHECK\]/g, '')
-          .trim()
-      );
-    }
-
-    // Extract consistency facts
-    const consistencyMatch = content.match(/\[CONSISTENCY_CHECK\]([\s\S]*?)\[\/CONSISTENCY_CHECK\]/);
-    if (consistencyMatch) {
-      const facts = consistencyMatch[1]
-        .split(/[-•]\s*/)
-        .map(f => f.trim())
-        .filter(f => f.length > 10);
-      result.consistencyFacts = facts;
-    }
-
-    // Extract decision if present
-    if (isDecisionPoint) {
-      const decisionMatch = content.match(/\[DECISION\]([\s\S]*?)\[\/DECISION\]/);
-      if (decisionMatch) {
-        result.decision = this._parseDecision(decisionMatch[1]);
+      // Convert decision format if present
+      if (isDecisionPoint && parsed.decision) {
+        result.decision = this._convertDecisionFormat(parsed.decision);
       }
-    }
 
-    return result;
+      return result;
+    } catch (error) {
+      // This should rarely happen with structured output, but provide fallback
+      console.error('[StoryGenerationService] JSON parse error:', error);
+      return {
+        title: 'Untitled',
+        bridgeText: '',
+        narrative: typeof content === 'string' ? this._cleanNarrative(content) : '',
+        consistencyFacts: [],
+        decision: null,
+      };
+    }
   }
 
   /**
-   * Clean narrative text of common LLM artifacts
+   * Convert JSON decision format to internal game format
+   */
+  _convertDecisionFormat(decision) {
+    return {
+      intro: [decision.intro || ''],
+      options: [
+        {
+          key: decision.optionA?.key || 'A',
+          title: decision.optionA?.title || 'Option A',
+          focus: decision.optionA?.focus || '',
+          consequence: null,
+          stats: null,
+          outcome: null,
+          nextChapter: null, // Will be set by game logic
+          nextPathKey: decision.optionA?.key || 'A',
+          details: [],
+        },
+        {
+          key: decision.optionB?.key || 'B',
+          title: decision.optionB?.title || 'Option B',
+          focus: decision.optionB?.focus || '',
+          consequence: null,
+          stats: null,
+          outcome: null,
+          nextChapter: null, // Will be set by game logic
+          nextPathKey: decision.optionB?.key || 'B',
+          details: [],
+        },
+      ],
+    };
+  }
+
+  /**
+   * Clean narrative text - minimal cleanup since structured output is clean
    */
   _cleanNarrative(text) {
+    if (!text) return '';
     return text
-      // Remove any remaining tags
-      .replace(/\[.*?\]/g, '')
       // Fix double spaces
       .replace(/\s{2,}/g, ' ')
-      // Remove em dashes (replace with comma or period based on context)
+      // Remove em dashes (replace with comma)
       .replace(/\s*—\s*/g, ', ')
-      // Remove any meta-commentary
-      .replace(/\(Note:.*?\)/gi, '')
-      .replace(/\[Author's note:.*?\]/gi, '')
       .trim();
   }
 
@@ -783,63 +862,6 @@ After writing, you MUST include a [CONSISTENCY_CHECK] block listing 3-5 NEW fact
       valid: issues.length === 0,
       issues,
     };
-  }
-
-  /**
-   * Parse decision block
-   */
-  _parseDecision(decisionText) {
-    const decision = {
-      intro: [],
-      options: [],
-    };
-
-    // Extract intro
-    const introMatch = decisionText.match(/INTRO:\s*(.+)/);
-    if (introMatch) {
-      decision.intro = [introMatch[1].trim()];
-    }
-
-    // Extract Option A
-    const optionAKey = decisionText.match(/OPTION_A_KEY:\s*(\w+)/)?.[1] || 'A';
-    const optionATitle = decisionText.match(/OPTION_A_TITLE:\s*(.+)/)?.[1]?.trim() || 'Option A';
-    const optionAFocus = decisionText.match(/OPTION_A_FOCUS:\s*(.+)/)?.[1]?.trim() || '';
-
-    // Extract Option B
-    const optionBKey = decisionText.match(/OPTION_B_KEY:\s*(\w+)/)?.[1] || 'B';
-    const optionBTitle = decisionText.match(/OPTION_B_TITLE:\s*(.+)/)?.[1]?.trim() || 'Option B';
-    const optionBFocus = decisionText.match(/OPTION_B_FOCUS:\s*(.+)/)?.[1]?.trim() || '';
-
-    // Get current chapter for nextChapter calculation
-    const chapterMatch = decisionText.match(/chapter\s*(\d+)/i);
-    const currentChapter = chapterMatch ? parseInt(chapterMatch[1]) : 2;
-
-    decision.options = [
-      {
-        key: optionAKey,
-        title: optionATitle,
-        focus: optionAFocus,
-        consequence: null,
-        stats: null,
-        outcome: null,
-        nextChapter: currentChapter + 1,
-        nextPathKey: optionAKey,
-        details: [],
-      },
-      {
-        key: optionBKey,
-        title: optionBTitle,
-        focus: optionBFocus,
-        consequence: null,
-        stats: null,
-        outcome: null,
-        nextChapter: currentChapter + 1,
-        nextPathKey: optionBKey,
-        details: [],
-      },
-    ];
-
-    return decision;
   }
 
   /**
