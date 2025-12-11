@@ -82,22 +82,21 @@ export function gameReducer(state, action) {
                     if (remainingOutliers === 0) {
                         return state;
                     }
-                    
-                    // For C subchapters with branching outliers (2 sets of 4 = 8 total),
+
+                    // For C subchapters (third subchapter of any chapter),
                     // allow up to 8 selections initially, decreasing as outliers are found
-                    const isBranchingCSubchapter = caseData?.caseNumber && 
-                                                   isBranchingSubchapter(caseData.caseNumber) && 
-                                                   uniqueOutliers.length === 8;
-                    
+                    const isThirdSubchapter = caseData?.caseNumber &&
+                                              isBranchingSubchapter(caseData.caseNumber);
+
                     let maxSelections;
-                    if (isBranchingCSubchapter) {
+                    if (isThirdSubchapter) {
                         // Start with 8, decrease by confirmed outliers, but don't exceed remaining outliers
                         maxSelections = Math.min(8 - state.confirmedOutliers.length, remainingOutliers);
                     } else {
                         // Regular case: limit to remaining outliers
                         maxSelections = remainingOutliers;
                     }
-                    
+
                     if (state.selectedWords.length >= maxSelections) {
                         return state;
                     }
