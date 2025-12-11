@@ -548,6 +548,7 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
   /**
    * Generate board data for the puzzle
    * Ensures all words are from the narrative with no duplicates
+   * For decision points, creates branchingOutlierSets with themed sets for each option
    */
   _generateBoardData(narrative, isDecisionPoint, decision) {
     // Extract meaningful words from narrative for the puzzle
@@ -585,7 +586,7 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       'SHADOW', 'TRUTH', 'LIE', 'NIGHT', 'RAIN', 'SMOKE', 'BLOOD', 'DEATH',
       'GUILT', 'ALIBI', 'CRIME', 'BADGE', 'CLUE', 'FEAR', 'DARK', 'NOIR',
       'VICE', 'DREAD', 'KNIFE', 'GLASS', 'BOOZE', 'DAME', 'GRIFT', 'HEIST',
-      'MOTIVE', 'ALIBI', 'CORPSE', 'VAULT', 'CHASE', 'BLIND', 'TRAIL', 'MARK',
+      'MOTIVE', 'CORPSE', 'VAULT', 'CHASE', 'BLIND', 'TRAIL', 'MARK',
       'SNITCH', 'BRASS', 'STREET', 'ALLEY', 'DOCK', 'PIER', 'WHARF', 'TORCH',
     ];
 
@@ -621,18 +622,68 @@ Your full narrative here (minimum ${MIN_WORDS_PER_SUBCHAPTER} words)
       grid.push(shuffledWords.slice(row * gridCols, (row + 1) * gridCols));
     }
 
-    // Create outlier theme
-    const themeName = this._determineTheme(outlierWords);
-
-    return {
+    // Build board result
+    const boardResult = {
       outlierWords: outlierWords.slice(0, isDecisionPoint ? 8 : 4),
       grid,
       outlierTheme: {
-        name: themeName,
+        name: this._determineTheme(outlierWords),
         icon: '\ud83d\udd0e',
         summary: narrative.substring(0, 100) + '...',
       },
     };
+
+    // For decision points, create branchingOutlierSets structure
+    // This is critical for EvidenceBoardScreen to display two colored sets
+    if (isDecisionPoint && decision?.options?.length >= 2) {
+      const set1Words = outlierWords.slice(0, 4);
+      const set2Words = outlierWords.slice(4, 8);
+
+      boardResult.branchingOutlierSets = [
+        {
+          optionKey: decision.options[0].key || 'A',
+          key: decision.options[0].key || 'A',
+          label: decision.options[0].key || 'A',
+          theme: {
+            name: this._truncateThemeName(decision.options[0].title) || 'PATH A',
+            icon: '\ud83d\udd34',
+            summary: decision.options[0].focus || decision.options[0].title || 'Option A',
+          },
+          words: set1Words,
+          descriptions: set1Words.reduce((acc, word) => {
+            acc[word] = `Related to: ${decision.options[0].title || 'Path A'}`;
+            return acc;
+          }, {}),
+        },
+        {
+          optionKey: decision.options[1].key || 'B',
+          key: decision.options[1].key || 'B',
+          label: decision.options[1].key || 'B',
+          theme: {
+            name: this._truncateThemeName(decision.options[1].title) || 'PATH B',
+            icon: '\ud83d\udd35',
+            summary: decision.options[1].focus || decision.options[1].title || 'Option B',
+          },
+          words: set2Words,
+          descriptions: set2Words.reduce((acc, word) => {
+            acc[word] = `Related to: ${decision.options[1].title || 'Path B'}`;
+            return acc;
+          }, {}),
+        },
+      ];
+    }
+
+    return boardResult;
+  }
+
+  /**
+   * Truncate theme name for display
+   */
+  _truncateThemeName(title) {
+    if (!title) return null;
+    // Extract first few meaningful words, max 12 chars
+    const words = title.split(/\s+/).slice(0, 2).join(' ');
+    return words.length > 12 ? words.slice(0, 12).toUpperCase() : words.toUpperCase();
   }
 
   /**
