@@ -137,31 +137,34 @@ export function generateBoardGrid(caseData) {
 
     const selectedMain = mainPool.slice(0, requiredMainCount);
     const combined = [...selectedMain, ...outlierWords];
-    let uniqueCombined = dedupeWords(combined);
+    const uniqueCombined = dedupeWords(combined);
 
+    // Use a Set for O(1) duplicate checking
+    const usedWords = new Set(uniqueCombined);
+
+    // If we need more words, try to fill from remaining mainPool and outlierWords
     if (uniqueCombined.length < totalSlots) {
-        const fallbackPool = [...mainPool, ...outlierWords].filter((word) => !uniqueCombined.includes(word));
-        for (let i = 0; i < fallbackPool.length && uniqueCombined.length < totalSlots; i += 1) {
-            uniqueCombined.push(fallbackPool[i]);
+        const allAvailable = [...mainPool, ...outlierWords];
+        for (const word of allAvailable) {
+            if (uniqueCombined.length >= totalSlots) break;
+            if (!usedWords.has(word)) {
+                uniqueCombined.push(word);
+                usedWords.add(word);
+            }
         }
     }
 
-    if (uniqueCombined.length > totalSlots) {
-        uniqueCombined = uniqueCombined.slice(0, totalSlots);
-    } else if (uniqueCombined.length < totalSlots && uniqueCombined.length) {
+    // If still not enough words, log a warning but don't add duplicates
+    if (uniqueCombined.length < totalSlots) {
         const deficit = totalSlots - uniqueCombined.length;
         console.warn(
-            `[GameContext] Case ${caseData?.id ?? 'unknown'} is missing ${deficit} words to fill the grid.`,
+            `[GameContext] Case ${caseData?.id ?? 'unknown'} is missing ${deficit} words to fill the grid. Cannot add duplicates.`,
         );
-        const fallbackPool = [...mainPool, ...outlierWords];
-        let index = 0;
-        while (uniqueCombined.length < totalSlots && fallbackPool.length) {
-            uniqueCombined.push(fallbackPool[index % fallbackPool.length]);
-            index += 1;
-        }
     }
 
-    const shuffled = shuffleArray(uniqueCombined).slice(0, totalSlots);
+    // Ensure we don't exceed totalSlots
+    const finalWords = uniqueCombined.slice(0, totalSlots);
+    const shuffled = shuffleArray(finalWords);
     const grid = [];
     for (let row = 0; row < profile.rows; row += 1) {
         grid.push(shuffled.slice(row * profile.columns, (row + 1) * profile.columns));
