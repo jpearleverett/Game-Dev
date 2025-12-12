@@ -43,9 +43,6 @@ export default function InteractivePolaroid({
     outputRange: [0, 1],
   });
 
-  const tapeAngle = useRef(Math.random() * 6 - 3).current; // Random tape angle +/- 3deg
-  const paperTexture = useRef(Math.random() > 0.5 ? 'coarse' : 'fine').current;
-
   const handlePress = () => {
     if (expanded) return; 
     setExpanded(true);
@@ -101,7 +98,7 @@ export default function InteractivePolaroid({
       >
         <Pressable onPress={handlePress} style={{ flex: 1 }}>
           <View style={[styles.polaroid, { transform: [{ rotate: `${entry.rotation}deg` }] }]}>
-            <View style={[styles.tapeTop, { transform: [{ rotate: `${tapeAngle}deg` }] }]} />
+            <View style={styles.tapeTop} />
             <View style={styles.imageWrapper}>
               <Image 
                 source={entry.image} 
@@ -109,8 +106,6 @@ export default function InteractivePolaroid({
                 contentFit="cover"
                 transition={200}
               />
-              {/* Gloss Sheen Overlay */}
-              <View style={styles.glossOverlay} />
             </View>
             <Text style={[styles.label, { fontSize: size * 0.075 }]} numberOfLines={2}>
               {entry.label}
@@ -171,56 +166,42 @@ const styles = StyleSheet.create({
   },
   polaroid: {
     flex: 1,
-    backgroundColor: '#f4f1ea', // Slightly warmer/aged paper
-    borderRadius: 2, // Sharper corners for realism
+    backgroundColor: '#fef9f0',
+    borderRadius: 4,
     padding: 6,
     justifyContent: 'flex-start',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    shadowOffset: { width: 1, height: 3 },
-    elevation: 6,
-    borderWidth: 0.5,
-    borderColor: 'rgba(0,0,0,0.1)',
+    shadowOpacity: 0.45,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
   tapeTop: {
     position: 'absolute',
-    top: -10,
-    left: '28%',
-    right: '28%',
-    height: 18,
-    backgroundColor: 'rgba(240, 230, 190, 0.6)', // More translucent
-    borderRadius: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    zIndex: 10,
+    top: -12,
+    left: '25%',
+    right: '25%',
+    height: 16,
+    backgroundColor: 'rgba(250, 236, 180, 0.85)',
+    borderRadius: 2,
+    transform: [{ rotate: '-2deg' }],
   },
   imageWrapper: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#0a0a0a',
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-  glossOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#1a1a1a',
+    marginBottom: 6,
   },
   image: {
     width: '100%',
     height: '100%',
-    opacity: 0.95, // Slight fade for age
   },
   label: {
-    fontFamily: 'CourierPrime_700Bold', // Handwriting feel if possible, otherwise Bold Mono
-    color: '#2a1a0a',
+    fontFamily: FONTS.mono,
+    color: '#3c2414',
     textAlign: 'center',
-    lineHeight: 14,
-    opacity: 0.85,
+    lineHeight: 12,
   },
   
   // Modal Styles
