@@ -66,6 +66,9 @@ export default function SecondaryButton({
       onPress={handlePress}
       onPressIn={handlePressIn}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.wrapper,
         responsiveStyles.wrapper,
