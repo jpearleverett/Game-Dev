@@ -18,6 +18,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { Audio } from 'expo-av';
 
 import ScreenSurface from "../components/ScreenSurface";
 import SecondaryButton from "../components/SecondaryButton";
@@ -62,6 +63,37 @@ export default function CaseFileScreen({
   const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
   const medium = sizeClass === "medium";
+
+  // Audio: Ambient Background
+  const [sound, setSound] = useState();
+
+  useEffect(() => {
+    let soundObject = null;
+    
+    async function loadAmbientSound() {
+      try {
+        // Unload any existing sound first if necessary
+        if (soundObject) await soundObject.unloadAsync();
+        
+        const { sound } = await Audio.Sound.createAsync(
+           require("../../assets/audio/music/menu-ambient.mp3"),
+           { isLooping: true, volume: 0.15, shouldPlay: true }
+        );
+        soundObject = sound;
+        setSound(sound);
+      } catch (error) {
+        console.log("Failed to load ambient sound", error);
+      }
+    }
+    
+    loadAmbientSound();
+    
+    return () => {
+       if (soundObject) {
+         soundObject.unloadAsync();
+       }
+    };
+  }, []);
 
   const storyUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const unlockTarget = storyUnlockAt || nextUnlockAt;

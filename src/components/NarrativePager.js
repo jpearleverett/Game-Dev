@@ -19,6 +19,7 @@ import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 
 const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
+const VIGNETTE_OVERLAY = require("../../assets/images/ui/backgrounds/vignette-overlay.png");
 const BINDER_RING_COUNT = 4;
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
@@ -83,7 +84,7 @@ export default function NarrativePager({
   const tapeWidth = Math.max(82, Math.round(scaleSpacing(compact ? SPACING.xxl : SPACING.xxl + SPACING.sm)));
 
   const narrativeSize = shrinkFont(moderateScale(FONT_SIZES.md));
-  const narrativeLineHeight = Math.round(narrativeSize * (compact ? 1.56 : 1.68));
+  const narrativeLineHeight = Math.round(narrativeSize * (compact ? 1.6 : 1.8));
   const slugSize = shrinkFont(moderateScale(FONT_SIZES.xs));
   const arrowSize = Math.max(40, Math.round(scaleSpacing(compact ? SPACING.xl : SPACING.xxl)));
   const arrowFontSize = Math.round(arrowSize * 0.48);
@@ -237,13 +238,15 @@ export default function NarrativePager({
 
         {/* Backgrounds */}
         <Image source={NOISE_TEXTURE} style={[styles.noise, { borderRadius: blockRadius }]} />
-        <LinearGradient
-          colors={["rgba(0, 0, 0, 0.12)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.32, y: 1 }}
-          style={[styles.gradient, { borderRadius: blockRadius }]}
+        <Image 
+          source={VIGNETTE_OVERLAY} 
+          style={[
+            styles.vignette, 
+            { borderRadius: blockRadius }
+          ]} 
+          resizeMode="stretch"
         />
-
+        
         {/* Decorative Tape */}
         <View style={[styles.tape, styles.tapeLeft, { width: tapeWidth * 0.68 }]} />
         <View style={[styles.tape, styles.tapeRight, { width: tapeWidth * 0.54 }]} />
@@ -290,7 +293,7 @@ export default function NarrativePager({
             style={{
               fontSize: narrativeSize,
               lineHeight: narrativeLineHeight,
-              fontFamily: FONTS.primary,
+              fontFamily: FONTS.mono,
               color: "#2b1a10",
             }}
           />
@@ -436,7 +439,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   page: {
-    backgroundColor: "#f2ebd9", // Aged paper
+    backgroundColor: "#f5eeda", // Richer cream/manila color
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
@@ -448,8 +451,12 @@ const styles = StyleSheet.create({
   },
   noise: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.15, // Increased texture visibility
+    opacity: 0.12, 
     resizeMode: "repeat",
+  },
+  vignette: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.6,
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,
