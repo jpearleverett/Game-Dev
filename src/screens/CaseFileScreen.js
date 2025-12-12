@@ -135,9 +135,12 @@ export default function CaseFileScreen({
   const boardTapeHeight = Math.max(18, Math.round(scaleSpacing(SPACING.sm) + 6));
   const boardTapeOffset = scaleSpacing(SPACING.xl);
 
-  // Typography Constants
-  const narrativeSize = shrinkFont(moderateScale(FONT_SIZES.md));
-  const narrativeLineHeight = Math.round(narrativeSize * (compact ? 1.56 : 1.68));
+  // Typography Constants - OPTIMIZED FOR READABILITY
+  // We switch to primary (WorkSans) or secondary (Playfair) for long form if desired, 
+  // but if we stick to mono, we need more space.
+  // Let's use a cleaner font for the main narrative to reduce eye strain.
+  const narrativeSize = shrinkFont(moderateScale(FONT_SIZES.md)); 
+  const narrativeLineHeight = Math.round(narrativeSize * 1.8); // Much more air
   const slugSize = shrinkFont(moderateScale(FONT_SIZES.xs));
   const footerLabelSize = shrinkFont(moderateScale(FONT_SIZES.xs));
   const footerValueSize = shrinkFont(moderateScale(compact ? FONT_SIZES.md : FONT_SIZES.lg));
@@ -692,19 +695,20 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
     borderWidth: 1,
-    borderColor: "rgba(40, 25, 15, 0.5)",
-    backgroundColor: "#1a120b",
+    borderColor: "rgba(20, 10, 5, 0.6)",
+    backgroundColor: "#0f0804",
+    // Deep, soft ambient occlusion shadow
     shadowColor: "#000",
-    shadowOpacity: 0.6,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 20 },
-    elevation: 24,
+    shadowOpacity: 0.75,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 25 },
+    elevation: 30,
   },
-  boardFrame: { flex: 1, width: "100%", position: "relative", overflow: "hidden", padding: 1 },
+  boardFrame: { flex: 1, width: "100%", position: "relative", overflow: "hidden", padding: 2 }, // Slightly thicker frame
   boardSurface: { flex: 1, width: "100%", position: "relative", overflow: "hidden" },
-  boardGlow: { position: "absolute", top: -120, left: -80, opacity: 0.5 },
-  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.04 },
-  boardCorner: { position: "absolute", width: 72, height: 72, opacity: 0.4 },
+  boardGlow: { position: "absolute", top: -120, left: -80, opacity: 0.4, filter: 'blur(40px)' }, // simulated blur
+  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.07 }, // Slightly more texture
+  boardCorner: { position: "absolute", width: 72, height: 72, opacity: 0.6 },
   boardCornerTl: { top: -4, left: -4 },
   boardCornerTr: { top: -4, right: -4, transform: [{ scaleX: -1 }] },
   boardCornerBl: { bottom: -4, left: -4, transform: [{ scaleY: -1 }] },
@@ -712,12 +716,14 @@ const styles = StyleSheet.create({
   boardContent: { position: "relative", width: "100%" },
   boardPin: {
     position: "absolute",
-    backgroundColor: "#7a2e24",
+    backgroundColor: "#9a3e34", // Richer red
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#4a150f",
+    borderColor: "rgba(0,0,0,0.3)",
+    // Pin head shadow
     shadowColor: "#000",
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
     shadowOffset: { width: 1, height: 2 },
     elevation: 8,
     zIndex: 4,
@@ -726,26 +732,26 @@ const styles = StyleSheet.create({
   boardPinRight: { right: "22%" },
   boardTape: {
     position: "absolute",
-    backgroundColor: "rgba(245, 230, 200, 0.85)",
+    backgroundColor: "rgba(235, 220, 190, 0.5)", // More transparent (cellophane feel)
     borderRadius: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
     zIndex: 3,
     overflow: 'hidden',
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    // Jagged edges simulated by not having borders on side
   },
   tapeGloss: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '40%',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.08)', // Subtle overall sheen
+    borderTopWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   boardTapeLeft: { left: "18%", transform: [{ rotate: "-9deg" }] },
   boardTapeRight: { right: "18%", transform: [{ rotate: "7deg" }] },

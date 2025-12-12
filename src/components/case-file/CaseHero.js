@@ -90,8 +90,9 @@ export default function CaseHero({ activeCase, compact }) {
               styles.caseNumber,
               {
                 fontSize: heroNumberSize,
-                color: "#5b3a24",
-                letterSpacing: compact ? 2.4 : 3.2,
+                color: "rgba(91, 58, 36, 0.85)", // Softer brown
+                letterSpacing: compact ? 2 : 3,
+                marginBottom: 4,
               },
             ]}
           >
@@ -102,15 +103,14 @@ export default function CaseHero({ activeCase, compact }) {
               styles.caseTitle,
               {
                 fontSize: heroTitleSize,
-                color: "#27160c",
-                letterSpacing: compact ? 3 : 4.2,
-                lineHeight: Math.round(heroTitleSize * (compact ? 1.08 : 1.12)),
+                color: "#1a120b", // Deep ink black
+                letterSpacing: 0.5, // Tighter for serif headings (classier)
+                lineHeight: Math.round(heroTitleSize * 1.1),
               },
             ]}
-            numberOfLines={1}
+            numberOfLines={2}
             adjustsFontSizeToFit
-            minimumFontScale={0.45}
-            lineBreakStrategyIOS="hangul-word"
+            minimumFontScale={0.6}
           >
             {activeCase?.title}
           </Text>
