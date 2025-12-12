@@ -150,14 +150,14 @@ export default function SettingsScreen({
                   <Pressable
                     style={[
                       styles.providerOption,
-                      geminiModel === 'gemini-3-pro-preview' && styles.providerOptionActive,
+                      geminiModel === 'gemini-2.5-pro-preview-06-05' && styles.providerOptionActive,
                     ]}
-                    onPress={() => setGeminiModel('gemini-3-pro-preview')}
+                    onPress={() => setGeminiModel('gemini-2.5-pro-preview-06-05')}
                   >
                     <Text style={[
                       styles.providerText,
-                      geminiModel === 'gemini-3-pro-preview' && styles.providerTextActive,
-                    ]}>3 Pro</Text>
+                      geminiModel === 'gemini-2.5-pro-preview-06-05' && styles.providerTextActive,
+                    ]}>2.5 Pro</Text>
                   </Pressable>
                   <Pressable
                     style={[

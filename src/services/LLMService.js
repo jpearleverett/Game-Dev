@@ -16,7 +16,7 @@ const DEFAULT_CONFIG = {
   apiKey: null,
   baseUrl: null, // For custom endpoints
   maxRetries: 3,
-  timeout: 90000, // 90 seconds for longer generations
+  timeout: 180000, // 180 seconds for longer story generations
 };
 
 class LLMService {
@@ -35,6 +35,14 @@ class LLMService {
       const savedConfig = await AsyncStorage.getItem(LLM_CONFIG_KEY);
       if (savedConfig) {
         this.config = { ...DEFAULT_CONFIG, ...JSON.parse(savedConfig) };
+
+        // Migrate invalid model names to valid ones
+        if (this.config.model === 'gemini-3-pro-preview') {
+          console.log('[LLMService] Migrating invalid model gemini-3-pro-preview to gemini-2.5-pro-preview-06-05');
+          this.config.model = 'gemini-2.5-pro-preview-06-05';
+          // Save the migrated config
+          await this.setConfig({ model: this.config.model });
+        }
       }
       this.initialized = true;
     } catch (error) {
@@ -191,7 +199,19 @@ class LLMService {
           throw new Error('Response blocked due to safety filters');
         }
 
-        const content = candidate.content?.parts?.[0]?.text || '';
+        // Check for truncated responses - this is critical for JSON responses
+        const finishReason = candidate.finishReason;
+        const isTruncated = finishReason === 'MAX_TOKENS' ||
+                           finishReason === 'LENGTH' ||
+                           finishReason === 'RECITATION';
+
+        let content = candidate.content?.parts?.[0]?.text || '';
+
+        // If response was truncated and we expect JSON, try to repair it
+        if (isTruncated && responseSchema) {
+          console.warn(`[LLMService] Response truncated (${finishReason}), attempting JSON repair...`);
+          content = this._repairTruncatedJson(content);
+        }
 
         return {
           content,
@@ -201,6 +221,8 @@ class LLMService {
             totalTokens: data.usageMetadata?.totalTokenCount,
           },
           model,
+          finishReason,
+          isTruncated,
         };
       } catch (error) {
         lastError = error;
@@ -267,6 +289,142 @@ class LLMService {
 
   _sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Attempt to repair truncated JSON responses
+   * This is critical for handling Gemini responses that exceed token limits
+   */
+  _repairTruncatedJson(content) {
+    if (!content || typeof content !== 'string') {
+      return content;
+    }
+
+    let json = content.trim();
+
+    // If it's already valid JSON, return as-is
+    try {
+      JSON.parse(json);
+      return json;
+    } catch {
+      // Continue with repair
+    }
+
+    // Count open/close brackets to determine what's missing
+    let openBraces = 0;
+    let openBrackets = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < json.length; i++) {
+      const char = json[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"' && !escapeNext) {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') openBraces++;
+        else if (char === '}') openBraces--;
+        else if (char === '[') openBrackets++;
+        else if (char === ']') openBrackets--;
+      }
+    }
+
+    // If we're inside a string, try to close it
+    if (inString) {
+      // Find the last quote and see if we can salvage the content
+      const lastQuoteIndex = json.lastIndexOf('"');
+      if (lastQuoteIndex > 0) {
+        // Check if the content before the last quote looks like a complete value
+        const beforeQuote = json.substring(0, lastQuoteIndex);
+        // Truncate to the last complete sentence or word
+        const truncatedNarrative = this._truncateToLastSentence(json.substring(json.lastIndexOf('narrative') + 12, lastQuoteIndex));
+        if (truncatedNarrative.length > 100) {
+          // Reconstruct with truncated narrative
+          const narrativeStart = json.lastIndexOf('"narrative"');
+          if (narrativeStart > 0) {
+            const narrativeValueStart = json.indexOf('"', narrativeStart + 11);
+            if (narrativeValueStart > 0) {
+              json = json.substring(0, narrativeValueStart + 1) + truncatedNarrative + '"';
+            }
+          }
+        } else {
+          json += '"';
+        }
+      } else {
+        json += '"';
+      }
+      inString = false;
+    }
+
+    // Remove any trailing commas before closing brackets
+    json = json.replace(/,\s*$/, '');
+
+    // Close any unclosed arrays and objects
+    // First, add any missing array closures
+    for (let i = 0; i < openBrackets; i++) {
+      // Check if we need to add empty array content
+      if (json.endsWith('[') || json.endsWith(',')) {
+        json = json.replace(/,\s*$/, '');
+      }
+      json += ']';
+    }
+
+    // Then close any unclosed objects
+    for (let i = 0; i < openBraces; i++) {
+      // Check if we need to clean up incomplete properties
+      if (json.endsWith(':') || json.endsWith(',')) {
+        json = json.replace(/[:,]\s*$/, '');
+      }
+      json += '}';
+    }
+
+    // Final cleanup: remove trailing commas before closing brackets/braces
+    json = json.replace(/,(\s*[\]}])/g, '$1');
+
+    // Verify the repaired JSON is valid
+    try {
+      JSON.parse(json);
+      console.log('[LLMService] JSON repair successful');
+      return json;
+    } catch (error) {
+      console.warn('[LLMService] JSON repair failed, returning original:', error.message);
+      // Return original content and let the parser handle the fallback
+      return content;
+    }
+  }
+
+  /**
+   * Truncate text to the last complete sentence
+   */
+  _truncateToLastSentence(text) {
+    if (!text) return '';
+
+    // Find the last sentence-ending punctuation
+    const lastPeriod = text.lastIndexOf('.');
+    const lastExclamation = text.lastIndexOf('!');
+    const lastQuestion = text.lastIndexOf('?');
+
+    const lastEnd = Math.max(lastPeriod, lastExclamation, lastQuestion);
+
+    if (lastEnd > text.length * 0.5) {
+      // Only truncate if we're keeping at least half the content
+      return text.substring(0, lastEnd + 1);
+    }
+
+    return text;
   }
 }
 
