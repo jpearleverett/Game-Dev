@@ -1,5 +1,5 @@
 const MAX_NARRATIVE_PAGE_CHARACTERS = 850;
-const PARAGRAPH_BREAK_WEIGHT = 50;
+const PARAGRAPH_BREAK_WEIGHT = 80;
 
 export function paginateNarrativeSegments(
   segments,
@@ -17,6 +17,7 @@ export function paginateNarrativeSegments(
     }
 
     const normalizedParagraphs = rawSegment
+      .replace(/\\n/g, "\n") // Handle escaped newlines from LLM JSON
       .replace(/\r/g, "")
       .split("\n")
       .map((line) => line.trim())

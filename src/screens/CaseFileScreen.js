@@ -18,6 +18,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { Audio } from 'expo-av';
 
 import ScreenSurface from "../components/ScreenSurface";
 import SecondaryButton from "../components/SecondaryButton";
@@ -62,6 +63,37 @@ export default function CaseFileScreen({
   const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
   const medium = sizeClass === "medium";
+
+  // Audio: Ambient Background
+  const [sound, setSound] = useState();
+
+  useEffect(() => {
+    let soundObject = null;
+    
+    async function loadAmbientSound() {
+      try {
+        // Unload any existing sound first if necessary
+        if (soundObject) await soundObject.unloadAsync();
+        
+        const { sound } = await Audio.Sound.createAsync(
+           require("../../assets/audio/music/menu-ambient.mp3"),
+           { isLooping: true, volume: 0.15, shouldPlay: true }
+        );
+        soundObject = sound;
+        setSound(sound);
+      } catch (error) {
+        console.log("Failed to load ambient sound", error);
+      }
+    }
+    
+    loadAmbientSound();
+    
+    return () => {
+       if (soundObject) {
+         soundObject.unloadAsync();
+       }
+    };
+  }, []);
 
   const storyUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const unlockTarget = storyUnlockAt || nextUnlockAt;
@@ -205,7 +237,11 @@ export default function CaseFileScreen({
     return [];
   }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords]);
 
-  const pageCharLimit = compact ? 620 : 900;
+  // Adjusted for Courier Prime (Monospace) + Increased Line Height
+  // Monospace is wider, so we need fewer characters per page to prevent overflow.
+  // We increased the paragraph break weight in pagination utility to account for vertical gaps,
+  // allowing us to be slightly more generous with the raw character limit here to fill pages better.
+  const pageCharLimit = compact ? 460 : 650;
   const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);
 
   // Game State Logic
