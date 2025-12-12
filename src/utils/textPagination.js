@@ -17,6 +17,7 @@ export function paginateNarrativeSegments(
     }
 
     const normalizedParagraphs = rawSegment
+      .replace(/\\n/g, "\n") // Handle escaped newlines from LLM JSON
       .replace(/\r/g, "")
       .split("\n")
       .map((line) => line.trim())

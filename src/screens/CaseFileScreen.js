@@ -237,7 +237,9 @@ export default function CaseFileScreen({
     return [];
   }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords]);
 
-  const pageCharLimit = compact ? 620 : 900;
+  // Adjusted for Courier Prime (Monospace) + Increased Line Height
+  // Monospace is wider, so we need fewer characters per page to prevent overflow.
+  const pageCharLimit = compact ? 400 : 580;
   const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);
 
   // Game State Logic
