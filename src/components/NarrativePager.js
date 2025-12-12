@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   noise: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0, 
+    opacity: 0.04, 
     resizeMode: "repeat",
   },
   vignette: {
