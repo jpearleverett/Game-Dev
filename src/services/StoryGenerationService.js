@@ -53,11 +53,11 @@ const STORY_CONTENT_SCHEMA = {
     },
     bridge: {
       type: 'string',
-      description: 'One compelling sentence hook for this subchapter',
+      description: 'One short, compelling sentence hook for this subchapter (max 15 words)',
     },
     previously: {
       type: 'string',
-      description: 'A 2-3 sentence recap of what happened in the previous subchapter, written in past tense from Jack perspective. Essential for continuity.',
+      description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), written in past tense from Jack\'s perspective.',
     },
     narrative: {
       type: 'string',
@@ -100,11 +100,11 @@ const DECISION_CONTENT_SCHEMA = {
     },
     bridge: {
       type: 'string',
-      description: 'One compelling sentence hook for this subchapter',
+      description: 'One short, compelling sentence hook for this subchapter (max 15 words)',
     },
     previously: {
       type: 'string',
-      description: 'A 2-3 sentence recap of what happened in the previous subchapter, written in past tense from Jack perspective. Essential for continuity.',
+      description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), written in past tense from Jack\'s perspective.',
     },
     narrative: {
       type: 'string',
@@ -203,8 +203,8 @@ NEVER use:
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
 - "title": Evocative 2-5 word noir chapter title
-- "bridge": One compelling sentence hook for this subchapter
-- "previously": 2-3 sentences recapping what just happened (from Jack's perspective, past tense)
+- "bridge": One short, compelling sentence hook (max 15 words)
+- "previously": Concise 1-2 sentence recap of what just happened (max 40 words, from Jack's perspective, past tense)
 - "narrative": Your full prose (minimum ${MIN_WORDS_PER_SUBCHAPTER} words, aim for ${TARGET_WORDS})
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
 - "consistencyFacts": Array of 3-5 specific facts that must remain consistent
