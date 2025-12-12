@@ -365,10 +365,10 @@ export const GENERATION_CONFIG = {
     expansion: 0.65,      // Conservative when expanding
   },
 
-  // Token limits
+  // Token limits - increased to prevent JSON truncation
   maxTokens: {
-    subchapter: 3500,     // Allow longer, richer content
-    expansion: 2000,
+    subchapter: 8192,     // Increased for complete JSON responses with narrative
+    expansion: 3000,
     validation: 500,
   },
 

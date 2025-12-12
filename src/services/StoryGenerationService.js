@@ -820,6 +820,7 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
   /**
    * Parse generated content from JSON response
    * With structured output, Gemini guarantees valid JSON matching our schema
+   * However, truncated responses may still produce invalid JSON
    */
   _parseGeneratedContent(content, isDecisionPoint) {
     try {
@@ -844,18 +845,198 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
 
       return result;
     } catch (error) {
-      // This should rarely happen with structured output, but provide fallback
+      // This can happen with truncated responses - try to extract what we can
       console.error('[StoryGenerationService] JSON parse error:', error);
+      console.log('[StoryGenerationService] Attempting to extract content from malformed JSON...');
+
+      // Try to extract partial content using regex
+      const extracted = this._extractPartialContent(content, isDecisionPoint);
+      if (extracted.narrative && extracted.narrative.length > 100) {
+        console.log('[StoryGenerationService] Successfully extracted partial content');
+        return extracted;
+      }
+
+      // Last resort: use the raw content as narrative
+      console.warn('[StoryGenerationService] Falling back to raw content as narrative');
       return {
         title: 'Untitled',
         bridgeText: '',
         previously: '',
-        narrative: typeof content === 'string' ? this._cleanNarrative(content) : '',
+        narrative: typeof content === 'string' ? this._cleanNarrative(this._extractNarrativeFromRaw(content)) : '',
         briefing: { summary: '', objectives: [] },
         consistencyFacts: [],
         decision: null,
       };
     }
+  }
+
+  /**
+   * Extract partial content from malformed JSON using regex patterns
+   */
+  _extractPartialContent(content, isDecisionPoint) {
+    const result = {
+      title: 'Untitled',
+      bridgeText: '',
+      previously: '',
+      narrative: '',
+      briefing: { summary: '', objectives: [] },
+      consistencyFacts: [],
+      decision: null,
+    };
+
+    if (typeof content !== 'string') {
+      return result;
+    }
+
+    // Try to extract title
+    const titleMatch = content.match(/"title"\s*:\s*"([^"]+)"/);
+    if (titleMatch) {
+      result.title = titleMatch[1];
+    }
+
+    // Try to extract bridge text
+    const bridgeMatch = content.match(/"bridge"\s*:\s*"([^"]+)"/);
+    if (bridgeMatch) {
+      result.bridgeText = bridgeMatch[1];
+    }
+
+    // Try to extract previously
+    const previouslyMatch = content.match(/"previously"\s*:\s*"([^"]+)"/);
+    if (previouslyMatch) {
+      result.previously = previouslyMatch[1];
+    }
+
+    // Try to extract narrative (this is the most important and likely longest field)
+    const narrativeMatch = content.match(/"narrative"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"|"\s*,\s*"briefing|"\s*,\s*"consistencyFacts|"\s*})/);
+    if (narrativeMatch) {
+      // Unescape the narrative content
+      let narrative = narrativeMatch[1];
+      // Handle escaped characters
+      narrative = narrative.replace(/\\n/g, '\n')
+                          .replace(/\\"/g, '"')
+                          .replace(/\\\\/g, '\\');
+      result.narrative = this._cleanNarrative(narrative);
+    } else {
+      // Try a more aggressive pattern for truncated narratives
+      const looseNarrativeMatch = content.match(/"narrative"\s*:\s*"([\s\S]{100,})/);
+      if (looseNarrativeMatch) {
+        let narrative = looseNarrativeMatch[1];
+        // Find the last complete sentence
+        const lastSentenceEnd = Math.max(
+          narrative.lastIndexOf('.'),
+          narrative.lastIndexOf('!'),
+          narrative.lastIndexOf('?')
+        );
+        if (lastSentenceEnd > narrative.length * 0.5) {
+          narrative = narrative.substring(0, lastSentenceEnd + 1);
+        }
+        narrative = narrative.replace(/\\n/g, '\n')
+                            .replace(/\\"/g, '"')
+                            .replace(/\\\\/g, '\\');
+        result.narrative = this._cleanNarrative(narrative);
+      }
+    }
+
+    // Try to extract briefing summary
+    const briefingSummaryMatch = content.match(/"summary"\s*:\s*"([^"]+)"/);
+    if (briefingSummaryMatch) {
+      result.briefing.summary = briefingSummaryMatch[1];
+    }
+
+    // Try to extract briefing objectives
+    const objectivesMatch = content.match(/"objectives"\s*:\s*\[([\s\S]*?)\]/);
+    if (objectivesMatch) {
+      const objectivesStr = objectivesMatch[1];
+      const objectives = objectivesStr.match(/"([^"]+)"/g);
+      if (objectives) {
+        result.briefing.objectives = objectives.map(o => o.replace(/"/g, ''));
+      }
+    }
+
+    // Try to extract decision for decision points
+    if (isDecisionPoint) {
+      const introMatch = content.match(/"intro"\s*:\s*"([^"]+)"/);
+      const optionATitleMatch = content.match(/"optionA"[\s\S]*?"title"\s*:\s*"([^"]+)"/);
+      const optionAFocusMatch = content.match(/"optionA"[\s\S]*?"focus"\s*:\s*"([^"]+)"/);
+      const optionBTitleMatch = content.match(/"optionB"[\s\S]*?"title"\s*:\s*"([^"]+)"/);
+      const optionBFocusMatch = content.match(/"optionB"[\s\S]*?"focus"\s*:\s*"([^"]+)"/);
+
+      if (introMatch && optionATitleMatch) {
+        result.decision = {
+          intro: [introMatch[1]],
+          options: [
+            {
+              key: 'A',
+              title: optionATitleMatch[1],
+              focus: optionAFocusMatch ? optionAFocusMatch[1] : '',
+              consequence: null,
+              stats: null,
+              outcome: null,
+              nextChapter: null,
+              nextPathKey: 'A',
+              details: [],
+            },
+            {
+              key: 'B',
+              title: optionBTitleMatch ? optionBTitleMatch[1] : 'Option B',
+              focus: optionBFocusMatch ? optionBFocusMatch[1] : '',
+              consequence: null,
+              stats: null,
+              outcome: null,
+              nextChapter: null,
+              nextPathKey: 'B',
+              details: [],
+            },
+          ],
+        };
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Extract narrative content from raw text when JSON parsing completely fails
+   */
+  _extractNarrativeFromRaw(content) {
+    if (typeof content !== 'string') return '';
+
+    // Remove JSON structure artifacts
+    let text = content;
+
+    // If it looks like it starts with JSON, try to extract the narrative value
+    if (text.includes('"narrative"')) {
+      const narrativeStart = text.indexOf('"narrative"');
+      const valueStart = text.indexOf('"', narrativeStart + 11) + 1;
+      if (valueStart > narrativeStart) {
+        text = text.substring(valueStart);
+        // Try to find the end of the narrative
+        const valueEnd = text.lastIndexOf('"');
+        if (valueEnd > 100) {
+          text = text.substring(0, valueEnd);
+        }
+      }
+    }
+
+    // Clean up escaped characters
+    text = text.replace(/\\n/g, '\n')
+               .replace(/\\"/g, '"')
+               .replace(/\\\\/g, '\\')
+               .replace(/^\{[\s\S]*?"narrative"\s*:\s*"/m, '')
+               .replace(/",[\s\S]*$/m, '');
+
+    // Find the last complete sentence to avoid cut-off text
+    const lastSentenceEnd = Math.max(
+      text.lastIndexOf('.'),
+      text.lastIndexOf('!'),
+      text.lastIndexOf('?')
+    );
+
+    if (lastSentenceEnd > text.length * 0.3) {
+      text = text.substring(0, lastSentenceEnd + 1);
+    }
+
+    return text.trim();
   }
 
   /**
