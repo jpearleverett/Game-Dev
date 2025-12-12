@@ -36,13 +36,6 @@ class LLMService {
       if (savedConfig) {
         this.config = { ...DEFAULT_CONFIG, ...JSON.parse(savedConfig) };
 
-        // Migrate invalid model names to valid ones
-        if (this.config.model === 'gemini-3-pro-preview') {
-          console.log('[LLMService] Migrating invalid model gemini-3-pro-preview to gemini-2.5-pro-preview-06-05');
-          this.config.model = 'gemini-2.5-pro-preview-06-05';
-          // Save the migrated config
-          await this.setConfig({ model: this.config.model });
-        }
       }
       this.initialized = true;
     } catch (error) {
@@ -112,22 +105,34 @@ class LLMService {
   /**
    * Google Gemini API completion
    * Supports structured output via responseSchema for guaranteed valid JSON responses
+   * Special handling for Gemini 3 models (temperature=1.0, thinkingConfig)
    */
   async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema }) {
     // Gemini API endpoint
     const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
     const model = this.config.model || 'gemini-2.5-flash-preview-05-20';
 
+    // Check if using Gemini 3 model
+    const isGemini3 = model.includes('gemini-3');
+
     // Convert messages to Gemini format
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
 
     // Build generation config
+    // For Gemini 3: Google strongly recommends temperature=1.0 to avoid looping/degraded performance
     const generationConfig = {
-      temperature,
+      temperature: isGemini3 ? 1.0 : temperature,
       maxOutputTokens: maxTokens,
       topP: 0.95,
       topK: 40,
     };
+
+    // Add thinking configuration for Gemini 3 (use "low" for faster responses)
+    if (isGemini3) {
+      generationConfig.thinkingConfig = {
+        thinkingLevel: 'low', // Minimize latency while still using Gemini 3 reasoning
+      };
+    }
 
     // Add structured output configuration if schema provided
     if (responseSchema) {
