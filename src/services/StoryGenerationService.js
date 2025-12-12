@@ -34,6 +34,7 @@ const SUBCHAPTERS_PER_CHAPTER = 3;
 const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum;
 const TARGET_WORDS = GENERATION_CONFIG.wordCount.target;
 const DECISION_SUBCHAPTER = 3;
+const MAX_RETRIES = 2;
 
 // ============================================================================
 // JSON SCHEMAS FOR STRUCTURED OUTPUT
@@ -729,10 +730,35 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
       }
 
       // Validate consistency (check for obvious violations)
-      const validationResult = this._validateConsistency(generatedContent, context);
+      let validationResult = this._validateConsistency(generatedContent, context);
+      let retries = 0;
+
+      while (!validationResult.valid && retries < MAX_RETRIES) {
+        console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
+
+        try {
+          generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
+
+          // Re-validate word count for the fixed content
+          const wordCount = generatedContent.narrative.split(/\s+/).length;
+          if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+            generatedContent.narrative = await this._expandNarrative(
+              generatedContent.narrative,
+              context,
+              TARGET_WORDS - wordCount
+            );
+          }
+
+          validationResult = this._validateConsistency(generatedContent, context);
+          retries++;
+        } catch (error) {
+          console.error('Error during content regeneration:', error);
+          break; // Stop retrying if generation fails
+        }
+      }
+
       if (!validationResult.valid) {
-        console.warn('Consistency warning:', validationResult.issues);
-        // In production, you might want to regenerate or fix issues
+        console.warn('Consistency warning (Unresolved):', validationResult.issues);
       }
 
       // Build the story entry
@@ -910,6 +936,38 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
       valid: issues.length === 0,
       issues,
     };
+  }
+
+  /**
+   * Attempt to fix content that failed validation
+   */
+  async _fixContent(content, issues, context, isDecisionPoint) {
+    const fixPrompt = `The following generated story content contains consistency violations that must be fixed.
+
+ISSUES TO FIX:
+${issues.map(i => `- ${i}`).join('\n')}
+
+Please rewrite the content to resolve these specific issues while maintaining the noir style, plot, and character voices. Ensure all names and facts are consistent.
+
+ORIGINAL CONTENT:
+${JSON.stringify(content, null, 2)}
+`;
+
+    const responseSchema = isDecisionPoint
+      ? DECISION_CONTENT_SCHEMA
+      : STORY_CONTENT_SCHEMA;
+
+    const response = await llmService.complete(
+      [{ role: 'user', content: fixPrompt }],
+      {
+        systemPrompt: 'You are an expert editor ensuring narrative consistency. Fix the issues in the provided content without changing the core story.',
+        temperature: GENERATION_CONFIG.temperature.narrative, // Use standard temperature
+        maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+        responseSchema,
+      }
+    );
+
+    return this._parseGeneratedContent(response.content, isDecisionPoint);
   }
 
   /**
