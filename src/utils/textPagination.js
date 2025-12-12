@@ -1,14 +1,12 @@
-const MAX_NARRATIVE_PAGE_CHARACTERS = 850;
-const PARAGRAPH_BREAK_WEIGHT = 80;
-
 export function paginateNarrativeSegments(
   segments,
-  maxCharacters = MAX_NARRATIVE_PAGE_CHARACTERS,
+  config = { charsPerLine: 42, linesPerPage: 18 }
 ) {
   if (!Array.isArray(segments) || !segments.length) {
     return [];
   }
 
+  const { charsPerLine = 42, linesPerPage = 18 } = config;
   const pages = [];
 
   segments.forEach((rawSegment, segmentIndex) => {
@@ -16,82 +14,92 @@ export function paginateNarrativeSegments(
       return;
     }
 
-    const normalizedParagraphs = rawSegment
-      .replace(/\\n/g, "\n") // Handle escaped newlines from LLM JSON
+    // 1. Normalize paragraphs
+    const paragraphs = rawSegment
+      .replace(/\\n/g, "\n")
       .replace(/\r/g, "")
       .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .reduce((acc, paragraph) => {
-        if (!paragraph) {
-          return acc;
-        }
+      .map(p => p.trim())
+      .filter(Boolean);
 
-        if (paragraph.length <= maxCharacters) {
-          acc.push(paragraph);
-          return acc;
-        }
+    if (!paragraphs.length) return;
 
-        let start = 0;
-        while (start < paragraph.length) {
-          let chunkEnd = Math.min(start + maxCharacters, paragraph.length);
-          if (chunkEnd < paragraph.length) {
-            const whitespaceIndex = paragraph.lastIndexOf(" ", chunkEnd);
-            if (whitespaceIndex > start + maxCharacters * 0.4) {
-              chunkEnd = whitespaceIndex;
-            }
-          }
-          const chunk = paragraph.slice(start, chunkEnd).trim();
-          if (!chunk) {
-            break;
-          }
-          acc.push(chunk);
-          start = chunkEnd;
-        }
-        return acc;
-      }, []);
+    // 2. Simulate line wrapping and pagination
+    const segmentPages = [];
+    let currentPageLines = [];
+    let currentLineCount = 0;
 
-    if (!normalizedParagraphs.length) {
-      return;
-    }
-
-    const pageParagraphs = [];
-    let currentPage = [];
-    let currentWeight = 0;
-
-    const flushCurrentPage = () => {
-      if (!currentPage.length) {
-        return;
+    const flushPage = () => {
+      if (currentPageLines.length > 0) {
+        segmentPages.push(currentPageLines.join("\n")); // Join lines with newline
+        currentPageLines = [];
+        currentLineCount = 0;
       }
-      pageParagraphs.push(currentPage.join("\n\n"));
-      currentPage = [];
-      currentWeight = 0;
     };
 
-    normalizedParagraphs.forEach((paragraph) => {
-      const isFirst = currentPage.length === 0;
-      const addedWeight = paragraph.length + (isFirst ? 0 : 2 + PARAGRAPH_BREAK_WEIGHT);
-
-      if (currentWeight + addedWeight <= maxCharacters || isFirst) {
-        currentPage.push(paragraph);
-        currentWeight += addedWeight;
-        return;
+    paragraphs.forEach((paragraph, pIndex) => {
+      // If this is not the first paragraph on the page, add a blank line for spacing
+      // BUT if we are at the top of a page, don't add spacing.
+      if (currentLineCount > 0) {
+         // Check if adding a blank line pushes us over
+         if (currentLineCount + 1 >= linesPerPage) {
+             flushPage();
+         } else {
+             currentPageLines.push(""); // Blank line for paragraph break
+             currentLineCount++;
+         }
       }
 
-      flushCurrentPage();
-      currentPage.push(paragraph);
-      currentWeight = paragraph.length;
+      const words = paragraph.split(" ");
+      let currentLineText = "";
+
+      words.forEach((word) => {
+        // Calculate length if we add this word
+        // If line is empty, length is just word. If not, add space + word.
+        const potentialLineLength = currentLineText.length > 0 
+            ? currentLineText.length + 1 + word.length 
+            : word.length;
+
+        if (potentialLineLength <= charsPerLine) {
+            currentLineText = currentLineText.length > 0 
+                ? currentLineText + " " + word 
+                : word;
+        } else {
+            // Line full, push it
+            currentPageLines.push(currentLineText);
+            currentLineCount++;
+            
+            // Start new line with current word
+            currentLineText = word;
+
+            // Check if page full
+            if (currentLineCount >= linesPerPage) {
+                flushPage();
+            }
+        }
+      });
+
+      // Push the last line of the paragraph
+      if (currentLineText.length > 0) {
+          currentPageLines.push(currentLineText);
+          currentLineCount++;
+          
+          if (currentLineCount >= linesPerPage) {
+              flushPage();
+          }
+      }
     });
 
-    flushCurrentPage();
+    flushPage();
 
-    pageParagraphs.forEach((pageText, pageIndex) => {
+    // 3. Map to result objects
+    segmentPages.forEach((pageText, pageIndex) => {
       pages.push({
         key: `${segmentIndex}-${pageIndex}`,
         text: pageText,
         segmentIndex,
         pageIndex,
-        totalPagesForSegment: pageParagraphs.length,
+        totalPagesForSegment: segmentPages.length,
       });
     });
   });

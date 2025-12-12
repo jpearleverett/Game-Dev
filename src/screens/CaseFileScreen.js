@@ -241,8 +241,11 @@ export default function CaseFileScreen({
   // Monospace is wider, so we need fewer characters per page to prevent overflow.
   // We increased the paragraph break weight in pagination utility to account for vertical gaps,
   // allowing us to be slightly more generous with the raw character limit here to fill pages better.
-  const pageCharLimit = compact ? 460 : 650;
-  const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);
+  const layoutConfig = useMemo(() => ({
+    charsPerLine: compact ? 34 : 42,
+    linesPerPage: compact ? 16 : 21,
+  }), [compact]);
+  const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, layoutConfig), [narrative, layoutConfig]);
 
   // Game State Logic
   const caseNumber = activeCase?.caseNumber;
@@ -700,7 +703,7 @@ const styles = StyleSheet.create({
   boardFrame: { flex: 1, width: "100%", position: "relative", overflow: "hidden", padding: 1 },
   boardSurface: { flex: 1, width: "100%", position: "relative", overflow: "hidden" },
   boardGlow: { position: "absolute", top: -120, left: -80, opacity: 0.5 },
-  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.08 },
+  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.04 },
   boardCorner: { position: "absolute", width: 72, height: 72, opacity: 0.4 },
   boardCornerTl: { top: -4, left: -4 },
   boardCornerTr: { top: -4, right: -4, transform: [{ scaleX: -1 }] },
