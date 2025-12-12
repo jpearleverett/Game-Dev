@@ -426,22 +426,41 @@ export default function CaseFileScreen({
             },
           ]}
         >
+          {/* Outer dark frame (The "Case" container) */}
           <LinearGradient
-            colors={["rgba(58, 36, 18, 0.96)", "rgba(28, 16, 8, 0.98)"]}
-            start={{ x: 0.12, y: 0 }}
-            end={{ x: 0.88, y: 1 }}
+            colors={["#2a1d15", "#1a120b", "#0f0804"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={[styles.boardFrame, { borderRadius: boardFrameRadius }]}
           >
+            {/* Inner "Cork/Wood" Surface */}
             <LinearGradient
-              colors={["#d9b78b", "#c68f57", "#ab6b34"]}
-              locations={[0, 0.55, 1]}
-              start={{ x: 0.15, y: 0 }}
-              end={{ x: 0.85, y: 1 }}
-              style={[styles.boardSurface, { borderRadius: boardRadius }]}
+              colors={["#e6cca5", "#d4b080", "#b08656"]}
+              locations={[0, 0.4, 1]}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+              style={[
+                styles.boardSurface, 
+                { 
+                  borderRadius: boardRadius,
+                  margin: 2, // Slight inset to show the frame
+                }
+              ]}
             >
-              {/* Board Visuals */}
+              {/* Board Visuals - Atmospheric Layers */}
               <View pointerEvents="none" style={[styles.boardGlow, { width: boardGlowSize, height: boardGlowSize, borderRadius: boardGlowSize, backgroundColor: palette.glow }]} />
+              
+              {/* Heavy Grain Texture */}
               <RNImage source={NOISE_TEXTURE} style={styles.boardNoise} resizeMode="repeat" pointerEvents="none" />
+              
+              {/* Vignette for depth */}
+              <LinearGradient
+                colors={["rgba(60, 40, 20, 0)", "rgba(40, 25, 10, 0.1)", "rgba(20, 10, 5, 0.3)"]}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+
+              {/* Decorative Corners */}
               <Image source={BOARD_CORNER_TL} style={[styles.boardCorner, styles.boardCornerTl]} pointerEvents="none" />
               <Image source={BOARD_CORNER_TR} style={[styles.boardCorner, styles.boardCornerTr]} pointerEvents="none" />
               <Image source={BOARD_CORNER_BL} style={[styles.boardCorner, styles.boardCornerBl]} pointerEvents="none" />
@@ -457,10 +476,17 @@ export default function CaseFileScreen({
                   },
                 ]}
               >
+                {/* Pins and Tape - Holding the file together */}
                 <View pointerEvents="none" style={[styles.boardPin, styles.boardPinLeft, { width: pinSize, height: pinSize, borderRadius: pinSize / 2, top: -pinOffset }]} />
                 <View pointerEvents="none" style={[styles.boardPin, styles.boardPinRight, { width: pinSize, height: pinSize, borderRadius: pinSize / 2, top: -pinOffset }]} />
-                <View pointerEvents="none" style={[styles.boardTape, styles.boardTapeLeft, { width: boardTapeWidth, height: boardTapeHeight, top: -boardTapeOffset }]} />
-                <View pointerEvents="none" style={[styles.boardTape, styles.boardTapeRight, { width: boardTapeWidth, height: boardTapeHeight, top: -boardTapeOffset * 0.72 }]} />
+                
+                {/* Realistic Tape */}
+                <View pointerEvents="none" style={[styles.boardTape, styles.boardTapeLeft, { width: boardTapeWidth, height: boardTapeHeight, top: -boardTapeOffset }]}>
+                    <View style={styles.tapeGloss} />
+                </View>
+                <View pointerEvents="none" style={[styles.boardTape, styles.boardTapeRight, { width: boardTapeWidth, height: boardTapeHeight, top: -boardTapeOffset * 0.72 }]}>
+                    <View style={styles.tapeGloss} />
+                </View>
 
                 {/* Hero Section */}
                 <CaseHero activeCase={activeCase} compact={compact} />
@@ -626,34 +652,34 @@ const styles = StyleSheet.create({
   boardWrapper: {
     position: "relative",
     overflow: "visible",
-    borderWidth: 2,
-    borderColor: "rgba(78, 50, 24, 0.82)",
-    backgroundColor: "rgba(22, 12, 6, 0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(40, 25, 15, 0.5)",
+    backgroundColor: "#1a120b",
     shadowColor: "#000",
-    shadowOpacity: 0.42,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 22,
+    shadowOpacity: 0.6,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 24,
   },
-  boardFrame: { flex: 1, width: "100%", position: "relative", overflow: "hidden" },
+  boardFrame: { flex: 1, width: "100%", position: "relative", overflow: "hidden", padding: 1 },
   boardSurface: { flex: 1, width: "100%", position: "relative", overflow: "hidden" },
-  boardGlow: { position: "absolute", top: -160, left: -120, opacity: 0.32 },
-  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.16 },
-  boardCorner: { position: "absolute", width: 72, height: 72, opacity: 0.24 },
-  boardCornerTl: { top: -10, left: -6 },
-  boardCornerTr: { top: -10, right: -6, transform: [{ scaleX: -1 }] },
-  boardCornerBl: { bottom: -10, left: -6, transform: [{ scaleY: -1 }] },
-  boardCornerBr: { bottom: -10, right: -6, transform: [{ scaleX: -1 }, { scaleY: -1 }] },
+  boardGlow: { position: "absolute", top: -120, left: -80, opacity: 0.5 },
+  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.08 },
+  boardCorner: { position: "absolute", width: 72, height: 72, opacity: 0.4 },
+  boardCornerTl: { top: -4, left: -4 },
+  boardCornerTr: { top: -4, right: -4, transform: [{ scaleX: -1 }] },
+  boardCornerBl: { bottom: -4, left: -4, transform: [{ scaleY: -1 }] },
+  boardCornerBr: { bottom: -4, right: -4, transform: [{ scaleX: -1 }, { scaleY: -1 }] },
   boardContent: { position: "relative", width: "100%" },
   boardPin: {
     position: "absolute",
-    backgroundColor: "#5a221b",
-    borderWidth: 2,
-    borderColor: "#2a0d0a",
+    backgroundColor: "#7a2e24",
+    borderWidth: 1,
+    borderColor: "#4a150f",
     shadowColor: "#000",
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    shadowOffset: { width: 1, height: 2 },
     elevation: 8,
     zIndex: 4,
   },
@@ -661,14 +687,26 @@ const styles = StyleSheet.create({
   boardPinRight: { right: "22%" },
   boardTape: {
     position: "absolute",
-    backgroundColor: "rgba(251, 229, 184, 0.92)",
-    borderRadius: 8,
+    backgroundColor: "rgba(245, 230, 200, 0.85)",
+    borderRadius: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 8,
     zIndex: 3,
+    overflow: 'hidden',
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  tapeGloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   boardTapeLeft: { left: "18%", transform: [{ rotate: "-9deg" }] },
   boardTapeRight: { right: "18%", transform: [{ rotate: "7deg" }] },
