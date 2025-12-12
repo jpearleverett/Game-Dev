@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Text, View, StyleSheet, Pressable, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Text, Pressable, View, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 
@@ -15,57 +15,128 @@ export default function TypewriterText({
 }) {
   const [displayedText, setDisplayedText] = useState('');
   const [cursorVisible, setCursorVisible] = useState(true);
-  const indexRef = useRef(0);
-  const timerRef = useRef(null);
-  const cursorTimerRef = useRef(null);
+
+  const requestRef = useRef();
+  const startTimeRef = useRef(null);
+  const lastRenderedIndexRef = useRef(0);
+
+  // Refs to hold latest values of props to avoid effect re-runs
+  const textRef = useRef(text);
+  const onCompleteRef = useRef(onComplete);
+  const speedRef = useRef(speed);
+
   const hapticThrottleRef = useRef(0);
+  const cursorTimerRef = useRef(null);
   
-  // Reset when text changes or activity status changes
+  // Update refs when props change
   useEffect(() => {
-    // If finished, show full text immediately and stop timers
+    textRef.current = text;
+    onCompleteRef.current = onComplete;
+    speedRef.current = speed;
+  }, [text, onComplete, speed]);
+
+  // Main Typing Logic
+  useEffect(() => {
+    // 1. If finished, show full text immediately
     if (isFinished) {
       setDisplayedText(text);
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
       return;
     }
 
-    // If not active, clear text and reset
+    // 2. If not active, clear and reset
     if (!isActive) {
       setDisplayedText('');
-      indexRef.current = 0;
-      if (timerRef.current) clearInterval(timerRef.current);
+      startTimeRef.current = null;
+      lastRenderedIndexRef.current = 0;
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
       return;
     }
 
-    // Starting a new sequence
+    // 3. Start typing sequence
     setDisplayedText('');
-    indexRef.current = 0;
+    lastRenderedIndexRef.current = 0;
+    startTimeRef.current = null;
     
-    const startTimer = setTimeout(() => {
-      startTyping();
-    }, delay);
-    
-    return () => {
-      clearTimeout(startTimer);
-      if (timerRef.current) clearInterval(timerRef.current);
+    let timeoutId;
+
+    const animate = () => {
+      const now = Date.now();
+      if (!startTimeRef.current) startTimeRef.current = now;
+
+      const elapsed = now - startTimeRef.current;
+      // Use current speed from ref
+      const targetIndex = Math.floor(elapsed / Math.max(1, speedRef.current));
+      const fullText = textRef.current;
+
+      // Check for completion
+      if (targetIndex >= fullText.length) {
+         setDisplayedText(fullText);
+         lastRenderedIndexRef.current = fullText.length;
+         onCompleteRef.current?.();
+         return; // Stop animation
+      }
+
+      // Only update if we advanced by at least one character
+      if (targetIndex > lastRenderedIndexRef.current) {
+         setDisplayedText(fullText.slice(0, targetIndex));
+
+         // Haptic Feedback (Throttled & Batch Aware)
+         const nowTime = Date.now();
+         if (nowTime - hapticThrottleRef.current > 70) {
+             let shouldHaptic = false;
+             // Check if any of the newly revealed characters trigger haptics
+             for (let i = lastRenderedIndexRef.current; i < targetIndex; i++) {
+                 const char = fullText[i];
+                 if (char === ' ' || i % 3 === 0) {
+                     shouldHaptic = true;
+                     break;
+                 }
+             }
+
+             if (shouldHaptic) {
+                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                 hapticThrottleRef.current = nowTime;
+             }
+         }
+
+         lastRenderedIndexRef.current = targetIndex;
+      }
+
+      requestRef.current = requestAnimationFrame(animate);
     };
+
+    // Initial delay before starting the loop
+    timeoutId = setTimeout(() => {
+      requestRef.current = requestAnimationFrame(animate);
+    }, delay);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+    // Dependencies:
+    // - text: if text changes, we want to restart.
+    // - isActive: if active status changes, restart/stop.
+    // - isFinished: if finished status changes, show full/reset.
+    // - delay: if delay changes, we restart (simplest safe behavior).
+    // NOT including onComplete or speed to prevent restarts on prop churn.
   }, [text, delay, isActive, isFinished]);
 
-  // Track whether typing is in progress
+  // Track if typing is in progress
   const isTyping = displayedText.length < text.length;
 
-  // Cursor blink effect - only run while actively typing
+  // Cursor blink effect
   useEffect(() => {
-    // Stop cursor blink if not active, finished, or done typing
     if (!isActive || isFinished || !isTyping) {
       if (cursorTimerRef.current) {
         clearInterval(cursorTimerRef.current);
         cursorTimerRef.current = null;
       }
+      setCursorVisible(true);
       return;
     }
 
-    // Only start cursor blink if actively typing
     cursorTimerRef.current = setInterval(() => {
       setCursorVisible((v) => !v);
     }, 500);
@@ -78,46 +149,17 @@ export default function TypewriterText({
     };
   }, [isActive, isFinished, isTyping]);
 
-  const startTyping = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    
-    timerRef.current = setInterval(() => {
-      if (indexRef.current < text.length) {
-        const char = text[indexRef.current];
-        indexRef.current += 1;
-        setDisplayedText(text.slice(0, indexRef.current));
-        
-        // Throttled Haptics
-        const now = Date.now();
-        if (now - hapticThrottleRef.current > 70) { // Max 14 hits per second
-             if (char === ' ' || indexRef.current % 3 === 0) {
-                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                 hapticThrottleRef.current = now;
-             }
-        }
-      } else {
-        if (timerRef.current) clearInterval(timerRef.current);
-        onComplete?.();
-      }
-    }, speed);
-  };
-
   const handlePress = () => {
     if (isTyping) {
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
         setDisplayedText(text);
-        indexRef.current = text.length; // Ensure we mark as done
-        onComplete?.();
+        lastRenderedIndexRef.current = text.length;
+        onCompleteRef.current?.();
     }
   };
 
-  // Show cursor only while actively typing
   const showCursor = isTyping && cursorVisible && isActive && !isFinished;
 
-  // Optimization: Single text node structure
-  // We use a transparent copy only if absolutely needed for layout, but here we can usually get away with just one.
-  // If layout jump is an issue, we can wrap in a View with minHeight.
-  
   if (inline) {
     return (
       <Text style={style}>
