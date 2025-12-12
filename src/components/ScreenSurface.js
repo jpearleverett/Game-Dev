@@ -15,9 +15,8 @@ const NOISE_TEXTURE = require('../../assets/images/ui/backgrounds/noise-texture.
 const VIGNETTE_TEXTURE = require('../../assets/images/ui/backgrounds/vignette-overlay.png');
 
 const GRADIENTS = {
-  // Richer, deeper gradients for better contrast
-  default: ['rgba(5, 6, 8, 0.98)', 'rgba(15, 17, 24, 0.95)', 'rgba(25, 28, 36, 0.92)'],
-  desk: ['rgba(5, 5, 5, 0.99)', 'rgba(18, 14, 10, 0.96)', 'rgba(30, 22, 16, 0.92)'], // Warmer deep brown/black for desk
+  default: ['rgba(5, 6, 8, 0.98)', 'rgba(11, 13, 18, 0.96)', 'rgba(17, 20, 28, 0.94)'],
+  desk: ['rgba(5, 6, 8, 0.98)', 'rgba(12, 15, 21, 0.96)', 'rgba(18, 22, 30, 0.94)'],
   bright: ['rgba(10, 12, 18, 0.96)', 'rgba(18, 21, 28, 0.94)', 'rgba(24, 28, 34, 0.92)'],
 };
 
@@ -151,19 +150,18 @@ const styles = StyleSheet.create({
   },
   vignetteOverlay: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.6, // Reduced opacity to not kill the new gradient details
-    backgroundColor: 'transparent', 
+    opacity: 0.85,
   },
     lightSweep: {
       position: 'absolute',
-      top: '-20%',
-      bottom: '-20%',
-      width: 300, // Wider beam
-      borderRadius: 150,
+      top: '-40%',
+      bottom: '-40%',
+      width: 220,
+      borderRadius: 220,
       opacity: 0,
       shadowColor: COLORS.accentSoft,
-      shadowOpacity: 0.5, // Softer glow
-      shadowRadius: 100, // More diffusion
+      shadowOpacity: 0.75,
+      shadowRadius: 85,
       shadowOffset: { width: 0, height: 0 },
     },
 });
