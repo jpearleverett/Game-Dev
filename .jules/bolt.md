@@ -1,0 +1,3 @@
+## 2024-05-23 - [TypewriterText Performance]
+**Learning:** `setInterval` with small delays (e.g. 8ms) for typewriter effects can overwhelm the JS thread, especially when causing state updates and re-renders.
+**Action:** Use a `requestAnimationFrame` loop that calculates the number of characters to display based on elapsed time. This decouples the "typing speed" from the "frame rate", ensuring the UI updates at a smooth 60fps (or whatever the device supports) while still respecting the desired text appearance speed. It also prevents "catching up" lag from stacking up thousands of state updates.
