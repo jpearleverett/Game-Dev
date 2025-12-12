@@ -1,5 +1,5 @@
 const MAX_NARRATIVE_PAGE_CHARACTERS = 850;
-const PARAGRAPH_BREAK_WEIGHT = 50;
+const PARAGRAPH_BREAK_WEIGHT = 80;
 
 export function paginateNarrativeSegments(
   segments,

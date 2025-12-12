@@ -239,7 +239,9 @@ export default function CaseFileScreen({
 
   // Adjusted for Courier Prime (Monospace) + Increased Line Height
   // Monospace is wider, so we need fewer characters per page to prevent overflow.
-  const pageCharLimit = compact ? 400 : 580;
+  // We increased the paragraph break weight in pagination utility to account for vertical gaps,
+  // allowing us to be slightly more generous with the raw character limit here to fill pages better.
+  const pageCharLimit = compact ? 460 : 650;
   const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);
 
   // Game State Logic
