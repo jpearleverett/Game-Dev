@@ -197,6 +197,42 @@ export function useStoryGeneration(storyCampaign) {
   }, [isConfigured]);
 
   /**
+   * Pre-generate the remaining subchapters of the current chapter (B and C)
+   * Called when player enters subchapter A to ensure B and C are ready
+   * when they finish reading and solving the puzzle for A
+   */
+  const pregenerateCurrentChapterSiblings = useCallback(async (chapter, pathKey, choiceHistory = []) => {
+    if (!isConfigured || chapter < 2) {
+      return;
+    }
+
+    // Generate subchapters B and C in background
+    const subchaptersToGenerate = ['B', 'C'];
+
+    for (const subLetter of subchaptersToGenerate) {
+      const caseNumber = `${String(chapter).padStart(3, '0')}${subLetter}`;
+      const needsGen = await needsGeneration(caseNumber, pathKey);
+
+      if (needsGen) {
+        // Generate in background without blocking
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
+
+        const subIndex = { 'B': 2, 'C': 3 }[subLetter];
+        storyGenerationService.generateSubchapter(chapter, subIndex, pathKey, choiceHistory)
+          .then(entry => {
+            if (entry) {
+              updateGeneratedCache(caseNumber, pathKey, entry);
+            }
+          })
+          .catch(err => {
+            console.warn(`Background generation failed for ${caseNumber}:`, err.message);
+          });
+      }
+    }
+  }, [isConfigured, needsGeneration]);
+
+  /**
    * Pre-generate upcoming content (call when player is likely to need it soon)
    * Generates for BOTH paths (A and B) to ensure cache hits regardless of player choice
    */
@@ -257,6 +293,7 @@ export function useStoryGeneration(storyCampaign) {
     generateForCase,
     generateChapter,
     pregenerate,
+    pregenerateCurrentChapterSiblings,
     cancelGeneration,
     clearError,
   };

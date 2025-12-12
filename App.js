@@ -93,7 +93,10 @@ function AppContent({ fontsReady }) {
   }
 
   // Determine if generation overlay should be visible
-  const showGenerationOverlay = storyGeneration?.isGenerating ||
+  // Only show for IMMEDIATE generation (blocking), NOT for background preloading
+  // This ensures the player never sees the loading screen during normal gameplay
+  const showGenerationOverlay =
+    storyGeneration?.awaitingGeneration || // Only when player is waiting for content they need NOW
     storyGeneration?.status === 'error' ||
     storyGeneration?.status === 'not_configured';
 

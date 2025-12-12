@@ -54,9 +54,29 @@ const STORY_CONTENT_SCHEMA = {
       type: 'string',
       description: 'One compelling sentence hook for this subchapter',
     },
+    previously: {
+      type: 'string',
+      description: 'A 2-3 sentence recap of what happened in the previous subchapter, written in past tense from Jack perspective. Essential for continuity.',
+    },
     narrative: {
       type: 'string',
       description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words',
+    },
+    briefing: {
+      type: 'object',
+      description: 'Mission briefing for the evidence board puzzle',
+      properties: {
+        summary: {
+          type: 'string',
+          description: 'One sentence objective for this subchapter, e.g., "Find the connection between the warehouse records and the missing witness."',
+        },
+        objectives: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '2-3 specific directives for the player, e.g., "Cross-reference the shipping manifests", "Identify the code words used"',
+        },
+      },
+      required: ['summary', 'objectives'],
     },
     consistencyFacts: {
       type: 'array',
@@ -64,7 +84,7 @@ const STORY_CONTENT_SCHEMA = {
       description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
     },
   },
-  required: ['title', 'bridge', 'narrative', 'consistencyFacts'],
+  required: ['title', 'bridge', 'previously', 'narrative', 'briefing', 'consistencyFacts'],
 };
 
 /**
@@ -81,9 +101,29 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       description: 'One compelling sentence hook for this subchapter',
     },
+    previously: {
+      type: 'string',
+      description: 'A 2-3 sentence recap of what happened in the previous subchapter, written in past tense from Jack perspective. Essential for continuity.',
+    },
     narrative: {
       type: 'string',
       description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words, ending at a critical decision moment',
+    },
+    briefing: {
+      type: 'object',
+      description: 'Mission briefing for the evidence board puzzle',
+      properties: {
+        summary: {
+          type: 'string',
+          description: 'One sentence objective for this subchapter, e.g., "Uncover the truth behind the conflicting testimonies."',
+        },
+        objectives: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '2-3 specific directives for the player, e.g., "Identify both paths forward", "Weigh the evidence for each choice"',
+        },
+      },
+      required: ['summary', 'objectives'],
     },
     consistencyFacts: {
       type: 'array',
@@ -120,7 +160,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['title', 'bridge', 'narrative', 'consistencyFacts', 'decision'],
+  required: ['title', 'bridge', 'previously', 'narrative', 'briefing', 'consistencyFacts', 'decision'],
 };
 
 // ============================================================================
@@ -162,8 +202,10 @@ NEVER use:
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
 - "title": Evocative 2-5 word noir chapter title
-- "bridge": One compelling sentence hook
+- "bridge": One compelling sentence hook for this subchapter
+- "previously": 2-3 sentences recapping what just happened (from Jack's perspective, past tense)
 - "narrative": Your full prose (minimum ${MIN_WORDS_PER_SUBCHAPTER} words, aim for ${TARGET_WORDS})
+- "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
 - "consistencyFacts": Array of 3-5 specific facts that must remain consistent
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
 
@@ -702,6 +744,8 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
         title: generatedContent.title,
         narrative: generatedContent.narrative,
         bridgeText: generatedContent.bridgeText,
+        previously: generatedContent.previously || '', // Recap of previous events
+        briefing: generatedContent.briefing || { summary: '', objectives: [] },
         decision: isDecisionPoint ? generatedContent.decision : null,
         board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision),
         consistencyFacts: generatedContent.consistencyFacts || [],
@@ -760,7 +804,9 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
       const result = {
         title: parsed.title || 'Untitled',
         bridgeText: parsed.bridge || '',
+        previously: parsed.previously || '', // Recap of previous events
         narrative: this._cleanNarrative(parsed.narrative || ''),
+        briefing: parsed.briefing || { summary: '', objectives: [] },
         consistencyFacts: Array.isArray(parsed.consistencyFacts) ? parsed.consistencyFacts : [],
         decision: null,
       };
@@ -777,7 +823,9 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
       return {
         title: 'Untitled',
         bridgeText: '',
+        previously: '',
         narrative: typeof content === 'string' ? this._cleanNarrative(content) : '',
+        briefing: { summary: '', objectives: [] },
         consistencyFacts: [],
         decision: null,
       };
