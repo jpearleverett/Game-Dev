@@ -20,7 +20,7 @@ import useResponsiveLayout from "../hooks/useResponsiveLayout";
 
 const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
 const VIGNETTE_OVERLAY = require("../../assets/images/ui/backgrounds/vignette-overlay.png");
-const BINDER_RING_COUNT = 3;
+const BINDER_RING_COUNT = 4;
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
@@ -294,10 +294,7 @@ export default function NarrativePager({
               fontSize: narrativeSize,
               lineHeight: narrativeLineHeight,
               fontFamily: FONTS.mono,
-              color: "#1a0f05", // Darker ink for better contrast
-              textShadowColor: "rgba(0, 0, 0, 0.1)",
-              textShadowOffset: { width: 0, height: 0.5 },
-              textShadowRadius: 1,
+              color: "#2b1a10",
             }}
           />
           {completedPages.has(index) && !isLastPage && (
@@ -442,7 +439,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   page: {
-    backgroundColor: "#faf6ea", // Lighter, cleaner cream color
+    backgroundColor: "#f5eeda", // Richer cream/manila color
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
@@ -454,7 +451,7 @@ const styles = StyleSheet.create({
   },
   noise: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.04, 
+    opacity: 0.12, 
     resizeMode: "repeat",
   },
   vignette: {
