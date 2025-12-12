@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import ConfettiCannon from "react-native-confetti-cannon";
+// import ConfettiCannon from "react-native-confetti-cannon"; // REMOVED: Too festive/cheap
+import SolvedStampAnimation from '../SolvedStampAnimation'; // Reusing/referencing logic from here for "Case Closed" feel
 
 import DecisionDossier from "../DecisionDossier";
 import { FONTS, FONT_SIZES } from '../../constants/typography';
@@ -204,16 +205,21 @@ export default function DecisionPanel({
 
       {celebrationActive ? (
         <View pointerEvents="none" style={styles.decisionConfettiLayer}>
-          <ConfettiCannon
-            count={72}
-            origin={confettiOrigin}
-            fadeOut
-            fallSpeed={2400}
-            explosionSpeed={360}
-            autoStart
-            colors={[palette.accent, "#ffe1a0", "#ff9a62", "#8ad9ff", "#f5c8ff"]}
-            onAnimationEnd={() => setCelebrationActive(false)}
-          />
+           {/* REPLACEMENT: Dramatic Stamp Animation overlay */}
+           <View style={styles.stampOverlay}>
+              <Animated.View style={[
+                  styles.stampCircle,
+                  {
+                      transform: [
+                          { scale: lockCelebrationScale },
+                          { rotate: '-12deg' }
+                      ],
+                      opacity: lockCelebrationOpacity
+                  }
+              ]}>
+                  <Text style={styles.stampText}>FILED</Text>
+              </Animated.View>
+           </View>
         </View>
       ) : null}
     </View>
@@ -226,6 +232,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: "rgba(8, 4, 2, 0.94)",
     overflow: "hidden",
+  },
+  // ... existing styles ...
+  stampOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)', // Dim background to focus on stamp
+  },
+  stampCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 8,
+    borderColor: '#d32f2f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(211, 47, 47, 0.1)',
+    shadowColor: '#d32f2f',
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  stampText: {
+    fontFamily: FONTS.secondaryBold,
+    fontSize: 48,
+    color: '#d32f2f',
+    letterSpacing: 4,
+    fontWeight: '900',
   },
   decisionHeaderRow: {
     flexDirection: "row",
