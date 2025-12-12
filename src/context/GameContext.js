@@ -93,6 +93,7 @@ export function GameProvider({ children }) {
     generateForCase,
     generateChapter,
     pregenerate,
+    pregenerateCurrentChapterSiblings,
     cancelGeneration,
     clearError: clearGenerationError,
   } = useStoryGeneration(storyCampaign);
@@ -192,10 +193,15 @@ export function GameProvider({ children }) {
           // Analytics
           analytics.logLevelStart(targetCase.id, 'story', pathKey);
 
-          // Pre-generate next chapter in background (only at start of chapter, i.e., subchapter A)
+          // Pre-generate content in background (only at start of chapter, i.e., subchapter A)
           // This prevents duplicate pregeneration when activating B and C subchapters
           const { chapter, subchapter } = parseCaseNumber(caseNumber);
           if (chapter < 12 && hasFirstDecision && subchapter === 1) {
+            // Generate B and C of current chapter while player reads A and solves the puzzle
+            // This gives us 6-23 minutes of gameplay time to generate in background
+            pregenerateCurrentChapterSiblings(chapter, pathKey, storyCampaign?.choiceHistory || []);
+
+            // Also pregenerate the next chapter (for both decision paths)
             pregenerate(chapter, pathKey, storyCampaign?.choiceHistory || []);
           }
 
@@ -212,7 +218,7 @@ export function GameProvider({ children }) {
       return { ok: true, caseId: targetCase.id };
 
     },
-    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey, ensureStoryContent, pregenerate, storyCampaign?.choiceHistory]
+    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey, ensureStoryContent, pregenerate, pregenerateCurrentChapterSiblings, storyCampaign?.choiceHistory]
   );
 
   // Helper to parse case number (imported from storyContent)
