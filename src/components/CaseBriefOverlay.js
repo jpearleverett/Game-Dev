@@ -51,9 +51,11 @@ export default function CaseBriefOverlay({
 
   const content = useMemo(() => {
     if (!caseData) return null;
-    
-    // Recap logic
-    const recapText = caseData.dailyIntro || '';
+
+    // Recap logic - prefer generated 'previously' field, fall back to dailyIntro
+    // storyMeta contains the generated content when in story mode
+    const storyMeta = caseData.storyMeta || caseData;
+    const recapText = storyMeta.previously || caseData.dailyIntro || '';
     const cleanRecap = recapText
         .replace(/PREVIOUSLY:/i, '')
         .trim()
@@ -61,13 +63,14 @@ export default function CaseBriefOverlay({
         .slice(0, 3) // Keep it short
         .join('\n');
 
-    // Objectives
-    const objectives = caseData.briefing?.objectives || [];
-    const summary = caseData.briefing?.summary || 'Review the evidence board. Identify the outliers.';
+    // Objectives and summary - prefer generated briefing, fall back to static briefing
+    const briefing = storyMeta.briefing || caseData.briefing || {};
+    const objectives = briefing.objectives || [];
+    const summary = briefing.summary || '';
 
     return {
       caseNumber: caseData.caseNumber || '---',
-      title: caseData.title || 'Classified',
+      title: storyMeta.title || caseData.title || 'Classified',
       recap: cleanRecap,
       summary,
       objectives,

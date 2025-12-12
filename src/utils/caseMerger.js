@@ -95,13 +95,26 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
         },
     };
 
-    // 6. Merge Story Metadata (Narrative, Polaroids)
+    // 6. Merge Story Metadata (Narrative, Polaroids, Briefing)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
         merged.storyDecision = storyMeta.decision || null;
         merged.narrative = storyMeta.narrative ? [storyMeta.narrative] : merged.narrative;
         merged.bridgeText = storyMeta.bridgeText ? [storyMeta.bridgeText] : merged.bridgeText;
-        
+
+        // Merge generated 'previously' text for recap sections
+        if (storyMeta.previously) {
+            merged.previously = storyMeta.previously;
+        }
+
+        // Merge generated briefing for mission objectives
+        if (storyMeta.briefing) {
+            merged.briefing = {
+                ...(merged.briefing || {}),
+                ...storyMeta.briefing,
+            };
+        }
+
         // IMPORTANT: Narrative evidenceBoard (Polaroids) overrides the static one
         if (storyMeta.evidenceBoard) {
             merged.evidenceBoard = storyMeta.evidenceBoard;
@@ -199,12 +212,25 @@ export async function mergeCaseWithStoryAsync(baseCase, storyCampaign, getStoryE
         },
     };
 
-    // 6. Merge Story Metadata
+    // 6. Merge Story Metadata (Narrative, Polaroids, Briefing)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
         merged.storyDecision = storyMeta.decision || null;
         merged.narrative = storyMeta.narrative ? [storyMeta.narrative] : merged.narrative;
         merged.bridgeText = storyMeta.bridgeText ? [storyMeta.bridgeText] : merged.bridgeText;
+
+        // Merge generated 'previously' text for recap sections
+        if (storyMeta.previously) {
+            merged.previously = storyMeta.previously;
+        }
+
+        // Merge generated briefing for mission objectives
+        if (storyMeta.briefing) {
+            merged.briefing = {
+                ...(merged.briefing || {}),
+                ...storyMeta.briefing,
+            };
+        }
 
         if (storyMeta.evidenceBoard) {
             merged.evidenceBoard = storyMeta.evidenceBoard;
