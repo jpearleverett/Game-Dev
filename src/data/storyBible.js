@@ -245,8 +245,8 @@ export const STORY_STRUCTURE = {
 // ============================================================================
 export const WRITING_STYLE = {
   voice: {
-    perspective: 'First person, Jack Halloway',
-    tense: 'Present tense',
+    perspective: 'Third person, Jack Halloway',
+    tense: 'Past tense',
     tone: 'Hard-boiled noir, world-weary, introspective',
   },
 
