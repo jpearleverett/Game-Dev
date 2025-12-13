@@ -38,7 +38,7 @@ import {
   parseDailyIntro,
   splitSummaryLines,
 } from "../utils/caseFileHelpers";
-import { paginateNarrativeSegments } from "../utils/textPagination";
+import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
 
 const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
 const BOARD_CORNER_TL = require("../../assets/images/ui/decorative/corner-ornament-tl.png");
@@ -60,7 +60,7 @@ export default function CaseFileScreen({
   onContinueStory,
   onReturnHome,
 }) {
-  const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
+  const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
   const medium = sizeClass === "medium";
 
@@ -237,12 +237,32 @@ export default function CaseFileScreen({
     return [];
   }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords]);
 
-  // Adjusted for Courier Prime (Monospace) + Increased Line Height
-  // Monospace is wider, so we need fewer characters per page to prevent overflow.
-  // We increased the paragraph break weight in pagination utility to account for vertical gaps,
-  // allowing us to be slightly more generous with the raw character limit here to fill pages better.
-  const pageCharLimit = compact ? 460 : 650;
-  const narrativePages = useMemo(() => paginateNarrativeSegments(narrative, pageCharLimit), [narrative, pageCharLimit]);
+  // Calculate pagination parameters based on actual page dimensions and typography.
+  // This uses line-based pagination to prevent text cutoff at the bottom of pages.
+  const pageHeight = Math.round(moderateScale(compact ? 450 : 540));
+
+  // Calculate page width by subtracting all container paddings from screen width
+  // Screen → horizontalPadding → boardContentPaddingH → sectionPaddingH → pagePaddingH
+  const sectionPaddingH = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
+  const pagePaddingH = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const pagePaddingV = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const totalHorizontalPadding = (horizontalPadding + boardContentPaddingH + sectionPaddingH + pagePaddingH) * 2;
+  const estimatedPageWidth = Math.max(200, screenWidth - totalHorizontalPadding);
+
+  const paginationParams = useMemo(() => calculatePaginationParams({
+    pageHeight,
+    pageWidth: estimatedPageWidth,
+    fontSize: narrativeSize,
+    lineHeight: narrativeLineHeight,
+    verticalPadding: pagePaddingV * 2 + scaleSpacing(SPACING.md), // top + bottom + extra bottom
+    labelHeight: 28, // Journal entry label height
+    bottomReserved: scaleSpacing(SPACING.xxl) + 24, // ScrollView padding + page stamp
+  }), [pageHeight, estimatedPageWidth, narrativeSize, narrativeLineHeight, pagePaddingV, scaleSpacing]);
+
+  const narrativePages = useMemo(
+    () => paginateNarrativeSegments(narrative, paginationParams),
+    [narrative, paginationParams]
+  );
 
   // Game State Logic
   const caseNumber = activeCase?.caseNumber;
