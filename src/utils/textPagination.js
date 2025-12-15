@@ -2,10 +2,6 @@
 const DEFAULT_MAX_LINES = 12;
 const DEFAULT_CHARS_PER_LINE = 30;
 
-// Paragraph break consumes vertical space equivalent to ~1.25 lines
-// (tighter spacing to fill pages better while maintaining readability)
-const PARAGRAPH_BREAK_LINE_COST = 1.25;
-
 // Monospace font character width is approximately 0.6x the font size
 const MONOSPACE_CHAR_WIDTH_RATIO = 0.6;
 
@@ -35,9 +31,8 @@ export function calculatePaginationParams({
   // Calculate available height for text content
   const availableHeight = pageHeight - verticalPadding - labelHeight - bottomReserved;
 
-  // Calculate max lines that fit (with a small safety margin)
-  // Use 96% of available space to fill pages better while preventing cutoff
-  const maxLinesPerPage = Math.max(6, Math.floor((availableHeight / lineHeight) * 0.96));
+  // Calculate max lines that fit - use full capacity since we'll fill to the line
+  const maxLinesPerPage = Math.max(6, Math.floor(availableHeight / lineHeight));
 
   // Calculate characters per line based on available width and monospace font
   const charWidth = fontSize * MONOSPACE_CHAR_WIDTH_RATIO;
@@ -49,60 +44,56 @@ export function calculatePaginationParams({
 }
 
 /**
- * Estimates how many visual lines a paragraph will occupy when rendered.
- * Uses word-wrap simulation to get accurate line counts.
+ * Wraps text into visual lines based on available width.
+ * Returns an array of line strings.
  */
-function estimateParagraphLines(text, charsPerLine) {
-  if (!text || charsPerLine <= 0) return 1;
+function wrapTextToLines(text, charsPerLine) {
+  if (!text || charsPerLine <= 0) return [''];
 
   const words = text.split(/\s+/).filter(Boolean);
-  if (!words.length) return 1;
+  if (!words.length) return [''];
 
-  let lines = 1;
-  let currentLineLength = 0;
+  const lines = [];
+  let currentLine = '';
 
   for (const word of words) {
-    const wordLength = word.length;
-
-    // If word alone exceeds line width, it will wrap onto multiple lines
-    if (wordLength > charsPerLine) {
-      if (currentLineLength > 0) {
-        lines++; // Start new line for long word
+    // Handle words longer than line width
+    if (word.length > charsPerLine) {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = '';
       }
-      lines += Math.ceil(wordLength / charsPerLine) - 1;
-      currentLineLength = wordLength % charsPerLine || charsPerLine;
+      // Break long word across lines
+      let remaining = word;
+      while (remaining.length > charsPerLine) {
+        lines.push(remaining.slice(0, charsPerLine));
+        remaining = remaining.slice(charsPerLine);
+      }
+      currentLine = remaining;
       continue;
     }
 
-    // Check if word fits on current line (account for space between words)
-    const spaceNeeded = currentLineLength > 0 ? 1 : 0;
-    if (currentLineLength + spaceNeeded + wordLength > charsPerLine) {
-      lines++;
-      currentLineLength = wordLength;
+    const separator = currentLine ? ' ' : '';
+    if ((currentLine + separator + word).length <= charsPerLine) {
+      currentLine += separator + word;
     } else {
-      currentLineLength += spaceNeeded + wordLength;
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
     }
   }
 
-  return lines;
+  if (currentLine) lines.push(currentLine);
+  return lines.length ? lines : [''];
 }
 
-// Soft overflow tolerance - allow slightly exceeding target for better page fill
-// This prevents awkward page breaks when just 1-2 lines over
-const SOFT_OVERFLOW_TOLERANCE = 1.5;
-
-// Minimum page fill ratio before trying to pull more content
-const MIN_FILL_RATIO = 0.65;
-
 /**
- * Paginates narrative segments based on visual line count rather than character count.
- * This prevents text cutoff by accurately modeling how text will render on the page.
- * Uses intelligent page filling to maximize content per page without cutoff.
+ * Paginates narrative segments by filling pages to capacity.
+ * Breaks mid-paragraph when needed to ensure pages are well-filled.
  *
  * @param {string[]} segments - Array of narrative text segments
  * @param {Object} options - Pagination options
  * @param {number} options.maxLinesPerPage - Maximum visual lines per page
- * @param {number} options.charsPerLine - Estimated characters per line (based on container width and font)
+ * @param {number} options.charsPerLine - Estimated characters per line
  * @returns {Array} Paginated pages array
  */
 export function paginateNarrativeSegments(
@@ -120,9 +111,9 @@ export function paginateNarrativeSegments(
       return;
     }
 
-    // Parse and normalize paragraphs
+    // Parse paragraphs
     const paragraphs = rawSegment
-      .replace(/\\n/g, "\n") // Handle escaped newlines from LLM JSON
+      .replace(/\\n/g, "\n")
       .replace(/\r/g, "")
       .split("\n")
       .map((line) => line.trim())
@@ -132,65 +123,84 @@ export function paginateNarrativeSegments(
       return;
     }
 
-    // Calculate line count for each paragraph
-    const paragraphsWithLines = paragraphs.map((text) => ({
-      text,
-      lines: estimateParagraphLines(text, charsPerLine),
-    }));
-
-    // Build pages based on line count with intelligent filling
-    const pageParagraphs = [];
-    let currentPage = [];
-    let currentLineCount = 0;
-
-    const flushCurrentPage = () => {
-      if (!currentPage.length) return;
-      pageParagraphs.push(currentPage.map((p) => p.text).join("\n\n"));
-      currentPage = [];
-      currentLineCount = 0;
-    };
-
-    paragraphsWithLines.forEach((para) => {
-      const isFirst = currentPage.length === 0;
-      // Account for paragraph break spacing (except for first paragraph)
-      const breakCost = isFirst ? 0 : PARAGRAPH_BREAK_LINE_COST;
-      const totalLinesNeeded = para.lines + breakCost;
-      const wouldExceed = currentLineCount + totalLinesNeeded > maxLinesPerPage;
-      const overflowAmount = (currentLineCount + totalLinesNeeded) - maxLinesPerPage;
-
-      // Decision logic for whether to include this paragraph on current page:
-      // 1. Always include first paragraph on a page
-      // 2. Include if it fits within the limit
-      // 3. Include with soft overflow if:
-      //    - The overflow is within tolerance AND
-      //    - The page would be poorly filled without it (below MIN_FILL_RATIO)
-      const currentFillRatio = currentLineCount / maxLinesPerPage;
-      const allowSoftOverflow =
-        wouldExceed &&
-        overflowAmount <= SOFT_OVERFLOW_TOLERANCE &&
-        currentFillRatio < MIN_FILL_RATIO;
-
-      if (isFirst || !wouldExceed || allowSoftOverflow) {
-        currentPage.push(para);
-        currentLineCount += totalLinesNeeded;
-      } else {
-        // Start a new page
-        flushCurrentPage();
-        currentPage.push(para);
-        currentLineCount = para.lines;
+    // Convert all paragraphs to wrapped lines with paragraph markers
+    const allLines = [];
+    paragraphs.forEach((para, idx) => {
+      if (idx > 0) {
+        // Add blank line between paragraphs
+        allLines.push({ type: 'blank', text: '' });
       }
+      const wrappedLines = wrapTextToLines(para, charsPerLine);
+      wrappedLines.forEach((line) => {
+        allLines.push({ type: 'text', text: line });
+      });
     });
 
-    flushCurrentPage();
+    // Now paginate by filling each page to capacity
+    const segmentPages = [];
+    let currentPageLines = [];
 
-    // Create page objects
-    pageParagraphs.forEach((pageText, pageIndex) => {
+    for (let i = 0; i < allLines.length; i++) {
+      const line = allLines[i];
+
+      // Check if adding this line would exceed capacity
+      if (currentPageLines.length >= maxLinesPerPage) {
+        // Flush current page
+        segmentPages.push(currentPageLines);
+        currentPageLines = [];
+      }
+
+      // Skip leading blank lines on a new page
+      if (currentPageLines.length === 0 && line.type === 'blank') {
+        continue;
+      }
+
+      // Skip trailing blank line if it would be the last line and we're near capacity
+      if (line.type === 'blank' && currentPageLines.length >= maxLinesPerPage - 1) {
+        continue;
+      }
+
+      currentPageLines.push(line);
+    }
+
+    // Flush remaining lines
+    if (currentPageLines.length > 0) {
+      // Remove trailing blank lines from last page
+      while (currentPageLines.length > 0 && currentPageLines[currentPageLines.length - 1].type === 'blank') {
+        currentPageLines.pop();
+      }
+      if (currentPageLines.length > 0) {
+        segmentPages.push(currentPageLines);
+      }
+    }
+
+    // Convert line arrays back to text for each page
+    segmentPages.forEach((pageLines, pageIndex) => {
+      // Build text, converting blank lines to paragraph breaks
+      let text = '';
+      let prevWasBlank = false;
+
+      for (const line of pageLines) {
+        if (line.type === 'blank') {
+          prevWasBlank = true;
+        } else {
+          if (text && prevWasBlank) {
+            text += '\n\n' + line.text;
+          } else if (text) {
+            text += '\n' + line.text;
+          } else {
+            text = line.text;
+          }
+          prevWasBlank = false;
+        }
+      }
+
       pages.push({
         key: `${segmentIndex}-${pageIndex}`,
-        text: pageText,
+        text,
         segmentIndex,
         pageIndex,
-        totalPagesForSegment: pageParagraphs.length,
+        totalPagesForSegment: segmentPages.length,
       });
     });
   });
