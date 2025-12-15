@@ -254,9 +254,9 @@ export default function CaseFileScreen({
     pageWidth: estimatedPageWidth,
     fontSize: narrativeSize,
     lineHeight: narrativeLineHeight,
-    verticalPadding: pagePaddingV * 2 + scaleSpacing(SPACING.md), // top + bottom + extra bottom
-    labelHeight: 28, // Journal entry label height
-    bottomReserved: scaleSpacing(SPACING.xxl) + 24, // ScrollView padding + page stamp
+    verticalPadding: pagePaddingV * 2, // top + bottom padding
+    labelHeight: 24, // Journal entry label height (tighter)
+    bottomReserved: scaleSpacing(SPACING.lg) + 20, // Page stamp area (reduced for better fill)
   }), [pageHeight, estimatedPageWidth, narrativeSize, narrativeLineHeight, pagePaddingV, scaleSpacing]);
 
   const narrativePages = useMemo(

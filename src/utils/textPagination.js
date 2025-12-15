@@ -2,8 +2,9 @@
 const DEFAULT_MAX_LINES = 12;
 const DEFAULT_CHARS_PER_LINE = 30;
 
-// Paragraph break consumes vertical space equivalent to ~1.5 lines
-const PARAGRAPH_BREAK_LINE_COST = 1.5;
+// Paragraph break consumes vertical space equivalent to ~1.25 lines
+// (tighter spacing to fill pages better while maintaining readability)
+const PARAGRAPH_BREAK_LINE_COST = 1.25;
 
 // Monospace font character width is approximately 0.6x the font size
 const MONOSPACE_CHAR_WIDTH_RATIO = 0.6;
@@ -35,7 +36,8 @@ export function calculatePaginationParams({
   const availableHeight = pageHeight - verticalPadding - labelHeight - bottomReserved;
 
   // Calculate max lines that fit (with a small safety margin)
-  const maxLinesPerPage = Math.max(6, Math.floor((availableHeight / lineHeight) * 0.92));
+  // Use 96% of available space to fill pages better while preventing cutoff
+  const maxLinesPerPage = Math.max(6, Math.floor((availableHeight / lineHeight) * 0.96));
 
   // Calculate characters per line based on available width and monospace font
   const charWidth = fontSize * MONOSPACE_CHAR_WIDTH_RATIO;
@@ -85,9 +87,17 @@ function estimateParagraphLines(text, charsPerLine) {
   return lines;
 }
 
+// Soft overflow tolerance - allow slightly exceeding target for better page fill
+// This prevents awkward page breaks when just 1-2 lines over
+const SOFT_OVERFLOW_TOLERANCE = 1.5;
+
+// Minimum page fill ratio before trying to pull more content
+const MIN_FILL_RATIO = 0.65;
+
 /**
  * Paginates narrative segments based on visual line count rather than character count.
  * This prevents text cutoff by accurately modeling how text will render on the page.
+ * Uses intelligent page filling to maximize content per page without cutoff.
  *
  * @param {string[]} segments - Array of narrative text segments
  * @param {Object} options - Pagination options
@@ -128,7 +138,7 @@ export function paginateNarrativeSegments(
       lines: estimateParagraphLines(text, charsPerLine),
     }));
 
-    // Build pages based on line count
+    // Build pages based on line count with intelligent filling
     const pageParagraphs = [];
     let currentPage = [];
     let currentLineCount = 0;
@@ -145,16 +155,29 @@ export function paginateNarrativeSegments(
       // Account for paragraph break spacing (except for first paragraph)
       const breakCost = isFirst ? 0 : PARAGRAPH_BREAK_LINE_COST;
       const totalLinesNeeded = para.lines + breakCost;
+      const wouldExceed = currentLineCount + totalLinesNeeded > maxLinesPerPage;
+      const overflowAmount = (currentLineCount + totalLinesNeeded) - maxLinesPerPage;
 
-      // If adding this paragraph would exceed max lines, start a new page
-      // Exception: if it's the first paragraph on the page, we must include it
-      if (!isFirst && currentLineCount + totalLinesNeeded > maxLinesPerPage) {
+      // Decision logic for whether to include this paragraph on current page:
+      // 1. Always include first paragraph on a page
+      // 2. Include if it fits within the limit
+      // 3. Include with soft overflow if:
+      //    - The overflow is within tolerance AND
+      //    - The page would be poorly filled without it (below MIN_FILL_RATIO)
+      const currentFillRatio = currentLineCount / maxLinesPerPage;
+      const allowSoftOverflow =
+        wouldExceed &&
+        overflowAmount <= SOFT_OVERFLOW_TOLERANCE &&
+        currentFillRatio < MIN_FILL_RATIO;
+
+      if (isFirst || !wouldExceed || allowSoftOverflow) {
+        currentPage.push(para);
+        currentLineCount += totalLinesNeeded;
+      } else {
+        // Start a new page
         flushCurrentPage();
         currentPage.push(para);
         currentLineCount = para.lines;
-      } else {
-        currentPage.push(para);
-        currentLineCount += totalLinesNeeded;
       }
     });
 
