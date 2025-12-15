@@ -1,10 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { FONTS, FONT_SIZES } from '../../constants/typography';
 import { SPACING, RADIUS } from '../../constants/layout';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
-const NOISE_TEXTURE = require("../../../assets/images/ui/backgrounds/noise-texture.png");
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
@@ -42,11 +41,6 @@ export default function CaseSummary({ content, compact }) {
     >
       <View style={[styles.summaryTape, styles.summaryTapeLeft]} pointerEvents="none" />
       <View style={[styles.summaryTape, styles.summaryTapeRight]} pointerEvents="none" />
-      <Image
-        source={NOISE_TEXTURE}
-        style={[styles.summaryNoise, { borderRadius: blockRadius }]}
-        pointerEvents="none"
-      />
       
       {content.type === "dailyIntro" && content.showSlugSeparately && content.slug ? (
         <Text
@@ -118,10 +112,6 @@ const styles = StyleSheet.create({
   summaryTapeRight: {
     right: "18%",
     transform: [{ rotate: "7deg" }],
-  },
-  summaryNoise: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.16,
   },
   summaryText: {
     fontFamily: FONTS.primary,

@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   FlatList,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,18 +10,42 @@ import {
   View,
 } from "react-native";
 import { Audio } from 'expo-av';
-import { LinearGradient } from "expo-linear-gradient";
 
 import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 
-const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
-const VIGNETTE_OVERLAY = require("../../assets/images/ui/backgrounds/vignette-overlay.png");
-const BINDER_RING_COUNT = 4;
+const BINDER_RING_COUNT = 3;
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
+
+// Lined notebook paper background component
+function NotebookLines({ lineHeight, pageHeight, marginLeft }) {
+  const lineCount = Math.floor(pageHeight / lineHeight);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Red margin line */}
+      <View
+        style={[
+          styles.marginLine,
+          { left: marginLeft }
+        ]}
+      />
+      {/* Horizontal ruled lines */}
+      {Array.from({ length: lineCount }).map((_, i) => (
+        <View
+          key={`line-${i}`}
+          style={[
+            styles.ruleLine,
+            { top: (i + 1) * lineHeight }
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
 
 function PulsingArrow() {
   const opacity = useRef(new Animated.Value(0.2)).current;
@@ -224,6 +247,13 @@ export default function NarrativePager({
           },
         ]}
       >
+        {/* Lined notebook paper background */}
+        <NotebookLines
+          lineHeight={narrativeLineHeight}
+          pageHeight={pageHeight}
+          marginLeft={pagePaddingH - 4}
+        />
+
         {/* Tap Zones */}
         <Pressable
           style={[styles.tapZone, styles.tapZoneLeft]}
@@ -236,17 +266,6 @@ export default function NarrativePager({
           onPress={() => triggerPageFlip(1)}
         />
 
-        {/* Backgrounds */}
-        <Image source={NOISE_TEXTURE} style={[styles.noise, { borderRadius: blockRadius }]} />
-        <Image 
-          source={VIGNETTE_OVERLAY} 
-          style={[
-            styles.vignette, 
-            { borderRadius: blockRadius }
-          ]} 
-          resizeMode="stretch"
-        />
-        
         {/* Decorative Tape */}
         <View style={[styles.tape, styles.tapeLeft, { width: tapeWidth * 0.68 }]} />
         <View style={[styles.tape, styles.tapeRight, { width: tapeWidth * 0.54 }]} />
@@ -439,27 +458,29 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   page: {
-    backgroundColor: "#f5eeda", // Richer cream/manila color
+    backgroundColor: "#faf8f3", // Warm off-white notebook paper
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: "#d8d0c4",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 10,
     shadowOffset: { width: 5, height: 5 },
     elevation: 4,
   },
-  noise: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.12, 
-    resizeMode: "repeat",
+  marginLine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(205, 92, 92, 0.35)", // Subtle red margin line
   },
-  vignette: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
+  ruleLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(176, 196, 222, 0.4)", // Light blue ruled lines
   },
   tapZone: {
     position: "absolute",
