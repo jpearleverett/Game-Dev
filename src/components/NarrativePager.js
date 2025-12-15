@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   FlatList,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,16 +10,13 @@ import {
   View,
 } from "react-native";
 import { Audio } from 'expo-av';
-import { LinearGradient } from "expo-linear-gradient";
 
 import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 
-const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
-const VIGNETTE_OVERLAY = require("../../assets/images/ui/backgrounds/vignette-overlay.png");
-const BINDER_RING_COUNT = 4;
+const BINDER_RING_COUNT = 3;
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
@@ -236,16 +232,6 @@ export default function NarrativePager({
           onPress={() => triggerPageFlip(1)}
         />
 
-        {/* Backgrounds */}
-        <Image source={NOISE_TEXTURE} style={[styles.noise, { borderRadius: blockRadius }]} />
-        <Image 
-          source={VIGNETTE_OVERLAY} 
-          style={[
-            styles.vignette, 
-            { borderRadius: blockRadius }
-          ]} 
-          resizeMode="stretch"
-        />
         
         {/* Decorative Tape */}
         <View style={[styles.tape, styles.tapeLeft, { width: tapeWidth * 0.68 }]} />
@@ -439,27 +425,15 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   page: {
-    backgroundColor: "#f5eeda", // Richer cream/manila color
+    backgroundColor: "#faf6ef", // Clean warm cream paper color
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: "#e0d5c5",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 10,
     shadowOffset: { width: 5, height: 5 },
     elevation: 4,
-  },
-  noise: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.12, 
-    resizeMode: "repeat",
-  },
-  vignette: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
   },
   tapZone: {
     position: "absolute",
