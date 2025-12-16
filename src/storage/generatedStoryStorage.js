@@ -181,6 +181,213 @@ export async function importGeneratedStory(backup) {
   }
 }
 
+// ============================================================================
+// STORAGE PRUNING STRATEGY - Prevents AsyncStorage quota exhaustion
+// ============================================================================
+
+/**
+ * Maximum storage size in bytes (4MB to stay well under iOS 6MB limit)
+ */
+const MAX_STORAGE_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Get current storage size estimate
+ */
+export async function getStorageSize() {
+  try {
+    const story = await loadGeneratedStory();
+    const context = await getStoryContext();
+
+    const storySize = JSON.stringify(story).length;
+    const contextSize = JSON.stringify(context).length;
+
+    return {
+      storySize,
+      contextSize,
+      totalSize: storySize + contextSize,
+      maxSize: MAX_STORAGE_BYTES,
+      utilizationPercent: Math.round(((storySize + contextSize) / MAX_STORAGE_BYTES) * 100),
+    };
+  } catch (error) {
+    console.warn('[GeneratedStoryStorage] Failed to get storage size:', error);
+    return { totalSize: 0, maxSize: MAX_STORAGE_BYTES, utilizationPercent: 0 };
+  }
+}
+
+/**
+ * Prune old generated content to stay under storage limits
+ * Strategy: Keep recent chapters and the player's current path, prune alternative paths
+ *
+ * @param {string} currentPathKey - The player's current path key (to preserve)
+ * @param {number} currentChapter - The player's current chapter number
+ * @param {number} maxSizeBytes - Maximum allowed storage size
+ * @returns {Object} - Pruning results { prunedCount, freedBytes, newSize }
+ */
+export async function pruneOldGenerations(currentPathKey, currentChapter, maxSizeBytes = MAX_STORAGE_BYTES) {
+  try {
+    const story = await loadGeneratedStory();
+    const entries = Object.entries(story.chapters);
+
+    if (entries.length === 0) {
+      return { prunedCount: 0, freedBytes: 0, newSize: 0 };
+    }
+
+    const initialSize = JSON.stringify(story).length;
+
+    // If under limit, no pruning needed
+    if (initialSize <= maxSizeBytes) {
+      console.log('[GeneratedStoryStorage] Storage under limit, no pruning needed');
+      return { prunedCount: 0, freedBytes: 0, newSize: initialSize };
+    }
+
+    console.log(`[GeneratedStoryStorage] Storage at ${initialSize} bytes, pruning to ${maxSizeBytes}`);
+
+    // Score each entry for preservation priority
+    const scoredEntries = entries.map(([key, entry]) => {
+      let score = 0;
+
+      // Higher score = more important to keep
+
+      // Current path gets highest priority
+      if (key.includes(currentPathKey)) {
+        score += 1000;
+      }
+
+      // Recent chapters are more important
+      const entryChapter = entry.chapter || 1;
+      const chapterDistance = Math.abs(currentChapter - entryChapter);
+      score += (12 - chapterDistance) * 10; // Closer chapters score higher
+
+      // Subchapter C (decision points) are more important
+      if (entry.subchapter === 3) {
+        score += 50;
+      }
+
+      // Recently generated content is more important
+      const generatedAt = entry.generatedAt ? new Date(entry.generatedAt).getTime() : 0;
+      const age = Date.now() - generatedAt;
+      const ageHours = age / (1000 * 60 * 60);
+      score += Math.max(0, 100 - ageHours); // Newer content scores higher
+
+      // Fallback content is less important
+      if (entry.isFallback) {
+        score -= 200;
+      }
+
+      return { key, entry, score, size: JSON.stringify(entry).length };
+    });
+
+    // Sort by score (lowest first - these will be pruned first)
+    scoredEntries.sort((a, b) => a.score - b.score);
+
+    // Prune lowest-scored entries until we're under the limit
+    let currentSize = initialSize;
+    let prunedCount = 0;
+    const prunedKeys = [];
+
+    for (const { key, size, score } of scoredEntries) {
+      if (currentSize <= maxSizeBytes) {
+        break;
+      }
+
+      // Never prune entries with very high scores (current path, very recent)
+      if (score > 500) {
+        console.log(`[GeneratedStoryStorage] Skipping high-priority entry: ${key} (score: ${score})`);
+        continue;
+      }
+
+      // Prune this entry
+      delete story.chapters[key];
+      currentSize -= size;
+      prunedCount++;
+      prunedKeys.push(key);
+
+      console.log(`[GeneratedStoryStorage] Pruned: ${key} (${size} bytes, score: ${score})`);
+    }
+
+    // Save the pruned story
+    if (prunedCount > 0) {
+      story.totalGenerated = Object.keys(story.chapters).length;
+      story.lastPruned = new Date().toISOString();
+      await AsyncStorage.setItem(GENERATED_STORY_KEY, JSON.stringify(story));
+    }
+
+    const freedBytes = initialSize - currentSize;
+    console.log(`[GeneratedStoryStorage] Pruned ${prunedCount} entries, freed ${freedBytes} bytes`);
+
+    return {
+      prunedCount,
+      freedBytes,
+      newSize: currentSize,
+      prunedKeys,
+    };
+  } catch (error) {
+    console.error('[GeneratedStoryStorage] Failed to prune:', error);
+    return { prunedCount: 0, freedBytes: 0, newSize: 0, error: error.message };
+  }
+}
+
+/**
+ * Auto-prune if storage is above threshold
+ * Called automatically after saving new content
+ *
+ * @param {string} currentPathKey - The player's current path key
+ * @param {number} currentChapter - The player's current chapter number
+ * @param {number} thresholdPercent - Trigger pruning above this utilization (default 80%)
+ */
+export async function autoPruneIfNeeded(currentPathKey, currentChapter, thresholdPercent = 80) {
+  try {
+    const { utilizationPercent, totalSize } = await getStorageSize();
+
+    if (utilizationPercent >= thresholdPercent) {
+      console.log(`[GeneratedStoryStorage] Auto-pruning triggered at ${utilizationPercent}% utilization`);
+
+      // Target 60% utilization after pruning
+      const targetSize = Math.floor(MAX_STORAGE_BYTES * 0.6);
+      return await pruneOldGenerations(currentPathKey, currentChapter, targetSize);
+    }
+
+    return { prunedCount: 0, freedBytes: 0, newSize: totalSize };
+  } catch (error) {
+    console.warn('[GeneratedStoryStorage] Auto-prune check failed:', error);
+    return { prunedCount: 0, freedBytes: 0, error: error.message };
+  }
+}
+
+/**
+ * Compact storage by removing null/undefined values and optimizing structure
+ */
+export async function compactStorage() {
+  try {
+    const story = await loadGeneratedStory();
+
+    // Remove entries with null/undefined narratives
+    const validEntries = Object.entries(story.chapters).filter(([, entry]) => {
+      return entry && entry.narrative && entry.narrative.length > 0;
+    });
+
+    const compactedStory = {
+      ...story,
+      chapters: Object.fromEntries(validEntries),
+      totalGenerated: validEntries.length,
+      lastCompacted: new Date().toISOString(),
+    };
+
+    await AsyncStorage.setItem(GENERATED_STORY_KEY, JSON.stringify(compactedStory));
+
+    const originalCount = Object.keys(story.chapters).length;
+    const newCount = validEntries.length;
+
+    return {
+      removed: originalCount - newCount,
+      remaining: newCount,
+    };
+  } catch (error) {
+    console.warn('[GeneratedStoryStorage] Failed to compact:', error);
+    return { removed: 0, remaining: 0, error: error.message };
+  }
+}
+
 /**
  * Create blank generated story structure
  */

@@ -111,6 +111,16 @@ const STORY_CONTENT_SCHEMA = {
       type: 'string',
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), written in past tense from Jack\'s perspective.',
     },
+    jackActionStyle: {
+      type: 'string',
+      enum: ['cautious', 'balanced', 'direct'],
+      description: 'How Jack approaches situations in this chapter. MUST match the player path personality provided in context. cautious=methodical/careful, direct=aggressive/confrontational, balanced=adaptive',
+    },
+    jackRiskLevel: {
+      type: 'string',
+      enum: ['low', 'moderate', 'high'],
+      description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
+    },
     narrative: {
       type: 'string',
       description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words',
@@ -174,8 +184,31 @@ const STORY_CONTENT_SCHEMA = {
       },
       description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status.'
     },
+    previousThreadsAddressed: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          originalThread: {
+            type: 'string',
+            description: 'Description of the previous thread being addressed'
+          },
+          howAddressed: {
+            type: 'string',
+            enum: ['resolved', 'progressed', 'acknowledged', 'delayed', 'failed'],
+            description: 'How this thread was handled: resolved=completed, progressed=moved forward, acknowledged=mentioned but not resolved, delayed=postponed with reason, failed=abandoned'
+          },
+          narrativeReference: {
+            type: 'string',
+            description: 'Brief quote or description of where in your narrative this thread was addressed'
+          }
+        },
+        required: ['originalThread', 'howAddressed', 'narrativeReference']
+      },
+      description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
+    },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
 };
 
 /**
@@ -200,6 +233,16 @@ const DECISION_CONTENT_SCHEMA = {
     previously: {
       type: 'string',
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), written in past tense from Jack\'s perspective.',
+    },
+    jackActionStyle: {
+      type: 'string',
+      enum: ['cautious', 'balanced', 'direct'],
+      description: 'How Jack approaches situations in this chapter. MUST match the player path personality provided in context. cautious=methodical/careful, direct=aggressive/confrontational, balanced=adaptive',
+    },
+    jackRiskLevel: {
+      type: 'string',
+      enum: ['low', 'moderate', 'high'],
+      description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
     },
     narrative: {
       type: 'string',
@@ -264,6 +307,29 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status.'
     },
+    previousThreadsAddressed: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          originalThread: {
+            type: 'string',
+            description: 'Description of the previous thread being addressed'
+          },
+          howAddressed: {
+            type: 'string',
+            enum: ['resolved', 'progressed', 'acknowledged', 'delayed', 'failed'],
+            description: 'How this thread was handled: resolved=completed, progressed=moved forward, acknowledged=mentioned but not resolved, delayed=postponed with reason, failed=abandoned'
+          },
+          narrativeReference: {
+            type: 'string',
+            description: 'Brief quote or description of where in your narrative this thread was addressed'
+          }
+        },
+        required: ['originalThread', 'howAddressed', 'narrativeReference']
+      },
+      description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
+    },
     decision: {
       type: 'object',
       description: 'The binary choice presented to the player',
@@ -294,7 +360,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
 };
 
 // ============================================================================
@@ -306,7 +372,7 @@ const MASTER_SYSTEM_PROMPT = `You are writing "The Detective Portrait," an inter
 You continue the story of Jack Halloway, a retired detective confronting the wrongful convictions built on his career. The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
 
 ## CRITICAL CONSTRAINTS - NEVER VIOLATE THESE
-1. You write ONLY from Jack Halloway's first-person perspective, present tense
+1. You write ONLY from Jack Halloway's first-person perspective, PAST TENSE (matching the example passages)
 2. You NEVER contradict established facts from previous chapters
 3. You NEVER break character or acknowledge being an AI
 4. You maintain EXACT consistency with names, dates, relationships, and events
@@ -343,11 +409,14 @@ NEVER use:
 - "In a world where..." or "Little did [anyone] know..."
 - "I couldn't help but..." or "I found myself..."
 - Excessive sentences starting with "And" or "But"
-- Adverbs: "seemingly," "interestingly," "notably," "certainly"
-- Words: "delve," "unravel," "tapestry," "myriad"
-- Phrases: "a testament to," "serves as a reminder"
-- Hedging: "It seems," "Perhaps," "Maybe," "It appears"
+- Adverbs: "seemingly," "interestingly," "notably," "certainly," "undoubtedly"
+- Words: "delve," "unravel," "tapestry," "myriad," "whilst," "amidst," "amongst"
+- Phrases: "a testament to," "serves as a reminder," "it's important to note," "it's worth noting"
+- Hedging: "It seems," "Perhaps," "Maybe," "It appears," "One might say"
+- Connectors: "Moreover," "Furthermore," "In essence," "Consequently," "Additionally"
+- Meta-commentary: "This moment," "This realization," "This truth" (show, don't label)
 - Summarizing what just happened instead of showing the next scene
+- Explaining character emotions instead of showing them through action
 
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
@@ -367,6 +436,11 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   * characters: Array of character names involved
   IMPORTANT: Only extract ACTUAL threads from your narrative. Do not invent threads that aren't in the story.
   Examples: "Sarah promised to bring the files tomorrow" (appointment), "Jack discovered Tom's signature on the forged documents" (revelation)
+- "previousThreadsAddressed": CRITICAL - For EACH active thread from previous chapters (appointments, promises, threats), you MUST explain how your narrative addresses it:
+  * originalThread: Description of the previous thread
+  * howAddressed: "resolved" | "progressed" | "acknowledged" | "delayed" | "failed"
+  * narrativeReference: Where in your narrative this appears
+  If previous chapters contain active threads, your narrative MUST acknowledge them. You cannot ignore appointments Jack made or promises others gave him.
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
 
 // ============================================================================
@@ -407,6 +481,508 @@ class StoryGenerationService {
     this.indexedFacts = null; // Smart fact index by relevance
     this.consistencyCheckpoints = new Map(); // Periodic state validation snapshots
     this.generatedConsequences = new Map(); // Dynamically generated decision consequences
+
+    // ========== NEW: Fallback Content System for Graceful Degradation ==========
+    this.fallbackTemplates = this._initializeFallbackTemplates();
+    this.generationAttempts = new Map(); // Track retry attempts per content
+    this.maxGenerationAttempts = 3; // Max attempts before using fallback
+  }
+
+  // ==========================================================================
+  // FALLBACK CONTENT SYSTEM - Graceful degradation when generation fails
+  // ==========================================================================
+
+  /**
+   * Initialize fallback narrative templates for each story phase
+   * These provide meaningful content when LLM generation completely fails
+   */
+  _initializeFallbackTemplates() {
+    return {
+      risingAction: {
+        subchapterA: {
+          title: 'The Trail Continues',
+          narrative: `The rain hadn't let up since morning. I stood at the window of my office, watching Ashport's streets turn to rivers of reflected neon. Another day, another lead that might go nowhere.
+
+Murphy's jukebox bled through the floorboards below, some sad song about chances missed and roads not taken. The melody matched my mood. Every case I'd closed in thirty years felt like it was reopening, one envelope at a time.
+
+The Confessor's latest message sat on my desk. Black paper, red wax, silver ink spelling out accusations I couldn't deny. They knew things. Things I'd buried so deep I'd almost convinced myself they'd never happened.
+
+I poured two fingers of Jameson and let it burn down my throat. The whiskey didn't help, but it didn't hurt either. At my age, that's about all you can ask for.
+
+My phone buzzed. A text from an unknown number: "The next piece of the puzzle awaits. Are you ready to see what you've been blind to?"
+
+I grabbed my coat and headed for the door. Ready or not, the truth was coming. And I had a feeling it wouldn't be kind.
+
+The streets of Ashport welcomed me with their usual indifference. Neon signs flickered in the rain, advertising bars and bail bondsmen and dreams that died a long time ago. I'd walked these streets for three decades. Now they felt like a stranger's territory.
+
+Whatever came next, I'd face it the way I always had: one step at a time, eyes open, hoping the shadows wouldn't swallow me whole.`,
+          bridgeText: 'The investigation deepens.',
+        },
+        subchapterB: {
+          title: 'Shadows and Revelations',
+          narrative: `The address led me to a part of town I knew too well. Back alleys where witnesses disappeared and evidence got lost. The kind of place where cops like me used to be kings.
+
+Not anymore.
+
+I found what I was looking for in an abandoned warehouse. Files, photographs, documents that should have been destroyed years ago. Someone had been collecting the pieces of cases I'd closed, building a picture I never wanted to see.
+
+My hands shook as I flipped through the pages. Names I recognized. Faces I'd forgotten. Evidence that looked too perfect to be real—because it wasn't. Not all of it, anyway.
+
+How many times had I looked at forensic reports without questioning where they came from? How many confessions had I accepted because the physical evidence seemed so airtight?
+
+The warehouse door creaked behind me. I spun, hand going to the gun I still carried out of habit more than necessity.
+
+"You're starting to understand." The voice echoed from the shadows. "That's good. That's progress."
+
+I couldn't see them, but I knew who it was. The Confessor. Victoria. Whatever name she was using today.
+
+"Show yourself," I said, but my voice lacked conviction.
+
+"Not yet. You're not ready. But soon, Jack. Soon you'll see everything."
+
+When I turned back to the files, my eye caught something new. A photograph I hadn't noticed before. A face from the past that changed everything I thought I knew.
+
+The rain outside seemed to intensify, as if the city itself was crying for all the wrongs that had been done in its name.`,
+          bridgeText: 'The truth begins to emerge.',
+        },
+        subchapterC: {
+          title: 'The Choice',
+          narrative: `By the time I pieced together what the documents meant, the sun had set and risen again. I'd spent the night in that warehouse, surrounded by ghosts of cases past, trying to make sense of a career that suddenly felt like a lie.
+
+The evidence pointed in two directions. Two paths forward. Each one leading to different truths, different consequences.
+
+On one hand, I could follow the paper trail that led to the highest levels of the department. The kind of investigation that would burn bridges and end careers—mine included. But it might expose the full scope of what had been done.
+
+On the other hand, I could focus on the individual cases. The people who'd been hurt. The innocents who might still be saved. A smaller scope, but perhaps more tangible results.
+
+My phone rang. Sarah's name on the screen. My former partner, the only person in this city I still trusted.
+
+"Jack, I've been doing some digging," she said without preamble. "Whatever you're into, it's bigger than you think. I've got contacts who want to help, but you need to choose your battles carefully."
+
+She was right. She usually was.
+
+The Confessor's game had brought me here, to this moment of decision. Victoria wanted me to understand the cost of certainty, the price of closing cases without questioning the evidence.
+
+Well, I understood now. The question was what I was going to do about it.
+
+Two paths. Two possibilities. The rain kept falling, and Ashport kept its secrets, waiting to see which road I'd choose.`,
+          bridgeText: 'A crucial decision awaits.',
+        },
+      },
+      complications: {
+        subchapterA: {
+          title: 'Walls Closing In',
+          narrative: `Three days since my last lead went cold. Three days of paranoia and dead ends and the growing certainty that someone was watching my every move.
+
+The walls of my office felt closer than they used to. Murphy's Bar below had gone quiet—too quiet for this time of night. Even the jukebox had stopped playing.
+
+I checked the window. A car I didn't recognize sat across the street, engine running, headlights off. Could be nothing. Could be everything.
+
+The Confessor's latest envelope had arrived that morning. This one was different. More urgent. The silver ink spelled out a name I hadn't thought about in years, attached to a case I'd considered closed.
+
+Nothing was closed anymore.
+
+I pulled out the case file I'd kept hidden in my desk drawer. Seven years of dust on the cover, but the details were burned into my memory. Emily Cross. Art student. Missing person case that became a death investigation when we found evidence of suicide.
+
+Only now I was learning we might have been wrong. That she might have survived. That everything I thought I knew about that case—about a lot of cases—was built on foundations of sand.
+
+My phone buzzed. Unknown number again.
+
+"Time is running out, Jack. The people who built this system are getting nervous. They know you're asking questions. They're taking steps to ensure those questions stop."
+
+The line went dead before I could respond.
+
+I grabbed my coat and gun. Whatever was coming, I couldn't face it sitting still. The streets of Ashport awaited, rain-slicked and treacherous as always.`,
+          bridgeText: 'The stakes continue to rise.',
+        },
+        subchapterB: {
+          title: 'Betrayal\'s Edge',
+          narrative: `The meeting was set for midnight. An informant who claimed to have proof of evidence tampering going back two decades. The kind of information that could bring down half the department.
+
+I should have known it was too good to be true.
+
+The warehouse was empty when I arrived. No informant. No evidence. Just shadows and the echo of footsteps that weren't mine.
+
+"You came alone," a voice said from the darkness. "That was either brave or stupid."
+
+I recognized the voice. Someone I'd trusted. Someone I'd worked with for years. The betrayal hit harder than any bullet could.
+
+"Why?" I asked, though part of me already knew the answer.
+
+"Because some secrets are worth killing for, Jack. And you're getting too close to all of them."
+
+The first shot went wide. The second one would have found its mark if I hadn't moved when I did. Years of instinct, survival reflexes that wouldn't quit even when my conscious mind had given up.
+
+I ran. Through the warehouse, out a back exit, into the rain-soaked streets of Ashport. Behind me, I could hear pursuit. Ahead of me, only uncertainty.
+
+The city that had been my home for thirty years had become a maze of enemies. Every shadow held a potential threat. Every familiar face might be hiding treachery.
+
+But I kept moving. Because stopping meant dying, and I wasn't ready to die. Not yet. Not until I knew the full truth about what I'd helped build with my career of certainty and closed cases.
+
+The rain washed the blood from my hands—I'd cut myself on broken glass during the escape—but it couldn't wash away the stain on my conscience. That would take more than water.`,
+          bridgeText: 'Trust shatters.',
+        },
+        subchapterC: {
+          title: 'Point of No Return',
+          narrative: `Safe house. The term felt like a joke. Nowhere was safe anymore.
+
+I sat in the darkness of a motel room on the edge of town, nursing my wounds and my whiskey in equal measure. The Confessor had been right all along. The system I'd served for thirty years was rotten at its core, and I'd been one of the instruments of that rot.
+
+Two options lay before me now. Two ways forward from this point of no return.
+
+The first: go public. Take everything I knew to the press, the feds, anyone who would listen. Burn it all down and let the chips fall where they may. It would mean the end of my life as I knew it—prison, probably, or worse—but it might be enough to expose the full scope of the corruption.
+
+The second: go underground. Disappear into the shadows and work from there. Build a case so airtight that no one could ignore it or silence it. It would take longer, and more people might suffer in the meantime, but it offered a chance at a more complete victory.
+
+Neither option was good. Both came with costs I wasn't sure I was willing to pay.
+
+My phone—a burner now, my old one smashed in a storm drain—buzzed with an incoming message.
+
+"The choice is yours, Jack. You've always had choices. That's what makes this meaningful."
+
+Victoria. The Confessor. My tormentor and, in a twisted way, my teacher.
+
+Outside, the rain continued to fall on Ashport. The city didn't care about my moral dilemmas. It would keep turning, keep churning through lives and cases and dreams, regardless of what I chose.
+
+But I had to choose. That was the one certainty left in a world that had become nothing but questions.`,
+          bridgeText: 'A defining choice emerges.',
+        },
+      },
+      confrontations: {
+        subchapterA: {
+          title: 'Face to Face',
+          narrative: `The penthouse was everything I expected and nothing I was prepared for. Glass and steel rising above Ashport like a monument to power and secrets. Victoria Blackwell's domain.
+
+She was waiting for me when I stepped off the elevator. Red dress, confident smile, eyes that had seen things no one should have to see.
+
+"Jack. I wondered when you'd come."
+
+"We need to talk."
+
+"We've been talking for weeks. Through letters, through breadcrumbs, through the ruins of your career." She gestured to a chair. "But yes. It's time for a more direct conversation."
+
+I sat. She poured drinks—Jameson for me, something amber for herself. She knew my preferences. She knew everything about me.
+
+"Emily Cross," I said. "That's who you really are."
+
+Her smile flickered, just for a moment. "Emily Cross died seven years ago. You declared it yourself. I'm someone else now. Someone who was forged in the fire of that death."
+
+"I closed your case because the evidence pointed to suicide. I had no reason to—"
+
+"You had every reason," she cut me off. "You had witnesses you dismissed because they were homeless or addicted or simply inconvenient. You had inconsistencies you ignored because the forensic report was so clean. So perfect."
+
+She leaned forward, and for the first time, I saw the scars. Faint lines on her wrists and neck, souvenirs from whatever hell she'd escaped.
+
+"Tom Wade manufactured evidence for your cases, Jack. For twenty years. And you never questioned it once."
+
+The name hit like a punch. Tom Wade. My best friend. The forensic examiner I'd trusted with my career.
+
+"That's impossible," I heard myself say, but even as the words left my mouth, I knew they were a lie.`,
+          bridgeText: 'The confrontation begins.',
+        },
+        subchapterB: {
+          title: 'Truth Unleashed',
+          narrative: `The files Victoria showed me that night would have broken a weaker man. Maybe they broke me too—I'm still not sure.
+
+Twenty years of manufactured evidence. Planted fingerprints, fabricated forensic reports, confessions coerced using "evidence" that never existed. A systematic corruption of justice that had sent dozens of people to prison.
+
+People like Eleanor Bellamy, rotting in Greystone for a murder she didn't commit.
+
+People like Marcus Thornhill, who died in a cell because he couldn't live with the shame of a conviction built on lies.
+
+And at the center of it all: Tom Wade. My friend. My partner in so many investigations. The man I'd trusted more than anyone else in the world.
+
+"Why?" I asked Victoria—Emily—whoever she was now. "Why do all this? Why not just go to the authorities?"
+
+"I tried," she said, and her voice carried the weight of years. "Seven years ago, I tried to tell people what was happening. You know what I got for my trouble? Grange. Deputy Chief Grange, who kept me in a basement for months, who did things—" She stopped, composed herself. "The authorities are part of the problem, Jack. They always have been."
+
+"So you became the Confessor. The anonymous letters, the chess pieces, the elaborate game."
+
+"I became what I needed to be. Someone with power. Someone who couldn't be silenced or disappeared." She met my eyes. "And I needed you to understand. To really understand what certainty costs when it's built on lies."
+
+I understood now. God help me, I understood.
+
+But understanding wasn't enough. Understanding didn't free the innocent people still in prison. It didn't bring back the ones who had died.
+
+"What do you want from me?" I asked.
+
+"I want you to choose, Jack. Like you've been choosing all along. Only this time, choose with your eyes open."`,
+          bridgeText: 'The full truth emerges.',
+        },
+        subchapterC: {
+          title: 'The Final Choice',
+          narrative: `Dawn broke over Ashport as I left Victoria's penthouse. The rain had finally stopped, but the city still felt heavy with moisture and secrets.
+
+I had the files now. Evidence of everything—the manufactured forensics, the wrongful convictions, the corrupt officials who had enabled it all. Enough to bring down careers, institutions, maybe even the entire justice system of Ashport.
+
+But Victoria had given me a choice. She always did.
+
+Option one: release everything immediately. Go nuclear. The innocent would be freed, the guilty exposed, but the chaos would be immense. Trials overturned, criminals released alongside the wrongly convicted, public faith in law enforcement destroyed for a generation.
+
+Option two: work within the system. Use the evidence strategically, case by case. Free the innocents first, then build toward the larger accountability. Slower, more controlled, but with less collateral damage.
+
+Neither option was perfect. Neither option could undo all the damage that had been done.
+
+My phone rang. Sarah.
+
+"Jack, I've been talking to the FBI. Agent Martinez. He's investigating the corruption, has been for months. He wants to meet—off the books, somewhere safe."
+
+Federal involvement. Another layer of complexity. Another set of interests and agendas to navigate.
+
+"Tell him I'll think about it," I said.
+
+"Jack, whatever you're planning—"
+
+"I know, Sarah. I know."
+
+I hung up and looked out at the city I'd served for thirty years. The city I'd helped corrupt with my certainty and my closed cases.
+
+Two paths forward. Two versions of justice. And a choice that would define everything I'd ever believed about right and wrong.
+
+The sun rose higher, burning away the fog, and I made my decision.`,
+          bridgeText: 'The decisive moment arrives.',
+        },
+      },
+      resolution: {
+        subchapterA: {
+          title: 'Reckoning',
+          narrative: `The courtroom was packed. Every seat filled with journalists, victims' families, curious citizens who wanted to see justice—real justice—finally served.
+
+I sat in the witness box, looking out at faces I recognized. Eleanor Bellamy, finally free after eight years. Claire Thornhill, daughter of the man who died in custody because of evidence I helped create. Sarah Reeves, my former partner, who had become something greater than I ever was.
+
+And Tom Wade. Sitting at the defendant's table, looking smaller than I'd ever seen him. The man who had been my best friend for thirty years. The man who had manufactured evidence for twenty of those years while I looked the other way.
+
+The prosecutor was thorough. The questions were hard. But I answered them all, holding nothing back. Every case I should have questioned. Every witness I should have believed. Every moment I chose certainty over truth.
+
+"Detective Halloway," the prosecutor said finally, "in your professional opinion, how many wrongful convictions resulted from the evidence manipulation you've described?"
+
+I took a breath. "At least twenty that I know of. Possibly more."
+
+The murmur that ran through the courtroom was like a wave. Twenty lives. Twenty people who lost years, decades, everything—because I trusted a friend more than I trusted my own doubts.
+
+Victoria wasn't there. Emily Cross had disappeared again, her work done. She'd forced me to see the truth, and now the truth was forcing everyone else to see it too.
+
+Whether that made her a hero or a villain, I still wasn't sure. Maybe it didn't matter. Maybe all that mattered was what came next.
+
+The trial would take months. The appeals would take years. But for the first time in a long time, I felt like we were moving in the right direction.`,
+          bridgeText: 'Justice begins.',
+        },
+        subchapterB: {
+          title: 'Aftermath',
+          narrative: `Six months after the trial began, Ashport was a different city.
+
+The reforms came faster than anyone expected. New oversight committees. Independent forensic review boards. Mandatory recording of interrogations. The system that had allowed people like Tom Wade to operate unchecked was being dismantled, piece by piece.
+
+Not everyone was happy about it. The old guard fought back, called me a traitor, tried to paint the whole thing as a witch hunt. Some of them succeeded in escaping justice—retirement, resignations, plea deals that let them walk away with their pensions intact.
+
+But some of them didn't. Deputy Chief Grange was in prison now, finally paying for the things he'd done. Helen Price, the prosecutor who'd built her career on manufactured evidence, had resigned in disgrace. Tom Wade faced twenty years, and this time the evidence against him was real.
+
+I visited Eleanor Bellamy on the day she walked out of Greystone. Eight years of her life, stolen by a crime she didn't commit.
+
+"I should apologize," I said.
+
+She looked at me for a long moment. "Apologies don't give me back the time. But they're a start."
+
+"What will you do now?"
+
+"Live," she said simply. "Try to remember what that feels like."
+
+I watched her walk away, her daughter Maya at her side, and felt something I hadn't felt in years. Not redemption—I wasn't sure I deserved that. But purpose, maybe. A reason to keep going.
+
+Sarah found me later that night, in Murphy's Bar, working on my third Jameson.
+
+"The Conviction Integrity Project got funded," she said, sliding onto the stool next to me. "Federal grant. We can start reviewing cases next month."
+
+I raised my glass. "To second chances."
+
+She clinked her water against it. "To getting it right this time."`,
+          bridgeText: 'A new chapter begins.',
+        },
+        subchapterC: {
+          title: 'The End of Certainty',
+          narrative: `One year later, I stood at my window again, watching the rain fall on Ashport.
+
+Some things never changed. The city was still corrupt, still broken in a thousand small ways. But some things had changed. The justice system was cleaner than it had been in decades. Innocent people were free. Guilty people were paying for their crimes.
+
+I had paid too, in my own way. The years of whiskey and certainty had caught up with me. The doctors said my liver was shot, my heart wasn't far behind. Maybe I had a few years left, maybe less.
+
+But I was at peace with it. More at peace than I had any right to be.
+
+A knock at the door interrupted my reflection. When I opened it, there was no one there—just a black envelope on the floor. Red wax seal, silver ink.
+
+My heart jumped. Victoria. Emily. The Confessor.
+
+I opened it with trembling hands.
+
+"Jack—
+
+The game is over, but the work continues. Every day, somewhere, a case is closed wrong. A witness is dismissed. A certainty is chosen over truth.
+
+You can't fix them all. But you can try.
+
+The world needs detectives who question. Who doubt. Who choose uncertainty over the comfortable lie.
+
+Be that detective. For whatever time you have left.
+
+Goodbye, Jack. It's been educational.
+
+— E.C."
+
+I read the letter three times before I set it down. Then I poured myself a Jameson—just one, the doctors allowed me that—and watched the rain.
+
+Tomorrow, I'd start again. A new case. A new chance to get it right.
+
+That was the thing about certainty: once you lost it, you never got it back. But maybe that wasn't such a bad thing. Maybe doubt was what made us human.
+
+Maybe it was what made us good.
+
+The rain kept falling, and I kept watching, and somewhere out there, the truth kept waiting to be found.`,
+          bridgeText: 'The journey concludes.',
+        },
+      },
+    };
+  }
+
+  /**
+   * Get appropriate fallback content based on chapter and subchapter
+   */
+  _getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint) {
+    // Determine story phase
+    let phase;
+    if (chapter <= 4) phase = 'risingAction';
+    else if (chapter <= 7) phase = 'complications';
+    else if (chapter <= 10) phase = 'confrontations';
+    else phase = 'resolution';
+
+    // Get subchapter key
+    const subKey = ['subchapterA', 'subchapterB', 'subchapterC'][subchapter - 1];
+
+    const template = this.fallbackTemplates[phase]?.[subKey];
+    if (!template) {
+      // Ultimate fallback
+      return this._generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint);
+    }
+
+    // Adapt the template with path-specific details
+    const adapted = {
+      title: template.title,
+      bridgeText: template.bridgeText,
+      previously: `The investigation continued through Ashport's rain-soaked streets.`,
+      narrative: template.narrative,
+      chapterSummary: `Chapter ${chapter}.${subchapter}: ${template.bridgeText}`,
+      jackActionStyle: 'balanced',
+      jackRiskLevel: 'moderate',
+      puzzleCandidates: this._extractKeywordsFromNarrative(template.narrative).slice(0, 8),
+      briefing: {
+        summary: 'Continue the investigation.',
+        objectives: ['Follow the leads', 'Uncover the truth', 'Make your choice'],
+      },
+      consistencyFacts: [
+        `Chapter ${chapter}.${subchapter} was generated using fallback content due to generation failure.`,
+      ],
+      previousThreadsAddressed: [],
+      narrativeThreads: [],
+      decision: null,
+    };
+
+    // Add decision for subchapter C
+    if (isDecisionPoint) {
+      adapted.decision = {
+        intro: ['Two paths lie before you. Each leads to different truths, different consequences.'],
+        options: [
+          {
+            key: 'A',
+            title: 'Take direct action',
+            focus: 'Confront the situation head-on, accepting the risks',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'A',
+            details: [],
+          },
+          {
+            key: 'B',
+            title: 'Proceed with caution',
+            focus: 'Gather more information before committing to action',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'B',
+            details: [],
+          },
+        ],
+      };
+    }
+
+    return adapted;
+  }
+
+  /**
+   * Generate minimal fallback when no template is available
+   */
+  _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
+    const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. I pulled my coat tighter and stepped into the night.
+
+Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing me closer to truths I wasn't sure I wanted to face. But there was no turning back now. Not after everything I'd seen.
+
+Murphy's Bar was quiet below my office. The usual crowd had dispersed, leaving only ghosts and memories. I poured a glass of Jameson and let the familiar burn ground me in the present.
+
+Tomorrow would bring new challenges. New choices. New opportunities to get things right—or to fail, as I had failed so many times before.
+
+But that was tomorrow. Tonight, I would rest. Gather my strength. Prepare for whatever came next.
+
+The city outside my window sparkled with neon and rain. Beautiful and treacherous, like everything else in Ashport. I watched it for a long time before finally turning away.
+
+Whatever the morning brought, I would face it. That was all I could promise myself anymore.`;
+
+    return {
+      title: 'The Investigation Continues',
+      bridgeText: 'The journey continues.',
+      previously: 'Jack continued his investigation through the rain-soaked streets of Ashport.',
+      narrative: minimalNarrative,
+      chapterSummary: `Chapter ${chapter}.${subchapter}: The investigation continues through Ashport.`,
+      jackActionStyle: 'balanced',
+      jackRiskLevel: 'moderate',
+      puzzleCandidates: ['RAIN', 'TRUTH', 'SHADOW', 'NIGHT', 'WHISKEY', 'PUZZLE', 'CHOICE', 'GHOST'],
+      briefing: {
+        summary: 'Continue the investigation.',
+        objectives: ['Follow available leads', 'Consider your options'],
+      },
+      consistencyFacts: [
+        `Chapter ${chapter}.${subchapter} was generated using minimal fallback content.`,
+      ],
+      previousThreadsAddressed: [],
+      narrativeThreads: [],
+      decision: isDecisionPoint ? {
+        intro: ['A choice presents itself.'],
+        options: [
+          {
+            key: 'A',
+            title: 'Take action',
+            focus: 'Move forward directly',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'A',
+            details: [],
+          },
+          {
+            key: 'B',
+            title: 'Wait and observe',
+            focus: 'Gather more information',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'B',
+            details: [],
+          },
+        ],
+      } : null,
+    };
   }
 
   // ==========================================================================
@@ -1679,17 +2255,40 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
     // Add active narrative threads that need to be maintained
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
       const threadsByType = {};
-      context.narrativeThreads.slice(-10).forEach(t => {
+      context.narrativeThreads.slice(-15).forEach(t => {
         if (!threadsByType[t.type]) threadsByType[t.type] = [];
         threadsByType[t.type].push(t);
       });
 
-      section += `\n\n### ACTIVE NARRATIVE THREADS (Address or acknowledge)`;
-      Object.entries(threadsByType).forEach(([type, threads]) => {
-        section += `\n**${type.toUpperCase()}:**`;
-        threads.slice(-3).forEach(t => {
-          section += `\n- Chapter ${t.chapter}.${t.subchapter}: "${t.excerpt.slice(0, 80)}..."`;
-        });
+      section += `\n\n### ACTIVE NARRATIVE THREADS (MUST Address or acknowledge)`;
+
+      // Critical threads first (appointments, promises, threats)
+      const criticalTypes = ['appointment', 'promise', 'threat'];
+      const otherTypes = Object.keys(threadsByType).filter(t => !criticalTypes.includes(t));
+
+      criticalTypes.forEach(type => {
+        if (threadsByType[type] && threadsByType[type].length > 0) {
+          section += `\n**[CRITICAL] ${type.toUpperCase()} (must be addressed):**`;
+          threadsByType[type].slice(-4).forEach(t => {
+            const desc = t.description || t.excerpt || '';
+            const truncatedDesc = desc.length > 150 ? desc.slice(0, 150) + '...' : desc;
+            section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
+            if (t.characters && t.characters.length > 0) {
+              section += ` [Characters: ${t.characters.join(', ')}]`;
+            }
+          });
+        }
+      });
+
+      otherTypes.forEach(type => {
+        if (threadsByType[type] && threadsByType[type].length > 0) {
+          section += `\n**${type.toUpperCase()}:**`;
+          threadsByType[type].slice(-3).forEach(t => {
+            const desc = t.description || t.excerpt || '';
+            const truncatedDesc = desc.length > 150 ? desc.slice(0, 150) + '...' : desc;
+            section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
+          });
+        }
       });
     }
 
@@ -1922,6 +2521,56 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         return storyEntry;
       } catch (error) {
         this.isGenerating = false;
+
+        // ========== GRACEFUL DEGRADATION: Use fallback content on failure ==========
+        console.error(`[StoryGenerationService] Generation failed for ${caseNumber}_${pathKey}:`, error.message);
+
+        // Track attempts
+        const attemptKey = `${caseNumber}_${pathKey}`;
+        const attempts = (this.generationAttempts.get(attemptKey) || 0) + 1;
+        this.generationAttempts.set(attemptKey, attempts);
+
+        // If we've exhausted retries, use fallback content
+        if (attempts >= this.maxGenerationAttempts) {
+          console.warn(`[StoryGenerationService] Using fallback content for ${caseNumber} after ${attempts} failed attempts`);
+
+          const fallbackContent = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+
+          // Build fallback story entry
+          const fallbackEntry = {
+            chapter,
+            subchapter,
+            pathKey,
+            caseNumber,
+            title: fallbackContent.title,
+            narrative: fallbackContent.narrative,
+            bridgeText: fallbackContent.bridgeText,
+            previously: fallbackContent.previously,
+            briefing: fallbackContent.briefing,
+            decision: fallbackContent.decision,
+            board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates),
+            consistencyFacts: fallbackContent.consistencyFacts,
+            chapterSummary: fallbackContent.chapterSummary,
+            generatedAt: new Date().toISOString(),
+            wordCount: fallbackContent.narrative.split(/\s+/).length,
+            isFallback: true, // Flag to indicate this is fallback content
+            fallbackReason: error.message,
+          };
+
+          // Save and return fallback
+          await saveGeneratedChapter(caseNumber, pathKey, fallbackEntry);
+          if (!this.generatedStory) {
+            this.generatedStory = { chapters: {} };
+          }
+          this.generatedStory.chapters[`${caseNumber}_${pathKey}`] = fallbackEntry;
+
+          // Clear attempt count on successful fallback
+          this.generationAttempts.delete(attemptKey);
+
+          return fallbackEntry;
+        }
+
+        // Re-throw to allow caller to retry if attempts remain
         throw error;
       }
     })();
@@ -1934,7 +2583,34 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       return result;
     } catch (e) {
       this.pendingGenerations.delete(generationKey);
-      throw e;
+
+      // Final fallback if even the inner fallback failed
+      console.error('[StoryGenerationService] Complete generation failure, using emergency fallback');
+      const chapter = parseInt(caseNumber?.slice(0, 3)) || 2;
+      const subchapter = parseInt(caseNumber?.slice(4, 5)) || 1;
+      const isDecisionPoint = subchapter === 3;
+
+      const emergencyFallback = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+      return {
+        chapter,
+        subchapter,
+        pathKey,
+        caseNumber,
+        title: emergencyFallback.title,
+        narrative: emergencyFallback.narrative,
+        bridgeText: emergencyFallback.bridgeText,
+        previously: emergencyFallback.previously,
+        briefing: emergencyFallback.briefing,
+        decision: emergencyFallback.decision,
+        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates),
+        consistencyFacts: emergencyFallback.consistencyFacts,
+        chapterSummary: emergencyFallback.chapterSummary,
+        generatedAt: new Date().toISOString(),
+        wordCount: emergencyFallback.narrative.split(/\s+/).length,
+        isFallback: true,
+        isEmergencyFallback: true,
+        fallbackReason: e.message,
+      };
     }
   }
 
@@ -2295,38 +2971,111 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
 
     // =========================================================================
     // CATEGORY 4: CHARACTER BEHAVIOR CONSISTENCY (Based on path personality)
+    // NOW ENFORCED AS ERRORS, NOT WARNINGS
     // =========================================================================
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
 
-      // Check for personality-inconsistent behavior
+      // Validate jackActionStyle and jackRiskLevel from LLM output match expected personality
+      const expectedActionStyle = personality.riskTolerance === 'low' ? 'cautious'
+        : personality.riskTolerance === 'high' ? 'direct' : 'balanced';
+      const expectedRiskLevel = personality.riskTolerance || 'moderate';
+
+      // Check if LLM declared action style matches expected (from schema output)
+      if (content.jackActionStyle && content.jackActionStyle !== expectedActionStyle) {
+        // Allow balanced as acceptable middle ground
+        if (content.jackActionStyle !== 'balanced' && expectedActionStyle !== 'balanced') {
+          issues.push(`Jack's action style mismatch: LLM declared "${content.jackActionStyle}" but player path personality expects "${expectedActionStyle}"`);
+        }
+      }
+
+      if (content.jackRiskLevel && content.jackRiskLevel !== expectedRiskLevel) {
+        // Allow moderate as acceptable middle ground
+        if (content.jackRiskLevel !== 'moderate' && expectedRiskLevel !== 'moderate') {
+          issues.push(`Jack's risk level mismatch: LLM declared "${content.jackRiskLevel}" but player path personality expects "${expectedRiskLevel}"`);
+        }
+      }
+
+      // Check for personality-inconsistent behavior in narrative text - NOW ERRORS
       if (personality.riskTolerance === 'low') {
         // Methodical Jack shouldn't suddenly be reckless
-        const recklessBehavior = /jack\s+(?:rushed|charged|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)/i;
+        const recklessBehavior = /(?:i|jack)\s+(?:rushed|charged|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)/i;
         if (recklessBehavior.test(narrativeOriginal)) {
-          warnings.push('Jack is behaving more recklessly than his methodical path personality suggests');
+          issues.push('PERSONALITY VIOLATION: Methodical Jack is acting recklessly (rushed/charged/stormed). Rewrite with cautious approach.');
+        }
+
+        // Check for impulsive actions
+        const impulsiveActions = /without\s+(?:thinking|hesitation|a\s+second\s+thought)|(?:i|jack)\s+(?:grabbed|lunged|dove|leapt)\s+(?:at|for|toward)/i;
+        if (impulsiveActions.test(narrativeOriginal)) {
+          issues.push('PERSONALITY VIOLATION: Methodical Jack is acting impulsively. Rewrite with deliberate, planned actions.');
         }
       } else if (personality.riskTolerance === 'high') {
         // Aggressive Jack shouldn't suddenly become overly cautious
-        const overlyPrudent = /jack\s+(?:hesitated|wavered|second-guessed|held\s+back|waited\s+patiently)/i;
+        const overlyPrudent = /(?:i|jack)\s+(?:hesitated|wavered|second-guessed|held\s+back|waited\s+patiently|decided\s+to\s+wait)/i;
         if (overlyPrudent.test(narrativeOriginal)) {
-          warnings.push('Jack is behaving more cautiously than his aggressive path personality suggests');
+          issues.push('PERSONALITY VIOLATION: Aggressive Jack is being overly cautious (hesitated/wavered). Rewrite with direct action.');
+        }
+
+        // Check for excessive deliberation
+        const excessiveDeliberation = /(?:i|jack)\s+(?:carefully\s+considered|weighed\s+(?:my|the)\s+options|took\s+(?:my|his)\s+time)/i;
+        if (excessiveDeliberation.test(narrativeOriginal)) {
+          issues.push('PERSONALITY VIOLATION: Aggressive Jack is deliberating excessively. Rewrite with decisive action.');
         }
       }
     }
 
     // =========================================================================
-    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads
+    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads - NOW ENFORCED
     // =========================================================================
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
-      // Check for appointments/promises that should be addressed
-      const recentAppointments = context.narrativeThreads
-        .filter(t => t.type === 'appointment')
-        .slice(-3);
+      // Get critical threads that MUST be addressed (appointments and promises)
+      const criticalThreads = context.narrativeThreads.filter(t =>
+        t.status === 'active' &&
+        (t.type === 'appointment' || t.type === 'promise' || t.type === 'threat')
+      );
 
-      // Note: We can't automatically verify these are addressed, but we can warn
-      if (recentAppointments.length > 0 && context.currentPosition.chapter > 2) {
-        // This is informational - the prompt should mention these
+      if (criticalThreads.length > 0 && context.currentPosition.chapter > 2) {
+        // Check if LLM provided thread acknowledgments
+        const addressedThreads = content.previousThreadsAddressed || [];
+
+        // Calculate how many critical threads were addressed
+        const addressedCount = addressedThreads.length;
+        const criticalCount = criticalThreads.length;
+
+        // Require at least 50% of critical threads to be acknowledged
+        const requiredAcknowledgments = Math.ceil(criticalCount * 0.5);
+        if (addressedCount < requiredAcknowledgments) {
+          issues.push(`THREAD CONTINUITY VIOLATION: Only ${addressedCount}/${criticalCount} critical threads addressed. Must acknowledge at least ${requiredAcknowledgments}. Critical threads: ${criticalThreads.slice(0, 3).map(t => t.description).join('; ')}`);
+        }
+
+        // Verify acknowledged threads actually appear in narrative
+        for (const addressed of addressedThreads) {
+          if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed') {
+            // Check if the narrative actually mentions relevant characters or topics
+            const threadLower = addressed.originalThread.toLowerCase();
+            const narrativeLower = narrative;
+
+            // Extract key nouns/names from the thread description
+            const keyWords = threadLower.match(/\b(?:jack|sarah|victoria|eleanor|silas|tom|wade|grange|meet|promise|call|contact|investigate|reveal)\b/g) || [];
+
+            const mentionedInNarrative = keyWords.some(word => narrativeLower.includes(word));
+
+            if (!mentionedInNarrative && keyWords.length > 0) {
+              warnings.push(`Thread claimed as "${addressed.howAddressed}" but may not appear in narrative: "${addressed.originalThread.slice(0, 60)}..."`);
+            }
+          }
+        }
+      }
+
+      // Check for dangling appointments more than 2 chapters old
+      const oldAppointments = context.narrativeThreads.filter(t =>
+        t.status === 'active' &&
+        t.type === 'appointment' &&
+        t.chapter && (context.currentPosition.chapter - t.chapter) >= 2
+      );
+
+      if (oldAppointments.length > 0) {
+        warnings.push(`WARNING: ${oldAppointments.length} appointment(s) from 2+ chapters ago still unresolved. Consider addressing or explaining delay.`);
       }
     }
 
@@ -2441,9 +3190,15 @@ ${JSON.stringify(content, null, 2)}
 
   /**
    * Expand narrative with controlled generation
+   * NOW INCLUDES GROUNDING to prevent consistency violations during expansion
    */
   async _expandNarrative(narrative, context, additionalWords) {
-    const expandPrompt = `Expand this noir detective narrative by approximately ${additionalWords} more words.
+    // Build grounding section to maintain consistency during expansion
+    const groundingSection = this._buildExpansionGrounding(context);
+
+    const expandPrompt = `${groundingSection}
+
+Expand this noir detective narrative by approximately ${additionalWords} more words.
 
 CURRENT TEXT:
 ${narrative}
@@ -2456,19 +3211,68 @@ REQUIREMENTS:
 5. DO NOT change the plot or ending
 6. DO NOT add new major events
 7. Maintain Jack Halloway's noir voice exactly
+8. CRITICAL: Do not contradict ANY facts from the ABSOLUTE_FACTS section above
+9. Use ONLY the correct character names as specified
+10. Maintain the timeline - Jack is a retired detective, 30 years on the force
 
 Output ONLY the expanded narrative. No tags, no commentary.`;
 
     const response = await llmService.complete(
       [{ role: 'user', content: expandPrompt }],
       {
-        systemPrompt: 'You are expanding noir fiction. Match the existing style exactly.',
+        systemPrompt: 'You are expanding noir fiction. Match the existing style exactly. Never contradict established facts.',
         temperature: GENERATION_CONFIG.temperature.expansion,
         maxTokens: GENERATION_CONFIG.maxTokens.expansion,
       }
     );
 
     return this._cleanNarrative(response.content);
+  }
+
+  /**
+   * Build grounding section specifically for narrative expansion
+   * Lighter weight than full generation grounding but maintains key facts
+   */
+  _buildExpansionGrounding(context) {
+    const absoluteFacts = STORY_BIBLE.ABSOLUTE_FACTS;
+    const characters = STORY_BIBLE.CHARACTERS;
+
+    let grounding = `## ABSOLUTE_FACTS (NEVER CONTRADICT)
+- Jack Halloway: Retired detective, ${absoluteFacts.JACK_CAREER_LENGTH} on the force
+- Setting: Ashport, rain-soaked noir city
+- Tom Wade: Chief Forensic Examiner, Jack's former best friend, manufactured evidence for ${absoluteFacts.TOM_EVIDENCE_YEARS}
+- Victoria Blackwell: Also known as Emily Cross, The Midnight Confessor
+- The Five Innocents: Eleanor Bellamy, Marcus Thornhill, Dr. Lisa Chen, James Sullivan, Teresa Wade
+- Emily Cross "died" ${absoluteFacts.EMILY_YEARS_AGO} ago (Jack declared case closed while she was still alive)
+- Sarah Reeves: Jack's former partner for ${absoluteFacts.SARAH_PARTNERSHIP_YEARS} years
+
+## CHARACTER NAMES (USE EXACTLY)
+`;
+
+    // Add key character names
+    const keyCharacters = [
+      { name: characters.PROTAGONIST.name, role: 'protagonist' },
+      { name: characters.ANTAGONIST.name, alias: 'Emily Cross, The Midnight Confessor' },
+      { name: characters.ALLIES.SARAH.name, role: 'former partner' },
+      { name: characters.ALLIES.ELEANOR.name, role: 'wrongfully convicted' },
+      { name: characters.CORRUPT.TOM_WADE.name, role: 'forensic examiner' },
+    ];
+
+    for (const char of keyCharacters) {
+      grounding += `- ${char.name}${char.alias ? ` (aliases: ${char.alias})` : ''}${char.role ? ` - ${char.role}` : ''}\n`;
+    }
+
+    // Add path personality if available
+    if (context.pathPersonality) {
+      grounding += `
+## JACK'S CURRENT PERSONALITY (MAINTAIN DURING EXPANSION)
+- Action style: ${context.pathPersonality.narrativeStyle}
+- Dialogue tone: ${context.pathPersonality.dialogueTone}
+- Risk tolerance: ${context.pathPersonality.riskTolerance}
+`;
+    }
+
+    return grounding;
   }
 
   // ==========================================================================
@@ -2731,45 +3535,92 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
   _getSemanticClusters() {
     return [
       // Weather/Temperature
-      ['COLD', 'ICE', 'FROST', 'FREEZE', 'CHILL', 'WINTER', 'SNOW', 'FROZEN'],
-      ['WIND', 'BREEZE', 'GUST', 'STORM', 'GALE', 'BLOW', 'AIR'],
-      ['RAIN', 'WATER', 'WET', 'DAMP', 'MOIST', 'DRENCH', 'SOAK', 'FLOOD'],
-      ['FIRE', 'FLAME', 'BURN', 'HEAT', 'HOT', 'BLAZE', 'EMBER', 'SCORCH'],
+      ['COLD', 'ICE', 'FROST', 'FREEZE', 'CHILL', 'WINTER', 'SNOW', 'FROZEN', 'FRIGID'],
+      ['WIND', 'BREEZE', 'GUST', 'STORM', 'GALE', 'BLOW', 'AIR', 'TEMPEST'],
+      ['RAIN', 'WATER', 'WET', 'DAMP', 'MOIST', 'DRENCH', 'SOAK', 'FLOOD', 'POUR', 'DOWNPOUR', 'STORM'],
+      ['FIRE', 'FLAME', 'BURN', 'HEAT', 'HOT', 'BLAZE', 'EMBER', 'SCORCH', 'INFERNO'],
 
       // Light/Dark
-      ['DARK', 'SHADOW', 'BLACK', 'NIGHT', 'GLOOM', 'DIM', 'MURKY'],
-      ['LIGHT', 'BRIGHT', 'SHINE', 'GLOW', 'GLEAM', 'FLASH', 'BEAM'],
+      ['DARK', 'SHADOW', 'BLACK', 'NIGHT', 'GLOOM', 'DIM', 'MURKY', 'SHADE', 'DUSK'],
+      ['LIGHT', 'BRIGHT', 'SHINE', 'GLOW', 'GLEAM', 'FLASH', 'BEAM', 'LAMP', 'NEON'],
 
       // Death/Violence
-      ['DEATH', 'DEAD', 'DIE', 'KILL', 'MURDER', 'SLAY', 'FATAL'],
-      ['BLOOD', 'BLEED', 'WOUND', 'CUT', 'STAB', 'SLASH', 'GASH'],
-      ['GUN', 'SHOOT', 'SHOT', 'BULLET', 'PISTOL', 'WEAPON', 'RIFLE'],
+      ['DEATH', 'DEAD', 'DIE', 'KILL', 'MURDER', 'SLAY', 'FATAL', 'CORPSE', 'BODY', 'MORGUE'],
+      ['BLOOD', 'BLEED', 'WOUND', 'CUT', 'STAB', 'SLASH', 'GASH', 'INJURY', 'HURT'],
+      ['GUN', 'SHOOT', 'SHOT', 'BULLET', 'PISTOL', 'WEAPON', 'RIFLE', 'REVOLVER', 'FIREARM'],
+      ['KNIFE', 'BLADE', 'SHARP', 'CUT', 'STAB', 'DAGGER', 'RAZOR'],
 
       // Truth/Lies
-      ['TRUTH', 'TRUE', 'HONEST', 'REAL', 'FACT', 'GENUINE'],
-      ['LIE', 'FALSE', 'FAKE', 'DECEIT', 'FRAUD', 'CHEAT', 'TRICK'],
-      ['SECRET', 'HIDE', 'HIDDEN', 'CONCEAL', 'COVERT', 'COVER'],
+      ['TRUTH', 'TRUE', 'HONEST', 'REAL', 'FACT', 'GENUINE', 'SINCERE', 'CANDID'],
+      ['LIE', 'FALSE', 'FAKE', 'DECEIT', 'FRAUD', 'CHEAT', 'TRICK', 'DECEIVE', 'BETRAY'],
+      ['SECRET', 'HIDE', 'HIDDEN', 'CONCEAL', 'COVERT', 'COVER', 'BURY', 'SUPPRESS'],
 
       // Fear/Emotion
-      ['FEAR', 'AFRAID', 'TERROR', 'DREAD', 'PANIC', 'SCARED', 'FRIGHT'],
-      ['ANGER', 'ANGRY', 'RAGE', 'FURY', 'MAD', 'WRATH', 'HATE'],
+      ['FEAR', 'AFRAID', 'TERROR', 'DREAD', 'PANIC', 'SCARED', 'FRIGHT', 'HORROR'],
+      ['ANGER', 'ANGRY', 'RAGE', 'FURY', 'MAD', 'WRATH', 'HATE', 'HOSTILE'],
+      ['GUILT', 'SHAME', 'REGRET', 'REMORSE', 'SORRY', 'BLAME', 'FAULT'],
+      ['GRIEF', 'SORROW', 'MOURN', 'LOSS', 'SADNESS', 'DESPAIR', 'ANGUISH'],
 
       // Crime/Law
-      ['CRIME', 'CRIMINAL', 'CROOK', 'THIEF', 'STEAL', 'ROB', 'HEIST'],
-      ['POLICE', 'COP', 'BADGE', 'OFFICER', 'DETECTIVE', 'PATROL'],
-      ['JAIL', 'PRISON', 'CELL', 'LOCK', 'CAGE', 'CAPTIVE', 'TRAPPED'],
+      ['CRIME', 'CRIMINAL', 'CROOK', 'THIEF', 'STEAL', 'ROB', 'HEIST', 'FELON', 'CONVICT'],
+      ['POLICE', 'COP', 'BADGE', 'OFFICER', 'DETECTIVE', 'PATROL', 'PRECINCT', 'SQUAD'],
+      ['JAIL', 'PRISON', 'CELL', 'LOCK', 'CAGE', 'CAPTIVE', 'TRAPPED', 'BARS', 'INMATE'],
+      ['COURT', 'TRIAL', 'JUDGE', 'JURY', 'LAWYER', 'VERDICT', 'SENTENCE', 'PROSECUTE'],
+      ['EVIDENCE', 'PROOF', 'CLUE', 'WITNESS', 'TESTIMONY', 'ALIBI', 'FORENSIC'],
 
       // Body parts
-      ['HAND', 'FIST', 'GRIP', 'GRASP', 'HOLD', 'GRAB', 'CLUTCH'],
-      ['EYE', 'EYES', 'LOOK', 'GAZE', 'STARE', 'WATCH', 'SEE', 'SIGHT'],
+      ['HAND', 'FIST', 'GRIP', 'GRASP', 'HOLD', 'GRAB', 'CLUTCH', 'FINGER'],
+      ['EYE', 'EYES', 'LOOK', 'GAZE', 'STARE', 'WATCH', 'SEE', 'SIGHT', 'VISION'],
+      ['FACE', 'EXPRESSION', 'FEATURES', 'VISAGE', 'COUNTENANCE'],
 
       // Money
-      ['MONEY', 'CASH', 'DOLLAR', 'WEALTH', 'RICH', 'GOLD', 'FORTUNE'],
-      ['PAY', 'PAID', 'BRIBE', 'DEBT', 'OWE', 'COST', 'PRICE'],
+      ['MONEY', 'CASH', 'DOLLAR', 'WEALTH', 'RICH', 'GOLD', 'FORTUNE', 'FUNDS'],
+      ['PAY', 'PAID', 'BRIBE', 'DEBT', 'OWE', 'COST', 'PRICE', 'FEE'],
+      ['STEAL', 'ROB', 'THEFT', 'EMBEZZLE', 'FRAUD', 'SWINDLE', 'LAUNDER'],
 
       // Time
-      ['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK', 'DARK', 'LATE'],
-      ['PAST', 'MEMORY', 'REMEMBER', 'FORGOT', 'HISTORY', 'BEFORE'],
+      ['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK', 'DARK', 'LATE', 'NOCTURNAL'],
+      ['PAST', 'MEMORY', 'REMEMBER', 'FORGOT', 'HISTORY', 'BEFORE', 'YESTERDAY', 'YEARS'],
+      ['WAIT', 'PATIENT', 'TIME', 'CLOCK', 'HOUR', 'MINUTE', 'SECOND'],
+
+      // ========== NEW NOIR-SPECIFIC CLUSTERS ==========
+
+      // Alcohol/Drinking (Critical for Jack's character)
+      ['WHISKEY', 'BOURBON', 'SCOTCH', 'DRINK', 'DRUNK', 'BOOZE', 'ALCOHOL', 'BOTTLE', 'BAR', 'JAMESON', 'GLASS', 'POUR', 'SIP'],
+
+      // Partners/Allies
+      ['PARTNER', 'ALLY', 'FRIEND', 'TRUST', 'LOYAL', 'COMPANION', 'COLLEAGUE'],
+      ['BETRAY', 'TRAITOR', 'TURNCOAT', 'BACKSTAB', 'DOUBLE-CROSS', 'DECEIVE'],
+
+      // Investigation
+      ['INVESTIGATE', 'SEARCH', 'HUNT', 'TRACK', 'PURSUE', 'FOLLOW', 'TRAIL', 'LEAD'],
+      ['CASE', 'FILE', 'RECORD', 'DOCUMENT', 'REPORT', 'DOSSIER'],
+      ['SUSPECT', 'ACCUSED', 'DEFENDANT', 'PERPETRATOR', 'CULPRIT'],
+
+      // Noir Locations
+      ['OFFICE', 'DESK', 'ROOM', 'SPACE', 'CHAMBER'],
+      ['ALLEY', 'STREET', 'ROAD', 'AVENUE', 'LANE', 'PATH'],
+      ['WAREHOUSE', 'BUILDING', 'FACTORY', 'PLANT', 'FACILITY'],
+      ['DOCKS', 'PIER', 'WHARF', 'HARBOR', 'PORT', 'WATERFRONT'],
+
+      // Noir Atmosphere
+      ['NEON', 'GLOW', 'SIGN', 'LIGHT', 'FLASH', 'FLICKER'],
+      ['SMOKE', 'FOG', 'MIST', 'HAZE', 'VAPOR', 'CLOUD'],
+      ['COAT', 'HAT', 'TRENCH', 'JACKET', 'COLLAR'],
+
+      // Characters (Story-Specific)
+      ['VICTORIA', 'CONFESSOR', 'EMILY', 'BLACKWELL'],
+      ['SARAH', 'REEVES', 'PARTNER'],
+      ['TOM', 'WADE', 'FORENSIC'],
+      ['ELEANOR', 'BELLAMY', 'INNOCENT'],
+      ['GRANGE', 'DEPUTY', 'CHIEF'],
+
+      // Key Story Concepts
+      ['INNOCENT', 'WRONGFUL', 'FRAMED', 'CONVICTED', 'EXONERATE'],
+      ['CORRUPT', 'CORRUPTION', 'DIRTY', 'CROOKED', 'ROTTEN'],
+      ['JUSTICE', 'FAIR', 'RIGHT', 'WRONG', 'MORAL'],
+      ['CERTAINTY', 'CERTAIN', 'SURE', 'DOUBT', 'UNCERTAIN', 'QUESTION'],
+      ['REDEMPTION', 'ATONE', 'FORGIVE', 'REDEEM', 'SALVATION'],
     ];
   }
 
