@@ -29,6 +29,8 @@ import {
   GENERATION_CONFIG,
 } from '../data/storyBible';
 
+// Note: STORY_STRUCTURE.chapterBeatTypes is now used for tempo variation
+
 // Story configuration
 const TOTAL_CHAPTERS = 12;
 const SUBCHAPTERS_PER_CHAPTER = 3;
@@ -143,8 +145,37 @@ const STORY_CONTENT_SCHEMA = {
       items: { type: 'string' },
       description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
     },
+    narrativeThreads: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['appointment', 'revelation', 'investigation', 'relationship', 'physical_state', 'promise', 'threat'],
+            description: 'Category of narrative thread'
+          },
+          description: {
+            type: 'string',
+            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+          },
+          status: {
+            type: 'string',
+            enum: ['active', 'resolved', 'failed'],
+            description: 'Whether this thread is still pending, was resolved, or failed'
+          },
+          characters: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Characters involved in this thread'
+          }
+        },
+        required: ['type', 'description', 'status']
+      },
+      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status.'
+    },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads'],
 };
 
 /**
@@ -204,6 +235,35 @@ const DECISION_CONTENT_SCHEMA = {
       items: { type: 'string' },
       description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
     },
+    narrativeThreads: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['appointment', 'revelation', 'investigation', 'relationship', 'physical_state', 'promise', 'threat'],
+            description: 'Category of narrative thread'
+          },
+          description: {
+            type: 'string',
+            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+          },
+          status: {
+            type: 'string',
+            enum: ['active', 'resolved', 'failed'],
+            description: 'Whether this thread is still pending, was resolved, or failed'
+          },
+          characters: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Characters involved in this thread'
+          }
+        },
+        required: ['type', 'description', 'status']
+      },
+      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status.'
+    },
     decision: {
       type: 'object',
       description: 'The binary choice presented to the player',
@@ -234,7 +294,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'decision'],
 };
 
 // ============================================================================
@@ -300,6 +360,13 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
 - "consistencyFacts": Array of 3-5 specific facts that must remain consistent in future chapters
+- "narrativeThreads": Array of active story threads from YOUR narrative. Include:
+  * type: "appointment" | "revelation" | "investigation" | "relationship" | "physical_state" | "promise" | "threat"
+  * description: What happened (e.g., "Jack agreed to meet Sarah at the docks at midnight")
+  * status: "active" (ongoing), "resolved" (completed this chapter), or "failed" (abandoned/prevented)
+  * characters: Array of character names involved
+  IMPORTANT: Only extract ACTUAL threads from your narrative. Do not invent threads that aren't in the story.
+  Examples: "Sarah promised to bring the files tomorrow" (appointment), "Jack discovered Tom's signature on the forged documents" (revelation)
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
 
 // ============================================================================
@@ -998,36 +1065,121 @@ Generate realistic consequences that will affect future chapters.`;
 
   /**
    * Extract and track narrative threads that must be maintained
+   * Uses LLM-generated threads when available, with regex fallback for legacy content
    */
   _extractNarrativeThreads(chapters) {
     const threads = [];
+    const seenDescriptions = new Set(); // Prevent duplicate threads
+
+    // First priority: Use LLM-generated structured threads
+    chapters.forEach(ch => {
+      if (ch.narrativeThreads && Array.isArray(ch.narrativeThreads)) {
+        ch.narrativeThreads.forEach(thread => {
+          // Only include active threads (not resolved or failed)
+          if (thread.status === 'active') {
+            const key = `${thread.type}:${thread.description}`.toLowerCase();
+            if (!seenDescriptions.has(key)) {
+              seenDescriptions.add(key);
+              threads.push({
+                type: thread.type,
+                chapter: ch.chapter,
+                subchapter: ch.subchapter,
+                description: thread.description,
+                characters: thread.characters || [],
+                status: thread.status,
+                source: 'llm', // Track that this came from structured output
+              });
+            }
+          }
+        });
+      }
+    });
+
+    // Fallback: Regex extraction for chapters without LLM threads (legacy content)
     const threadPatterns = [
       { pattern: /agreed to meet|promised to|will (meet|call|contact)/i, type: 'appointment' },
       { pattern: /discovered|revealed|learned that/i, type: 'revelation' },
       { pattern: /suspects?|investigating|following/i, type: 'investigation' },
       { pattern: /trust|betray|alliance|enemy/i, type: 'relationship' },
       { pattern: /wounded|injured|hurt|sick/i, type: 'physical_state' },
+      { pattern: /swore|vowed|will make.*pay|threatened/i, type: 'threat' },
+      { pattern: /promised|gave.*word|committed to/i, type: 'promise' },
     ];
 
     chapters.forEach(ch => {
+      // Skip if we already have LLM threads for this chapter
+      if (ch.narrativeThreads && ch.narrativeThreads.length > 0) return;
       if (!ch.narrative) return;
+
       threadPatterns.forEach(({ pattern, type }) => {
         const matches = ch.narrative.match(new RegExp(`.{0,50}${pattern.source}.{0,50}`, 'gi'));
         if (matches) {
           matches.forEach(match => {
-            threads.push({
-              type,
-              chapter: ch.chapter,
-              subchapter: ch.subchapter,
-              excerpt: match.trim(),
-            });
+            const excerpt = match.trim();
+            const key = `${type}:${excerpt}`.toLowerCase();
+            if (!seenDescriptions.has(key)) {
+              seenDescriptions.add(key);
+              threads.push({
+                type,
+                chapter: ch.chapter,
+                subchapter: ch.subchapter,
+                description: excerpt,
+                excerpt, // Keep for backwards compatibility
+                source: 'regex', // Track that this came from regex fallback
+              });
+            }
           });
         }
       });
     });
 
-    // Keep most recent threads (last 20)
+    // Sort by chapter/subchapter and keep most recent threads (last 20)
+    threads.sort((a, b) => {
+      if (a.chapter !== b.chapter) return a.chapter - b.chapter;
+      return a.subchapter - b.subchapter;
+    });
+
     return threads.slice(-20);
+  }
+
+  /**
+   * Get a formatted summary of active narrative threads for the LLM context
+   */
+  _formatNarrativeThreadsForContext(threads) {
+    if (!threads || threads.length === 0) {
+      return 'No active narrative threads to maintain.';
+    }
+
+    const groupedByType = {};
+    threads.forEach(thread => {
+      if (!groupedByType[thread.type]) {
+        groupedByType[thread.type] = [];
+      }
+      groupedByType[thread.type].push(thread);
+    });
+
+    const lines = ['## ACTIVE NARRATIVE THREADS (must be addressed or acknowledged)'];
+
+    const typeLabels = {
+      appointment: 'SCHEDULED MEETINGS/APPOINTMENTS',
+      revelation: 'RECENT DISCOVERIES',
+      investigation: 'ONGOING INVESTIGATIONS',
+      relationship: 'RELATIONSHIP CHANGES',
+      physical_state: 'PHYSICAL CONDITIONS',
+      promise: 'PROMISES MADE',
+      threat: 'THREATS/WARNINGS',
+    };
+
+    for (const [type, typeThreads] of Object.entries(groupedByType)) {
+      lines.push(`\n### ${typeLabels[type] || type.toUpperCase()}`);
+      typeThreads.forEach(t => {
+        const chapterInfo = `(Ch ${t.chapter}.${t.subchapter})`;
+        const chars = t.characters?.length > 0 ? ` [${t.characters.join(', ')}]` : '';
+        lines.push(`- ${t.description}${chars} ${chapterInfo}`);
+      });
+    }
+
+    return lines.join('\n');
   }
 
   /**
@@ -1372,6 +1524,9 @@ Example: "${villains.silasReed.voiceAndStyle?.examplePhrases?.[0] || 'I told mys
     const outline = context.chapterOutline;
     const subchapterOutline = outline ? outline[`subchapter${subchapterLabel}`] : null;
 
+    // Get beat type constraints for tempo variation
+    const beatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+
     let task = `## CURRENT TASK
 
 Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
@@ -1381,6 +1536,19 @@ Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 - Subchapter ${subchapter} of 3
 - Current path: "${context.currentPosition.pathKey}"
 - Phase: ${pacing.phase}`;
+
+    // ========== BEAT TYPE CONSTRAINTS (Tempo Variation) ==========
+    if (beatType) {
+      task += `
+
+### CHAPTER BEAT TYPE: ${beatType.type} (MANDATORY)
+**${beatType.description}**
+
+This chapter MUST include:
+${beatType.requirements.map(r => `- ${r}`).join('\n')}
+
+${beatType.wordCountModifier !== 1.0 ? `**Pacing Note:** ${beatType.wordCountModifier < 1.0 ? 'This is a FAST-PACED chapter. Keep scenes short and punchy. Less exposition, more action.' : 'This is a DEEP chapter. Take time for dialogue and character exploration. Don\'t rush.'}` : ''}`;
+    }
 
     // ========== NEW: Story Arc Guidance ==========
     if (chapterArc) {
@@ -2323,7 +2491,7 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     const allWords = [...new Set([...validCandidates, ...regexWords])];
 
     const outlierCount = isDecisionPoint ? 8 : 4;
-    const outlierWords = this._selectOutlierWords(allWords, outlierCount, isDecisionPoint, decision);
+    let outlierWords = this._selectOutlierWords(allWords, outlierCount, isDecisionPoint, decision);
 
     const gridRows = isDecisionPoint ? 5 : 4;
     const gridCols = 4;
@@ -2370,7 +2538,29 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       }
     }
 
-    const shuffledWords = this._shuffleArray(uniqueGridWords);
+    // ========== SEMANTIC VALIDATION ==========
+    // Ensure outlier words are semantically distinct from main grid words
+    const mainGridWords = uniqueGridWords.filter(w => !outlierWords.includes(w));
+    const availableReplacements = allWords.filter(w =>
+      !uniqueGridWords.includes(w.toUpperCase()) &&
+      !outlierWords.includes(w.toUpperCase())
+    );
+
+    // Run synchronous semantic validation
+    outlierWords = this._validatePuzzleSemanticsSync(
+      outlierWords,
+      mainGridWords,
+      [...availableReplacements, ...shuffledFillers]
+    );
+
+    // Update grid with validated outliers
+    const finalGridWords = [...outlierWords, ...mainGridWords].slice(0, gridSize);
+    while (finalGridWords.length < gridSize) {
+      const fallback = `CASE${finalGridWords.length}`;
+      finalGridWords.push(fallback);
+    }
+
+    const shuffledWords = this._shuffleArray(finalGridWords);
 
     const grid = [];
     for (let row = 0; row < gridRows; row++) {
@@ -2528,6 +2718,182 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       }
     }
     return uniqueWords;
+  }
+
+  // ==========================================================================
+  // SEMANTIC OVERLAP DETECTION - Prevents unfair puzzles
+  // ==========================================================================
+
+  /**
+   * Known semantic clusters - words that are too closely related to appear
+   * as both outliers and main words in the same puzzle
+   */
+  _getSemanticClusters() {
+    return [
+      // Weather/Temperature
+      ['COLD', 'ICE', 'FROST', 'FREEZE', 'CHILL', 'WINTER', 'SNOW', 'FROZEN'],
+      ['WIND', 'BREEZE', 'GUST', 'STORM', 'GALE', 'BLOW', 'AIR'],
+      ['RAIN', 'WATER', 'WET', 'DAMP', 'MOIST', 'DRENCH', 'SOAK', 'FLOOD'],
+      ['FIRE', 'FLAME', 'BURN', 'HEAT', 'HOT', 'BLAZE', 'EMBER', 'SCORCH'],
+
+      // Light/Dark
+      ['DARK', 'SHADOW', 'BLACK', 'NIGHT', 'GLOOM', 'DIM', 'MURKY'],
+      ['LIGHT', 'BRIGHT', 'SHINE', 'GLOW', 'GLEAM', 'FLASH', 'BEAM'],
+
+      // Death/Violence
+      ['DEATH', 'DEAD', 'DIE', 'KILL', 'MURDER', 'SLAY', 'FATAL'],
+      ['BLOOD', 'BLEED', 'WOUND', 'CUT', 'STAB', 'SLASH', 'GASH'],
+      ['GUN', 'SHOOT', 'SHOT', 'BULLET', 'PISTOL', 'WEAPON', 'RIFLE'],
+
+      // Truth/Lies
+      ['TRUTH', 'TRUE', 'HONEST', 'REAL', 'FACT', 'GENUINE'],
+      ['LIE', 'FALSE', 'FAKE', 'DECEIT', 'FRAUD', 'CHEAT', 'TRICK'],
+      ['SECRET', 'HIDE', 'HIDDEN', 'CONCEAL', 'COVERT', 'COVER'],
+
+      // Fear/Emotion
+      ['FEAR', 'AFRAID', 'TERROR', 'DREAD', 'PANIC', 'SCARED', 'FRIGHT'],
+      ['ANGER', 'ANGRY', 'RAGE', 'FURY', 'MAD', 'WRATH', 'HATE'],
+
+      // Crime/Law
+      ['CRIME', 'CRIMINAL', 'CROOK', 'THIEF', 'STEAL', 'ROB', 'HEIST'],
+      ['POLICE', 'COP', 'BADGE', 'OFFICER', 'DETECTIVE', 'PATROL'],
+      ['JAIL', 'PRISON', 'CELL', 'LOCK', 'CAGE', 'CAPTIVE', 'TRAPPED'],
+
+      // Body parts
+      ['HAND', 'FIST', 'GRIP', 'GRASP', 'HOLD', 'GRAB', 'CLUTCH'],
+      ['EYE', 'EYES', 'LOOK', 'GAZE', 'STARE', 'WATCH', 'SEE', 'SIGHT'],
+
+      // Money
+      ['MONEY', 'CASH', 'DOLLAR', 'WEALTH', 'RICH', 'GOLD', 'FORTUNE'],
+      ['PAY', 'PAID', 'BRIBE', 'DEBT', 'OWE', 'COST', 'PRICE'],
+
+      // Time
+      ['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK', 'DARK', 'LATE'],
+      ['PAST', 'MEMORY', 'REMEMBER', 'FORGOT', 'HISTORY', 'BEFORE'],
+    ];
+  }
+
+  /**
+   * Check if two words belong to the same semantic cluster
+   */
+  _areSemanticallySimilar(word1, word2) {
+    const w1 = word1.toUpperCase();
+    const w2 = word2.toUpperCase();
+
+    // Same word
+    if (w1 === w2) return true;
+
+    // Check if one contains the other (KILL/KILLER, DEATH/DEAD)
+    if (w1.includes(w2) || w2.includes(w1)) return true;
+
+    // Check semantic clusters
+    const clusters = this._getSemanticClusters();
+    for (const cluster of clusters) {
+      const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
+      const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
+      if (hasW1 && hasW2) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Validate and fix puzzle board for semantic overlap
+   * Ensures outlier words are semantically distinct from main grid words
+   */
+  _validatePuzzleSemanticsSync(outlierWords, gridWords, availableReplacements) {
+    const validatedOutliers = [...outlierWords];
+    const gridSet = new Set(gridWords.map(w => w.toUpperCase()));
+    const usedWords = new Set([...outlierWords, ...gridWords].map(w => w.toUpperCase()));
+
+    // Check each outlier against all grid words
+    for (let i = 0; i < validatedOutliers.length; i++) {
+      const outlier = validatedOutliers[i];
+
+      for (const gridWord of gridWords) {
+        if (this._areSemanticallySimilar(outlier, gridWord)) {
+          console.log(`[StoryGenerationService] Semantic overlap detected: outlier "${outlier}" ~ grid word "${gridWord}"`);
+
+          // Find a replacement from available words
+          const replacement = availableReplacements.find(w => {
+            const upper = w.toUpperCase();
+            if (usedWords.has(upper)) return false;
+            // Ensure replacement doesn't overlap with any grid word
+            return !gridWords.some(gw => this._areSemanticallySimilar(upper, gw));
+          });
+
+          if (replacement) {
+            console.log(`[StoryGenerationService] Replacing "${outlier}" with "${replacement}"`);
+            usedWords.delete(outlier.toUpperCase());
+            validatedOutliers[i] = replacement.toUpperCase();
+            usedWords.add(replacement.toUpperCase());
+          }
+          break; // Move to next outlier after finding one overlap
+        }
+      }
+    }
+
+    return validatedOutliers;
+  }
+
+  /**
+   * LLM-based semantic validation for puzzles (async, more thorough)
+   * Used as a secondary check for important decision-point puzzles
+   */
+  async _validatePuzzleSemanticsWithLLM(outlierWords, mainWords) {
+    const prompt = `You are a word puzzle validator. Given these two word lists, identify any pairs where a word from List A is semantically too similar to a word from List B to be fair in a puzzle where players must identify outliers.
+
+LIST A (Outlier words - players must find these): ${outlierWords.join(', ')}
+LIST B (Main grid words): ${mainWords.join(', ')}
+
+Semantic similarity means:
+- Synonyms (COLD/FREEZING)
+- Same category/theme (WIND/ICE both relate to cold weather)
+- One implies the other (BLOOD/WOUND)
+- Common collocations (NIGHT/DARK)
+
+Return a JSON object:
+{
+  "conflicts": [
+    {"outlier": "WORD1", "mainWord": "WORD2", "reason": "brief explanation"}
+  ]
+}
+
+If no conflicts, return: {"conflicts": []}`;
+
+    try {
+      const response = await llmService.complete(
+        [{ role: 'user', content: prompt }],
+        {
+          temperature: 0.1,
+          maxTokens: 500,
+          responseSchema: {
+            type: 'object',
+            properties: {
+              conflicts: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    outlier: { type: 'string' },
+                    mainWord: { type: 'string' },
+                    reason: { type: 'string' }
+                  },
+                  required: ['outlier', 'mainWord', 'reason']
+                }
+              }
+            },
+            required: ['conflicts']
+          }
+        }
+      );
+
+      const result = JSON.parse(response.content);
+      return result.conflicts || [];
+    } catch (error) {
+      console.warn('[StoryGenerationService] LLM semantic validation failed:', error.message);
+      return []; // Fail open - rely on sync validation
+    }
   }
 
   _selectThemedWords(words, count, themeFocus, excludeWords = new Set()) {

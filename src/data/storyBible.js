@@ -238,6 +238,78 @@ export const STORY_STRUCTURE = {
       tone: 'Cathartic, definitive, earned ending',
     },
   },
+
+  // ========== BEAT TYPE CONSTRAINTS ==========
+  // Forces tempo variation to prevent narrative "sameness"
+  // Each chapter has a required beat type that overrides default pacing
+  chapterBeatTypes: {
+    2: {
+      type: 'INVESTIGATION',
+      description: 'Methodical evidence gathering, interview-heavy, building the case',
+      wordCountModifier: 1.0, // Standard length
+      requirements: ['At least one witness interview', 'Discovery of key evidence', 'End with a lead to follow'],
+    },
+    3: {
+      type: 'REVELATION',
+      description: 'Major discovery that recontextualizes previous events',
+      wordCountModifier: 1.0,
+      requirements: ['Shocking reveal about a trusted character', 'Jack questions his assumptions', 'Stakes raised significantly'],
+    },
+    4: {
+      type: 'RELATIONSHIP',
+      description: 'Character-focused, trust dynamics, personal stakes',
+      wordCountModifier: 1.1, // Slightly longer for character depth
+      requirements: ['Extended dialogue with key character', 'Trust tested or earned', 'Personal vulnerability shown'],
+    },
+    5: {
+      type: 'TENSION',
+      description: 'Building dread, surveillance, being watched',
+      wordCountModifier: 1.0,
+      requirements: ['Sense of being followed/watched', 'Paranoia justified', 'Near-miss danger'],
+    },
+    6: {
+      type: 'CHASE',
+      description: 'High action, short punchy scenes, physical danger, time pressure',
+      wordCountModifier: 0.85, // Shorter, faster pacing
+      requirements: ['Physical pursuit or escape', 'Time-sensitive objective', 'Minimal dialogue, maximum action'],
+    },
+    7: {
+      type: 'BETRAYAL',
+      description: 'Trust shattered, ally becomes threat, isolation',
+      wordCountModifier: 1.0,
+      requirements: ['Trusted character revealed as compromised', 'Jack left without support', 'Emotional gut-punch'],
+    },
+    8: {
+      type: 'CONFRONTATION',
+      description: 'Face-to-face with antagonist or major corrupt figure',
+      wordCountModifier: 1.1,
+      requirements: ['Direct confrontation with power', 'Truth spoken to corruption', 'High stakes dialogue'],
+    },
+    9: {
+      type: 'BOTTLE_EPISODE',
+      description: 'Single location, intense dialogue, psychological pressure',
+      wordCountModifier: 1.2, // Longer for dialogue depth
+      requirements: ['One primary location', 'Extended dialogue exchange', 'Character psychology explored', 'Minimal scene changes'],
+    },
+    10: {
+      type: 'RECKONING',
+      description: 'Consequences of choices manifest, past catches up',
+      wordCountModifier: 1.0,
+      requirements: ['Previous choices have consequences', 'Character accountability', 'Setup for climax'],
+    },
+    11: {
+      type: 'CLIMAX',
+      description: 'All threads converge, maximum stakes, decisive action',
+      wordCountModifier: 1.1,
+      requirements: ['Multiple plot threads resolved', 'Highest stakes moment', 'Irreversible choices made'],
+    },
+    12: {
+      type: 'RESOLUTION',
+      description: 'Aftermath, reflection, earned ending based on choices',
+      wordCountModifier: 1.0,
+      requirements: ['Consequences shown', 'Character reflection', 'Thematic closure', 'Path-dependent ending'],
+    },
+  },
 };
 
 // ============================================================================

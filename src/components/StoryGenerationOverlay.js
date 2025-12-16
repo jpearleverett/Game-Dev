@@ -32,6 +32,32 @@ const QUOTES = [
   '"Justice delayed is justice denied."',
 ];
 
+// Diegetic loading messages for unexpected path choices (cache misses)
+// These make the loading delay feel like part of the investigation
+const CACHE_MISS_MESSAGES = {
+  titles: [
+    'Following a New Lead',
+    'Changing Course',
+    'Taking the Road Less Traveled',
+    'Re-examining the Evidence',
+    'Pursuing an Unexpected Thread',
+  ],
+  progress: [
+    'Cross-referencing new evidence...',
+    'Tracking down a different angle...',
+    'Following the trail you\'ve chosen...',
+    'Uncovering what this path reveals...',
+    'Piecing together the unexpected connection...',
+  ],
+  hints: [
+    'Sometimes the case takes you where you least expect...',
+    'A good detective follows the evidence, not the obvious path...',
+    'The truth rarely travels in straight lines...',
+    'Every choice opens new doors and closes others...',
+    'You\'ve surprised us. Let\'s see where this leads...',
+  ],
+};
+
 // Noir-themed error messages
 const ERROR_MESSAGES = {
   network: [
@@ -92,6 +118,7 @@ export default function StoryGenerationOverlay({
   error,
   generationType,
   isPreloading,
+  isCacheMiss = false, // True when player chose an unexpected/unpredicted path
   onCancel,
   onRetry,
   onGoToSettings,
@@ -100,6 +127,7 @@ export default function StoryGenerationOverlay({
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const quoteIndex = useRef(Math.floor(Math.random() * QUOTES.length)).current;
+  const cacheMissIndex = useRef(Math.floor(Math.random() * CACHE_MISS_MESSAGES.titles.length)).current;
   const noirErrorRef = useRef(null);
 
   // Generate noir error message once per error
@@ -183,11 +211,16 @@ export default function StoryGenerationOverlay({
   // Different messages for immediate generation vs pre-loading
   const isPreloadingContent = isPreloading || generationType === GENERATION_TYPE.PRELOAD;
 
+  // Use diegetic messages for cache misses (unexpected player choices)
   const progressText = progress?.total > 0
     ? isPreloadingContent
       ? `Pre-loading chapter ${progress.current}/${progress.total}...`
-      : `Generating story ${progress.current}/${progress.total}...`
-    : 'Preparing story...';
+      : isCacheMiss
+        ? CACHE_MISS_MESSAGES.progress[cacheMissIndex]
+        : `Generating story ${progress.current}/${progress.total}...`
+    : isCacheMiss
+      ? CACHE_MISS_MESSAGES.progress[cacheMissIndex]
+      : 'Preparing story...';
 
   const titleText = hasError
     ? 'Generation Error'
@@ -195,11 +228,15 @@ export default function StoryGenerationOverlay({
       ? 'Setup Required'
       : isPreloadingContent
         ? 'Loading Next Chapter'
-        : 'Crafting Your Story';
+        : isCacheMiss
+          ? CACHE_MISS_MESSAGES.titles[cacheMissIndex]
+          : 'Crafting Your Story';
 
   const hintText = isPreloadingContent
     ? 'Getting the next chapter ready while you play...'
-    : 'The AI is writing your unique story continuation...';
+    : isCacheMiss
+      ? CACHE_MISS_MESSAGES.hints[cacheMissIndex]
+      : 'The AI is writing your unique story continuation...';
 
   return (
     <Modal

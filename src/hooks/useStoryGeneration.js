@@ -32,6 +32,12 @@ export const GENERATION_TYPE = {
   PRELOAD: 'preload',      // Pre-loading upcoming content in background
 };
 
+// Cache miss tracking - when player picks unexpected path
+export const CACHE_MISS_TYPE = {
+  NONE: 'none',            // Content was pre-loaded (expected path)
+  UNEXPECTED: 'unexpected', // Player chose unpredicted path, content not ready
+};
+
 /**
  * Hook for managing story generation
  */
@@ -41,7 +47,9 @@ export function useStoryGeneration(storyCampaign) {
   const [error, setError] = useState(null);
   const [isConfigured, setIsConfigured] = useState(false);
   const [generationType, setGenerationType] = useState(GENERATION_TYPE.IMMEDIATE);
+  const [isCacheMiss, setIsCacheMiss] = useState(false); // Track unexpected path choices
   const generationRef = useRef(null);
+  const lastPredictionRef = useRef(null); // Track what we predicted
 
   // Check if LLM is configured on mount
   useEffect(() => {
@@ -80,6 +88,7 @@ export function useStoryGeneration(storyCampaign) {
 
   /**
    * Generate content for a specific case
+   * Tracks whether this is a "cache miss" (player chose unexpected path)
    */
   const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = []) => {
     if (!isConfigured) {
@@ -98,11 +107,19 @@ export function useStoryGeneration(storyCampaign) {
     // Check if already generated
     const hasContent = await hasStoryContent(caseNumber, pathKey);
     if (hasContent) {
+      setIsCacheMiss(false);
       return null; // Already generated
     }
 
+    // Determine if this is a cache miss (player chose unexpected path)
+    // A cache miss occurs when we predicted a different path than what was chosen
+    const wasCacheMiss = lastPredictionRef.current &&
+      lastPredictionRef.current.primary !== pathKey &&
+      lastPredictionRef.current.confidence > 0.6;
+
     setStatus(GENERATION_STATUS.GENERATING);
     setGenerationType(GENERATION_TYPE.IMMEDIATE);
+    setIsCacheMiss(wasCacheMiss);
     setError(null);
     setProgress({ current: 0, total: 1 });
 
@@ -283,6 +300,9 @@ export function useStoryGeneration(storyCampaign) {
     // Predict which path player is more likely to choose
     const prediction = predictNextPath(choiceHistory);
 
+    // Store prediction for cache miss detection
+    lastPredictionRef.current = prediction;
+
     // Always generate the primary (predicted) path first
     const needsPrimaryGen = await needsGeneration(firstCaseOfNextChapter, prediction.primary);
 
@@ -402,6 +422,7 @@ export function useStoryGeneration(storyCampaign) {
     isGenerating: status === GENERATION_STATUS.GENERATING,
     generationType,
     isPreloading: status === GENERATION_STATUS.GENERATING && generationType === GENERATION_TYPE.PRELOAD,
+    isCacheMiss, // True when player chose an unexpected path and content wasn't pre-loaded
 
     // Actions
     configureLLM,
