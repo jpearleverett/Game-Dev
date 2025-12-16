@@ -141,6 +141,9 @@ class LLMService {
     }
 
     let lastError = null;
+    const MAX_RATE_LIMIT_WAITS = 3; // Maximum times we'll wait for rate limits before failing
+    let rateLimitWaitCount = 0;
+
     for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
       try {
         const controller = new AbortController();
@@ -183,9 +186,13 @@ class LLMService {
 
         // Handle rate limiting specifically (429 errors)
         if (response.status === 429) {
+          rateLimitWaitCount++;
+          if (rateLimitWaitCount > MAX_RATE_LIMIT_WAITS) {
+            throw new Error(`API rate limit exceeded after ${MAX_RATE_LIMIT_WAITS} waits. Please try again later or check your API quota.`);
+          }
           const retryAfterHeader = response.headers.get('Retry-After');
-          const retryAfter = parseInt(retryAfterHeader || '60', 10);
-          console.warn(`[LLMService] Rate limited (429), waiting ${retryAfter}s before retry...`);
+          const retryAfter = Math.min(parseInt(retryAfterHeader || '60', 10), 120); // Cap at 2 minutes
+          console.warn(`[LLMService] Rate limited (429), waiting ${retryAfter}s before retry (${rateLimitWaitCount}/${MAX_RATE_LIMIT_WAITS})...`);
           await this._sleep(retryAfter * 1000);
           // Don't count this toward retry limit - continue the loop
           attempt--; // Decrement to not count this attempt
@@ -197,7 +204,11 @@ class LLMService {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error?.message || '';
           if (errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('limit')) {
-            console.warn('[LLMService] API quota exhausted, waiting 60s before retry...');
+            rateLimitWaitCount++;
+            if (rateLimitWaitCount > MAX_RATE_LIMIT_WAITS) {
+              throw new Error(`API quota exhausted after ${MAX_RATE_LIMIT_WAITS} waits. Please check your API quota and try again later.`);
+            }
+            console.warn(`[LLMService] API quota exhausted, waiting 60s before retry (${rateLimitWaitCount}/${MAX_RATE_LIMIT_WAITS})...`);
             await this._sleep(60000);
             attempt--; // Don't count toward retry limit
             continue;
@@ -443,13 +454,39 @@ class LLMService {
       }
 
       // If this appears to be a decision point, check decision structure
+      // Decision points have stricter requirements - truncation here is critical
       if (parsed.decision) {
         if (!parsed.decision.intro) {
           validationIssues.push('Decision missing intro');
+          // Try to add a placeholder intro if missing
+          parsed.decision.intro = 'A critical choice lies ahead.';
         }
-        if (!parsed.decision.optionA?.title || !parsed.decision.optionB?.title) {
-          validationIssues.push('Decision missing option titles');
+        if (!parsed.decision.optionA?.title) {
+          validationIssues.push('Decision missing optionA title');
+          // Create placeholder optionA if missing
+          if (!parsed.decision.optionA) parsed.decision.optionA = {};
+          parsed.decision.optionA.key = 'A';
+          parsed.decision.optionA.title = 'Take direct action';
+          parsed.decision.optionA.focus = 'Prioritizes immediate resolution. Risks escalation.';
         }
+        if (!parsed.decision.optionA?.focus) {
+          validationIssues.push('Decision optionA missing focus');
+          parsed.decision.optionA.focus = 'Prioritizes decisive action. Risks unforeseen consequences.';
+        }
+        if (!parsed.decision.optionB?.title) {
+          validationIssues.push('Decision missing optionB title');
+          // Create placeholder optionB if missing
+          if (!parsed.decision.optionB) parsed.decision.optionB = {};
+          parsed.decision.optionB.key = 'B';
+          parsed.decision.optionB.title = 'Proceed with caution';
+          parsed.decision.optionB.focus = 'Prioritizes careful approach. Risks losing momentum.';
+        }
+        if (!parsed.decision.optionB?.focus) {
+          validationIssues.push('Decision optionB missing focus');
+          parsed.decision.optionB.focus = 'Prioritizes careful analysis. Risks delay.';
+        }
+        // Re-serialize with repaired decision
+        json = JSON.stringify(parsed);
       }
 
       // Log any validation issues as warnings (don't fail the repair)
