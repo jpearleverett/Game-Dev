@@ -28,6 +28,7 @@ export async function loadGeneratedStory() {
 
 /**
  * Save a generated chapter
+ * Automatically triggers storage pruning if utilization is high
  */
 export async function saveGeneratedChapter(caseNumber, pathKey, entry) {
   try {
@@ -39,6 +40,17 @@ export async function saveGeneratedChapter(caseNumber, pathKey, entry) {
     current.totalGenerated = Object.keys(current.chapters).length;
 
     await AsyncStorage.setItem(GENERATED_STORY_KEY, JSON.stringify(current));
+
+    // Auto-prune if storage utilization is high (async, don't block save)
+    const currentChapter = entry.chapter || 2;
+    autoPruneIfNeeded(pathKey, currentChapter, 80).then(result => {
+      if (result.prunedCount > 0) {
+        console.log(`[GeneratedStoryStorage] Auto-pruned ${result.prunedCount} entries after save`);
+      }
+    }).catch(err => {
+      console.warn('[GeneratedStoryStorage] Auto-prune error:', err);
+    });
+
     return true;
   } catch (error) {
     console.warn('[GeneratedStoryStorage] Failed to save chapter:', error);

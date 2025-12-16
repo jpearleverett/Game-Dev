@@ -2084,6 +2084,118 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
+   * Clean up all stored data for a fresh start
+   * Removes generated story, story arcs, chapter outlines, and resets service state
+   */
+  async cleanupAllStoredData() {
+    console.log('[StoryGenerationService] Starting full storage cleanup...');
+
+    try {
+      // Get all AsyncStorage keys to find story-related ones
+      const allKeys = await AsyncStorage.getAllKeys();
+
+      // Keys to remove: story arcs, chapter outlines, offline queue
+      const keysToRemove = allKeys.filter(key =>
+        key.startsWith('story_arc_') ||
+        key.startsWith('chapter_outline_') ||
+        key === 'detective_portrait_offline_queue'
+      );
+
+      // Remove story arc keys
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+        console.log(`[StoryGenerationService] Removed ${keysToRemove.length} auxiliary storage keys`);
+      }
+
+      // Clear generated story and context via storage module
+      const { clearGeneratedStory } = await import('../storage/generatedStoryStorage');
+      await clearGeneratedStory();
+
+      // Reset service state
+      this.generatedStory = null;
+      this.storyContext = null;
+      this.storyArc = null;
+      this.chapterOutlines.clear();
+      this.consistencyCheckpoints.clear();
+      this.generatedConsequences.clear();
+      this.pendingGenerations.clear();
+      this.threadAcknowledgmentCounts.clear();
+      this.generationAttempts.clear();
+      this.pathPersonality = null;
+      this.consistencyLog = [];
+      this.narrativeThreads = [];
+
+      console.log('[StoryGenerationService] Full cleanup complete');
+      return { success: true, keysRemoved: keysToRemove.length + 2 }; // +2 for story and context
+    } catch (error) {
+      console.error('[StoryGenerationService] Cleanup failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get storage usage statistics
+   */
+  async getStorageStats() {
+    try {
+      const { getStorageSize, getGenerationStats } = await import('../storage/generatedStoryStorage');
+
+      const sizeInfo = await getStorageSize();
+      const genStats = await getGenerationStats();
+
+      // Count story arcs
+      const allKeys = await AsyncStorage.getAllKeys();
+      const arcKeys = allKeys.filter(k => k.startsWith('story_arc_'));
+      const outlineKeys = allKeys.filter(k => k.startsWith('chapter_outline_'));
+
+      return {
+        ...sizeInfo,
+        ...genStats,
+        storyArcCount: arcKeys.length,
+        chapterOutlineCount: outlineKeys.length,
+        totalKeysUsed: arcKeys.length + outlineKeys.length + 2, // +2 for main story and context
+      };
+    } catch (error) {
+      console.warn('[StoryGenerationService] Failed to get storage stats:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Force prune storage to free up space
+   * @param {string} currentPathKey - Player's current path
+   * @param {number} currentChapter - Player's current chapter
+   */
+  async forcePruneStorage(currentPathKey, currentChapter) {
+    try {
+      const { pruneOldGenerations } = await import('../storage/generatedStoryStorage');
+
+      // Target 50% of max storage
+      const targetSize = 2 * 1024 * 1024; // 2MB target
+      const result = await pruneOldGenerations(currentPathKey, currentChapter, targetSize);
+
+      // Also clean up old story arcs that aren't for the current path
+      const allKeys = await AsyncStorage.getAllKeys();
+      const arcKeys = allKeys.filter(k =>
+        k.startsWith('story_arc_') && !k.includes(currentPathKey)
+      );
+
+      if (arcKeys.length > 0) {
+        await AsyncStorage.multiRemove(arcKeys);
+        console.log(`[StoryGenerationService] Removed ${arcKeys.length} old story arcs`);
+      }
+
+      return {
+        ...result,
+        arcsRemoved: arcKeys.length,
+      };
+    } catch (error) {
+      console.error('[StoryGenerationService] Force prune failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Check if a specific chapter/subchapter needs generation
    */
   needsGeneration(chapter, subchapter, pathKey) {
@@ -5506,6 +5618,40 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
       // Silas Reed (Jack's former partner)
       ['SILAS', 'REED', 'RECLUSE', 'HERMIT', 'FORMER'],
+
+      // ========== COLOR CLUSTERS (Visual descriptions) ==========
+      ['RED', 'CRIMSON', 'SCARLET', 'RUBY', 'MAROON', 'BURGUNDY', 'CHERRY', 'BLOOD-RED'],
+      ['BLUE', 'AZURE', 'NAVY', 'COBALT', 'INDIGO', 'SAPPHIRE', 'CERULEAN', 'MIDNIGHT-BLUE'],
+      ['GREEN', 'EMERALD', 'JADE', 'OLIVE', 'FOREST', 'MOSS', 'VIRIDIAN'],
+      ['BLACK', 'EBONY', 'ONYX', 'JET', 'OBSIDIAN', 'PITCH', 'INKY', 'COAL'],
+      ['WHITE', 'IVORY', 'PEARL', 'ALABASTER', 'SNOW', 'PALE', 'PALLID', 'ASHEN'],
+      ['GREY', 'GRAY', 'SILVER', 'ASH', 'SLATE', 'STEEL', 'CHARCOAL', 'GUNMETAL'],
+      ['GOLD', 'GOLDEN', 'AMBER', 'BRONZE', 'BRASS', 'COPPER', 'TAWNY'],
+
+      // ========== SOUND CLUSTERS (Auditory descriptions) ==========
+      ['WHISPER', 'MURMUR', 'HUSH', 'MUTTER', 'MUMBLE', 'BREATHE', 'SIGH'],
+      ['SCREAM', 'SHOUT', 'YELL', 'CRY', 'SHRIEK', 'HOWL', 'WAIL', 'SCREECH'],
+      ['BANG', 'CRASH', 'SLAM', 'THUD', 'BOOM', 'BLAST', 'CRACK', 'POP'],
+      ['CREAK', 'GROAN', 'SQUEAK', 'SQUEAL', 'SCRAPE', 'SCRATCH', 'RASP'],
+      ['HISS', 'SIZZLE', 'FIZZ', 'BUZZ', 'HUM', 'DRONE', 'WHIR'],
+      ['RUMBLE', 'THUNDER', 'ROAR', 'GROWL', 'SNARL', 'GRUMBLE'],
+      ['CLICK', 'CLACK', 'TAP', 'KNOCK', 'RAP', 'TICK', 'TOCK'],
+      ['RING', 'CHIME', 'TOLL', 'BELL', 'DING', 'CLANG', 'JINGLE'],
+
+      // ========== SYNONYM EXPANSIONS (Common noir words) ==========
+      ['SHADOW', 'SILHOUETTE', 'OUTLINE', 'SHAPE', 'FIGURE', 'FORM', 'PROFILE'],
+      ['STARE', 'GLARE', 'GAWK', 'OGLE', 'PEER', 'SQUINT', 'SCRUTINIZE'],
+      ['WHISKEY', 'BOURBON', 'SCOTCH', 'RYE', 'BRANDY', 'COGNAC', 'LIQUOR'],
+      ['CIGARETTE', 'SMOKE', 'CIGAR', 'TOBACCO', 'ASH', 'BUTT', 'DRAG', 'PUFF'],
+      ['TIRED', 'WEARY', 'EXHAUSTED', 'FATIGUED', 'WORN', 'DRAINED', 'SPENT'],
+      ['OLD', 'AGED', 'WORN', 'WEATHERED', 'BATTERED', 'SHABBY', 'DECREPIT'],
+
+      // ========== BODY/PHYSICAL EXPANSIONS ==========
+      ['LEG', 'FOOT', 'FEET', 'KNEE', 'ANKLE', 'THIGH', 'CALF', 'TOE'],
+      ['ARM', 'ELBOW', 'WRIST', 'SHOULDER', 'BICEP', 'FOREARM'],
+      ['CHEST', 'TORSO', 'RIBS', 'HEART', 'LUNGS', 'STOMACH', 'GUT'],
+      ['HEAD', 'SKULL', 'BRAIN', 'TEMPLE', 'FOREHEAD', 'BROW', 'SCALP'],
+      ['NECK', 'THROAT', 'JAW', 'CHIN', 'CHEEK', 'MOUTH', 'LIPS'],
     ];
   }
 

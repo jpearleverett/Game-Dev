@@ -6,8 +6,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 const LLM_CONFIG_KEY = 'detective_portrait_llm_config';
+const OFFLINE_QUEUE_KEY = 'detective_portrait_offline_queue';
 
 // Default configuration - using Gemini
 const DEFAULT_CONFIG = {
@@ -32,6 +34,192 @@ class LLMService {
     this.minRequestInterval = 500; // Minimum 500ms between requests
     this.maxConcurrentRequests = 2; // Max concurrent API calls
     this.activeRequests = 0;
+
+    // ========== OFFLINE HANDLING ==========
+    this.isOnline = true;
+    this.offlineQueue = []; // Queue of requests to retry when back online
+    this.offlineListeners = new Set(); // Callbacks for offline/online state changes
+    this.networkUnsubscribe = null;
+    this._setupNetworkListener();
+  }
+
+  /**
+   * Setup network state listener for offline handling
+   */
+  _setupNetworkListener() {
+    try {
+      this.networkUnsubscribe = NetInfo.addEventListener(state => {
+        const wasOnline = this.isOnline;
+        this.isOnline = state.isConnected && state.isInternetReachable !== false;
+
+        console.log(`[LLMService] Network state changed: ${this.isOnline ? 'ONLINE' : 'OFFLINE'}`);
+
+        // Notify listeners of state change
+        this.offlineListeners.forEach(listener => {
+          try {
+            listener(this.isOnline);
+          } catch (e) {
+            console.warn('[LLMService] Error in offline listener:', e);
+          }
+        });
+
+        // Process offline queue when coming back online
+        if (!wasOnline && this.isOnline) {
+          console.log('[LLMService] Back online, processing offline queue...');
+          this._processOfflineQueue();
+        }
+      });
+    } catch (error) {
+      console.warn('[LLMService] Failed to setup network listener:', error);
+      // Assume online if we can't detect network state
+      this.isOnline = true;
+    }
+  }
+
+  /**
+   * Subscribe to offline/online state changes
+   * @param {Function} callback - Called with (isOnline: boolean)
+   * @returns {Function} Unsubscribe function
+   */
+  onNetworkStateChange(callback) {
+    this.offlineListeners.add(callback);
+    // Immediately call with current state
+    callback(this.isOnline);
+    return () => this.offlineListeners.delete(callback);
+  }
+
+  /**
+   * Check if device is currently online
+   */
+  async checkOnline() {
+    try {
+      const state = await NetInfo.fetch();
+      this.isOnline = state.isConnected && state.isInternetReachable !== false;
+      return this.isOnline;
+    } catch {
+      return this.isOnline;
+    }
+  }
+
+  /**
+   * Add a request to the offline queue for later processing
+   */
+  async _queueOfflineRequest(requestData) {
+    const queueItem = {
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      data: requestData,
+      retryCount: 0,
+    };
+
+    this.offlineQueue.push(queueItem);
+
+    // Persist queue to storage
+    try {
+      await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(this.offlineQueue));
+    } catch (error) {
+      console.warn('[LLMService] Failed to persist offline queue:', error);
+    }
+
+    console.log(`[LLMService] Request queued for offline retry (${this.offlineQueue.length} items in queue)`);
+    return queueItem.id;
+  }
+
+  /**
+   * Load offline queue from storage on init
+   */
+  async _loadOfflineQueue() {
+    try {
+      const saved = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+      if (saved) {
+        this.offlineQueue = JSON.parse(saved);
+        // Filter out stale requests (older than 24 hours)
+        const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+        this.offlineQueue = this.offlineQueue.filter(item => item.timestamp > cutoff);
+        console.log(`[LLMService] Loaded ${this.offlineQueue.length} items from offline queue`);
+      }
+    } catch (error) {
+      console.warn('[LLMService] Failed to load offline queue:', error);
+      this.offlineQueue = [];
+    }
+  }
+
+  /**
+   * Process offline queue when back online
+   */
+  async _processOfflineQueue() {
+    if (this.offlineQueue.length === 0) return;
+
+    console.log(`[LLMService] Processing ${this.offlineQueue.length} queued offline requests...`);
+
+    const itemsToProcess = [...this.offlineQueue];
+    this.offlineQueue = [];
+
+    for (const item of itemsToProcess) {
+      if (!this.isOnline) {
+        // Went offline again, re-queue remaining items
+        this.offlineQueue.push(item);
+        continue;
+      }
+
+      try {
+        // Attempt to process the queued request
+        // Note: The callback will handle the actual request
+        if (item.data.callback) {
+          await item.data.callback();
+        }
+      } catch (error) {
+        console.warn(`[LLMService] Failed to process offline queue item:`, error);
+        // Re-queue if still has retries left
+        if (item.retryCount < 3) {
+          item.retryCount++;
+          this.offlineQueue.push(item);
+        }
+      }
+    }
+
+    // Update persisted queue
+    try {
+      await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(this.offlineQueue));
+    } catch (error) {
+      console.warn('[LLMService] Failed to update offline queue:', error);
+    }
+  }
+
+  /**
+   * Get current offline queue status
+   */
+  getOfflineQueueStatus() {
+    return {
+      isOnline: this.isOnline,
+      queuedRequests: this.offlineQueue.length,
+      oldestRequest: this.offlineQueue.length > 0
+        ? new Date(this.offlineQueue[0].timestamp).toISOString()
+        : null,
+    };
+  }
+
+  /**
+   * Clear the offline queue
+   */
+  async clearOfflineQueue() {
+    this.offlineQueue = [];
+    try {
+      await AsyncStorage.removeItem(OFFLINE_QUEUE_KEY);
+    } catch (error) {
+      console.warn('[LLMService] Failed to clear offline queue:', error);
+    }
+  }
+
+  /**
+   * Cleanup on service destruction
+   */
+  destroy() {
+    if (this.networkUnsubscribe) {
+      this.networkUnsubscribe();
+      this.networkUnsubscribe = null;
+    }
+    this.offlineListeners.clear();
   }
 
   /**
@@ -94,8 +282,14 @@ class LLMService {
       const savedConfig = await AsyncStorage.getItem(LLM_CONFIG_KEY);
       if (savedConfig) {
         this.config = { ...DEFAULT_CONFIG, ...JSON.parse(savedConfig) };
-
       }
+
+      // Load any persisted offline queue
+      await this._loadOfflineQueue();
+
+      // Check initial network state
+      await this.checkOnline();
+
       this.initialized = true;
     } catch (error) {
       console.warn('[LLMService] Failed to load config:', error);
@@ -145,6 +339,27 @@ class LLMService {
 
     if (!this.isConfigured()) {
       throw new Error('LLM Service not configured. Please set a Gemini API key.');
+    }
+
+    // Check network connectivity before attempting request
+    const isOnline = await this.checkOnline();
+    if (!isOnline) {
+      const error = new Error('OFFLINE: No internet connection. Story generation requires network access. Please check your connection and try again.');
+      error.isOffline = true;
+      error.canRetry = true;
+
+      // Optionally queue the request for later if a callback is provided
+      if (options.offlineCallback) {
+        await this._queueOfflineRequest({
+          callback: options.offlineCallback,
+          chapter: options.chapter,
+          subchapter: options.subchapter,
+        });
+        error.queued = true;
+        error.message = 'OFFLINE: Request queued. Will automatically retry when back online.';
+      }
+
+      throw error;
     }
 
     const {
