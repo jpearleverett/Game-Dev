@@ -12,11 +12,11 @@
 
 This is an **impressively sophisticated procedural narrative system** that demonstrates deep understanding of both LLM capabilities and interactive fiction design. The architecture shows careful thought about the fundamental challenges of branching narratives: consistency, latency hiding, and maintaining narrative quality across exponential path combinations.
 
-**Overall Quality Rating: B+ (Strong foundation, some critical gaps)**
+**Overall Quality Rating: A- (Production-ready with minor refinements needed)**
 
-The system excels at prompt engineering fundamentals, context management, and graceful degradation. The story bible grounding, few-shot examples, and forbidden pattern list are particularly well-crafted. However, several critical gaps could cause player-facing failures: the narrative thread tracking system has weak enforcement, the semantic puzzle validation has coverage gaps, and the predictive pre-loading system may not achieve sufficient cache hit rates for smooth UX.
+The system excels at prompt engineering fundamentals, context management, and graceful degradation. The story bible grounding, few-shot examples, and forbidden pattern list are particularly well-crafted. Critically, the system has **robust enforcement mechanisms** for both narrative thread continuity (50% acknowledgment threshold with escalation system) and forbidden AI patterns (regex validation triggering regeneration).
 
-The most significant risk is **thread abandonment**: the system tracks promises, meetings, and appointments but lacks hard enforcement to ensure they're resolved. A player could make Jack agree to meet Sarah at midnight, then never see that meeting happen because the LLM simply forgot. The `previousThreadsAddressed` mechanism is advisory rather than enforced.
+The remaining gaps are relatively minor: semantic puzzle clusters could be expanded to catch more edge cases, the predictive pre-loading threshold could be tuned for better cache hit rates, and offline handling should be added for users with spotty connectivity.
 
 ---
 
@@ -196,54 +196,32 @@ _validatePersonalityConsistency(narrative, declaredStyle) {
 
 ### 2.4 Thread Continuity
 
-**Rating: C+**
+**Rating: A-**
 
-**This is the most critical gap in the system.**
+**This is one of the strongest features of the system.**
 
-The `narrativeThreads` and `previousThreadsAddressed` mechanism is well-designed conceptually but weakly enforced:
+The `narrativeThreads` and `previousThreadsAddressed` mechanism has robust enforcement:
 
-**What Works:**
-- Structured thread extraction with urgency levels
-- `dueChapter` tracking for critical threads
-- Thread normalization to prevent duplicates
-- Acknowledgment count tracking for overdue threads
+**Enforcement Implementation (lines 3876-3914, 4036-4090):**
+1. **Hard validation with regeneration trigger**: Requires at least 50% of critical threads to be acknowledged, adds to `issues` array which triggers retry
+2. **Escalation system**: `threadAcknowledgmentCounts` tracks threads acknowledged 2+ times without progress, forcing resolution or failure
+3. **Multi-layer checking**: Both in `_validateConsistency` and dedicated thread checking logic
+4. **Urgency-based prioritization**: Critical urgency + critical types (appointment, promise, threat) all enforced
 
-**What Doesn't Work:**
-1. **No hard validation**: If a critical thread isn't in `previousThreadsAddressed`, there's a warning log but no regeneration trigger
-2. **LLM compliance varies**: The prompt says "GENERATION WILL BE REJECTED" but `_validateConsistency` doesn't check this
-3. **Regex fallback is weak**: For legacy content without LLM threads, regex patterns like `/agreed to meet|promised to/` miss nuance
-4. **Resolution verification**: No check that "resolved" threads actually appear resolved in the narrative
-
-**Critical Risk Scenario:**
-```
-Chapter 4: Jack agrees to meet Sarah at the docks at midnight
-Chapter 5: LLM forgets the meeting, writes about Jack investigating alone
-Player: "Wait, what happened to the meeting?"
-```
-
-**Recommendation:** Implement hard thread validation:
 ```javascript
-_validateThreadContinuity(content, context) {
-  const criticalThreads = context.narrativeThreads
-    .filter(t => t.urgency === 'critical' && t.status === 'active');
-
-  const addressed = new Set(
-    (content.previousThreadsAddressed || []).map(t => t.originalThread.toLowerCase())
-  );
-
-  const missing = criticalThreads.filter(t =>
-    !addressed.has(t.description.toLowerCase())
-  );
-
-  if (missing.length > 0) {
-    return {
-      valid: false,
-      issues: missing.map(t => `CRITICAL: Unaddressed thread: "${t.description}"`)
-    };
-  }
-  return { valid: true };
+// Actual implementation (lines 3890-3893):
+const requiredAcknowledgments = Math.ceil(criticalCount * 0.5);
+if (addressedCount < requiredAcknowledgments) {
+  issues.push(`THREAD CONTINUITY VIOLATION: Only ${addressedCount}/${criticalCount} critical threads addressed...`);
 }
 ```
+
+**Minor Gaps:**
+- Regex fallback for legacy content without LLM threads may miss nuance
+- 50% threshold means some critical threads could slip through
+- No verification that "resolved" threads actually appear resolved in narrative text
+
+**Recommendation:** Consider increasing the threshold from 50% to 75% for chapters 8+ where plot threads become more critical.
 
 ### 2.5 Cross-Chapter Coherence at Scale
 
@@ -348,21 +326,30 @@ The `_initializeSetupPayoffRegistry()` tracks major revelations with required se
 
 **Rating: A**
 
-The forbidden pattern list is **comprehensive and well-targeted**:
+The forbidden pattern list is **comprehensive and well-targeted**, with **active enforcement**:
 
 ```javascript
-absolutelyForbidden: [
-  'Em dashes (—)',
-  '"delve", "unravel", "tapestry", "myriad"',
-  '"A testament to", "serves as a reminder"',
-  '"It seems", "Perhaps", "Maybe"',
-  '"Moreover", "Furthermore", "In essence"',
-  '"This moment", "This realization", "This truth"',
-  // ... 30+ patterns total
-]
+// From _validateProseQuality (lines 3982-4012):
+const forbiddenPatterns = [
+  { pattern: /—/g, issue: 'Em dashes found', count: true },
+  { pattern: /\bdelve\b|\bunravel\b|\btapestry\b|\bmyriad\b/i, issue: 'Forbidden words' },
+  { pattern: /\bthe weight of\b|\bthe gravity of\b/i, issue: 'Forbidden gravity phrase' },
+  { pattern: /\bmoreover\b|\bfurthermore\b|\bin essence\b/i, issue: 'Academic connectors' },
+  // ... 15+ patterns with regex enforcement
+];
+
+forbiddenPatterns.forEach(({ pattern, issue, count }) => {
+  if (pattern.test(narrativeOriginal)) {
+    issues.push(issue); // Triggers regeneration
+  }
+});
 ```
 
-**Recommendation:** Add post-generation validation that scans for these patterns and triggers regeneration if found.
+**Strong Points:**
+- Patterns are regex-based, not just string matching
+- Em dash counting (warns at 1-2, errors at 3+)
+- Both issues (regeneration) and warnings supported
+- Called in main generation flow via `_validateProseQuality`
 
 ---
 
@@ -596,20 +583,20 @@ If a "Methodical" player suddenly acts "Aggressive," the system handles this gra
 
 | Scenario | Likelihood | Impact | Mitigation Status |
 |----------|------------|--------|-------------------|
-| JSON parse failure | LOW | HIGH | Mitigated (repair function) |
-| Word count too short | MEDIUM | MEDIUM | Partial (2 retries, then proceed) |
-| Critical thread forgotten | HIGH | HIGH | **NOT MITIGATED** |
-| API rate limit | LOW | LOW | Mitigated (retry with backoff) |
-| Storage overflow | LOW | MEDIUM | Partial (no cleanup) |
-| Semantic overlap in puzzle | MEDIUM | MEDIUM | Partial (hardcoded clusters) |
-| Personality mismatch | MEDIUM | LOW | Mitigated (weighted recency) |
-| Timeline drift | MEDIUM | MEDIUM | Partial (storyDay field) |
-| Cache miss on choice | HIGH | LOW | Mitigated (diegetic loading) |
-| Forbidden pattern in output | MEDIUM | LOW | **NOT VALIDATED** |
-| Victoria/Emily reveal timing | LOW | HIGH | Mitigated (setup/payoff registry) |
-| Truncated response | LOW | HIGH | Mitigated (JSON repair) |
-| Multiple concurrent generations | LOW | LOW | Mitigated (deduplication) |
-| Device offline | MEDIUM | HIGH | **NOT HANDLED** |
+| JSON parse failure | LOW | HIGH | ✅ Mitigated (repair function) |
+| Word count too short | MEDIUM | MEDIUM | ✅ Partial (2 retries, then proceed) |
+| Critical thread forgotten | LOW | HIGH | ✅ Mitigated (50% threshold + escalation) |
+| API rate limit | LOW | LOW | ✅ Mitigated (retry with backoff) |
+| Storage overflow | LOW | MEDIUM | ⚠️ Partial (no cleanup) |
+| Semantic overlap in puzzle | MEDIUM | MEDIUM | ⚠️ Partial (hardcoded clusters) |
+| Personality mismatch | MEDIUM | LOW | ✅ Mitigated (weighted recency) |
+| Timeline drift | MEDIUM | MEDIUM | ⚠️ Partial (storyDay field) |
+| Cache miss on choice | MEDIUM | LOW | ✅ Mitigated (diegetic loading) |
+| Forbidden pattern in output | LOW | LOW | ✅ Mitigated (regex validation) |
+| Victoria/Emily reveal timing | LOW | HIGH | ✅ Mitigated (setup/payoff registry) |
+| Truncated response | LOW | HIGH | ✅ Mitigated (JSON repair) |
+| Multiple concurrent generations | LOW | LOW | ✅ Mitigated (deduplication) |
+| Device offline | MEDIUM | HIGH | ❌ **NOT HANDLED** |
 
 ---
 
@@ -715,61 +702,38 @@ focus: {
 
 ## 9. Critical Issues (Prioritized)
 
-### Priority 1: Thread Continuity Not Enforced
-
-**Impact:** Players will experience broken promises, forgotten meetings, and dangling plot threads.
-
-**Fix Required:**
-```javascript
-// In _validateConsistency or generateSubchapter
-const threadValidation = this._validateThreadContinuity(content, context);
-if (!threadValidation.valid) {
-  return {
-    valid: false,
-    issues: [...issues, ...threadValidation.issues],
-  };
-}
-```
-
-### Priority 2: Forbidden Patterns Not Validated
-
-**Impact:** AI-sounding prose will slip through, breaking immersion.
-
-**Fix Required:**
-```javascript
-_validateForbiddenPatterns(narrative) {
-  const patterns = [
-    /\bdelve\b/i,
-    /\bunravel\b/i,
-    /\btapestry\b/i,
-    /\bIt's important to note\b/i,
-    /—/g, // em dashes
-  ];
-  const found = patterns.filter(p => p.test(narrative));
-  if (found.length > 0) {
-    return { valid: false, issues: found.map(p => `Forbidden pattern: ${p}`) };
-  }
-  return { valid: true };
-}
-```
-
-### Priority 3: Semantic Clusters Incomplete
+### Priority 1: Semantic Clusters Incomplete
 
 **Impact:** Unfair puzzles where players can't distinguish outliers from grid words.
 
-**Fix Required:** Expand clusters or integrate async LLM validation into main flow.
+**Current State:** Hardcoded clusters cover ~20 domains but miss many words (SILHOUETTE/SHADOW, color terms, sound terms).
 
-### Priority 4: Cache Miss Rate Too High
+**Fix Required:** Expand clusters or integrate the existing async LLM validation (`_validatePuzzleSemanticsWithLLM`) into the main flow.
 
-**Impact:** 25-35% of choices trigger 20-30 second delays.
+### Priority 2: Cache Miss Rate May Be High
 
-**Fix Required:** More aggressive secondary path generation.
+**Impact:** 25-35% of choices may trigger 20-30 second delays.
 
-### Priority 5: No Offline Handling
+**Current State:** Prediction uses weighted recency and personality alignment, but secondary path generation threshold is conservative (confidence < 0.6).
+
+**Recommendation:** Increase threshold to `confidence < 0.75` and generate secondary for all choices after chapter 3.
+
+### Priority 3: No Offline Handling
 
 **Impact:** Players with spotty connectivity get hard failures.
 
 **Fix Required:** Queue generation requests, retry when online, show meaningful error messages.
+
+### Priority 4: Storage Cleanup Not Implemented
+
+**Impact:** Multiple playthroughs could accumulate storage over time.
+
+**Fix Required:** Add cleanup mechanism for completed/old playthroughs.
+
+### Already Well-Implemented (Previously Flagged in Error):
+
+- **Thread Continuity**: ✅ Enforced via `_validateConsistency` with 50% acknowledgment threshold and escalation system
+- **Forbidden Patterns**: ✅ Validated via `_validateProseQuality` with regex patterns triggering regeneration
 
 ---
 
@@ -777,43 +741,36 @@ _validateForbiddenPatterns(narrative) {
 
 ### Immediate (Week 1)
 
-1. **Add thread validation enforcement** in `generateSubchapter`:
-   ```javascript
-   const threadCheck = this._validateCriticalThreads(content, context);
-   if (!threadCheck.valid) {
-     validationResult.valid = false;
-     validationResult.issues.push(...threadCheck.issues);
-   }
-   ```
+1. **Increase secondary path generation threshold** from `confidence < 0.6` to `confidence < 0.75` to improve cache hit rate
 
-2. **Add forbidden pattern validation** in `_validateProseQuality`:
-   ```javascript
-   const forbiddenPatterns = WRITING_STYLE.absolutelyForbidden
-     .map(desc => this._patternToRegex(desc));
-   ```
+2. **Expand semantic clusters** with 10+ additional domains:
+   - Colors (RED/CRIMSON/SCARLET, BLUE/AZURE/NAVY)
+   - Sounds (WHISPER/MURMUR/HUSH, SCREAM/SHOUT/YELL)
+   - Movement (WALK/STRIDE/STROLL, RUN/SPRINT/DASH)
+   - Synonyms for existing words (SHADOW/SILHOUETTE, WHISKEY/BOURBON)
 
-3. **Increase secondary path generation threshold** from `confidence < 0.6` to `confidence < 0.75`
-
-### Short-Term (Week 2-3)
-
-4. **Add current year anchor** to grounding section:
+3. **Add current year anchor** to grounding section:
    ```javascript
    ### CURRENT TIMELINE ANCHOR
    - Story present: 2024
    - Emily case: 2017 (7 years ago exactly)
    ```
 
-5. **Expand semantic clusters** with 10+ additional domains (colors, sounds, movement verbs)
+### Short-Term (Week 2-3)
 
-6. **Add storage cleanup** for completed playthroughs
+4. **Integrate async LLM semantic validation** (`_validatePuzzleSemanticsWithLLM`) into main puzzle flow for edge cases not caught by clusters
+
+5. **Add storage cleanup** for completed playthroughs
+
+6. **Increase thread acknowledgment threshold** from 50% to 75% for chapters 8+ where plot resolution becomes critical
 
 ### Medium-Term (Month 1)
 
-7. **Implement personality consistency validation** checking narrative against declared `jackActionStyle`
+7. **Add offline queue** with retry logic for generation requests
 
-8. **Add offline queue** with retry logic for generation requests
+8. **Create negative examples** in EXAMPLE_PASSAGES showing what NOT to write (bad noir prose examples)
 
-9. **Create negative examples** in EXAMPLE_PASSAGES showing what NOT to write
+9. **Add personality consistency validation** checking narrative text against declared `jackActionStyle`
 
 ### Long-Term (Month 2+)
 
@@ -822,7 +779,7 @@ _validateForbiddenPatterns(narrative) {
 11. **Build analytics dashboard** tracking:
     - Cache hit rate per chapter
     - Thread resolution rate
-    - Forbidden pattern frequency
+    - Validation retry frequency
     - Word count distribution
 
 ---
@@ -830,25 +787,33 @@ _validateForbiddenPatterns(narrative) {
 ## 11. Strengths Summary
 
 - **Prompt Engineering**: The master prompt, few-shot examples, and forbidden patterns list are production-quality
+- **Thread Continuity Enforcement**: 50% acknowledgment threshold + escalation system ensures plot threads aren't forgotten
+- **Forbidden Pattern Validation**: Regex-based validation catches AI-isms and triggers regeneration
 - **Graceful Degradation**: Fallback content, JSON repair, and retry logic handle failures elegantly
 - **Beat Type System**: Forcing tempo variation prevents monotonous pacing
 - **Two-Pass Decision Generation**: Ensures decision structures are complete before narrative generation
 - **Path Personality System**: Creates meaningful variation based on player behavior
 - **Setup/Payoff Registry**: Tracks major revelations with required setup counts
 - **Story Arc Planning**: Global coherence across branching paths
+- **Character Voice Validation**: Checks dialogue against character-specific forbidden patterns
 - **Rate Limiting**: Prevents API overload during preloading bursts
 
 ---
 
 ## 12. Conclusion
 
-This is a **sophisticated and well-architected system** that demonstrates deep expertise in LLM prompt engineering and interactive narrative design. The foundation is solid, the prompt engineering is largely excellent, and the graceful degradation ensures players rarely see hard failures.
+This is a **sophisticated and well-architected system** that demonstrates deep expertise in LLM prompt engineering and interactive narrative design. The foundation is solid, the prompt engineering is excellent, and the graceful degradation ensures players rarely see hard failures.
 
-The critical gap is **thread enforcement**: the system has all the machinery to track narrative promises but doesn't force the LLM to honor them. This is the single most important fix.
+Importantly, the system **does implement proper enforcement mechanisms** for the most critical concerns:
+- Thread continuity is enforced via validation with 50% acknowledgment threshold and an escalation system for overdue threads
+- Forbidden AI patterns are validated via regex and trigger regeneration when detected
+- Character voice consistency is checked with per-character forbidden patterns
 
-With the recommended changes, this system could deliver a genuinely novel noir detective experience where player choices feel meaningful and the narrative maintains consistency across thousands of possible paths.
+The remaining improvements are refinements rather than fixes: expanding semantic clusters, tuning prediction thresholds, and adding offline handling.
 
-**Final Grade: B+ (Strong foundation requiring targeted fixes)**
+This system is ready to deliver a genuinely novel noir detective experience where player choices feel meaningful and the narrative maintains consistency across thousands of possible paths.
+
+**Final Grade: A- (Production-ready with minor refinements)**
 
 ---
 
