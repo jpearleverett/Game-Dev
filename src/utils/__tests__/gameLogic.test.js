@@ -5,6 +5,26 @@ import {
   extractMainWords,
 } from '../gameLogic';
 
+// Mock dependencies to isolate logic testing
+// Paths are relative to this test file: src/utils/__tests__/gameLogic.test.js
+jest.mock('../../data/cases', () => ({
+  SEASON_ONE_CASES: [],
+}));
+
+jest.mock('../../storage/progressStorage', () => ({
+  createBlankStoryCampaign: jest.fn(() => ({})),
+}));
+
+jest.mock('../../data/storyContent', () => ({
+  formatCaseNumber: jest.fn(),
+  ROOT_PATH_KEY: 'ROOT',
+  normalizeStoryPathKey: jest.fn(k => k),
+}));
+
+jest.mock('../../utils/caseNumbers', () => ({
+  getBoardProfile: jest.fn(),
+}));
+
 describe('Game Logic Utils', () => {
   describe('dedupeWords', () => {
     it('removes duplicates from an array', () => {

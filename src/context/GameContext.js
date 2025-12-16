@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
-import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter, hasStoryContent, updateGeneratedCache } from '../data/storyContent';
-import { usePersistence } from '../hooks/usePersistence';
+import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
+// Removed: internal usePersistence hook call
 import { useGameLogic } from '../hooks/useGameLogic';
-import { useStoryEngine } from '../hooks/useStoryEngine';
-import { useStoryGeneration, GENERATION_STATUS } from '../hooks/useStoryGeneration';
 import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { analytics } from '../services/AnalyticsService';
 import { purchaseService } from '../services/PurchaseService';
 import { ACHIEVEMENTS } from '../data/achievementsData';
+import { useAudio } from './AudioContext';
+import { useStory } from './StoryContext';
 
 const GameStateContext = createContext(null);
 const GameDispatchContext = createContext(null);
@@ -17,27 +17,24 @@ const GameDispatchContext = createContext(null);
 export { STATUS };
 export const GAME_STATUS = STATUS;
 
-export function GameProvider({ children }) {
-  const audioRef = React.useRef(null);
+// Updated: Accepts persistence props injected from parent
+export function GameProvider({
+  children,
+  progress,
+  hydrationComplete,
+  updateProgress,
+  updateSettings,
+  markPrologueSeen,
+  setPremiumUnlocked,
+  markCaseBriefingSeen,
+  clearProgress
+}) {
+  const audio = useAudio();
+  const story = useStory();
 
   useEffect(() => {
     analytics.init();
   }, []);
-
-  const setAudioController = useCallback((controller) => {
-    audioRef.current = controller;
-  }, []);
-
-  const {
-    progress,
-    hydrationComplete,
-    updateProgress,
-    updateSettings,
-    markPrologueSeen,
-    setPremiumUnlocked,
-    markCaseBriefingSeen,
-    clearProgress,
-  } = usePersistence();
 
   const {
     gameState,
@@ -50,64 +47,7 @@ export function GameProvider({ children }) {
     gameDispatch,
   } = useGameLogic(SEASON_ONE_CASES, progress, updateProgress);
 
-  const {
-    storyCampaign,
-    selectDecision: storySelectDecisionCore,
-    activateStoryCase: storyActivateCase,
-  } = useStoryEngine(progress, updateProgress);
-
-  // Wrap selectDecision to trigger story generation after the first decision
-  const storySelectDecision = useCallback(async (optionKey) => {
-    // Get chapter info before making the decision
-    const currentChapter = storyCampaign?.chapter || 1;
-    const isFirstDecision = (storyCampaign?.choiceHistory?.length || 0) === 0;
-
-    // Make the decision
-    storySelectDecisionCore(optionKey);
-
-    // After first decision (at 1.3), trigger generation for the first case of chapter 2
-    // so it's ready immediately. The pregeneration of subsequent chapters is handled
-    // by activateStoryCase when the player enters subchapter A of any chapter.
-    if (isFirstDecision && currentChapter === 1 && isLLMConfigured) {
-      const nextChapter = 2;
-      const nextCaseNumber = formatCaseNumber(nextChapter, 1);
-      // The path key for chapter 2 is the option chosen at 1.3
-      const pathKey = optionKey;
-
-      // Generate content for the first case of chapter 2
-      await ensureStoryContent(nextCaseNumber, pathKey);
-    }
-  }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent]);
-
-  // Story generation hook for dynamic content
-  const {
-    status: generationStatus,
-    progress: generationProgress,
-    error: generationError,
-    isConfigured: isLLMConfigured,
-    isGenerating,
-    generationType,
-    isPreloading,
-    configureLLM,
-    needsGeneration,
-    generateForCase,
-    generateChapter,
-    pregenerate,
-    pregenerateCurrentChapterSiblings,
-    cancelGeneration,
-    clearError: clearGenerationError,
-  } = useStoryGeneration(storyCampaign);
-
   const [mode, setMode] = useState('daily');
-
-  // State for tracking if we're waiting for generation
-  const [awaitingGeneration, setAwaitingGeneration] = useState(false);
-
-  // Helper to get current path key for analytics
-  const getCurrentPathKey = useCallback((caseNumber) => {
-      if (!progress.storyCampaign || !caseNumber) return ROOT_PATH_KEY;
-      return resolveStoryPathKey(caseNumber, progress.storyCampaign);
-  }, [progress.storyCampaign]);
 
   // Initialize game state when persistence is ready
   useEffect(() => {
@@ -117,62 +57,20 @@ export function GameProvider({ children }) {
     }
   }, [hydrationComplete, gameState.hydrationComplete, progress, initializeGame]);
 
-  /**
-   * Check and generate story content if needed for a case
-   */
-  const ensureStoryContent = useCallback(async (caseNumber, pathKey) => {
-    // Chapter 1 is static, no generation needed
-    if (!isDynamicChapter(caseNumber)) {
-      return { ok: true, generated: false };
-    }
-
-    // Check if content exists
-    const hasContent = await hasStoryContent(caseNumber, pathKey);
-    if (hasContent) {
-      return { ok: true, generated: false };
-    }
-
-    // Check if LLM is configured
-    if (!isLLMConfigured) {
-      return { ok: false, reason: 'llm-not-configured' };
-    }
-
-    // Generate the content
-    setAwaitingGeneration(true);
-    try {
-      const entry = await generateForCase(
-        caseNumber,
-        pathKey,
-        storyCampaign?.choiceHistory || []
-      );
-
-      if (entry) {
-        return { ok: true, generated: true, entry };
-      }
-      return { ok: false, reason: 'generation-failed' };
-    } catch (error) {
-      return { ok: false, reason: 'generation-error', error: error.message };
-    } finally {
-      setAwaitingGeneration(false);
-    }
-  }, [isLLMConfigured, generateForCase, storyCampaign?.choiceHistory]);
-
   const activateStoryCase = useCallback(
     async ({ skipLock = false, mode: targetMode = 'daily' } = {}) => {
       // Story Mode Logic
       if (targetMode === 'story') {
-          const result = storyActivateCase({ skipLock });
+          const result = story.activateStoryCase({ skipLock });
           if (!result.ok) return result;
 
           const caseNumber = result.caseNumber;
-          const pathKey = getCurrentPathKey(caseNumber);
+          const pathKey = story.getCurrentPathKey(caseNumber);
 
           // Check if we need to generate content for this case
-          // Only generate for dynamic chapters AFTER the player has made their first decision
-          // (i.e., after completing 1.3 and choosing a path)
-          const hasFirstDecision = (storyCampaign?.choiceHistory?.length || 0) > 0;
+          const hasFirstDecision = (story.storyCampaign?.choiceHistory?.length || 0) > 0;
           if (isDynamicChapter(caseNumber) && hasFirstDecision) {
-            const genResult = await ensureStoryContent(caseNumber, pathKey);
+            const genResult = await story.ensureStoryContent(caseNumber, pathKey);
             if (!genResult.ok) {
               return {
                 ok: false,
@@ -193,16 +91,11 @@ export function GameProvider({ children }) {
           // Analytics
           analytics.logLevelStart(targetCase.id, 'story', pathKey);
 
-          // Pre-generate content in background (only at start of chapter, i.e., subchapter A)
-          // This prevents duplicate pregeneration when activating B and C subchapters
+          // Trigger background generation via StoryContext
           const { chapter, subchapter } = parseCaseNumber(caseNumber);
           if (chapter < 12 && hasFirstDecision && subchapter === 1) {
-            // Generate B and C of current chapter while player reads A and solves the puzzle
-            // This gives us 6-23 minutes of gameplay time to generate in background
-            pregenerateCurrentChapterSiblings(chapter, pathKey, storyCampaign?.choiceHistory || []);
-
-            // Also pregenerate the next chapter (for both decision paths)
-            pregenerate(chapter, pathKey, storyCampaign?.choiceHistory || []);
+            story.pregenerateCurrentChapterSiblings(chapter, pathKey, story.storyCampaign?.choiceHistory || []);
+            story.pregenerate(chapter, pathKey, story.storyCampaign?.choiceHistory || []);
           }
 
           return { ok: true, caseId: targetCase.id };
@@ -218,10 +111,10 @@ export function GameProvider({ children }) {
       return { ok: true, caseId: targetCase.id };
 
     },
-    [storyActivateCase, setActiveCaseInternal, progress.currentCaseId, getCurrentPathKey, ensureStoryContent, pregenerate, pregenerateCurrentChapterSiblings, storyCampaign?.choiceHistory]
+    [story, setActiveCaseInternal, progress.currentCaseId]
   );
 
-  // Helper to parse case number (imported from storyContent)
+  // Helper to parse case number (duplicated from original context for local use)
   const parseCaseNumber = (caseNumber) => {
     if (!caseNumber) return { chapter: 1, subchapter: 1 };
     const chapterSegment = caseNumber.slice(0, 3);
@@ -250,10 +143,10 @@ export function GameProvider({ children }) {
       setActiveCaseInternal(targetCase.id);
       setMode('story');
       
-      const pathKey = getCurrentPathKey(targetCase.caseNumber);
+      const pathKey = story.getCurrentPathKey(targetCase.caseNumber);
       analytics.logLevelStart(targetCase.id, 'story', pathKey);
       return true;
-  }, [setActiveCaseInternal, getCurrentPathKey]);
+  }, [setActiveCaseInternal, story]);
 
   const exitStoryCampaign = useCallback(() => {
       setMode('daily');
@@ -262,12 +155,10 @@ export function GameProvider({ children }) {
   }, [progress.currentCaseId, setActiveCaseInternal]);
 
   const ensureDailyStoryCase = useCallback(() => {
-      // If there is a pending story case, sync to it so Daily Mode reflects current progress
-      const story = normalizeStoryCampaignShape(progress.storyCampaign);
-      if (story.activeCaseNumber && !story.awaitingDecision) {
-          const storyCase = SEASON_ONE_CASES.find(c => c.caseNumber === story.activeCaseNumber);
+      const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
+      if (currentStory.activeCaseNumber && !currentStory.awaitingDecision) {
+          const storyCase = SEASON_ONE_CASES.find(c => c.caseNumber === currentStory.activeCaseNumber);
           if (storyCase && storyCase.id !== progress.currentCaseId) {
-              // Sync daily case to story case
               setActiveCaseInternal(storyCase.id);
               setMode('daily');
               updateProgress({ currentCaseId: storyCase.id });
@@ -290,8 +181,6 @@ export function GameProvider({ children }) {
           
           if (customerInfo.entitlements.active['com.deadletters.bribe_clerk']?.isActive) {
                const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
-               
-               // Determine if we should also advance the case immediately
                let updates = {
                    storyCampaign: {
                        ...currentStory,
@@ -386,7 +275,7 @@ export function GameProvider({ children }) {
       const { status: nextStatus, attemptsUsed, caseId } = result;
 
       // Analytics
-      const pathKey = getCurrentPathKey(activeCase.caseNumber);
+      const pathKey = story.getCurrentPathKey(activeCase.caseNumber);
       if (nextStatus === STATUS.SOLVED) {
         analytics.logLevelComplete(caseId, mode, attemptsUsed, true, pathKey);
       } else if (nextStatus === STATUS.FAILED) {
@@ -395,19 +284,18 @@ export function GameProvider({ children }) {
 
       if (nextStatus === STATUS.SOLVED) {
           notificationHaptic(Haptics.NotificationFeedbackType.Success);
-          audioRef.current?.playVictory?.();
+          audio.playVictory();
       } else if (nextStatus === STATUS.FAILED) {
           notificationHaptic(Haptics.NotificationFeedbackType.Error);
-          audioRef.current?.playFailure?.();
+          audio.playFailure();
       } else {
           impactHaptic(Haptics.ImpactFeedbackStyle.Medium);
-          audioRef.current?.playSubmit?.();
+          audio.playSubmit();
       }
       
       if (nextStatus === STATUS.SOLVED || nextStatus === STATUS.FAILED) {
           const nowIso = new Date().toISOString();
           
-          // 1. Handle Story Mode Consequences
           const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
           const isStoryCase = activeCase.caseNumber === currentStory.activeCaseNumber;
 
@@ -449,7 +337,6 @@ export function GameProvider({ children }) {
               });
 
           } else {
-              // 2. Handle Daily/Archive Mode Consequences
               const distributionKey = nextStatus === STATUS.SOLVED 
                   ? Math.max(1, Math.min(activeCase.attempts || 4, attemptsUsed)) 
                   : 'fail';
@@ -478,18 +365,14 @@ export function GameProvider({ children }) {
               updateProgress(newStats);
           }
       }
-  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, getCurrentPathKey]);
+  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio]);
 
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
-  /**
-   * Unlock an ending when player reaches it
-   */
   const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
     const nowIso = new Date().toISOString();
     const currentEndings = progress.endings || { unlockedEndingIds: [], endingDetails: {}, totalEndingsReached: 0 };
     
-    // Check if already unlocked
     const alreadyUnlocked = currentEndings.unlockedEndingIds.includes(endingId);
     
     const updatedEndings = {
@@ -511,7 +394,6 @@ export function GameProvider({ children }) {
       firstEndingAt: currentEndings.firstEndingAt || nowIso,
     };
 
-    // Also unlock chapter select after first ending
     const updatedCheckpoints = {
       ...(progress.chapterCheckpoints || {}),
       unlocked: true,
@@ -522,25 +404,19 @@ export function GameProvider({ children }) {
       chapterCheckpoints: updatedCheckpoints,
     });
 
-    // Log analytics
     analytics.logEvent?.('ending_unlocked', { endingId, isNew: !alreadyUnlocked });
     
-    return !alreadyUnlocked; // Return true if this was a new unlock
+    return !alreadyUnlocked;
   }, [progress.endings, progress.chapterCheckpoints, updateProgress]);
 
-  /**
-   * Unlock an achievement
-   */
   const unlockAchievement = useCallback((achievementId, context = {}) => {
     const nowIso = new Date().toISOString();
     const currentAchievements = progress.achievements || { unlockedAchievementIds: [], achievementDetails: {}, totalPoints: 0 };
 
-    // Check if already unlocked
     if (currentAchievements.unlockedAchievementIds.includes(achievementId)) {
-      return false; // Already unlocked
+      return false;
     }
 
-    // Use module-scoped ACHIEVEMENTS (imported at top of file for performance)
     const achievement = ACHIEVEMENTS[achievementId];
     const points = achievement?.points || 0;
 
@@ -559,30 +435,20 @@ export function GameProvider({ children }) {
     };
 
     updateProgress({ achievements: updatedAchievements });
-
-    // Haptic feedback for achievement unlock (throttled)
     notificationHaptic(Haptics.NotificationFeedbackType.Success);
-
-    // Log analytics
     analytics.logEvent?.('achievement_unlocked', { achievementId, points });
 
     return true;
   }, [progress.achievements, updateProgress]);
 
-  /**
-   * Check and unlock achievements based on current state
-   */
   const checkAchievements = useCallback(() => {
-    // Use module-scoped ACHIEVEMENTS (imported at top of file for performance)
     const currentAchievements = progress.achievements?.unlockedAchievementIds || [];
     const newUnlocks = [];
 
-    // Check prologue achievement
     if (progress.seenPrologue && !currentAchievements.includes('THE_BEGINNING')) {
       if (unlockAchievement('THE_BEGINNING')) newUnlocks.push('THE_BEGINNING');
     }
 
-    // Check streak achievements
     if (progress.streak >= 5 && !currentAchievements.includes('STREAK_FIVE')) {
       if (unlockAchievement('STREAK_FIVE')) newUnlocks.push('STREAK_FIVE');
     }
@@ -590,7 +456,6 @@ export function GameProvider({ children }) {
       if (unlockAchievement('STREAK_TEN')) newUnlocks.push('STREAK_TEN');
     }
 
-    // Check total solved achievements
     const totalSolved = progress.solvedCaseIds?.length || 0;
     if (totalSolved >= 10 && !currentAchievements.includes('CASE_CRACKER')) {
       if (unlockAchievement('CASE_CRACKER')) newUnlocks.push('CASE_CRACKER');
@@ -599,31 +464,25 @@ export function GameProvider({ children }) {
       if (unlockAchievement('VETERAN_INVESTIGATOR')) newUnlocks.push('VETERAN_INVESTIGATOR');
     }
 
-    // Check perfect solve (1 attempt)
     const perfectSolves = progress.attemptsDistribution?.[1] || 0;
     if (perfectSolves > 0 && !currentAchievements.includes('PERFECT_DETECTIVE')) {
       if (unlockAchievement('PERFECT_DETECTIVE')) newUnlocks.push('PERFECT_DETECTIVE');
     }
 
-    // Check ending achievements
     const unlockedEndings = progress.endings?.unlockedEndingIds || [];
     
-    // First ending
     if (unlockedEndings.length >= 1 && !currentAchievements.includes('FIRST_ENDING')) {
       if (unlockAchievement('FIRST_ENDING')) newUnlocks.push('FIRST_ENDING');
     }
     
-    // Halfway
     if (unlockedEndings.length >= 8 && !currentAchievements.includes('HALFWAY_THERE')) {
       if (unlockAchievement('HALFWAY_THERE')) newUnlocks.push('HALFWAY_THERE');
     }
     
-    // Completionist
     if (unlockedEndings.length >= 16 && !currentAchievements.includes('COMPLETIONIST')) {
       if (unlockAchievement('COMPLETIONIST')) newUnlocks.push('COMPLETIONIST');
     }
 
-    // Time-based hidden achievements
     const hour = new Date().getHours();
     if (hour >= 0 && hour < 4 && !currentAchievements.includes('NIGHT_OWL')) {
       if (unlockAchievement('NIGHT_OWL')) newUnlocks.push('NIGHT_OWL');
@@ -635,14 +494,10 @@ export function GameProvider({ children }) {
     return newUnlocks;
   }, [progress, unlockAchievement]);
 
-  /**
-   * Save a chapter checkpoint for replay
-   */
   const saveChapterCheckpoint = useCallback((chapter, subchapter, pathKey) => {
     const nowIso = new Date().toISOString();
     const currentCheckpoints = progress.chapterCheckpoints || { checkpoints: [], unlocked: false };
     
-    // Create checkpoint snapshot
     const checkpoint = {
       id: `${chapter}-${subchapter}-${pathKey}-${Date.now()}`,
       chapter,
@@ -652,7 +507,6 @@ export function GameProvider({ children }) {
       storyCampaignSnapshot: { ...progress.storyCampaign },
     };
 
-    // Keep only the last checkpoint per chapter-path combination
     const existingIndex = currentCheckpoints.checkpoints.findIndex(
       cp => cp.chapter === chapter && cp.pathKey === pathKey
     );
@@ -673,18 +527,13 @@ export function GameProvider({ children }) {
     });
   }, [progress.chapterCheckpoints, progress.storyCampaign, updateProgress]);
 
-  /**
-   * Start replay from a specific chapter checkpoint
-   */
   const startFromChapter = useCallback((checkpoint) => {
     if (!checkpoint?.storyCampaignSnapshot) return false;
 
     const nowIso = new Date().toISOString();
     
-    // Restore story campaign from checkpoint
     const restoredCampaign = {
       ...checkpoint.storyCampaignSnapshot,
-      // Mark this as a replay branch
       isReplayBranch: true,
       replayStartedAt: nowIso,
       replayFromChapter: checkpoint.chapter,
@@ -701,9 +550,6 @@ export function GameProvider({ children }) {
     return true;
   }, [progress.chapterCheckpoints, updateProgress]);
 
-  /**
-   * Update gameplay stats (for time-based achievements)
-   */
   const updateGameplayStats = useCallback((updates) => {
     const currentStats = progress.gameplayStats || {};
     updateProgress({
@@ -721,18 +567,8 @@ export function GameProvider({ children }) {
     activeCase,
     mode,
     cases: SEASON_ONE_CASES,
-    // Story generation state
-    storyGeneration: {
-      status: generationStatus,
-      progress: generationProgress,
-      error: generationError,
-      isConfigured: isLLMConfigured,
-      isGenerating,
-      generationType,
-      isPreloading,
-      awaitingGeneration,
-    },
-  }), [gameState, progress, hydrationComplete, activeCase, mode, generationStatus, generationProgress, generationError, isLLMConfigured, isGenerating, generationType, isPreloading, awaitingGeneration]);
+    storyGeneration: story.generation, // Mapping for backward compatibility if needed, or update consumers
+  }), [gameState, progress, hydrationComplete, activeCase, mode, story.generation]);
 
   const dispatchValue = useMemo(() => ({
     toggleWordSelection,
@@ -750,17 +586,19 @@ export function GameProvider({ children }) {
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
-    selectStoryDecision: storySelectDecision,
-    setAudioController,
+    selectStoryDecision: story.selectStoryDecision,
+    // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
+    // Ideally consumers use useAudio(), but GameContext was the facade.
+    // We removed setAudioController from here.
     purchaseBribe,
     purchaseFullUnlock,
-    // Story generation actions
-    configureLLM,
-    ensureStoryContent,
-    generateForCase,
-    generateChapter,
-    cancelGeneration,
-    clearGenerationError,
+    // Story generation actions - delegated to StoryContext
+    configureLLM: story.configureLLM,
+    ensureStoryContent: story.ensureStoryContent,
+    generateForCase: story.generateForCase,
+    generateChapter: story.generateChapter,
+    cancelGeneration: story.cancelGeneration,
+    clearGenerationError: story.clearGenerationError,
     // Endings & Achievements
     unlockEnding,
     unlockAchievement,
@@ -784,16 +622,9 @@ export function GameProvider({ children }) {
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
-    storySelectDecision,
-    setAudioController,
+    story,
     purchaseBribe,
     purchaseFullUnlock,
-    configureLLM,
-    ensureStoryContent,
-    generateForCase,
-    generateChapter,
-    cancelGeneration,
-    clearGenerationError,
     unlockEnding,
     unlockAchievement,
     checkAchievements,
