@@ -1418,11 +1418,19 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
   _createFallbackStoryArc(pathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
 
+    // Customize theme based on player personality
+    const theme = personality.riskTolerance === 'high'
+      ? 'Redemption through decisive action and confrontation'
+      : personality.riskTolerance === 'low'
+        ? 'Redemption through patient investigation and truth-seeking'
+        : 'Redemption through confronting past mistakes';
+
     return {
       key: `arc_${pathKey}_${choiceHistory.length}`,
       pathKey,
       isFallback: true,
-      overallTheme: 'Redemption through confronting past mistakes',
+      playerPersonality: personality.riskTolerance || 'balanced',
+      overallTheme: theme,
       chapterArcs: [
         { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First innocent discovered', tensionLevel: 4, endingHook: 'A new lead emerges' },
         { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Evidence of conspiracy', tensionLevel: 5, endingHook: 'Trust begins to fracture' },
@@ -1468,10 +1476,17 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
     // Ensure we have the story arc first
     await this.ensureStoryArc(pathKey, choiceHistory);
 
-    const outline = await this._generateChapterOutline(chapter, pathKey, choiceHistory);
-    this.chapterOutlines.set(outlineKey, outline);
-
-    return outline;
+    // Generate outline with fallback on failure
+    try {
+      const outline = await this._generateChapterOutline(chapter, pathKey, choiceHistory);
+      this.chapterOutlines.set(outlineKey, outline);
+      return outline;
+    } catch (error) {
+      console.warn('[StoryGenerationService] Chapter outline generation failed, using fallback:', error.message);
+      const fallbackOutline = this._createFallbackChapterOutline(chapter, pathKey);
+      this.chapterOutlines.set(outlineKey, fallbackOutline);
+      return fallbackOutline;
+    }
   }
 
   /**
@@ -1580,6 +1595,75 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
     return {
       ...outline,
       pathKey,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Create a fallback chapter outline when LLM generation fails
+   * Provides a basic structure for story generation to continue
+   */
+  _createFallbackChapterOutline(chapter, pathKey) {
+    // Determine story phase based on chapter number
+    let phase, tensionLevel, focus;
+    if (chapter <= 4) {
+      phase = 'RISING_ACTION';
+      tensionLevel = 4 + (chapter - 2);
+      focus = 'Investigation deepens';
+    } else if (chapter <= 7) {
+      phase = 'COMPLICATIONS';
+      tensionLevel = 6 + (chapter - 5);
+      focus = 'Betrayals and revelations';
+    } else if (chapter <= 10) {
+      phase = 'CONFRONTATIONS';
+      tensionLevel = 8;
+      focus = 'Direct confrontations';
+    } else {
+      phase = 'RESOLUTION';
+      tensionLevel = 9;
+      focus = 'Final reckoning';
+    }
+
+    return {
+      chapter,
+      pathKey,
+      isFallback: true,
+      summary: `Chapter ${chapter}: Jack continues his investigation into the conspiracy.`,
+      openingMood: 'Noir atmosphere with building tension',
+      subchapterA: {
+        focus: `Opening: ${focus}`,
+        keyBeats: [
+          'Jack reflects on recent discoveries',
+          'New information comes to light',
+          'The investigation takes a turn',
+        ],
+        endingTransition: 'A lead demands immediate attention',
+      },
+      subchapterB: {
+        focus: `Development: The mystery deepens`,
+        keyBeats: [
+          'Jack pursues the new lead',
+          'Unexpected obstacles arise',
+          'A piece of the puzzle falls into place',
+        ],
+        endingTransition: 'Jack faces a difficult choice',
+      },
+      subchapterC: {
+        focus: `Climax: Decision point`,
+        keyBeats: [
+          'Tensions reach a breaking point',
+          'The truth demands a response',
+          'Jack must choose his path forward',
+        ],
+        decisionSetup: 'A choice between two difficult paths',
+      },
+      tensionLevel,
+      phase,
+      consistencyAnchors: [
+        'Jack Halloway seeks the truth',
+        'The conspiracy runs deep',
+        'Every choice has consequences',
+      ],
       generatedAt: new Date().toISOString(),
     };
   }
