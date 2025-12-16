@@ -571,9 +571,17 @@ export default function EvidenceBoardScreen({
       const fallbackData = defaultPolaroids[index] || defaultPolaroids[defaultPolaroids.length - 1] || null;
       const labelText = sourceData?.label && sourceData.label.trim().length ? sourceData.label : fallbackData?.label || "";
       const imageKey = sourceData?.imageKey || fallbackData?.imageKey || "default";
+
+      let imageSource;
+      if (sourceData?.uri) {
+        imageSource = { uri: sourceData.uri };
+      } else {
+        imageSource = POLAROID_IMAGES[imageKey] || POLAROID_IMAGES.default;
+      }
+
       return {
         id: `polaroid-${slot.id}-${previousCaseMeta?.caseNumber ?? "default"}-${sourceData?.id ?? index}`,
-        image: POLAROID_IMAGES[imageKey] || POLAROID_IMAGES.default,
+        image: imageSource,
         label: labelText,
         detail: sourceData?.detail || null,
         style: slot.style,

@@ -134,6 +134,14 @@ const STORY_CONTENT_SCHEMA = {
       items: { type: 'string' },
       description: 'List of 6-8 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
     },
+    polaroidImagePrompt: {
+      type: 'string',
+      description: 'A detailed visual description of a key object, person, or scene from this chapter to be turned into a polaroid photo. Noir style, moody lighting.',
+    },
+    polaroidCaption: {
+      type: 'string',
+      description: 'A short, handwritten-style caption for the polaroid (max 5 words).',
+    },
     briefing: {
       type: 'object',
       description: 'Mission briefing for the evidence board puzzle',
@@ -256,6 +264,14 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'array',
       items: { type: 'string' },
       description: 'List of 10-12 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
+    },
+    polaroidImagePrompt: {
+      type: 'string',
+      description: 'A detailed visual description of a key object, person, or scene from this chapter to be turned into a polaroid photo. Noir style, moody lighting.',
+    },
+    polaroidCaption: {
+      type: 'string',
+      description: 'A short, handwritten-style caption for the polaroid (max 5 words).',
     },
     briefing: {
       type: 'object',
@@ -2480,6 +2496,13 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           console.warn('Consistency warning (Unresolved):', validationResult.issues);
         }
 
+        // Generate polaroid image if prompt is available
+        let polaroidImage = null;
+        if (generatedContent.polaroidImagePrompt) {
+            console.log('[StoryGenerationService] Generating polaroid image...');
+            polaroidImage = await llmService.generateImage(generatedContent.polaroidImagePrompt);
+        }
+
         // Build the story entry
         const storyEntry = {
           chapter,
@@ -2493,6 +2516,15 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           decision: isDecisionPoint ? generatedContent.decision : null,
           board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision, generatedContent.puzzleCandidates),
+          evidenceBoard: polaroidImage ? {
+            polaroids: [{
+                id: `gen-${caseNumber}-${pathKey}`,
+                imageKey: null, // Use uri instead
+                uri: polaroidImage,
+                label: generatedContent.polaroidCaption || 'Evidence',
+                detail: generatedContent.polaroidImagePrompt,
+            }]
+          } : null,
           consistencyFacts: generatedContent.consistencyFacts || [],
           chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
           generatedAt: new Date().toISOString(),
