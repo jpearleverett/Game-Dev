@@ -23,6 +23,65 @@ class LLMService {
   constructor() {
     this.config = { ...DEFAULT_CONFIG };
     this.initialized = false;
+
+    // ========== RATE LIMITING ==========
+    // Prevents burst requests from overwhelming the API during preloading
+    this.requestQueue = [];
+    this.isProcessingQueue = false;
+    this.lastRequestTime = 0;
+    this.minRequestInterval = 500; // Minimum 500ms between requests
+    this.maxConcurrentRequests = 2; // Max concurrent API calls
+    this.activeRequests = 0;
+  }
+
+  /**
+   * Rate-limited request wrapper
+   * Ensures requests are spaced out to avoid 429 errors during preloading bursts
+   */
+  async _rateLimitedRequest(requestFn) {
+    return new Promise((resolve, reject) => {
+      this.requestQueue.push({ requestFn, resolve, reject });
+      this._processQueue();
+    });
+  }
+
+  /**
+   * Process the request queue with rate limiting
+   */
+  async _processQueue() {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.requestQueue.length > 0) {
+      // Wait if we're at max concurrent requests
+      if (this.activeRequests >= this.maxConcurrentRequests) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+
+      // Enforce minimum interval between requests
+      const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+      if (timeSinceLastRequest < this.minRequestInterval) {
+        await new Promise(resolve => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest));
+      }
+
+      const { requestFn, resolve, reject } = this.requestQueue.shift();
+      this.activeRequests++;
+      this.lastRequestTime = Date.now();
+
+      // Execute the request
+      requestFn()
+        .then(result => {
+          this.activeRequests--;
+          resolve(result);
+        })
+        .catch(error => {
+          this.activeRequests--;
+          reject(error);
+        });
+    }
+
+    this.isProcessingQueue = false;
   }
 
   /**
@@ -96,7 +155,10 @@ class LLMService {
     } = options;
 
     if (this.config.provider === 'gemini') {
-      return this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema });
+      // Use rate-limited request wrapper to prevent API overload during preloading bursts
+      return this._rateLimitedRequest(() =>
+        this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema })
+      );
     }
 
     throw new Error(`Unknown LLM provider: ${this.config.provider}`);

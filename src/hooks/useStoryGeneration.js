@@ -288,41 +288,84 @@ export function useStoryGeneration(storyCampaign) {
       playerPersonality = 'methodical'; // Option B is typically more cautious
     }
 
-    // ========== DECISION FRAMING ANALYSIS ==========
-    // Analyze the upcoming decision text to detect which option aligns with player personality
+    // ========== DECISION PERSONALITY ALIGNMENT ANALYSIS ==========
+    // Uses LLM-generated personalityAlignment when available, falls back to regex framing analysis
     let framingBonus = 0;
     let framingPrediction = null;
+    let alignmentSource = null;
 
     if (upcomingDecision?.optionA && upcomingDecision?.optionB) {
-      const optionATitle = (upcomingDecision.optionA.title || '').toLowerCase();
-      const optionBTitle = (upcomingDecision.optionB.title || '').toLowerCase();
-      const optionAFocus = (upcomingDecision.optionA.focus || '').toLowerCase();
-      const optionBFocus = (upcomingDecision.optionB.focus || '').toLowerCase();
+      // PRIORITY 1: Use LLM-generated personalityAlignment if available (most accurate)
+      const optionAAlignment = upcomingDecision.optionA.personalityAlignment;
+      const optionBAlignment = upcomingDecision.optionB.personalityAlignment;
 
-      // Aggressive/Direct keywords
-      const aggressivePatterns = /\b(confront|direct|demand|force|now|immediately|attack|charge|push|challenge|expose|reveal|accuse)\b/i;
+      if (optionAAlignment || optionBAlignment) {
+        alignmentSource = 'llm';
 
-      // Cautious/Methodical keywords
-      const cautiousPatterns = /\b(gather|wait|investigate|careful|evidence|plan|prepare|observe|patience|consider|analyze|research|surveillance)\b/i;
+        // Match player personality to option alignment
+        if (playerPersonality === 'aggressive') {
+          if (optionAAlignment === 'aggressive' && optionBAlignment !== 'aggressive') {
+            framingBonus = 0.15; // Higher bonus for explicit LLM alignment
+            framingPrediction = 'A';
+          } else if (optionBAlignment === 'aggressive' && optionAAlignment !== 'aggressive') {
+            framingBonus = 0.15;
+            framingPrediction = 'B';
+          }
+        } else if (playerPersonality === 'methodical') {
+          if (optionAAlignment === 'methodical' && optionBAlignment !== 'methodical') {
+            framingBonus = 0.15;
+            framingPrediction = 'A';
+          } else if (optionBAlignment === 'methodical' && optionAAlignment !== 'methodical') {
+            framingBonus = 0.15;
+            framingPrediction = 'B';
+          }
+        }
 
-      const optionAIsAggressive = aggressivePatterns.test(optionATitle) || aggressivePatterns.test(optionAFocus);
-      const optionBIsCautious = cautiousPatterns.test(optionBTitle) || cautiousPatterns.test(optionBFocus);
-      const optionBIsAggressive = aggressivePatterns.test(optionBTitle) || aggressivePatterns.test(optionBFocus);
-      const optionAIsCautious = cautiousPatterns.test(optionATitle) || cautiousPatterns.test(optionAFocus);
+        // For balanced players, prefer neutral options if available
+        if (playerPersonality === 'balanced') {
+          if (optionAAlignment === 'neutral' && optionBAlignment !== 'neutral') {
+            framingBonus = 0.08;
+            framingPrediction = 'A';
+          } else if (optionBAlignment === 'neutral' && optionAAlignment !== 'neutral') {
+            framingBonus = 0.08;
+            framingPrediction = 'B';
+          }
+        }
+      }
 
-      // If player personality aligns with option framing, boost confidence
-      if (playerPersonality === 'aggressive' && optionAIsAggressive && !optionBIsAggressive) {
-        framingBonus = 0.10;
-        framingPrediction = 'A';
-      } else if (playerPersonality === 'aggressive' && optionBIsAggressive && !optionAIsAggressive) {
-        framingBonus = 0.10;
-        framingPrediction = 'B';
-      } else if (playerPersonality === 'methodical' && optionBIsCautious && !optionAIsCautious) {
-        framingBonus = 0.10;
-        framingPrediction = 'B';
-      } else if (playerPersonality === 'methodical' && optionAIsCautious && !optionBIsCautious) {
-        framingBonus = 0.10;
-        framingPrediction = 'A';
+      // PRIORITY 2: Fall back to regex-based framing analysis if no LLM alignment
+      if (!framingPrediction) {
+        alignmentSource = 'regex';
+        const optionATitle = (upcomingDecision.optionA.title || '').toLowerCase();
+        const optionBTitle = (upcomingDecision.optionB.title || '').toLowerCase();
+        const optionAFocus = (upcomingDecision.optionA.focus || '').toLowerCase();
+        const optionBFocus = (upcomingDecision.optionB.focus || '').toLowerCase();
+
+        // Aggressive/Direct keywords
+        const aggressivePatterns = /\b(confront|direct|demand|force|now|immediately|attack|charge|push|challenge|expose|reveal|accuse)\b/i;
+
+        // Cautious/Methodical keywords
+        const cautiousPatterns = /\b(gather|wait|investigate|careful|evidence|plan|prepare|observe|patience|consider|analyze|research|surveillance)\b/i;
+
+        const optionAIsAggressive = aggressivePatterns.test(optionATitle) || aggressivePatterns.test(optionAFocus);
+        const optionBIsCautious = cautiousPatterns.test(optionBTitle) || cautiousPatterns.test(optionBFocus);
+        const optionBIsAggressive = aggressivePatterns.test(optionBTitle) || aggressivePatterns.test(optionBFocus);
+        const optionAIsCautious = cautiousPatterns.test(optionATitle) || cautiousPatterns.test(optionAFocus);
+
+        // If player personality aligns with option framing, boost confidence
+        if (playerPersonality === 'aggressive' && optionAIsAggressive && !optionBIsAggressive) {
+          framingBonus = 0.10;
+          framingPrediction = 'A';
+        } else if (playerPersonality === 'aggressive' && optionBIsAggressive && !optionAIsAggressive) {
+          framingBonus = 0.10;
+          framingPrediction = 'B';
+        } else if (playerPersonality === 'methodical' && optionBIsCautious && !optionAIsCautious) {
+          framingBonus = 0.10;
+          framingPrediction = 'B';
+        } else if (playerPersonality === 'methodical' && optionAIsCautious && !optionBIsCautious) {
+          framingBonus = 0.10;
+          framingPrediction = 'A';
+        }
       }
     }
 
@@ -353,7 +396,7 @@ export function useStoryGeneration(storyCampaign) {
       }
     }
 
-    return { primary, secondary, confidence, playerPersonality, framingUsed: !!framingPrediction };
+    return { primary, secondary, confidence, playerPersonality, framingUsed: !!framingPrediction, alignmentSource };
   }, []);
 
   /**
