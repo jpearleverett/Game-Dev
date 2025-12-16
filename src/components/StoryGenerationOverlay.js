@@ -119,6 +119,9 @@ export default function StoryGenerationOverlay({
   generationType,
   isPreloading,
   isCacheMiss = false, // True when player chose an unexpected/unpredicted path
+  retryAttempt = 0, // Current retry attempt number (0 = first attempt)
+  maxRetries = 3, // Maximum retries before fallback
+  isFallback = false, // True when using fallback content
   onCancel,
   onRetry,
   onGoToSettings,
@@ -211,32 +214,55 @@ export default function StoryGenerationOverlay({
   // Different messages for immediate generation vs pre-loading
   const isPreloadingContent = isPreloading || generationType === GENERATION_TYPE.PRELOAD;
 
+  // Build retry status string
+  const retryStatusText = retryAttempt > 0
+    ? `Attempt ${retryAttempt + 1}/${maxRetries}`
+    : null;
+
   // Use diegetic messages for cache misses (unexpected player choices)
-  const progressText = progress?.total > 0
-    ? isPreloadingContent
-      ? `Pre-loading chapter ${progress.current}/${progress.total}...`
-      : isCacheMiss
-        ? CACHE_MISS_MESSAGES.progress[cacheMissIndex]
-        : `Generating story ${progress.current}/${progress.total}...`
-    : isCacheMiss
-      ? CACHE_MISS_MESSAGES.progress[cacheMissIndex]
-      : 'Preparing story...';
+  let progressText;
+  if (isFallback) {
+    progressText = 'Using backup story content...';
+  } else if (progress?.total > 0) {
+    if (isPreloadingContent) {
+      progressText = `Pre-loading chapter ${progress.current}/${progress.total}...`;
+    } else if (isCacheMiss) {
+      progressText = CACHE_MISS_MESSAGES.progress[cacheMissIndex];
+    } else {
+      progressText = `Generating story ${progress.current}/${progress.total}...`;
+    }
+  } else if (isCacheMiss) {
+    progressText = CACHE_MISS_MESSAGES.progress[cacheMissIndex];
+  } else {
+    progressText = 'Preparing story...';
+  }
+
+  // Append retry status if applicable
+  if (retryStatusText && !isFallback) {
+    progressText = `${progressText} (${retryStatusText})`;
+  }
 
   const titleText = hasError
     ? 'Generation Error'
     : notConfigured
       ? 'Setup Required'
-      : isPreloadingContent
-        ? 'Loading Next Chapter'
-        : isCacheMiss
-          ? CACHE_MISS_MESSAGES.titles[cacheMissIndex]
-          : 'Crafting Your Story';
+      : isFallback
+        ? 'Using Backup Story'
+        : isPreloadingContent
+          ? 'Loading Next Chapter'
+          : isCacheMiss
+            ? CACHE_MISS_MESSAGES.titles[cacheMissIndex]
+            : 'Crafting Your Story';
 
-  const hintText = isPreloadingContent
-    ? 'Getting the next chapter ready while you play...'
-    : isCacheMiss
-      ? CACHE_MISS_MESSAGES.hints[cacheMissIndex]
-      : 'The AI is writing your unique story continuation...';
+  const hintText = isFallback
+    ? 'Connection issues prevented custom generation. Using pre-written backup content.'
+    : isPreloadingContent
+      ? 'Getting the next chapter ready while you play...'
+      : isCacheMiss
+        ? CACHE_MISS_MESSAGES.hints[cacheMissIndex]
+        : retryAttempt > 0
+          ? `Previous attempt failed. Retrying... (${maxRetries - retryAttempt} attempts remaining)`
+          : 'The AI is writing your unique story continuation...';
 
   return (
     <Modal
