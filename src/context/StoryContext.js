@@ -43,7 +43,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
   /**
    * Check and generate story content if needed for a case
    */
-  const ensureStoryContent = useCallback(async (caseNumber, pathKey) => {
+  const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null) => {
     // Chapter 1 is static, no generation needed
     if (!isDynamicChapter(caseNumber)) {
       return { ok: true, generated: false };
@@ -62,10 +62,13 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Generate the content
     try {
+      // Use optimistic history if provided, otherwise fallback to current state
+      const history = optimisticChoiceHistory || storyCampaign?.choiceHistory || [];
+
       const entry = await generateForCase(
         caseNumber,
         pathKey,
-        storyCampaign?.choiceHistory || []
+        history
       );
 
       if (entry) {
@@ -80,17 +83,36 @@ export function StoryProvider({ children, progress, updateProgress }) {
   const selectStoryDecision = useCallback(async (optionKey) => {
     // Get chapter info before making the decision
     const currentChapter = storyCampaign?.chapter || 1;
-    const isFirstDecision = (storyCampaign?.choiceHistory?.length || 0) === 0;
+    // Current choice history before update
+    const currentHistory = storyCampaign?.choiceHistory || [];
+    const isFirstDecision = currentHistory.length === 0;
 
-    // Make the decision
+    // Make the decision (updates state/persistence asynchronously)
     storySelectDecisionCore(optionKey);
 
     // After first decision (at 1.3), trigger generation for the first case of chapter 2
+    // We do this optimistically without waiting for state update to ensure seamless transition
     if (isFirstDecision && currentChapter === 1 && isLLMConfigured) {
       const nextChapter = 2;
       const nextCaseNumber = formatCaseNumber(nextChapter, 1);
       const pathKey = optionKey;
-      await ensureStoryContent(nextCaseNumber, pathKey);
+
+      // Construct optimistic history including the choice just made
+      const optimisticChoiceHistory = [
+        ...currentHistory,
+        {
+          caseNumber: formatCaseNumber(currentChapter, 3), // Decision happens at subchapter 3
+          optionKey: optionKey,
+          timestamp: new Date().toISOString()
+        }
+      ];
+
+      // Trigger generation immediately - do NOT await if we want to return control to UI
+      // However, ensureStoryContent handles deduplication via service now, so calling it here is safe.
+      // If the user navigates immediately, the next call to ensureStoryContent will attach to this promise.
+      ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory).catch(err => {
+         console.warn('[StoryContext] Background generation failed:', err);
+      });
     }
   }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent]);
 

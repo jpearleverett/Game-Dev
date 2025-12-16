@@ -236,6 +236,7 @@ class StoryGenerationService {
     this.storyContext = null;
     this.isGenerating = false;
     this.consistencyLog = []; // Track facts for consistency checking
+    this.pendingGenerations = new Map(); // Cache for in-flight generation promises
   }
 
   /**
@@ -569,6 +570,18 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 5. Include: atmospheric description, internal monologue, dialogue
 6. Build tension appropriate to ${pacing.phase} phase`;
 
+    // Add emphasis on recent decision if applicable (beginning of new chapter)
+    if (subchapter === 1 && context.playerChoices.length > 0) {
+      const lastChoice = context.playerChoices[context.playerChoices.length - 1];
+      if (lastChoice.chapter === chapter - 1) {
+        task += `\n\n### CRITICAL CONTEXT: PREVIOUS DECISION
+The player JUST made a crucial decision at the end of the previous chapter.
+You MUST acknowledge this choice immediately.
+PLAYER CHOICE: "${lastChoice.optionKey}"
+This choice determines the current path. Ensure the narrative reflects this specific outcome.`;
+      }
+    }
+
     if (isDecisionPoint) {
       task += `
 
@@ -686,116 +699,137 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
     }
 
     const caseNumber = formatCaseNumber(chapter, subchapter);
-    const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
+    const generationKey = `${caseNumber}_${pathKey}`;
 
-    // Build comprehensive context
-    const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
+    // Deduplication: Return existing promise if generation is already in flight for this exact content
+    if (this.pendingGenerations.has(generationKey)) {
+      console.log(`[StoryGenerationService] Reusing pending generation for ${generationKey}`);
+      return this.pendingGenerations.get(generationKey);
+    }
 
-    // Build the prompt with all context
-    const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+    const generationPromise = (async () => {
+      const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
 
-    // Select appropriate temperature and schema based on content type
-    const temperature = isDecisionPoint
-      ? GENERATION_CONFIG.temperature.decisions
-      : GENERATION_CONFIG.temperature.narrative;
-    const responseSchema = isDecisionPoint
-      ? DECISION_CONTENT_SCHEMA
-      : STORY_CONTENT_SCHEMA;
+      // Build comprehensive context
+      const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
-    this.isGenerating = true;
-    try {
-      // Primary generation with structured output
-      const response = await llmService.complete(
-        [{ role: 'user', content: prompt }],
-        {
-          systemPrompt: MASTER_SYSTEM_PROMPT,
-          temperature,
-          maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-          responseSchema,
-        }
-      );
+      // Build the prompt with all context
+      const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
-      // Parse JSON response (guaranteed valid by schema)
-      let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+      // Select appropriate temperature and schema based on content type
+      const temperature = isDecisionPoint
+        ? GENERATION_CONFIG.temperature.decisions
+        : GENERATION_CONFIG.temperature.narrative;
+      const responseSchema = isDecisionPoint
+        ? DECISION_CONTENT_SCHEMA
+        : STORY_CONTENT_SCHEMA;
 
-      // Validate word count
-      const wordCount = generatedContent.narrative.split(/\s+/).length;
-      if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-        // Request expansion
-        generatedContent.narrative = await this._expandNarrative(
-          generatedContent.narrative,
-          context,
-          TARGET_WORDS - wordCount
-        );
-      }
-
-      // Validate consistency (check for obvious violations)
-      let validationResult = this._validateConsistency(generatedContent, context);
-      let retries = 0;
-
-      while (!validationResult.valid && retries < MAX_RETRIES) {
-        console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
-
-        try {
-          generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
-
-          // Re-validate word count for the fixed content
-          const wordCount = generatedContent.narrative.split(/\s+/).length;
-          if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-            generatedContent.narrative = await this._expandNarrative(
-              generatedContent.narrative,
-              context,
-              TARGET_WORDS - wordCount
-            );
+      this.isGenerating = true;
+      try {
+        // Primary generation with structured output
+        const response = await llmService.complete(
+          [{ role: 'user', content: prompt }],
+          {
+            systemPrompt: MASTER_SYSTEM_PROMPT,
+            temperature,
+            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+            responseSchema,
           }
+        );
 
-          validationResult = this._validateConsistency(generatedContent, context);
-          retries++;
-        } catch (error) {
-          console.error('Error during content regeneration:', error);
-          break; // Stop retrying if generation fails
+        // Parse JSON response (guaranteed valid by schema)
+        let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+
+        // Validate word count
+        const wordCount = generatedContent.narrative.split(/\s+/).length;
+        if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+          // Request expansion
+          generatedContent.narrative = await this._expandNarrative(
+            generatedContent.narrative,
+            context,
+            TARGET_WORDS - wordCount
+          );
         }
+
+        // Validate consistency (check for obvious violations)
+        let validationResult = this._validateConsistency(generatedContent, context);
+        let retries = 0;
+
+        while (!validationResult.valid && retries < MAX_RETRIES) {
+          console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
+
+          try {
+            generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
+
+            // Re-validate word count for the fixed content
+            const wordCount = generatedContent.narrative.split(/\s+/).length;
+            if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+              generatedContent.narrative = await this._expandNarrative(
+                generatedContent.narrative,
+                context,
+                TARGET_WORDS - wordCount
+              );
+            }
+
+            validationResult = this._validateConsistency(generatedContent, context);
+            retries++;
+          } catch (error) {
+            console.error('Error during content regeneration:', error);
+            break; // Stop retrying if generation fails
+          }
+        }
+
+        if (!validationResult.valid) {
+          console.warn('Consistency warning (Unresolved):', validationResult.issues);
+        }
+
+        // Build the story entry
+        const storyEntry = {
+          chapter,
+          subchapter,
+          pathKey,
+          caseNumber,
+          title: generatedContent.title,
+          narrative: generatedContent.narrative,
+          bridgeText: generatedContent.bridgeText,
+          previously: generatedContent.previously || '', // Recap of previous events
+          briefing: generatedContent.briefing || { summary: '', objectives: [] },
+          decision: isDecisionPoint ? generatedContent.decision : null,
+          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision),
+          consistencyFacts: generatedContent.consistencyFacts || [],
+          generatedAt: new Date().toISOString(),
+          wordCount: generatedContent.narrative.split(/\s+/).length,
+        };
+
+        // Save the generated content
+        await saveGeneratedChapter(caseNumber, pathKey, storyEntry);
+
+        // Update local cache
+        if (!this.generatedStory) {
+          this.generatedStory = { chapters: {} };
+        }
+        this.generatedStory.chapters[`${caseNumber}_${pathKey}`] = storyEntry;
+
+        // Update story context
+        await this._updateStoryContext(storyEntry);
+
+        this.isGenerating = false;
+        return storyEntry;
+      } catch (error) {
+        this.isGenerating = false;
+        throw error;
       }
+    })();
 
-      if (!validationResult.valid) {
-        console.warn('Consistency warning (Unresolved):', validationResult.issues);
-      }
+    this.pendingGenerations.set(generationKey, generationPromise);
 
-      // Build the story entry
-      const storyEntry = {
-        chapter,
-        subchapter,
-        pathKey,
-        caseNumber,
-        title: generatedContent.title,
-        narrative: generatedContent.narrative,
-        bridgeText: generatedContent.bridgeText,
-        previously: generatedContent.previously || '', // Recap of previous events
-        briefing: generatedContent.briefing || { summary: '', objectives: [] },
-        decision: isDecisionPoint ? generatedContent.decision : null,
-        board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision),
-        consistencyFacts: generatedContent.consistencyFacts || [],
-        generatedAt: new Date().toISOString(),
-        wordCount: generatedContent.narrative.split(/\s+/).length,
-      };
-
-      // Save the generated content
-      await saveGeneratedChapter(caseNumber, pathKey, storyEntry);
-
-      // Update local cache
-      if (!this.generatedStory) {
-        this.generatedStory = { chapters: {} };
-      }
-      this.generatedStory.chapters[`${caseNumber}_${pathKey}`] = storyEntry;
-
-      // Update story context
-      await this._updateStoryContext(storyEntry);
-
-      this.isGenerating = false;
-      return storyEntry;
-    } catch (error) {
-      this.isGenerating = false;
-      throw error;
+    try {
+      const result = await generationPromise;
+      this.pendingGenerations.delete(generationKey);
+      return result;
+    } catch (e) {
+      this.pendingGenerations.delete(generationKey);
+      throw e;
     }
   }
 
