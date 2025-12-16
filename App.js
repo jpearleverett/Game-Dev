@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StatusBar, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { GameProvider, useGame } from './src/context/GameContext';
+import { AudioProvider } from './src/context/AudioContext';
+import { StoryProvider } from './src/context/StoryContext';
 import { COLORS } from './src/constants/colors';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAudioController } from './src/hooks/useAudioController';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import useCachedResources from './src/hooks/useCachedResources';
 import StoryGenerationOverlay from './src/components/StoryGenerationOverlay';
+import { usePersistence } from './src/hooks/usePersistence';
 
 const ROUTE_TO_AUDIO_KEY = {
   Splash: 'splash',
@@ -23,48 +26,64 @@ const ROUTE_TO_AUDIO_KEY = {
   Story: 'story',
 };
 
-function AppContent({ fontsReady }) {
+// Wrapper component to provide contexts that need progress
+function GameWrapper({ fontsReady }) {
+  const persistence = usePersistence();
+  const {
+    progress,
+    hydrationComplete,
+  } = persistence;
+
+  // Initialize Audio Controller (needs settings from persistence)
+  const [currentRoute, setCurrentRoute] = useState('Splash');
+  const audioKey = ROUTE_TO_AUDIO_KEY[currentRoute] || 'desk';
+  const audio = useAudioController(audioKey, progress.settings || {});
+
+  // Handle Navigation State Changes to update audio
+  const handleStateChange = useCallback((state) => {
+    if (!state) return;
+    const route = state.routes[state.index];
+    setCurrentRoute(route.name);
+  }, []);
+
+  if (!hydrationComplete) {
+    return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
+  }
+
+  return (
+    <AudioProvider controller={audio} settings={progress.settings}>
+      <StoryProvider progress={progress} updateProgress={persistence.updateProgress}>
+        <GameProvider {...persistence}>
+          <AppContent
+            fontsReady={fontsReady}
+            audioController={audio}
+            onStateChange={handleStateChange}
+          />
+        </GameProvider>
+      </StoryProvider>
+    </AudioProvider>
+  );
+}
+
+function AppContent({ fontsReady, audioController, onStateChange }) {
   const game = useGame();
   const {
     progress,
     unlockNextCaseIfReady,
-    setAudioController,
+    // setAudioController, // Removed from GameContext API
     storyGeneration,
     cancelGeneration,
     clearGenerationError,
     exitStoryCampaign,
   } = game;
 
-  // Navigation ref for controlling navigation from overlay
   const navigationRef = useRef(null);
-
-  // Track current screen for audio context
-  const [currentRoute, setCurrentRoute] = useState('Splash');
-
-  // Map the navigation route name to the audio controller's expected key
-  const audioKey = ROUTE_TO_AUDIO_KEY[currentRoute] || 'desk';
-
-  // Initialize Audio Controller
-  const audio = useAudioController(audioKey, progress.settings || {});
-
-  // Sync audio controller to GameContext
-  useEffect(() => {
-    setAudioController(audio);
-  }, [audio, setAudioController]);
 
   // Global Game Loop: Check for case unlocks
   useEffect(() => {
     unlockNextCaseIfReady();
   }, [unlockNextCaseIfReady, progress.nextUnlockAt]);
 
-  // Handle Navigation State Changes
-  const handleStateChange = (state) => {
-    if (!state) return;
-    const route = state.routes[state.index];
-    setCurrentRoute(route.name);
-  };
-
-  // Overlay navigation handlers
   const handleGoToSettings = useCallback(() => {
     clearGenerationError?.();
     navigationRef.current?.navigate('Settings');
@@ -77,13 +96,11 @@ function AppContent({ fontsReady }) {
   }, [clearGenerationError, exitStoryCampaign]);
 
   const handleRetry = useCallback(() => {
-    // Clear error - the next navigation attempt will re-trigger generation
     clearGenerationError?.();
   }, [clearGenerationError]);
 
   const handleCancelGeneration = useCallback(() => {
     cancelGeneration?.();
-    // Return to story hub when cancelling
     exitStoryCampaign?.();
     navigationRef.current?.navigate('Story');
   }, [cancelGeneration, exitStoryCampaign]);
@@ -92,19 +109,16 @@ function AppContent({ fontsReady }) {
     return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
   }
 
-  // Determine if generation overlay should be visible
-  // Only show for IMMEDIATE generation (blocking), NOT for background preloading
-  // This ensures the player never sees the loading screen during normal gameplay
   const showGenerationOverlay =
-    storyGeneration?.awaitingGeneration || // Only when player is waiting for content they need NOW
+    storyGeneration?.awaitingGeneration ||
     storyGeneration?.status === 'error' ||
     storyGeneration?.status === 'not_configured';
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" />
-      <NavigationContainer ref={navigationRef} onStateChange={handleStateChange}>
-        <AppNavigator fontsReady={fontsReady} audio={audio} />
+      <NavigationContainer ref={navigationRef} onStateChange={onStateChange}>
+        <AppNavigator fontsReady={fontsReady} audio={audioController} />
       </NavigationContainer>
       <StoryGenerationOverlay
         visible={showGenerationOverlay}
@@ -131,9 +145,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <GameProvider>
-        <AppContent fontsReady={true} />
-      </GameProvider>
+      <GameWrapper fontsReady={true} />
     </ErrorBoundary>
   );
 }
