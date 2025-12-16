@@ -181,6 +181,30 @@ class LLMService {
 
         clearTimeout(timeoutId);
 
+        // Handle rate limiting specifically (429 errors)
+        if (response.status === 429) {
+          const retryAfterHeader = response.headers.get('Retry-After');
+          const retryAfter = parseInt(retryAfterHeader || '60', 10);
+          console.warn(`[LLMService] Rate limited (429), waiting ${retryAfter}s before retry...`);
+          await this._sleep(retryAfter * 1000);
+          // Don't count this toward retry limit - continue the loop
+          attempt--; // Decrement to not count this attempt
+          continue;
+        }
+
+        // Handle quota exhaustion (403 with quota message)
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || '';
+          if (errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('limit')) {
+            console.warn('[LLMService] API quota exhausted, waiting 60s before retry...');
+            await this._sleep(60000);
+            attempt--; // Don't count toward retry limit
+            continue;
+          }
+          throw new Error(`Gemini API access denied: ${errorMessage}`);
+        }
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
@@ -399,10 +423,42 @@ class LLMService {
     // Final cleanup: remove trailing commas before closing brackets/braces
     json = json.replace(/,(\s*[\]}])/g, '$1');
 
-    // Verify the repaired JSON is valid
+    // Verify the repaired JSON is valid and has required content
     try {
-      JSON.parse(json);
-      console.log('[LLMService] JSON repair successful');
+      const parsed = JSON.parse(json);
+
+      // Validate required fields exist and have meaningful content
+      const validationIssues = [];
+
+      // Check for narrative field (most critical)
+      if (!parsed.narrative) {
+        validationIssues.push('Missing narrative field');
+      } else if (typeof parsed.narrative === 'string' && parsed.narrative.length < 200) {
+        validationIssues.push(`Narrative too short after repair: ${parsed.narrative.length} chars`);
+      }
+
+      // Check for title field
+      if (!parsed.title || parsed.title.length < 3) {
+        validationIssues.push('Missing or invalid title field');
+      }
+
+      // If this appears to be a decision point, check decision structure
+      if (parsed.decision) {
+        if (!parsed.decision.intro) {
+          validationIssues.push('Decision missing intro');
+        }
+        if (!parsed.decision.optionA?.title || !parsed.decision.optionB?.title) {
+          validationIssues.push('Decision missing option titles');
+        }
+      }
+
+      // Log any validation issues as warnings (don't fail the repair)
+      if (validationIssues.length > 0) {
+        console.warn('[LLMService] JSON repair succeeded but with issues:', validationIssues);
+      } else {
+        console.log('[LLMService] JSON repair successful with all required fields');
+      }
+
       return json;
     } catch (error) {
       console.warn('[LLMService] JSON repair failed, returning original:', error.message);

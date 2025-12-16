@@ -174,15 +174,24 @@ const STORY_CONTENT_SCHEMA = {
             enum: ['active', 'resolved', 'failed'],
             description: 'Whether this thread is still pending, was resolved, or failed'
           },
+          urgency: {
+            type: 'string',
+            enum: ['critical', 'normal', 'background'],
+            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters (appointments, immediate threats), normal=should be addressed soon (promises, investigations), background=can develop over time (relationships, slow revelations)'
+          },
           characters: {
             type: 'array',
             items: { type: 'string' },
             description: 'Characters involved in this thread'
+          },
+          deadline: {
+            type: 'string',
+            description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
           }
         },
-        required: ['type', 'description', 'status']
+        required: ['type', 'description', 'status', 'urgency']
       },
-      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status.'
+      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status and urgency level for prioritization.'
     },
     previousThreadsAddressed: {
       type: 'array',
@@ -297,15 +306,24 @@ const DECISION_CONTENT_SCHEMA = {
             enum: ['active', 'resolved', 'failed'],
             description: 'Whether this thread is still pending, was resolved, or failed'
           },
+          urgency: {
+            type: 'string',
+            enum: ['critical', 'normal', 'background'],
+            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters (appointments, immediate threats), normal=should be addressed soon (promises, investigations), background=can develop over time (relationships, slow revelations)'
+          },
           characters: {
             type: 'array',
             items: { type: 'string' },
             description: 'Characters involved in this thread'
+          },
+          deadline: {
+            type: 'string',
+            description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
           }
         },
-        required: ['type', 'description', 'status']
+        required: ['type', 'description', 'status', 'urgency']
       },
-      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status.'
+      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status and urgency level for prioritization.'
     },
     previousThreadsAddressed: {
       type: 'array',
@@ -409,14 +427,18 @@ NEVER use:
 - "In a world where..." or "Little did [anyone] know..."
 - "I couldn't help but..." or "I found myself..."
 - Excessive sentences starting with "And" or "But"
-- Adverbs: "seemingly," "interestingly," "notably," "certainly," "undoubtedly"
-- Words: "delve," "unravel," "tapestry," "myriad," "whilst," "amidst," "amongst"
+- Adverbs: "seemingly," "interestingly," "notably," "certainly," "undoubtedly," "undeniably," "profoundly," "unmistakably," "inherently"
+- Words: "delve," "unravel," "tapestry," "myriad," "whilst," "amidst," "amongst," "realm," "intricate," "nuanced," "pivotal," "crucial"
 - Phrases: "a testament to," "serves as a reminder," "it's important to note," "it's worth noting"
+- Weight/Gravity phrases: "The weight of..." (e.g., "The weight of his words"), "The gravity of...", "The magnitude of...", "The enormity of..."
 - Hedging: "It seems," "Perhaps," "Maybe," "It appears," "One might say"
-- Connectors: "Moreover," "Furthermore," "In essence," "Consequently," "Additionally"
+- Connectors: "Moreover," "Furthermore," "In essence," "Consequently," "Additionally," "Notably," "Importantly"
 - Meta-commentary: "This moment," "This realization," "This truth" (show, don't label)
+- Opening patterns: "As I...", "As the...", "With a...", "In the..." as sentence starters (overused)
+- Time transitions: "In that moment," "At that instant," "In the blink of an eye"
 - Summarizing what just happened instead of showing the next scene
 - Explaining character emotions instead of showing them through action
+- Generic intensifiers: "very," "really," "quite," "rather," "somewhat"
 
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
@@ -433,14 +455,46 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   * type: "appointment" | "revelation" | "investigation" | "relationship" | "physical_state" | "promise" | "threat"
   * description: What happened (e.g., "Jack agreed to meet Sarah at the docks at midnight")
   * status: "active" (ongoing), "resolved" (completed this chapter), or "failed" (abandoned/prevented)
+  * urgency: "critical" (must resolve in 1-2 chapters), "normal" (should address soon), "background" (can develop slowly)
   * characters: Array of character names involved
-  IMPORTANT: Only extract ACTUAL threads from your narrative. Do not invent threads that aren't in the story.
-  Examples: "Sarah promised to bring the files tomorrow" (appointment), "Jack discovered Tom's signature on the forged documents" (revelation)
-- "previousThreadsAddressed": CRITICAL - For EACH active thread from previous chapters (appointments, promises, threats), you MUST explain how your narrative addresses it:
-  * originalThread: Description of the previous thread
-  * howAddressed: "resolved" | "progressed" | "acknowledged" | "delayed" | "failed"
-  * narrativeReference: Where in your narrative this appears
-  If previous chapters contain active threads, your narrative MUST acknowledge them. You cannot ignore appointments Jack made or promises others gave him.
+  * deadline: If time-sensitive, specify when (e.g., "midnight tonight", "before Eleanor's appeal")
+
+  *** CRITICAL RULES FOR NARRATIVE THREADS ***
+  1. Only extract ACTUAL threads that appear in YOUR narrative. Do NOT invent threads that aren't in the story.
+  2. If no meetings were scheduled, leave appointments empty.
+  3. If no promises were made, leave promises empty.
+  4. Every thread must have a clear basis in your written narrative.
+
+  Examples of GOOD threads:
+  - "Sarah promised to bring the files tomorrow" (type: appointment, urgency: critical, deadline: "tomorrow")
+  - "Jack discovered Tom's signature on the forged documents" (type: revelation, urgency: normal)
+  - "Jack's shoulder wound from the warehouse fight" (type: physical_state, urgency: background)
+
+  Examples of BAD threads (DO NOT DO THIS):
+  - "Something mysterious will be revealed" (too vague, not from narrative)
+  - "Jack might find more evidence" (speculative, not actual)
+
+- "previousThreadsAddressed": *** THIS IS MANDATORY - GENERATION WILL FAIL IF IGNORED ***
+  BEFORE writing your narrative, you MUST:
+  1. Review ALL active threads from the PREVIOUS_ACTIVE_THREADS section below
+  2. Plan how each critical/appointment thread will appear in your scene
+  3. Your narrative MUST reference or address each active thread
+
+  For EACH active thread you MUST explain:
+  * originalThread: Copy the original thread description exactly
+  * howAddressed: Choose ONE - "resolved" | "progressed" | "acknowledged" | "delayed" | "failed"
+    - resolved: The thread was completed (meeting happened, promise kept)
+    - progressed: Significant movement toward resolution
+    - acknowledged: Jack thinks about it or mentions it but takes no action yet
+    - delayed: Explicitly postponed with reason (e.g., "Sarah called to reschedule")
+    - failed: The opportunity was lost or the thread is now impossible
+  * narrativeReference: Quote the specific sentence(s) from your narrative where this appears
+
+  *** YOU CANNOT SUBMIT WITHOUT ADDRESSING ALL CRITICAL THREADS ***
+  If Jack agreed to meet someone at midnight, your midnight chapter MUST show that meeting.
+  If someone promised to call, you must acknowledge whether they did.
+  Plot holes from ignored threads will break the player's immersion.
+
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
 
 // ============================================================================
@@ -1301,6 +1355,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
 
   /**
    * Generate consequences for a single decision
+   * Enhanced with full narrative context for more meaningful consequences
    */
   async _generateDecisionConsequence(choice) {
     const chapter = this._extractChapterFromCase(choice.caseNumber);
@@ -1308,17 +1363,47 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
     // Try to get context from the decision itself if available
     const decisionEntry = this.getGeneratedEntry(choice.caseNumber, this._getPathKeyForChapter(chapter, []));
     const decisionContext = decisionEntry?.decision?.options?.find(o => o.key === choice.optionKey);
+    const otherOption = decisionEntry?.decision?.options?.find(o => o.key !== choice.optionKey);
+
+    // Extract narrative context for richer consequence generation
+    const narrativeContext = decisionEntry?.narrative ? decisionEntry.narrative.slice(-2000) : '';
+    const decisionIntro = decisionEntry?.decision?.intro?.[0] || '';
+    const activeThreads = decisionEntry?.consistencyFacts?.slice(0, 5) || [];
+    const charactersInvolved = decisionEntry?.decision?.options?.flatMap(o => o.characters || []) || [];
 
     const consequencePrompt = `Generate narrative consequences for a player decision in a noir detective story.
 
-## DECISION CONTEXT
-- Chapter: ${chapter}
-- Player chose: Option ${choice.optionKey}
-${decisionContext ? `- Option title: "${decisionContext.title}"
-- Option focus: "${decisionContext.focus}"` : '- Details not available'}
+## STORY CONTEXT
+This is "The Detective Portrait" - Jack Halloway, a retired detective, is re-examining cases he closed after receiving letters from "The Midnight Confessor." He's discovering his best friend Tom Wade manufactured evidence for 20 years, sending innocent people to prison.
+
+## CHAPTER ${chapter} NARRATIVE LEADING TO DECISION
+${narrativeContext ? `The following is the end of the narrative leading to this choice:
+"""
+${narrativeContext.slice(-1200)}
+"""` : 'Narrative context not available.'}
+
+## THE DECISION POINT
+${decisionIntro ? `Decision setup: "${decisionIntro}"` : ''}
+
+## PLAYER'S CHOICE: Option ${choice.optionKey}
+${decisionContext ? `- Title: "${decisionContext.title}"
+- Focus: "${decisionContext.focus}"` : '- Details not available'}
+
+## THE PATH NOT TAKEN: Option ${otherOption?.key || 'N/A'}
+${otherOption ? `- Title: "${otherOption.title}"
+- Focus: "${otherOption.focus}"` : '- Details not available'}
+
+## ACTIVE STORY ELEMENTS
+${activeThreads.length > 0 ? activeThreads.map(t => `- ${t}`).join('\n') : '- No specific threads tracked'}
+${charactersInvolved.length > 0 ? `\nCharacters involved: ${[...new Set(charactersInvolved)].join(', ')}` : ''}
 
 ## REQUIRED OUTPUT
-Generate realistic consequences that will affect future chapters.`;
+Generate realistic, specific consequences based on the actual narrative content. Consider:
+1. What doors does this choice open? What does it close?
+2. How will characters involved react to Jack's decision?
+3. What investigation leads are gained or lost?
+4. How does this affect Jack's relationships and reputation?
+5. What thematic weight does this choice carry (guilt, redemption, truth vs. comfort)?`;
 
     const consequenceSchema = {
       type: 'object',
@@ -2492,7 +2577,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           previously: generatedContent.previously || '', // Recap of previous events
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           decision: isDecisionPoint ? generatedContent.decision : null,
-          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision, generatedContent.puzzleCandidates),
+          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision, generatedContent.puzzleCandidates, chapter),
           consistencyFacts: generatedContent.consistencyFacts || [],
           chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
           generatedAt: new Date().toISOString(),
@@ -2548,7 +2633,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
             previously: fallbackContent.previously,
             briefing: fallbackContent.briefing,
             decision: fallbackContent.decision,
-            board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates),
+            board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
             consistencyFacts: fallbackContent.consistencyFacts,
             chapterSummary: fallbackContent.chapterSummary,
             generatedAt: new Date().toISOString(),
@@ -2602,7 +2687,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         previously: emergencyFallback.previously,
         briefing: emergencyFallback.briefing,
         decision: emergencyFallback.decision,
-        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates),
+        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates, chapter),
         consistencyFacts: emergencyFallback.consistencyFacts,
         chapterSummary: emergencyFallback.chapterSummary,
         generatedAt: new Date().toISOString(),
@@ -3107,9 +3192,16 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       { pattern: /\blittle did (?:he|she|they|i|we) know\b/i, issue: 'Forbidden phrase: "Little did [anyone] know..."' },
       { pattern: /\bi couldn'?t help but\b/i, issue: 'Forbidden phrase: "I couldn\'t help but..."' },
       { pattern: /\bi found myself\b/i, issue: 'Forbidden phrase: "I found myself..."' },
-      { pattern: /\bseemingly\b|\binterestingly\b|\bnotably\b/i, issue: 'Forbidden flowery adverbs detected' },
+      { pattern: /\bseemingly\b|\binterestingly\b|\bnotably\b|\bcertainly\b|\bundoubtedly\b/i, issue: 'Forbidden flowery adverbs detected' },
+      { pattern: /\bundeniably\b|\bprofoundly\b|\bunmistakably\b|\binherently\b/i, issue: 'Forbidden AI-ism adverbs detected (undeniably, profoundly, unmistakably, inherently)' },
       { pattern: /\bdelve\b|\bunravel\b|\btapestry\b|\bmyriad\b/i, issue: 'Forbidden words detected (delve, unravel, tapestry, myriad)' },
+      { pattern: /\brealm\b|\bintricate\b|\bnuanced\b|\bpivotal\b|\bcrucial\b/i, issue: 'Forbidden AI-ism words detected (realm, intricate, nuanced, pivotal, crucial)' },
       { pattern: /\ba testament to\b|\bserves as a reminder\b/i, issue: 'Forbidden cliche phrase detected' },
+      { pattern: /\bthe weight of\b|\bthe gravity of\b|\bthe magnitude of\b|\bthe enormity of\b/i, issue: 'Forbidden "weight/gravity of" phrase detected' },
+      { pattern: /\bmoreover\b|\bfurthermore\b|\bin essence\b|\bconsequently\b|\badditionally\b/i, issue: 'Forbidden academic connectors detected' },
+      { pattern: /\bthis moment\b|\bthis realization\b|\bthis truth\b/i, issue: 'Forbidden meta-commentary detected ("this moment/realization/truth")' },
+      { pattern: /\bin that moment\b|\bat that instant\b|\bin the blink of an eye\b/i, issue: 'Forbidden time transition cliche detected' },
+      { pattern: /\bit'?s (?:important|worth) (?:to note|noting)\b/i, issue: 'Forbidden meta-phrase detected ("it\'s important/worth noting")' },
     ];
 
     forbiddenPatterns.forEach(({ pattern, issue, count }) => {
@@ -3142,6 +3234,130 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
     const thirdPersonSlips = /\bjack\s+(?:thought|felt|wondered|realized|knew|saw|heard)\b/i;
     if (thirdPersonSlips.test(narrativeOriginal)) {
       warnings.push('Possible third-person perspective slip detected - should be first-person (Jack\'s POV)');
+    }
+
+    // =========================================================================
+    // CATEGORY 10: NARRATIVE THREAD RESOLUTION ENFORCEMENT
+    // =========================================================================
+    // Verify that critical threads from previous chapters are addressed
+    // Now uses urgency field for prioritization
+    if (context.narrativeThreads && context.narrativeThreads.length > 0) {
+      // Filter for threads that need resolution: critical urgency OR critical types with active status
+      const criticalThreadTypes = ['appointment', 'promise', 'threat'];
+      const threadsToCheck = context.narrativeThreads.filter(t => {
+        if (t.status !== 'active') return false;
+        // Critical urgency threads must always be addressed
+        if (t.urgency === 'critical') return true;
+        // Critical types should also be addressed
+        if (criticalThreadTypes.includes(t.type)) return true;
+        return false;
+      });
+
+      const addressedThreads = content.previousThreadsAddressed || [];
+
+      for (const thread of threadsToCheck) {
+        // Check if this thread was addressed in the generated content
+        const threadDescription = (thread.description || thread.excerpt || '').toLowerCase();
+        const threadKeywords = threadDescription.split(/\s+/).filter(w => w.length > 4).slice(0, 5);
+
+        const wasAddressed = addressedThreads.some(addressed => {
+          if (!addressed.originalThread) return false;
+          const addressedLower = addressed.originalThread.toLowerCase();
+          // Check if at least 2 key words match
+          const matchingKeywords = threadKeywords.filter(kw => addressedLower.includes(kw));
+          return matchingKeywords.length >= 2;
+        });
+
+        // Also check if the thread is mentioned in the narrative itself
+        const mentionedInNarrative = threadKeywords.some(kw => narrative.includes(kw));
+
+        if (!wasAddressed && !mentionedInNarrative) {
+          const threadChapter = thread.chapter || 0;
+          const currentChapter = context.currentPosition?.chapter || 12;
+          const chapterDistance = currentChapter - threadChapter;
+
+          // Critical urgency threads are always issues if not addressed
+          if (thread.urgency === 'critical') {
+            issues.push(`CRITICAL ${thread.type} thread not addressed: "${threadDescription.slice(0, 60)}..." (deadline: ${thread.deadline || 'immediate'})`);
+          } else if (chapterDistance <= 2) {
+            // Recent threads of critical types are also issues
+            issues.push(`Critical ${thread.type} thread not addressed: "${threadDescription.slice(0, 60)}..."`);
+          } else {
+            // Older threads become warnings
+            warnings.push(`Older ${thread.type} thread may need resolution: "${threadDescription.slice(0, 40)}..."`);
+          }
+        }
+      }
+
+      // Also check for normal urgency threads that are getting stale (3+ chapters old)
+      const staleNormalThreads = context.narrativeThreads.filter(t =>
+        t.status === 'active' &&
+        t.urgency === 'normal' &&
+        (context.currentPosition?.chapter || 12) - (t.chapter || 0) >= 3
+      );
+
+      for (const thread of staleNormalThreads) {
+        const threadDescription = (thread.description || thread.excerpt || '').toLowerCase();
+        warnings.push(`Normal-urgency thread becoming stale (3+ chapters): "${threadDescription.slice(0, 50)}..."`);
+      }
+    }
+
+    // =========================================================================
+    // CATEGORY 11: PATH PERSONALITY BEHAVIOR CONSISTENCY
+    // =========================================================================
+    // Ensure Jack's actions match the established path personality
+    if (context.pathPersonality) {
+      const personality = context.pathPersonality;
+
+      // Check for reckless behavior when player has been methodical
+      if (personality.riskTolerance === 'low' || personality.narrativeStyle?.includes('cautiously')) {
+        const recklessPatterns = /\b(?:charged|rushed|stormed|burst|leapt\s+without|didn't\s+wait|threw\s+caution|reckless|impulsive|without\s+thinking)\b/i;
+        if (recklessPatterns.test(narrativeOriginal)) {
+          issues.push('Narrative shows reckless behavior inconsistent with methodical/cautious path personality');
+        }
+      }
+
+      // Check for overly passive behavior when player has been aggressive
+      if (personality.riskTolerance === 'high' || personality.narrativeStyle?.includes('decisively')) {
+        const passivePatterns = /\b(?:hesitated\s+for\s+a\s+long|couldn't\s+bring\s+myself|waited\s+patiently|decided\s+to\s+observe|held\s+back\s+from)\b/i;
+        if (passivePatterns.test(narrativeOriginal)) {
+          warnings.push('Narrative shows passive behavior that may conflict with aggressive path personality');
+        }
+      }
+
+      // Verify jackActionStyle field matches context personality
+      if (content.jackActionStyle) {
+        const expectedStyle = personality.riskTolerance === 'low' ? 'cautious' :
+                              personality.riskTolerance === 'high' ? 'direct' : 'balanced';
+        if (content.jackActionStyle !== expectedStyle && content.jackActionStyle !== 'balanced') {
+          warnings.push(`jackActionStyle "${content.jackActionStyle}" may not match path personality (expected "${expectedStyle}")`);
+        }
+      }
+    }
+
+    // =========================================================================
+    // CATEGORY 12: TIMELINE APPROXIMATION PREVENTION
+    // =========================================================================
+    // Ensure exact timeline numbers are used, not approximations
+    const timelineApproximations = [
+      { pattern: /(?:nearly|about|almost|over|around|roughly|approximately)\s*30\s*years?.*(?:friend|wade|tom|college)/i,
+        issue: 'Timeline approximation for Jack/Tom friendship - must be exactly 30 years' },
+      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*8\s*years?.*(?:prison|greystone|eleanor|bellamy)/i,
+        issue: 'Timeline approximation for Eleanor imprisonment - must be exactly 8 years' },
+      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*7\s*years?.*(?:emily|cross|dead|died|case\s*closed)/i,
+        issue: 'Timeline approximation for Emily case - must be exactly 7 years' },
+      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*13\s*years?.*(?:sarah|reeves|partner)/i,
+        issue: 'Timeline approximation for Sarah partnership - must be exactly 13 years' },
+      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*8\s*years?.*(?:silas|reed|partner)/i,
+        issue: 'Timeline approximation for Silas partnership - must be exactly 8 years' },
+      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*20\s*years?.*(?:evidence|manufactur|tom|wade|forensic)/i,
+        issue: 'Timeline approximation for evidence manufacturing - must be exactly 20 years' },
+    ];
+
+    for (const { pattern, issue } of timelineApproximations) {
+      if (pattern.test(narrativeOriginal)) {
+        issues.push(issue);
+      }
     }
 
     // Log warnings but don't block on them
@@ -3234,28 +3450,33 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
    * Lighter weight than full generation grounding but maintains key facts
    */
   _buildExpansionGrounding(context) {
-    const absoluteFacts = STORY_BIBLE.ABSOLUTE_FACTS;
-    const characters = STORY_BIBLE.CHARACTERS;
+    // Use the imported constants directly (not STORY_BIBLE which doesn't exist)
+    const protagonist = CHARACTER_REFERENCE.protagonist;
+    const antagonist = CHARACTER_REFERENCE.antagonist;
+    const allies = CHARACTER_REFERENCE.allies;
+    const villains = CHARACTER_REFERENCE.villains;
 
     let grounding = `## ABSOLUTE_FACTS (NEVER CONTRADICT)
-- Jack Halloway: Retired detective, ${absoluteFacts.JACK_CAREER_LENGTH} on the force
-- Setting: Ashport, rain-soaked noir city
-- Tom Wade: Chief Forensic Examiner, Jack's former best friend, manufactured evidence for ${absoluteFacts.TOM_EVIDENCE_YEARS}
-- Victoria Blackwell: Also known as Emily Cross, The Midnight Confessor
+- Jack Halloway: Retired detective, ${ABSOLUTE_FACTS.protagonist.careerLength} on the force
+- Setting: ${ABSOLUTE_FACTS.setting.city}, ${ABSOLUTE_FACTS.setting.atmosphere}
+- Tom Wade: ${ABSOLUTE_FACTS.corruptOfficials.tomWade.title}, Jack's former best friend, manufactured evidence for 20 years
+- Victoria Blackwell: Also known as ${ABSOLUTE_FACTS.antagonist.trueName}, The Midnight Confessor
 - The Five Innocents: Eleanor Bellamy, Marcus Thornhill, Dr. Lisa Chen, James Sullivan, Teresa Wade
-- Emily Cross "died" ${absoluteFacts.EMILY_YEARS_AGO} ago (Jack declared case closed while she was still alive)
-- Sarah Reeves: Jack's former partner for ${absoluteFacts.SARAH_PARTNERSHIP_YEARS} years
+- Emily Cross "died" 7 years ago exactly (Jack declared case closed while she was still alive)
+- Sarah Reeves: Jack's former partner for 13 years exactly
+- Jack and Tom Wade: Best friends for 30 years exactly
+- Eleanor Bellamy: In prison for 8 years exactly
 
 ## CHARACTER NAMES (USE EXACTLY)
 `;
 
-    // Add key character names
+    // Add key character names from CHARACTER_REFERENCE
     const keyCharacters = [
-      { name: characters.PROTAGONIST.name, role: 'protagonist' },
-      { name: characters.ANTAGONIST.name, alias: 'Emily Cross, The Midnight Confessor' },
-      { name: characters.ALLIES.SARAH.name, role: 'former partner' },
-      { name: characters.ALLIES.ELEANOR.name, role: 'wrongfully convicted' },
-      { name: characters.CORRUPT.TOM_WADE.name, role: 'forensic examiner' },
+      { name: protagonist?.name || 'Jack Halloway', role: 'protagonist' },
+      { name: antagonist?.name || 'Victoria Blackwell', alias: 'Emily Cross, The Midnight Confessor' },
+      { name: allies?.sarahReeves?.name || 'Sarah Reeves', role: 'former partner' },
+      { name: allies?.eleanorBellamy?.name || 'Eleanor Bellamy', role: 'wrongfully convicted' },
+      { name: villains?.tomWade?.name || 'Tom Wade', role: 'forensic examiner' },
     ];
 
     for (const char of keyCharacters) {
@@ -3281,23 +3502,91 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
   /**
    * Generate board data for the puzzle
+   * Now includes chapter-based difficulty scaling
+   *
+   * @param {string} narrative - The narrative text to extract words from
+   * @param {boolean} isDecisionPoint - Whether this is a decision subchapter
+   * @param {object} decision - Decision data for decision points
+   * @param {string[]} puzzleCandidates - LLM-suggested puzzle words
+   * @param {number} chapter - Current chapter (2-12) for difficulty scaling
    */
-  _generateBoardData(narrative, isDecisionPoint, decision, puzzleCandidates = []) {
+  _generateBoardData(narrative, isDecisionPoint, decision, puzzleCandidates = [], chapter = 2) {
     // Combine LLM candidates with regex extraction, prioritizing LLM candidates
     const regexWords = this._extractKeywordsFromNarrative(narrative);
 
-    // Filter LLM candidates for validity (length, structure)
+    // ========== DIFFICULTY SCALING BASED ON CHAPTER ==========
+    // Early chapters (2-4): Easier puzzles with more obvious words
+    // Mid chapters (5-8): Standard difficulty
+    // Late chapters (9-12): Harder puzzles with more outliers and larger grids
+
+    // Calculate difficulty tier (0 = easy, 1 = medium, 2 = hard)
+    const difficultyTier = chapter <= 4 ? 0 : chapter <= 8 ? 1 : 2;
+
+    // Word length requirements scale with difficulty
+    const minWordLength = 4; // Always 4
+    const maxWordLength = difficultyTier === 0 ? 8 : difficultyTier === 1 ? 9 : 10;
+
+    // ========== WORD QUALITY FILTER ==========
+    // Exclude boring/common words that don't make good puzzle words
+    const boringWords = new Set([
+      // Common verbs that aren't evocative
+      'JUST', 'SAID', 'THEN', 'WHEN', 'THAT', 'THIS', 'FROM', 'HAVE', 'WERE', 'BEEN',
+      'INTO', 'OVER', 'VERY', 'MUCH', 'SOME', 'LIKE', 'WHAT', 'THAN', 'THEM', 'ONLY',
+      'COME', 'CAME', 'MADE', 'MAKE', 'TAKE', 'TOOK', 'GOES', 'GONE', 'WENT', 'KNOW',
+      'KNEW', 'THINK', 'FELT', 'FEEL', 'SEEM', 'LOOK', 'TURN', 'BACK', 'DOWN', 'AWAY',
+      'WILL', 'WOULD', 'COULD', 'SHOULD', 'MIGHT', 'MUST', 'SHALL', 'NEED', 'WANT',
+      // Articles and prepositions that might slip through
+      'WITH', 'ABOUT', 'AFTER', 'BEFORE', 'THROUGH', 'UNDER', 'BETWEEN', 'AROUND',
+      // Common pronouns and determiners
+      'THEIR', 'THERE', 'WHERE', 'WHICH', 'OTHER', 'THESE', 'THOSE', 'EVERY', 'BEING',
+      // Generic time words
+      'TIME', 'TIMES', 'YEAR', 'YEARS', 'LATER', 'STILL', 'AGAIN', 'NEVER', 'ALWAYS',
+      // Common but uninteresting nouns
+      'THING', 'THINGS', 'PLACE', 'WAY', 'WAYS', 'PART', 'PARTS', 'KIND', 'SORT',
+      'SAME', 'SUCH', 'EACH', 'BOTH', 'ELSE', 'EVEN', 'ALSO', 'MOST', 'MANY', 'MORE',
+      // Weak adjectives
+      'GOOD', 'WELL', 'LONG', 'LITTLE', 'GREAT', 'HIGH', 'SMALL', 'LARGE', 'YOUNG',
+      // Common story-telling transitions
+      'FIRST', 'LAST', 'NEXT', 'ANOTHER', 'WHOLE', 'HALF', 'REAL', 'SURE', 'TRUE',
+    ]);
+
+    // Filter LLM candidates for validity (length, structure, quality) with difficulty-based length
     const validCandidates = (puzzleCandidates || [])
       .map(w => w.toUpperCase().trim())
-      .filter(w => w.length >= 4 && w.length <= 10 && /^[A-Z]+$/.test(w));
+      .filter(w => {
+        // Basic structure checks
+        if (w.length < minWordLength || w.length > maxWordLength) return false;
+        if (!/^[A-Z]+$/.test(w)) return false;
+        // Quality filter
+        if (boringWords.has(w)) return false;
+        return true;
+      });
+
+    // Also filter regex words for quality
+    const qualityRegexWords = regexWords.filter(w => !boringWords.has(w.toUpperCase()));
 
     // Combine lists: Candidates first, then regex words (deduplicated)
-    const allWords = [...new Set([...validCandidates, ...regexWords])];
+    const allWords = [...new Set([...validCandidates, ...qualityRegexWords])];
 
-    const outlierCount = isDecisionPoint ? 8 : 4;
+    // Outlier count scales with difficulty and decision status
+    // Easy: 4 outliers (6 for decisions), Medium: 4-5 (7-8), Hard: 5-6 (8)
+    let outlierCount;
+    if (isDecisionPoint) {
+      outlierCount = difficultyTier === 0 ? 6 : difficultyTier === 1 ? 7 : 8;
+    } else {
+      outlierCount = difficultyTier === 0 ? 4 : difficultyTier === 1 ? 5 : 6;
+    }
+
     let outlierWords = this._selectOutlierWords(allWords, outlierCount, isDecisionPoint, decision);
 
-    const gridRows = isDecisionPoint ? 5 : 4;
+    // Grid size scales with difficulty
+    // Easy: 4x4, Medium: 4x4 or 5x4 for decisions, Hard: 5x4
+    let gridRows;
+    if (isDecisionPoint) {
+      gridRows = 5; // Always 5 for decisions
+    } else {
+      gridRows = difficultyTier === 2 ? 5 : 4;
+    }
     const gridCols = 4;
     const gridSize = gridRows * gridCols;
 
@@ -3621,6 +3910,42 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       ['JUSTICE', 'FAIR', 'RIGHT', 'WRONG', 'MORAL'],
       ['CERTAINTY', 'CERTAIN', 'SURE', 'DOUBT', 'UNCERTAIN', 'QUESTION'],
       ['REDEMPTION', 'ATONE', 'FORGIVE', 'REDEEM', 'SALVATION'],
+
+      // ========== NEW CLUSTERS: Vehicles, Communication, Documents ==========
+
+      // Vehicles (noir staple for chases, stakeouts, escapes)
+      ['CAR', 'DRIVE', 'DROVE', 'VEHICLE', 'AUTO', 'SEDAN', 'COUPE', 'WHEELS'],
+      ['ROAD', 'HIGHWAY', 'STREET', 'AVENUE', 'BOULEVARD', 'ROUTE', 'PATH'],
+      ['CHASE', 'PURSUE', 'TAIL', 'FOLLOW', 'TRACK', 'HUNT', 'FLEE', 'ESCAPE'],
+      ['TAXI', 'CAB', 'CABBIE', 'FARE', 'METER', 'PICKUP'],
+      ['GARAGE', 'PARKING', 'LOT', 'SPACE', 'SPOT'],
+
+      // Communication (phones, messages, interception)
+      ['PHONE', 'CALL', 'RING', 'DIAL', 'RECEIVER', 'LINE', 'BOOTH'],
+      ['MESSAGE', 'NOTE', 'LETTER', 'MAIL', 'POST', 'ENVELOPE', 'STAMP'],
+      ['WIRE', 'TAP', 'BUG', 'LISTEN', 'RECORD', 'INTERCEPT', 'EAVESDROP'],
+      ['TALK', 'SPEAK', 'SAY', 'SAID', 'TELL', 'TOLD', 'VOICE', 'WORD'],
+      ['SILENCE', 'QUIET', 'MUTE', 'HUSH', 'STILL', 'SILENT'],
+
+      // Documents (evidence, records, paperwork)
+      ['PAPER', 'DOCUMENT', 'FILE', 'FOLDER', 'BINDER', 'STACK'],
+      ['RECORD', 'REPORT', 'MEMO', 'NOTE', 'LOG', 'ENTRY', 'DOSSIER'],
+      ['SIGN', 'SIGNED', 'SIGNATURE', 'AUTOGRAPH', 'NAME', 'INITIAL'],
+      ['TYPE', 'TYPED', 'PRINT', 'CARBON', 'COPY', 'DUPLICATE'],
+      ['PHOTO', 'PICTURE', 'IMAGE', 'SNAPSHOT', 'FRAME', 'NEGATIVE'],
+      ['MAP', 'CHART', 'DIAGRAM', 'LAYOUT', 'PLAN', 'BLUEPRINT'],
+
+      // Money/Finance (bribes, debts, motives)
+      ['BANK', 'VAULT', 'SAFE', 'DEPOSIT', 'ACCOUNT', 'SAVINGS'],
+      ['CHECK', 'CHEQUE', 'CASH', 'BILL', 'COIN', 'CHANGE'],
+      ['BRIBE', 'PAYOFF', 'KICKBACK', 'GREASE', 'PALM', 'CUT'],
+
+      // Actions/Movement (common noir verbs)
+      ['WALK', 'STEP', 'PACE', 'STRIDE', 'STROLL', 'MARCH'],
+      ['RUN', 'SPRINT', 'DASH', 'BOLT', 'RACE', 'RUSH'],
+      ['WAIT', 'WATCH', 'OBSERVE', 'STAKE', 'SURVEIL', 'MONITOR'],
+      ['ENTER', 'EXIT', 'LEAVE', 'ARRIVE', 'DEPART', 'RETURN'],
+      ['OPEN', 'CLOSE', 'SHUT', 'LOCK', 'UNLOCK', 'BOLT'],
     ];
   }
 
