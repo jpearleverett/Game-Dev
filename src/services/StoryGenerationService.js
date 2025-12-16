@@ -121,6 +121,37 @@ const STORY_CONTENT_SCHEMA = {
       enum: ['low', 'moderate', 'high'],
       description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
     },
+    jackBehaviorDeclaration: {
+      type: 'object',
+      description: 'EXPLICIT declaration of Jack\'s behavior in this scene. Fill out BEFORE writing narrative. MUST match path personality.',
+      properties: {
+        primaryAction: {
+          type: 'string',
+          enum: ['investigate', 'confront', 'observe', 'negotiate', 'flee', 'wait', 'interrogate', 'follow'],
+          description: 'The main action Jack takes in this scene',
+        },
+        dialogueApproach: {
+          type: 'string',
+          enum: ['aggressive', 'measured', 'evasive', 'empathetic', 'threatening', 'pleading'],
+          description: 'How Jack speaks to other characters',
+        },
+        emotionalState: {
+          type: 'string',
+          enum: ['determined', 'desperate', 'cautious', 'angry', 'regretful', 'suspicious', 'resigned'],
+          description: 'Jack\'s dominant emotional state',
+        },
+        physicalBehavior: {
+          type: 'string',
+          enum: ['tense', 'relaxed', 'aggressive', 'defensive', 'stealthy', 'commanding'],
+          description: 'How Jack carries himself physically',
+        },
+        personalityConsistencyNote: {
+          type: 'string',
+          description: 'Brief explanation of how this behavior aligns with player path personality (aggressive/methodical/balanced)',
+        },
+      },
+      required: ['primaryAction', 'dialogueApproach', 'emotionalState', 'physicalBehavior', 'personalityConsistencyNote'],
+    },
     storyDay: {
       type: 'number',
       description: 'Which day of the 12-day timeline this scene takes place. Chapter 2 = Day 2, Chapter 3 = Day 3, etc. The story spans exactly 12 days.',
@@ -227,7 +258,78 @@ const STORY_CONTENT_SCHEMA = {
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+};
+
+/**
+ * Schema for decision-only generation (first pass of two-pass decision generation)
+ * This ensures the decision structure is always complete before narrative generation
+ */
+const DECISION_ONLY_SCHEMA = {
+  type: 'object',
+  properties: {
+    decisionContext: {
+      type: 'string',
+      description: 'Brief description of the narrative situation leading to this choice (2-3 sentences)',
+    },
+    decision: {
+      type: 'object',
+      description: 'The binary choice - generate this FIRST before any narrative',
+      properties: {
+        intro: {
+          type: 'string',
+          description: '1-2 sentences framing the impossible choice Jack faces',
+        },
+        optionA: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "A"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+            narrativeSetup: {
+              type: 'string',
+              description: 'How the narrative should build toward this option being presented (1-2 sentences)',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment', 'narrativeSetup'],
+        },
+        optionB: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "B"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+            narrativeSetup: {
+              type: 'string',
+              description: 'How the narrative should build toward this option being presented (1-2 sentences)',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment', 'narrativeSetup'],
+        },
+      },
+      required: ['intro', 'optionA', 'optionB'],
+    },
+    keyMoments: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '3-5 key moments/beats the narrative must include to naturally lead to this decision',
+    },
+    emotionalArc: {
+      type: 'string',
+      description: 'The emotional journey Jack experiences in this scene (tension, revelation, confrontation, etc.)',
+    },
+  },
+  required: ['decisionContext', 'decision', 'keyMoments', 'emotionalArc'],
 };
 
 /**
@@ -262,6 +364,37 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       enum: ['low', 'moderate', 'high'],
       description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
+    },
+    jackBehaviorDeclaration: {
+      type: 'object',
+      description: 'EXPLICIT declaration of Jack\'s behavior in this scene. Fill out BEFORE writing narrative. MUST match path personality.',
+      properties: {
+        primaryAction: {
+          type: 'string',
+          enum: ['investigate', 'confront', 'observe', 'negotiate', 'flee', 'wait', 'interrogate', 'follow'],
+          description: 'The main action Jack takes in this scene',
+        },
+        dialogueApproach: {
+          type: 'string',
+          enum: ['aggressive', 'measured', 'evasive', 'empathetic', 'threatening', 'pleading'],
+          description: 'How Jack speaks to other characters',
+        },
+        emotionalState: {
+          type: 'string',
+          enum: ['determined', 'desperate', 'cautious', 'angry', 'regretful', 'suspicious', 'resigned'],
+          description: 'Jack\'s dominant emotional state',
+        },
+        physicalBehavior: {
+          type: 'string',
+          enum: ['tense', 'relaxed', 'aggressive', 'defensive', 'stealthy', 'commanding'],
+          description: 'How Jack carries himself physically',
+        },
+        personalityConsistencyNote: {
+          type: 'string',
+          description: 'Brief explanation of how this behavior aligns with player path personality (aggressive/methodical/balanced)',
+        },
+      },
+      required: ['primaryAction', 'dialogueApproach', 'emotionalState', 'physicalBehavior', 'personalityConsistencyNote'],
     },
     storyDay: {
       type: 'number',
@@ -408,7 +541,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
 };
 
 // ============================================================================
@@ -2589,12 +2722,276 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
   }
 
   // ==========================================================================
+  // TWO-PASS DECISION GENERATION
+  // ==========================================================================
+
+  /**
+   * Generate decision structure first (Pass 1 of two-pass generation)
+   * This ensures decisions are always complete and contextually appropriate,
+   * preventing truncation from producing generic placeholder choices
+   */
+  async _generateDecisionStructure(context, chapter) {
+    const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "The Detective Portrait."
+
+## CURRENT STORY STATE
+${context.storySummary || 'Jack Halloway is investigating the wrongful convictions built on his career.'}
+
+## RECENT EVENTS
+${context.previousChapterSummary || 'Jack received another letter from the Midnight Confessor.'}
+
+## ACTIVE NARRATIVE THREADS
+${context.narrativeThreads?.filter(t => t.status === 'active').slice(0, 5).map(t => `- [${t.urgency}] ${t.description}`).join('\n') || '- No active threads'}
+
+## PATH PERSONALITY
+Jack has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
+Risk tolerance: ${context.pathPersonality?.riskTolerance || 'moderate'}
+
+## CHAPTER BEAT TYPE
+This chapter's required beat: ${STORY_STRUCTURE.chapterBeatTypes?.[chapter] || 'STANDARD'}
+
+## YOUR TASK
+Design a meaningful binary decision that:
+1. Emerges naturally from the story situation
+2. Has NO obvious "right" answer - both options have real costs
+3. Connects to themes of wrongful conviction, certainty vs truth, betrayal
+4. Fits the player's established personality while challenging them
+5. Creates genuinely different story branches
+
+Generate the decision structure FIRST. This will guide the narrative that leads to it.`;
+
+    console.log(`[StoryGenerationService] Two-pass generation: Generating decision structure for Chapter ${chapter}`);
+
+    const response = await llmService.complete(
+      [{ role: 'user', content: decisionPrompt }],
+      {
+        systemPrompt: 'You are a noir narrative designer creating morally complex choices. Every decision must have real stakes and no clear "correct" answer.',
+        temperature: GENERATION_CONFIG.temperature.decisions,
+        maxTokens: 2000,
+        responseSchema: DECISION_ONLY_SCHEMA,
+      }
+    );
+
+    try {
+      const parsed = typeof response.content === 'string'
+        ? JSON.parse(response.content)
+        : response.content;
+
+      console.log(`[StoryGenerationService] Decision structure generated: "${parsed.decision?.optionA?.title}" vs "${parsed.decision?.optionB?.title}"`);
+
+      return parsed;
+    } catch (error) {
+      console.error('[StoryGenerationService] Failed to parse decision structure:', error);
+      // Return a valid fallback structure
+      return {
+        decisionContext: 'Jack faces an impossible choice.',
+        decision: {
+          intro: 'The evidence points in two directions, and time is running out.',
+          optionA: {
+            key: 'A',
+            title: 'Take direct action now',
+            focus: 'Prioritizes immediate resolution and confrontation. Risks escalating the situation before all facts are known.',
+            personalityAlignment: 'aggressive',
+            narrativeSetup: 'The tension builds to a breaking point where waiting feels impossible.',
+          },
+          optionB: {
+            key: 'B',
+            title: 'Gather more evidence first',
+            focus: 'Prioritizes thorough investigation and certainty. Risks letting the trail go cold or enemies preparing.',
+            personalityAlignment: 'methodical',
+            narrativeSetup: 'New information suggests there may be more to uncover.',
+          },
+        },
+        keyMoments: ['Building tension', 'Key revelation', 'Forced choice'],
+        emotionalArc: 'Tension building to difficult choice',
+      };
+    }
+  }
+
+  /**
+   * Build prompt for narrative generation with pre-determined decision (Pass 2)
+   */
+  _buildDecisionNarrativePrompt(context, chapter, subchapter, decisionStructure) {
+    const basePrompt = this._buildGenerationPrompt(context, chapter, subchapter, true);
+
+    const decisionGuidance = `
+
+## PRE-DETERMINED DECISION (Your narrative MUST lead to this exact choice)
+The following decision has already been designed. Your narrative must naturally build toward it.
+
+### DECISION INTRO (Use this exact text or very close variation):
+"${decisionStructure.decision.intro}"
+
+### OPTION A: "${decisionStructure.decision.optionA.title}"
+- Focus: ${decisionStructure.decision.optionA.focus}
+- Personality: ${decisionStructure.decision.optionA.personalityAlignment}
+- Narrative setup: ${decisionStructure.decision.optionA.narrativeSetup}
+
+### OPTION B: "${decisionStructure.decision.optionB.title}"
+- Focus: ${decisionStructure.decision.optionB.focus}
+- Personality: ${decisionStructure.decision.optionB.personalityAlignment}
+- Narrative setup: ${decisionStructure.decision.optionB.narrativeSetup}
+
+### KEY MOMENTS TO INCLUDE:
+${decisionStructure.keyMoments.map((m, i) => `${i + 1}. ${m}`).join('\n')}
+
+### EMOTIONAL ARC:
+${decisionStructure.emotionalArc}
+
+### CRITICAL INSTRUCTION:
+Copy the decision object EXACTLY as provided above into your response. Do not modify the decision titles, focus, or intro. Your narrative should make these choices feel earned and natural, but the decision text itself is FIXED.`;
+
+    return basePrompt + decisionGuidance;
+  }
+
+  // ==========================================================================
+  // THREAD NORMALIZATION - Prevents duplicate threads across paths
+  // ==========================================================================
+
+  /**
+   * Normalize a thread to a canonical ID for deduplication
+   * Format: {type}:{sorted_entities}:{action_hash}
+   */
+  _normalizeThreadId(thread) {
+    if (!thread || !thread.description) return null;
+
+    const type = thread.type || 'unknown';
+    const description = thread.description.toLowerCase();
+
+    // Extract character names mentioned in the thread
+    const knownCharacters = [
+      'jack', 'sarah', 'victoria', 'emily', 'tom', 'wade', 'eleanor',
+      'bellamy', 'silas', 'reed', 'grange', 'marcus', 'thornhill',
+      'lisa', 'chen', 'james', 'sullivan', 'teresa', 'reeves', 'confessor'
+    ];
+
+    const mentionedCharacters = knownCharacters
+      .filter(name => description.includes(name))
+      .sort();
+
+    // Extract key action verbs
+    const actionVerbs = [
+      'meet', 'call', 'visit', 'confront', 'investigate', 'find', 'search',
+      'promise', 'agree', 'threaten', 'reveal', 'discover', 'follow', 'watch'
+    ];
+
+    const actions = actionVerbs
+      .filter(verb => description.includes(verb))
+      .sort();
+
+    // Extract time references for appointments
+    const timePatterns = /(?:midnight|noon|morning|evening|tonight|tomorrow|dawn|dusk|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/gi;
+    const times = (description.match(timePatterns) || []).map(t => t.toLowerCase()).sort();
+
+    // Extract location references
+    const locations = [
+      'docks', 'warehouse', 'office', 'precinct', 'greystone', 'prison',
+      'bar', 'apartment', 'morgue', 'courthouse', 'alley', 'waterfront'
+    ];
+    const mentionedLocations = locations
+      .filter(loc => description.includes(loc))
+      .sort();
+
+    // Build normalized ID
+    const parts = [type];
+    if (mentionedCharacters.length > 0) parts.push(mentionedCharacters.join(','));
+    if (actions.length > 0) parts.push(actions[0]); // Primary action
+    if (times.length > 0) parts.push(times[0]); // Primary time
+    if (mentionedLocations.length > 0) parts.push(mentionedLocations[0]); // Primary location
+
+    return parts.join(':');
+  }
+
+  /**
+   * Deduplicate threads using normalized IDs
+   */
+  _deduplicateThreads(threads) {
+    if (!threads || threads.length === 0) return [];
+
+    const seen = new Map();
+    const deduplicated = [];
+
+    for (const thread of threads) {
+      const normalizedId = this._normalizeThreadId(thread);
+
+      if (!normalizedId) {
+        deduplicated.push(thread);
+        continue;
+      }
+
+      if (!seen.has(normalizedId)) {
+        seen.set(normalizedId, thread);
+        // Add normalized ID to thread for tracking
+        thread._normalizedId = normalizedId;
+        deduplicated.push(thread);
+      } else {
+        // Merge: keep the more recent or more urgent version
+        const existing = seen.get(normalizedId);
+        const urgencyRank = { critical: 3, normal: 2, background: 1 };
+
+        if ((urgencyRank[thread.urgency] || 0) > (urgencyRank[existing.urgency] || 0)) {
+          // Replace with more urgent version
+          const idx = deduplicated.indexOf(existing);
+          if (idx !== -1) {
+            thread._normalizedId = normalizedId;
+            deduplicated[idx] = thread;
+            seen.set(normalizedId, thread);
+          }
+        }
+
+        console.log(`[StoryGenerationService] Deduplicated thread: "${thread.description?.slice(0, 50)}..." (normalized: ${normalizedId})`);
+      }
+    }
+
+    return deduplicated;
+  }
+
+  /**
+   * Cap active threads to prevent state explosion
+   * Keeps critical threads, most recent, and auto-resolves old background threads
+   */
+  _capActiveThreads(threads, maxThreads = 20) {
+    if (!threads || threads.length <= maxThreads) return threads;
+
+    // Separate by urgency
+    const critical = threads.filter(t => t.urgency === 'critical' && t.status === 'active');
+    const normal = threads.filter(t => t.urgency === 'normal' && t.status === 'active');
+    const background = threads.filter(t => t.urgency === 'background' && t.status === 'active');
+    const resolved = threads.filter(t => t.status !== 'active');
+
+    // Always keep all critical threads
+    const kept = [...critical];
+
+    // Add normal threads up to limit
+    const remainingSlots = maxThreads - kept.length;
+    const normalToKeep = normal.slice(0, Math.min(normal.length, Math.ceil(remainingSlots * 0.6)));
+    kept.push(...normalToKeep);
+
+    // Add background threads with remaining slots
+    const backgroundSlots = maxThreads - kept.length;
+    const backgroundToKeep = background.slice(0, backgroundSlots);
+    kept.push(...backgroundToKeep);
+
+    // Auto-resolve old background threads that didn't make the cut
+    const autoResolved = background.slice(backgroundSlots).map(t => ({
+      ...t,
+      status: 'resolved',
+      _autoResolved: true,
+      _autoResolveReason: 'Thread cap reached - background thread auto-closed',
+    }));
+
+    console.log(`[StoryGenerationService] Thread cap: kept ${kept.length}, auto-resolved ${autoResolved.length} background threads`);
+
+    return [...kept, ...autoResolved, ...resolved];
+  }
+
+  // ==========================================================================
   // GENERATION AND VALIDATION
   // ==========================================================================
 
   /**
    * Generate a single subchapter with validation
    * Now integrates Story Arc Planning and Chapter Outlines for 100% consistency
+   * Decision points use two-pass generation to ensure complete, contextual choices
    */
   async generateSubchapter(chapter, subchapter, pathKey, choiceHistory = []) {
     if (!llmService.isConfigured()) {
@@ -2633,39 +3030,76 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       // Build comprehensive context (now includes story arc and chapter outline)
       const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
+      // Apply thread normalization and capping to prevent state explosion
+      if (context.narrativeThreads) {
+        context.narrativeThreads = this._deduplicateThreads(context.narrativeThreads);
+        context.narrativeThreads = this._capActiveThreads(context.narrativeThreads, 20);
+      }
+
       // Add story arc and chapter outline to context
       context.storyArc = this.storyArc;
       context.chapterOutline = chapterOutline;
 
-      // Build the prompt with all context (including new planning data)
-      const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
-
-      // Select appropriate temperature and schema based on content type
-      const temperature = isDecisionPoint
-        ? GENERATION_CONFIG.temperature.decisions
-        : GENERATION_CONFIG.temperature.narrative;
-      const responseSchema = isDecisionPoint
-        ? DECISION_CONTENT_SCHEMA
-        : STORY_CONTENT_SCHEMA;
-
       this.isGenerating = true;
       try {
-        // Primary generation with structured output
-        const response = await llmService.complete(
-          [{ role: 'user', content: prompt }],
-          {
-            systemPrompt: MASTER_SYSTEM_PROMPT,
-            temperature,
-            // Decision points have larger schema requirements (optionA, optionB) - add buffer
-            maxTokens: isDecisionPoint
-              ? GENERATION_CONFIG.maxTokens.subchapter + 2000
-              : GENERATION_CONFIG.maxTokens.subchapter,
-            responseSchema,
-          }
-        );
+        let generatedContent;
+        let decisionStructure = null;
 
-        // Parse JSON response (guaranteed valid by schema)
-        let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+        if (isDecisionPoint) {
+          // ========== TWO-PASS GENERATION FOR DECISION POINTS ==========
+          // Pass 1: Generate decision structure first (ensures complete, contextual choices)
+          decisionStructure = await this._generateDecisionStructure(context, chapter);
+
+          // Pass 2: Generate narrative with pre-determined decision
+          const decisionPrompt = this._buildDecisionNarrativePrompt(context, chapter, subchapter, decisionStructure);
+
+          const response = await llmService.complete(
+            [{ role: 'user', content: decisionPrompt }],
+            {
+              systemPrompt: MASTER_SYSTEM_PROMPT,
+              temperature: GENERATION_CONFIG.temperature.decisions,
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter + 2000,
+              responseSchema: DECISION_CONTENT_SCHEMA,
+            }
+          );
+
+          generatedContent = this._parseGeneratedContent(response.content, true);
+
+          // Ensure the decision from Pass 1 is used (in case LLM modified it)
+          if (decisionStructure.decision) {
+            generatedContent.decision = {
+              intro: decisionStructure.decision.intro,
+              optionA: {
+                key: 'A',
+                title: decisionStructure.decision.optionA.title,
+                focus: decisionStructure.decision.optionA.focus,
+                personalityAlignment: decisionStructure.decision.optionA.personalityAlignment,
+              },
+              optionB: {
+                key: 'B',
+                title: decisionStructure.decision.optionB.title,
+                focus: decisionStructure.decision.optionB.focus,
+                personalityAlignment: decisionStructure.decision.optionB.personalityAlignment,
+              },
+            };
+            console.log(`[StoryGenerationService] Two-pass complete: Decision preserved from Pass 1`);
+          }
+        } else {
+          // ========== STANDARD SINGLE-PASS FOR NON-DECISION SUBCHAPTERS ==========
+          const prompt = this._buildGenerationPrompt(context, chapter, subchapter, false);
+
+          const response = await llmService.complete(
+            [{ role: 'user', content: prompt }],
+            {
+              systemPrompt: MASTER_SYSTEM_PROMPT,
+              temperature: GENERATION_CONFIG.temperature.narrative,
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+              responseSchema: STORY_CONTENT_SCHEMA,
+            }
+          );
+
+          generatedContent = this._parseGeneratedContent(response.content, false);
+        }
 
         // Validate word count with retry logic
         let wordCount = generatedContent.narrative.split(/\s+/).length;
@@ -3274,6 +3708,54 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         // Allow moderate as acceptable middle ground
         if (content.jackRiskLevel !== 'moderate' && expectedRiskLevel !== 'moderate') {
           issues.push(`Jack's risk level mismatch: LLM declared "${content.jackRiskLevel}" but player path personality expects "${expectedRiskLevel}"`);
+        }
+      }
+
+      // =========================================================================
+      // BEHAVIOR DECLARATION VALIDATION (Schema-Level Enforcement)
+      // =========================================================================
+      if (content.jackBehaviorDeclaration) {
+        const behavior = content.jackBehaviorDeclaration;
+
+        // Define personality-appropriate behaviors
+        const methodicalBehaviors = {
+          primaryAction: ['investigate', 'observe', 'wait', 'follow'],
+          dialogueApproach: ['measured', 'evasive', 'empathetic'],
+          physicalBehavior: ['tense', 'defensive', 'stealthy'],
+        };
+
+        const aggressiveBehaviors = {
+          primaryAction: ['confront', 'interrogate', 'negotiate'],
+          dialogueApproach: ['aggressive', 'threatening'],
+          physicalBehavior: ['aggressive', 'commanding', 'tense'],
+        };
+
+        if (personality.riskTolerance === 'low') {
+          // Methodical player - check for aggressive behaviors
+          if (behavior.primaryAction && aggressiveBehaviors.primaryAction.includes(behavior.primaryAction)) {
+            if (!methodicalBehaviors.primaryAction.includes(behavior.primaryAction)) {
+              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared primaryAction="${behavior.primaryAction}". Expected one of: ${methodicalBehaviors.primaryAction.join(', ')}`);
+            }
+          }
+          if (behavior.dialogueApproach && aggressiveBehaviors.dialogueApproach.includes(behavior.dialogueApproach)) {
+            issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared dialogueApproach="${behavior.dialogueApproach}". Expected one of: ${methodicalBehaviors.dialogueApproach.join(', ')}`);
+          }
+          if (behavior.physicalBehavior === 'aggressive' || behavior.physicalBehavior === 'commanding') {
+            issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared physicalBehavior="${behavior.physicalBehavior}". Expected one of: ${methodicalBehaviors.physicalBehavior.join(', ')}`);
+          }
+        } else if (personality.riskTolerance === 'high') {
+          // Aggressive player - check for overly cautious behaviors
+          if (behavior.primaryAction === 'wait' || behavior.primaryAction === 'flee') {
+            warnings.push(`BEHAVIOR NOTE: Aggressive player declared primaryAction="${behavior.primaryAction}" - ensure this is justified by circumstances`);
+          }
+          if (behavior.dialogueApproach === 'evasive' || behavior.dialogueApproach === 'pleading') {
+            warnings.push(`BEHAVIOR NOTE: Aggressive player declared dialogueApproach="${behavior.dialogueApproach}" - ensure this is justified by circumstances`);
+          }
+        }
+
+        // Verify the personalityConsistencyNote is present and reasonable
+        if (!behavior.personalityConsistencyNote || behavior.personalityConsistencyNote.length < 20) {
+          warnings.push('Behavior declaration missing or has insufficient personalityConsistencyNote explanation');
         }
       }
 
@@ -4221,6 +4703,42 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
       // Betrayal/Trust (Tom Wade's 30-year betrayal)
       ['BETRAY', 'BETRAYAL', 'BETRAYED', 'TRUST', 'TRUSTED', 'FAITH', 'FAITHFUL', 'LOYAL', 'LOYALTY'],
+
+      // ========== ADDITIONAL STORY-CRITICAL CLUSTERS ==========
+
+      // Memory/Recall (Jack's recollections, flashbacks)
+      ['RECALL', 'RECOLLECT', 'NOSTALGIA', 'FLASHBACK', 'MEMORY', 'MEMORIES', 'REMEMBER', 'REMEMBERED'],
+
+      // Victim/Survivor (The Five Innocents are victims)
+      ['VICTIM', 'VICTIMS', 'SURVIVOR', 'SURVIVORS', 'SUFFERER', 'TARGET', 'PREY'],
+
+      // Appeal/Exoneration (Eleanor's appeal, wrongful conviction theme)
+      ['APPEAL', 'APPEALS', 'EXONERATE', 'EXONERATION', 'OVERTURN', 'REVERSAL', 'PARDON', 'RELEASE'],
+
+      // Midnight/Night (Victoria's timing, noir atmosphere)
+      ['MIDNIGHT', 'MIDNIGHTS', 'CONFESSOR', 'CONFESSION', 'WITCHING', 'TWELVE', 'STROKE'],
+
+      // Evidence types (Tom's manufactured evidence)
+      ['FINGERPRINT', 'FINGERPRINTS', 'DNA', 'FIBER', 'FIBERS', 'TRACE', 'SAMPLE', 'SPECIMEN'],
+      ['AUTOPSY', 'POSTMORTEM', 'CORONER', 'MEDICAL', 'EXAMINER', 'FORENSICS'],
+
+      // Confession variants (The Midnight Confessor's letters)
+      ['LETTER', 'LETTERS', 'ENVELOPE', 'ENVELOPES', 'MISSIVE', 'CORRESPONDENCE', 'MAIL'],
+
+      // Watching/Surveillance (Jack's investigation methods)
+      ['STAKEOUT', 'SURVEILLANCE', 'WATCHING', 'OBSERVING', 'TAILING', 'SHADOWING', 'SPYING'],
+
+      // Old/Past (30 years of friendship, 8 years in prison)
+      ['YEARS', 'DECADES', 'ANCIENT', 'FORMER', 'PREVIOUS', 'PRIOR', 'OLD', 'AGED'],
+
+      // Five Innocents names (prevent character name overlap issues)
+      ['MARCUS', 'THORNHILL', 'ACCOUNTANT', 'EMBEZZLER'],
+      ['LISA', 'CHEN', 'DOCTOR', 'PHYSICIAN'],
+      ['JAMES', 'SULLIVAN', 'MECHANIC', 'GARAGE'],
+      ['TERESA', 'WADE', 'TOM', 'WIFE'],
+
+      // Silas Reed (Jack's former partner)
+      ['SILAS', 'REED', 'RECLUSE', 'HERMIT', 'FORMER'],
     ];
   }
 
