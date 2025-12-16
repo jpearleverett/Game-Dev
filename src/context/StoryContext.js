@@ -40,6 +40,16 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return resolveStoryPathKey(caseNumber, progress.storyCampaign);
   }, [progress.storyCampaign]);
 
+  // Helper to parse case number
+  const parseCaseNumber = useCallback((caseNumber) => {
+    if (!caseNumber) return { chapter: 1, subchapter: 1 };
+    const chapterSegment = caseNumber.slice(0, 3);
+    const letter = caseNumber.slice(3, 4);
+    const chapter = parseInt(chapterSegment, 10) || 1;
+    const subchapter = { 'A': 1, 'B': 2, 'C': 3 }[letter] || 1;
+    return { chapter, subchapter };
+  }, []);
+
   /**
    * Check and generate story content if needed for a case
    */
@@ -79,6 +89,34 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return { ok: false, reason: 'generation-error', error: error.message };
     }
   }, [isLLMConfigured, generateForCase, storyCampaign?.choiceHistory]);
+
+  /**
+   * Handle background generation logic seamlessly
+   * Called when entering a case to ensure upcoming content is ready
+   */
+  const handleBackgroundGeneration = useCallback((caseNumber, pathKey) => {
+    if (!isLLMConfigured) return;
+
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+    const choiceHistory = storyCampaign?.choiceHistory || [];
+
+    // Strategy:
+    // 1. Ensure current chapter's remaining subchapters (siblings) are ready
+    // 2. Ensure next chapter is pre-loading (lookahead)
+
+    // Logic for Subchapters A (1) and B (2) -> Generate remaining siblings
+    // If we are in A, we need B and C. If in B, we need C.
+    if (chapter >= 2 && subchapter < 3) {
+      pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
+    }
+
+    // Logic for all Subchapters -> Look ahead to next chapter
+    // If we are in A, B, or C, we should ensure the Next Chapter is ready.
+    // This is especially critical for C, but useful for A/B to fill the queue.
+    if (chapter >= 1 && chapter < 12) {
+      pregenerate(chapter, pathKey, choiceHistory);
+    }
+  }, [isLLMConfigured, parseCaseNumber, storyCampaign?.choiceHistory, pregenerateCurrentChapterSiblings, pregenerate]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
     // Get chapter info before making the decision
@@ -134,6 +172,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     activateStoryCase,
     selectStoryDecision,
     ensureStoryContent,
+    handleBackgroundGeneration, // Exposed for GameContext
     configureLLM,
     generateForCase,
     generateChapter,
@@ -145,6 +184,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     activateStoryCase,
     selectStoryDecision,
     ensureStoryContent,
+    handleBackgroundGeneration,
     configureLLM,
     generateForCase,
     generateChapter,
