@@ -713,8 +713,31 @@ const STYLE_EXAMPLES = `
 ## EXAMPLE: TENSE MOMENT (EXCELLENT)
 "${EXAMPLE_PASSAGES.tenseMoment}"
 
+## EXAMPLE: CHARACTER CONFRONTATION (EXCELLENT)
+"${EXAMPLE_PASSAGES.characterConfrontation}"
+
+## EXAMPLE: EMOTIONAL REVELATION (EXCELLENT)
+"${EXAMPLE_PASSAGES.emotionalRevelation}"
+
+## EXAMPLE: CHASE/ACTION SEQUENCE (EXCELLENT)
+"${EXAMPLE_PASSAGES.chaseSequence}"
+
+## EXAMPLE: INVESTIGATION SCENE (EXCELLENT)
+"${EXAMPLE_PASSAGES.investigationScene}"
+
+## EXAMPLE: QUIET CHARACTER MOMENT (EXCELLENT)
+"${EXAMPLE_PASSAGES.quietMoment}"
+
 ---
-Study these examples. Match their rhythm, tone, and prose quality. Your writing should feel like it belongs in the same novel.
+Study these examples carefully. Note the:
+- Varied sentence lengths (punchy shorts mixed with longer flowing ones)
+- Sensory grounding (rain, neon, whiskey, smoke)
+- Metaphors that feel noir-specific, not generic
+- Dialogue that reveals character without exposition
+- Physical action interleaved with internal thought
+- Tension built through what's NOT said
+
+Your writing should feel like it belongs in the same novel as these passages.
 `;
 
 class StoryGenerationService {
@@ -745,6 +768,9 @@ class StoryGenerationService {
     this.fallbackTemplates = this._initializeFallbackTemplates();
     this.generationAttempts = new Map(); // Track retry attempts per content
     this.maxGenerationAttempts = 3; // Max attempts before using fallback
+
+    // ========== A+ QUALITY: Setup/Payoff Registry ==========
+    this._initializeSetupPayoffRegistry();
   }
 
   // ==========================================================================
@@ -3136,6 +3162,52 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         // Validate consistency (check for obvious violations)
         let validationResult = this._validateConsistency(generatedContent, context);
+
+        // ========== A+ QUALITY VALIDATION ==========
+        // Track setups for major revelations
+        this._trackSetups(generatedContent.narrative, chapter, subchapter);
+
+        // Run prose quality validation
+        const proseQuality = this._validateProseQuality(generatedContent.narrative);
+        if (proseQuality.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.warnings];
+        }
+        if (proseQuality.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...proseQuality.issues];
+          validationResult.valid = false;
+        }
+        console.log(`[A+Quality] Prose quality score: ${proseQuality.score}/100`);
+
+        // Run sentence variety validation
+        const sentenceVariety = this._validateSentenceVariety(generatedContent.narrative);
+        if (sentenceVariety.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.warnings];
+        }
+        if (sentenceVariety.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...sentenceVariety.issues];
+          validationResult.valid = false;
+        }
+
+        // Run character voice validation
+        const characterVoice = this._validateCharacterVoices(generatedContent.narrative);
+        if (characterVoice.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...characterVoice.warnings];
+        }
+        if (characterVoice.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...characterVoice.issues];
+          validationResult.valid = false;
+        }
+
+        // Validate setup/payoff balance
+        const setupPayoff = this._validateSetupPayoff(chapter, generatedContent.narrative);
+        if (setupPayoff.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...setupPayoff.warnings];
+        }
+        if (setupPayoff.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...setupPayoff.issues];
+          validationResult.valid = false;
+        }
+
         let retries = 0;
 
         while (!validationResult.valid && retries < MAX_RETRIES) {
@@ -4088,6 +4160,568 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       issues,
       warnings,
     };
+  }
+
+  // ==========================================================================
+  // A+ QUALITY VALIDATORS - Advanced prose and narrative quality checks
+  // ==========================================================================
+
+  /**
+   * Validate prose quality - checks for metaphor variety, sentence diversity, and noir voice
+   * Returns quality score (0-100) and specific feedback
+   */
+  _validateProseQuality(narrative) {
+    const issues = [];
+    const warnings = [];
+    let qualityScore = 100;
+
+    // ========== 1. METAPHOR DETECTION ==========
+    // Noir prose should have evocative metaphors, not generic descriptions
+    const noirMetaphorPatterns = [
+      /rain\s+(?:fell|poured|drummed|hammered|beat|washed|slicked|dripped)/i,
+      /shadow[s]?\s+(?:stretched|crawled|pooled|swallowed|embraced|clung)/i,
+      /neon\s+(?:bled|reflected|flickered|buzzed|hummed|painted|spilled)/i,
+      /city\s+(?:breathed|slept|whispered|groaned|stretched|waited)/i,
+      /silence\s+(?:hung|pressed|settled|wrapped|stretched|fell)/i,
+      /guilt\s+(?:weighed|gnawed|clawed|settled|wrapped|clung)/i,
+      /memory\s+(?:surfaced|lurked|haunted|clawed|whispered|echoed)/i,
+      /truth\s+(?:cut|burned|stung|waited|lurked|surfaced)/i,
+      /(?:voice|words?)\s+(?:cut|sliced|dripped|hung|fell|echoed)/i,
+      /eyes\s+(?:burned|bored|searched|narrowed|softened|hardened)/i,
+    ];
+
+    const metaphorCount = noirMetaphorPatterns.reduce((count, pattern) => {
+      return count + (narrative.match(pattern)?.length || 0);
+    }, 0);
+
+    const wordCount = narrative.split(/\s+/).length;
+    const expectedMetaphors = Math.max(2, Math.floor(wordCount / 200)); // Expect 1 per 200 words, minimum 2
+
+    if (metaphorCount < expectedMetaphors) {
+      warnings.push(`Prose lacks noir texture: only ${metaphorCount} evocative metaphors found (expected ${expectedMetaphors}+). Add atmospheric language.`);
+      qualityScore -= 10;
+    }
+
+    // ========== 2. SENSORY DETAIL CHECK ==========
+    // A+ noir prose engages multiple senses
+    const sensoryPatterns = {
+      visual: /\b(?:saw|watched|looked|glanced|neon|shadow|dark|light|glow|flicker|gleam|shine)\b/gi,
+      auditory: /\b(?:heard|sound|noise|whisper|echo|creak|hum|buzz|silence|quiet|jukebox|rain\s+(?:drummed|hammered|pattered))\b/gi,
+      tactile: /\b(?:felt|cold|warm|wet|damp|rough|smooth|grip|touch|chill|sting|burn)\b/gi,
+      olfactory: /\b(?:smell|scent|odor|stink|perfume|smoke|whiskey|rain|musk|sweat)\b/gi,
+      taste: /\b(?:taste|bitter|sweet|sour|whiskey|bourbon|coffee|blood)\b/gi,
+    };
+
+    const sensoryHits = {};
+    let totalSensory = 0;
+    for (const [sense, pattern] of Object.entries(sensoryPatterns)) {
+      const matches = narrative.match(pattern) || [];
+      sensoryHits[sense] = matches.length;
+      totalSensory += matches.length;
+    }
+
+    const sensesCovered = Object.values(sensoryHits).filter(v => v > 0).length;
+    if (sensesCovered < 3) {
+      warnings.push(`Limited sensory engagement: only ${sensesCovered}/5 senses used. Add ${['visual', 'auditory', 'tactile', 'olfactory', 'taste'].filter(s => !sensoryHits[s]).join(', ')} details.`);
+      qualityScore -= 5;
+    }
+
+    // ========== 3. DIALOGUE QUALITY CHECK ==========
+    // Extract dialogue and check for quality
+    const dialogueMatches = narrative.match(/"[^"]+"/g) || [];
+    if (dialogueMatches.length > 0) {
+      // Check for weak dialogue tags
+      const weakTags = /(?:he|she|i)\s+(?:said|asked|replied)\s+(?:quietly|loudly|softly|quickly|slowly)/gi;
+      if (weakTags.test(narrative)) {
+        warnings.push('Weak dialogue tags with adverbs detected. Show emotion through action beats instead.');
+        qualityScore -= 3;
+      }
+
+      // Check for talking heads (no action beats between dialogue)
+      const consecutiveDialogue = narrative.match(/"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"/g);
+      if (consecutiveDialogue && consecutiveDialogue.length > 0) {
+        warnings.push('Dialogue passages lack action beats. Break up long exchanges with physical actions or observations.');
+        qualityScore -= 5;
+      }
+    }
+
+    // ========== 4. PARAGRAPH VARIETY CHECK ==========
+    const paragraphs = narrative.split(/\n\n+/).filter(p => p.trim().length > 0);
+    if (paragraphs.length > 0) {
+      const paragraphLengths = paragraphs.map(p => p.split(/\s+/).length);
+      const avgLength = paragraphLengths.reduce((a, b) => a + b, 0) / paragraphLengths.length;
+      const variance = paragraphLengths.reduce((sum, len) => sum + Math.pow(len - avgLength, 2), 0) / paragraphLengths.length;
+
+      // Low variance means monotonous paragraph structure
+      if (variance < 100 && paragraphs.length > 3) {
+        warnings.push(`Monotonous paragraph structure: variance ${Math.round(variance)}. Vary paragraph lengths for better pacing.`);
+        qualityScore -= 5;
+      }
+    }
+
+    // ========== 5. OPENING QUALITY CHECK ==========
+    const firstParagraph = paragraphs[0] || '';
+    const hasAtmosphericOpening = noirMetaphorPatterns.some(p => p.test(firstParagraph)) ||
+                                   /\b(?:rain|shadow|night|dark|neon|city|street)\b/i.test(firstParagraph);
+
+    if (!hasAtmosphericOpening && wordCount > 200) {
+      warnings.push('Opening lacks atmospheric grounding. Start with sensory scene-setting.');
+      qualityScore -= 5;
+    }
+
+    // ========== 6. GENERIC PHRASE DETECTION ==========
+    // Detect phrases that feel AI-generated or generic
+    const genericPatterns = [
+      { pattern: /\bthe air\s+(?:was|felt)\s+(?:thick|heavy|tense)\b/i, issue: 'Generic atmosphere: "the air was thick/heavy"' },
+      { pattern: /\bmy\s+(?:heart|pulse)\s+(?:raced|pounded|quickened)\b/i, issue: 'Generic tension: heart racing/pounding' },
+      { pattern: /\ba\s+(?:chill|shiver)\s+(?:ran|went)\s+down\s+(?:my|his|her)\s+spine\b/i, issue: 'Cliché: chill down spine' },
+      { pattern: /\btime\s+(?:seemed\s+to\s+)?(?:stood|stopped|froze|slowed)\b/i, issue: 'Cliché: time stopped/froze' },
+      { pattern: /\beverything\s+(?:changed|happened)\s+(?:so\s+)?fast\b/i, issue: 'Generic pacing: everything happened fast' },
+    ];
+
+    for (const { pattern, issue } of genericPatterns) {
+      if (pattern.test(narrative)) {
+        warnings.push(`${issue} - rewrite with more specific imagery`);
+        qualityScore -= 3;
+      }
+    }
+
+    return {
+      score: Math.max(0, qualityScore),
+      issues,
+      warnings,
+      details: {
+        metaphorCount,
+        sensoryHits,
+        dialogueCount: dialogueMatches.length,
+        paragraphCount: paragraphs.length,
+        hasAtmosphericOpening,
+      },
+    };
+  }
+
+  /**
+   * Validate character voice consistency in dialogue
+   * Ensures each character sounds distinct and matches their established voice
+   */
+  _validateCharacterVoices(narrative) {
+    const issues = [];
+    const warnings = [];
+
+    // Character voice signatures from characterReference.js
+    const voiceSignatures = {
+      victoria: {
+        patterns: [
+          /\b(?:education|curriculum|lesson|understand|certainty)\b/i,
+          /\b(?:twelve\s+days?|chess|game|move|piece)\b/i,
+          /\b(?:power|truth|noise|believe)\b/i,
+        ],
+        forbiddenPatterns: [
+          /\b(?:gonna|gotta|ain't|wanna)\b/i, // Too casual for Victoria
+          /\b(?:like,?\s+(?:you\s+know|whatever))\b/i, // Valley speak
+        ],
+        style: 'elegant, calculated, formal diction with sardonic edge',
+      },
+      sarah: {
+        patterns: [
+          /\b(?:partner|force|badge|case|evidence)\b/i,
+          /\b(?:done|finished|walk\s+away|my\s+own)\b/i,
+        ],
+        forbiddenPatterns: [
+          /\b(?:darling|dear|sweetheart)\b/i, // Too soft for Sarah
+        ],
+        style: 'direct, no-nonsense, increasingly independent',
+      },
+      eleanor: {
+        patterns: [
+          /\b(?:years?|prison|greystone|cell|innocent)\b/i,
+          /\b(?:daughter|maya|richard|husband)\b/i,
+        ],
+        forbiddenPatterns: [], // Eleanor can sound bitter in many ways
+        style: 'bitter, resilient, gravel and broken glass',
+      },
+      silas: {
+        patterns: [
+          /\b(?:blackmail|blood\s+money|penthouse|guilty|probably)\b/i,
+          /\b(?:sorry|forgive|mistake|wrong)\b/i,
+        ],
+        forbiddenPatterns: [
+          /\b(?:confident|sure|certain|definitely)\b/i, // Silas is defeated, not confident
+        ],
+        style: 'defeated, bourbon-soaked, confessional',
+      },
+      tom: {
+        patterns: [
+          /\b(?:evidence|forensic|lab|test|results?)\b/i,
+          /\b(?:friend|years?|college|trust)\b/i,
+        ],
+        forbiddenPatterns: [],
+        style: 'outwardly friendly and competent (before revelation)',
+      },
+    };
+
+    // Extract dialogue with speaker attribution
+    // Pattern: "dialogue" [optional: character said/spoke/etc]
+    const dialogueWithAttribution = narrative.match(/"[^"]+"\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
+
+    // Check for dialogue that could be attributed to specific characters
+    const characterNames = ['victoria', 'sarah', 'eleanor', 'silas', 'tom', 'wade', 'reeves', 'bellamy', 'reed', 'confessor', 'blackwell'];
+
+    for (const dialogue of dialogueWithAttribution) {
+      const text = dialogue.match(/"([^"]+)"/)?.[1] || '';
+      const attribution = dialogue.toLowerCase();
+
+      for (const [character, signature] of Object.entries(voiceSignatures)) {
+        // Check if this dialogue is attributed to this character
+        const isThisCharacter = characterNames.some(name =>
+          attribution.includes(name) &&
+          (character === name || character === name.replace('wade', 'tom') || character === name.replace('reeves', 'sarah'))
+        );
+
+        if (isThisCharacter) {
+          // Check for forbidden patterns in this character's dialogue
+          for (const forbidden of signature.forbiddenPatterns) {
+            if (forbidden.test(text)) {
+              warnings.push(`Character voice violation: ${character.toUpperCase()} dialogue contains forbidden pattern. Style should be: ${signature.style}`);
+            }
+          }
+        }
+      }
+    }
+
+    // Cross-check: Victoria should never sound casual like a cop
+    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^"]*"([^"]+)"/gi) || [];
+    for (const match of victoriaDialogue) {
+      const text = match.match(/"([^"]+)"/)?.[1] || '';
+      if (/\b(?:gonna|gotta|ain't|ya|hey|buddy|pal)\b/i.test(text)) {
+        issues.push('Victoria/Confessor uses overly casual language - should be elegant and formal');
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
+   * Validate sentence variety to prevent monotonous prose
+   * Checks for I-stacking, sentence length variety, and opener diversity
+   */
+  _validateSentenceVariety(narrative) {
+    const issues = [];
+    const warnings = [];
+
+    const sentences = narrative.match(/[^.!?]+[.!?]+/g) || [];
+    if (sentences.length < 5) {
+      return { issues, warnings }; // Not enough sentences to validate
+    }
+
+    // ========== 1. I-STACKING DETECTION ==========
+    // Count sentences starting with "I"
+    let consecutiveIStarts = 0;
+    let maxConsecutiveI = 0;
+    let totalIStarts = 0;
+
+    for (const sentence of sentences) {
+      const trimmed = sentence.trim();
+      if (/^I\s+(?!didn't|don't|won't|can't|couldn't|wouldn't|shouldn't)/i.test(trimmed)) {
+        consecutiveIStarts++;
+        totalIStarts++;
+        maxConsecutiveI = Math.max(maxConsecutiveI, consecutiveIStarts);
+      } else {
+        consecutiveIStarts = 0;
+      }
+    }
+
+    if (maxConsecutiveI >= 4) {
+      issues.push(`I-stacking detected: ${maxConsecutiveI} consecutive sentences start with "I". Vary sentence openers.`);
+    } else if (maxConsecutiveI >= 3) {
+      warnings.push(`Minor I-stacking: ${maxConsecutiveI} consecutive "I" sentences. Consider varying openers.`);
+    }
+
+    const iPercentage = (totalIStarts / sentences.length) * 100;
+    if (iPercentage > 50) {
+      warnings.push(`${Math.round(iPercentage)}% of sentences start with "I". Aim for under 40%.`);
+    }
+
+    // ========== 2. SENTENCE LENGTH VARIETY ==========
+    const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
+    const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
+
+    // Check for monotonous length (all sentences within 5 words of average)
+    const nearAverage = sentenceLengths.filter(len => Math.abs(len - avgLength) < 5).length;
+    const monotonyRatio = nearAverage / sentenceLengths.length;
+
+    if (monotonyRatio > 0.8) {
+      warnings.push(`Monotonous sentence length: ${Math.round(monotonyRatio * 100)}% near average (${Math.round(avgLength)} words). Mix short punchy sentences with longer ones.`);
+    }
+
+    // Check for at least some short sentences (under 8 words) for punch
+    const shortSentences = sentenceLengths.filter(len => len < 8).length;
+    if (shortSentences < sentences.length * 0.1) {
+      warnings.push('Few short sentences for impact. Add punchy 3-7 word sentences for noir rhythm.');
+    }
+
+    // ========== 3. OPENER VARIETY ==========
+    // Check first words of sentences for variety
+    const openers = sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean);
+    const openerCounts = {};
+    for (const opener of openers) {
+      openerCounts[opener] = (openerCounts[opener] || 0) + 1;
+    }
+
+    // Any opener used more than 25% of the time is overused
+    for (const [opener, count] of Object.entries(openerCounts)) {
+      const percentage = (count / openers.length) * 100;
+      if (percentage > 25 && count >= 4) {
+        warnings.push(`Opener "${opener}" overused: ${Math.round(percentage)}% of sentences. Vary your sentence starts.`);
+      }
+    }
+
+    // ========== 4. PARAGRAPH OPENER VARIETY ==========
+    const paragraphs = narrative.split(/\n\n+/).filter(p => p.trim());
+    const paragraphOpeners = paragraphs.map(p => p.trim().split(/\s+/).slice(0, 3).join(' ').toLowerCase());
+
+    // Check for repeated paragraph openers (e.g., "The rain..." "The city...")
+    const paraOpenerCounts = {};
+    for (const opener of paragraphOpeners) {
+      // Check first 2 words
+      const key = opener.split(/\s+/).slice(0, 2).join(' ');
+      paraOpenerCounts[key] = (paraOpenerCounts[key] || 0) + 1;
+    }
+
+    for (const [opener, count] of Object.entries(paraOpenerCounts)) {
+      if (count >= 3) {
+        warnings.push(`Paragraph opener pattern "${opener}..." used ${count} times. Vary paragraph beginnings.`);
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
+   * Setup/Payoff Registry - Track story setups that require payoffs
+   * Critical for maintaining narrative promises across chapters
+   */
+  _setupPayoffRegistry = new Map();
+
+  /**
+   * Initialize setup/payoff tracking for major story revelations
+   * Called once at the start of story generation
+   */
+  _initializeSetupPayoffRegistry() {
+    // Major revelations that need proper setup before payoff
+    const majorRevelations = [
+      {
+        id: 'victoria_is_emily',
+        payoff: 'Victoria Blackwell is revealed to be Emily Cross',
+        requiredSetups: [
+          'References to Emily Cross case',
+          'Victoria showing knowledge only Emily would have',
+          'Physical or behavioral hints connecting Victoria to Emily',
+          'Victoria\'s scars or trauma references',
+        ],
+        minSetupCount: 3,
+        earliestPayoffChapter: 6,
+        latestPayoffChapter: 10,
+      },
+      {
+        id: 'tom_betrayal',
+        payoff: 'Tom Wade has been manufacturing evidence for 20 years',
+        requiredSetups: [
+          'Tom\'s "perfect" evidence praised or noticed',
+          'Inconsistencies in old cases',
+          'Someone questioning forensic methods',
+          'Tom acting nervous or defensive',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 5,
+        latestPayoffChapter: 9,
+      },
+      {
+        id: 'grange_serial_kidnapper',
+        payoff: 'Deputy Chief Grange is a serial kidnapper',
+        requiredSetups: [
+          'Missing persons cases mentioned',
+          'Grange having unusual power/access',
+          'Victims\' families or witnesses dismissed',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 7,
+        latestPayoffChapter: 11,
+      },
+      {
+        id: 'silas_blackmailed',
+        payoff: 'Silas Reed was blackmailed into framing Marcus Thornhill',
+        requiredSetups: [
+          'Silas acting guilty or drinking heavily',
+          'Thornhill case inconsistencies',
+          'References to something Silas is hiding',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 4,
+        latestPayoffChapter: 8,
+      },
+      {
+        id: 'five_innocents',
+        payoff: 'The full list of five wrongfully convicted innocents',
+        requiredSetups: [
+          'Individual innocent cases introduced',
+          'Pattern of manufactured evidence emerging',
+          'Victoria\'s "curriculum" references',
+        ],
+        minSetupCount: 4,
+        earliestPayoffChapter: 8,
+        latestPayoffChapter: 11,
+      },
+    ];
+
+    for (const revelation of majorRevelations) {
+      this._setupPayoffRegistry.set(revelation.id, {
+        ...revelation,
+        setupsFound: [],
+        payoffDelivered: false,
+        payoffChapter: null,
+      });
+    }
+  }
+
+  /**
+   * Track setups found in generated content
+   */
+  _trackSetups(narrative, chapter, subchapter) {
+    const narrativeLower = narrative.toLowerCase();
+
+    for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
+      if (revelation.payoffDelivered) continue;
+
+      // Check for setups
+      for (const setup of revelation.requiredSetups) {
+        const setupPatterns = this._generateSetupPatterns(setup);
+        for (const pattern of setupPatterns) {
+          if (pattern.test(narrativeLower)) {
+            if (!revelation.setupsFound.includes(setup)) {
+              revelation.setupsFound.push(setup);
+              console.log(`[SetupPayoff] Found setup for ${id}: "${setup}" in Chapter ${chapter}.${subchapter}`);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Generate regex patterns for setup detection
+   */
+  _generateSetupPatterns(setup) {
+    const setupLower = setup.toLowerCase();
+    const patterns = [];
+
+    // Direct keyword matching
+    const keywords = setupLower.match(/\b\w{4,}\b/g) || [];
+    if (keywords.length >= 2) {
+      // Pattern: at least 2 keywords within 100 characters
+      patterns.push(new RegExp(keywords.slice(0, 2).join('.*').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\.\\\*/g, '.{0,100}'), 'i'));
+    }
+
+    // Character-specific patterns
+    if (setupLower.includes('emily')) {
+      patterns.push(/emily\s+cross/i, /cross\s+case/i, /that\s+girl.*(?:dead|missing|closed)/i);
+    }
+    if (setupLower.includes('tom')) {
+      patterns.push(/tom.*(?:evidence|forensic|perfect)/i, /wade.*(?:lab|report|test)/i);
+    }
+    if (setupLower.includes('victoria')) {
+      patterns.push(/victoria.*(?:know|scar|past|trauma)/i, /blackwell.*(?:secret|truth)/i);
+    }
+    if (setupLower.includes('grange')) {
+      patterns.push(/grange.*(?:power|access|missing|girl)/i, /deputy.*(?:chief|suspicious)/i);
+    }
+    if (setupLower.includes('silas')) {
+      patterns.push(/silas.*(?:drink|guilt|hiding|secret)/i, /reed.*(?:nervous|scared)/i);
+    }
+    if (setupLower.includes('thornhill')) {
+      patterns.push(/thornhill.*(?:case|frame|innocent|dead)/i, /marcus.*(?:suicide|lockup)/i);
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Validate setup/payoff balance before major revelations
+   */
+  _validateSetupPayoff(chapter, narrative) {
+    const issues = [];
+    const warnings = [];
+
+    for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
+      // Check if this narrative contains the payoff
+      const payoffPatterns = this._generatePayoffPatterns(id);
+      const hasPayoff = payoffPatterns.some(p => p.test(narrative.toLowerCase()));
+
+      if (hasPayoff) {
+        // Validate sufficient setup before payoff
+        if (revelation.setupsFound.length < revelation.minSetupCount) {
+          issues.push(`PAYOFF WITHOUT SETUP: "${revelation.payoff}" revealed but only ${revelation.setupsFound.length}/${revelation.minSetupCount} required setups found. Previous setups: ${revelation.setupsFound.join(', ') || 'none'}`);
+        }
+
+        // Check timing
+        if (chapter < revelation.earliestPayoffChapter) {
+          warnings.push(`Early payoff: "${revelation.payoff}" in Chapter ${chapter} (recommended: ${revelation.earliestPayoffChapter}+)`);
+        }
+
+        revelation.payoffDelivered = true;
+        revelation.payoffChapter = chapter;
+      }
+
+      // Warn if approaching latest payoff chapter without sufficient setup
+      if (!revelation.payoffDelivered && chapter >= revelation.latestPayoffChapter - 1) {
+        if (revelation.setupsFound.length < revelation.minSetupCount) {
+          warnings.push(`Approaching deadline for "${revelation.payoff}" (Chapter ${revelation.latestPayoffChapter}) with only ${revelation.setupsFound.length}/${revelation.minSetupCount} setups. Add more foreshadowing.`);
+        }
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
+   * Generate patterns to detect payoff delivery
+   */
+  _generatePayoffPatterns(revelationId) {
+    const patterns = {
+      victoria_is_emily: [
+        /victoria.*(?:is|was)\s+emily/i,
+        /emily\s+cross.*(?:alive|survived|you)/i,
+        /blackwell.*(?:real\s+name|true\s+identity|emily)/i,
+        /confessor.*emily/i,
+        /you.*(?:are|were)\s+emily/i,
+      ],
+      tom_betrayal: [
+        /tom.*(?:manufactured|faked|planted)\s+evidence/i,
+        /wade.*(?:lied|fabricated|forged)/i,
+        /best\s+friend.*(?:betrayed|manufactured)/i,
+        /twenty\s+years.*(?:evidence|lies|manufactured)/i,
+        /forensic.*(?:fake|forged|manufactured)/i,
+      ],
+      grange_serial_kidnapper: [
+        /grange.*(?:kidnapped|abducted|took|held)/i,
+        /deputy.*(?:serial|victims|women)/i,
+        /23\s+(?:victims|women|girls)/i,
+        /grange.*(?:basement|captive|prisoner)/i,
+      ],
+      silas_blackmailed: [
+        /silas.*(?:blackmailed|forced|made\s+to)/i,
+        /reed.*(?:framed|set\s+up)\s+(?:thornhill|marcus)/i,
+        /signed.*(?:documents|papers).*(?:blackmail|threaten)/i,
+      ],
+      five_innocents: [
+        /five\s+(?:innocents?|people|victims)/i,
+        /all\s+(?:five|of\s+them).*(?:innocent|wrongful|framed)/i,
+        /eleanor.*marcus.*(?:lisa|james|teresa)/i,
+      ],
+    };
+
+    return patterns[revelationId] || [];
   }
 
   /**
