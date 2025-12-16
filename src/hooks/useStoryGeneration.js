@@ -253,34 +253,107 @@ export function useStoryGeneration(storyCampaign) {
   /**
    * Analyze choice history to predict most likely next path
    * Returns the path (A or B) that the player is more likely to choose
+   *
+   * Enhanced with DECISION FRAMING ANALYSIS:
+   * - Analyzes the upcoming decision text to detect aggressive vs cautious framing
+   * - If player's personality aligns with a framed option, increases confidence
+   *
+   * @param {Array} choiceHistory - Array of previous choices
+   * @param {Object} upcomingDecision - Optional: the decision object for the upcoming choice
    */
-  const predictNextPath = useCallback((choiceHistory) => {
+  const predictNextPath = useCallback((choiceHistory, upcomingDecision = null) => {
     if (!choiceHistory || choiceHistory.length === 0) {
       // No history - default to A (slightly more common first choice)
-      return { primary: 'A', secondary: 'B', confidence: 0.55 };
+      // Increased base confidence from 0.55 to 0.60 to reduce cache misses
+      return { primary: 'A', secondary: 'B', confidence: 0.60 };
     }
 
-    // Count A vs B choices
+    // Count A vs B choices with weighted recency
     const counts = { A: 0, B: 0 };
-    // Weight recent choices more heavily
+    // Weight recent choices MORE heavily (exponential instead of linear)
     choiceHistory.forEach((choice, index) => {
-      const weight = 1 + (index / choiceHistory.length);
+      // Exponential weighting: later choices count more
+      const weight = Math.pow(1.5, index);
       counts[choice.optionKey] = (counts[choice.optionKey] || 0) + weight;
     });
 
     const total = counts.A + counts.B;
     const aRatio = counts.A / total;
 
-    // If player has shown strong preference, predict that path
+    // Determine player personality from choice patterns
+    let playerPersonality = 'balanced';
     if (aRatio > 0.65) {
-      return { primary: 'A', secondary: 'B', confidence: aRatio };
+      playerPersonality = 'aggressive'; // Option A is typically more direct/confrontational
     } else if (aRatio < 0.35) {
-      return { primary: 'B', secondary: 'A', confidence: 1 - aRatio };
+      playerPersonality = 'methodical'; // Option B is typically more cautious
     }
 
-    // If balanced, look at most recent choice as tiebreaker
-    const lastChoice = choiceHistory[choiceHistory.length - 1]?.optionKey || 'A';
-    return { primary: lastChoice, secondary: lastChoice === 'A' ? 'B' : 'A', confidence: 0.55 };
+    // ========== DECISION FRAMING ANALYSIS ==========
+    // Analyze the upcoming decision text to detect which option aligns with player personality
+    let framingBonus = 0;
+    let framingPrediction = null;
+
+    if (upcomingDecision?.optionA && upcomingDecision?.optionB) {
+      const optionATitle = (upcomingDecision.optionA.title || '').toLowerCase();
+      const optionBTitle = (upcomingDecision.optionB.title || '').toLowerCase();
+      const optionAFocus = (upcomingDecision.optionA.focus || '').toLowerCase();
+      const optionBFocus = (upcomingDecision.optionB.focus || '').toLowerCase();
+
+      // Aggressive/Direct keywords
+      const aggressivePatterns = /\b(confront|direct|demand|force|now|immediately|attack|charge|push|challenge|expose|reveal|accuse)\b/i;
+
+      // Cautious/Methodical keywords
+      const cautiousPatterns = /\b(gather|wait|investigate|careful|evidence|plan|prepare|observe|patience|consider|analyze|research|surveillance)\b/i;
+
+      const optionAIsAggressive = aggressivePatterns.test(optionATitle) || aggressivePatterns.test(optionAFocus);
+      const optionBIsCautious = cautiousPatterns.test(optionBTitle) || cautiousPatterns.test(optionBFocus);
+      const optionBIsAggressive = aggressivePatterns.test(optionBTitle) || aggressivePatterns.test(optionBFocus);
+      const optionAIsCautious = cautiousPatterns.test(optionATitle) || cautiousPatterns.test(optionAFocus);
+
+      // If player personality aligns with option framing, boost confidence
+      if (playerPersonality === 'aggressive' && optionAIsAggressive && !optionBIsAggressive) {
+        framingBonus = 0.10;
+        framingPrediction = 'A';
+      } else if (playerPersonality === 'aggressive' && optionBIsAggressive && !optionAIsAggressive) {
+        framingBonus = 0.10;
+        framingPrediction = 'B';
+      } else if (playerPersonality === 'methodical' && optionBIsCautious && !optionAIsCautious) {
+        framingBonus = 0.10;
+        framingPrediction = 'B';
+      } else if (playerPersonality === 'methodical' && optionAIsCautious && !optionBIsCautious) {
+        framingBonus = 0.10;
+        framingPrediction = 'A';
+      }
+    }
+
+    // ========== FINAL PREDICTION ==========
+    let primary, secondary, confidence;
+
+    // If player has shown strong preference, predict that path
+    if (aRatio > 0.65) {
+      primary = 'A';
+      secondary = 'B';
+      confidence = Math.min(0.85, aRatio + framingBonus); // Cap at 85%
+    } else if (aRatio < 0.35) {
+      primary = 'B';
+      secondary = 'A';
+      confidence = Math.min(0.85, (1 - aRatio) + framingBonus);
+    } else {
+      // Balanced player - use framing prediction if available, else recent choice
+      if (framingPrediction) {
+        primary = framingPrediction;
+        secondary = framingPrediction === 'A' ? 'B' : 'A';
+        confidence = 0.60 + framingBonus;
+      } else {
+        // Use most recent choice as tiebreaker
+        const lastChoice = choiceHistory[choiceHistory.length - 1]?.optionKey || 'A';
+        primary = lastChoice;
+        secondary = lastChoice === 'A' ? 'B' : 'A';
+        confidence = 0.55;
+      }
+    }
+
+    return { primary, secondary, confidence, playerPersonality, framingUsed: !!framingPrediction };
   }, []);
 
   /**

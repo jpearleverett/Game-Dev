@@ -121,6 +121,12 @@ const STORY_CONTENT_SCHEMA = {
       enum: ['low', 'moderate', 'high'],
       description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
     },
+    storyDay: {
+      type: 'number',
+      description: 'Which day of the 12-day timeline this scene takes place. Chapter 2 = Day 2, Chapter 3 = Day 3, etc. The story spans exactly 12 days.',
+      minimum: 1,
+      maximum: 12,
+    },
     narrative: {
       type: 'string',
       description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words',
@@ -217,7 +223,7 @@ const STORY_CONTENT_SCHEMA = {
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
 };
 
 /**
@@ -252,6 +258,12 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       enum: ['low', 'moderate', 'high'],
       description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
+    },
+    storyDay: {
+      type: 'number',
+      description: 'Which day of the 12-day timeline this scene takes place. Chapter 2 = Day 2, Chapter 3 = Day 3, etc. The story spans exactly 12 days.',
+      minimum: 1,
+      maximum: 12,
     },
     narrative: {
       type: 'string',
@@ -361,7 +373,7 @@ const DECISION_CONTENT_SCHEMA = {
           properties: {
             key: { type: 'string', description: 'Always "A"' },
             title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
-            focus: { type: 'string', description: 'What this path prioritizes and what it risks' },
+            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes immediate confrontation and direct truth-seeking. Risks alienating Sarah and losing her cooperation."' },
           },
           required: ['key', 'title', 'focus'],
         },
@@ -370,7 +382,7 @@ const DECISION_CONTENT_SCHEMA = {
           properties: {
             key: { type: 'string', description: 'Always "B"' },
             title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
-            focus: { type: 'string', description: 'What this path prioritizes and what it risks' },
+            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes careful evidence gathering and maintaining alliances. Risks letting the trail go cold while the enemy prepares."' },
           },
           required: ['key', 'title', 'focus'],
         },
@@ -378,7 +390,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
 };
 
 // ============================================================================
@@ -400,16 +412,17 @@ You continue the story of Jack Halloway, a retired detective confronting the wro
 Your narrative field MUST contain ${TARGET_WORDS}+ words. This is critical for player immersion.
 
 To achieve this word count naturally:
-- Open with atmospheric scene-setting (50-100 words)
-- Include Jack's internal monologue reflecting on recent events (100-150 words)
-- Write meaningful dialogue exchanges, not just brief statements (150-200 words)
-- Describe physical actions and sensory details throughout (100+ words)
-- End with tension or cliffhanger appropriate to the scene (50-100 words)
+- Open with atmospheric scene-setting (75-125 words)
+- Include Jack's internal monologue reflecting on recent events (150-200 words)
+- Write meaningful dialogue exchanges, not just brief statements (200-250 words)
+- Describe physical actions and sensory details throughout (150+ words)
+- End with tension or cliffhanger appropriate to the scene (75-100 words)
 
 DO NOT:
 - Write a short narrative thinking you'll expand later - you won't get the chance
 - Stop at the minimum - always aim for ${TARGET_WORDS}+ words
 - Use filler - every sentence should advance character, plot, or atmosphere
+- Start multiple paragraphs with "I" - vary your sentence openings
 
 ## VOICE AND STYLE
 Channel Raymond Chandler's hard-boiled prose:
@@ -426,19 +439,24 @@ NEVER use:
 - "X is not just Y, it's Z" or similar constructions
 - "In a world where..." or "Little did [anyone] know..."
 - "I couldn't help but..." or "I found myself..."
+- "couldn't help but notice" or "couldn't shake the feeling"
 - Excessive sentences starting with "And" or "But"
 - Adverbs: "seemingly," "interestingly," "notably," "certainly," "undoubtedly," "undeniably," "profoundly," "unmistakably," "inherently"
 - Words: "delve," "unravel," "tapestry," "myriad," "whilst," "amidst," "amongst," "realm," "intricate," "nuanced," "pivotal," "crucial"
 - Phrases: "a testament to," "serves as a reminder," "it's important to note," "it's worth noting"
 - Weight/Gravity phrases: "The weight of..." (e.g., "The weight of his words"), "The gravity of...", "The magnitude of...", "The enormity of..."
+- Emotion abstractions: "A sense of [emotion]" (e.g., "A sense of dread"), "A feeling of..."
 - Hedging: "It seems," "Perhaps," "Maybe," "It appears," "One might say"
 - Connectors: "Moreover," "Furthermore," "In essence," "Consequently," "Additionally," "Notably," "Importantly"
 - Meta-commentary: "This moment," "This realization," "This truth" (show, don't label)
 - Opening patterns: "As I...", "As the...", "With a...", "In the..." as sentence starters (overused)
 - Time transitions: "In that moment," "At that instant," "In the blink of an eye"
+- Vague foreshadowing: "Something about [X]...", "There was something..."
 - Summarizing what just happened instead of showing the next scene
 - Explaining character emotions instead of showing them through action
 - Generic intensifiers: "very," "really," "quite," "rather," "somewhat"
+- False tension: "suddenly" (unless truly sudden), exclamation marks in internal monologue
+- Never write in second person or break into omniscient narration
 
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
@@ -446,6 +464,7 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 - "title": Evocative 2-5 word noir chapter title
 - "bridge": One short, compelling sentence hook (max 15 words)
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words, from Jack's perspective, past tense)
+- "storyDay": The day number (1-12) this scene takes place. Chapter number = Day number. The story spans exactly 12 days.
 - "narrative": Your full prose (**MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} words, TARGET ${TARGET_WORDS}+ words** - this is enforced)
 - "chapterSummary": Summarize the events of THIS narrative for future memory (2-3 sentences)
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
@@ -465,16 +484,24 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   3. If no promises were made, leave promises empty.
   4. Every thread must have a clear basis in your written narrative.
 
-  Examples of GOOD threads:
-  - "Sarah promised to bring the files tomorrow" (type: appointment, urgency: critical, deadline: "tomorrow")
-  - "Jack discovered Tom's signature on the forged documents" (type: revelation, urgency: normal)
-  - "Jack's shoulder wound from the warehouse fight" (type: physical_state, urgency: background)
+  Examples of CORRECT thread extraction with CORRECT urgency:
+  - "Jack agreed to meet Sarah at midnight" → type: appointment, urgency: CRITICAL (has explicit deadline!)
+  - "Sarah promised to bring the files tomorrow" → type: promise, urgency: CRITICAL (has explicit deadline!)
+  - "Victoria threatened to expose Jack's failures publicly" → type: threat, urgency: CRITICAL (immediate consequence)
+  - "Jack started investigating the warehouse records" → type: investigation, urgency: normal (ongoing work)
+  - "Jack discovered Tom's signature on the forged documents" → type: revelation, urgency: normal
+  - "Victoria knows about Jack's drinking problem" → type: relationship, urgency: background (context)
+  - "Jack's shoulder wound from the warehouse fight" → type: physical_state, urgency: background
+
+  Examples of WRONG urgency assignment (DO NOT DO THIS):
+  - "Jack agreed to meet Sarah at midnight" → urgency: background (WRONG! Meetings are CRITICAL)
+  - "Someone promised to call Jack" → urgency: background (WRONG! Promises with deadlines are CRITICAL)
 
   Examples of BAD threads (DO NOT DO THIS):
   - "Something mysterious will be revealed" (too vague, not from narrative)
   - "Jack might find more evidence" (speculative, not actual)
 
-- "previousThreadsAddressed": *** THIS IS MANDATORY - GENERATION WILL FAIL IF IGNORED ***
+- "previousThreadsAddressed": *** THIS IS MANDATORY - GENERATION WILL BE REJECTED IF IGNORED ***
   BEFORE writing your narrative, you MUST:
   1. Review ALL active threads from the PREVIOUS_ACTIVE_THREADS section below
   2. Plan how each critical/appointment thread will appear in your scene
@@ -490,7 +517,15 @@ Your response will be structured as JSON (enforced by schema). Focus on:
     - failed: The opportunity was lost or the thread is now impossible
   * narrativeReference: Quote the specific sentence(s) from your narrative where this appears
 
-  *** YOU CANNOT SUBMIT WITHOUT ADDRESSING ALL CRITICAL THREADS ***
+  *** GENERATION WILL BE REJECTED IF CRITICAL THREADS ARE NOT IN previousThreadsAddressed ***
+  The validation system automatically checks that every thread with urgency="critical"
+  appears in your previousThreadsAddressed array. Missing critical threads = regeneration.
+
+  *** OVERDUE THREAD ESCALATION ***
+  If a thread has been "acknowledged" 2+ times without "resolved" or "progressed",
+  it is OVERDUE. You MUST either resolve it or mark it as "failed" with explanation.
+  Perpetually acknowledging threads without progress is not acceptable.
+
   If Jack agreed to meet someone at midnight, your midnight chapter MUST show that meeting.
   If someone promised to call, you must acknowledge whether they did.
   Plot holes from ignored threads will break the player's immersion.
@@ -535,6 +570,11 @@ class StoryGenerationService {
     this.indexedFacts = null; // Smart fact index by relevance
     this.consistencyCheckpoints = new Map(); // Periodic state validation snapshots
     this.generatedConsequences = new Map(); // Dynamically generated decision consequences
+
+    // ========== Thread Escalation System ==========
+    // Tracks how many times a thread has been acknowledged without progress
+    // After 2+ acknowledgments, threads become OVERDUE and must be resolved/failed
+    this.threadAcknowledgmentCounts = new Map(); // threadId -> acknowledgment count
 
     // ========== NEW: Fallback Content System for Graceful Degradation ==========
     this.fallbackTemplates = this._initializeFallbackTemplates();
@@ -2514,7 +2554,10 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           {
             systemPrompt: MASTER_SYSTEM_PROMPT,
             temperature,
-            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+            // Decision points have larger schema requirements (optionA, optionB) - add buffer
+            maxTokens: isDecisionPoint
+              ? GENERATION_CONFIG.maxTokens.subchapter + 2000
+              : GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema,
           }
         );
@@ -3041,6 +3084,29 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
     });
 
     // =========================================================================
+    // CATEGORY 2.5: STORY DAY CONSISTENCY
+    // =========================================================================
+    // Validate that storyDay matches chapter number (story spans exactly 12 days)
+    if (content.storyDay !== undefined && context.currentPosition?.chapter) {
+      const expectedDay = context.currentPosition.chapter;
+      if (content.storyDay !== expectedDay) {
+        issues.push(`STORY DAY MISMATCH: LLM declared day ${content.storyDay} but chapter ${expectedDay} should be day ${expectedDay}. The story spans exactly 12 days, one per chapter.`);
+      }
+    }
+
+    // Check for relative time references that could cause drift
+    const relativeTimePatterns = [
+      { pattern: /(?:nearly|almost|about|roughly)\s+(?:a\s+)?decade/i, issue: 'Avoid vague time references like "nearly a decade" - use exact durations (8 years for Eleanor, 7 years for Emily)' },
+      { pattern: /(?:many|several|countless)\s+years\s+(?:ago|since)/i, issue: 'Avoid vague "many/several years" - use exact durations from ABSOLUTE_FACTS' },
+    ];
+
+    relativeTimePatterns.forEach(({ pattern, issue }) => {
+      if (pattern.test(narrativeOriginal)) {
+        warnings.push(issue); // Warning, not error, for vague references
+      }
+    });
+
+    // =========================================================================
     // CATEGORY 3: SETTING CONSISTENCY
     // =========================================================================
     const settingViolations = [
@@ -3116,7 +3182,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       // Get critical threads that MUST be addressed (appointments and promises)
       const criticalThreads = context.narrativeThreads.filter(t =>
         t.status === 'active' &&
-        (t.type === 'appointment' || t.type === 'promise' || t.type === 'threat')
+        (t.type === 'appointment' || t.type === 'promise' || t.type === 'threat' || t.urgency === 'critical')
       );
 
       if (criticalThreads.length > 0 && context.currentPosition.chapter > 2) {
@@ -3133,10 +3199,33 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           issues.push(`THREAD CONTINUITY VIOLATION: Only ${addressedCount}/${criticalCount} critical threads addressed. Must acknowledge at least ${requiredAcknowledgments}. Critical threads: ${criticalThreads.slice(0, 3).map(t => t.description).join('; ')}`);
         }
 
-        // Verify acknowledged threads actually appear in narrative
+        // =========================================================================
+        // THREAD ESCALATION SYSTEM - Track and enforce overdue threads
+        // =========================================================================
         for (const addressed of addressedThreads) {
+          const threadId = addressed.originalThread.slice(0, 50); // Use truncated description as ID
+
+          if (addressed.howAddressed === 'acknowledged' || addressed.howAddressed === 'delayed') {
+            // Increment acknowledgment count for threads that weren't progressed
+            const currentCount = (this.threadAcknowledgmentCounts.get(threadId) || 0) + 1;
+            this.threadAcknowledgmentCounts.set(threadId, currentCount);
+
+            // If acknowledged 2+ times without progress, flag as OVERDUE ERROR
+            if (currentCount >= 2) {
+              const matchingCritical = criticalThreads.find(t =>
+                t.description && t.description.toLowerCase().includes(threadId.toLowerCase().slice(0, 20))
+              );
+              if (matchingCritical) {
+                issues.push(`OVERDUE THREAD ERROR: "${addressed.originalThread.slice(0, 60)}..." has been acknowledged ${currentCount} times without resolution. You MUST either resolve it, progress it meaningfully, or mark it as "failed" with explanation.`);
+              }
+            }
+          } else if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed' || addressed.howAddressed === 'failed') {
+            // Reset counter when thread is actually addressed
+            this.threadAcknowledgmentCounts.delete(threadId);
+          }
+
+          // Verify acknowledged threads actually appear in narrative
           if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed') {
-            // Check if the narrative actually mentions relevant characters or topics
             const threadLower = addressed.originalThread.toLowerCase();
             const narrativeLower = narrative;
 
@@ -3152,7 +3241,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         }
       }
 
-      // Check for dangling appointments more than 2 chapters old
+      // Check for dangling appointments more than 2 chapters old - NOW ERROR
       const oldAppointments = context.narrativeThreads.filter(t =>
         t.status === 'active' &&
         t.type === 'appointment' &&
@@ -3160,7 +3249,18 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       );
 
       if (oldAppointments.length > 0) {
-        warnings.push(`WARNING: ${oldAppointments.length} appointment(s) from 2+ chapters ago still unresolved. Consider addressing or explaining delay.`);
+        issues.push(`OVERDUE APPOINTMENTS: ${oldAppointments.length} appointment(s) from 2+ chapters ago still unresolved. These MUST be addressed: ${oldAppointments.slice(0, 2).map(t => t.description).join('; ')}`);
+      }
+
+      // Check for old promises - NOW ERROR after 3 chapters
+      const oldPromises = context.narrativeThreads.filter(t =>
+        t.status === 'active' &&
+        t.type === 'promise' &&
+        t.chapter && (context.currentPosition.chapter - t.chapter) >= 3
+      );
+
+      if (oldPromises.length > 0) {
+        issues.push(`OVERDUE PROMISES: ${oldPromises.length} promise(s) from 3+ chapters ago still unresolved. These MUST be resolved or failed: ${oldPromises.slice(0, 2).map(t => t.description).join('; ')}`);
       }
     }
 
@@ -3522,9 +3622,17 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     // Calculate difficulty tier (0 = easy, 1 = medium, 2 = hard)
     const difficultyTier = chapter <= 4 ? 0 : chapter <= 8 ? 1 : 2;
 
+    // Calculate progressive difficulty multiplier (10% harder per chapter after 2)
+    const chapterProgression = Math.max(0, (chapter - 2) * 0.1);
+
     // Word length requirements scale with difficulty
     const minWordLength = 4; // Always 4
     const maxWordLength = difficultyTier === 0 ? 8 : difficultyTier === 1 ? 9 : 10;
+
+    // Semantic distance requirement scales with chapter
+    // Later chapters require more semantic distinction to prevent "lucky guesses"
+    // Stored for use in semantic validation
+    this._currentSemanticDistanceRequirement = Math.min(3, Math.floor(chapter / 4) + 1);
 
     // ========== WORD QUALITY FILTER ==========
     // Exclude boring/common words that don't make good puzzle words
@@ -3946,6 +4054,29 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       ['WAIT', 'WATCH', 'OBSERVE', 'STAKE', 'SURVEIL', 'MONITOR'],
       ['ENTER', 'EXIT', 'LEAVE', 'ARRIVE', 'DEPART', 'RETURN'],
       ['OPEN', 'CLOSE', 'SHUT', 'LOCK', 'UNLOCK', 'BOLT'],
+
+      // ========== STORY-CRITICAL CLUSTERS (Prevent unfair puzzles) ==========
+
+      // Confession/Confessor (The antagonist's title - critical overlap risk)
+      ['CONFESSION', 'CONFESS', 'CONFESSIONAL', 'CONFESSOR', 'ADMIT', 'ADMISSION', 'ACKNOWLEDGE'],
+
+      // Guilt/Justice expanded (central theme of wrongful convictions)
+      ['GUILT', 'GUILTY', 'INNOCENT', 'INNOCENCE', 'CONVICT', 'CONVICTION', 'SENTENCE', 'SENTENCED'],
+      ['WRONGFUL', 'UNJUST', 'UNFAIR', 'MISTAKEN', 'ERROR', 'MISTAKE'],
+
+      // Frame/Forge (evidence tampering theme)
+      ['FRAME', 'FRAMED', 'SETUP', 'PLANT', 'PLANTED', 'STAGE', 'STAGED'],
+      ['FORGE', 'FORGED', 'FAKE', 'FALSIFY', 'FABRICATE', 'FABRICATED', 'TAMPER', 'TAMPERED'],
+      ['MANUFACTURE', 'MANUFACTURED', 'CREATE', 'CREATED', 'MAKE', 'MADE'],
+
+      // Partner/Detective relationships
+      ['PARTNER', 'DETECTIVE', 'COP', 'OFFICER', 'INVESTIGATOR', 'BADGE', 'FORCE', 'PRECINCT'],
+
+      // Prison/Incarceration (Eleanor's 8 years)
+      ['PRISON', 'JAIL', 'INMATE', 'PRISONER', 'GREYSTONE', 'CELL', 'BARS', 'LOCKED', 'CONFINED'],
+
+      // Betrayal/Trust (Tom Wade's 30-year betrayal)
+      ['BETRAY', 'BETRAYAL', 'BETRAYED', 'TRUST', 'TRUSTED', 'FAITH', 'FAITHFUL', 'LOYAL', 'LOYALTY'],
     ];
   }
 
@@ -3982,29 +4113,71 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     const gridSet = new Set(gridWords.map(w => w.toUpperCase()));
     const usedWords = new Set([...outlierWords, ...gridWords].map(w => w.toUpperCase()));
 
+    // Get semantic distance requirement from difficulty scaling (default 1 if not set)
+    const minSemanticDistance = this._currentSemanticDistanceRequirement || 1;
+
+    // For higher difficulty chapters, we need stricter semantic separation
+    // minSemanticDistance 1 = basic cluster check
+    // minSemanticDistance 2 = also check for thematic similarity
+    // minSemanticDistance 3 = also check for letter pattern similarity (harder puzzles)
+
     // Check each outlier against all grid words
     for (let i = 0; i < validatedOutliers.length; i++) {
       const outlier = validatedOutliers[i];
+      let needsReplacement = false;
 
       for (const gridWord of gridWords) {
+        // Basic semantic cluster check (always performed)
         if (this._areSemanticallySimilar(outlier, gridWord)) {
+          needsReplacement = true;
           console.log(`[StoryGenerationService] Semantic overlap detected: outlier "${outlier}" ~ grid word "${gridWord}"`);
+          break;
+        }
 
-          // Find a replacement from available words
-          const replacement = availableReplacements.find(w => {
-            const upper = w.toUpperCase();
-            if (usedWords.has(upper)) return false;
-            // Ensure replacement doesn't overlap with any grid word
-            return !gridWords.some(gw => this._areSemanticallySimilar(upper, gw));
-          });
-
-          if (replacement) {
-            console.log(`[StoryGenerationService] Replacing "${outlier}" with "${replacement}"`);
-            usedWords.delete(outlier.toUpperCase());
-            validatedOutliers[i] = replacement.toUpperCase();
-            usedWords.add(replacement.toUpperCase());
+        // Additional checks for higher difficulty
+        if (minSemanticDistance >= 2) {
+          // Check for shared prefix/suffix (e.g., MURDER/MURDERER, INVEST/INVESTIGATE)
+          const outlierUpper = outlier.toUpperCase();
+          const gridUpper = gridWord.toUpperCase();
+          if (outlierUpper.length >= 4 && gridUpper.length >= 4) {
+            if (outlierUpper.startsWith(gridUpper.slice(0, 4)) ||
+                gridUpper.startsWith(outlierUpper.slice(0, 4))) {
+              needsReplacement = true;
+              console.log(`[StoryGenerationService] Prefix overlap detected: "${outlier}" ~ "${gridWord}"`);
+              break;
+            }
           }
-          break; // Move to next outlier after finding one overlap
+        }
+
+        if (minSemanticDistance >= 3) {
+          // Check for anagram-like similarity (shared letters)
+          const outlierLetters = new Set(outlier.toUpperCase().split(''));
+          const gridLetters = new Set(gridWord.toUpperCase().split(''));
+          const sharedLetters = [...outlierLetters].filter(l => gridLetters.has(l)).length;
+          const maxLength = Math.max(outlier.length, gridWord.length);
+          // If more than 70% letters are shared, might be confusing
+          if (sharedLetters / maxLength > 0.7) {
+            needsReplacement = true;
+            console.log(`[StoryGenerationService] Letter overlap detected: "${outlier}" ~ "${gridWord}" (${Math.round(sharedLetters/maxLength*100)}% shared)`);
+            break;
+          }
+        }
+      }
+
+      if (needsReplacement) {
+        // Find a replacement from available words
+        const replacement = availableReplacements.find(w => {
+          const upper = w.toUpperCase();
+          if (usedWords.has(upper)) return false;
+          // Ensure replacement doesn't overlap with any grid word
+          return !gridWords.some(gw => this._areSemanticallySimilar(upper, gw));
+        });
+
+        if (replacement) {
+          console.log(`[StoryGenerationService] Replacing "${outlier}" with "${replacement}"`);
+          usedWords.delete(outlier.toUpperCase());
+          validatedOutliers[i] = replacement.toUpperCase();
+          usedWords.add(replacement.toUpperCase());
         }
       }
     }
