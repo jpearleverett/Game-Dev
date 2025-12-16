@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from '
 import { Image } from 'expo-image';
 import { FONTS, FONT_SIZES } from '../../constants/typography';
 import * as Haptics from 'expo-haptics';
+import GenerativePolaroid from './GenerativePolaroid';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -16,6 +17,8 @@ export default function InteractivePolaroid({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [flipped, setFlipped] = useState(false);
+  const [containerSize, setContainerSize] = useState({ width: size, height: size });
+  const [modalImageSize, setModalImageSize] = useState({ width: 0, height: 0 });
   
   // Animation values - lazy initialization to prevent object creation on every render
   const expandAnim = useState(() => new Animated.Value(0))[0];
@@ -71,6 +74,8 @@ export default function InteractivePolaroid({
       toValue: 0,
       duration: 250,
       useNativeDriver: true,
+      friction: 7,
+      tension: 40
     }).start(() => {
       setExpanded(false);
       onClose?.();
@@ -89,6 +94,37 @@ export default function InteractivePolaroid({
       useNativeDriver: true,
     }).start(() => setFlipped(!flipped));
   };
+  
+  // Render content based on type (Image or Generative)
+  const renderVisualContent = (isModal = false) => {
+    if (entry.visuals) {
+       // Use generative component
+       const w = isModal ? modalImageSize.width : containerSize.width;
+       const h = isModal ? modalImageSize.height : containerSize.height;
+       
+       // Avoid rendering 0-size generative content
+       if (w <= 0 || h <= 0) return null;
+       
+       return (
+         <GenerativePolaroid 
+            visuals={entry.visuals} 
+            seed={entry.id + (entry.label || "")} 
+            width={w} 
+            height={h} 
+         />
+       );
+    }
+    
+    // Default image rendering
+    return (
+      <Image 
+        source={entry.image} 
+        style={isModal ? styles.imageModal : styles.image} 
+        contentFit="cover"
+        transition={200}
+      />
+    );
+  };
 
   return (
     <>
@@ -99,13 +135,11 @@ export default function InteractivePolaroid({
         <Pressable onPress={handlePress} style={{ flex: 1 }}>
           <View style={[styles.polaroid, { transform: [{ rotate: `${entry.rotation}deg` }] }]}>
             <View style={styles.tapeTop} />
-            <View style={styles.imageWrapper}>
-              <Image 
-                source={entry.image} 
-                style={styles.image} 
-                contentFit="cover"
-                transition={200}
-              />
+            <View 
+                style={styles.imageWrapper}
+                onLayout={(e) => setContainerSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+            >
+              {renderVisualContent(false)}
             </View>
             <Text style={[styles.label, { fontSize: size * 0.075 }]} numberOfLines={2}>
               {entry.label}
@@ -128,13 +162,11 @@ export default function InteractivePolaroid({
                 opacity: frontOpacity
               }]}>
                 <View style={styles.tapeTopModal} />
-                <View style={styles.imageWrapperModal}>
-                  <Image 
-                    source={entry.image} 
-                    style={styles.imageModal} 
-                    contentFit="cover"
-                    transition={200}
-                  />
+                <View 
+                    style={styles.imageWrapperModal}
+                    onLayout={(e) => setModalImageSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+                >
+                  {renderVisualContent(true)}
                 </View>
                 <Text style={styles.labelModal}>{entry.label}</Text>
                 <Text style={styles.hintText}>Tap to Flip</Text>
@@ -192,6 +224,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     backgroundColor: '#1a1a1a',
     marginBottom: 6,
+    overflow: 'hidden', // Added for proper containment
   },
   image: {
     width: '100%',
@@ -265,6 +298,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#ddd',
+    overflow: 'hidden', // Added for proper containment
   },
   imageModal: {
     width: '100%',

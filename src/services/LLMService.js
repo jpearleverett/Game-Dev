@@ -294,24 +294,11 @@ class LLMService {
 
   /**
    * Generate an image based on a prompt
-   * Uses Pollinations.ai for zero-setup image generation
+   * (Placeholder for future implementation)
    */
   async generateImage(prompt) {
-    if (!prompt) return null;
-
-    try {
-      // Encode the prompt
-      const encodedPrompt = encodeURIComponent(prompt + " noir detective style, polaroid, vintage photo, photorealistic, 8k");
-      // Use a fixed seed for consistency if needed, or random for variety.
-      // Pollinations url format: https://image.pollinations.ai/prompt/{prompt}
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&private=true&enhance=false`;
-
-      // We can return the URL directly as it's a public URL
-      return imageUrl;
-    } catch (error) {
-      console.warn('[LLMService] Failed to generate image:', error);
-      return null;
-    }
+    // Client-side generation is now preferred over API calls
+    return null;
   }
 
   _sleep(ms) {

@@ -134,9 +134,25 @@ const STORY_CONTENT_SCHEMA = {
       items: { type: 'string' },
       description: 'List of 6-8 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
     },
-    polaroidImagePrompt: {
-      type: 'string',
-      description: 'A detailed visual description of a key object, person, or scene from this chapter to be turned into a polaroid photo. Noir style, moody lighting.',
+    polaroidVisuals: {
+      type: 'object',
+      description: 'Visual parameters for client-side generative art. Prefer moody, dark, noir aesthetics.',
+      properties: {
+        style: {
+          type: 'string',
+          enum: ['document', 'evidence', 'shadow', 'map', 'pattern'],
+          description: 'The visual archetype of the evidence. document=redacted text/files, evidence=objects/clues, shadow=figures/mood, map=locations/paths, pattern=abstract noise'
+        },
+        primaryColor: {
+          type: 'string',
+          description: 'Hex code for dominant color (muted noir tones like #8B0000, #2F4F4F, #556B2F, #1A1A1A)',
+        },
+        complexity: {
+            type: 'number',
+            description: '0.1 to 1.0, how chaotic/busy the image is'
+        }
+      },
+      required: ['style', 'complexity']
     },
     polaroidCaption: {
       type: 'string',
@@ -265,9 +281,25 @@ const DECISION_CONTENT_SCHEMA = {
       items: { type: 'string' },
       description: 'List of 10-12 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
     },
-    polaroidImagePrompt: {
-      type: 'string',
-      description: 'A detailed visual description of a key object, person, or scene from this chapter to be turned into a polaroid photo. Noir style, moody lighting.',
+    polaroidVisuals: {
+      type: 'object',
+      description: 'Visual parameters for client-side generative art. Prefer moody, dark, noir aesthetics.',
+      properties: {
+        style: {
+          type: 'string',
+          enum: ['document', 'evidence', 'shadow', 'map', 'pattern'],
+          description: 'The visual archetype of the evidence. document=redacted text/files, evidence=objects/clues, shadow=figures/mood, map=locations/paths, pattern=abstract noise'
+        },
+        primaryColor: {
+          type: 'string',
+          description: 'Hex code for dominant color (muted noir tones like #8B0000, #2F4F4F, #556B2F, #1A1A1A)',
+        },
+        complexity: {
+            type: 'number',
+            description: '0.1 to 1.0, how chaotic/busy the image is'
+        }
+      },
+      required: ['style', 'complexity']
     },
     polaroidCaption: {
       type: 'string',
@@ -2497,12 +2529,8 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         }
 
         // Generate polaroid image if prompt is available
-        let polaroidImage = null;
-        if (generatedContent.polaroidImagePrompt) {
-            console.log('[StoryGenerationService] Generating polaroid image...');
-            polaroidImage = await llmService.generateImage(generatedContent.polaroidImagePrompt);
-        }
-
+        // Client-side generation logic
+        
         // Build the story entry
         const storyEntry = {
           chapter,
@@ -2516,13 +2544,13 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           decision: isDecisionPoint ? generatedContent.decision : null,
           board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision, generatedContent.puzzleCandidates),
-          evidenceBoard: polaroidImage ? {
+          evidenceBoard: generatedContent.polaroidVisuals ? {
             polaroids: [{
                 id: `gen-${caseNumber}-${pathKey}`,
-                imageKey: null, // Use uri instead
-                uri: polaroidImage,
+                imageKey: null,
+                visuals: generatedContent.polaroidVisuals,
                 label: generatedContent.polaroidCaption || 'Evidence',
-                detail: generatedContent.polaroidImagePrompt,
+                detail: generatedContent.title || 'Evidence from the case',
             }]
           } : null,
           consistencyFacts: generatedContent.consistencyFacts || [],

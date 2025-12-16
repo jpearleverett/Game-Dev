@@ -573,15 +573,18 @@ export default function EvidenceBoardScreen({
       const imageKey = sourceData?.imageKey || fallbackData?.imageKey || "default";
 
       let imageSource;
+      let visuals = sourceData?.visuals;
+      
       if (sourceData?.uri) {
         imageSource = { uri: sourceData.uri };
-      } else {
+      } else if (!visuals) {
         imageSource = POLAROID_IMAGES[imageKey] || POLAROID_IMAGES.default;
       }
 
       return {
         id: `polaroid-${slot.id}-${previousCaseMeta?.caseNumber ?? "default"}-${sourceData?.id ?? index}`,
         image: imageSource,
+        visuals: visuals,
         label: labelText,
         detail: sourceData?.detail || null,
         style: slot.style,
