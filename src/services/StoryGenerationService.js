@@ -193,6 +193,10 @@ const STORY_CONTENT_SCHEMA = {
           deadline: {
             type: 'string',
             description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
+          },
+          dueChapter: {
+            type: 'number',
+            description: 'For critical urgency threads, the chapter number by which this MUST be resolved. critical=current chapter+1, normal=current chapter+3, background=no limit. Example: if current chapter is 5 and urgency is critical, dueChapter should be 6 or 7.'
           }
         },
         required: ['type', 'description', 'status', 'urgency']
@@ -331,6 +335,10 @@ const DECISION_CONTENT_SCHEMA = {
           deadline: {
             type: 'string',
             description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
+          },
+          dueChapter: {
+            type: 'number',
+            description: 'For critical urgency threads, the chapter number by which this MUST be resolved. critical=current chapter+1, normal=current chapter+3, background=no limit. Example: if current chapter is 5 and urgency is critical, dueChapter should be 6 or 7.'
           }
         },
         required: ['type', 'description', 'status', 'urgency']
@@ -374,8 +382,13 @@ const DECISION_CONTENT_SCHEMA = {
             key: { type: 'string', description: 'Always "A"' },
             title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
             focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes immediate confrontation and direct truth-seeking. Risks alienating Sarah and losing her cooperation."' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option. aggressive=direct confrontation, methodical=careful investigation, neutral=either personality might choose'
+            },
           },
-          required: ['key', 'title', 'focus'],
+          required: ['key', 'title', 'focus', 'personalityAlignment'],
         },
         optionB: {
           type: 'object',
@@ -383,8 +396,13 @@ const DECISION_CONTENT_SCHEMA = {
             key: { type: 'string', description: 'Always "B"' },
             title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
             focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes careful evidence gathering and maintaining alliances. Risks letting the trail go cold while the enemy prepares."' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option. aggressive=direct confrontation, methodical=careful investigation, neutral=either personality might choose'
+            },
           },
-          required: ['key', 'title', 'focus'],
+          required: ['key', 'title', 'focus', 'personalityAlignment'],
         },
       },
       required: ['intro', 'optionA', 'optionB'],
@@ -406,12 +424,12 @@ You continue the story of Jack Halloway, a retired detective confronting the wro
 2. You NEVER contradict established facts from previous chapters
 3. You NEVER break character or acknowledge being an AI
 4. You maintain EXACT consistency with names, dates, relationships, and events
-5. **WORD COUNT IS NON-NEGOTIABLE:** You MUST write AT LEAST ${MIN_WORDS_PER_SUBCHAPTER} words, aiming for ${TARGET_WORDS}+
+5. You write a FULL narrative (see word count section below)
 
-## WORD COUNT REQUIREMENTS - READ CAREFULLY
-Your narrative field MUST contain ${TARGET_WORDS}+ words. This is critical for player immersion.
+## WORD COUNT REQUIREMENTS - THE SINGLE SOURCE OF TRUTH
+**MINIMUM:** ${MIN_WORDS_PER_SUBCHAPTER} words | **TARGET:** ${TARGET_WORDS}+ words
 
-To achieve this word count naturally:
+To achieve this naturally:
 - Open with atmospheric scene-setting (75-125 words)
 - Include Jack's internal monologue reflecting on recent events (150-200 words)
 - Write meaningful dialogue exchanges, not just brief statements (200-250 words)
@@ -465,7 +483,7 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 - "bridge": One short, compelling sentence hook (max 15 words)
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words, from Jack's perspective, past tense)
 - "storyDay": The day number (1-12) this scene takes place. Chapter number = Day number. The story spans exactly 12 days.
-- "narrative": Your full prose (**MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} words, TARGET ${TARGET_WORDS}+ words** - this is enforced)
+- "narrative": Your full prose (see WORD COUNT REQUIREMENTS section above)
 - "chapterSummary": Summarize the events of THIS narrative for future memory (2-3 sentences)
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
@@ -530,7 +548,21 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   If someone promised to call, you must acknowledge whether they did.
   Plot holes from ignored threads will break the player's immersion.
 
-- "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
+- "decision": (Only for decision points) The binary choice with intro, optionA, and optionB
+
+## SELF-VERIFICATION CHECKLIST (Complete before submitting)
+Before outputting your JSON response, verify:
+
+1. **WORD COUNT**: Your narrative exceeds ${MIN_WORDS_PER_SUBCHAPTER} words (count them!)
+2. **THREAD CONTINUITY**: Every CRITICAL thread from PREVIOUS_ACTIVE_THREADS appears in previousThreadsAddressed
+3. **PERSONALITY MATCH**: jackActionStyle matches the player path personality provided in the task
+4. **STORY DAY**: storyDay equals the chapter number (story spans exactly 12 days)
+5. **FORBIDDEN PATTERNS**: Scan your narrative for forbidden words/phrases from the list above
+6. **FIRST PERSON**: Entire narrative is Jack's perspective, past tense, never "Jack thought" (use "I thought")
+7. **TIMELINE FACTS**: Any durations mentioned use EXACT numbers from ABSOLUTE_FACTS (30 years Tom, 8 years Eleanor, etc.)
+8. **DECISION ALIGNMENT**: If decision point, both options have personalityAlignment field filled
+
+If any check fails, revise before outputting.`;
 
 // ============================================================================
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
@@ -2246,9 +2278,49 @@ Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 **${beatType.description}**
 
 This chapter MUST include:
-${beatType.requirements.map(r => `- ${r}`).join('\n')}
+${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
 
-${beatType.wordCountModifier !== 1.0 ? `**Pacing Note:** ${beatType.wordCountModifier < 1.0 ? 'This is a FAST-PACED chapter. Keep scenes short and punchy. Less exposition, more action.' : 'This is a DEEP chapter. Take time for dialogue and character exploration. Don\'t rush.'}` : ''}`;
+      // Add beat-type-specific pacing instructions
+      if (beatType.type === 'CHASE') {
+        task += `
+
+**CHASE PACING MANDATE:**
+- Keep paragraphs under 4 sentences
+- No internal monologue longer than 2 sentences
+- Use ACTION VERBS: ran, ducked, slammed, grabbed, dove
+- Short dialogue exchanges (1-2 lines max)
+- Breathless sentence fragments are OK: "Corner. Left. Another alley."
+- Physical sensations: burning lungs, pounding heart, rain in eyes
+- Time pressure in every scene: "Thirty seconds. Maybe less."`;
+      } else if (beatType.type === 'BOTTLE_EPISODE') {
+        task += `
+
+**BOTTLE EPISODE PACING MANDATE:**
+- Extended dialogue exchanges (5+ back-and-forth minimum)
+- Stay in ONE primary location the entire chapter
+- Deep character exploration through conversation
+- Allow pauses, silences, meaningful looks
+- Internal monologue between dialogue beats
+- No scene cuts to other locations
+- Psychological tension over physical action`;
+      } else if (beatType.type === 'CONFRONTATION' || beatType.type === 'BETRAYAL') {
+        task += `
+
+**CONFRONTATION PACING MANDATE:**
+- Build to the confrontation through the first half
+- The confrontation itself should be LONG and detailed
+- Every word in the dialogue carries weight
+- Physical descriptions of tension (clenched jaw, white knuckles)
+- Allow for emotional gut-punches with space to breathe after`;
+      } else if (beatType.wordCountModifier < 1.0) {
+        task += `
+
+**PACING NOTE:** This is a FAST-PACED chapter. Keep scenes short and punchy. Less exposition, more action.`;
+      } else if (beatType.wordCountModifier > 1.0) {
+        task += `
+
+**PACING NOTE:** This is a DEEP chapter. Take time for dialogue and character exploration. Don't rush.`;
+      }
     }
 
     // ========== NEW: Story Arc Guidance ==========
@@ -2297,7 +2369,37 @@ Based on player's choices, Jack's behavior pattern is: **${personality.narrative
 - Risk tolerance: ${personality.riskTolerance}
 ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.aggressive.toFixed(0)}, Methodical=${personality.scores.methodical.toFixed(0)}` : ''}
 
-**IMPORTANT:** Jack's actions and dialogue MUST reflect this established personality pattern. A methodical Jack doesn't suddenly become reckless. An aggressive Jack doesn't suddenly become overly cautious.
+**IMPORTANT:** Jack's actions and dialogue MUST reflect this established personality pattern.`;
+
+    // Add personality-specific voice examples
+    if (personality.riskTolerance === 'high') {
+      task += `
+
+**AGGRESSIVE JACK VOICE EXAMPLES:**
+Same scene, written for aggressive Jack:
+- Entering a dangerous location: "I kicked the door open before my better judgment could catch up. The warehouse stank of rust and old violence. Good. I was in the mood for both."
+- Confronting a suspect: "'Cut the crap,' I said, grabbing his collar. 'I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry.'"
+- Internal monologue: "Thirty years of being the patient detective. Look where it got me. This time, I wasn't waiting for permission."
+- DO: Push, confront, act first and deal with consequences later
+- DON'T: Hesitate, gather excessive evidence, wait patiently`;
+    } else if (personality.riskTolerance === 'low') {
+      task += `
+
+**METHODICAL JACK VOICE EXAMPLES:**
+Same scene, written for methodical Jack:
+- Entering a dangerous location: "I circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did I try the door."
+- Confronting a suspect: "'I have some questions,' I said, keeping my voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
+- Internal monologue: "Every case I'd closed in thirty years taught me the same lesson: patience catches more killers than speed. I could wait. I'd gotten good at waiting."
+- DO: Observe, plan, build the case methodically, leverage information
+- DON'T: Rush in, confront without evidence, take unnecessary risks`;
+    } else {
+      task += `
+
+**BALANCED JACK VOICE NOTE:**
+Jack adapts his approach to the situation. He can be patient when it serves him, aggressive when pushed. Match the narrative moment—if stakes are high and time is short, he acts; if information is needed, he investigates.`;
+    }
+
+    task += `
 
 ### DECISION CONSEQUENCES (Must be reflected in narrative)
 ${context.decisionConsequences?.immediate?.length > 0 ? context.decisionConsequences.immediate.map(c => `- ${c}`).join('\n') : '- No previous decisions yet'}
@@ -2565,15 +2667,37 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         // Parse JSON response (guaranteed valid by schema)
         let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
 
-        // Validate word count
-        const wordCount = generatedContent.narrative.split(/\s+/).length;
-        if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-          // Request expansion
-          generatedContent.narrative = await this._expandNarrative(
+        // Validate word count with retry logic
+        let wordCount = generatedContent.narrative.split(/\s+/).length;
+        let expansionAttempts = 0;
+        const MAX_EXPANSION_ATTEMPTS = 2;
+
+        while (wordCount < MIN_WORDS_PER_SUBCHAPTER && expansionAttempts < MAX_EXPANSION_ATTEMPTS) {
+          expansionAttempts++;
+          console.log(`[StoryGenerationService] Word count ${wordCount} below minimum ${MIN_WORDS_PER_SUBCHAPTER}, expansion attempt ${expansionAttempts}/${MAX_EXPANSION_ATTEMPTS}`);
+
+          const expandedNarrative = await this._expandNarrative(
             generatedContent.narrative,
             context,
             TARGET_WORDS - wordCount
           );
+
+          const expandedWordCount = expandedNarrative.split(/\s+/).length;
+
+          // Only accept expansion if it actually increased word count
+          if (expandedWordCount > wordCount) {
+            generatedContent.narrative = expandedNarrative;
+            wordCount = expandedWordCount;
+            console.log(`[StoryGenerationService] Expansion successful: ${wordCount} words`);
+          } else {
+            console.warn(`[StoryGenerationService] Expansion did not increase word count (${expandedWordCount} <= ${wordCount})`);
+            break;
+          }
+        }
+
+        // If still under minimum after retries, log warning but continue
+        if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+          console.warn(`[StoryGenerationService] Word count ${wordCount} still below minimum after ${expansionAttempts} expansion attempts. Proceeding with validation.`);
         }
 
         // Validate consistency (check for obvious violations)
@@ -2586,14 +2710,20 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           try {
             generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
 
-            // Re-validate word count for the fixed content
-            const wordCount = generatedContent.narrative.split(/\s+/).length;
-            if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-              generatedContent.narrative = await this._expandNarrative(
+            // Re-validate word count for the fixed content with verification
+            let fixedWordCount = generatedContent.narrative.split(/\s+/).length;
+            if (fixedWordCount < MIN_WORDS_PER_SUBCHAPTER) {
+              const expandedNarrative = await this._expandNarrative(
                 generatedContent.narrative,
                 context,
-                TARGET_WORDS - wordCount
+                TARGET_WORDS - fixedWordCount
               );
+              const newWordCount = expandedNarrative.split(/\s+/).length;
+              // Only accept if expansion actually helped
+              if (newWordCount > fixedWordCount) {
+                generatedContent.narrative = expandedNarrative;
+                console.log(`[StoryGenerationService] Post-fix expansion: ${fixedWordCount} -> ${newWordCount} words`);
+              }
             }
 
             validationResult = this._validateConsistency(generatedContent, context);
@@ -3376,9 +3506,15 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
           const currentChapter = context.currentPosition?.chapter || 12;
           const chapterDistance = currentChapter - threadChapter;
 
+          // Check if thread has explicit dueChapter and we've passed it
+          const isOverdue = thread.dueChapter && currentChapter > thread.dueChapter;
+
           // Critical urgency threads are always issues if not addressed
-          if (thread.urgency === 'critical') {
-            issues.push(`CRITICAL ${thread.type} thread not addressed: "${threadDescription.slice(0, 60)}..." (deadline: ${thread.deadline || 'immediate'})`);
+          if (thread.urgency === 'critical' || isOverdue) {
+            const deadlineInfo = thread.dueChapter
+              ? `dueChapter: ${thread.dueChapter}, current: ${currentChapter}`
+              : (thread.deadline || 'immediate');
+            issues.push(`CRITICAL ${thread.type} thread not addressed: "${threadDescription.slice(0, 60)}..." (${deadlineInfo})`);
           } else if (chapterDistance <= 2) {
             // Recent threads of critical types are also issues
             issues.push(`Critical ${thread.type} thread not addressed: "${threadDescription.slice(0, 60)}..."`);
@@ -3557,15 +3693,23 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     const villains = CHARACTER_REFERENCE.villains;
 
     let grounding = `## ABSOLUTE_FACTS (NEVER CONTRADICT)
+
+### PROTAGONIST
 - Jack Halloway: Retired detective, ${ABSOLUTE_FACTS.protagonist.careerLength} on the force
 - Setting: ${ABSOLUTE_FACTS.setting.city}, ${ABSOLUTE_FACTS.setting.atmosphere}
-- Tom Wade: ${ABSOLUTE_FACTS.corruptOfficials.tomWade.title}, Jack's former best friend, manufactured evidence for 20 years
+
+### EXACT TIMELINE DURATIONS (Use these numbers precisely, never approximate)
+- Jack and Tom Wade: Best friends for exactly 30 years (met in college)
+- Tom Wade's evidence manufacturing: exactly 20 years (Jack was unaware)
+- Sarah Reeves: Jack's former partner for exactly 13 years
+- Silas Reed: Jack's former partner for exactly 8 years
+- Emily Cross case closed: exactly 7 years ago (Jack declared dead while she was still alive, held captive by Grange)
+- Eleanor Bellamy: In prison for exactly 8 years (wrongfully convicted of husband's murder)
+
+### KEY CHARACTERS
+- Tom Wade: ${ABSOLUTE_FACTS.corruptOfficials.tomWade.title} - IMPORTANT: He manufactured evidence for 20 years, but has been Jack's best friend for 30 years. These are different durations.
 - Victoria Blackwell: Also known as ${ABSOLUTE_FACTS.antagonist.trueName}, The Midnight Confessor
 - The Five Innocents: Eleanor Bellamy, Marcus Thornhill, Dr. Lisa Chen, James Sullivan, Teresa Wade
-- Emily Cross "died" 7 years ago exactly (Jack declared case closed while she was still alive)
-- Sarah Reeves: Jack's former partner for 13 years exactly
-- Jack and Tom Wade: Best friends for 30 years exactly
-- Eleanor Bellamy: In prison for 8 years exactly
 
 ## CHARACTER NAMES (USE EXACTLY)
 `;
