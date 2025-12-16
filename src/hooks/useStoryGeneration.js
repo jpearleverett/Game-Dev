@@ -234,8 +234,42 @@ export function useStoryGeneration(storyCampaign) {
   }, [isConfigured, needsGeneration]);
 
   /**
-   * Pre-generate upcoming content (call when player is likely to need it soon)
-   * Generates for BOTH paths (A and B) to ensure cache hits regardless of player choice
+   * Analyze choice history to predict most likely next path
+   * Returns the path (A or B) that the player is more likely to choose
+   */
+  const predictNextPath = useCallback((choiceHistory) => {
+    if (!choiceHistory || choiceHistory.length === 0) {
+      // No history - default to A (slightly more common first choice)
+      return { primary: 'A', secondary: 'B', confidence: 0.55 };
+    }
+
+    // Count A vs B choices
+    const counts = { A: 0, B: 0 };
+    // Weight recent choices more heavily
+    choiceHistory.forEach((choice, index) => {
+      const weight = 1 + (index / choiceHistory.length);
+      counts[choice.optionKey] = (counts[choice.optionKey] || 0) + weight;
+    });
+
+    const total = counts.A + counts.B;
+    const aRatio = counts.A / total;
+
+    // If player has shown strong preference, predict that path
+    if (aRatio > 0.65) {
+      return { primary: 'A', secondary: 'B', confidence: aRatio };
+    } else if (aRatio < 0.35) {
+      return { primary: 'B', secondary: 'A', confidence: 1 - aRatio };
+    }
+
+    // If balanced, look at most recent choice as tiebreaker
+    const lastChoice = choiceHistory[choiceHistory.length - 1]?.optionKey || 'A';
+    return { primary: lastChoice, secondary: lastChoice === 'A' ? 'B' : 'A', confidence: 0.55 };
+  }, []);
+
+  /**
+   * Pre-generate upcoming content with SMART path prediction
+   * Uses player's choice history to prioritize likely paths
+   * Only generates secondary path when player is closer to decision point
    */
   const pregenerate = useCallback(async (currentChapter, pathKey, choiceHistory = []) => {
     if (!isConfigured || currentChapter >= 12) {
@@ -245,36 +279,58 @@ export function useStoryGeneration(storyCampaign) {
     const nextChapter = currentChapter + 1;
     const firstCaseOfNextChapter = `${String(nextChapter).padStart(3, '0')}A`;
 
-    // Generate for both possible paths since we don't know which path
-    // the player will choose at the end of the current chapter
-    const pathsToGenerate = ['A', 'B'];
+    // Predict which path player is more likely to choose
+    const prediction = predictNextPath(choiceHistory);
 
-    for (const targetPath of pathsToGenerate) {
-      const needsGen = await needsGeneration(firstCaseOfNextChapter, targetPath);
+    // Always generate the primary (predicted) path first
+    const needsPrimaryGen = await needsGeneration(firstCaseOfNextChapter, prediction.primary);
 
-      if (needsGen) {
-        // Generate in background without blocking
+    if (needsPrimaryGen) {
+      setStatus(GENERATION_STATUS.GENERATING);
+      setGenerationType(GENERATION_TYPE.PRELOAD);
+
+      const speculativeHistory = [
+        ...choiceHistory,
+        {
+          caseNumber: formatCaseNumber(currentChapter, 3),
+          optionKey: prediction.primary,
+          timestamp: new Date().toISOString()
+        }
+      ];
+
+      // Generate primary path first (don't await)
+      generateChapter(nextChapter, prediction.primary, speculativeHistory);
+    }
+
+    // Only generate secondary path if:
+    // 1. Primary is already generated, OR
+    // 2. Prediction confidence is low (player is unpredictable), OR
+    // 3. Player has made many choices (has shown varied behavior)
+    const shouldGenerateSecondary = !needsPrimaryGen ||
+                                     prediction.confidence < 0.6 ||
+                                     choiceHistory.length >= 3;
+
+    if (shouldGenerateSecondary) {
+      const needsSecondaryGen = await needsGeneration(firstCaseOfNextChapter, prediction.secondary);
+
+      if (needsSecondaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
 
-        // Construct SPECULATIVE history
-        // This simulates that the user chose 'targetPath' at the end of 'currentChapter'
-        // effectively providing the 'missing link' so the LLM knows why it's generating Path A vs Path B.
-        // The choice occurs at Subchapter 3 of the current chapter.
-        const speculativeHistory = [
+        const speculativeHistorySecondary = [
           ...choiceHistory,
           {
-            caseNumber: formatCaseNumber(currentChapter, 3), // e.g. "001C"
-            optionKey: targetPath, // 'A' or 'B'
+            caseNumber: formatCaseNumber(currentChapter, 3),
+            optionKey: prediction.secondary,
             timestamp: new Date().toISOString()
           }
         ];
 
-        // Don't await - let it run in background with the speculative history
-        generateChapter(nextChapter, targetPath, speculativeHistory);
+        // Generate secondary path (don't await)
+        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary);
       }
     }
-  }, [isConfigured, needsGeneration, generateChapter]);
+  }, [isConfigured, needsGeneration, generateChapter, predictNextPath]);
 
   /**
    * Cancel ongoing generation

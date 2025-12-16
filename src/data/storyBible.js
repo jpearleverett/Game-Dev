@@ -332,51 +332,84 @@ The floor creaked under my boots. Both paths led somewhere dark. The only questi
 };
 
 // ============================================================================
-// CONSISTENCY RULES
+// CONSISTENCY RULES - Organized by category for comprehensive coverage
 // ============================================================================
 export const CONSISTENCY_RULES = [
+  // CHARACTER NAMES & IDENTITIES
   'Jack ALWAYS refers to Victoria as "Victoria" or "the Confessor" until her true identity as Emily is revealed',
-  'Emily Cross case was closed 7 years ago, not more, not less',
+  'Victoria Blackwell is the alias; Emily Cross is the true identity',
+  'The Midnight Confessor signs as "M.C." or "V.A." or "E.C."',
+
+  // TIMELINE FACTS (EXACT NUMBERS - Never approximate)
+  'Emily Cross case was closed 7 years ago exactly (not approximately)',
   'Eleanor has been in prison for 8 years exactly',
-  'Tom Wade and Jack have been friends for 30 years exactly',
+  'Tom Wade and Jack have been friends for 30 years exactly (met in college)',
   'Jack and Sarah were partners for 13 years exactly',
   'Jack and Silas were partners for 8 years exactly',
-  'The Confessor communicates via black envelopes with red wax seals',
-  'Victoria wears red and has expensive French perfume with floral and patchouli notes',
-  'Ashport is ALWAYS rainy or recently rained',
-  'Jack drinks Jameson whiskey, never bourbon or scotch',
-  'Murphy\'s Bar is below Jack\'s office',
-  'There are exactly 5 innocents wrongfully convicted',
-  'Marcus Thornhill committed suicide in lockup, never went to prison',
-  'Richard Bellamy was an art dealer being blackmailed',
-  'Grange had 23 victims total, 8 confirmed dead',
-  'Helen Price had 53 consecutive wins in court',
+  'Jack had a 30-year career as detective before forced retirement',
+  'Emily was 22 when abducted, making her late 20s to early 30s now',
+
+  // SETTING & ATMOSPHERE
+  'Ashport is ALWAYS rainy, overcast, or recently rained - NEVER sunny or clear',
+  'Murphy\'s Bar is directly below Jack\'s office (Jack can hear the jukebox through the floorboards)',
+  'Ashport is neon-lit, morally gray, modern day with noir aesthetics',
+
+  // CHARACTER TRAITS (Immutable)
+  'Jack drinks Jameson whiskey exclusively - never bourbon, scotch, vodka, or beer',
+  'Jack wears a rumpled charcoal gray trench coat',
+  'Victoria wears red, has expensive French perfume with floral and patchouli notes',
+  'The Confessor communicates via black envelopes with red wax seals and silver ink',
+  'Victoria leaves obsidian chess pieces as markers',
+
+  // CASE FACTS (Plot-critical)
+  'There are exactly 5 innocents wrongfully convicted using manufactured evidence',
+  'Marcus Thornhill committed suicide in lockup (before trial) - he never went to prison',
+  'Richard Bellamy was an art dealer being blackmailed for embezzlement',
+  'Grange had exactly 23 kidnapping victims total, 8 confirmed dead',
+  'Helen Price had exactly 53 consecutive wins in court, 21 involved manufactured evidence',
+  'Tom Wade manufactured evidence for 20 years (Jack was unaware)',
+  'Eleanor was convicted of murdering Richard with arsenic poisoning (she was framed)',
+
+  // RELATIONSHIP STATES
+  'Sarah eventually loses faith in Jack and starts the Conviction Integrity Project',
+  'Tom Wade is Jack\'s best friend but betrayed him by manufacturing evidence',
+  'Silas Reed was blackmailed 7 years ago into framing Marcus Thornhill',
+  'Victoria was a victim of Richard Bellamy (affair started when she was 19, he was 48)',
+  'Deputy Chief Grange tortured Emily/Victoria for months after Jack closed her case',
 ];
 
 // ============================================================================
-// GENERATION PARAMETERS
+// GENERATION PARAMETERS - Optimized for quality and consistency
 // ============================================================================
 export const GENERATION_CONFIG = {
-  // Lower temperature for consistency, higher for creativity
+  // Temperature settings - balanced for consistency with creativity
   temperature: {
-    narrative: 0.75,      // Balanced creativity with consistency
-    dialogue: 0.80,       // Slightly more creative for dialogue
-    decisions: 0.70,      // More controlled for important choices
-    expansion: 0.65,      // Conservative when expanding
+    narrative: 0.72,      // Slightly lower for better consistency while maintaining creativity
+    dialogue: 0.75,       // Balanced for natural dialogue
+    decisions: 0.68,      // More controlled for critical choice points
+    expansion: 0.65,      // Conservative when expanding (rarely used now)
   },
 
-  // Token limits - increased to prevent JSON truncation
+  // Token limits - generous to prevent truncation
   maxTokens: {
-    subchapter: 8192,     // Increased for complete JSON responses with narrative
-    expansion: 3000,
+    subchapter: 10000,    // Increased to ensure complete JSON + narrative in single call
+    expansion: 3000,      // For fallback expansion (rarely needed with optimized prompts)
     validation: 500,
   },
 
-  // Word count requirements
+  // Word count requirements - optimized for immersion
   wordCount: {
-    minimum: 500,
-    target: 700,
-    maximum: 1200,
+    minimum: 550,         // Slightly increased minimum
+    target: 750,          // Higher target for richer content
+    maximum: 1200,        // Cap to prevent runaway generation
+  },
+
+  // Quality assurance settings
+  qualitySettings: {
+    maxRetries: 2,                    // Retries for consistency failures
+    minSentencesPerParagraph: 3,      // Ensures substantial paragraphs
+    maxConsecutiveDialogue: 6,        // Prevents wall-of-dialogue
+    requireAtmosphericOpening: true,  // Every chapter should set the scene
   },
 };
 

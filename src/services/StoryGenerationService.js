@@ -31,10 +31,54 @@ import {
 // Story configuration
 const TOTAL_CHAPTERS = 12;
 const SUBCHAPTERS_PER_CHAPTER = 3;
-const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum;
-const TARGET_WORDS = GENERATION_CONFIG.wordCount.target;
+const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 550
+const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 750
 const DECISION_SUBCHAPTER = 3;
-const MAX_RETRIES = 2;
+const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 2;
+
+// ============================================================================
+// PATH PERSONALITY SYSTEM - Tracks cumulative player behavior for coherent narrative
+// ============================================================================
+const PATH_PERSONALITY_TRAITS = {
+  // Maps choice patterns to narrative personality
+  AGGRESSIVE: {
+    keywords: ['confront', 'direct', 'immediate', 'force', 'demand', 'pressure'],
+    narrativeStyle: 'Jack acts decisively, confronting obstacles head-on',
+    dialogueTone: 'more direct and confrontational',
+    riskTolerance: 'high',
+  },
+  METHODICAL: {
+    keywords: ['investigate', 'gather', 'evidence', 'careful', 'plan', 'wait'],
+    narrativeStyle: 'Jack proceeds cautiously, gathering information before acting',
+    dialogueTone: 'more measured and analytical',
+    riskTolerance: 'low',
+  },
+  BALANCED: {
+    narrativeStyle: 'Jack balances intuition with evidence',
+    dialogueTone: 'adapts to the situation',
+    riskTolerance: 'moderate',
+  },
+};
+
+// ============================================================================
+// DECISION CONSEQUENCE REGISTRY - Tracks what each choice means for continuity
+// ============================================================================
+const DECISION_CONSEQUENCES = {
+  // Chapter 1 decision consequences
+  '001C': {
+    A: {
+      immediate: 'Jack chose to confront the situation directly',
+      ongoing: ['More adversarial relationships', 'Faster revelation of threats', 'Higher personal risk'],
+      characterImpact: { trust: -10, aggression: +15, thoroughness: -5 },
+    },
+    B: {
+      immediate: 'Jack chose to gather more information first',
+      ongoing: ['More careful approach', 'Slower but more complete understanding', 'Lower immediate risk'],
+      characterImpact: { trust: +5, aggression: -5, thoroughness: +15 },
+    },
+  },
+  // Additional chapter consequences will be generated dynamically
+};
 
 // ============================================================================
 // JSON SCHEMAS FOR STRUCTURED OUTPUT
@@ -205,7 +249,22 @@ You continue the story of Jack Halloway, a retired detective confronting the wro
 2. You NEVER contradict established facts from previous chapters
 3. You NEVER break character or acknowledge being an AI
 4. You maintain EXACT consistency with names, dates, relationships, and events
-5. You produce MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} words per subchapter (aim for ${TARGET_WORDS})
+5. **WORD COUNT IS NON-NEGOTIABLE:** You MUST write AT LEAST ${MIN_WORDS_PER_SUBCHAPTER} words, aiming for ${TARGET_WORDS}+
+
+## WORD COUNT REQUIREMENTS - READ CAREFULLY
+Your narrative field MUST contain ${TARGET_WORDS}+ words. This is critical for player immersion.
+
+To achieve this word count naturally:
+- Open with atmospheric scene-setting (50-100 words)
+- Include Jack's internal monologue reflecting on recent events (100-150 words)
+- Write meaningful dialogue exchanges, not just brief statements (150-200 words)
+- Describe physical actions and sensory details throughout (100+ words)
+- End with tension or cliffhanger appropriate to the scene (50-100 words)
+
+DO NOT:
+- Write a short narrative thinking you'll expand later - you won't get the chance
+- Stop at the minimum - always aim for ${TARGET_WORDS}+ words
+- Use filler - every sentence should advance character, plot, or atmosphere
 
 ## VOICE AND STYLE
 Channel Raymond Chandler's hard-boiled prose:
@@ -235,11 +294,11 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 - "title": Evocative 2-5 word noir chapter title
 - "bridge": One short, compelling sentence hook (max 15 words)
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words, from Jack's perspective, past tense)
-- "narrative": Your full prose (minimum ${MIN_WORDS_PER_SUBCHAPTER} words, aim for ${TARGET_WORDS})
-- "chapterSummary": Summarize the events of THIS narrative for future memory
+- "narrative": Your full prose (**MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} words, TARGET ${TARGET_WORDS}+ words** - this is enforced)
+- "chapterSummary": Summarize the events of THIS narrative for future memory (2-3 sentences)
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
-- "consistencyFacts": Array of 3-5 specific facts that must remain consistent
+- "consistencyFacts": Array of 3-5 specific facts that must remain consistent in future chapters
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
 
 // ============================================================================
@@ -269,6 +328,116 @@ class StoryGenerationService {
     this.isGenerating = false;
     this.consistencyLog = []; // Track facts for consistency checking
     this.pendingGenerations = new Map(); // Cache for in-flight generation promises
+    this.pathPersonality = null; // Tracks cumulative player behavior pattern
+    this.decisionConsequences = new Map(); // Tracks ongoing effects of player choices
+    this.characterStates = new Map(); // Tracks character relationship/trust states
+    this.narrativeThreads = []; // Active story threads that must be maintained
+  }
+
+  // ==========================================================================
+  // PATH PERSONALITY ANALYSIS - Ensures narrative coherence across player choices
+  // ==========================================================================
+
+  /**
+   * Analyze player's choice history to determine their "path personality"
+   * This ensures Jack's behavior remains consistent with player's decision patterns
+   */
+  _analyzePathPersonality(choiceHistory) {
+    if (!choiceHistory || choiceHistory.length === 0) {
+      return PATH_PERSONALITY_TRAITS.BALANCED;
+    }
+
+    let aggressiveScore = 0;
+    let methodicalScore = 0;
+
+    // Analyze each choice and weight recent choices more heavily
+    choiceHistory.forEach((choice, index) => {
+      const weight = 1 + (index / choiceHistory.length); // Recent choices weighted more
+      const consequence = DECISION_CONSEQUENCES[choice.caseNumber]?.[choice.optionKey];
+
+      if (consequence?.characterImpact) {
+        aggressiveScore += (consequence.characterImpact.aggression || 0) * weight;
+        methodicalScore += (consequence.characterImpact.thoroughness || 0) * weight;
+      } else {
+        // Default scoring based on option key patterns
+        if (choice.optionKey === 'A') {
+          aggressiveScore += 5 * weight;
+        } else {
+          methodicalScore += 5 * weight;
+        }
+      }
+    });
+
+    // Determine dominant personality
+    const diff = aggressiveScore - methodicalScore;
+    if (diff > 15) {
+      return { ...PATH_PERSONALITY_TRAITS.AGGRESSIVE, scores: { aggressive: aggressiveScore, methodical: methodicalScore } };
+    } else if (diff < -15) {
+      return { ...PATH_PERSONALITY_TRAITS.METHODICAL, scores: { aggressive: aggressiveScore, methodical: methodicalScore } };
+    }
+    return { ...PATH_PERSONALITY_TRAITS.BALANCED, scores: { aggressive: aggressiveScore, methodical: methodicalScore } };
+  }
+
+  /**
+   * Build cumulative decision consequences for context
+   */
+  _buildDecisionConsequences(choiceHistory) {
+    const consequences = {
+      immediate: [],
+      ongoing: [],
+      characterImpacts: { trust: 0, aggression: 0, thoroughness: 0 },
+    };
+
+    if (!choiceHistory) return consequences;
+
+    choiceHistory.forEach(choice => {
+      const conseq = DECISION_CONSEQUENCES[choice.caseNumber]?.[choice.optionKey];
+      if (conseq) {
+        consequences.immediate.push(`Chapter ${this._extractChapterFromCase(choice.caseNumber)}: ${conseq.immediate}`);
+        consequences.ongoing.push(...conseq.ongoing);
+        if (conseq.characterImpact) {
+          Object.keys(conseq.characterImpact).forEach(key => {
+            consequences.characterImpacts[key] += conseq.characterImpact[key];
+          });
+        }
+      }
+    });
+
+    return consequences;
+  }
+
+  /**
+   * Extract and track narrative threads that must be maintained
+   */
+  _extractNarrativeThreads(chapters) {
+    const threads = [];
+    const threadPatterns = [
+      { pattern: /agreed to meet|promised to|will (meet|call|contact)/i, type: 'appointment' },
+      { pattern: /discovered|revealed|learned that/i, type: 'revelation' },
+      { pattern: /suspects?|investigating|following/i, type: 'investigation' },
+      { pattern: /trust|betray|alliance|enemy/i, type: 'relationship' },
+      { pattern: /wounded|injured|hurt|sick/i, type: 'physical_state' },
+    ];
+
+    chapters.forEach(ch => {
+      if (!ch.narrative) return;
+      threadPatterns.forEach(({ pattern, type }) => {
+        const matches = ch.narrative.match(new RegExp(`.{0,50}${pattern.source}.{0,50}`, 'gi'));
+        if (matches) {
+          matches.forEach(match => {
+            threads.push({
+              type,
+              chapter: ch.chapter,
+              subchapter: ch.subchapter,
+              excerpt: match.trim(),
+            });
+          });
+        }
+      });
+    });
+
+    // Keep most recent threads (last 20)
+    return threads.slice(-20);
   }
 
   /**
@@ -306,8 +475,16 @@ class StoryGenerationService {
   /**
    * Build comprehensive story context with intelligent windowing
    * Recent chapters get full text, older chapters get compressed summaries
+   * Now includes path personality, decision consequences, and narrative threads
    */
   async buildStoryContext(targetChapter, targetSubchapter, pathKey, choiceHistory = []) {
+    // Analyze player's path personality for narrative consistency
+    const pathPersonality = this._analyzePathPersonality(choiceHistory);
+    this.pathPersonality = pathPersonality;
+
+    // Build cumulative decision consequences
+    const decisionConsequences = this._buildDecisionConsequences(choiceHistory);
+
     const context = {
       foundation: this._buildFoundationContext(),
       previousChapters: [],
@@ -318,6 +495,9 @@ class StoryGenerationService {
         pathKey,
       },
       establishedFacts: [], // Track facts that must remain consistent
+      pathPersonality, // Player's cumulative decision pattern
+      decisionConsequences, // Ongoing effects of choices
+      narrativeThreads: [], // Active story threads to maintain
     };
 
     // Add Chapter 1 content (static)
@@ -391,6 +571,9 @@ class StoryGenerationService {
 
     // Extract established facts from generated content
     context.establishedFacts = this._extractEstablishedFacts(context.previousChapters);
+
+    // Extract active narrative threads that must be maintained
+    context.narrativeThreads = this._extractNarrativeThreads(context.previousChapters);
 
     return context;
   }
@@ -589,6 +772,7 @@ Example: "${villains.silasReed.voiceAndStyle?.examplePhrases?.[0] || 'I told mys
     const chaptersRemaining = TOTAL_CHAPTERS - chapter;
     const subchapterLabel = ['A', 'B', 'C'][subchapter - 1];
     const pacing = this._getPacingGuidance(chapter);
+    const personality = context.pathPersonality || PATH_PERSONALITY_TRAITS.BALANCED;
 
     let task = `## CURRENT TASK
 
@@ -600,17 +784,32 @@ Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 - Current path: "${context.currentPosition.pathKey}"
 - Phase: ${pacing.phase}
 
+### PLAYER PATH PERSONALITY (CRITICAL FOR CONSISTENCY)
+Based on player's choices, Jack's behavior pattern is: **${personality.narrativeStyle}**
+- Dialogue tone should be ${personality.dialogueTone}
+- Risk tolerance: ${personality.riskTolerance}
+${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.aggressive.toFixed(0)}, Methodical=${personality.scores.methodical.toFixed(0)}` : ''}
+
+**IMPORTANT:** Jack's actions and dialogue MUST reflect this established personality pattern. A methodical Jack doesn't suddenly become reckless. An aggressive Jack doesn't suddenly become overly cautious.
+
+### DECISION CONSEQUENCES (Must be reflected in narrative)
+${context.decisionConsequences?.immediate?.length > 0 ? context.decisionConsequences.immediate.map(c => `- ${c}`).join('\n') : '- No previous decisions yet'}
+
+### ONGOING EFFECTS FROM CHOICES
+${context.decisionConsequences?.ongoing?.length > 0 ? [...new Set(context.decisionConsequences.ongoing)].slice(0, 5).map(e => `- ${e}`).join('\n') : '- Starting fresh'}
+
 ### PACING REQUIREMENTS
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
 1. **PLAN FIRST:** Use the 'beatSheet' field to outline 3-5 major beats.
-2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** (aim for ${TARGET_WORDS})
+2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** - AIM FOR ${TARGET_WORDS}+ WORDS. Write generously. Do NOT stop short.
 3. Continue DIRECTLY from where the last subchapter ended
 4. Maintain Jack's first-person noir voice throughout
 5. Reference specific events from previous chapters (show continuity)
 6. Include: atmospheric description, internal monologue, dialogue
-7. Build tension appropriate to ${pacing.phase} phase`;
+7. Build tension appropriate to ${pacing.phase} phase
+8. **ENSURE Jack's behavior matches the path personality above**`;
 
     // Add emphasis on recent decision if applicable (beginning of new chapter)
     if (subchapter === 1 && context.playerChoices.length > 0) {
@@ -665,12 +864,44 @@ ${EXAMPLE_PASSAGES.tenseMoment}
    * Build consistency verification section
    */
   _buildConsistencySection(context) {
-    return `## CONSISTENCY VERIFICATION
+    let section = `## CONSISTENCY VERIFICATION
 
-Before writing, confirm you will maintain these established facts:
-${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}
+### ESTABLISHED FACTS (Never contradict)
+${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
 
-In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative that future chapters must maintain (e.g., "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case").`;
+    // Add active narrative threads that need to be maintained
+    if (context.narrativeThreads && context.narrativeThreads.length > 0) {
+      const threadsByType = {};
+      context.narrativeThreads.slice(-10).forEach(t => {
+        if (!threadsByType[t.type]) threadsByType[t.type] = [];
+        threadsByType[t.type].push(t);
+      });
+
+      section += `\n\n### ACTIVE NARRATIVE THREADS (Address or acknowledge)`;
+      Object.entries(threadsByType).forEach(([type, threads]) => {
+        section += `\n**${type.toUpperCase()}:**`;
+        threads.slice(-3).forEach(t => {
+          section += `\n- Chapter ${t.chapter}.${t.subchapter}: "${t.excerpt.slice(0, 80)}..."`;
+        });
+      });
+    }
+
+    section += `
+
+### YOUR CONSISTENCY RESPONSIBILITIES
+1. In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative
+   Examples: "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case"
+
+2. NEVER contradict:
+   - Character names and relationships
+   - Timeline durations (Wade=30yrs, Sarah=13yrs, Silas=8yrs, Emily=7yrs, Eleanor=8yrs)
+   - Setting (Ashport is ALWAYS rainy)
+   - Jack's drink (Jameson whiskey ONLY)
+   - Player's path personality and decision consequences
+
+3. If you introduced a plot thread (meeting, promise, revelation), it MUST be addressed eventually`;
+
+    return section;
   }
 
   /**
@@ -1169,36 +1400,179 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
   }
 
   /**
-   * Validate content against established facts
+   * Validate content against established facts - COMPREHENSIVE VERSION
+   * Checks for: name spelling, timeline, setting, character behavior, relationship states,
+   * plot continuity, and path personality consistency
    */
   _validateConsistency(content, context) {
     const issues = [];
-
-    // Check for common consistency violations
+    const warnings = []; // Non-blocking issues
     const narrative = content.narrative.toLowerCase();
+    const narrativeOriginal = content.narrative;
 
-    // Check character names are spelled correctly
-    if (narrative.includes('hallaway') || narrative.includes('holloway')) {
-      issues.push('Protagonist name misspelled (should be Halloway)');
+    // =========================================================================
+    // CATEGORY 1: NAME AND SPELLING CONSISTENCY
+    // =========================================================================
+    const nameChecks = [
+      { wrong: ['hallaway', 'holloway', 'haloway', 'hallo way'], correct: 'Halloway' },
+      { wrong: ['blackwood', 'blackwel', 'black well'], correct: 'Blackwell' },
+      { wrong: ['reaves', 'reevs', 'reeve '], correct: 'Reeves' },
+      { wrong: ['bellami', 'bellamy,', 'bella my'], correct: 'Bellamy' },
+      { wrong: ['thornhil', 'thorn hill'], correct: 'Thornhill' },
+      { wrong: ['granges', 'grang '], correct: 'Grange' },
+      { wrong: ['silias', 'silass', 'si las'], correct: 'Silas' },
+    ];
+
+    nameChecks.forEach(({ wrong, correct }) => {
+      wrong.forEach(misspelling => {
+        if (narrative.includes(misspelling)) {
+          issues.push(`Name misspelled: found "${misspelling}", should be "${correct}"`);
+        }
+      });
+    });
+
+    // =========================================================================
+    // CATEGORY 2: TIMELINE CONSISTENCY
+    // =========================================================================
+    const timelineChecks = [
+      { pattern: /(?:twenty|20)\s*years.*(?:tom\s*wade|wade.*friend)/i, issue: 'Tom Wade friendship is 30 years, not 20' },
+      { pattern: /(?:ten|10)\s*years.*(?:sarah|reeves.*partner)/i, issue: 'Sarah partnership is 13 years, not 10' },
+      { pattern: /(?:five|5)\s*years.*(?:silas|reed.*partner)/i, issue: 'Silas partnership is 8 years, not 5' },
+      { pattern: /(?:five|5|ten|10)\s*years.*(?:emily.*dead|closed.*emily)/i, issue: 'Emily case was closed 7 years ago exactly' },
+      { pattern: /(?:five|5|ten|10)\s*years.*(?:eleanor.*prison|imprisoned)/i, issue: 'Eleanor has been imprisoned for 8 years exactly' },
+    ];
+
+    timelineChecks.forEach(({ pattern, issue }) => {
+      if (pattern.test(narrativeOriginal)) {
+        issues.push(issue);
+      }
+    });
+
+    // =========================================================================
+    // CATEGORY 3: SETTING CONSISTENCY
+    // =========================================================================
+    const settingViolations = [
+      { pattern: /\b(?:sunny|sunshine|bright\s+sun|clear\s+sk(?:y|ies)|cloudless)\b/i, issue: 'Ashport is ALWAYS rainy/overcast - never sunny or clear' },
+      { pattern: /\bjack\s+(?:orders?|drinks?)\s+(?:bourbon|scotch|vodka|gin|beer)\b/i, issue: 'Jack drinks Jameson whiskey, not other alcohol' },
+    ];
+
+    settingViolations.forEach(({ pattern, issue }) => {
+      if (pattern.test(narrativeOriginal)) {
+        issues.push(issue);
+      }
+    });
+
+    // =========================================================================
+    // CATEGORY 4: CHARACTER BEHAVIOR CONSISTENCY (Based on path personality)
+    // =========================================================================
+    if (context.pathPersonality) {
+      const personality = context.pathPersonality;
+
+      // Check for personality-inconsistent behavior
+      if (personality.riskTolerance === 'low') {
+        // Methodical Jack shouldn't suddenly be reckless
+        const recklessBehavior = /jack\s+(?:rushed|charged|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)/i;
+        if (recklessBehavior.test(narrativeOriginal)) {
+          warnings.push('Jack is behaving more recklessly than his methodical path personality suggests');
+        }
+      } else if (personality.riskTolerance === 'high') {
+        // Aggressive Jack shouldn't suddenly become overly cautious
+        const overlyPrudent = /jack\s+(?:hesitated|wavered|second-guessed|held\s+back|waited\s+patiently)/i;
+        if (overlyPrudent.test(narrativeOriginal)) {
+          warnings.push('Jack is behaving more cautiously than his aggressive path personality suggests');
+        }
+      }
     }
 
-    if (narrative.includes('blackwood') && !narrative.includes('blackwell')) {
-      issues.push('Antagonist name might be wrong (should be Blackwell)');
+    // =========================================================================
+    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads
+    // =========================================================================
+    if (context.narrativeThreads && context.narrativeThreads.length > 0) {
+      // Check for appointments/promises that should be addressed
+      const recentAppointments = context.narrativeThreads
+        .filter(t => t.type === 'appointment')
+        .slice(-3);
+
+      // Note: We can't automatically verify these are addressed, but we can warn
+      if (recentAppointments.length > 0 && context.currentPosition.chapter > 2) {
+        // This is informational - the prompt should mention these
+      }
     }
 
-    // Check for timeline violations
-    if (narrative.includes('twenty years') && narrative.includes('tom wade')) {
-      issues.push('Tom Wade friendship is 30 years, not 20');
+    // =========================================================================
+    // CATEGORY 6: DECISION CONSEQUENCE CARRYOVER
+    // =========================================================================
+    // Check that narrative mentions or reflects consequences of player's choices
+    if (context.playerChoices && context.playerChoices.length > 0 && context.currentPosition.subchapter === 1) {
+      const lastChoice = context.playerChoices[context.playerChoices.length - 1];
+      const lastChoiceChapter = this._extractChapterFromCase(lastChoice.caseNumber);
+
+      // If this is the first subchapter after a decision, narrative should acknowledge it
+      if (lastChoiceChapter === context.currentPosition.chapter - 1) {
+        // Look for any indication the choice is being addressed
+        const hasChoiceReference = /(?:choice|decision|chose|decided|opted|path|went with|took the)/i.test(narrativeOriginal);
+        if (!hasChoiceReference) {
+          warnings.push('Opening of new chapter should acknowledge/reflect the player\'s previous decision');
+        }
+      }
     }
 
-    // Check setting consistency
-    if (narrative.includes('sunny') || narrative.includes('sunshine')) {
-      issues.push('Ashport should always be rainy/overcast, not sunny');
+    // =========================================================================
+    // CATEGORY 7: FORBIDDEN WRITING PATTERNS
+    // =========================================================================
+    const forbiddenPatterns = [
+      { pattern: /—/g, issue: 'Em dashes (—) found - use commas, periods, or semicolons instead', count: true },
+      { pattern: /\bis not just\b.*\bit'?s\b/i, issue: 'Forbidden pattern: "X is not just Y, it\'s Z"' },
+      { pattern: /\bin a world where\b/i, issue: 'Forbidden phrase: "In a world where..."' },
+      { pattern: /\blittle did (?:he|she|they|i|we) know\b/i, issue: 'Forbidden phrase: "Little did [anyone] know..."' },
+      { pattern: /\bi couldn'?t help but\b/i, issue: 'Forbidden phrase: "I couldn\'t help but..."' },
+      { pattern: /\bi found myself\b/i, issue: 'Forbidden phrase: "I found myself..."' },
+      { pattern: /\bseemingly\b|\binterestingly\b|\bnotably\b/i, issue: 'Forbidden flowery adverbs detected' },
+      { pattern: /\bdelve\b|\bunravel\b|\btapestry\b|\bmyriad\b/i, issue: 'Forbidden words detected (delve, unravel, tapestry, myriad)' },
+      { pattern: /\ba testament to\b|\bserves as a reminder\b/i, issue: 'Forbidden cliche phrase detected' },
+    ];
+
+    forbiddenPatterns.forEach(({ pattern, issue, count }) => {
+      if (count) {
+        const matches = narrativeOriginal.match(pattern);
+        if (matches && matches.length > 2) {
+          issues.push(`${issue} (found ${matches.length} instances)`);
+        } else if (matches && matches.length > 0) {
+          warnings.push(`${issue} (found ${matches.length} instances)`);
+        }
+      } else if (pattern.test(narrativeOriginal)) {
+        issues.push(issue);
+      }
+    });
+
+    // =========================================================================
+    // CATEGORY 8: WORD COUNT VALIDATION
+    // =========================================================================
+    const wordCount = narrativeOriginal.split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+      issues.push(`Narrative too short: ${wordCount} words (minimum ${MIN_WORDS_PER_SUBCHAPTER} required)`);
+    } else if (wordCount < TARGET_WORDS * 0.85) {
+      warnings.push(`Narrative shorter than target: ${wordCount} words (target ${TARGET_WORDS})`);
+    }
+
+    // =========================================================================
+    // CATEGORY 9: PERSPECTIVE/TENSE CONSISTENCY
+    // =========================================================================
+    // Check for third-person perspective slips (should be first-person)
+    const thirdPersonSlips = /\bjack\s+(?:thought|felt|wondered|realized|knew|saw|heard)\b/i;
+    if (thirdPersonSlips.test(narrativeOriginal)) {
+      warnings.push('Possible third-person perspective slip detected - should be first-person (Jack\'s POV)');
+    }
+
+    // Log warnings but don't block on them
+    if (warnings.length > 0) {
+      console.log('[ConsistencyValidator] Warnings:', warnings);
     }
 
     return {
       valid: issues.length === 0,
       issues,
+      warnings,
     };
   }
 
