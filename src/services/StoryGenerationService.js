@@ -47,6 +47,11 @@ const MAX_RETRIES = 2;
 const STORY_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
+    beatSheet: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Ordered list of 3-5 major plot beats for this scene, planned BEFORE writing narrative.',
+    },
     title: {
       type: 'string',
       description: 'Evocative chapter title, 2-5 words, noir style',
@@ -62,6 +67,15 @@ const STORY_CONTENT_SCHEMA = {
     narrative: {
       type: 'string',
       description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words',
+    },
+    chapterSummary: {
+      type: 'string',
+      description: 'A concise 2-3 sentence summary of the narrative you just wrote, to be used for memory in future chapters.',
+    },
+    puzzleCandidates: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'List of 6-8 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
     },
     briefing: {
       type: 'object',
@@ -85,7 +99,7 @@ const STORY_CONTENT_SCHEMA = {
       description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
     },
   },
-  required: ['title', 'bridge', 'previously', 'narrative', 'briefing', 'consistencyFacts'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts'],
 };
 
 /**
@@ -94,6 +108,11 @@ const STORY_CONTENT_SCHEMA = {
 const DECISION_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
+    beatSheet: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Ordered list of 3-5 major plot beats for this scene, planned BEFORE writing narrative.',
+    },
     title: {
       type: 'string',
       description: 'Evocative chapter title, 2-5 words, noir style',
@@ -109,6 +128,15 @@ const DECISION_CONTENT_SCHEMA = {
     narrative: {
       type: 'string',
       description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words, ending at a critical decision moment',
+    },
+    chapterSummary: {
+      type: 'string',
+      description: 'A concise 2-3 sentence summary of the narrative you just wrote, to be used for memory in future chapters.',
+    },
+    puzzleCandidates: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'List of 10-12 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
     },
     briefing: {
       type: 'object',
@@ -161,7 +189,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['title', 'bridge', 'previously', 'narrative', 'briefing', 'consistencyFacts', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'decision'],
 };
 
 // ============================================================================
@@ -186,6 +214,7 @@ Channel Raymond Chandler's hard-boiled prose:
 - World-weary internal monologue laced with self-deprecation
 - Sensory details: sounds, smells, textures of the rain-soaked city
 - Moral ambiguity without moralizing
+- SHOW, DON'T TELL. Don't say "Jack felt angry"; describe his fist tightening.
 
 ## FORBIDDEN PATTERNS - THESE INSTANTLY BREAK IMMERSION
 NEVER use:
@@ -202,10 +231,13 @@ NEVER use:
 
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
+- "beatSheet": Plan your scene first with 3-5 plot beats.
 - "title": Evocative 2-5 word noir chapter title
 - "bridge": One short, compelling sentence hook (max 15 words)
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words, from Jack's perspective, past tense)
 - "narrative": Your full prose (minimum ${MIN_WORDS_PER_SUBCHAPTER} words, aim for ${TARGET_WORDS})
+- "chapterSummary": Summarize the events of THIS narrative for future memory
+- "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
 - "consistencyFacts": Array of 3-5 specific facts that must remain consistent
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB`;
@@ -236,6 +268,7 @@ class StoryGenerationService {
     this.storyContext = null;
     this.isGenerating = false;
     this.consistencyLog = []; // Track facts for consistency checking
+    this.pendingGenerations = new Map(); // Cache for in-flight generation promises
   }
 
   /**
@@ -299,6 +332,7 @@ class StoryGenerationService {
           title: entry.title || `Chapter 1.${sub}`,
           narrative: entry.narrative,
           decision: entry.decision || null,
+          chapterSummary: null, // Static chapters don't have generated summaries
           isRecent: targetChapter <= 3, // Chapter 1 is "recent" for early chapters
         });
       }
@@ -320,6 +354,7 @@ class StoryGenerationService {
             pathKey: chapterPathKey,
             title: entry.title || `Chapter ${ch}.${sub}`,
             narrative: entry.narrative,
+            chapterSummary: entry.chapterSummary || null, // Use generated summary if available
             decision: entry.decision || null,
             isRecent,
           });
@@ -339,6 +374,7 @@ class StoryGenerationService {
             pathKey,
             title: entry.title || `Chapter ${targetChapter}.${sub}`,
             narrative: entry.narrative,
+            chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
             isRecent: true, // Current chapter always recent
           });
@@ -480,9 +516,15 @@ class StoryGenerationService {
       summary += '### EARLIER CHAPTERS (Summary)\n';
       for (const ch of olderChapters) {
         summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}": `;
-        // Extract first 2-3 sentences as summary
-        const sentences = ch.narrative.match(/[^.!?]+[.!?]+/g) || [];
-        summary += sentences.slice(0, 3).join(' ').trim();
+
+        // Use generated summary if available (High Quality), otherwise fallback to slicing (Legacy)
+        if (ch.chapterSummary) {
+          summary += ch.chapterSummary;
+        } else {
+          // Extract first 2-3 sentences as summary
+          const sentences = ch.narrative.match(/[^.!?]+[.!?]+/g) || [];
+          summary += sentences.slice(0, 3).join(' ').trim();
+        }
         summary += '\n\n';
       }
     }
@@ -562,12 +604,25 @@ Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
-1. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** (aim for ${TARGET_WORDS})
-2. Continue DIRECTLY from where the last subchapter ended
-3. Maintain Jack's first-person noir voice throughout
-4. Reference specific events from previous chapters (show continuity)
-5. Include: atmospheric description, internal monologue, dialogue
-6. Build tension appropriate to ${pacing.phase} phase`;
+1. **PLAN FIRST:** Use the 'beatSheet' field to outline 3-5 major beats.
+2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** (aim for ${TARGET_WORDS})
+3. Continue DIRECTLY from where the last subchapter ended
+4. Maintain Jack's first-person noir voice throughout
+5. Reference specific events from previous chapters (show continuity)
+6. Include: atmospheric description, internal monologue, dialogue
+7. Build tension appropriate to ${pacing.phase} phase`;
+
+    // Add emphasis on recent decision if applicable (beginning of new chapter)
+    if (subchapter === 1 && context.playerChoices.length > 0) {
+      const lastChoice = context.playerChoices[context.playerChoices.length - 1];
+      if (lastChoice.chapter === chapter - 1) {
+        task += `\n\n### CRITICAL CONTEXT: PREVIOUS DECISION
+The player JUST made a crucial decision at the end of the previous chapter.
+You MUST acknowledge this choice immediately.
+PLAYER CHOICE: "${lastChoice.optionKey}"
+This choice determines the current path. Ensure the narrative reflects this specific outcome.`;
+      }
+    }
 
     if (isDecisionPoint) {
       task += `
@@ -686,116 +741,138 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
     }
 
     const caseNumber = formatCaseNumber(chapter, subchapter);
-    const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
+    const generationKey = `${caseNumber}_${pathKey}`;
 
-    // Build comprehensive context
-    const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
+    // Deduplication: Return existing promise if generation is already in flight for this exact content
+    if (this.pendingGenerations.has(generationKey)) {
+      console.log(`[StoryGenerationService] Reusing pending generation for ${generationKey}`);
+      return this.pendingGenerations.get(generationKey);
+    }
 
-    // Build the prompt with all context
-    const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+    const generationPromise = (async () => {
+      const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
 
-    // Select appropriate temperature and schema based on content type
-    const temperature = isDecisionPoint
-      ? GENERATION_CONFIG.temperature.decisions
-      : GENERATION_CONFIG.temperature.narrative;
-    const responseSchema = isDecisionPoint
-      ? DECISION_CONTENT_SCHEMA
-      : STORY_CONTENT_SCHEMA;
+      // Build comprehensive context
+      const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
-    this.isGenerating = true;
-    try {
-      // Primary generation with structured output
-      const response = await llmService.complete(
-        [{ role: 'user', content: prompt }],
-        {
-          systemPrompt: MASTER_SYSTEM_PROMPT,
-          temperature,
-          maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-          responseSchema,
-        }
-      );
+      // Build the prompt with all context
+      const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
-      // Parse JSON response (guaranteed valid by schema)
-      let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+      // Select appropriate temperature and schema based on content type
+      const temperature = isDecisionPoint
+        ? GENERATION_CONFIG.temperature.decisions
+        : GENERATION_CONFIG.temperature.narrative;
+      const responseSchema = isDecisionPoint
+        ? DECISION_CONTENT_SCHEMA
+        : STORY_CONTENT_SCHEMA;
 
-      // Validate word count
-      const wordCount = generatedContent.narrative.split(/\s+/).length;
-      if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-        // Request expansion
-        generatedContent.narrative = await this._expandNarrative(
-          generatedContent.narrative,
-          context,
-          TARGET_WORDS - wordCount
-        );
-      }
-
-      // Validate consistency (check for obvious violations)
-      let validationResult = this._validateConsistency(generatedContent, context);
-      let retries = 0;
-
-      while (!validationResult.valid && retries < MAX_RETRIES) {
-        console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
-
-        try {
-          generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
-
-          // Re-validate word count for the fixed content
-          const wordCount = generatedContent.narrative.split(/\s+/).length;
-          if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-            generatedContent.narrative = await this._expandNarrative(
-              generatedContent.narrative,
-              context,
-              TARGET_WORDS - wordCount
-            );
+      this.isGenerating = true;
+      try {
+        // Primary generation with structured output
+        const response = await llmService.complete(
+          [{ role: 'user', content: prompt }],
+          {
+            systemPrompt: MASTER_SYSTEM_PROMPT,
+            temperature,
+            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+            responseSchema,
           }
+        );
 
-          validationResult = this._validateConsistency(generatedContent, context);
-          retries++;
-        } catch (error) {
-          console.error('Error during content regeneration:', error);
-          break; // Stop retrying if generation fails
+        // Parse JSON response (guaranteed valid by schema)
+        let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+
+        // Validate word count
+        const wordCount = generatedContent.narrative.split(/\s+/).length;
+        if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+          // Request expansion
+          generatedContent.narrative = await this._expandNarrative(
+            generatedContent.narrative,
+            context,
+            TARGET_WORDS - wordCount
+          );
         }
+
+        // Validate consistency (check for obvious violations)
+        let validationResult = this._validateConsistency(generatedContent, context);
+        let retries = 0;
+
+        while (!validationResult.valid && retries < MAX_RETRIES) {
+          console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
+
+          try {
+            generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
+
+            // Re-validate word count for the fixed content
+            const wordCount = generatedContent.narrative.split(/\s+/).length;
+            if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
+              generatedContent.narrative = await this._expandNarrative(
+                generatedContent.narrative,
+                context,
+                TARGET_WORDS - wordCount
+              );
+            }
+
+            validationResult = this._validateConsistency(generatedContent, context);
+            retries++;
+          } catch (error) {
+            console.error('Error during content regeneration:', error);
+            break; // Stop retrying if generation fails
+          }
+        }
+
+        if (!validationResult.valid) {
+          console.warn('Consistency warning (Unresolved):', validationResult.issues);
+        }
+
+        // Build the story entry
+        const storyEntry = {
+          chapter,
+          subchapter,
+          pathKey,
+          caseNumber,
+          title: generatedContent.title,
+          narrative: generatedContent.narrative,
+          bridgeText: generatedContent.bridgeText,
+          previously: generatedContent.previously || '', // Recap of previous events
+          briefing: generatedContent.briefing || { summary: '', objectives: [] },
+          decision: isDecisionPoint ? generatedContent.decision : null,
+          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision, generatedContent.puzzleCandidates),
+          consistencyFacts: generatedContent.consistencyFacts || [],
+          chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
+          generatedAt: new Date().toISOString(),
+          wordCount: generatedContent.narrative.split(/\s+/).length,
+        };
+
+        // Save the generated content
+        await saveGeneratedChapter(caseNumber, pathKey, storyEntry);
+
+        // Update local cache
+        if (!this.generatedStory) {
+          this.generatedStory = { chapters: {} };
+        }
+        this.generatedStory.chapters[`${caseNumber}_${pathKey}`] = storyEntry;
+
+        // Update story context
+        await this._updateStoryContext(storyEntry);
+
+        this.isGenerating = false;
+        return storyEntry;
+      } catch (error) {
+        this.isGenerating = false;
+        throw error;
       }
+    })();
 
-      if (!validationResult.valid) {
-        console.warn('Consistency warning (Unresolved):', validationResult.issues);
-      }
+    this.pendingGenerations.set(generationKey, generationPromise);
 
-      // Build the story entry
-      const storyEntry = {
-        chapter,
-        subchapter,
-        pathKey,
-        caseNumber,
-        title: generatedContent.title,
-        narrative: generatedContent.narrative,
-        bridgeText: generatedContent.bridgeText,
-        previously: generatedContent.previously || '', // Recap of previous events
-        briefing: generatedContent.briefing || { summary: '', objectives: [] },
-        decision: isDecisionPoint ? generatedContent.decision : null,
-        board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision),
-        consistencyFacts: generatedContent.consistencyFacts || [],
-        generatedAt: new Date().toISOString(),
-        wordCount: generatedContent.narrative.split(/\s+/).length,
-      };
-
-      // Save the generated content
-      await saveGeneratedChapter(caseNumber, pathKey, storyEntry);
-
-      // Update local cache
-      if (!this.generatedStory) {
-        this.generatedStory = { chapters: {} };
-      }
-      this.generatedStory.chapters[`${caseNumber}_${pathKey}`] = storyEntry;
-
-      // Update story context
-      await this._updateStoryContext(storyEntry);
-
-      this.isGenerating = false;
-      return storyEntry;
-    } catch (error) {
-      this.isGenerating = false;
-      throw error;
+    try {
+      const result = await generationPromise;
+      this.pendingGenerations.delete(generationKey);
+      return result;
+    } catch (e) {
+      this.pendingGenerations.delete(generationKey);
+      throw e;
     }
   }
 
@@ -833,6 +910,8 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
         bridgeText: parsed.bridge || '',
         previously: parsed.previously || '', // Recap of previous events
         narrative: this._cleanNarrative(parsed.narrative || ''),
+        chapterSummary: parsed.chapterSummary || '', // High-quality summary
+        puzzleCandidates: parsed.puzzleCandidates || [], // LLM suggested puzzle words
         briefing: parsed.briefing || { summary: '', objectives: [] },
         consistencyFacts: Array.isArray(parsed.consistencyFacts) ? parsed.consistencyFacts : [],
         decision: null,
@@ -863,6 +942,8 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
         bridgeText: '',
         previously: '',
         narrative: typeof content === 'string' ? this._cleanNarrative(this._extractNarrativeFromRaw(content)) : '',
+        chapterSummary: '',
+        puzzleCandidates: [],
         briefing: { summary: '', objectives: [] },
         consistencyFacts: [],
         decision: null,
@@ -879,6 +960,8 @@ In your "consistencyFacts" array, include 3-5 NEW specific facts from your narra
       bridgeText: '',
       previously: '',
       narrative: '',
+      chapterSummary: '',
+      puzzleCandidates: [],
       briefing: { summary: '', objectives: [] },
       consistencyFacts: [],
       decision: null,
@@ -1190,10 +1273,20 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
   /**
    * Generate board data for the puzzle
    */
-  _generateBoardData(narrative, isDecisionPoint, decision) {
-    const words = this._extractKeywordsFromNarrative(narrative);
+  _generateBoardData(narrative, isDecisionPoint, decision, puzzleCandidates = []) {
+    // Combine LLM candidates with regex extraction, prioritizing LLM candidates
+    const regexWords = this._extractKeywordsFromNarrative(narrative);
+
+    // Filter LLM candidates for validity (length, structure)
+    const validCandidates = (puzzleCandidates || [])
+      .map(w => w.toUpperCase().trim())
+      .filter(w => w.length >= 4 && w.length <= 10 && /^[A-Z]+$/.test(w));
+
+    // Combine lists: Candidates first, then regex words (deduplicated)
+    const allWords = [...new Set([...validCandidates, ...regexWords])];
+
     const outlierCount = isDecisionPoint ? 8 : 4;
-    const outlierWords = this._selectOutlierWords(words, outlierCount, isDecisionPoint, decision);
+    const outlierWords = this._selectOutlierWords(allWords, outlierCount, isDecisionPoint, decision);
 
     const gridRows = isDecisionPoint ? 5 : 4;
     const gridCols = 4;
@@ -1202,7 +1295,8 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     const usedWords = new Set(outlierWords.map(w => w.toUpperCase()));
     const gridWords = [...outlierWords];
 
-    for (const word of words) {
+    // Fill remaining spots with other relevant words from narrative
+    for (const word of allWords) {
       if (gridWords.length >= gridSize) break;
       const upperWord = word.toUpperCase();
       if (!usedWords.has(upperWord)) {

@@ -92,10 +92,10 @@ export function GameProvider({
           analytics.logLevelStart(targetCase.id, 'story', pathKey);
 
           // Trigger background generation via StoryContext
-          const { chapter, subchapter } = parseCaseNumber(caseNumber);
-          if (chapter < 12 && hasFirstDecision && subchapter === 1) {
-            story.pregenerateCurrentChapterSiblings(chapter, pathKey, story.storyCampaign?.choiceHistory || []);
-            story.pregenerate(chapter, pathKey, story.storyCampaign?.choiceHistory || []);
+          // Now handles all subchapters robustly, not just subchapter 1
+          const { chapter } = parseCaseNumber(caseNumber);
+          if (chapter < 12 && hasFirstDecision) {
+            story.handleBackgroundGeneration(caseNumber, pathKey);
           }
 
           return { ok: true, caseId: targetCase.id };
