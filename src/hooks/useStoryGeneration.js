@@ -443,8 +443,9 @@ export function useStoryGeneration(storyCampaign) {
     // 1. Primary is already generated, OR
     // 2. Prediction confidence is low (player is unpredictable), OR
     // 3. Player has made many choices (has shown varied behavior)
+    // NOTE: Increased threshold from 0.6 to 0.75 to reduce cache miss rate
     const shouldGenerateSecondary = !needsPrimaryGen ||
-                                     prediction.confidence < 0.6 ||
+                                     prediction.confidence < 0.75 ||
                                      choiceHistory.length >= 3;
 
     if (shouldGenerateSecondary) {

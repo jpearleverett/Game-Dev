@@ -1293,13 +1293,20 @@ Whatever the morning brought, I would face it. That was all I could promise myse
       return savedArc;
     }
 
-    // Generate new arc
+    // Generate new arc with fallback on failure
     console.log('[StoryGenerationService] Generating story arc for path:', pathKey);
-    const arc = await this._generateStoryArc(pathKey, choiceHistory);
-    this.storyArc = arc;
-    await this._saveStoryArc(arcKey, arc);
-
-    return arc;
+    try {
+      const arc = await this._generateStoryArc(pathKey, choiceHistory);
+      this.storyArc = arc;
+      await this._saveStoryArc(arcKey, arc);
+      return arc;
+    } catch (error) {
+      console.warn('[StoryGenerationService] Story arc generation failed, using fallback:', error.message);
+      const fallbackArc = this._createFallbackStoryArc(pathKey, choiceHistory);
+      this.storyArc = fallbackArc;
+      // Don't persist fallback - allow retry on next session
+      return fallbackArc;
+    }
   }
 
   /**
@@ -1405,6 +1412,56 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
   }
 
   /**
+   * Create a fallback story arc when LLM generation fails
+   * Provides a coherent structure for story generation to continue
+   */
+  _createFallbackStoryArc(pathKey, choiceHistory) {
+    const personality = this._analyzePathPersonality(choiceHistory);
+
+    // Customize theme based on player personality
+    const theme = personality.riskTolerance === 'high'
+      ? 'Redemption through decisive action and confrontation'
+      : personality.riskTolerance === 'low'
+        ? 'Redemption through patient investigation and truth-seeking'
+        : 'Redemption through confronting past mistakes';
+
+    return {
+      key: `arc_${pathKey}_${choiceHistory.length}`,
+      pathKey,
+      isFallback: true,
+      playerPersonality: personality.riskTolerance || 'balanced',
+      overallTheme: theme,
+      chapterArcs: [
+        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First innocent discovered', tensionLevel: 4, endingHook: 'A new lead emerges' },
+        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Evidence of conspiracy', tensionLevel: 5, endingHook: 'Trust begins to fracture' },
+        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Second innocent revealed', tensionLevel: 5, endingHook: 'The pattern becomes clear' },
+        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Betrayal discovered', tensionLevel: 6, endingHook: 'An ally becomes suspect' },
+        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Third innocent confronted', tensionLevel: 7, endingHook: 'Stakes escalate dramatically' },
+        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'The web tightens', tensionLevel: 7, endingHook: 'No one can be trusted' },
+        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Major revelation', tensionLevel: 8, endingHook: 'The truth emerges' },
+        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Fourth innocent found', tensionLevel: 8, endingHook: 'Confrontation looms' },
+        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'Final pieces fall', tensionLevel: 9, endingHook: 'The mastermind revealed' },
+        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation', tensionLevel: 10, endingHook: 'Justice or vengeance' },
+        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'The story concludes' },
+      ],
+      characterArcs: {
+        jack: 'From guilt-ridden detective to seeker of truth',
+        victoria: 'The mysterious force driving revelation',
+        sarah: 'Partner whose loyalty will be tested',
+        tomWade: 'Friend whose betrayal runs deepest',
+      },
+      consistencyAnchors: [
+        'Jack Halloway is a retired detective haunted by his past',
+        'Victoria Blackwell is the Midnight Confessor (secretly Emily Cross)',
+        'Tom Wade has been manufacturing evidence for 30 years',
+        'Five innocents were wrongfully convicted',
+        'Eleanor Bellamy spent 8 years in Greystone prison',
+      ],
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
    * Generate a chapter outline before generating individual subchapters
    * This ensures A, B, C subchapters flow seamlessly as one coherent chapter
    */
@@ -1419,10 +1476,17 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
     // Ensure we have the story arc first
     await this.ensureStoryArc(pathKey, choiceHistory);
 
-    const outline = await this._generateChapterOutline(chapter, pathKey, choiceHistory);
-    this.chapterOutlines.set(outlineKey, outline);
-
-    return outline;
+    // Generate outline with fallback on failure
+    try {
+      const outline = await this._generateChapterOutline(chapter, pathKey, choiceHistory);
+      this.chapterOutlines.set(outlineKey, outline);
+      return outline;
+    } catch (error) {
+      console.warn('[StoryGenerationService] Chapter outline generation failed, using fallback:', error.message);
+      const fallbackOutline = this._createFallbackChapterOutline(chapter, pathKey);
+      this.chapterOutlines.set(outlineKey, fallbackOutline);
+      return fallbackOutline;
+    }
   }
 
   /**
@@ -1531,6 +1595,75 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
     return {
       ...outline,
       pathKey,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Create a fallback chapter outline when LLM generation fails
+   * Provides a basic structure for story generation to continue
+   */
+  _createFallbackChapterOutline(chapter, pathKey) {
+    // Determine story phase based on chapter number
+    let phase, tensionLevel, focus;
+    if (chapter <= 4) {
+      phase = 'RISING_ACTION';
+      tensionLevel = 4 + (chapter - 2);
+      focus = 'Investigation deepens';
+    } else if (chapter <= 7) {
+      phase = 'COMPLICATIONS';
+      tensionLevel = 6 + (chapter - 5);
+      focus = 'Betrayals and revelations';
+    } else if (chapter <= 10) {
+      phase = 'CONFRONTATIONS';
+      tensionLevel = 8;
+      focus = 'Direct confrontations';
+    } else {
+      phase = 'RESOLUTION';
+      tensionLevel = 9;
+      focus = 'Final reckoning';
+    }
+
+    return {
+      chapter,
+      pathKey,
+      isFallback: true,
+      summary: `Chapter ${chapter}: Jack continues his investigation into the conspiracy.`,
+      openingMood: 'Noir atmosphere with building tension',
+      subchapterA: {
+        focus: `Opening: ${focus}`,
+        keyBeats: [
+          'Jack reflects on recent discoveries',
+          'New information comes to light',
+          'The investigation takes a turn',
+        ],
+        endingTransition: 'A lead demands immediate attention',
+      },
+      subchapterB: {
+        focus: `Development: The mystery deepens`,
+        keyBeats: [
+          'Jack pursues the new lead',
+          'Unexpected obstacles arise',
+          'A piece of the puzzle falls into place',
+        ],
+        endingTransition: 'Jack faces a difficult choice',
+      },
+      subchapterC: {
+        focus: `Climax: Decision point`,
+        keyBeats: [
+          'Tensions reach a breaking point',
+          'The truth demands a response',
+          'Jack must choose his path forward',
+        ],
+        decisionSetup: 'A choice between two difficult paths',
+      },
+      tensionLevel,
+      phase,
+      consistencyAnchors: [
+        'Jack Halloway seeks the truth',
+        'The conspiracy runs deep',
+        'Every choice has consequences',
+      ],
       generatedAt: new Date().toISOString(),
     };
   }
@@ -2081,6 +2214,186 @@ Generate realistic, specific consequences based on the actual narrative content.
     this.generatedStory = await loadGeneratedStory();
     this.storyContext = await getStoryContext();
     return this;
+  }
+
+  /**
+   * Clean up all stored data for a fresh start
+   * Removes generated story, story arcs, chapter outlines, and resets service state
+   */
+  async cleanupAllStoredData() {
+    console.log('[StoryGenerationService] Starting full storage cleanup...');
+
+    try {
+      // Get all AsyncStorage keys to find story-related ones
+      const allKeys = await AsyncStorage.getAllKeys();
+
+      // Keys to remove: story arcs, chapter outlines, offline queue
+      const keysToRemove = allKeys.filter(key =>
+        key.startsWith('story_arc_') ||
+        key.startsWith('chapter_outline_') ||
+        key === 'detective_portrait_offline_queue'
+      );
+
+      // Remove story arc keys
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+        console.log(`[StoryGenerationService] Removed ${keysToRemove.length} auxiliary storage keys`);
+      }
+
+      // Clear generated story and context via storage module
+      const { clearGeneratedStory } = await import('../storage/generatedStoryStorage');
+      await clearGeneratedStory();
+
+      // Reset service state
+      this.generatedStory = null;
+      this.storyContext = null;
+      this.storyArc = null;
+      this.chapterOutlines.clear();
+      this.consistencyCheckpoints.clear();
+      this.generatedConsequences.clear();
+      this.pendingGenerations.clear();
+      this.threadAcknowledgmentCounts.clear();
+      this.generationAttempts.clear();
+      this.pathPersonality = null;
+      this.consistencyLog = [];
+      this.narrativeThreads = [];
+
+      console.log('[StoryGenerationService] Full cleanup complete');
+      return { success: true, keysRemoved: keysToRemove.length + 2 }; // +2 for story and context
+    } catch (error) {
+      console.error('[StoryGenerationService] Cleanup failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get storage usage statistics
+   */
+  async getStorageStats() {
+    try {
+      const { getStorageSize, getGenerationStats } = await import('../storage/generatedStoryStorage');
+
+      const sizeInfo = await getStorageSize();
+      const genStats = await getGenerationStats();
+
+      // Count story arcs
+      const allKeys = await AsyncStorage.getAllKeys();
+      const arcKeys = allKeys.filter(k => k.startsWith('story_arc_'));
+      const outlineKeys = allKeys.filter(k => k.startsWith('chapter_outline_'));
+
+      return {
+        ...sizeInfo,
+        ...genStats,
+        storyArcCount: arcKeys.length,
+        chapterOutlineCount: outlineKeys.length,
+        totalKeysUsed: arcKeys.length + outlineKeys.length + 2, // +2 for main story and context
+      };
+    } catch (error) {
+      console.warn('[StoryGenerationService] Failed to get storage stats:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Force prune storage to free up space
+   * @param {string} currentPathKey - Player's current path
+   * @param {number} currentChapter - Player's current chapter
+   */
+  async forcePruneStorage(currentPathKey, currentChapter) {
+    try {
+      const { pruneOldGenerations } = await import('../storage/generatedStoryStorage');
+
+      // Target 50% of max storage
+      const targetSize = 2 * 1024 * 1024; // 2MB target
+      const result = await pruneOldGenerations(currentPathKey, currentChapter, targetSize);
+
+      // Also clean up old story arcs that aren't for the current path
+      const allKeys = await AsyncStorage.getAllKeys();
+      const arcKeys = allKeys.filter(k =>
+        k.startsWith('story_arc_') && !k.includes(currentPathKey)
+      );
+
+      if (arcKeys.length > 0) {
+        await AsyncStorage.multiRemove(arcKeys);
+        console.log(`[StoryGenerationService] Removed ${arcKeys.length} old story arcs`);
+      }
+
+      return {
+        ...result,
+        arcsRemoved: arcKeys.length,
+      };
+    } catch (error) {
+      console.error('[StoryGenerationService] Force prune failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Prune stale in-memory Map entries to prevent memory leaks in long sessions
+   * Called periodically during generation to clean up abandoned paths
+   *
+   * @param {string} currentPathKey - The player's current path (entries matching this are preserved)
+   * @param {number} currentChapter - The player's current chapter
+   */
+  pruneInMemoryMaps(currentPathKey, currentChapter) {
+    let prunedCount = 0;
+
+    // Prune generationAttempts: remove entries for chapters far behind current chapter
+    for (const [key] of this.generationAttempts) {
+      // Keys are like "002A_ABABAB" - extract chapter from first 3 chars
+      const chapterNum = parseInt(key.slice(0, 3)) || 0;
+      // Remove attempts for chapters more than 2 behind (they won't be retried)
+      if (chapterNum < currentChapter - 2) {
+        this.generationAttempts.delete(key);
+        prunedCount++;
+      }
+    }
+
+    // Prune threadAcknowledgmentCounts: keep only reasonably recent entries
+    // Threads older than 20 entries are likely from abandoned paths
+    if (this.threadAcknowledgmentCounts.size > 50) {
+      // Take the 30 most recent by keeping entries, delete the rest
+      const entries = Array.from(this.threadAcknowledgmentCounts.entries());
+      const toRemove = entries.slice(0, entries.length - 30);
+      for (const [key] of toRemove) {
+        this.threadAcknowledgmentCounts.delete(key);
+        prunedCount++;
+      }
+    }
+
+    // Prune consistencyCheckpoints: keep only checkpoints for recent chapters
+    for (const [key] of this.consistencyCheckpoints) {
+      // Keys are like "chapter_3_ABABAB"
+      const match = key.match(/chapter_(\d+)/);
+      if (match) {
+        const chapterNum = parseInt(match[1]) || 0;
+        // Keep only checkpoints within 3 chapters of current
+        if (chapterNum < currentChapter - 3) {
+          this.consistencyCheckpoints.delete(key);
+          prunedCount++;
+        }
+      }
+    }
+
+    // Prune chapterOutlines: keep only recent outlines
+    for (const [key] of this.chapterOutlines) {
+      // Keys are like "outline_3_ABABAB"
+      const match = key.match(/outline_(\d+)/);
+      if (match) {
+        const chapterNum = parseInt(match[1]) || 0;
+        // Keep only outlines within 2 chapters of current
+        if (chapterNum < currentChapter - 2) {
+          this.chapterOutlines.delete(key);
+          prunedCount++;
+        }
+      }
+    }
+
+    if (prunedCount > 0) {
+      console.log(`[StoryGenerationService] Pruned ${prunedCount} stale in-memory entries`);
+    }
+
+    return prunedCount;
   }
 
   /**
@@ -3043,6 +3356,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // ========== NEW: Story Arc Planning Integration ==========
       // Ensure we have the global story arc for narrative consistency
       await this.ensureStoryArc(pathKey, choiceHistory);
+
+      // Periodic cleanup of in-memory Maps to prevent leaks in long sessions
+      // Run at the start of each chapter (subchapter A) to avoid overhead
+      if (subchapter === 1) {
+        this.pruneInMemoryMaps(pathKey, chapter);
+      }
 
       // Ensure we have the chapter outline for seamless subchapter flow
       const chapterOutline = await this.ensureChapterOutline(chapter, pathKey, choiceHistory);
@@ -5321,9 +5640,17 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
   /**
    * Known semantic clusters - words that are too closely related to appear
    * as both outliers and main words in the same puzzle
+   *
+   * NOTE: Cached on first access to avoid recreating this large array on every call
    */
   _getSemanticClusters() {
-    return [
+    // Return cached clusters if available
+    if (StoryGenerationService._cachedSemanticClusters) {
+      return StoryGenerationService._cachedSemanticClusters;
+    }
+
+    // Create and cache clusters on first call
+    StoryGenerationService._cachedSemanticClusters = [
       // Weather/Temperature
       ['COLD', 'ICE', 'FROST', 'FREEZE', 'CHILL', 'WINTER', 'SNOW', 'FROZEN', 'FRIGID'],
       ['WIND', 'BREEZE', 'GUST', 'STORM', 'GALE', 'BLOW', 'AIR', 'TEMPEST'],
@@ -5506,7 +5833,43 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
       // Silas Reed (Jack's former partner)
       ['SILAS', 'REED', 'RECLUSE', 'HERMIT', 'FORMER'],
+
+      // ========== COLOR CLUSTERS (Visual descriptions) ==========
+      ['RED', 'CRIMSON', 'SCARLET', 'RUBY', 'MAROON', 'BURGUNDY', 'CHERRY', 'BLOOD-RED'],
+      ['BLUE', 'AZURE', 'NAVY', 'COBALT', 'INDIGO', 'SAPPHIRE', 'CERULEAN', 'MIDNIGHT-BLUE'],
+      ['GREEN', 'EMERALD', 'JADE', 'OLIVE', 'FOREST', 'MOSS', 'VIRIDIAN'],
+      ['BLACK', 'EBONY', 'ONYX', 'JET', 'OBSIDIAN', 'PITCH', 'INKY', 'COAL'],
+      ['WHITE', 'IVORY', 'PEARL', 'ALABASTER', 'SNOW', 'PALE', 'PALLID', 'ASHEN'],
+      ['GREY', 'GRAY', 'SILVER', 'ASH', 'SLATE', 'STEEL', 'CHARCOAL', 'GUNMETAL'],
+      ['GOLD', 'GOLDEN', 'AMBER', 'BRONZE', 'BRASS', 'COPPER', 'TAWNY'],
+
+      // ========== SOUND CLUSTERS (Auditory descriptions) ==========
+      ['WHISPER', 'MURMUR', 'HUSH', 'MUTTER', 'MUMBLE', 'BREATHE', 'SIGH'],
+      ['SCREAM', 'SHOUT', 'YELL', 'CRY', 'SHRIEK', 'HOWL', 'WAIL', 'SCREECH'],
+      ['BANG', 'CRASH', 'SLAM', 'THUD', 'BOOM', 'BLAST', 'CRACK', 'POP'],
+      ['CREAK', 'GROAN', 'SQUEAK', 'SQUEAL', 'SCRAPE', 'SCRATCH', 'RASP'],
+      ['HISS', 'SIZZLE', 'FIZZ', 'BUZZ', 'HUM', 'DRONE', 'WHIR'],
+      ['RUMBLE', 'THUNDER', 'ROAR', 'GROWL', 'SNARL', 'GRUMBLE'],
+      ['CLICK', 'CLACK', 'TAP', 'KNOCK', 'RAP', 'TICK', 'TOCK'],
+      ['RING', 'CHIME', 'TOLL', 'BELL', 'DING', 'CLANG', 'JINGLE'],
+
+      // ========== SYNONYM EXPANSIONS (Common noir words) ==========
+      ['SHADOW', 'SILHOUETTE', 'OUTLINE', 'SHAPE', 'FIGURE', 'FORM', 'PROFILE'],
+      ['STARE', 'GLARE', 'GAWK', 'OGLE', 'PEER', 'SQUINT', 'SCRUTINIZE'],
+      ['WHISKEY', 'BOURBON', 'SCOTCH', 'RYE', 'BRANDY', 'COGNAC', 'LIQUOR'],
+      ['CIGARETTE', 'SMOKE', 'CIGAR', 'TOBACCO', 'ASH', 'BUTT', 'DRAG', 'PUFF'],
+      ['TIRED', 'WEARY', 'EXHAUSTED', 'FATIGUED', 'WORN', 'DRAINED', 'SPENT'],
+      ['OLD', 'AGED', 'WORN', 'WEATHERED', 'BATTERED', 'SHABBY', 'DECREPIT'],
+
+      // ========== BODY/PHYSICAL EXPANSIONS ==========
+      ['LEG', 'FOOT', 'FEET', 'KNEE', 'ANKLE', 'THIGH', 'CALF', 'TOE'],
+      ['ARM', 'ELBOW', 'WRIST', 'SHOULDER', 'BICEP', 'FOREARM'],
+      ['CHEST', 'TORSO', 'RIBS', 'HEART', 'LUNGS', 'STOMACH', 'GUT'],
+      ['HEAD', 'SKULL', 'BRAIN', 'TEMPLE', 'FOREHEAD', 'BROW', 'SCALP'],
+      ['NECK', 'THROAT', 'JAW', 'CHIN', 'CHEEK', 'MOUTH', 'LIPS'],
     ];
+
+    return StoryGenerationService._cachedSemanticClusters;
   }
 
   /**
