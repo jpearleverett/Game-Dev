@@ -121,6 +121,37 @@ const STORY_CONTENT_SCHEMA = {
       enum: ['low', 'moderate', 'high'],
       description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
     },
+    jackBehaviorDeclaration: {
+      type: 'object',
+      description: 'EXPLICIT declaration of Jack\'s behavior in this scene. Fill out BEFORE writing narrative. MUST match path personality.',
+      properties: {
+        primaryAction: {
+          type: 'string',
+          enum: ['investigate', 'confront', 'observe', 'negotiate', 'flee', 'wait', 'interrogate', 'follow'],
+          description: 'The main action Jack takes in this scene',
+        },
+        dialogueApproach: {
+          type: 'string',
+          enum: ['aggressive', 'measured', 'evasive', 'empathetic', 'threatening', 'pleading'],
+          description: 'How Jack speaks to other characters',
+        },
+        emotionalState: {
+          type: 'string',
+          enum: ['determined', 'desperate', 'cautious', 'angry', 'regretful', 'suspicious', 'resigned'],
+          description: 'Jack\'s dominant emotional state',
+        },
+        physicalBehavior: {
+          type: 'string',
+          enum: ['tense', 'relaxed', 'aggressive', 'defensive', 'stealthy', 'commanding'],
+          description: 'How Jack carries himself physically',
+        },
+        personalityConsistencyNote: {
+          type: 'string',
+          description: 'Brief explanation of how this behavior aligns with player path personality (aggressive/methodical/balanced)',
+        },
+      },
+      required: ['primaryAction', 'dialogueApproach', 'emotionalState', 'physicalBehavior', 'personalityConsistencyNote'],
+    },
     storyDay: {
       type: 'number',
       description: 'Which day of the 12-day timeline this scene takes place. Chapter 2 = Day 2, Chapter 3 = Day 3, etc. The story spans exactly 12 days.',
@@ -227,7 +258,78 @@ const STORY_CONTENT_SCHEMA = {
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+};
+
+/**
+ * Schema for decision-only generation (first pass of two-pass decision generation)
+ * This ensures the decision structure is always complete before narrative generation
+ */
+const DECISION_ONLY_SCHEMA = {
+  type: 'object',
+  properties: {
+    decisionContext: {
+      type: 'string',
+      description: 'Brief description of the narrative situation leading to this choice (2-3 sentences)',
+    },
+    decision: {
+      type: 'object',
+      description: 'The binary choice - generate this FIRST before any narrative',
+      properties: {
+        intro: {
+          type: 'string',
+          description: '1-2 sentences framing the impossible choice Jack faces',
+        },
+        optionA: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "A"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+            narrativeSetup: {
+              type: 'string',
+              description: 'How the narrative should build toward this option being presented (1-2 sentences)',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment', 'narrativeSetup'],
+        },
+        optionB: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "B"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+            narrativeSetup: {
+              type: 'string',
+              description: 'How the narrative should build toward this option being presented (1-2 sentences)',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment', 'narrativeSetup'],
+        },
+      },
+      required: ['intro', 'optionA', 'optionB'],
+    },
+    keyMoments: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '3-5 key moments/beats the narrative must include to naturally lead to this decision',
+    },
+    emotionalArc: {
+      type: 'string',
+      description: 'The emotional journey Jack experiences in this scene (tension, revelation, confrontation, etc.)',
+    },
+  },
+  required: ['decisionContext', 'decision', 'keyMoments', 'emotionalArc'],
 };
 
 /**
@@ -262,6 +364,37 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       enum: ['low', 'moderate', 'high'],
       description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
+    },
+    jackBehaviorDeclaration: {
+      type: 'object',
+      description: 'EXPLICIT declaration of Jack\'s behavior in this scene. Fill out BEFORE writing narrative. MUST match path personality.',
+      properties: {
+        primaryAction: {
+          type: 'string',
+          enum: ['investigate', 'confront', 'observe', 'negotiate', 'flee', 'wait', 'interrogate', 'follow'],
+          description: 'The main action Jack takes in this scene',
+        },
+        dialogueApproach: {
+          type: 'string',
+          enum: ['aggressive', 'measured', 'evasive', 'empathetic', 'threatening', 'pleading'],
+          description: 'How Jack speaks to other characters',
+        },
+        emotionalState: {
+          type: 'string',
+          enum: ['determined', 'desperate', 'cautious', 'angry', 'regretful', 'suspicious', 'resigned'],
+          description: 'Jack\'s dominant emotional state',
+        },
+        physicalBehavior: {
+          type: 'string',
+          enum: ['tense', 'relaxed', 'aggressive', 'defensive', 'stealthy', 'commanding'],
+          description: 'How Jack carries himself physically',
+        },
+        personalityConsistencyNote: {
+          type: 'string',
+          description: 'Brief explanation of how this behavior aligns with player path personality (aggressive/methodical/balanced)',
+        },
+      },
+      required: ['primaryAction', 'dialogueApproach', 'emotionalState', 'physicalBehavior', 'personalityConsistencyNote'],
     },
     storyDay: {
       type: 'number',
@@ -408,7 +541,7 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['intro', 'optionA', 'optionB'],
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
 };
 
 // ============================================================================
@@ -580,8 +713,31 @@ const STYLE_EXAMPLES = `
 ## EXAMPLE: TENSE MOMENT (EXCELLENT)
 "${EXAMPLE_PASSAGES.tenseMoment}"
 
+## EXAMPLE: CHARACTER CONFRONTATION (EXCELLENT)
+"${EXAMPLE_PASSAGES.characterConfrontation}"
+
+## EXAMPLE: EMOTIONAL REVELATION (EXCELLENT)
+"${EXAMPLE_PASSAGES.emotionalRevelation}"
+
+## EXAMPLE: CHASE/ACTION SEQUENCE (EXCELLENT)
+"${EXAMPLE_PASSAGES.chaseSequence}"
+
+## EXAMPLE: INVESTIGATION SCENE (EXCELLENT)
+"${EXAMPLE_PASSAGES.investigationScene}"
+
+## EXAMPLE: QUIET CHARACTER MOMENT (EXCELLENT)
+"${EXAMPLE_PASSAGES.quietMoment}"
+
 ---
-Study these examples. Match their rhythm, tone, and prose quality. Your writing should feel like it belongs in the same novel.
+Study these examples carefully. Note the:
+- Varied sentence lengths (punchy shorts mixed with longer flowing ones)
+- Sensory grounding (rain, neon, whiskey, smoke)
+- Metaphors that feel noir-specific, not generic
+- Dialogue that reveals character without exposition
+- Physical action interleaved with internal thought
+- Tension built through what's NOT said
+
+Your writing should feel like it belongs in the same novel as these passages.
 `;
 
 class StoryGenerationService {
@@ -612,6 +768,9 @@ class StoryGenerationService {
     this.fallbackTemplates = this._initializeFallbackTemplates();
     this.generationAttempts = new Map(); // Track retry attempts per content
     this.maxGenerationAttempts = 3; // Max attempts before using fallback
+
+    // ========== A+ QUALITY: Setup/Payoff Registry ==========
+    this._initializeSetupPayoffRegistry();
   }
 
   // ==========================================================================
@@ -2589,12 +2748,276 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
   }
 
   // ==========================================================================
+  // TWO-PASS DECISION GENERATION
+  // ==========================================================================
+
+  /**
+   * Generate decision structure first (Pass 1 of two-pass generation)
+   * This ensures decisions are always complete and contextually appropriate,
+   * preventing truncation from producing generic placeholder choices
+   */
+  async _generateDecisionStructure(context, chapter) {
+    const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "The Detective Portrait."
+
+## CURRENT STORY STATE
+${context.storySummary || 'Jack Halloway is investigating the wrongful convictions built on his career.'}
+
+## RECENT EVENTS
+${context.previousChapterSummary || 'Jack received another letter from the Midnight Confessor.'}
+
+## ACTIVE NARRATIVE THREADS
+${context.narrativeThreads?.filter(t => t.status === 'active').slice(0, 5).map(t => `- [${t.urgency}] ${t.description}`).join('\n') || '- No active threads'}
+
+## PATH PERSONALITY
+Jack has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
+Risk tolerance: ${context.pathPersonality?.riskTolerance || 'moderate'}
+
+## CHAPTER BEAT TYPE
+This chapter's required beat: ${STORY_STRUCTURE.chapterBeatTypes?.[chapter] || 'STANDARD'}
+
+## YOUR TASK
+Design a meaningful binary decision that:
+1. Emerges naturally from the story situation
+2. Has NO obvious "right" answer - both options have real costs
+3. Connects to themes of wrongful conviction, certainty vs truth, betrayal
+4. Fits the player's established personality while challenging them
+5. Creates genuinely different story branches
+
+Generate the decision structure FIRST. This will guide the narrative that leads to it.`;
+
+    console.log(`[StoryGenerationService] Two-pass generation: Generating decision structure for Chapter ${chapter}`);
+
+    const response = await llmService.complete(
+      [{ role: 'user', content: decisionPrompt }],
+      {
+        systemPrompt: 'You are a noir narrative designer creating morally complex choices. Every decision must have real stakes and no clear "correct" answer.',
+        temperature: GENERATION_CONFIG.temperature.decisions,
+        maxTokens: 2000,
+        responseSchema: DECISION_ONLY_SCHEMA,
+      }
+    );
+
+    try {
+      const parsed = typeof response.content === 'string'
+        ? JSON.parse(response.content)
+        : response.content;
+
+      console.log(`[StoryGenerationService] Decision structure generated: "${parsed.decision?.optionA?.title}" vs "${parsed.decision?.optionB?.title}"`);
+
+      return parsed;
+    } catch (error) {
+      console.error('[StoryGenerationService] Failed to parse decision structure:', error);
+      // Return a valid fallback structure
+      return {
+        decisionContext: 'Jack faces an impossible choice.',
+        decision: {
+          intro: 'The evidence points in two directions, and time is running out.',
+          optionA: {
+            key: 'A',
+            title: 'Take direct action now',
+            focus: 'Prioritizes immediate resolution and confrontation. Risks escalating the situation before all facts are known.',
+            personalityAlignment: 'aggressive',
+            narrativeSetup: 'The tension builds to a breaking point where waiting feels impossible.',
+          },
+          optionB: {
+            key: 'B',
+            title: 'Gather more evidence first',
+            focus: 'Prioritizes thorough investigation and certainty. Risks letting the trail go cold or enemies preparing.',
+            personalityAlignment: 'methodical',
+            narrativeSetup: 'New information suggests there may be more to uncover.',
+          },
+        },
+        keyMoments: ['Building tension', 'Key revelation', 'Forced choice'],
+        emotionalArc: 'Tension building to difficult choice',
+      };
+    }
+  }
+
+  /**
+   * Build prompt for narrative generation with pre-determined decision (Pass 2)
+   */
+  _buildDecisionNarrativePrompt(context, chapter, subchapter, decisionStructure) {
+    const basePrompt = this._buildGenerationPrompt(context, chapter, subchapter, true);
+
+    const decisionGuidance = `
+
+## PRE-DETERMINED DECISION (Your narrative MUST lead to this exact choice)
+The following decision has already been designed. Your narrative must naturally build toward it.
+
+### DECISION INTRO (Use this exact text or very close variation):
+"${decisionStructure.decision.intro}"
+
+### OPTION A: "${decisionStructure.decision.optionA.title}"
+- Focus: ${decisionStructure.decision.optionA.focus}
+- Personality: ${decisionStructure.decision.optionA.personalityAlignment}
+- Narrative setup: ${decisionStructure.decision.optionA.narrativeSetup}
+
+### OPTION B: "${decisionStructure.decision.optionB.title}"
+- Focus: ${decisionStructure.decision.optionB.focus}
+- Personality: ${decisionStructure.decision.optionB.personalityAlignment}
+- Narrative setup: ${decisionStructure.decision.optionB.narrativeSetup}
+
+### KEY MOMENTS TO INCLUDE:
+${decisionStructure.keyMoments.map((m, i) => `${i + 1}. ${m}`).join('\n')}
+
+### EMOTIONAL ARC:
+${decisionStructure.emotionalArc}
+
+### CRITICAL INSTRUCTION:
+Copy the decision object EXACTLY as provided above into your response. Do not modify the decision titles, focus, or intro. Your narrative should make these choices feel earned and natural, but the decision text itself is FIXED.`;
+
+    return basePrompt + decisionGuidance;
+  }
+
+  // ==========================================================================
+  // THREAD NORMALIZATION - Prevents duplicate threads across paths
+  // ==========================================================================
+
+  /**
+   * Normalize a thread to a canonical ID for deduplication
+   * Format: {type}:{sorted_entities}:{action_hash}
+   */
+  _normalizeThreadId(thread) {
+    if (!thread || !thread.description) return null;
+
+    const type = thread.type || 'unknown';
+    const description = thread.description.toLowerCase();
+
+    // Extract character names mentioned in the thread
+    const knownCharacters = [
+      'jack', 'sarah', 'victoria', 'emily', 'tom', 'wade', 'eleanor',
+      'bellamy', 'silas', 'reed', 'grange', 'marcus', 'thornhill',
+      'lisa', 'chen', 'james', 'sullivan', 'teresa', 'reeves', 'confessor'
+    ];
+
+    const mentionedCharacters = knownCharacters
+      .filter(name => description.includes(name))
+      .sort();
+
+    // Extract key action verbs
+    const actionVerbs = [
+      'meet', 'call', 'visit', 'confront', 'investigate', 'find', 'search',
+      'promise', 'agree', 'threaten', 'reveal', 'discover', 'follow', 'watch'
+    ];
+
+    const actions = actionVerbs
+      .filter(verb => description.includes(verb))
+      .sort();
+
+    // Extract time references for appointments
+    const timePatterns = /(?:midnight|noon|morning|evening|tonight|tomorrow|dawn|dusk|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/gi;
+    const times = (description.match(timePatterns) || []).map(t => t.toLowerCase()).sort();
+
+    // Extract location references
+    const locations = [
+      'docks', 'warehouse', 'office', 'precinct', 'greystone', 'prison',
+      'bar', 'apartment', 'morgue', 'courthouse', 'alley', 'waterfront'
+    ];
+    const mentionedLocations = locations
+      .filter(loc => description.includes(loc))
+      .sort();
+
+    // Build normalized ID
+    const parts = [type];
+    if (mentionedCharacters.length > 0) parts.push(mentionedCharacters.join(','));
+    if (actions.length > 0) parts.push(actions[0]); // Primary action
+    if (times.length > 0) parts.push(times[0]); // Primary time
+    if (mentionedLocations.length > 0) parts.push(mentionedLocations[0]); // Primary location
+
+    return parts.join(':');
+  }
+
+  /**
+   * Deduplicate threads using normalized IDs
+   */
+  _deduplicateThreads(threads) {
+    if (!threads || threads.length === 0) return [];
+
+    const seen = new Map();
+    const deduplicated = [];
+
+    for (const thread of threads) {
+      const normalizedId = this._normalizeThreadId(thread);
+
+      if (!normalizedId) {
+        deduplicated.push(thread);
+        continue;
+      }
+
+      if (!seen.has(normalizedId)) {
+        seen.set(normalizedId, thread);
+        // Add normalized ID to thread for tracking
+        thread._normalizedId = normalizedId;
+        deduplicated.push(thread);
+      } else {
+        // Merge: keep the more recent or more urgent version
+        const existing = seen.get(normalizedId);
+        const urgencyRank = { critical: 3, normal: 2, background: 1 };
+
+        if ((urgencyRank[thread.urgency] || 0) > (urgencyRank[existing.urgency] || 0)) {
+          // Replace with more urgent version
+          const idx = deduplicated.indexOf(existing);
+          if (idx !== -1) {
+            thread._normalizedId = normalizedId;
+            deduplicated[idx] = thread;
+            seen.set(normalizedId, thread);
+          }
+        }
+
+        console.log(`[StoryGenerationService] Deduplicated thread: "${thread.description?.slice(0, 50)}..." (normalized: ${normalizedId})`);
+      }
+    }
+
+    return deduplicated;
+  }
+
+  /**
+   * Cap active threads to prevent state explosion
+   * Keeps critical threads, most recent, and auto-resolves old background threads
+   */
+  _capActiveThreads(threads, maxThreads = 20) {
+    if (!threads || threads.length <= maxThreads) return threads;
+
+    // Separate by urgency
+    const critical = threads.filter(t => t.urgency === 'critical' && t.status === 'active');
+    const normal = threads.filter(t => t.urgency === 'normal' && t.status === 'active');
+    const background = threads.filter(t => t.urgency === 'background' && t.status === 'active');
+    const resolved = threads.filter(t => t.status !== 'active');
+
+    // Always keep all critical threads
+    const kept = [...critical];
+
+    // Add normal threads up to limit
+    const remainingSlots = maxThreads - kept.length;
+    const normalToKeep = normal.slice(0, Math.min(normal.length, Math.ceil(remainingSlots * 0.6)));
+    kept.push(...normalToKeep);
+
+    // Add background threads with remaining slots
+    const backgroundSlots = maxThreads - kept.length;
+    const backgroundToKeep = background.slice(0, backgroundSlots);
+    kept.push(...backgroundToKeep);
+
+    // Auto-resolve old background threads that didn't make the cut
+    const autoResolved = background.slice(backgroundSlots).map(t => ({
+      ...t,
+      status: 'resolved',
+      _autoResolved: true,
+      _autoResolveReason: 'Thread cap reached - background thread auto-closed',
+    }));
+
+    console.log(`[StoryGenerationService] Thread cap: kept ${kept.length}, auto-resolved ${autoResolved.length} background threads`);
+
+    return [...kept, ...autoResolved, ...resolved];
+  }
+
+  // ==========================================================================
   // GENERATION AND VALIDATION
   // ==========================================================================
 
   /**
    * Generate a single subchapter with validation
    * Now integrates Story Arc Planning and Chapter Outlines for 100% consistency
+   * Decision points use two-pass generation to ensure complete, contextual choices
    */
   async generateSubchapter(chapter, subchapter, pathKey, choiceHistory = []) {
     if (!llmService.isConfigured()) {
@@ -2633,39 +3056,76 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       // Build comprehensive context (now includes story arc and chapter outline)
       const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
+      // Apply thread normalization and capping to prevent state explosion
+      if (context.narrativeThreads) {
+        context.narrativeThreads = this._deduplicateThreads(context.narrativeThreads);
+        context.narrativeThreads = this._capActiveThreads(context.narrativeThreads, 20);
+      }
+
       // Add story arc and chapter outline to context
       context.storyArc = this.storyArc;
       context.chapterOutline = chapterOutline;
 
-      // Build the prompt with all context (including new planning data)
-      const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
-
-      // Select appropriate temperature and schema based on content type
-      const temperature = isDecisionPoint
-        ? GENERATION_CONFIG.temperature.decisions
-        : GENERATION_CONFIG.temperature.narrative;
-      const responseSchema = isDecisionPoint
-        ? DECISION_CONTENT_SCHEMA
-        : STORY_CONTENT_SCHEMA;
-
       this.isGenerating = true;
       try {
-        // Primary generation with structured output
-        const response = await llmService.complete(
-          [{ role: 'user', content: prompt }],
-          {
-            systemPrompt: MASTER_SYSTEM_PROMPT,
-            temperature,
-            // Decision points have larger schema requirements (optionA, optionB) - add buffer
-            maxTokens: isDecisionPoint
-              ? GENERATION_CONFIG.maxTokens.subchapter + 2000
-              : GENERATION_CONFIG.maxTokens.subchapter,
-            responseSchema,
-          }
-        );
+        let generatedContent;
+        let decisionStructure = null;
 
-        // Parse JSON response (guaranteed valid by schema)
-        let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+        if (isDecisionPoint) {
+          // ========== TWO-PASS GENERATION FOR DECISION POINTS ==========
+          // Pass 1: Generate decision structure first (ensures complete, contextual choices)
+          decisionStructure = await this._generateDecisionStructure(context, chapter);
+
+          // Pass 2: Generate narrative with pre-determined decision
+          const decisionPrompt = this._buildDecisionNarrativePrompt(context, chapter, subchapter, decisionStructure);
+
+          const response = await llmService.complete(
+            [{ role: 'user', content: decisionPrompt }],
+            {
+              systemPrompt: MASTER_SYSTEM_PROMPT,
+              temperature: GENERATION_CONFIG.temperature.decisions,
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter + 2000,
+              responseSchema: DECISION_CONTENT_SCHEMA,
+            }
+          );
+
+          generatedContent = this._parseGeneratedContent(response.content, true);
+
+          // Ensure the decision from Pass 1 is used (in case LLM modified it)
+          if (decisionStructure.decision) {
+            generatedContent.decision = {
+              intro: decisionStructure.decision.intro,
+              optionA: {
+                key: 'A',
+                title: decisionStructure.decision.optionA.title,
+                focus: decisionStructure.decision.optionA.focus,
+                personalityAlignment: decisionStructure.decision.optionA.personalityAlignment,
+              },
+              optionB: {
+                key: 'B',
+                title: decisionStructure.decision.optionB.title,
+                focus: decisionStructure.decision.optionB.focus,
+                personalityAlignment: decisionStructure.decision.optionB.personalityAlignment,
+              },
+            };
+            console.log(`[StoryGenerationService] Two-pass complete: Decision preserved from Pass 1`);
+          }
+        } else {
+          // ========== STANDARD SINGLE-PASS FOR NON-DECISION SUBCHAPTERS ==========
+          const prompt = this._buildGenerationPrompt(context, chapter, subchapter, false);
+
+          const response = await llmService.complete(
+            [{ role: 'user', content: prompt }],
+            {
+              systemPrompt: MASTER_SYSTEM_PROMPT,
+              temperature: GENERATION_CONFIG.temperature.narrative,
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+              responseSchema: STORY_CONTENT_SCHEMA,
+            }
+          );
+
+          generatedContent = this._parseGeneratedContent(response.content, false);
+        }
 
         // Validate word count with retry logic
         let wordCount = generatedContent.narrative.split(/\s+/).length;
@@ -2702,6 +3162,62 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
 
         // Validate consistency (check for obvious violations)
         let validationResult = this._validateConsistency(generatedContent, context);
+
+        // ========== A+ QUALITY VALIDATION ==========
+        // Track setups for major revelations
+        this._trackSetups(generatedContent.narrative, chapter, subchapter);
+
+        // Run prose quality validation
+        const proseQuality = this._validateProseQuality(generatedContent.narrative);
+        if (proseQuality.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.warnings];
+        }
+        if (proseQuality.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...proseQuality.issues];
+          validationResult.valid = false;
+        }
+        console.log(`[A+Quality] Prose quality score: ${proseQuality.score}/100`);
+
+        // Run sentence variety validation
+        const sentenceVariety = this._validateSentenceVariety(generatedContent.narrative);
+        if (sentenceVariety.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.warnings];
+        }
+        if (sentenceVariety.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...sentenceVariety.issues];
+          validationResult.valid = false;
+        }
+
+        // Run character voice validation
+        const characterVoice = this._validateCharacterVoices(generatedContent.narrative);
+        if (characterVoice.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...characterVoice.warnings];
+        }
+        if (characterVoice.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...characterVoice.issues];
+          validationResult.valid = false;
+        }
+
+        // Validate setup/payoff balance
+        const setupPayoff = this._validateSetupPayoff(chapter, generatedContent.narrative);
+        if (setupPayoff.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...setupPayoff.warnings];
+        }
+        if (setupPayoff.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...setupPayoff.issues];
+          validationResult.valid = false;
+        }
+
+        // Validate arc closure for final chapters (11-12)
+        const arcClosure = this._validateArcClosure(chapter, context);
+        if (arcClosure.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.warnings];
+        }
+        if (arcClosure.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...arcClosure.issues];
+          validationResult.valid = false;
+        }
+
         let retries = 0;
 
         while (!validationResult.valid && retries < MAX_RETRIES) {
@@ -3277,6 +3793,54 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
         }
       }
 
+      // =========================================================================
+      // BEHAVIOR DECLARATION VALIDATION (Schema-Level Enforcement)
+      // =========================================================================
+      if (content.jackBehaviorDeclaration) {
+        const behavior = content.jackBehaviorDeclaration;
+
+        // Define personality-appropriate behaviors
+        const methodicalBehaviors = {
+          primaryAction: ['investigate', 'observe', 'wait', 'follow'],
+          dialogueApproach: ['measured', 'evasive', 'empathetic'],
+          physicalBehavior: ['tense', 'defensive', 'stealthy'],
+        };
+
+        const aggressiveBehaviors = {
+          primaryAction: ['confront', 'interrogate', 'negotiate'],
+          dialogueApproach: ['aggressive', 'threatening'],
+          physicalBehavior: ['aggressive', 'commanding', 'tense'],
+        };
+
+        if (personality.riskTolerance === 'low') {
+          // Methodical player - check for aggressive behaviors
+          if (behavior.primaryAction && aggressiveBehaviors.primaryAction.includes(behavior.primaryAction)) {
+            if (!methodicalBehaviors.primaryAction.includes(behavior.primaryAction)) {
+              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared primaryAction="${behavior.primaryAction}". Expected one of: ${methodicalBehaviors.primaryAction.join(', ')}`);
+            }
+          }
+          if (behavior.dialogueApproach && aggressiveBehaviors.dialogueApproach.includes(behavior.dialogueApproach)) {
+            issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared dialogueApproach="${behavior.dialogueApproach}". Expected one of: ${methodicalBehaviors.dialogueApproach.join(', ')}`);
+          }
+          if (behavior.physicalBehavior === 'aggressive' || behavior.physicalBehavior === 'commanding') {
+            issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared physicalBehavior="${behavior.physicalBehavior}". Expected one of: ${methodicalBehaviors.physicalBehavior.join(', ')}`);
+          }
+        } else if (personality.riskTolerance === 'high') {
+          // Aggressive player - check for overly cautious behaviors
+          if (behavior.primaryAction === 'wait' || behavior.primaryAction === 'flee') {
+            warnings.push(`BEHAVIOR NOTE: Aggressive player declared primaryAction="${behavior.primaryAction}" - ensure this is justified by circumstances`);
+          }
+          if (behavior.dialogueApproach === 'evasive' || behavior.dialogueApproach === 'pleading') {
+            warnings.push(`BEHAVIOR NOTE: Aggressive player declared dialogueApproach="${behavior.dialogueApproach}" - ensure this is justified by circumstances`);
+          }
+        }
+
+        // Verify the personalityConsistencyNote is present and reasonable
+        if (!behavior.personalityConsistencyNote || behavior.personalityConsistencyNote.length < 20) {
+          warnings.push('Behavior declaration missing or has insufficient personalityConsistencyNote explanation');
+        }
+      }
+
       // Check for personality-inconsistent behavior in narrative text - NOW ERRORS
       if (personality.riskTolerance === 'low') {
         // Methodical Jack shouldn't suddenly be reckless
@@ -3608,20 +4172,705 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
     };
   }
 
+  // ==========================================================================
+  // A+ QUALITY VALIDATORS - Advanced prose and narrative quality checks
+  // ==========================================================================
+
+  /**
+   * Validate prose quality - checks for metaphor variety, sentence diversity, and noir voice
+   * Returns quality score (0-100) and specific feedback
+   */
+  _validateProseQuality(narrative) {
+    const issues = [];
+    const warnings = [];
+    let qualityScore = 100;
+
+    // ========== 1. METAPHOR DETECTION ==========
+    // Noir prose should have evocative metaphors, not generic descriptions
+    const noirMetaphorPatterns = [
+      /rain\s+(?:fell|poured|drummed|hammered|beat|washed|slicked|dripped)/i,
+      /shadow[s]?\s+(?:stretched|crawled|pooled|swallowed|embraced|clung)/i,
+      /neon\s+(?:bled|reflected|flickered|buzzed|hummed|painted|spilled)/i,
+      /city\s+(?:breathed|slept|whispered|groaned|stretched|waited)/i,
+      /silence\s+(?:hung|pressed|settled|wrapped|stretched|fell)/i,
+      /guilt\s+(?:weighed|gnawed|clawed|settled|wrapped|clung)/i,
+      /memory\s+(?:surfaced|lurked|haunted|clawed|whispered|echoed)/i,
+      /truth\s+(?:cut|burned|stung|waited|lurked|surfaced)/i,
+      /(?:voice|words?)\s+(?:cut|sliced|dripped|hung|fell|echoed)/i,
+      /eyes\s+(?:burned|bored|searched|narrowed|softened|hardened)/i,
+    ];
+
+    const metaphorCount = noirMetaphorPatterns.reduce((count, pattern) => {
+      return count + (narrative.match(pattern)?.length || 0);
+    }, 0);
+
+    const wordCount = narrative.split(/\s+/).length;
+    const expectedMetaphors = Math.max(2, Math.floor(wordCount / 200)); // Expect 1 per 200 words, minimum 2
+
+    if (metaphorCount < expectedMetaphors) {
+      warnings.push(`Prose lacks noir texture: only ${metaphorCount} evocative metaphors found (expected ${expectedMetaphors}+). Add atmospheric language.`);
+      qualityScore -= 10;
+    }
+
+    // ========== 2. SENSORY DETAIL CHECK ==========
+    // A+ noir prose engages multiple senses
+    const sensoryPatterns = {
+      visual: /\b(?:saw|watched|looked|glanced|neon|shadow|dark|light|glow|flicker|gleam|shine)\b/gi,
+      auditory: /\b(?:heard|sound|noise|whisper|echo|creak|hum|buzz|silence|quiet|jukebox|rain\s+(?:drummed|hammered|pattered))\b/gi,
+      tactile: /\b(?:felt|cold|warm|wet|damp|rough|smooth|grip|touch|chill|sting|burn)\b/gi,
+      olfactory: /\b(?:smell|scent|odor|stink|perfume|smoke|whiskey|rain|musk|sweat)\b/gi,
+      taste: /\b(?:taste|bitter|sweet|sour|whiskey|bourbon|coffee|blood)\b/gi,
+    };
+
+    const sensoryHits = {};
+    let totalSensory = 0;
+    for (const [sense, pattern] of Object.entries(sensoryPatterns)) {
+      const matches = narrative.match(pattern) || [];
+      sensoryHits[sense] = matches.length;
+      totalSensory += matches.length;
+    }
+
+    const sensesCovered = Object.values(sensoryHits).filter(v => v > 0).length;
+    if (sensesCovered < 3) {
+      warnings.push(`Limited sensory engagement: only ${sensesCovered}/5 senses used. Add ${['visual', 'auditory', 'tactile', 'olfactory', 'taste'].filter(s => !sensoryHits[s]).join(', ')} details.`);
+      qualityScore -= 5;
+    }
+
+    // ========== 3. DIALOGUE QUALITY CHECK ==========
+    // Extract dialogue and check for quality
+    const dialogueMatches = narrative.match(/"[^"]+"/g) || [];
+    if (dialogueMatches.length > 0) {
+      // Check for weak dialogue tags
+      const weakTags = /(?:he|she|i)\s+(?:said|asked|replied)\s+(?:quietly|loudly|softly|quickly|slowly)/gi;
+      if (weakTags.test(narrative)) {
+        warnings.push('Weak dialogue tags with adverbs detected. Show emotion through action beats instead.');
+        qualityScore -= 3;
+      }
+
+      // Check for talking heads (no action beats between dialogue)
+      const consecutiveDialogue = narrative.match(/"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"/g);
+      if (consecutiveDialogue && consecutiveDialogue.length > 0) {
+        warnings.push('Dialogue passages lack action beats. Break up long exchanges with physical actions or observations.');
+        qualityScore -= 5;
+      }
+    }
+
+    // ========== 4. PARAGRAPH VARIETY CHECK ==========
+    const paragraphs = narrative.split(/\n\n+/).filter(p => p.trim().length > 0);
+    if (paragraphs.length > 0) {
+      const paragraphLengths = paragraphs.map(p => p.split(/\s+/).length);
+      const avgLength = paragraphLengths.reduce((a, b) => a + b, 0) / paragraphLengths.length;
+      const variance = paragraphLengths.reduce((sum, len) => sum + Math.pow(len - avgLength, 2), 0) / paragraphLengths.length;
+
+      // Low variance means monotonous paragraph structure
+      if (variance < 100 && paragraphs.length > 3) {
+        warnings.push(`Monotonous paragraph structure: variance ${Math.round(variance)}. Vary paragraph lengths for better pacing.`);
+        qualityScore -= 5;
+      }
+    }
+
+    // ========== 5. OPENING QUALITY CHECK ==========
+    const firstParagraph = paragraphs[0] || '';
+    const hasAtmosphericOpening = noirMetaphorPatterns.some(p => p.test(firstParagraph)) ||
+                                   /\b(?:rain|shadow|night|dark|neon|city|street)\b/i.test(firstParagraph);
+
+    if (!hasAtmosphericOpening && wordCount > 200) {
+      warnings.push('Opening lacks atmospheric grounding. Start with sensory scene-setting.');
+      qualityScore -= 5;
+    }
+
+    // ========== 6. ATMOSPHERE DENSITY CHECK (Positive requirement) ==========
+    // Noir prose REQUIRES atmospheric elements - not just absence of forbidden ones
+    const atmospherePatterns = {
+      weather: /\b(?:rain|drizzle|downpour|storm|mist|fog|damp|wet|puddle|umbrella|overcast|cloud|grey|gray)\b/gi,
+      lighting: /\b(?:neon|shadow|dark|dim|glow|flicker|lamp|streetlight|moonlight|fluorescent|bulb)\b/gi,
+      urbanTexture: /\b(?:concrete|brick|alley|street|gutter|pavement|curb|sidewalk|corner|building)\b/gi,
+      noirMood: /\b(?:smoke|cigarette|whiskey|bourbon|glass|bottle|bar|jukebox|mirror|booth)\b/gi,
+      timeOfDay: /\b(?:night|midnight|dawn|dusk|evening|late|early|hour|clock|morning)\b/gi,
+    };
+
+    const atmosphereHits = {};
+    let totalAtmosphere = 0;
+    for (const [category, pattern] of Object.entries(atmospherePatterns)) {
+      const matches = narrative.match(pattern) || [];
+      atmosphereHits[category] = matches.length;
+      totalAtmosphere += matches.length;
+    }
+
+    // Require minimum atmosphere density (at least 3 categories represented)
+    const categoriesCovered = Object.values(atmosphereHits).filter(v => v > 0).length;
+    if (categoriesCovered < 3) {
+      warnings.push(`Thin atmosphere: only ${categoriesCovered}/5 noir categories present (weather, lighting, urban texture, noir mood, time). Add more environmental grounding.`);
+      qualityScore -= 5;
+    }
+
+    // Check density relative to word count (expect ~1 atmospheric element per 50 words)
+    const expectedAtmosphere = Math.floor(wordCount / 50);
+    if (totalAtmosphere < expectedAtmosphere * 0.5) {
+      warnings.push(`Low atmosphere density: ${totalAtmosphere} elements in ${wordCount} words (expected ${expectedAtmosphere}+). Scene feels sterile - add rain, neon, shadows, smoke.`);
+      qualityScore -= 5;
+    }
+
+    // ========== 7. GENERIC PHRASE DETECTION ==========
+    // Detect phrases that feel AI-generated or generic
+    const genericPatterns = [
+      { pattern: /\bthe air\s+(?:was|felt)\s+(?:thick|heavy|tense)\b/i, issue: 'Generic atmosphere: "the air was thick/heavy"' },
+      { pattern: /\bmy\s+(?:heart|pulse)\s+(?:raced|pounded|quickened)\b/i, issue: 'Generic tension: heart racing/pounding' },
+      { pattern: /\ba\s+(?:chill|shiver)\s+(?:ran|went)\s+down\s+(?:my|his|her)\s+spine\b/i, issue: 'Cliché: chill down spine' },
+      { pattern: /\btime\s+(?:seemed\s+to\s+)?(?:stood|stopped|froze|slowed)\b/i, issue: 'Cliché: time stopped/froze' },
+      { pattern: /\beverything\s+(?:changed|happened)\s+(?:so\s+)?fast\b/i, issue: 'Generic pacing: everything happened fast' },
+    ];
+
+    for (const { pattern, issue } of genericPatterns) {
+      if (pattern.test(narrative)) {
+        warnings.push(`${issue} - rewrite with more specific imagery`);
+        qualityScore -= 3;
+      }
+    }
+
+    return {
+      score: Math.max(0, qualityScore),
+      issues,
+      warnings,
+      details: {
+        metaphorCount,
+        sensoryHits,
+        atmosphereHits,
+        atmosphereDensity: totalAtmosphere,
+        dialogueCount: dialogueMatches.length,
+        paragraphCount: paragraphs.length,
+        hasAtmosphericOpening,
+      },
+    };
+  }
+
+  /**
+   * Validate character voice consistency in dialogue
+   * Ensures each character sounds distinct and matches their established voice
+   */
+  _validateCharacterVoices(narrative) {
+    const issues = [];
+    const warnings = [];
+
+    // Character voice signatures from characterReference.js
+    const voiceSignatures = {
+      victoria: {
+        patterns: [
+          /\b(?:education|curriculum|lesson|understand|certainty)\b/i,
+          /\b(?:twelve\s+days?|chess|game|move|piece)\b/i,
+          /\b(?:power|truth|noise|believe)\b/i,
+        ],
+        forbiddenPatterns: [
+          /\b(?:gonna|gotta|ain't|wanna)\b/i, // Too casual for Victoria
+          /\b(?:like,?\s+(?:you\s+know|whatever))\b/i, // Valley speak
+        ],
+        style: 'elegant, calculated, formal diction with sardonic edge',
+      },
+      sarah: {
+        patterns: [
+          /\b(?:partner|force|badge|case|evidence)\b/i,
+          /\b(?:done|finished|walk\s+away|my\s+own)\b/i,
+        ],
+        forbiddenPatterns: [
+          /\b(?:darling|dear|sweetheart)\b/i, // Too soft for Sarah
+        ],
+        style: 'direct, no-nonsense, increasingly independent',
+      },
+      eleanor: {
+        patterns: [
+          /\b(?:years?|prison|greystone|cell|innocent)\b/i,
+          /\b(?:daughter|maya|richard|husband)\b/i,
+        ],
+        forbiddenPatterns: [], // Eleanor can sound bitter in many ways
+        style: 'bitter, resilient, gravel and broken glass',
+      },
+      silas: {
+        patterns: [
+          /\b(?:blackmail|blood\s+money|penthouse|guilty|probably)\b/i,
+          /\b(?:sorry|forgive|mistake|wrong)\b/i,
+        ],
+        forbiddenPatterns: [
+          /\b(?:confident|sure|certain|definitely)\b/i, // Silas is defeated, not confident
+        ],
+        style: 'defeated, bourbon-soaked, confessional',
+      },
+      tom: {
+        patterns: [
+          /\b(?:evidence|forensic|lab|test|results?)\b/i,
+          /\b(?:friend|years?|college|trust)\b/i,
+        ],
+        forbiddenPatterns: [],
+        style: 'outwardly friendly and competent (before revelation)',
+      },
+    };
+
+    // Extract dialogue with speaker attribution
+    // Pattern: "dialogue" [optional: character said/spoke/etc]
+    const dialogueWithAttribution = narrative.match(/"[^"]+"\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
+
+    // Check for dialogue that could be attributed to specific characters
+    const characterNames = ['victoria', 'sarah', 'eleanor', 'silas', 'tom', 'wade', 'reeves', 'bellamy', 'reed', 'confessor', 'blackwell'];
+
+    for (const dialogue of dialogueWithAttribution) {
+      const text = dialogue.match(/"([^"]+)"/)?.[1] || '';
+      const attribution = dialogue.toLowerCase();
+
+      for (const [character, signature] of Object.entries(voiceSignatures)) {
+        // Check if this dialogue is attributed to this character
+        const isThisCharacter = characterNames.some(name =>
+          attribution.includes(name) &&
+          (character === name || character === name.replace('wade', 'tom') || character === name.replace('reeves', 'sarah'))
+        );
+
+        if (isThisCharacter) {
+          // Check for forbidden patterns in this character's dialogue
+          for (const forbidden of signature.forbiddenPatterns) {
+            if (forbidden.test(text)) {
+              warnings.push(`Character voice violation: ${character.toUpperCase()} dialogue contains forbidden pattern. Style should be: ${signature.style}`);
+            }
+          }
+        }
+      }
+    }
+
+    // Cross-check: Victoria should never sound casual like a cop
+    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^"]*"([^"]+)"/gi) || [];
+    for (const match of victoriaDialogue) {
+      const text = match.match(/"([^"]+)"/)?.[1] || '';
+      if (/\b(?:gonna|gotta|ain't|ya|hey|buddy|pal)\b/i.test(text)) {
+        issues.push('Victoria/Confessor uses overly casual language - should be elegant and formal');
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
+   * Validate sentence variety to prevent monotonous prose
+   * Checks for I-stacking, sentence length variety, and opener diversity
+   */
+  _validateSentenceVariety(narrative) {
+    const issues = [];
+    const warnings = [];
+
+    const sentences = narrative.match(/[^.!?]+[.!?]+/g) || [];
+    if (sentences.length < 5) {
+      return { issues, warnings }; // Not enough sentences to validate
+    }
+
+    // ========== 1. I-STACKING DETECTION ==========
+    // Count sentences starting with "I"
+    let consecutiveIStarts = 0;
+    let maxConsecutiveI = 0;
+    let totalIStarts = 0;
+
+    for (const sentence of sentences) {
+      const trimmed = sentence.trim();
+      if (/^I\s+(?!didn't|don't|won't|can't|couldn't|wouldn't|shouldn't)/i.test(trimmed)) {
+        consecutiveIStarts++;
+        totalIStarts++;
+        maxConsecutiveI = Math.max(maxConsecutiveI, consecutiveIStarts);
+      } else {
+        consecutiveIStarts = 0;
+      }
+    }
+
+    if (maxConsecutiveI >= 4) {
+      issues.push(`I-stacking detected: ${maxConsecutiveI} consecutive sentences start with "I". Vary sentence openers.`);
+    } else if (maxConsecutiveI >= 3) {
+      warnings.push(`Minor I-stacking: ${maxConsecutiveI} consecutive "I" sentences. Consider varying openers.`);
+    }
+
+    const iPercentage = (totalIStarts / sentences.length) * 100;
+    if (iPercentage > 50) {
+      warnings.push(`${Math.round(iPercentage)}% of sentences start with "I". Aim for under 40%.`);
+    }
+
+    // ========== 2. SENTENCE LENGTH VARIETY ==========
+    const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
+    const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
+
+    // Check for monotonous length (all sentences within 5 words of average)
+    const nearAverage = sentenceLengths.filter(len => Math.abs(len - avgLength) < 5).length;
+    const monotonyRatio = nearAverage / sentenceLengths.length;
+
+    if (monotonyRatio > 0.8) {
+      warnings.push(`Monotonous sentence length: ${Math.round(monotonyRatio * 100)}% near average (${Math.round(avgLength)} words). Mix short punchy sentences with longer ones.`);
+    }
+
+    // Check for at least some short sentences (under 8 words) for punch
+    const shortSentences = sentenceLengths.filter(len => len < 8).length;
+    if (shortSentences < sentences.length * 0.1) {
+      warnings.push('Few short sentences for impact. Add punchy 3-7 word sentences for noir rhythm.');
+    }
+
+    // ========== 3. OPENER VARIETY ==========
+    // Check first words of sentences for variety
+    const openers = sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean);
+    const openerCounts = {};
+    for (const opener of openers) {
+      openerCounts[opener] = (openerCounts[opener] || 0) + 1;
+    }
+
+    // Any opener used more than 25% of the time is overused
+    for (const [opener, count] of Object.entries(openerCounts)) {
+      const percentage = (count / openers.length) * 100;
+      if (percentage > 25 && count >= 4) {
+        warnings.push(`Opener "${opener}" overused: ${Math.round(percentage)}% of sentences. Vary your sentence starts.`);
+      }
+    }
+
+    // ========== 4. PARAGRAPH OPENER VARIETY ==========
+    const paragraphs = narrative.split(/\n\n+/).filter(p => p.trim());
+    const paragraphOpeners = paragraphs.map(p => p.trim().split(/\s+/).slice(0, 3).join(' ').toLowerCase());
+
+    // Check for repeated paragraph openers (e.g., "The rain..." "The city...")
+    const paraOpenerCounts = {};
+    for (const opener of paragraphOpeners) {
+      // Check first 2 words
+      const key = opener.split(/\s+/).slice(0, 2).join(' ');
+      paraOpenerCounts[key] = (paraOpenerCounts[key] || 0) + 1;
+    }
+
+    for (const [opener, count] of Object.entries(paraOpenerCounts)) {
+      if (count >= 3) {
+        warnings.push(`Paragraph opener pattern "${opener}..." used ${count} times. Vary paragraph beginnings.`);
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
+   * Setup/Payoff Registry - Track story setups that require payoffs
+   * Critical for maintaining narrative promises across chapters
+   */
+  _setupPayoffRegistry = new Map();
+
+  /**
+   * Initialize setup/payoff tracking for major story revelations
+   * Called once at the start of story generation
+   */
+  _initializeSetupPayoffRegistry() {
+    // Major revelations that need proper setup before payoff
+    const majorRevelations = [
+      {
+        id: 'victoria_is_emily',
+        payoff: 'Victoria Blackwell is revealed to be Emily Cross',
+        requiredSetups: [
+          'References to Emily Cross case',
+          'Victoria showing knowledge only Emily would have',
+          'Physical or behavioral hints connecting Victoria to Emily',
+          'Victoria\'s scars or trauma references',
+        ],
+        minSetupCount: 3,
+        earliestPayoffChapter: 6,
+        latestPayoffChapter: 10,
+      },
+      {
+        id: 'tom_betrayal',
+        payoff: 'Tom Wade has been manufacturing evidence for 20 years',
+        requiredSetups: [
+          'Tom\'s "perfect" evidence praised or noticed',
+          'Inconsistencies in old cases',
+          'Someone questioning forensic methods',
+          'Tom acting nervous or defensive',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 5,
+        latestPayoffChapter: 9,
+      },
+      {
+        id: 'grange_serial_kidnapper',
+        payoff: 'Deputy Chief Grange is a serial kidnapper',
+        requiredSetups: [
+          'Missing persons cases mentioned',
+          'Grange having unusual power/access',
+          'Victims\' families or witnesses dismissed',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 7,
+        latestPayoffChapter: 11,
+      },
+      {
+        id: 'silas_blackmailed',
+        payoff: 'Silas Reed was blackmailed into framing Marcus Thornhill',
+        requiredSetups: [
+          'Silas acting guilty or drinking heavily',
+          'Thornhill case inconsistencies',
+          'References to something Silas is hiding',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 4,
+        latestPayoffChapter: 8,
+      },
+      {
+        id: 'five_innocents',
+        payoff: 'The full list of five wrongfully convicted innocents',
+        requiredSetups: [
+          'Individual innocent cases introduced',
+          'Pattern of manufactured evidence emerging',
+          'Victoria\'s "curriculum" references',
+        ],
+        minSetupCount: 4,
+        earliestPayoffChapter: 8,
+        latestPayoffChapter: 11,
+      },
+    ];
+
+    for (const revelation of majorRevelations) {
+      this._setupPayoffRegistry.set(revelation.id, {
+        ...revelation,
+        setupsFound: [],
+        payoffDelivered: false,
+        payoffChapter: null,
+      });
+    }
+  }
+
+  /**
+   * Track setups found in generated content
+   */
+  _trackSetups(narrative, chapter, subchapter) {
+    const narrativeLower = narrative.toLowerCase();
+
+    for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
+      if (revelation.payoffDelivered) continue;
+
+      // Check for setups
+      for (const setup of revelation.requiredSetups) {
+        const setupPatterns = this._generateSetupPatterns(setup);
+        for (const pattern of setupPatterns) {
+          if (pattern.test(narrativeLower)) {
+            if (!revelation.setupsFound.includes(setup)) {
+              revelation.setupsFound.push(setup);
+              console.log(`[SetupPayoff] Found setup for ${id}: "${setup}" in Chapter ${chapter}.${subchapter}`);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Generate regex patterns for setup detection
+   */
+  _generateSetupPatterns(setup) {
+    const setupLower = setup.toLowerCase();
+    const patterns = [];
+
+    // Direct keyword matching
+    const keywords = setupLower.match(/\b\w{4,}\b/g) || [];
+    if (keywords.length >= 2) {
+      // Pattern: at least 2 keywords within 100 characters
+      patterns.push(new RegExp(keywords.slice(0, 2).join('.*').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\.\\\*/g, '.{0,100}'), 'i'));
+    }
+
+    // Character-specific patterns
+    if (setupLower.includes('emily')) {
+      patterns.push(/emily\s+cross/i, /cross\s+case/i, /that\s+girl.*(?:dead|missing|closed)/i);
+    }
+    if (setupLower.includes('tom')) {
+      patterns.push(/tom.*(?:evidence|forensic|perfect)/i, /wade.*(?:lab|report|test)/i);
+    }
+    if (setupLower.includes('victoria')) {
+      patterns.push(/victoria.*(?:know|scar|past|trauma)/i, /blackwell.*(?:secret|truth)/i);
+    }
+    if (setupLower.includes('grange')) {
+      patterns.push(/grange.*(?:power|access|missing|girl)/i, /deputy.*(?:chief|suspicious)/i);
+    }
+    if (setupLower.includes('silas')) {
+      patterns.push(/silas.*(?:drink|guilt|hiding|secret)/i, /reed.*(?:nervous|scared)/i);
+    }
+    if (setupLower.includes('thornhill')) {
+      patterns.push(/thornhill.*(?:case|frame|innocent|dead)/i, /marcus.*(?:suicide|lockup)/i);
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Validate setup/payoff balance before major revelations
+   */
+  _validateSetupPayoff(chapter, narrative) {
+    const issues = [];
+    const warnings = [];
+
+    for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
+      // Check if this narrative contains the payoff
+      const payoffPatterns = this._generatePayoffPatterns(id);
+      const hasPayoff = payoffPatterns.some(p => p.test(narrative.toLowerCase()));
+
+      if (hasPayoff) {
+        // Validate sufficient setup before payoff
+        if (revelation.setupsFound.length < revelation.minSetupCount) {
+          issues.push(`PAYOFF WITHOUT SETUP: "${revelation.payoff}" revealed but only ${revelation.setupsFound.length}/${revelation.minSetupCount} required setups found. Previous setups: ${revelation.setupsFound.join(', ') || 'none'}`);
+        }
+
+        // Check timing
+        if (chapter < revelation.earliestPayoffChapter) {
+          warnings.push(`Early payoff: "${revelation.payoff}" in Chapter ${chapter} (recommended: ${revelation.earliestPayoffChapter}+)`);
+        }
+
+        revelation.payoffDelivered = true;
+        revelation.payoffChapter = chapter;
+      }
+
+      // Warn if approaching latest payoff chapter without sufficient setup
+      if (!revelation.payoffDelivered && chapter >= revelation.latestPayoffChapter - 1) {
+        if (revelation.setupsFound.length < revelation.minSetupCount) {
+          warnings.push(`Approaching deadline for "${revelation.payoff}" (Chapter ${revelation.latestPayoffChapter}) with only ${revelation.setupsFound.length}/${revelation.minSetupCount} setups. Add more foreshadowing.`);
+        }
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
+   * Generate patterns to detect payoff delivery
+   */
+  _generatePayoffPatterns(revelationId) {
+    const patterns = {
+      victoria_is_emily: [
+        /victoria.*(?:is|was)\s+emily/i,
+        /emily\s+cross.*(?:alive|survived|you)/i,
+        /blackwell.*(?:real\s+name|true\s+identity|emily)/i,
+        /confessor.*emily/i,
+        /you.*(?:are|were)\s+emily/i,
+      ],
+      tom_betrayal: [
+        /tom.*(?:manufactured|faked|planted)\s+evidence/i,
+        /wade.*(?:lied|fabricated|forged)/i,
+        /best\s+friend.*(?:betrayed|manufactured)/i,
+        /twenty\s+years.*(?:evidence|lies|manufactured)/i,
+        /forensic.*(?:fake|forged|manufactured)/i,
+      ],
+      grange_serial_kidnapper: [
+        /grange.*(?:kidnapped|abducted|took|held)/i,
+        /deputy.*(?:serial|victims|women)/i,
+        /23\s+(?:victims|women|girls)/i,
+        /grange.*(?:basement|captive|prisoner)/i,
+      ],
+      silas_blackmailed: [
+        /silas.*(?:blackmailed|forced|made\s+to)/i,
+        /reed.*(?:framed|set\s+up)\s+(?:thornhill|marcus)/i,
+        /signed.*(?:documents|papers).*(?:blackmail|threaten)/i,
+      ],
+      five_innocents: [
+        /five\s+(?:innocents?|people|victims)/i,
+        /all\s+(?:five|of\s+them).*(?:innocent|wrongful|framed)/i,
+        /eleanor.*marcus.*(?:lisa|james|teresa)/i,
+      ],
+    };
+
+    return patterns[revelationId] || [];
+  }
+
+  /**
+   * Validate arc closure in final chapters (11-12)
+   * Ensures all major threads and revelations are resolved before story ends
+   */
+  _validateArcClosure(chapter, context) {
+    const issues = [];
+    const warnings = [];
+
+    // Only enforce arc closure in final chapters
+    if (chapter < 11) {
+      return { issues, warnings };
+    }
+
+    // Check for undelivered revelations
+    for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
+      if (!revelation.payoffDelivered) {
+        if (chapter === 12) {
+          // Chapter 12: All major revelations MUST be delivered
+          issues.push(`ARC CLOSURE REQUIRED: Major revelation "${revelation.payoff}" has not been delivered. This is the final chapter - all major plot points must resolve.`);
+        } else if (chapter === 11) {
+          // Chapter 11: Warn about undelivered revelations
+          warnings.push(`Approaching finale: "${revelation.payoff}" still undelivered. Ensure this is revealed in chapters 11-12.`);
+        }
+      }
+    }
+
+    // Check for unresolved critical threads
+    if (context.narrativeThreads && context.narrativeThreads.length > 0) {
+      const unresolvedCritical = context.narrativeThreads.filter(t =>
+        t.status === 'active' &&
+        (t.urgency === 'critical' || t.type === 'appointment' || t.type === 'promise')
+      );
+
+      if (chapter === 12 && unresolvedCritical.length > 0) {
+        issues.push(`ARC CLOSURE REQUIRED: ${unresolvedCritical.length} critical thread(s) still unresolved in final chapter: ${unresolvedCritical.slice(0, 3).map(t => t.description?.slice(0, 40)).join('; ')}...`);
+      } else if (chapter === 11 && unresolvedCritical.length > 3) {
+        warnings.push(`Too many unresolved threads (${unresolvedCritical.length}) entering finale. Prioritize resolution.`);
+      }
+    }
+
+    // Check that Victoria/Emily confrontation happens
+    if (chapter === 12) {
+      const victoriaThread = context.narrativeThreads?.find(t =>
+        t.description?.toLowerCase().includes('victoria') ||
+        t.description?.toLowerCase().includes('confessor') ||
+        t.description?.toLowerCase().includes('emily')
+      );
+      if (!victoriaThread || victoriaThread.status !== 'resolved') {
+        warnings.push('Final chapter should include climactic confrontation with Victoria/The Confessor');
+      }
+    }
+
+    return { issues, warnings };
+  }
+
   /**
    * Attempt to fix content that failed validation
+   * NOW INCLUDES A+ QUALITY GUIDANCE for fixing prose issues
    */
   async _fixContent(content, issues, context, isDecisionPoint) {
-    const fixPrompt = `The following generated story content contains consistency violations that must be fixed.
+    // Categorize issues for targeted fixing
+    const proseIssues = issues.filter(i =>
+      i.includes('metaphor') || i.includes('sensory') || i.includes('I-stacking') ||
+      i.includes('sentence') || i.includes('opener') || i.includes('atmosphere') ||
+      i.includes('dialogue') || i.includes('monotonous') || i.includes('Generic')
+    );
+    const consistencyIssues = issues.filter(i => !proseIssues.includes(i));
 
-ISSUES TO FIX:
-${issues.map(i => `- ${i}`).join('\n')}
+    // Build quality guidance for prose fixes
+    const proseGuidance = proseIssues.length > 0 ? `
+## A+ PROSE QUALITY REQUIREMENTS
+Your rewrite MUST address these prose quality issues:
+${proseIssues.map(i => `- ${i}`).join('\n')}
 
-Please rewrite the content to resolve these specific issues while maintaining the noir style, plot, and character voices. Ensure all names and facts are consistent.
+To fix these:
+1. **Metaphors**: Add noir-specific imagery (rain drumming, shadows pooling, neon bleeding)
+2. **Sensory details**: Engage sight, sound, smell, touch, taste
+3. **Sentence variety**: Mix short punchy sentences (3-7 words) with longer flowing ones
+4. **Opener diversity**: Vary how sentences and paragraphs begin (not all "I" or "The")
+5. **Atmospheric grounding**: Open scenes with weather, lighting, physical setting
+6. **Dialogue**: Break up exchanges with action beats (what characters DO while talking)
 
-ORIGINAL CONTENT:
+Example noir texture to emulate:
+"The rain fell on Ashport the way memory falls on the guilty, soft at first, then relentless. Neon bled into the wet streets, turning the city into a watercolor of regret."
+` : '';
+
+    const fixPrompt = `The following generated story content contains violations that must be fixed.
+
+## CONSISTENCY ISSUES TO FIX:
+${consistencyIssues.length > 0 ? consistencyIssues.map(i => `- ${i}`).join('\n') : '(none)'}
+${proseGuidance}
+
+## CRITICAL RULES:
+1. Maintain the exact plot and story events
+2. Keep all character names spelled correctly
+3. Use exact timeline numbers (30 years Tom friendship, 8 years Eleanor prison, etc.)
+4. Stay in first-person past tense from Jack's POV
+5. Never use forbidden words: delve, unravel, tapestry, myriad, whilst, realm
+
+## ORIGINAL CONTENT:
 ${JSON.stringify(content, null, 2)}
-`;
+
+Rewrite the narrative to fix ALL issues while maintaining the noir style and story progression.`;
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
@@ -3630,8 +4879,8 @@ ${JSON.stringify(content, null, 2)}
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],
       {
-        systemPrompt: 'You are an expert editor ensuring narrative consistency. Fix the issues in the provided content without changing the core story.',
-        temperature: GENERATION_CONFIG.temperature.narrative, // Use standard temperature
+        systemPrompt: 'You are an expert noir editor. Fix all issues while enhancing the atmospheric prose quality. Never change the plot, only improve the writing.',
+        temperature: GENERATION_CONFIG.temperature.narrative,
         maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
         responseSchema,
       }
@@ -4221,6 +5470,42 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
       // Betrayal/Trust (Tom Wade's 30-year betrayal)
       ['BETRAY', 'BETRAYAL', 'BETRAYED', 'TRUST', 'TRUSTED', 'FAITH', 'FAITHFUL', 'LOYAL', 'LOYALTY'],
+
+      // ========== ADDITIONAL STORY-CRITICAL CLUSTERS ==========
+
+      // Memory/Recall (Jack's recollections, flashbacks)
+      ['RECALL', 'RECOLLECT', 'NOSTALGIA', 'FLASHBACK', 'MEMORY', 'MEMORIES', 'REMEMBER', 'REMEMBERED'],
+
+      // Victim/Survivor (The Five Innocents are victims)
+      ['VICTIM', 'VICTIMS', 'SURVIVOR', 'SURVIVORS', 'SUFFERER', 'TARGET', 'PREY'],
+
+      // Appeal/Exoneration (Eleanor's appeal, wrongful conviction theme)
+      ['APPEAL', 'APPEALS', 'EXONERATE', 'EXONERATION', 'OVERTURN', 'REVERSAL', 'PARDON', 'RELEASE'],
+
+      // Midnight/Night (Victoria's timing, noir atmosphere)
+      ['MIDNIGHT', 'MIDNIGHTS', 'CONFESSOR', 'CONFESSION', 'WITCHING', 'TWELVE', 'STROKE'],
+
+      // Evidence types (Tom's manufactured evidence)
+      ['FINGERPRINT', 'FINGERPRINTS', 'DNA', 'FIBER', 'FIBERS', 'TRACE', 'SAMPLE', 'SPECIMEN'],
+      ['AUTOPSY', 'POSTMORTEM', 'CORONER', 'MEDICAL', 'EXAMINER', 'FORENSICS'],
+
+      // Confession variants (The Midnight Confessor's letters)
+      ['LETTER', 'LETTERS', 'ENVELOPE', 'ENVELOPES', 'MISSIVE', 'CORRESPONDENCE', 'MAIL'],
+
+      // Watching/Surveillance (Jack's investigation methods)
+      ['STAKEOUT', 'SURVEILLANCE', 'WATCHING', 'OBSERVING', 'TAILING', 'SHADOWING', 'SPYING'],
+
+      // Old/Past (30 years of friendship, 8 years in prison)
+      ['YEARS', 'DECADES', 'ANCIENT', 'FORMER', 'PREVIOUS', 'PRIOR', 'OLD', 'AGED'],
+
+      // Five Innocents names (prevent character name overlap issues)
+      ['MARCUS', 'THORNHILL', 'ACCOUNTANT', 'EMBEZZLER'],
+      ['LISA', 'CHEN', 'DOCTOR', 'PHYSICIAN'],
+      ['JAMES', 'SULLIVAN', 'MECHANIC', 'GARAGE'],
+      ['TERESA', 'WADE', 'TOM', 'WIFE'],
+
+      // Silas Reed (Jack's former partner)
+      ['SILAS', 'REED', 'RECLUSE', 'HERMIT', 'FORMER'],
     ];
   }
 

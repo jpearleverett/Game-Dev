@@ -401,6 +401,70 @@ Sarah's voice crackled through my earpiece. "Jack, we can't be in two places. Yo
 Choice. Victoria's favorite word. The whole game was built on them, each one a brick in the wall I'd built around the innocent people I'd helped bury. Now she wanted me to understand what that felt like from the other side.
 
 The floor creaked under my boots. Both paths led somewhere dark. The only question was which darkness I could live with.`,
+
+  // ========== NEW A+ QUALITY EXAMPLES ==========
+
+  characterConfrontation: `Victoria's penthouse smelled of old money and new secrets. Floor-to-ceiling windows gave her a god's-eye view of Ashport, the city spread out like a game board beneath her heels. She didn't turn when I entered. Didn't need to.
+
+"Seven years." Her voice carried the weight of every one of them. "That's how long I waited. Planned. Watched you collect your commendations while I learned to walk again."
+
+"Emily." The name felt like broken glass in my mouth. "I closed your case because the evidence—"
+
+"The evidence said I was dead." She turned then, and I saw what Grange had done to her. The scars traced a map of suffering across her throat, her wrists. "I heard you, Jack. Through the floor of that basement. 'Case closed. Moving on.' Those were your words while he was still deciding whether to let me live."
+
+Her eyes held something worse than hatred. Understanding. She knew exactly what I was, because she'd built herself into something stronger.`,
+
+  emotionalRevelation: `The photograph shook in my hands. Not from age, not from the rain that had soaked through the folder. From recognition.
+
+That was Tom's handwriting. Thirty years of friendship, and I knew his chicken scratch better than my own signature. But this wasn't case notes or lab reports. This was a ledger. Names, dates, evidence reference numbers. A catalog of lies stretching back two decades.
+
+Marcus Thornhill's case was on page three. The fiber analysis that put him at the scene. Tom's notation: "Sample sourced externally. Match achieved 11/4."
+
+Sourced externally. That meant fabricated. That meant Tom had watched Marcus hang himself in a cell for a crime built on nothing but manufactured threads.
+
+I'd stood at that man's funeral. Told his daughter Claire that justice had been served. Let her spend four years thinking the system worked, when the system was just another word for my best friend's lies.
+
+The folder fell from my fingers. I barely heard it hit the floor. All I could hear was thirty years of certainty crumbling into dust.`,
+
+  chaseSequence: `The warehouse door splintered behind me. No time to look. No time to think.
+
+Left. Through the shipping containers. Rain hammered the metal above, masking my footsteps but theirs too. Three of them, maybe four. Grange's cleanup crew.
+
+My lungs burned. Two decades of Jameson and too many cigarettes catching up at the worst possible moment. A bullet sparked off steel six inches from my head. Close. Getting closer.
+
+Corner. Right. Another row of crates. The dock had to be nearby. Had to be.
+
+Voices behind me, coordinating. Professional. The kind of men who made problems disappear for Deputy Chief Grange. Twenty-three victims. I wasn't planning to be number twenty-four.
+
+The container ahead was open. Dark inside. A choice made in heartbeats: hide and hope, or keep running and pray.
+
+I dove into the darkness. Held my breath. Listened to their boots thunder past, hunting a ghost in the rain.`,
+
+  investigationScene: `The Thornhill file told a story if you knew how to read it. Most people didn't. Most people saw evidence and assumed it meant truth. Thirty years on the job had taught me better. Now those lessons tasted like ash.
+
+Claire had gathered everything. Bank records showing the shell company was created three days before Marcus was fired. Emails her father never wrote, sent from a computer he never owned. The forensic timeline that proved the money moved while Marcus was in surgery getting his appendix removed.
+
+"Your partner signed the arrest warrant." Claire's voice held no accusation. She was past that. This was simple recitation of fact. "Silas Reed. He took the forgeries and stamped them real."
+
+I spread the documents across my desk. The rain on the window caught the light, made the papers glow like accusation. Every page was a nail in a coffin I'd helped build.
+
+"Why are you showing me this?" I asked, though I already knew.
+
+"Because you're the only cop who might actually care." She leaned forward, four years of grief compressed into certainty. "And because Victoria Blackwell told me you'd want to see what you helped bury."`,
+
+  quietMoment: `Murphy's was empty at 3 AM. Just me, the jukebox, and a glass of Jameson that wasn't helping.
+
+The stool next to me creaked. Sarah sat down without asking, ordered a coffee she wouldn't drink. We watched the rain together for a while. Some things don't need words. Thirteen years of partnership buys you that much silence.
+
+"I filed the Conviction Integrity request today." She said it to the mirror behind the bar, not to me. "Eleanor Bellamy's case. If even half of what we've found is true..."
+
+"It's true." The whiskey burned going down. "All of it."
+
+"Then you know what happens next." She finally looked at me. Her eyes held something I couldn't name. Disappointment, maybe. Or worse, pity. "Internal Affairs. Grand jury. Everything you built, Jack. Gone."
+
+I poured another glass. "It was never mine to build."
+
+She left her coffee untouched and walked back into the rain. The jukebox played something about roads not taken. I drank until the song ended, then drank some more.`,
 };
 
 // ============================================================================
