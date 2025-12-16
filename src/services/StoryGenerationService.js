@@ -1453,7 +1453,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
       consistencyAnchors: [
         'Jack Halloway is a retired detective haunted by his past',
         'Victoria Blackwell is the Midnight Confessor (secretly Emily Cross)',
-        'Tom Wade has been manufacturing evidence for 30 years',
+        'Tom Wade has been manufacturing evidence for 20 years (friends with Jack for 30 years)',
         'Five innocents were wrongfully convicted',
         'Eleanor Bellamy spent 8 years in Greystone prison',
       ],
