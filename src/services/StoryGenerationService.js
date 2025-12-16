@@ -10,6 +10,7 @@
  * - Structured output parsing with validation
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { llmService } from './LLMService';
 import {
   loadGeneratedStory,
@@ -332,6 +333,595 @@ class StoryGenerationService {
     this.decisionConsequences = new Map(); // Tracks ongoing effects of player choices
     this.characterStates = new Map(); // Tracks character relationship/trust states
     this.narrativeThreads = []; // Active story threads that must be maintained
+
+    // ========== NEW: Story Arc Planning System ==========
+    this.storyArc = null; // Global story arc generated at start for consistency
+    this.chapterOutlines = new Map(); // Pre-generated chapter outlines for seamless flow
+    this.indexedFacts = null; // Smart fact index by relevance
+    this.consistencyCheckpoints = new Map(); // Periodic state validation snapshots
+    this.generatedConsequences = new Map(); // Dynamically generated decision consequences
+  }
+
+  // ==========================================================================
+  // STORY ARC PLANNING - Generates high-level outline for 100% consistency
+  // ==========================================================================
+
+  /**
+   * Generate or retrieve the story arc - called once at the start of dynamic generation
+   * This ensures ALL 12 chapters follow a coherent narrative thread regardless of player choices
+   */
+  async ensureStoryArc(pathKey, choiceHistory = []) {
+    const arcKey = `arc_${pathKey}_${choiceHistory.length}`;
+
+    // Check if we already have a valid arc
+    if (this.storyArc && this.storyArc.key === arcKey) {
+      return this.storyArc;
+    }
+
+    // Check persistent storage
+    const savedArc = await this._loadStoryArc(arcKey);
+    if (savedArc) {
+      this.storyArc = savedArc;
+      return savedArc;
+    }
+
+    // Generate new arc
+    console.log('[StoryGenerationService] Generating story arc for path:', pathKey);
+    const arc = await this._generateStoryArc(pathKey, choiceHistory);
+    this.storyArc = arc;
+    await this._saveStoryArc(arcKey, arc);
+
+    return arc;
+  }
+
+  /**
+   * Generate the master story arc that guides all chapter generation
+   */
+  async _generateStoryArc(pathKey, choiceHistory) {
+    const personality = this._analyzePathPersonality(choiceHistory);
+
+    const arcPrompt = `You are the story architect for "The Detective Portrait," a 12-chapter noir detective mystery.
+
+## STORY PREMISE
+Jack Halloway, a retired detective, discovers his career was built on manufactured evidence. The Midnight Confessor (Victoria Blackwell, secretly Emily Cross) forces him to confront each wrongful conviction.
+
+## PLAYER PATH: "${pathKey}"
+Player personality: ${personality.narrativeStyle}
+Risk tolerance: ${personality.riskTolerance}
+
+## YOUR TASK
+Create a high-level story arc outline for Chapters 2-12 that:
+1. Maintains PERFECT narrative consistency across all chapters
+2. Builds appropriate tension per story phase
+3. Ensures each chapter has a clear purpose advancing the mystery
+4. Creates meaningful decision points that reflect player personality
+5. Weaves all 5 innocents' stories together naturally
+
+## STORY PHASES
+- Chapters 2-4: RISING ACTION (investigating, uncovering clues)
+- Chapters 5-7: COMPLICATIONS (betrayals revealed, stakes escalate)
+- Chapters 8-10: CONFRONTATIONS (major revelations, direct confrontations)
+- Chapters 11-12: RESOLUTION (final confrontation, consequences manifest)
+
+## FIVE INNOCENTS TO WEAVE IN
+1. Eleanor Bellamy - wrongly convicted of husband's murder (8 years in Greystone)
+2. Marcus Thornhill - framed for embezzlement (committed suicide)
+3. Dr. Lisa Chen - reported evidence tampering (career destroyed)
+4. James Sullivan - details revealed progressively
+5. Teresa Wade - Tom Wade's own daughter (convicted using his methods)
+
+Provide a structured arc ensuring each innocent's story gets proper attention.`;
+
+    const arcSchema = {
+      type: 'object',
+      properties: {
+        overallTheme: {
+          type: 'string',
+          description: 'The central thematic throughline for this playthrough',
+        },
+        chapterArcs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              chapter: { type: 'number' },
+              phase: { type: 'string' },
+              primaryFocus: { type: 'string', description: 'Main narrative focus for this chapter' },
+              innocentFeatured: { type: 'string', description: 'Which innocent is featured (if any)' },
+              keyRevelation: { type: 'string', description: 'What major truth is revealed' },
+              tensionLevel: { type: 'number', description: '1-10 tension scale' },
+              endingHook: { type: 'string', description: 'How this chapter should end to hook into the next' },
+              decisionTheme: { type: 'string', description: 'What kind of choice the player faces' },
+            },
+            required: ['chapter', 'phase', 'primaryFocus', 'tensionLevel', 'endingHook'],
+          },
+        },
+        characterArcs: {
+          type: 'object',
+          properties: {
+            jack: { type: 'string', description: 'Jack\'s emotional journey across chapters' },
+            victoria: { type: 'string', description: 'How Victoria\'s presence evolves' },
+            sarah: { type: 'string', description: 'Sarah Reeves\' arc' },
+            tomWade: { type: 'string', description: 'Tom Wade\'s betrayal arc' },
+          },
+        },
+        consistencyAnchors: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Key facts that MUST remain consistent across all chapters',
+        },
+      },
+      required: ['overallTheme', 'chapterArcs', 'characterArcs', 'consistencyAnchors'],
+    };
+
+    const response = await llmService.complete(
+      [{ role: 'user', content: arcPrompt }],
+      {
+        systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive noir mystery.',
+        temperature: 0.6, // Lower temperature for planning consistency
+        maxTokens: 4000,
+        responseSchema: arcSchema,
+      }
+    );
+
+    const arc = typeof response.content === 'string'
+      ? JSON.parse(response.content)
+      : response.content;
+
+    return {
+      key: `arc_${pathKey}_${choiceHistory.length}`,
+      pathKey,
+      ...arc,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Generate a chapter outline before generating individual subchapters
+   * This ensures A, B, C subchapters flow seamlessly as one coherent chapter
+   */
+  async ensureChapterOutline(chapter, pathKey, choiceHistory = []) {
+    const outlineKey = `outline_${chapter}_${pathKey}`;
+
+    // Check if we already have this outline
+    if (this.chapterOutlines.has(outlineKey)) {
+      return this.chapterOutlines.get(outlineKey);
+    }
+
+    // Ensure we have the story arc first
+    await this.ensureStoryArc(pathKey, choiceHistory);
+
+    const outline = await this._generateChapterOutline(chapter, pathKey, choiceHistory);
+    this.chapterOutlines.set(outlineKey, outline);
+
+    return outline;
+  }
+
+  /**
+   * Generate detailed outline for a single chapter
+   */
+  async _generateChapterOutline(chapter, pathKey, choiceHistory) {
+    const chapterArc = this.storyArc?.chapterArcs?.find(c => c.chapter === chapter);
+    const previousOutlines = [];
+
+    // Gather previous chapter outlines for continuity
+    for (let i = 2; i < chapter; i++) {
+      const prevKey = `outline_${i}_${this._getPathKeyForChapter(i, choiceHistory)}`;
+      if (this.chapterOutlines.has(prevKey)) {
+        previousOutlines.push(this.chapterOutlines.get(prevKey));
+      }
+    }
+
+    const outlinePrompt = `Generate a detailed outline for Chapter ${chapter} of "The Detective Portrait."
+
+## STORY ARC GUIDANCE
+${chapterArc ? `
+- Phase: ${chapterArc.phase}
+- Primary Focus: ${chapterArc.primaryFocus}
+- Featured Innocent: ${chapterArc.innocentFeatured || 'None specifically'}
+- Key Revelation: ${chapterArc.keyRevelation || 'Building tension'}
+- Tension Level: ${chapterArc.tensionLevel}/10
+- Ending Hook: ${chapterArc.endingHook}
+- Decision Theme: ${chapterArc.decisionTheme || 'Moral complexity'}
+` : `Chapter ${chapter} - Continue building the mystery`}
+
+## PREVIOUS CHAPTERS SUMMARY
+${previousOutlines.map(o => `Chapter ${o.chapter}: ${o.summary}`).join('\n') || 'Starting fresh from Chapter 1'}
+
+## REQUIREMENTS
+Create a 3-part outline (Subchapters A, B, C) that:
+1. Flows seamlessly as ONE coherent chapter experience
+2. Subchapter A: Opens with atmosphere, establishes chapter's focus
+3. Subchapter B: Develops the investigation/revelation
+4. Subchapter C: Builds to decision point with genuine moral complexity
+
+Each subchapter should feel like a natural continuation, not a separate scene.`;
+
+    const outlineSchema = {
+      type: 'object',
+      properties: {
+        chapter: { type: 'number' },
+        summary: { type: 'string', description: 'One sentence summary of the entire chapter' },
+        openingMood: { type: 'string', description: 'Atmospheric tone for chapter opening' },
+        subchapterA: {
+          type: 'object',
+          properties: {
+            focus: { type: 'string' },
+            keyBeats: { type: 'array', items: { type: 'string' } },
+            endingTransition: { type: 'string', description: 'How A flows into B' },
+          },
+          required: ['focus', 'keyBeats', 'endingTransition'],
+        },
+        subchapterB: {
+          type: 'object',
+          properties: {
+            focus: { type: 'string' },
+            keyBeats: { type: 'array', items: { type: 'string' } },
+            endingTransition: { type: 'string', description: 'How B flows into C' },
+          },
+          required: ['focus', 'keyBeats', 'endingTransition'],
+        },
+        subchapterC: {
+          type: 'object',
+          properties: {
+            focus: { type: 'string' },
+            keyBeats: { type: 'array', items: { type: 'string' } },
+            decisionSetup: { type: 'string', description: 'How the narrative builds to the choice' },
+            optionADirection: { type: 'string', description: 'What Option A represents' },
+            optionBDirection: { type: 'string', description: 'What Option B represents' },
+          },
+          required: ['focus', 'keyBeats', 'decisionSetup', 'optionADirection', 'optionBDirection'],
+        },
+        narrativeThreads: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Threads to weave through all three subchapters',
+        },
+        consistencyRequirements: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Facts that must be maintained across this chapter',
+        },
+      },
+      required: ['chapter', 'summary', 'subchapterA', 'subchapterB', 'subchapterC'],
+    };
+
+    const response = await llmService.complete(
+      [{ role: 'user', content: outlinePrompt }],
+      {
+        systemPrompt: 'You are outlining a single chapter of an interactive noir mystery. Ensure the three subchapters flow as one seamless narrative.',
+        temperature: 0.65,
+        maxTokens: 2000,
+        responseSchema: outlineSchema,
+      }
+    );
+
+    const outline = typeof response.content === 'string'
+      ? JSON.parse(response.content)
+      : response.content;
+
+    return {
+      ...outline,
+      pathKey,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async _loadStoryArc(arcKey) {
+    try {
+      const data = await AsyncStorage.getItem(`story_arc_${arcKey}`);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async _saveStoryArc(arcKey, arc) {
+    try {
+      await AsyncStorage.setItem(`story_arc_${arcKey}`, JSON.stringify(arc));
+    } catch (error) {
+      console.warn('[StoryGenerationService] Failed to save story arc:', error);
+    }
+  }
+
+  // ==========================================================================
+  // DYNAMIC CONSEQUENCE GENERATION - Auto-generates consequences for all decisions
+  // ==========================================================================
+
+  /**
+   * Ensure we have consequences generated for all player decisions
+   * This fills in gaps in the static DECISION_CONSEQUENCES registry
+   */
+  async _ensureDecisionConsequences(choiceHistory) {
+    for (const choice of choiceHistory) {
+      const consequenceKey = `${choice.caseNumber}_${choice.optionKey}`;
+
+      // Skip if we already have this consequence (static or generated)
+      if (DECISION_CONSEQUENCES[choice.caseNumber]?.[choice.optionKey]) {
+        continue;
+      }
+      if (this.generatedConsequences.has(consequenceKey)) {
+        continue;
+      }
+
+      // Generate consequences for this decision
+      const consequence = await this._generateDecisionConsequence(choice);
+      this.generatedConsequences.set(consequenceKey, consequence);
+
+      // Also store in the registry for future use
+      if (!DECISION_CONSEQUENCES[choice.caseNumber]) {
+        DECISION_CONSEQUENCES[choice.caseNumber] = {};
+      }
+      DECISION_CONSEQUENCES[choice.caseNumber][choice.optionKey] = consequence;
+    }
+  }
+
+  /**
+   * Generate consequences for a single decision
+   */
+  async _generateDecisionConsequence(choice) {
+    const chapter = this._extractChapterFromCase(choice.caseNumber);
+
+    // Try to get context from the decision itself if available
+    const decisionEntry = this.getGeneratedEntry(choice.caseNumber, this._getPathKeyForChapter(chapter, []));
+    const decisionContext = decisionEntry?.decision?.options?.find(o => o.key === choice.optionKey);
+
+    const consequencePrompt = `Generate narrative consequences for a player decision in a noir detective story.
+
+## DECISION CONTEXT
+- Chapter: ${chapter}
+- Player chose: Option ${choice.optionKey}
+${decisionContext ? `- Option title: "${decisionContext.title}"
+- Option focus: "${decisionContext.focus}"` : '- Details not available'}
+
+## REQUIRED OUTPUT
+Generate realistic consequences that will affect future chapters.`;
+
+    const consequenceSchema = {
+      type: 'object',
+      properties: {
+        immediate: {
+          type: 'string',
+          description: 'One sentence describing what Jack did',
+        },
+        ongoing: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '2-4 ongoing effects that will ripple through future chapters',
+        },
+        characterImpact: {
+          type: 'object',
+          properties: {
+            trust: { type: 'number', description: 'Change to trust relationships (-20 to +20)' },
+            aggression: { type: 'number', description: 'Change to aggression level (-20 to +20)' },
+            thoroughness: { type: 'number', description: 'Change to investigation thoroughness (-20 to +20)' },
+          },
+        },
+      },
+      required: ['immediate', 'ongoing', 'characterImpact'],
+    };
+
+    try {
+      const response = await llmService.complete(
+        [{ role: 'user', content: consequencePrompt }],
+        {
+          systemPrompt: 'You are generating narrative consequences for player choices in a noir detective mystery.',
+          temperature: 0.6,
+          maxTokens: 500,
+          responseSchema: consequenceSchema,
+        }
+      );
+
+      const consequence = typeof response.content === 'string'
+        ? JSON.parse(response.content)
+        : response.content;
+
+      return consequence;
+    } catch (error) {
+      console.warn('[StoryGenerationService] Failed to generate consequence:', error);
+      // Return default consequence
+      return {
+        immediate: `Jack chose path ${choice.optionKey}`,
+        ongoing: ['This choice will affect future events'],
+        characterImpact: { trust: 0, aggression: choice.optionKey === 'A' ? 5 : -5, thoroughness: choice.optionKey === 'B' ? 5 : -5 },
+      };
+    }
+  }
+
+  // ==========================================================================
+  // SMART FACT INDEXING - Indexes facts by relevance for efficient context building
+  // ==========================================================================
+
+  /**
+   * Build indexed facts from generated content for efficient retrieval
+   */
+  _buildIndexedFacts(chapters) {
+    const index = {
+      byCharacter: new Map(),      // Facts mentioning specific characters
+      byChapter: new Map(),        // Facts from specific chapters
+      byType: new Map(),           // Facts by type (timeline, setting, relationship, etc.)
+      critical: [],                // Always-include critical facts
+      recent: [],                  // Most recent facts (high priority)
+    };
+
+    // Add base consistency rules as critical
+    index.critical.push(...CONSISTENCY_RULES.slice(0, 15));
+
+    // Index facts from chapters
+    chapters.forEach(ch => {
+      if (!ch.consistencyFacts) return;
+
+      ch.consistencyFacts.forEach(fact => {
+        // Index by chapter
+        if (!index.byChapter.has(ch.chapter)) {
+          index.byChapter.set(ch.chapter, []);
+        }
+        index.byChapter.get(ch.chapter).push(fact);
+
+        // Index by character mentioned
+        const characters = ['Jack', 'Victoria', 'Sarah', 'Eleanor', 'Silas', 'Tom', 'Wade', 'Grange', 'Thornhill', 'Chen', 'Sullivan', 'Teresa'];
+        characters.forEach(char => {
+          if (fact.toLowerCase().includes(char.toLowerCase())) {
+            if (!index.byCharacter.has(char)) {
+              index.byCharacter.set(char, []);
+            }
+            index.byCharacter.get(char).push(fact);
+          }
+        });
+
+        // Index by type
+        if (/\d+\s*(year|month|day|hour)/i.test(fact)) {
+          if (!index.byType.has('timeline')) index.byType.set('timeline', []);
+          index.byType.get('timeline').push(fact);
+        }
+        if (/meet|promise|agree|plan/i.test(fact)) {
+          if (!index.byType.has('appointment')) index.byType.set('appointment', []);
+          index.byType.get('appointment').push(fact);
+        }
+        if (/reveal|discover|learn|find out/i.test(fact)) {
+          if (!index.byType.has('revelation')) index.byType.set('revelation', []);
+          index.byType.get('revelation').push(fact);
+        }
+      });
+    });
+
+    // Track recent facts (last 2 chapters)
+    const sortedChapters = [...chapters].sort((a, b) => {
+      if (a.chapter !== b.chapter) return b.chapter - a.chapter;
+      return b.subchapter - a.subchapter;
+    });
+    sortedChapters.slice(0, 6).forEach(ch => {
+      if (ch.consistencyFacts) {
+        index.recent.push(...ch.consistencyFacts);
+      }
+    });
+
+    return index;
+  }
+
+  /**
+   * Get relevant facts for a specific chapter/subchapter
+   * Uses smart selection instead of dumping all facts
+   */
+  _getRelevantFacts(targetChapter, targetSubchapter, indexedFacts, context) {
+    const relevantFacts = new Set();
+
+    // Always include critical facts
+    indexedFacts.critical.forEach(f => relevantFacts.add(f));
+
+    // Include recent facts (high priority)
+    indexedFacts.recent.slice(0, 10).forEach(f => relevantFacts.add(f));
+
+    // Include facts from previous chapter (continuity)
+    const prevChapterFacts = indexedFacts.byChapter.get(targetChapter - 1) || [];
+    prevChapterFacts.forEach(f => relevantFacts.add(f));
+
+    // Include facts from current chapter's previous subchapters
+    if (targetSubchapter > 1) {
+      const currChapterFacts = indexedFacts.byChapter.get(targetChapter) || [];
+      currChapterFacts.forEach(f => relevantFacts.add(f));
+    }
+
+    // Include character-specific facts based on story arc
+    const chapterArc = context.storyArc?.chapterArcs?.find(c => c.chapter === targetChapter);
+    if (chapterArc?.innocentFeatured) {
+      const characterFacts = indexedFacts.byCharacter.get(chapterArc.innocentFeatured) || [];
+      characterFacts.forEach(f => relevantFacts.add(f));
+    }
+
+    // Include appointment/promise facts (must be tracked)
+    const appointmentFacts = indexedFacts.byType.get('appointment') || [];
+    appointmentFacts.slice(-5).forEach(f => relevantFacts.add(f));
+
+    return [...relevantFacts].slice(0, 25); // Cap at 25 facts to manage token usage
+  }
+
+  // ==========================================================================
+  // CONSISTENCY CHECKPOINTS - Periodic validation of accumulated state
+  // ==========================================================================
+
+  /**
+   * Create a consistency checkpoint after generation
+   */
+  async _createConsistencyCheckpoint(chapter, pathKey, storyEntry) {
+    const checkpointKey = `checkpoint_${chapter}_${pathKey}`;
+
+    const checkpoint = {
+      chapter,
+      pathKey,
+      timestamp: new Date().toISOString(),
+      accumulatedFacts: [],
+      characterStates: {},
+      narrativeThreads: [],
+      decisionHistory: [],
+    };
+
+    // Gather all facts from this and previous chapters
+    for (let ch = 2; ch <= chapter; ch++) {
+      for (let sub = 1; sub <= 3; sub++) {
+        const caseNum = formatCaseNumber(ch, sub);
+        const chPathKey = ch === chapter ? pathKey : this._getPathKeyForChapter(ch, []);
+        const entry = this.getGeneratedEntry(caseNum, chPathKey);
+        if (entry?.consistencyFacts) {
+          checkpoint.accumulatedFacts.push(...entry.consistencyFacts);
+        }
+      }
+    }
+
+    // Deduplicate facts
+    checkpoint.accumulatedFacts = [...new Set(checkpoint.accumulatedFacts)];
+
+    // Track character relationship states based on path personality
+    if (this.pathPersonality) {
+      checkpoint.characterStates = {
+        jackPersonality: this.pathPersonality.narrativeStyle,
+        riskTolerance: this.pathPersonality.riskTolerance,
+        scores: this.pathPersonality.scores,
+      };
+    }
+
+    this.consistencyCheckpoints.set(checkpointKey, checkpoint);
+
+    // Validate checkpoint for anomalies every 3 chapters
+    if (chapter % 3 === 0) {
+      await this._validateCheckpoint(checkpoint);
+    }
+
+    return checkpoint;
+  }
+
+  /**
+   * Validate a consistency checkpoint for anomalies
+   */
+  async _validateCheckpoint(checkpoint) {
+    const issues = [];
+
+    // Check for contradictory facts
+    const factText = checkpoint.accumulatedFacts.join(' ').toLowerCase();
+
+    // Timeline contradictions
+    if (factText.includes('20 years') && factText.includes('tom wade') && factText.includes('friend')) {
+      if (!factText.includes('30 years')) {
+        issues.push('Timeline contradiction: Tom Wade friendship should be 30 years');
+      }
+    }
+
+    // Character state contradictions
+    if (checkpoint.characterStates.jackPersonality) {
+      const isMethodical = checkpoint.characterStates.riskTolerance === 'low';
+      const hasRecklessAction = /jack\s+(charged|rushed|stormed)/i.test(factText);
+      if (isMethodical && hasRecklessAction) {
+        issues.push('Character behavior contradiction: Methodical Jack acting recklessly');
+      }
+    }
+
+    if (issues.length > 0) {
+      console.warn('[StoryGenerationService] Checkpoint validation issues:', issues);
+      // Store issues for potential auto-correction in future generations
+      checkpoint.validationIssues = issues;
+    }
+
+    return issues;
   }
 
   // ==========================================================================
@@ -767,12 +1357,20 @@ Example: "${villains.silasReed.voiceAndStyle?.examplePhrases?.[0] || 'I told mys
 
   /**
    * Build task specification section
+   * Now includes Story Arc and Chapter Outline guidance for 100% consistency
    */
   _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
     const chaptersRemaining = TOTAL_CHAPTERS - chapter;
     const subchapterLabel = ['A', 'B', 'C'][subchapter - 1];
     const pacing = this._getPacingGuidance(chapter);
     const personality = context.pathPersonality || PATH_PERSONALITY_TRAITS.BALANCED;
+
+    // Get story arc guidance for this chapter
+    const chapterArc = context.storyArc?.chapterArcs?.find(c => c.chapter === chapter);
+
+    // Get chapter outline for subchapter guidance
+    const outline = context.chapterOutline;
+    const subchapterOutline = outline ? outline[`subchapter${subchapterLabel}`] : null;
 
     let task = `## CURRENT TASK
 
@@ -782,7 +1380,47 @@ Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 - Chapter ${chapter} of ${TOTAL_CHAPTERS} (${chaptersRemaining} remaining)
 - Subchapter ${subchapter} of 3
 - Current path: "${context.currentPosition.pathKey}"
-- Phase: ${pacing.phase}
+- Phase: ${pacing.phase}`;
+
+    // ========== NEW: Story Arc Guidance ==========
+    if (chapterArc) {
+      task += `
+
+### STORY ARC GUIDANCE (Follow this for consistency)
+- **Chapter Focus:** ${chapterArc.primaryFocus}
+${chapterArc.innocentFeatured ? `- **Featured Innocent:** ${chapterArc.innocentFeatured}` : ''}
+${chapterArc.keyRevelation ? `- **Key Revelation:** ${chapterArc.keyRevelation}` : ''}
+- **Tension Level:** ${chapterArc.tensionLevel}/10
+- **Ending Hook:** ${chapterArc.endingHook}
+${chapterArc.decisionTheme ? `- **Decision Theme:** ${chapterArc.decisionTheme}` : ''}`;
+    }
+
+    // ========== NEW: Chapter Outline Guidance ==========
+    if (subchapterOutline) {
+      task += `
+
+### SUBCHAPTER ${subchapterLabel} OUTLINE (Follow this structure)
+- **Focus:** ${subchapterOutline.focus}
+- **Key Beats:** ${subchapterOutline.keyBeats?.join(', ') || 'Build tension naturally'}
+${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOutline.endingTransition}` : ''}`;
+
+      if (isDecisionPoint && subchapterOutline.decisionSetup) {
+        task += `
+- **Decision Setup:** ${subchapterOutline.decisionSetup}
+- **Option A Direction:** ${subchapterOutline.optionADirection || 'More direct approach'}
+- **Option B Direction:** ${subchapterOutline.optionBDirection || 'More cautious approach'}`;
+      }
+    }
+
+    // ========== NEW: Narrative Thread Continuity ==========
+    if (outline?.narrativeThreads?.length > 0) {
+      task += `
+
+### NARRATIVE THREADS (Weave these through the chapter)
+${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
+    }
+
+    task += `
 
 ### PLAYER PATH PERSONALITY (CRITICAL FOR CONSISTENCY)
 Based on player's choices, Jack's behavior pattern is: **${personality.narrativeStyle}**
@@ -809,7 +1447,8 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 5. Reference specific events from previous chapters (show continuity)
 6. Include: atmospheric description, internal monologue, dialogue
 7. Build tension appropriate to ${pacing.phase} phase
-8. **ENSURE Jack's behavior matches the path personality above**`;
+8. **ENSURE Jack's behavior matches the path personality above**
+9. **FOLLOW the story arc and chapter outline guidance above**`;
 
     // Add emphasis on recent decision if applicable (beginning of new chapter)
     if (subchapter === 1 && context.playerChoices.length > 0) {
@@ -961,6 +1600,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
 
   /**
    * Generate a single subchapter with validation
+   * Now integrates Story Arc Planning and Chapter Outlines for 100% consistency
    */
   async generateSubchapter(chapter, subchapter, pathKey, choiceHistory = []) {
     if (!llmService.isConfigured()) {
@@ -983,10 +1623,27 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
     const generationPromise = (async () => {
       const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
 
-      // Build comprehensive context
+      // ========== NEW: Story Arc Planning Integration ==========
+      // Ensure we have the global story arc for narrative consistency
+      await this.ensureStoryArc(pathKey, choiceHistory);
+
+      // Ensure we have the chapter outline for seamless subchapter flow
+      const chapterOutline = await this.ensureChapterOutline(chapter, pathKey, choiceHistory);
+
+      // ========== NEW: Dynamic Consequence Generation ==========
+      // If this follows a decision, ensure we have generated consequences
+      if (choiceHistory.length > 0) {
+        await this._ensureDecisionConsequences(choiceHistory);
+      }
+
+      // Build comprehensive context (now includes story arc and chapter outline)
       const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
-      // Build the prompt with all context
+      // Add story arc and chapter outline to context
+      context.storyArc = this.storyArc;
+      context.chapterOutline = chapterOutline;
+
+      // Build the prompt with all context (including new planning data)
       const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
       // Select appropriate temperature and schema based on content type
@@ -1086,6 +1743,12 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
 
         // Update story context
         await this._updateStoryContext(storyEntry);
+
+        // ========== NEW: Create consistency checkpoint for state validation ==========
+        // Checkpoints are created after each subchapter C (end of chapter) for validation
+        if (subchapter === 3) {
+          await this._createConsistencyCheckpoint(chapter, pathKey, storyEntry);
+        }
 
         this.isGenerating = false;
         return storyEntry;

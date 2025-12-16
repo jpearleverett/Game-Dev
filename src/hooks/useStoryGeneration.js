@@ -267,15 +267,16 @@ export function useStoryGeneration(storyCampaign) {
   }, []);
 
   /**
-   * Pre-generate upcoming content with SMART path prediction
+   * Pre-generate upcoming content with MULTI-TIER lookahead strategy
    * Uses player's choice history to prioritize likely paths
-   * Only generates secondary path when player is closer to decision point
+   * Now generates up to 2 chapters ahead for seamless gameplay
    */
   const pregenerate = useCallback(async (currentChapter, pathKey, choiceHistory = []) => {
     if (!isConfigured || currentChapter >= 12) {
       return;
     }
 
+    // ========== TIER 1: Immediate next chapter (highest priority) ==========
     const nextChapter = currentChapter + 1;
     const firstCaseOfNextChapter = `${String(nextChapter).padStart(3, '0')}A`;
 
@@ -302,7 +303,7 @@ export function useStoryGeneration(storyCampaign) {
       generateChapter(nextChapter, prediction.primary, speculativeHistory);
     }
 
-    // Only generate secondary path if:
+    // Generate secondary path if:
     // 1. Primary is already generated, OR
     // 2. Prediction confidence is low (player is unpredictable), OR
     // 3. Player has made many choices (has shown varied behavior)
@@ -328,6 +329,50 @@ export function useStoryGeneration(storyCampaign) {
 
         // Generate secondary path (don't await)
         generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary);
+      }
+    }
+
+    // ========== TIER 2: Two chapters ahead (lower priority, speculative) ==========
+    // Only generate if next chapter is already mostly ready and we're past early game
+    if (currentChapter >= 3 && nextChapter < 12 && !needsPrimaryGen) {
+      const twoAheadChapter = currentChapter + 2;
+      const firstCaseTwoAhead = `${String(twoAheadChapter).padStart(3, '0')}A`;
+
+      // Build speculative history for two chapters ahead (assume primary path for both)
+      const speculativeHistoryTier2 = [
+        ...choiceHistory,
+        {
+          caseNumber: formatCaseNumber(currentChapter, 3),
+          optionKey: prediction.primary,
+          timestamp: new Date().toISOString()
+        },
+        {
+          caseNumber: formatCaseNumber(nextChapter, 3),
+          optionKey: prediction.primary, // Assume same pattern continues
+          timestamp: new Date().toISOString()
+        }
+      ];
+
+      const needsTier2Gen = await needsGeneration(firstCaseTwoAhead, prediction.primary);
+
+      if (needsTier2Gen) {
+        // Use a slight delay to prioritize Tier 1 completion
+        setTimeout(async () => {
+          setGenerationType(GENERATION_TYPE.PRELOAD);
+          // Only generate first subchapter of Tier 2 to save resources
+          const tier2CaseNumber = firstCaseTwoAhead;
+          const { chapter: tier2Chapter, subchapter: tier2Sub } = parseCaseNumber(tier2CaseNumber);
+          try {
+            await storyGenerationService.generateSubchapter(
+              tier2Chapter,
+              tier2Sub,
+              prediction.primary,
+              speculativeHistoryTier2
+            );
+          } catch (err) {
+            console.warn('[useStoryGeneration] Tier 2 pre-load failed:', err.message);
+          }
+        }, 5000); // 5 second delay to prioritize Tier 1
       }
     }
   }, [isConfigured, needsGeneration, generateChapter, predictNextPath]);
