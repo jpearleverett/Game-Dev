@@ -13,6 +13,7 @@ import {
   hasStoryContent,
   updateGeneratedCache,
   parseCaseNumber,
+  formatCaseNumber,
 } from '../data/storyContent';
 
 // Generation states
@@ -255,8 +256,22 @@ export function useStoryGeneration(storyCampaign) {
         // Generate in background without blocking
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
-        // Don't await - let it run in background
-        generateChapter(nextChapter, targetPath, choiceHistory);
+
+        // Construct SPECULATIVE history
+        // This simulates that the user chose 'targetPath' at the end of 'currentChapter'
+        // effectively providing the 'missing link' so the LLM knows why it's generating Path A vs Path B.
+        // The choice occurs at Subchapter 3 of the current chapter.
+        const speculativeHistory = [
+          ...choiceHistory,
+          {
+            caseNumber: formatCaseNumber(currentChapter, 3), // e.g. "001C"
+            optionKey: targetPath, // 'A' or 'B'
+            timestamp: new Date().toISOString()
+          }
+        ];
+
+        // Don't await - let it run in background with the speculative history
+        generateChapter(nextChapter, targetPath, speculativeHistory);
       }
     }
   }, [isConfigured, needsGeneration, generateChapter]);
