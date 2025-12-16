@@ -3208,6 +3208,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           validationResult.valid = false;
         }
 
+        // Validate arc closure for final chapters (11-12)
+        const arcClosure = this._validateArcClosure(chapter, context);
+        if (arcClosure.warnings.length > 0) {
+          validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.warnings];
+        }
+        if (arcClosure.issues.length > 0) {
+          validationResult.issues = [...validationResult.issues, ...arcClosure.issues];
+          validationResult.valid = false;
+        }
+
         let retries = 0;
 
         while (!validationResult.valid && retries < MAX_RETRIES) {
@@ -4269,7 +4279,39 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       qualityScore -= 5;
     }
 
-    // ========== 6. GENERIC PHRASE DETECTION ==========
+    // ========== 6. ATMOSPHERE DENSITY CHECK (Positive requirement) ==========
+    // Noir prose REQUIRES atmospheric elements - not just absence of forbidden ones
+    const atmospherePatterns = {
+      weather: /\b(?:rain|drizzle|downpour|storm|mist|fog|damp|wet|puddle|umbrella|overcast|cloud|grey|gray)\b/gi,
+      lighting: /\b(?:neon|shadow|dark|dim|glow|flicker|lamp|streetlight|moonlight|fluorescent|bulb)\b/gi,
+      urbanTexture: /\b(?:concrete|brick|alley|street|gutter|pavement|curb|sidewalk|corner|building)\b/gi,
+      noirMood: /\b(?:smoke|cigarette|whiskey|bourbon|glass|bottle|bar|jukebox|mirror|booth)\b/gi,
+      timeOfDay: /\b(?:night|midnight|dawn|dusk|evening|late|early|hour|clock|morning)\b/gi,
+    };
+
+    const atmosphereHits = {};
+    let totalAtmosphere = 0;
+    for (const [category, pattern] of Object.entries(atmospherePatterns)) {
+      const matches = narrative.match(pattern) || [];
+      atmosphereHits[category] = matches.length;
+      totalAtmosphere += matches.length;
+    }
+
+    // Require minimum atmosphere density (at least 3 categories represented)
+    const categoriesCovered = Object.values(atmosphereHits).filter(v => v > 0).length;
+    if (categoriesCovered < 3) {
+      warnings.push(`Thin atmosphere: only ${categoriesCovered}/5 noir categories present (weather, lighting, urban texture, noir mood, time). Add more environmental grounding.`);
+      qualityScore -= 5;
+    }
+
+    // Check density relative to word count (expect ~1 atmospheric element per 50 words)
+    const expectedAtmosphere = Math.floor(wordCount / 50);
+    if (totalAtmosphere < expectedAtmosphere * 0.5) {
+      warnings.push(`Low atmosphere density: ${totalAtmosphere} elements in ${wordCount} words (expected ${expectedAtmosphere}+). Scene feels sterile - add rain, neon, shadows, smoke.`);
+      qualityScore -= 5;
+    }
+
+    // ========== 7. GENERIC PHRASE DETECTION ==========
     // Detect phrases that feel AI-generated or generic
     const genericPatterns = [
       { pattern: /\bthe air\s+(?:was|felt)\s+(?:thick|heavy|tense)\b/i, issue: 'Generic atmosphere: "the air was thick/heavy"' },
@@ -4293,6 +4335,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       details: {
         metaphorCount,
         sensoryHits,
+        atmosphereHits,
+        atmosphereDensity: totalAtmosphere,
         dialogueCount: dialogueMatches.length,
         paragraphCount: paragraphs.length,
         hasAtmosphericOpening,
@@ -4725,19 +4769,108 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   }
 
   /**
+   * Validate arc closure in final chapters (11-12)
+   * Ensures all major threads and revelations are resolved before story ends
+   */
+  _validateArcClosure(chapter, context) {
+    const issues = [];
+    const warnings = [];
+
+    // Only enforce arc closure in final chapters
+    if (chapter < 11) {
+      return { issues, warnings };
+    }
+
+    // Check for undelivered revelations
+    for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
+      if (!revelation.payoffDelivered) {
+        if (chapter === 12) {
+          // Chapter 12: All major revelations MUST be delivered
+          issues.push(`ARC CLOSURE REQUIRED: Major revelation "${revelation.payoff}" has not been delivered. This is the final chapter - all major plot points must resolve.`);
+        } else if (chapter === 11) {
+          // Chapter 11: Warn about undelivered revelations
+          warnings.push(`Approaching finale: "${revelation.payoff}" still undelivered. Ensure this is revealed in chapters 11-12.`);
+        }
+      }
+    }
+
+    // Check for unresolved critical threads
+    if (context.narrativeThreads && context.narrativeThreads.length > 0) {
+      const unresolvedCritical = context.narrativeThreads.filter(t =>
+        t.status === 'active' &&
+        (t.urgency === 'critical' || t.type === 'appointment' || t.type === 'promise')
+      );
+
+      if (chapter === 12 && unresolvedCritical.length > 0) {
+        issues.push(`ARC CLOSURE REQUIRED: ${unresolvedCritical.length} critical thread(s) still unresolved in final chapter: ${unresolvedCritical.slice(0, 3).map(t => t.description?.slice(0, 40)).join('; ')}...`);
+      } else if (chapter === 11 && unresolvedCritical.length > 3) {
+        warnings.push(`Too many unresolved threads (${unresolvedCritical.length}) entering finale. Prioritize resolution.`);
+      }
+    }
+
+    // Check that Victoria/Emily confrontation happens
+    if (chapter === 12) {
+      const victoriaThread = context.narrativeThreads?.find(t =>
+        t.description?.toLowerCase().includes('victoria') ||
+        t.description?.toLowerCase().includes('confessor') ||
+        t.description?.toLowerCase().includes('emily')
+      );
+      if (!victoriaThread || victoriaThread.status !== 'resolved') {
+        warnings.push('Final chapter should include climactic confrontation with Victoria/The Confessor');
+      }
+    }
+
+    return { issues, warnings };
+  }
+
+  /**
    * Attempt to fix content that failed validation
+   * NOW INCLUDES A+ QUALITY GUIDANCE for fixing prose issues
    */
   async _fixContent(content, issues, context, isDecisionPoint) {
-    const fixPrompt = `The following generated story content contains consistency violations that must be fixed.
+    // Categorize issues for targeted fixing
+    const proseIssues = issues.filter(i =>
+      i.includes('metaphor') || i.includes('sensory') || i.includes('I-stacking') ||
+      i.includes('sentence') || i.includes('opener') || i.includes('atmosphere') ||
+      i.includes('dialogue') || i.includes('monotonous') || i.includes('Generic')
+    );
+    const consistencyIssues = issues.filter(i => !proseIssues.includes(i));
 
-ISSUES TO FIX:
-${issues.map(i => `- ${i}`).join('\n')}
+    // Build quality guidance for prose fixes
+    const proseGuidance = proseIssues.length > 0 ? `
+## A+ PROSE QUALITY REQUIREMENTS
+Your rewrite MUST address these prose quality issues:
+${proseIssues.map(i => `- ${i}`).join('\n')}
 
-Please rewrite the content to resolve these specific issues while maintaining the noir style, plot, and character voices. Ensure all names and facts are consistent.
+To fix these:
+1. **Metaphors**: Add noir-specific imagery (rain drumming, shadows pooling, neon bleeding)
+2. **Sensory details**: Engage sight, sound, smell, touch, taste
+3. **Sentence variety**: Mix short punchy sentences (3-7 words) with longer flowing ones
+4. **Opener diversity**: Vary how sentences and paragraphs begin (not all "I" or "The")
+5. **Atmospheric grounding**: Open scenes with weather, lighting, physical setting
+6. **Dialogue**: Break up exchanges with action beats (what characters DO while talking)
 
-ORIGINAL CONTENT:
+Example noir texture to emulate:
+"The rain fell on Ashport the way memory falls on the guilty, soft at first, then relentless. Neon bled into the wet streets, turning the city into a watercolor of regret."
+` : '';
+
+    const fixPrompt = `The following generated story content contains violations that must be fixed.
+
+## CONSISTENCY ISSUES TO FIX:
+${consistencyIssues.length > 0 ? consistencyIssues.map(i => `- ${i}`).join('\n') : '(none)'}
+${proseGuidance}
+
+## CRITICAL RULES:
+1. Maintain the exact plot and story events
+2. Keep all character names spelled correctly
+3. Use exact timeline numbers (30 years Tom friendship, 8 years Eleanor prison, etc.)
+4. Stay in first-person past tense from Jack's POV
+5. Never use forbidden words: delve, unravel, tapestry, myriad, whilst, realm
+
+## ORIGINAL CONTENT:
 ${JSON.stringify(content, null, 2)}
-`;
+
+Rewrite the narrative to fix ALL issues while maintaining the noir style and story progression.`;
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
@@ -4746,8 +4879,8 @@ ${JSON.stringify(content, null, 2)}
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],
       {
-        systemPrompt: 'You are an expert editor ensuring narrative consistency. Fix the issues in the provided content without changing the core story.',
-        temperature: GENERATION_CONFIG.temperature.narrative, // Use standard temperature
+        systemPrompt: 'You are an expert noir editor. Fix all issues while enhancing the atmospheric prose quality. Never change the plot, only improve the writing.',
+        temperature: GENERATION_CONFIG.temperature.narrative,
         maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
         responseSchema,
       }
