@@ -3,6 +3,8 @@
  *
  * Handles persistent storage for dynamically generated story content.
  * Ensures generated chapters are saved and can be retrieved across sessions.
+ *
+ * Uses a write lock to prevent race conditions when multiple saves happen concurrently.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,16 +12,100 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const GENERATED_STORY_KEY = 'detective_portrait_generated_story_v1';
 const STORY_CONTEXT_KEY = 'detective_portrait_story_context_v1';
 
+// ============================================================================
+// WRITE LOCK - Prevents race conditions in concurrent saves
+// ============================================================================
+
+/**
+ * Simple mutex implementation for storage writes
+ * Ensures only one write operation happens at a time
+ */
+class StorageWriteLock {
+  constructor() {
+    this._locked = false;
+    this._queue = [];
+  }
+
+  async acquire() {
+    return new Promise((resolve) => {
+      if (!this._locked) {
+        this._locked = true;
+        resolve();
+      } else {
+        this._queue.push(resolve);
+      }
+    });
+  }
+
+  release() {
+    if (this._queue.length > 0) {
+      const next = this._queue.shift();
+      next();
+    } else {
+      this._locked = false;
+    }
+  }
+
+  /**
+   * Execute a function with the lock held
+   * Automatically releases lock when done (even on error)
+   */
+  async withLock(fn) {
+    await this.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.release();
+    }
+  }
+}
+
+// Singleton lock instance for all storage operations
+const storyWriteLock = new StorageWriteLock();
+
+// ============================================================================
+// IN-MEMORY CACHE - Reduces deserialization overhead on repeated reads
+// ============================================================================
+
+/**
+ * In-memory cache for the generated story
+ * Reduces AsyncStorage reads and JSON parse operations
+ */
+let storyCache = null;
+let storyCacheTimestamp = 0;
+const CACHE_TTL_MS = 30000; // Cache valid for 30 seconds
+let pendingFlush = null; // Debounced flush promise
+let isDirty = false; // Track if cache has unwritten changes
+
+/**
+ * Invalidate the cache (call after external modifications)
+ */
+export function invalidateStoryCache() {
+  storyCache = null;
+  storyCacheTimestamp = 0;
+}
+
 /**
  * Load all generated story content
+ * Uses in-memory cache to reduce deserialization overhead
  */
 export async function loadGeneratedStory() {
+  // Return cached version if still valid
+  const now = Date.now();
+  if (storyCache && (now - storyCacheTimestamp) < CACHE_TTL_MS) {
+    return storyCache;
+  }
+
   try {
     const raw = await AsyncStorage.getItem(GENERATED_STORY_KEY);
     if (!raw) {
-      return createBlankGeneratedStory();
+      storyCache = createBlankGeneratedStory();
+    } else {
+      storyCache = JSON.parse(raw);
     }
-    return JSON.parse(raw);
+    storyCacheTimestamp = now;
+    isDirty = false;
+    return storyCache;
   } catch (error) {
     console.warn('[GeneratedStoryStorage] Failed to load:', error);
     return createBlankGeneratedStory();
@@ -27,39 +113,105 @@ export async function loadGeneratedStory() {
 }
 
 /**
+ * Flush cache to storage (debounced to reduce write frequency)
+ */
+async function flushCacheToStorage() {
+  if (!storyCache || !isDirty) return;
+
+  try {
+    await AsyncStorage.setItem(GENERATED_STORY_KEY, JSON.stringify(storyCache));
+    isDirty = false;
+    console.log('[GeneratedStoryStorage] Cache flushed to storage');
+  } catch (error) {
+    console.warn('[GeneratedStoryStorage] Failed to flush cache:', error);
+  }
+}
+
+/**
+ * Schedule a debounced flush (consolidates multiple rapid saves)
+ */
+function scheduleDebouncedFlush() {
+  if (pendingFlush) return pendingFlush;
+
+  pendingFlush = new Promise((resolve) => {
+    setTimeout(async () => {
+      await flushCacheToStorage();
+      pendingFlush = null;
+      resolve();
+    }, 500); // 500ms debounce
+  });
+
+  return pendingFlush;
+}
+
+/**
  * Save a generated chapter
- * Automatically triggers storage pruning if utilization is high
+ * Uses write lock and in-memory cache for better performance
+ * Debounces storage writes for rapid successive saves
  */
 export async function saveGeneratedChapter(caseNumber, pathKey, entry) {
-  try {
-    const current = await loadGeneratedStory();
-    const key = `${caseNumber}_${pathKey}`;
-
-    current.chapters[key] = entry;
-    current.lastUpdated = new Date().toISOString();
-    current.totalGenerated = Object.keys(current.chapters).length;
-
-    await AsyncStorage.setItem(GENERATED_STORY_KEY, JSON.stringify(current));
-
-    // Auto-prune if storage utilization is high (async, don't block save)
-    const currentChapter = entry.chapter || 2;
-    autoPruneIfNeeded(pathKey, currentChapter, 80).then(result => {
-      if (result.prunedCount > 0) {
-        console.log(`[GeneratedStoryStorage] Auto-pruned ${result.prunedCount} entries after save`);
+  return storyWriteLock.withLock(async () => {
+    try {
+      // Load into cache if not already there
+      if (!storyCache) {
+        await loadGeneratedStory();
       }
-    }).catch(err => {
-      console.warn('[GeneratedStoryStorage] Auto-prune error:', err);
-    });
 
-    return true;
-  } catch (error) {
-    console.warn('[GeneratedStoryStorage] Failed to save chapter:', error);
-    return false;
+      const key = `${caseNumber}_${pathKey}`;
+
+      // Only update if the entry doesn't already exist or is newer
+      const existingEntry = storyCache.chapters[key];
+      if (existingEntry && existingEntry.generatedAt && entry.generatedAt) {
+        if (new Date(existingEntry.generatedAt) >= new Date(entry.generatedAt)) {
+          console.log(`[GeneratedStoryStorage] Skipping save for ${key} - existing entry is newer or same`);
+          return true; // Already have this or newer
+        }
+      }
+
+      // Update cache
+      storyCache.chapters[key] = entry;
+      storyCache.lastUpdated = new Date().toISOString();
+      storyCache.totalGenerated = Object.keys(storyCache.chapters).length;
+      isDirty = true;
+
+      // Immediate write for important data (decision subchapters)
+      // Debounced write for other updates
+      if (entry.decision || entry.subchapter === 3) {
+        await flushCacheToStorage();
+      } else {
+        scheduleDebouncedFlush();
+      }
+
+      // Auto-prune if storage utilization is high (async, don't block save)
+      const currentChapter = entry.chapter || 2;
+      autoPruneIfNeeded(pathKey, currentChapter, 80).then(result => {
+        if (result.prunedCount > 0) {
+          console.log(`[GeneratedStoryStorage] Auto-pruned ${result.prunedCount} entries after save`);
+        }
+      }).catch(err => {
+        console.warn('[GeneratedStoryStorage] Auto-prune error:', err);
+      });
+
+      return true;
+    } catch (error) {
+      console.warn('[GeneratedStoryStorage] Failed to save chapter:', error);
+      return false;
+    }
+  });
+}
+
+/**
+ * Force flush any pending writes (call before app close or navigation)
+ */
+export async function flushPendingWrites() {
+  if (isDirty) {
+    await storyWriteLock.withLock(flushCacheToStorage);
   }
 }
 
 /**
  * Get a specific generated entry
+ * Uses cached data when available
  */
 export async function getGeneratedEntry(caseNumber, pathKey) {
   try {
@@ -87,6 +239,9 @@ export async function clearGeneratedStory() {
   try {
     await AsyncStorage.removeItem(GENERATED_STORY_KEY);
     await AsyncStorage.removeItem(STORY_CONTEXT_KEY);
+    // Invalidate cache after clearing storage
+    invalidateStoryCache();
+    isDirty = false;
     return true;
   } catch (error) {
     console.warn('[GeneratedStoryStorage] Failed to clear:', error);

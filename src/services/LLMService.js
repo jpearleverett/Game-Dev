@@ -420,11 +420,15 @@ class LLMService {
     let lastError = null;
     const MAX_RATE_LIMIT_WAITS = 3; // Maximum times we'll wait for rate limits before failing
     let rateLimitWaitCount = 0;
+    let attempt = 0;
 
-    for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
+    // Use while loop to avoid infinite loop from attempt-- going negative
+    while (attempt < this.config.maxRetries) {
+      let controller;
+      let timeoutId;
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+        controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
         const response = await fetch(
           `${baseUrl}/models/${model}:generateContent?key=${this.config.apiKey}`,
@@ -462,6 +466,7 @@ class LLMService {
         clearTimeout(timeoutId);
 
         // Handle rate limiting specifically (429 errors)
+        // Rate limit waits don't count toward retry limit, but have their own cap
         if (response.status === 429) {
           rateLimitWaitCount++;
           if (rateLimitWaitCount > MAX_RATE_LIMIT_WAITS) {
@@ -471,8 +476,7 @@ class LLMService {
           const retryAfter = Math.min(parseInt(retryAfterHeader || '60', 10), 120); // Cap at 2 minutes
           console.warn(`[LLMService] Rate limited (429), waiting ${retryAfter}s before retry (${rateLimitWaitCount}/${MAX_RATE_LIMIT_WAITS})...`);
           await this._sleep(retryAfter * 1000);
-          // Don't count this toward retry limit - continue the loop
-          attempt--; // Decrement to not count this attempt
+          // Don't increment attempt - rate limit waits are separate from retries
           continue;
         }
 
@@ -487,7 +491,7 @@ class LLMService {
             }
             console.warn(`[LLMService] API quota exhausted, waiting 60s before retry (${rateLimitWaitCount}/${MAX_RATE_LIMIT_WAITS})...`);
             await this._sleep(60000);
-            attempt--; // Don't count toward retry limit
+            // Don't increment attempt - quota waits are separate from retries
             continue;
           }
           throw new Error(`Gemini API access denied: ${errorMessage}`);
@@ -542,13 +546,20 @@ class LLMService {
           isTruncated,
         };
       } catch (error) {
+        // Always clean up timeout to prevent accumulation
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
         lastError = error;
         if (error.name === 'AbortError') {
           throw new Error('Request timed out');
         }
-        // Exponential backoff
-        if (attempt < this.config.maxRetries - 1) {
-          await this._sleep(Math.pow(2, attempt) * 1000);
+        // Increment attempt counter for actual failures (not rate limits)
+        attempt++;
+        // Exponential backoff before next retry
+        if (attempt < this.config.maxRetries) {
+          await this._sleep(Math.pow(2, attempt - 1) * 1000);
         }
       }
     }

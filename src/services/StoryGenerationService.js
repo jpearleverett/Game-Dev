@@ -2389,11 +2389,109 @@ Generate realistic, specific consequences based on the actual narrative content.
       }
     }
 
+    // Prune decisionConsequences: remove entries for old chapters
+    for (const [key] of this.decisionConsequences) {
+      // Keys are like "decision_2_A" or contain chapter references
+      const match = key.match(/(\d+)/);
+      if (match) {
+        const chapterNum = parseInt(match[1]) || 0;
+        if (chapterNum < currentChapter - 3) {
+          this.decisionConsequences.delete(key);
+          prunedCount++;
+        }
+      }
+    }
+
+    // Prune characterStates: limit to reasonable size (50 entries max)
+    if (this.characterStates.size > 50) {
+      const entries = Array.from(this.characterStates.entries());
+      const toRemove = entries.slice(0, entries.length - 30);
+      for (const [key] of toRemove) {
+        this.characterStates.delete(key);
+        prunedCount++;
+      }
+    }
+
+    // Prune generatedConsequences: remove old chapter consequences
+    for (const [key] of this.generatedConsequences) {
+      const match = key.match(/(\d+)/);
+      if (match) {
+        const chapterNum = parseInt(match[1]) || 0;
+        if (chapterNum < currentChapter - 3) {
+          this.generatedConsequences.delete(key);
+          prunedCount++;
+        }
+      }
+    }
+
+    // Prune stale pendingGenerations: remove any that are older than 5 minutes
+    // (they likely failed silently or were abandoned)
+    const now = Date.now();
+    for (const [key, promise] of this.pendingGenerations) {
+      // Check if promise has been resolved/rejected by adding a flag
+      if (promise._createdAt && now - promise._createdAt > 5 * 60 * 1000) {
+        this.pendingGenerations.delete(key);
+        prunedCount++;
+        console.log(`[StoryGenerationService] Pruned stale pending generation: ${key}`);
+      }
+    }
+
     if (prunedCount > 0) {
       console.log(`[StoryGenerationService] Pruned ${prunedCount} stale in-memory entries`);
     }
 
     return prunedCount;
+  }
+
+  /**
+   * Destroy the service and clean up all resources
+   * Call this when unmounting or resetting the application
+   */
+  destroy() {
+    console.log('[StoryGenerationService] Destroying service and cleaning up resources...');
+
+    // Clear all Maps
+    this.pendingGenerations.clear();
+    this.decisionConsequences.clear();
+    this.characterStates.clear();
+    this.threadAcknowledgmentCounts.clear();
+    this.chapterOutlines.clear();
+    this.consistencyCheckpoints.clear();
+    this.generatedConsequences.clear();
+    this.generationAttempts.clear();
+
+    // Clear other state
+    this.generatedStory = null;
+    this.storyContext = null;
+    this.storyArc = null;
+    this.indexedFacts = null;
+    this.consistencyLog = [];
+    this.narrativeThreads = [];
+    this.pathPersonality = null;
+    this.isGenerating = false;
+
+    // Clear dynamic clusters
+    this._currentDynamicClusters = null;
+
+    console.log('[StoryGenerationService] Cleanup complete');
+  }
+
+  /**
+   * Get memory usage statistics for debugging
+   */
+  getMemoryStats() {
+    return {
+      pendingGenerations: this.pendingGenerations.size,
+      decisionConsequences: this.decisionConsequences.size,
+      characterStates: this.characterStates.size,
+      threadAcknowledgmentCounts: this.threadAcknowledgmentCounts.size,
+      chapterOutlines: this.chapterOutlines.size,
+      consistencyCheckpoints: this.consistencyCheckpoints.size,
+      generatedConsequences: this.generatedConsequences.size,
+      generationAttempts: this.generationAttempts.size,
+      narrativeThreads: this.narrativeThreads?.length || 0,
+      consistencyLog: this.consistencyLog?.length || 0,
+    };
   }
 
   /**
@@ -3874,6 +3972,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     })();
 
+    // Add timestamp for stale detection during pruning
+    generationPromise._createdAt = Date.now();
     this.pendingGenerations.set(generationKey, generationPromise);
 
     try {
@@ -4395,7 +4495,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // =========================================================================
-    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads - NOW ENFORCED
+    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads - STRICTLY ENFORCED
     // =========================================================================
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
       // Get critical threads that MUST be addressed (appointments and promises)
@@ -4408,14 +4508,39 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Check if LLM provided thread acknowledgments
         const addressedThreads = content.previousThreadsAddressed || [];
 
-        // Calculate how many critical threads were addressed
-        const addressedCount = addressedThreads.length;
-        const criticalCount = criticalThreads.length;
+        // ========== NEW: Verify addressed threads actually match critical threads ==========
+        // This prevents the LLM from claiming to address made-up threads
+        let validAddressedCount = 0;
+        const unmatchedCritical = [...criticalThreads];
 
-        // Require at least 50% of critical threads to be acknowledged
+        for (const addressed of addressedThreads) {
+          const addressedLower = (addressed.originalThread || '').toLowerCase();
+
+          // Try to match this addressed thread to a critical thread
+          const matchIndex = unmatchedCritical.findIndex(critical => {
+            const criticalLower = (critical.description || '').toLowerCase();
+            // Match if there's significant overlap in key terms
+            const addressedWords = addressedLower.split(/\s+/).filter(w => w.length > 3);
+            const criticalWords = criticalLower.split(/\s+/).filter(w => w.length > 3);
+            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => cw.includes(w) || w.includes(cw)));
+            // Require at least 2 matching words or 40% overlap
+            return matchingWords.length >= 2 || matchingWords.length / Math.max(addressedWords.length, 1) > 0.4;
+          });
+
+          if (matchIndex !== -1) {
+            validAddressedCount++;
+            unmatchedCritical.splice(matchIndex, 1); // Remove matched thread
+          } else {
+            // Log potential fabricated thread
+            console.warn(`[StoryGenerationService] Thread addressed doesn't match any critical thread: "${addressedLower.slice(0, 60)}..."`);
+          }
+        }
+
+        // Require at least 50% of critical threads to be VALIDLY acknowledged
+        const criticalCount = criticalThreads.length;
         const requiredAcknowledgments = Math.ceil(criticalCount * 0.5);
-        if (addressedCount < requiredAcknowledgments) {
-          issues.push(`THREAD CONTINUITY VIOLATION: Only ${addressedCount}/${criticalCount} critical threads addressed. Must acknowledge at least ${requiredAcknowledgments}. Critical threads: ${criticalThreads.slice(0, 3).map(t => t.description).join('; ')}`);
+        if (validAddressedCount < requiredAcknowledgments) {
+          issues.push(`THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge at least ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`);
         }
 
         // =========================================================================
