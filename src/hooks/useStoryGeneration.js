@@ -180,11 +180,20 @@ export function useStoryGeneration(storyCampaign) {
 
   /**
    * Generate all subchapters for a chapter
+   * @param {number} chapter - Chapter number to generate
+   * @param {string} pathKey - Path key (A or B)
+   * @param {Array} choiceHistory - Player's choice history
+   * @param {Object} options - Optional settings
+   * @param {boolean} options.silent - If true, skip progress/status updates (for background preloading)
    */
-  const generateChapter = useCallback(async (chapter, pathKey, choiceHistory = []) => {
+  const generateChapter = useCallback(async (chapter, pathKey, choiceHistory = [], options = {}) => {
+    const { silent = false } = options;
+
     if (!isConfigured) {
-      setStatus(GENERATION_STATUS.NOT_CONFIGURED);
-      setError('LLM not configured. Please set an API key in settings.');
+      if (!silent) {
+        setStatus(GENERATION_STATUS.NOT_CONFIGURED);
+        setError('LLM not configured. Please set an API key in settings.');
+      }
       return null;
     }
 
@@ -192,9 +201,12 @@ export function useStoryGeneration(storyCampaign) {
       return null; // Chapter 1 is static
     }
 
-    setStatus(GENERATION_STATUS.GENERATING);
-    setError(null);
-    setProgress({ current: 0, total: 3 });
+    // Only update status/progress for non-silent (user-facing) generations
+    if (!silent) {
+      setStatus(GENERATION_STATUS.GENERATING);
+      setError(null);
+      setProgress({ current: 0, total: 3 });
+    }
 
     try {
       generationRef.current = true;
@@ -211,7 +223,9 @@ export function useStoryGeneration(storyCampaign) {
         // Skip if already generated
         const hasContent = await hasStoryContent(caseNumber, pathKey);
         if (hasContent) {
-          setProgress({ current: sub, total: 3 });
+          if (!silent) {
+            setProgress({ current: sub, total: 3 });
+          }
           continue;
         }
 
@@ -224,14 +238,22 @@ export function useStoryGeneration(storyCampaign) {
 
         updateGeneratedCache(caseNumber, pathKey, entry);
         results.push(entry);
-        setProgress({ current: sub, total: 3 });
+        if (!silent) {
+          setProgress({ current: sub, total: 3 });
+        }
       }
 
-      setStatus(GENERATION_STATUS.COMPLETE);
+      if (!silent) {
+        setStatus(GENERATION_STATUS.COMPLETE);
+      }
       return results;
     } catch (err) {
-      setStatus(GENERATION_STATUS.ERROR);
-      setError(err.message);
+      if (!silent) {
+        setStatus(GENERATION_STATUS.ERROR);
+        setError(err.message);
+      } else {
+        console.warn(`[useStoryGeneration] Silent generation failed for chapter ${chapter}:`, err.message);
+      }
       return null;
     } finally {
       generationRef.current = false;
@@ -248,28 +270,44 @@ export function useStoryGeneration(storyCampaign) {
       return;
     }
 
+    // Capture parameters at call time to prevent stale closure issues
+    // Even though JS block scoping handles this, being explicit improves readability
+    const targetChapter = chapter;
+    const targetPath = pathKey;
+    const history = [...choiceHistory]; // Create a copy to prevent mutation issues
+
     // Generate subchapters B and C in background
     const subchaptersToGenerate = ['B', 'C'];
 
+    // Set status once at the start, not in the loop (prevents thrashing)
+    let anyNeedsGen = false;
+
     for (const subLetter of subchaptersToGenerate) {
-      const caseNumber = `${String(chapter).padStart(3, '0')}${subLetter}`;
-      const needsGen = await needsGeneration(caseNumber, pathKey);
+      const caseNumber = `${String(targetChapter).padStart(3, '0')}${subLetter}`;
+      const needsGen = await needsGeneration(caseNumber, targetPath);
 
       if (needsGen && isMountedRef.current) {
-        // Generate in background without blocking
-        setStatus(GENERATION_STATUS.GENERATING);
-        setGenerationType(GENERATION_TYPE.PRELOAD);
+        if (!anyNeedsGen) {
+          // Only set status once when we first find something to generate
+          setStatus(GENERATION_STATUS.GENERATING);
+          setGenerationType(GENERATION_TYPE.PRELOAD);
+          anyNeedsGen = true;
+        }
 
+        // Capture loop variables in local scope for the async closure
+        const targetCase = caseNumber;
         const subIndex = { 'B': 2, 'C': 3 }[subLetter];
-        storyGenerationService.generateSubchapter(chapter, subIndex, pathKey, choiceHistory)
+
+        // Generate in background without blocking
+        storyGenerationService.generateSubchapter(targetChapter, subIndex, targetPath, history)
           .then(entry => {
             // Guard against state updates on unmounted component
             if (entry && isMountedRef.current) {
-              updateGeneratedCache(caseNumber, pathKey, entry);
+              updateGeneratedCache(targetCase, targetPath, entry);
             }
           })
           .catch(err => {
-            console.warn(`[useStoryGeneration] Background generation failed for ${caseNumber}:`, err.message);
+            console.warn(`[useStoryGeneration] Background generation failed for ${targetCase}:`, err.message);
           });
       }
     }
@@ -485,19 +523,21 @@ export function useStoryGeneration(storyCampaign) {
       setStatus(GENERATION_STATUS.GENERATING);
       setGenerationType(GENERATION_TYPE.PRELOAD);
 
-      // Fire both generations simultaneously - don't await, let them run in parallel
+      // Fire both generations simultaneously with silent: true to prevent progress thrashing
+      // When multiple generations run in parallel, they would otherwise interleave setProgress calls
       if (needsPrimaryGen) {
-        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary);
+        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary, { silent: true });
       }
       if (needsSecondaryGen) {
-        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary);
+        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary, { silent: true });
       }
     } else {
       // ========== CONFIDENT PREDICTION: Prioritize primary path ==========
       if (needsPrimaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
-        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary);
+        // Use silent: true for all background preloading to avoid UI state conflicts
+        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary, { silent: true });
       }
 
       // Generate secondary path if:
@@ -508,7 +548,7 @@ export function useStoryGeneration(storyCampaign) {
       if (shouldGenerateSecondary && needsSecondaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
-        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary);
+        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary, { silent: true });
       }
     }
 

@@ -2209,10 +2209,19 @@ Generate realistic, specific consequences based on the actual narrative content.
 
   /**
    * Initialize the service and load any previously generated content
+   * Also resets in-memory state that shouldn't persist across sessions
    */
   async init() {
     this.generatedStory = await loadGeneratedStory();
     this.storyContext = await getStoryContext();
+
+    // Reset thread acknowledgment counts on init to prevent stale data from affecting
+    // validation when starting a new session or reloading the app
+    this.threadAcknowledgmentCounts.clear();
+
+    // Also clear generation attempts to give fresh retries
+    this.generationAttempts.clear();
+
     return this;
   }
 
@@ -4466,30 +4475,46 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
       }
 
-      // Check for personality-inconsistent behavior in narrative text - NOW ERRORS
+      // Check for personality-inconsistent behavior in narrative text
+      // IMPORTANT: Allow personality breaks when emotional state justifies it (desperate, angry)
+      const emotionalState = content.jackBehaviorDeclaration?.emotionalState;
+      const allowsPersonalityBreak = emotionalState === 'desperate' || emotionalState === 'angry';
+
       if (personality.riskTolerance === 'low') {
-        // Methodical Jack shouldn't suddenly be reckless
-        const recklessBehavior = /(?:i|jack)\s+(?:rushed|charged|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)/i;
-        if (recklessBehavior.test(narrativeOriginal)) {
-          issues.push('PERSONALITY VIOLATION: Methodical Jack is acting recklessly (rushed/charged/stormed). Rewrite with cautious approach.');
+        // Methodical Jack shouldn't suddenly be reckless (unless emotionally compromised)
+        // Improved regex: use word boundaries and exclude false positives like "charged with"
+        const recklessBehavior = /\b(?:i|jack)\s+(?:rushed|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)\b/i;
+        const chargedAction = /\b(?:i|jack)\s+charged\s+(?:in|into|through|forward|at)\b/i; // Separate to exclude "charged with"
+
+        if (recklessBehavior.test(narrativeOriginal) || chargedAction.test(narrativeOriginal)) {
+          if (allowsPersonalityBreak) {
+            warnings.push(`Methodical Jack is acting recklessly, but emotional state "${emotionalState}" may justify this deviation.`);
+          } else {
+            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting recklessly (rushed/charged/stormed). Rewrite with cautious approach or set emotionalState to "desperate" or "angry".');
+          }
         }
 
-        // Check for impulsive actions
-        const impulsiveActions = /without\s+(?:thinking|hesitation|a\s+second\s+thought)|(?:i|jack)\s+(?:grabbed|lunged|dove|leapt)\s+(?:at|for|toward)/i;
+        // Check for impulsive actions - improved with word boundaries
+        const impulsiveActions = /\bwithout\s+(?:thinking|hesitation|a\s+second\s+thought)\b|\b(?:i|jack)\s+(?:grabbed|lunged|dove|leapt)\s+(?:at|for|toward)\b/i;
         if (impulsiveActions.test(narrativeOriginal)) {
-          issues.push('PERSONALITY VIOLATION: Methodical Jack is acting impulsively. Rewrite with deliberate, planned actions.');
+          if (allowsPersonalityBreak) {
+            warnings.push(`Methodical Jack is acting impulsively, but emotional state "${emotionalState}" may justify this.`);
+          } else {
+            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting impulsively. Rewrite with deliberate actions or set emotionalState to "desperate" or "angry".');
+          }
         }
       } else if (personality.riskTolerance === 'high') {
         // Aggressive Jack shouldn't suddenly become overly cautious
-        const overlyPrudent = /(?:i|jack)\s+(?:hesitated|wavered|second-guessed|held\s+back|waited\s+patiently|decided\s+to\s+wait)/i;
+        // Note: For aggressive->cautious, we use warnings (not errors) since this is less narratively jarring
+        const overlyPrudent = /\b(?:i|jack)\s+(?:hesitated\s+for\s+(?:a\s+)?long|wavered|second-guessed|held\s+back|waited\s+patiently|decided\s+to\s+wait)\b/i;
         if (overlyPrudent.test(narrativeOriginal)) {
-          issues.push('PERSONALITY VIOLATION: Aggressive Jack is being overly cautious (hesitated/wavered). Rewrite with direct action.');
+          warnings.push('Aggressive Jack is showing cautious behavior (hesitated/wavered). Consider if this fits the scene context.');
         }
 
         // Check for excessive deliberation
-        const excessiveDeliberation = /(?:i|jack)\s+(?:carefully\s+considered|weighed\s+(?:my|the)\s+options|took\s+(?:my|his)\s+time)/i;
+        const excessiveDeliberation = /\b(?:i|jack)\s+(?:carefully\s+considered|weighed\s+(?:my|the)\s+options|took\s+(?:my|his)\s+time\s+(?:to|before))\b/i;
         if (excessiveDeliberation.test(narrativeOriginal)) {
-          issues.push('PERSONALITY VIOLATION: Aggressive Jack is deliberating excessively. Rewrite with decisive action.');
+          warnings.push('Aggressive Jack is deliberating excessively. Consider if this fits the scene context.');
         }
       }
     }
@@ -4756,14 +4781,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // CATEGORY 11: PATH PERSONALITY BEHAVIOR CONSISTENCY
     // =========================================================================
     // Ensure Jack's actions match the established path personality
+    // Note: Category 4 handles detailed checks; this is a broader safety net
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
+      // Re-use emotional state check from above (allow breaks for desperate/angry)
+      const emotionalStateForCat11 = content.jackBehaviorDeclaration?.emotionalState;
+      const allowsBreakCat11 = emotionalStateForCat11 === 'desperate' || emotionalStateForCat11 === 'angry';
 
       // Check for reckless behavior when player has been methodical
       if (personality.riskTolerance === 'low' || personality.narrativeStyle?.includes('cautiously')) {
-        const recklessPatterns = /\b(?:charged|rushed|stormed|burst|leapt\s+without|didn't\s+wait|threw\s+caution|reckless|impulsive|without\s+thinking)\b/i;
+        // Improved patterns: exclude standalone words that could be false positives
+        const recklessPatterns = /\b(?:rushed\s+(?:in|into|forward)|stormed\s+(?:in|into|out)|burst\s+(?:in|into|through)|leapt\s+without|didn't\s+wait|threw\s+caution)\b/i;
         if (recklessPatterns.test(narrativeOriginal)) {
-          issues.push('Narrative shows reckless behavior inconsistent with methodical/cautious path personality');
+          if (allowsBreakCat11) {
+            warnings.push(`Reckless behavior detected, but emotional state "${emotionalStateForCat11}" may justify this.`);
+          } else {
+            warnings.push('Narrative shows reckless behavior that may conflict with methodical path personality. Consider setting emotionalState to "desperate" or "angry" if intentional.');
+          }
         }
       }
 
