@@ -2389,11 +2389,109 @@ Generate realistic, specific consequences based on the actual narrative content.
       }
     }
 
+    // Prune decisionConsequences: remove entries for old chapters
+    for (const [key] of this.decisionConsequences) {
+      // Keys are like "decision_2_A" or contain chapter references
+      const match = key.match(/(\d+)/);
+      if (match) {
+        const chapterNum = parseInt(match[1]) || 0;
+        if (chapterNum < currentChapter - 3) {
+          this.decisionConsequences.delete(key);
+          prunedCount++;
+        }
+      }
+    }
+
+    // Prune characterStates: limit to reasonable size (50 entries max)
+    if (this.characterStates.size > 50) {
+      const entries = Array.from(this.characterStates.entries());
+      const toRemove = entries.slice(0, entries.length - 30);
+      for (const [key] of toRemove) {
+        this.characterStates.delete(key);
+        prunedCount++;
+      }
+    }
+
+    // Prune generatedConsequences: remove old chapter consequences
+    for (const [key] of this.generatedConsequences) {
+      const match = key.match(/(\d+)/);
+      if (match) {
+        const chapterNum = parseInt(match[1]) || 0;
+        if (chapterNum < currentChapter - 3) {
+          this.generatedConsequences.delete(key);
+          prunedCount++;
+        }
+      }
+    }
+
+    // Prune stale pendingGenerations: remove any that are older than 5 minutes
+    // (they likely failed silently or were abandoned)
+    const now = Date.now();
+    for (const [key, promise] of this.pendingGenerations) {
+      // Check if promise has been resolved/rejected by adding a flag
+      if (promise._createdAt && now - promise._createdAt > 5 * 60 * 1000) {
+        this.pendingGenerations.delete(key);
+        prunedCount++;
+        console.log(`[StoryGenerationService] Pruned stale pending generation: ${key}`);
+      }
+    }
+
     if (prunedCount > 0) {
       console.log(`[StoryGenerationService] Pruned ${prunedCount} stale in-memory entries`);
     }
 
     return prunedCount;
+  }
+
+  /**
+   * Destroy the service and clean up all resources
+   * Call this when unmounting or resetting the application
+   */
+  destroy() {
+    console.log('[StoryGenerationService] Destroying service and cleaning up resources...');
+
+    // Clear all Maps
+    this.pendingGenerations.clear();
+    this.decisionConsequences.clear();
+    this.characterStates.clear();
+    this.threadAcknowledgmentCounts.clear();
+    this.chapterOutlines.clear();
+    this.consistencyCheckpoints.clear();
+    this.generatedConsequences.clear();
+    this.generationAttempts.clear();
+
+    // Clear other state
+    this.generatedStory = null;
+    this.storyContext = null;
+    this.storyArc = null;
+    this.indexedFacts = null;
+    this.consistencyLog = [];
+    this.narrativeThreads = [];
+    this.pathPersonality = null;
+    this.isGenerating = false;
+
+    // Clear dynamic clusters
+    this._currentDynamicClusters = null;
+
+    console.log('[StoryGenerationService] Cleanup complete');
+  }
+
+  /**
+   * Get memory usage statistics for debugging
+   */
+  getMemoryStats() {
+    return {
+      pendingGenerations: this.pendingGenerations.size,
+      decisionConsequences: this.decisionConsequences.size,
+      characterStates: this.characterStates.size,
+      threadAcknowledgmentCounts: this.threadAcknowledgmentCounts.size,
+      chapterOutlines: this.chapterOutlines.size,
+      consistencyCheckpoints: this.consistencyCheckpoints.size,
+      generatedConsequences: this.generatedConsequences.size,
+      generationAttempts: this.generationAttempts.size,
+      narrativeThreads: this.narrativeThreads?.length || 0,
+      consistencyLog: this.consistencyLog?.length || 0,
+    };
   }
 
   /**
@@ -3184,11 +3282,102 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
   // ==========================================================================
   // THREAD NORMALIZATION - Prevents duplicate threads across paths
+  // Uses semantic similarity for fuzzy matching of equivalent threads
   // ==========================================================================
 
   /**
+   * Synonym groups for semantic thread matching
+   * Verbs in the same group are treated as equivalent for deduplication
+   */
+  static VERB_SYNONYM_GROUPS = [
+    // Meeting/Encounter synonyms
+    ['meet', 'see', 'visit', 'rendezvous', 'encounter', 'come', 'arrive', 'show'],
+    // Promise/Agreement synonyms
+    ['promise', 'agree', 'commit', 'vow', 'swear', 'pledge', 'guarantee', 'assure'],
+    // Investigation synonyms
+    ['investigate', 'search', 'look', 'examine', 'check', 'probe', 'dig', 'explore'],
+    // Confrontation synonyms
+    ['confront', 'face', 'challenge', 'accuse', 'question', 'interrogate', 'press'],
+    // Following/Tracking synonyms
+    ['follow', 'track', 'tail', 'shadow', 'pursue', 'watch', 'observe', 'surveil'],
+    // Communication synonyms
+    ['call', 'phone', 'contact', 'reach', 'message', 'notify', 'inform', 'tell'],
+    // Discovery synonyms
+    ['find', 'discover', 'uncover', 'reveal', 'learn', 'realize', 'determine'],
+    // Threat synonyms
+    ['threaten', 'warn', 'intimidate', 'menace', 'pressure', 'coerce'],
+  ];
+
+  /**
+   * Location synonym groups for semantic matching
+   */
+  static LOCATION_SYNONYM_GROUPS = [
+    ['docks', 'pier', 'wharf', 'harbor', 'waterfront', 'marina', 'port'],
+    ['warehouse', 'building', 'factory', 'facility', 'plant'],
+    ['office', 'room', 'study', 'workspace'],
+    ['bar', 'pub', 'tavern', 'murphy', 'saloon'],
+    ['prison', 'jail', 'greystone', 'cell', 'penitentiary'],
+    ['alley', 'alleyway', 'backstreet', 'passage'],
+    ['apartment', 'flat', 'residence', 'home', 'place'],
+  ];
+
+  /**
+   * Stem common verb endings to base form
+   */
+  _stemVerb(word) {
+    if (!word) return word;
+    const w = word.toLowerCase();
+
+    // Handle common verb forms
+    if (w.endsWith('ing')) return w.slice(0, -3).replace(/([^aeiou])$/, '$1'); // meeting -> meet
+    if (w.endsWith('ed') && w.length > 4) return w.slice(0, -2).replace(/i$/, 'y'); // promised -> promis -> promise handled below
+    if (w.endsWith('ied')) return w.slice(0, -3) + 'y'; // tried -> try
+    if (w.endsWith('es') && w.length > 4) return w.slice(0, -2); // watches -> watch
+    if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) return w.slice(0, -1); // meets -> meet
+
+    // Fix common stemming artifacts
+    const fixes = {
+      'promis': 'promise', 'agre': 'agree', 'arriv': 'arrive',
+      'observ': 'observe', 'investigat': 'investigate', 'determin': 'determine',
+      'realiz': 'realize', 'pressur': 'pressure', 'threaten': 'threaten',
+    };
+    return fixes[w] || w;
+  }
+
+  /**
+   * Get the canonical verb for a given verb (using synonym groups)
+   */
+  _getCanonicalVerb(verb) {
+    const stemmed = this._stemVerb(verb);
+    for (const group of StoryGenerationService.VERB_SYNONYM_GROUPS) {
+      if (group.some(v => v === stemmed || stemmed.includes(v) || v.includes(stemmed))) {
+        return group[0]; // Return the canonical (first) verb in group
+      }
+    }
+    return stemmed;
+  }
+
+  /**
+   * Get the canonical location for a given location (using synonym groups)
+   */
+  _getCanonicalLocation(location) {
+    const loc = location.toLowerCase();
+    for (const group of StoryGenerationService.LOCATION_SYNONYM_GROUPS) {
+      if (group.some(l => loc.includes(l) || l.includes(loc))) {
+        return group[0]; // Return the canonical (first) location in group
+      }
+    }
+    return loc;
+  }
+
+  /**
    * Normalize a thread to a canonical ID for deduplication
-   * Format: {type}:{sorted_entities}:{action_hash}
+   * Format: {type}:{sorted_entities}:{canonical_action}:{canonical_location}:{time_bucket}
+   *
+   * Uses semantic normalization:
+   * - Verbs are stemmed and mapped to canonical synonyms
+   * - Locations are mapped to canonical synonyms
+   * - Time references are bucketed (morning/noon/evening/night)
    */
   _normalizeThreadId(thread) {
     if (!thread || !thread.description) return null;
@@ -3207,48 +3396,127 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       .filter(name => description.includes(name))
       .sort();
 
-    // Extract key action verbs
-    const actionVerbs = [
-      'meet', 'call', 'visit', 'confront', 'investigate', 'find', 'search',
-      'promise', 'agree', 'threaten', 'reveal', 'discover', 'follow', 'watch'
-    ];
+    // Extract and canonicalize action verbs
+    const actionPattern = /\b(meet|see|visit|visit|come|arrive|show|promise|agree|commit|vow|swear|pledge|investigate|search|look|examine|check|confront|face|challenge|accuse|question|interrogate|follow|track|tail|shadow|pursue|watch|observe|call|phone|contact|reach|message|find|discover|uncover|reveal|learn|threaten|warn|intimidate|meeting|seeing|visiting|coming|arriving|promising|agreeing|investigating|searching|confronting|following|tracking|calling|finding|discovering|threatening)[a-z]*/gi;
+    const foundActions = description.match(actionPattern) || [];
+    const canonicalActions = [...new Set(foundActions.map(a => this._getCanonicalVerb(a)))].sort();
 
-    const actions = actionVerbs
-      .filter(verb => description.includes(verb))
-      .sort();
+    // Extract time references and bucket them
+    const timeBuckets = {
+      morning: /\b(morning|dawn|sunrise|am|breakfast|early)\b/i,
+      noon: /\b(noon|midday|lunch|afternoon)\b/i,
+      evening: /\b(evening|sunset|dusk|dinner|pm)\b/i,
+      night: /\b(night|midnight|late|tonight)\b/i,
+      tomorrow: /\b(tomorrow|next day)\b/i,
+    };
 
-    // Extract time references for appointments
-    const timePatterns = /(?:midnight|noon|morning|evening|tonight|tomorrow|dawn|dusk|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/gi;
-    const times = (description.match(timePatterns) || []).map(t => t.toLowerCase()).sort();
+    let timeBucket = null;
+    for (const [bucket, pattern] of Object.entries(timeBuckets)) {
+      if (pattern.test(description)) {
+        timeBucket = bucket;
+        break;
+      }
+    }
 
-    // Extract location references
+    // Extract and canonicalize location references
     const locations = [
-      'docks', 'warehouse', 'office', 'precinct', 'greystone', 'prison',
-      'bar', 'apartment', 'morgue', 'courthouse', 'alley', 'waterfront'
+      'docks', 'pier', 'wharf', 'warehouse', 'office', 'precinct', 'greystone', 'prison',
+      'bar', 'murphy', 'apartment', 'morgue', 'courthouse', 'alley', 'waterfront',
+      'harbor', 'building', 'factory', 'home', 'place', 'penthouse'
     ];
-    const mentionedLocations = locations
-      .filter(loc => description.includes(loc))
-      .sort();
+    const foundLocations = locations.filter(loc => description.includes(loc));
+    const canonicalLocation = foundLocations.length > 0
+      ? this._getCanonicalLocation(foundLocations[0])
+      : null;
 
-    // Build normalized ID
+    // Build normalized ID with canonical forms
     const parts = [type];
     if (mentionedCharacters.length > 0) parts.push(mentionedCharacters.join(','));
-    if (actions.length > 0) parts.push(actions[0]); // Primary action
-    if (times.length > 0) parts.push(times[0]); // Primary time
-    if (mentionedLocations.length > 0) parts.push(mentionedLocations[0]); // Primary location
+    if (canonicalActions.length > 0) parts.push(canonicalActions[0]); // Primary canonical action
+    if (canonicalLocation) parts.push(canonicalLocation);
+    if (timeBucket) parts.push(timeBucket);
 
     return parts.join(':');
   }
 
   /**
-   * Deduplicate threads using normalized IDs
+   * Calculate semantic similarity score between two threads (0-1)
+   * Used for fuzzy matching when normalized IDs don't match exactly
+   */
+  _calculateThreadSimilarity(thread1, thread2) {
+    if (!thread1?.description || !thread2?.description) return 0;
+
+    const desc1 = thread1.description.toLowerCase();
+    const desc2 = thread2.description.toLowerCase();
+
+    let score = 0;
+    let factors = 0;
+
+    // Same type is a strong signal
+    if (thread1.type === thread2.type) {
+      score += 0.3;
+    }
+    factors += 0.3;
+
+    // Extract and compare characters
+    const knownCharacters = [
+      'jack', 'sarah', 'victoria', 'emily', 'tom', 'wade', 'eleanor',
+      'bellamy', 'silas', 'reed', 'grange', 'marcus', 'thornhill',
+      'lisa', 'chen', 'james', 'sullivan', 'teresa', 'reeves'
+    ];
+
+    const chars1 = new Set(knownCharacters.filter(c => desc1.includes(c)));
+    const chars2 = new Set(knownCharacters.filter(c => desc2.includes(c)));
+    const charIntersection = [...chars1].filter(c => chars2.has(c)).length;
+    const charUnion = new Set([...chars1, ...chars2]).size;
+
+    if (charUnion > 0) {
+      score += 0.35 * (charIntersection / charUnion); // Jaccard similarity for characters
+    }
+    factors += 0.35;
+
+    // Compare canonical actions
+    const actionPattern = /\b(meet|see|visit|promise|agree|investigate|search|confront|follow|track|call|find|discover|threaten|watch|observe)[a-z]*/gi;
+    const actions1 = [...new Set((desc1.match(actionPattern) || []).map(a => this._getCanonicalVerb(a)))];
+    const actions2 = [...new Set((desc2.match(actionPattern) || []).map(a => this._getCanonicalVerb(a)))];
+
+    const actionIntersection = actions1.filter(a => actions2.includes(a)).length;
+    const actionUnion = new Set([...actions1, ...actions2]).size;
+
+    if (actionUnion > 0) {
+      score += 0.25 * (actionIntersection / actionUnion);
+    }
+    factors += 0.25;
+
+    // Compare locations
+    const locations = [
+      'docks', 'pier', 'warehouse', 'office', 'precinct', 'greystone', 'prison',
+      'bar', 'apartment', 'morgue', 'courthouse', 'alley', 'waterfront'
+    ];
+    const locs1 = locations.filter(l => desc1.includes(l)).map(l => this._getCanonicalLocation(l));
+    const locs2 = locations.filter(l => desc2.includes(l)).map(l => this._getCanonicalLocation(l));
+
+    if (locs1.length > 0 && locs2.length > 0) {
+      const locMatch = locs1.some(l1 => locs2.includes(l1));
+      if (locMatch) score += 0.1;
+    }
+    factors += 0.1;
+
+    return score / factors; // Normalize to 0-1
+  }
+
+  /**
+   * Deduplicate threads using normalized IDs AND semantic similarity
+   * Two-pass approach: exact match first, then fuzzy match for remaining
    */
   _deduplicateThreads(threads) {
     if (!threads || threads.length === 0) return [];
 
     const seen = new Map();
     const deduplicated = [];
+    const urgencyRank = { critical: 3, normal: 2, background: 1 };
 
+    // PASS 1: Exact normalized ID matching
     for (const thread of threads) {
       const normalizedId = this._normalizeThreadId(thread);
 
@@ -3259,16 +3527,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
       if (!seen.has(normalizedId)) {
         seen.set(normalizedId, thread);
-        // Add normalized ID to thread for tracking
         thread._normalizedId = normalizedId;
         deduplicated.push(thread);
       } else {
         // Merge: keep the more recent or more urgent version
         const existing = seen.get(normalizedId);
-        const urgencyRank = { critical: 3, normal: 2, background: 1 };
 
         if ((urgencyRank[thread.urgency] || 0) > (urgencyRank[existing.urgency] || 0)) {
-          // Replace with more urgent version
           const idx = deduplicated.indexOf(existing);
           if (idx !== -1) {
             thread._normalizedId = normalizedId;
@@ -3277,7 +3542,46 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }
         }
 
-        console.log(`[StoryGenerationService] Deduplicated thread: "${thread.description?.slice(0, 50)}..." (normalized: ${normalizedId})`);
+        console.log(`[StoryGenerationService] Deduplicated thread (exact): "${thread.description?.slice(0, 50)}..." (normalized: ${normalizedId})`);
+      }
+    }
+
+    // PASS 2: Semantic similarity matching for remaining duplicates
+    // Only run if we have enough threads to warrant the cost
+    if (deduplicated.length > 3) {
+      const SIMILARITY_THRESHOLD = 0.75; // Threads with >75% similarity are considered duplicates
+      const toRemove = new Set();
+
+      for (let i = 0; i < deduplicated.length; i++) {
+        if (toRemove.has(i)) continue;
+
+        for (let j = i + 1; j < deduplicated.length; j++) {
+          if (toRemove.has(j)) continue;
+
+          // Skip if already matched by normalized ID
+          if (deduplicated[i]._normalizedId === deduplicated[j]._normalizedId) continue;
+
+          const similarity = this._calculateThreadSimilarity(deduplicated[i], deduplicated[j]);
+
+          if (similarity >= SIMILARITY_THRESHOLD) {
+            // Keep the more urgent one, or the first one if equal urgency
+            const urgencyI = urgencyRank[deduplicated[i].urgency] || 0;
+            const urgencyJ = urgencyRank[deduplicated[j].urgency] || 0;
+
+            if (urgencyJ > urgencyI) {
+              toRemove.add(i);
+              console.log(`[StoryGenerationService] Deduplicated thread (semantic ${(similarity * 100).toFixed(0)}%): "${deduplicated[i].description?.slice(0, 40)}..." ~= "${deduplicated[j].description?.slice(0, 40)}..."`);
+            } else {
+              toRemove.add(j);
+              console.log(`[StoryGenerationService] Deduplicated thread (semantic ${(similarity * 100).toFixed(0)}%): "${deduplicated[j].description?.slice(0, 40)}..." ~= "${deduplicated[i].description?.slice(0, 40)}..."`);
+            }
+          }
+        }
+      }
+
+      // Remove duplicates found in pass 2
+      if (toRemove.size > 0) {
+        return deduplicated.filter((_, idx) => !toRemove.has(idx));
       }
     }
 
@@ -3668,6 +3972,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     })();
 
+    // Add timestamp for stale detection during pruning
+    generationPromise._createdAt = Date.now();
     this.pendingGenerations.set(generationKey, generationPromise);
 
     try {
@@ -4189,7 +4495,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // =========================================================================
-    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads - NOW ENFORCED
+    // CATEGORY 5: PLOT CONTINUITY - Check narrative threads - STRICTLY ENFORCED
     // =========================================================================
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
       // Get critical threads that MUST be addressed (appointments and promises)
@@ -4202,14 +4508,39 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Check if LLM provided thread acknowledgments
         const addressedThreads = content.previousThreadsAddressed || [];
 
-        // Calculate how many critical threads were addressed
-        const addressedCount = addressedThreads.length;
-        const criticalCount = criticalThreads.length;
+        // ========== NEW: Verify addressed threads actually match critical threads ==========
+        // This prevents the LLM from claiming to address made-up threads
+        let validAddressedCount = 0;
+        const unmatchedCritical = [...criticalThreads];
 
-        // Require at least 50% of critical threads to be acknowledged
+        for (const addressed of addressedThreads) {
+          const addressedLower = (addressed.originalThread || '').toLowerCase();
+
+          // Try to match this addressed thread to a critical thread
+          const matchIndex = unmatchedCritical.findIndex(critical => {
+            const criticalLower = (critical.description || '').toLowerCase();
+            // Match if there's significant overlap in key terms
+            const addressedWords = addressedLower.split(/\s+/).filter(w => w.length > 3);
+            const criticalWords = criticalLower.split(/\s+/).filter(w => w.length > 3);
+            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => cw.includes(w) || w.includes(cw)));
+            // Require at least 2 matching words or 40% overlap
+            return matchingWords.length >= 2 || matchingWords.length / Math.max(addressedWords.length, 1) > 0.4;
+          });
+
+          if (matchIndex !== -1) {
+            validAddressedCount++;
+            unmatchedCritical.splice(matchIndex, 1); // Remove matched thread
+          } else {
+            // Log potential fabricated thread
+            console.warn(`[StoryGenerationService] Thread addressed doesn't match any critical thread: "${addressedLower.slice(0, 60)}..."`);
+          }
+        }
+
+        // Require at least 50% of critical threads to be VALIDLY acknowledged
+        const criticalCount = criticalThreads.length;
         const requiredAcknowledgments = Math.ceil(criticalCount * 0.5);
-        if (addressedCount < requiredAcknowledgments) {
-          issues.push(`THREAD CONTINUITY VIOLATION: Only ${addressedCount}/${criticalCount} critical threads addressed. Must acknowledge at least ${requiredAcknowledgments}. Critical threads: ${criticalThreads.slice(0, 3).map(t => t.description).join('; ')}`);
+        if (validAddressedCount < requiredAcknowledgments) {
+          issues.push(`THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge at least ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`);
         }
 
         // =========================================================================
@@ -5459,7 +5790,11 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       !outlierWords.includes(w.toUpperCase())
     );
 
-    // Run synchronous semantic validation
+    // Extract dynamic semantic clusters from this specific narrative
+    // This catches story-specific terms like poison types, unique locations, etc.
+    this._extractDynamicClusters(narrative);
+
+    // Run synchronous semantic validation (now uses both static AND dynamic clusters)
     outlierWords = this._validatePuzzleSemanticsSync(
       outlierWords,
       mainGridWords,
@@ -5873,7 +6208,162 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
   }
 
   /**
+   * Extract dynamic semantic clusters from narrative context
+   *
+   * Analyzes the current narrative to find story-specific terms that should
+   * be clustered together to prevent unfair puzzle overlaps.
+   *
+   * Examples of dynamic clusters:
+   * - If narrative mentions "arsenic poisoning", creates [ARSENIC, POISON, TOXIC, VENOM]
+   * - If narrative mentions a unique location "the old mill", creates [MILL, OLD, ABANDONED]
+   * - If narrative mentions a weapon "the bloodied hammer", creates [HAMMER, BLOOD, WEAPON]
+   *
+   * @param {string} narrative - The narrative text to analyze
+   * @returns {string[][]} Array of dynamic semantic clusters
+   */
+  _extractDynamicClusters(narrative) {
+    if (!narrative) return [];
+
+    const dynamicClusters = [];
+    const narrativeUpper = narrative.toUpperCase();
+    const narrativeLower = narrative.toLowerCase();
+
+    // ========== PATTERN 1: Method of Death/Violence ==========
+    // Detect specific methods mentioned and cluster related terms
+    const violencePatterns = [
+      { pattern: /\b(poison|poisoned|poisoning|arsenic|cyanide|toxic|venom)\b/gi,
+        cluster: ['POISON', 'POISONED', 'ARSENIC', 'CYANIDE', 'TOXIC', 'VENOM', 'DOSE', 'LETHAL'] },
+      { pattern: /\b(strangle|strangled|strangling|choke|choked|garrote|asphyxiate)\b/gi,
+        cluster: ['STRANGLE', 'CHOKE', 'GARROTE', 'THROAT', 'NECK', 'ASPHYXIATE', 'SUFFOCATE'] },
+      { pattern: /\b(drown|drowned|drowning|submerge|underwater)\b/gi,
+        cluster: ['DROWN', 'DROWNED', 'WATER', 'SUBMERGE', 'UNDERWATER', 'LUNGS', 'BREATHE'] },
+      { pattern: /\b(burn|burned|burning|arson|fire|immolate|torch)\b/gi,
+        cluster: ['BURN', 'BURNED', 'ARSON', 'FIRE', 'FLAME', 'TORCH', 'ASH', 'CHAR'] },
+      { pattern: /\b(bludgeon|bludgeoned|blunt|hammer|club|bat|beaten)\b/gi,
+        cluster: ['BLUDGEON', 'BLUNT', 'HAMMER', 'CLUB', 'BAT', 'BEATEN', 'SKULL', 'CRUSH'] },
+    ];
+
+    for (const { pattern, cluster } of violencePatterns) {
+      if (pattern.test(narrativeLower)) {
+        dynamicClusters.push(cluster);
+        console.log(`[StoryGenerationService] Dynamic cluster added for violence method: ${cluster[0]}`);
+      }
+    }
+
+    // ========== PATTERN 2: Specific Locations/Places ==========
+    // Extract unique location names and create clusters
+    const locationPatterns = [
+      { pattern: /\b(mill|old mill|abandoned mill|watermill)\b/gi,
+        cluster: ['MILL', 'ABANDONED', 'WATERMILL', 'GRAIN', 'WHEEL'] },
+      { pattern: /\b(lighthouse|beacon|tower light)\b/gi,
+        cluster: ['LIGHTHOUSE', 'BEACON', 'TOWER', 'LIGHT', 'COAST', 'ROCKS'] },
+      { pattern: /\b(church|chapel|cathedral|sanctuary|steeple)\b/gi,
+        cluster: ['CHURCH', 'CHAPEL', 'CATHEDRAL', 'SANCTUARY', 'STEEPLE', 'PEWS', 'ALTAR'] },
+      { pattern: /\b(cemetery|graveyard|tomb|crypt|mausoleum)\b/gi,
+        cluster: ['CEMETERY', 'GRAVEYARD', 'TOMB', 'CRYPT', 'GRAVE', 'BURIAL', 'HEADSTONE'] },
+      { pattern: /\b(casino|gambling|poker|roulette|blackjack)\b/gi,
+        cluster: ['CASINO', 'GAMBLING', 'POKER', 'CARDS', 'CHIPS', 'BET', 'STAKES'] },
+      { pattern: /\b(hospital|clinic|ward|medical center|emergency room)\b/gi,
+        cluster: ['HOSPITAL', 'CLINIC', 'WARD', 'MEDICAL', 'DOCTOR', 'NURSE', 'PATIENT'] },
+    ];
+
+    for (const { pattern, cluster } of locationPatterns) {
+      if (pattern.test(narrativeLower)) {
+        dynamicClusters.push(cluster);
+        console.log(`[StoryGenerationService] Dynamic cluster added for location: ${cluster[0]}`);
+      }
+    }
+
+    // ========== PATTERN 3: Evidence/Objects Mentioned ==========
+    // Extract specific objects that could be evidence
+    const evidencePatterns = [
+      { pattern: /\b(ring|wedding ring|diamond ring|signet ring)\b/gi,
+        cluster: ['RING', 'DIAMOND', 'WEDDING', 'GOLD', 'BAND', 'FINGER', 'JEWELRY'] },
+      { pattern: /\b(watch|wristwatch|pocket watch|timepiece)\b/gi,
+        cluster: ['WATCH', 'WRISTWATCH', 'TIMEPIECE', 'CLOCK', 'HANDS', 'TICK'] },
+      { pattern: /\b(photograph|photo|picture|snapshot|polaroid)\b/gi,
+        cluster: ['PHOTO', 'PHOTOGRAPH', 'PICTURE', 'SNAPSHOT', 'IMAGE', 'FRAME'] },
+      { pattern: /\b(diary|journal|notebook|ledger|log book)\b/gi,
+        cluster: ['DIARY', 'JOURNAL', 'NOTEBOOK', 'LEDGER', 'PAGES', 'ENTRIES', 'WRITING'] },
+      { pattern: /\b(tape|cassette|recording|audio|reel)\b/gi,
+        cluster: ['TAPE', 'CASSETTE', 'RECORDING', 'AUDIO', 'REEL', 'VOICE', 'PLAY'] },
+      { pattern: /\b(syringe|needle|injection|hypodermic)\b/gi,
+        cluster: ['SYRINGE', 'NEEDLE', 'INJECTION', 'HYPODERMIC', 'DOSE', 'INJECT'] },
+    ];
+
+    for (const { pattern, cluster } of evidencePatterns) {
+      if (pattern.test(narrativeLower)) {
+        dynamicClusters.push(cluster);
+        console.log(`[StoryGenerationService] Dynamic cluster added for evidence: ${cluster[0]}`);
+      }
+    }
+
+    // ========== PATTERN 4: Profession/Role Mentioned ==========
+    // If narrative introduces specific professions, cluster related terms
+    const professionPatterns = [
+      { pattern: /\b(doctor|surgeon|physician|medical)\b/gi,
+        cluster: ['DOCTOR', 'SURGEON', 'PHYSICIAN', 'MEDICAL', 'SCALPEL', 'PATIENT', 'SURGERY'] },
+      { pattern: /\b(lawyer|attorney|counsel|legal|barrister)\b/gi,
+        cluster: ['LAWYER', 'ATTORNEY', 'COUNSEL', 'LEGAL', 'COURT', 'CASE', 'CLIENT'] },
+      { pattern: /\b(priest|father|clergy|reverend|minister)\b/gi,
+        cluster: ['PRIEST', 'FATHER', 'CLERGY', 'REVEREND', 'CHURCH', 'HOLY', 'CONFESS'] },
+      { pattern: /\b(reporter|journalist|press|newspaper|editor)\b/gi,
+        cluster: ['REPORTER', 'JOURNALIST', 'PRESS', 'NEWSPAPER', 'EDITOR', 'STORY', 'HEADLINE'] },
+      { pattern: /\b(nurse|orderly|caretaker|aide)\b/gi,
+        cluster: ['NURSE', 'ORDERLY', 'CARETAKER', 'AIDE', 'PATIENT', 'CARE', 'WARD'] },
+    ];
+
+    for (const { pattern, cluster } of professionPatterns) {
+      if (pattern.test(narrativeLower)) {
+        dynamicClusters.push(cluster);
+        console.log(`[StoryGenerationService] Dynamic cluster added for profession: ${cluster[0]}`);
+      }
+    }
+
+    // ========== PATTERN 5: Extract Repeated Significant Nouns ==========
+    // Find nouns that appear 3+ times - they're likely thematically important
+    const nounPattern = /\b([A-Z][a-z]{3,})\b/g;
+    const nounCounts = new Map();
+    let match;
+
+    while ((match = nounPattern.exec(narrative)) !== null) {
+      const noun = match[1].toUpperCase();
+      // Skip common words and character names
+      const skipWords = new Set([
+        'JACK', 'SARAH', 'VICTORIA', 'EMILY', 'WADE', 'ELEANOR', 'BELLAMY',
+        'THAT', 'THIS', 'THEN', 'WHEN', 'WERE', 'BEEN', 'HAVE', 'SAID',
+        'JUST', 'LIKE', 'BACK', 'DOWN', 'INTO', 'OVER', 'ONLY', 'EVEN'
+      ]);
+      if (!skipWords.has(noun) && noun.length >= 4) {
+        nounCounts.set(noun, (nounCounts.get(noun) || 0) + 1);
+      }
+    }
+
+    // Create clusters for frequently mentioned nouns
+    for (const [noun, count] of nounCounts.entries()) {
+      if (count >= 3) {
+        // Create a small cluster with variations
+        const cluster = [noun];
+        // Add common variations
+        if (noun.endsWith('S')) cluster.push(noun.slice(0, -1));
+        else cluster.push(noun + 'S');
+        if (noun.endsWith('ED')) cluster.push(noun.slice(0, -2));
+        if (noun.endsWith('ING')) cluster.push(noun.slice(0, -3));
+
+        dynamicClusters.push(cluster);
+        console.log(`[StoryGenerationService] Dynamic cluster added for repeated noun: ${noun} (${count} occurrences)`);
+      }
+    }
+
+    // Store for use in semantic validation
+    this._currentDynamicClusters = dynamicClusters;
+
+    return dynamicClusters;
+  }
+
+  /**
    * Check if two words belong to the same semantic cluster
+   * Now checks both static clusters AND dynamic clusters extracted from narrative
    */
   _areSemanticallySimilar(word1, word2) {
     const w1 = word1.toUpperCase();
@@ -5885,12 +6375,23 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     // Check if one contains the other (KILL/KILLER, DEATH/DEAD)
     if (w1.includes(w2) || w2.includes(w1)) return true;
 
-    // Check semantic clusters
-    const clusters = this._getSemanticClusters();
-    for (const cluster of clusters) {
+    // Check static semantic clusters
+    const staticClusters = this._getSemanticClusters();
+    for (const cluster of staticClusters) {
       const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
       const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
       if (hasW1 && hasW2) return true;
+    }
+
+    // Check dynamic semantic clusters (extracted from current narrative)
+    const dynamicClusters = this._currentDynamicClusters || [];
+    for (const cluster of dynamicClusters) {
+      const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
+      const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
+      if (hasW1 && hasW2) {
+        console.log(`[StoryGenerationService] Dynamic cluster match: "${w1}" and "${w2}" in cluster [${cluster.slice(0, 3).join(', ')}...]`);
+        return true;
+      }
     }
 
     return false;

@@ -51,11 +51,33 @@ export function useStoryGeneration(storyCampaign) {
   const generationRef = useRef(null);
   const lastPredictionRef = useRef(null); // Track what we predicted
 
+  // Track mounted state to prevent state updates on unmounted component
+  const isMountedRef = useRef(true);
+  // Track pending timeouts for cleanup
+  const pendingTimeoutsRef = useRef(new Set());
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      // Clear all pending timeouts
+      pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      pendingTimeoutsRef.current.clear();
+      // Reset refs
+      generationRef.current = null;
+      lastPredictionRef.current = null;
+    };
+  }, []);
+
   // Check if LLM is configured on mount
   useEffect(() => {
     const checkConfig = async () => {
       await llmService.init();
-      setIsConfigured(llmService.isConfigured());
+      if (isMountedRef.current) {
+        setIsConfigured(llmService.isConfigured());
+      }
     };
     checkConfig();
   }, []);
@@ -113,9 +135,11 @@ export function useStoryGeneration(storyCampaign) {
 
     // Determine if this is a cache miss (player chose unexpected path)
     // A cache miss occurs when we predicted a different path than what was chosen
+    // Threshold aligned with pregenerate: we generate both paths when confidence < 0.70
+    // So only flag cache miss when we were confident (>= 0.70) but player chose differently
     const wasCacheMiss = lastPredictionRef.current &&
       lastPredictionRef.current.primary !== pathKey &&
-      lastPredictionRef.current.confidence > 0.6;
+      lastPredictionRef.current.confidence >= 0.70;
 
     setStatus(GENERATION_STATUS.GENERATING);
     setGenerationType(GENERATION_TYPE.IMMEDIATE);
@@ -231,7 +255,7 @@ export function useStoryGeneration(storyCampaign) {
       const caseNumber = `${String(chapter).padStart(3, '0')}${subLetter}`;
       const needsGen = await needsGeneration(caseNumber, pathKey);
 
-      if (needsGen) {
+      if (needsGen && isMountedRef.current) {
         // Generate in background without blocking
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
@@ -239,12 +263,13 @@ export function useStoryGeneration(storyCampaign) {
         const subIndex = { 'B': 2, 'C': 3 }[subLetter];
         storyGenerationService.generateSubchapter(chapter, subIndex, pathKey, choiceHistory)
           .then(entry => {
-            if (entry) {
+            // Guard against state updates on unmounted component
+            if (entry && isMountedRef.current) {
               updateGeneratedCache(caseNumber, pathKey, entry);
             }
           })
           .catch(err => {
-            console.warn(`Background generation failed for ${caseNumber}:`, err.message);
+            console.warn(`[useStoryGeneration] Background generation failed for ${caseNumber}:`, err.message);
           });
       }
     }
@@ -403,6 +428,9 @@ export function useStoryGeneration(storyCampaign) {
    * Pre-generate upcoming content with MULTI-TIER lookahead strategy
    * Uses player's choice history to prioritize likely paths
    * Now generates up to 2 chapters ahead for seamless gameplay
+   *
+   * BALANCED PLAYER OPTIMIZATION: For players with balanced/unpredictable patterns,
+   * both paths are generated in TRUE parallel to eliminate cache miss latency.
    */
   const pregenerate = useCallback(async (currentChapter, pathKey, choiceHistory = []) => {
     if (!isConfigured || currentChapter >= 12) {
@@ -419,52 +447,67 @@ export function useStoryGeneration(storyCampaign) {
     // Store prediction for cache miss detection
     lastPredictionRef.current = prediction;
 
-    // Always generate the primary (predicted) path first
-    const needsPrimaryGen = await needsGeneration(firstCaseOfNextChapter, prediction.primary);
+    // ========== BALANCED PLAYER DETECTION ==========
+    // For balanced players (low confidence OR explicitly balanced personality),
+    // generate BOTH paths immediately in true parallel to eliminate wait times
+    const isBalancedPlayer = prediction.playerPersonality === 'balanced' ||
+                             prediction.confidence < 0.70;
 
-    if (needsPrimaryGen) {
+    // Check what needs generation upfront (parallel async checks)
+    const [needsPrimaryGen, needsSecondaryGen] = await Promise.all([
+      needsGeneration(firstCaseOfNextChapter, prediction.primary),
+      needsGeneration(firstCaseOfNextChapter, prediction.secondary),
+    ]);
+
+    // Build speculative histories
+    const speculativeHistoryPrimary = [
+      ...choiceHistory,
+      {
+        caseNumber: formatCaseNumber(currentChapter, 3),
+        optionKey: prediction.primary,
+        timestamp: new Date().toISOString()
+      }
+    ];
+
+    const speculativeHistorySecondary = [
+      ...choiceHistory,
+      {
+        caseNumber: formatCaseNumber(currentChapter, 3),
+        optionKey: prediction.secondary,
+        timestamp: new Date().toISOString()
+      }
+    ];
+
+    // ========== PARALLEL GENERATION FOR BALANCED PLAYERS ==========
+    if (isBalancedPlayer) {
+      console.log(`[useStoryGeneration] Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}, personality: ${prediction.playerPersonality}). Generating both paths in parallel.`);
+
       setStatus(GENERATION_STATUS.GENERATING);
       setGenerationType(GENERATION_TYPE.PRELOAD);
 
-      const speculativeHistory = [
-        ...choiceHistory,
-        {
-          caseNumber: formatCaseNumber(currentChapter, 3),
-          optionKey: prediction.primary,
-          timestamp: new Date().toISOString()
-        }
-      ];
-
-      // Generate primary path first (don't await)
-      generateChapter(nextChapter, prediction.primary, speculativeHistory);
-    }
-
-    // Generate secondary path if:
-    // 1. Primary is already generated, OR
-    // 2. Prediction confidence is low (player is unpredictable), OR
-    // 3. Player has made many choices (has shown varied behavior)
-    // NOTE: Increased threshold from 0.6 to 0.75 to reduce cache miss rate
-    const shouldGenerateSecondary = !needsPrimaryGen ||
-                                     prediction.confidence < 0.75 ||
-                                     choiceHistory.length >= 3;
-
-    if (shouldGenerateSecondary) {
-      const needsSecondaryGen = await needsGeneration(firstCaseOfNextChapter, prediction.secondary);
-
+      // Fire both generations simultaneously - don't await, let them run in parallel
+      if (needsPrimaryGen) {
+        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary);
+      }
       if (needsSecondaryGen) {
+        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary);
+      }
+    } else {
+      // ========== CONFIDENT PREDICTION: Prioritize primary path ==========
+      if (needsPrimaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
+        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary);
+      }
 
-        const speculativeHistorySecondary = [
-          ...choiceHistory,
-          {
-            caseNumber: formatCaseNumber(currentChapter, 3),
-            optionKey: prediction.secondary,
-            timestamp: new Date().toISOString()
-          }
-        ];
+      // Generate secondary path if:
+      // 1. Primary is already generated, OR
+      // 2. Player has made many choices (has shown varied behavior)
+      const shouldGenerateSecondary = !needsPrimaryGen || choiceHistory.length >= 3;
 
-        // Generate secondary path (don't await)
+      if (shouldGenerateSecondary && needsSecondaryGen) {
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
         generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary);
       }
     }
@@ -494,7 +537,13 @@ export function useStoryGeneration(storyCampaign) {
 
       if (needsTier2Gen) {
         // Use a slight delay to prioritize Tier 1 completion
-        setTimeout(async () => {
+        // Track timeout for cleanup on unmount
+        const timeoutId = setTimeout(async () => {
+          pendingTimeoutsRef.current.delete(timeoutId);
+
+          // Guard against unmounted component
+          if (!isMountedRef.current) return;
+
           setGenerationType(GENERATION_TYPE.PRELOAD);
           // Only generate first subchapter of Tier 2 to save resources
           const tier2CaseNumber = firstCaseTwoAhead;
@@ -510,6 +559,8 @@ export function useStoryGeneration(storyCampaign) {
             console.warn('[useStoryGeneration] Tier 2 pre-load failed:', err.message);
           }
         }, 5000); // 5 second delay to prioritize Tier 1
+
+        pendingTimeoutsRef.current.add(timeoutId);
       }
     }
   }, [isConfigured, needsGeneration, generateChapter, predictNextPath]);
