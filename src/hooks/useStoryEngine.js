@@ -3,8 +3,11 @@ import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } f
 import { resolveStoryPathKey, getStoryEntry } from '../data/storyContent';
 import { saveStoredProgress } from '../storage/progressStorage';
 
-export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) {
-  
+// Configurable unlock delay (24 hours default)
+const CHAPTER_UNLOCK_DELAY_MS = 24 * 60 * 60 * 1000;
+
+export function useStoryEngine(progress, updateProgress) {
+
   const storyCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
@@ -65,8 +68,8 @@ export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) 
       chapter: nextChapter,
       subchapter: nextSubchapter,
       activeCaseNumber: nextCaseNumber,
-      nextStoryUnlockAt: nextChapter > 3 
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() 
+      nextStoryUnlockAt: nextChapter > 3
+        ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
         : null
     };
 
@@ -74,13 +77,17 @@ export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) 
         storyCampaign: updatedStory,
         nextUnlockAt: updatedStory.nextStoryUnlockAt
     });
-    
+
     // Force persistent save immediately to prevent save scumming
     saveStoredProgress({
         ...progress,
         storyCampaign: updatedStory,
         nextUnlockAt: updatedStory.nextStoryUnlockAt
-    }).catch(() => {});
+    }).catch((err) => {
+      // Log error but don't block - the in-memory state is already updated
+      // This prevents data loss from being completely silent
+      console.error('[useStoryEngine] Failed to persist decision:', err);
+    });
 
   }, [storyCampaign, updateProgress, progress]);
 
@@ -94,8 +101,10 @@ export function useStoryEngine(progress, updateProgress, setActiveCaseInternal) 
               return { ok: false, reason: 'decision-required' };
           }
           if (storyCampaign.nextStoryUnlockAt) {
-              const nowIso = new Date().toISOString();
-              if (nowIso < storyCampaign.nextStoryUnlockAt) {
+              // Use Date objects for comparison to avoid timezone issues
+              const now = new Date();
+              const unlockTime = new Date(storyCampaign.nextStoryUnlockAt);
+              if (now < unlockTime) {
                   return { ok: false, reason: 'locked', unlockAt: storyCampaign.nextStoryUnlockAt };
               }
           }

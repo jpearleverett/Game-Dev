@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useStoryEngine } from '../hooks/useStoryEngine';
 import { useStoryGeneration } from '../hooks/useStoryGeneration';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter, hasStoryContent } from '../data/storyContent';
@@ -9,6 +9,11 @@ const StoryStateContext = createContext(null);
 const StoryDispatchContext = createContext(null);
 
 export function StoryProvider({ children, progress, updateProgress }) {
+  // Track background generation errors for UI feedback
+  const [backgroundGenerationError, setBackgroundGenerationError] = useState(null);
+
+  // Ref to current choice history - avoids stale closures in callbacks
+  const choiceHistoryRef = useRef([]);
 
   const {
     storyCampaign,
@@ -33,6 +38,11 @@ export function StoryProvider({ children, progress, updateProgress }) {
     cancelGeneration,
     clearError: clearGenerationError,
   } = useStoryGeneration(storyCampaign);
+
+  // Keep choiceHistoryRef in sync to avoid stale closures
+  useEffect(() => {
+    choiceHistoryRef.current = storyCampaign?.choiceHistory || [];
+  }, [storyCampaign?.choiceHistory]);
 
   // Helper to get current path key for analytics
   const getCurrentPathKey = useCallback((caseNumber) => {
@@ -72,8 +82,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Generate the content
     try {
-      // Use optimistic history if provided, otherwise fallback to current state
-      const history = optimisticChoiceHistory || storyCampaign?.choiceHistory || [];
+      // Use optimistic history if provided, otherwise fallback to ref (avoids stale closure)
+      const history = optimisticChoiceHistory || choiceHistoryRef.current;
 
       const entry = await generateForCase(
         caseNumber,
@@ -88,7 +98,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     } catch (error) {
       return { ok: false, reason: 'generation-error', error: error.message };
     }
-  }, [isLLMConfigured, generateForCase, storyCampaign?.choiceHistory]);
+  }, [isLLMConfigured, generateForCase]);
 
   /**
    * Handle background generation logic seamlessly
@@ -98,7 +108,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
     if (!isLLMConfigured) return;
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
-    const choiceHistory = storyCampaign?.choiceHistory || [];
+    // Use ref to avoid stale closure
+    const choiceHistory = choiceHistoryRef.current;
 
     // Strategy:
     // 1. Ensure current chapter's remaining subchapters (siblings) are ready
@@ -116,9 +127,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
     if (chapter >= 1 && chapter < 12) {
       pregenerate(chapter, pathKey, choiceHistory);
     }
-  }, [isLLMConfigured, parseCaseNumber, storyCampaign?.choiceHistory, pregenerateCurrentChapterSiblings, pregenerate]);
+  }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, pregenerate]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
+    // Clear any previous background generation error when starting a new decision
+    setBackgroundGenerationError(null);
+
     // Get chapter info before making the decision
     const currentChapter = storyCampaign?.chapter || 1;
     // Current choice history before update
@@ -148,11 +162,36 @@ export function StoryProvider({ children, progress, updateProgress }) {
       // Trigger generation immediately - do NOT await if we want to return control to UI
       // However, ensureStoryContent handles deduplication via service now, so calling it here is safe.
       // If the user navigates immediately, the next call to ensureStoryContent will attach to this promise.
-      ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory).catch(err => {
-         console.warn('[StoryContext] Background generation failed:', err);
-      });
+      ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory)
+        .then(result => {
+          if (!result.ok && result.reason !== 'llm-not-configured') {
+            // Track the error so UI can display it
+            setBackgroundGenerationError({
+              caseNumber: nextCaseNumber,
+              reason: result.reason,
+              error: result.error,
+              timestamp: new Date().toISOString()
+            });
+            console.warn('[StoryContext] Background generation failed:', result);
+          }
+        })
+        .catch(err => {
+          // Unexpected error (not from ensureStoryContent result)
+          setBackgroundGenerationError({
+            caseNumber: nextCaseNumber,
+            reason: 'unexpected-error',
+            error: err.message,
+            timestamp: new Date().toISOString()
+          });
+          console.error('[StoryContext] Background generation threw:', err);
+        });
     }
   }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent]);
+
+  // Clear background generation error
+  const clearBackgroundGenerationError = useCallback(() => {
+    setBackgroundGenerationError(null);
+  }, []);
 
   const stateValue = useMemo(() => ({
     storyCampaign,
@@ -160,13 +199,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
       status: generationStatus,
       progress: generationProgress,
       error: generationError,
+      backgroundError: backgroundGenerationError, // Track background generation failures
       isConfigured: isLLMConfigured,
       isGenerating,
       generationType,
       isPreloading,
     },
     getCurrentPathKey,
-  }), [storyCampaign, generationStatus, generationProgress, generationError, isLLMConfigured, isGenerating, generationType, isPreloading, getCurrentPathKey]);
+  }), [storyCampaign, generationStatus, generationProgress, generationError, backgroundGenerationError, isLLMConfigured, isGenerating, generationType, isPreloading, getCurrentPathKey]);
 
   const dispatchValue = useMemo(() => ({
     activateStoryCase,
@@ -180,6 +220,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     pregenerateCurrentChapterSiblings,
     cancelGeneration,
     clearGenerationError,
+    clearBackgroundGenerationError,
   }), [
     activateStoryCase,
     selectStoryDecision,
@@ -192,6 +233,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     pregenerateCurrentChapterSiblings,
     cancelGeneration,
     clearGenerationError,
+    clearBackgroundGenerationError,
   ]);
 
   return (

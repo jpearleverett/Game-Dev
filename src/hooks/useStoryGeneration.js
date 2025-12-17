@@ -51,11 +51,33 @@ export function useStoryGeneration(storyCampaign) {
   const generationRef = useRef(null);
   const lastPredictionRef = useRef(null); // Track what we predicted
 
+  // Track mounted state to prevent state updates on unmounted component
+  const isMountedRef = useRef(true);
+  // Track pending timeouts for cleanup
+  const pendingTimeoutsRef = useRef(new Set());
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      // Clear all pending timeouts
+      pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      pendingTimeoutsRef.current.clear();
+      // Reset refs
+      generationRef.current = null;
+      lastPredictionRef.current = null;
+    };
+  }, []);
+
   // Check if LLM is configured on mount
   useEffect(() => {
     const checkConfig = async () => {
       await llmService.init();
-      setIsConfigured(llmService.isConfigured());
+      if (isMountedRef.current) {
+        setIsConfigured(llmService.isConfigured());
+      }
     };
     checkConfig();
   }, []);
@@ -113,9 +135,11 @@ export function useStoryGeneration(storyCampaign) {
 
     // Determine if this is a cache miss (player chose unexpected path)
     // A cache miss occurs when we predicted a different path than what was chosen
+    // Threshold aligned with pregenerate: we generate both paths when confidence < 0.70
+    // So only flag cache miss when we were confident (>= 0.70) but player chose differently
     const wasCacheMiss = lastPredictionRef.current &&
       lastPredictionRef.current.primary !== pathKey &&
-      lastPredictionRef.current.confidence > 0.6;
+      lastPredictionRef.current.confidence >= 0.70;
 
     setStatus(GENERATION_STATUS.GENERATING);
     setGenerationType(GENERATION_TYPE.IMMEDIATE);
@@ -231,7 +255,7 @@ export function useStoryGeneration(storyCampaign) {
       const caseNumber = `${String(chapter).padStart(3, '0')}${subLetter}`;
       const needsGen = await needsGeneration(caseNumber, pathKey);
 
-      if (needsGen) {
+      if (needsGen && isMountedRef.current) {
         // Generate in background without blocking
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
@@ -239,12 +263,13 @@ export function useStoryGeneration(storyCampaign) {
         const subIndex = { 'B': 2, 'C': 3 }[subLetter];
         storyGenerationService.generateSubchapter(chapter, subIndex, pathKey, choiceHistory)
           .then(entry => {
-            if (entry) {
+            // Guard against state updates on unmounted component
+            if (entry && isMountedRef.current) {
               updateGeneratedCache(caseNumber, pathKey, entry);
             }
           })
           .catch(err => {
-            console.warn(`Background generation failed for ${caseNumber}:`, err.message);
+            console.warn(`[useStoryGeneration] Background generation failed for ${caseNumber}:`, err.message);
           });
       }
     }
@@ -512,7 +537,13 @@ export function useStoryGeneration(storyCampaign) {
 
       if (needsTier2Gen) {
         // Use a slight delay to prioritize Tier 1 completion
-        setTimeout(async () => {
+        // Track timeout for cleanup on unmount
+        const timeoutId = setTimeout(async () => {
+          pendingTimeoutsRef.current.delete(timeoutId);
+
+          // Guard against unmounted component
+          if (!isMountedRef.current) return;
+
           setGenerationType(GENERATION_TYPE.PRELOAD);
           // Only generate first subchapter of Tier 2 to save resources
           const tier2CaseNumber = firstCaseTwoAhead;
@@ -528,6 +559,8 @@ export function useStoryGeneration(storyCampaign) {
             console.warn('[useStoryGeneration] Tier 2 pre-load failed:', err.message);
           }
         }, 5000); // 5 second delay to prioritize Tier 1
+
+        pendingTimeoutsRef.current.add(timeoutId);
       }
     }
   }, [isConfigured, needsGeneration, generateChapter, predictNextPath]);
