@@ -4402,10 +4402,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 4: CHARACTER BEHAVIOR CONSISTENCY (Based on path personality)
-    // NOW ENFORCED AS ERRORS, NOT WARNINGS
+    // Enforced as errors UNLESS emotional state justifies deviation
     // =========================================================================
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
+
+      // Check emotional state early - desperate/angry allows personality deviations
+      const emotionalState = content.jackBehaviorDeclaration?.emotionalState;
+      const allowsPersonalityBreak = emotionalState === 'desperate' || emotionalState === 'angry';
 
       // Validate jackActionStyle and jackRiskLevel from LLM output match expected personality
       const expectedActionStyle = personality.riskTolerance === 'low' ? 'cautious'
@@ -4416,19 +4420,28 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       if (content.jackActionStyle && content.jackActionStyle !== expectedActionStyle) {
         // Allow balanced as acceptable middle ground
         if (content.jackActionStyle !== 'balanced' && expectedActionStyle !== 'balanced') {
-          issues.push(`Jack's action style mismatch: LLM declared "${content.jackActionStyle}" but player path personality expects "${expectedActionStyle}"`);
+          if (allowsPersonalityBreak) {
+            warnings.push(`Jack's action style "${content.jackActionStyle}" differs from expected "${expectedActionStyle}", but emotional state "${emotionalState}" may justify this.`);
+          } else {
+            issues.push(`Jack's action style mismatch: LLM declared "${content.jackActionStyle}" but player path personality expects "${expectedActionStyle}"`);
+          }
         }
       }
 
       if (content.jackRiskLevel && content.jackRiskLevel !== expectedRiskLevel) {
         // Allow moderate as acceptable middle ground
         if (content.jackRiskLevel !== 'moderate' && expectedRiskLevel !== 'moderate') {
-          issues.push(`Jack's risk level mismatch: LLM declared "${content.jackRiskLevel}" but player path personality expects "${expectedRiskLevel}"`);
+          if (allowsPersonalityBreak) {
+            warnings.push(`Jack's risk level "${content.jackRiskLevel}" differs from expected "${expectedRiskLevel}", but emotional state "${emotionalState}" may justify this.`);
+          } else {
+            issues.push(`Jack's risk level mismatch: LLM declared "${content.jackRiskLevel}" but player path personality expects "${expectedRiskLevel}"`);
+          }
         }
       }
 
       // =========================================================================
       // BEHAVIOR DECLARATION VALIDATION (Schema-Level Enforcement)
+      // Uses allowsPersonalityBreak defined above for emotional state exceptions
       // =========================================================================
       if (content.jackBehaviorDeclaration) {
         const behavior = content.jackBehaviorDeclaration;
@@ -4450,17 +4463,29 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           // Methodical player - check for aggressive behaviors
           if (behavior.primaryAction && aggressiveBehaviors.primaryAction.includes(behavior.primaryAction)) {
             if (!methodicalBehaviors.primaryAction.includes(behavior.primaryAction)) {
-              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared primaryAction="${behavior.primaryAction}". Expected one of: ${methodicalBehaviors.primaryAction.join(', ')}`);
+              if (allowsPersonalityBreak) {
+                warnings.push(`Methodical player declared aggressive primaryAction="${behavior.primaryAction}", but emotional state "${emotionalState}" may justify this.`);
+              } else {
+                issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared primaryAction="${behavior.primaryAction}". Expected one of: ${methodicalBehaviors.primaryAction.join(', ')}`);
+              }
             }
           }
           if (behavior.dialogueApproach && aggressiveBehaviors.dialogueApproach.includes(behavior.dialogueApproach)) {
-            issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared dialogueApproach="${behavior.dialogueApproach}". Expected one of: ${methodicalBehaviors.dialogueApproach.join(', ')}`);
+            if (allowsPersonalityBreak) {
+              warnings.push(`Methodical player declared aggressive dialogueApproach="${behavior.dialogueApproach}", but emotional state "${emotionalState}" may justify this.`);
+            } else {
+              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared dialogueApproach="${behavior.dialogueApproach}". Expected one of: ${methodicalBehaviors.dialogueApproach.join(', ')}`);
+            }
           }
           if (behavior.physicalBehavior === 'aggressive' || behavior.physicalBehavior === 'commanding') {
-            issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared physicalBehavior="${behavior.physicalBehavior}". Expected one of: ${methodicalBehaviors.physicalBehavior.join(', ')}`);
+            if (allowsPersonalityBreak) {
+              warnings.push(`Methodical player declared aggressive physicalBehavior="${behavior.physicalBehavior}", but emotional state "${emotionalState}" may justify this.`);
+            } else {
+              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared physicalBehavior="${behavior.physicalBehavior}". Expected one of: ${methodicalBehaviors.physicalBehavior.join(', ')}`);
+            }
           }
         } else if (personality.riskTolerance === 'high') {
-          // Aggressive player - check for overly cautious behaviors
+          // Aggressive player - check for overly cautious behaviors (always warnings, not errors)
           if (behavior.primaryAction === 'wait' || behavior.primaryAction === 'flee') {
             warnings.push(`BEHAVIOR NOTE: Aggressive player declared primaryAction="${behavior.primaryAction}" - ensure this is justified by circumstances`);
           }
@@ -4476,10 +4501,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
 
       // Check for personality-inconsistent behavior in narrative text
-      // IMPORTANT: Allow personality breaks when emotional state justifies it (desperate, angry)
-      const emotionalState = content.jackBehaviorDeclaration?.emotionalState;
-      const allowsPersonalityBreak = emotionalState === 'desperate' || emotionalState === 'angry';
-
+      // Uses emotionalState and allowsPersonalityBreak already defined at start of Category 4
       if (personality.riskTolerance === 'low') {
         // Methodical Jack shouldn't suddenly be reckless (unless emotionally compromised)
         // Improved regex: use word boundaries and exclude false positives like "charged with"

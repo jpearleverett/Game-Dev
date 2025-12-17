@@ -202,19 +202,27 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     // Only update status/progress for non-silent (user-facing) generations
+    // Silent generations also don't use generationRef to avoid race conditions
+    // when multiple parallel generations run simultaneously
     if (!silent) {
       setStatus(GENERATION_STATUS.GENERATING);
       setError(null);
       setProgress({ current: 0, total: 3 });
+      generationRef.current = true;
     }
 
     try {
-      generationRef.current = true;
-
       const results = [];
       for (let sub = 1; sub <= 3; sub++) {
-        if (!generationRef.current) {
+        // Only check cancellation for non-silent (user-facing) generations
+        // Silent background generations should run to completion
+        if (!silent && !generationRef.current) {
           // Generation was cancelled
+          return results;
+        }
+
+        // Check if component unmounted (applies to all generations)
+        if (!isMountedRef.current) {
           return results;
         }
 
@@ -256,7 +264,10 @@ export function useStoryGeneration(storyCampaign) {
       }
       return null;
     } finally {
-      generationRef.current = false;
+      // Only reset generationRef for non-silent generations
+      if (!silent) {
+        generationRef.current = false;
+      }
     }
   }, [isConfigured]);
 
