@@ -145,6 +145,48 @@ function scheduleDebouncedFlush() {
 }
 
 /**
+ * Optimize entry for storage by stripping fields that are only needed during generation
+ * This reduces storage size without affecting gameplay
+ */
+function optimizeEntryForStorage(entry) {
+  // Create a shallow copy to avoid mutating the original
+  const optimized = { ...entry };
+
+  // Remove consistencyFacts - only used during generation validation, not needed for playback
+  if (optimized.consistencyFacts) {
+    delete optimized.consistencyFacts;
+  }
+
+  // Optimize board data if present
+  if (optimized.board) {
+    const optimizedBoard = { ...optimized.board };
+
+    // Remove outlierTheme.summary - it's just the first 100 chars of narrative (which we already store)
+    if (optimizedBoard.outlierTheme?.summary) {
+      optimizedBoard.outlierTheme = {
+        name: optimizedBoard.outlierTheme.name,
+        icon: optimizedBoard.outlierTheme.icon,
+        // summary can be reconstructed from narrative if needed
+      };
+    }
+
+    // For branchingOutlierSets, strip auto-generated descriptions (can be reconstructed)
+    if (optimizedBoard.branchingOutlierSets) {
+      optimizedBoard.branchingOutlierSets = optimizedBoard.branchingOutlierSets.map(set => {
+        const optimizedSet = { ...set };
+        // Keep theme but strip descriptions - they're auto-generated from title
+        delete optimizedSet.descriptions;
+        return optimizedSet;
+      });
+    }
+
+    optimized.board = optimizedBoard;
+  }
+
+  return optimized;
+}
+
+/**
  * Save a generated chapter
  * Uses write lock and in-memory cache for better performance
  * Debounces storage writes for rapid successive saves
@@ -168,8 +210,11 @@ export async function saveGeneratedChapter(caseNumber, pathKey, entry) {
         }
       }
 
-      // Update cache
-      storyCache.chapters[key] = entry;
+      // Optimize entry for storage to reduce size
+      const optimizedEntry = optimizeEntryForStorage(entry);
+
+      // Update cache with optimized entry
+      storyCache.chapters[key] = optimizedEntry;
       storyCache.lastUpdated = new Date().toISOString();
       storyCache.totalGenerated = Object.keys(storyCache.chapters).length;
       isDirty = true;
