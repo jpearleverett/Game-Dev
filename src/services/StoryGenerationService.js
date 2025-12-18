@@ -764,10 +764,23 @@ class StoryGenerationService {
     // After 2+ acknowledgments, threads become OVERDUE and must be resolved/failed
     this.threadAcknowledgmentCounts = new Map(); // threadId -> acknowledgment count
 
+    // ========== Thread Archive System ==========
+    // Stores resolved/failed threads compactly to reduce memory while preserving callback potential
+    // Threads are archived when resolved and pruned after 3 chapters of distance
+    this.archivedThreads = []; // Compressed archive of resolved threads
+    this.maxArchivedThreads = 50; // Cap on archived thread storage
+    this.archiveChapterRetention = 3; // Keep archived threads for N chapters after resolution
+
     // ========== NEW: Fallback Content System for Graceful Degradation ==========
     this.fallbackTemplates = this._initializeFallbackTemplates();
     this.generationAttempts = new Map(); // Track retry attempts per content
     this.maxGenerationAttempts = 3; // Max attempts before using fallback
+
+    // ========== Generation Concurrency Limiter ==========
+    // Prevents memory pressure and API overload when parallel preloading kicks in
+    this.maxConcurrentGenerations = 3; // Max simultaneous LLM generation calls
+    this.activeGenerationCount = 0; // Current in-flight generations
+    this.generationWaitQueue = []; // Queue of { resolve, reject, key } for waiting generations
 
     // ========== A+ QUALITY: Setup/Payoff Registry ==========
     this._initializeSetupPayoffRegistry();
@@ -2482,6 +2495,17 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Clear dynamic clusters
     this._currentDynamicClusters = null;
 
+    // Clear generation concurrency state
+    // Reject any waiting generations to prevent hanging promises
+    this.generationWaitQueue.forEach(({ reject, key }) => {
+      reject(new Error(`Generation ${key} cancelled: service destroyed`));
+    });
+    this.generationWaitQueue = [];
+    this.activeGenerationCount = 0;
+
+    // Clear thread archive
+    this.archivedThreads = [];
+
     console.log('[StoryGenerationService] Cleanup complete');
   }
 
@@ -2499,7 +2523,12 @@ Generate realistic, specific consequences based on the actual narrative content.
       generatedConsequences: this.generatedConsequences.size,
       generationAttempts: this.generationAttempts.size,
       narrativeThreads: this.narrativeThreads?.length || 0,
+      archivedThreads: this.archivedThreads?.length || 0,
       consistencyLog: this.consistencyLog?.length || 0,
+      generationQueue: {
+        active: this.activeGenerationCount,
+        waiting: this.generationWaitQueue.length,
+      },
     };
   }
 
@@ -3637,6 +3666,196 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   }
 
   // ==========================================================================
+  // THREAD ARCHIVAL SYSTEM
+  // ==========================================================================
+
+  /**
+   * Archive resolved threads to reduce active memory pressure
+   * Stores compressed version of thread with minimal fields needed for callbacks
+   * @param {Array} threads - Array of threads to process
+   * @param {number} currentChapter - Current chapter number for age calculation
+   */
+  _archiveResolvedThreads(threads, currentChapter) {
+    if (!threads || threads.length === 0) return threads;
+
+    const activeThreads = [];
+    const toArchive = [];
+
+    for (const thread of threads) {
+      // Keep active threads in main list
+      if (thread.status === 'active') {
+        activeThreads.push(thread);
+        continue;
+      }
+
+      // Resolved/failed threads get archived
+      if (thread.status === 'resolved' || thread.status === 'failed') {
+        toArchive.push(thread);
+      } else {
+        // Unknown status - keep in active list to be safe
+        activeThreads.push(thread);
+      }
+    }
+
+    // Archive resolved threads with compression
+    for (const thread of toArchive) {
+      const compressedThread = {
+        type: thread.type,
+        description: thread.description?.slice(0, 100), // Truncate description
+        status: thread.status,
+        resolvedChapter: thread.resolvedChapter || currentChapter,
+        characters: thread.characters?.slice(0, 3) || [], // Keep max 3 characters
+        originalChapter: thread.chapter,
+      };
+
+      // Check if similar thread already archived (avoid duplicates)
+      const isDuplicate = this.archivedThreads.some(archived =>
+        archived.type === compressedThread.type &&
+        archived.description === compressedThread.description
+      );
+
+      if (!isDuplicate) {
+        this.archivedThreads.push(compressedThread);
+      }
+    }
+
+    if (toArchive.length > 0) {
+      console.log(`[StoryGenerationService] Archived ${toArchive.length} resolved threads (archive size: ${this.archivedThreads.length})`);
+    }
+
+    // Prune old archived threads based on chapter distance
+    this._pruneArchivedThreads(currentChapter);
+
+    return activeThreads;
+  }
+
+  /**
+   * Prune archived threads that are too old to be relevant for callbacks
+   * Keeps threads within archiveChapterRetention chapters of resolution
+   */
+  _pruneArchivedThreads(currentChapter) {
+    const originalCount = this.archivedThreads.length;
+
+    // Remove threads resolved more than N chapters ago
+    this.archivedThreads = this.archivedThreads.filter(thread => {
+      const chapterDistance = currentChapter - (thread.resolvedChapter || 0);
+      return chapterDistance <= this.archiveChapterRetention;
+    });
+
+    // Also cap total archive size
+    if (this.archivedThreads.length > this.maxArchivedThreads) {
+      // Sort by resolution chapter (oldest first) and remove oldest
+      this.archivedThreads.sort((a, b) => (a.resolvedChapter || 0) - (b.resolvedChapter || 0));
+      this.archivedThreads = this.archivedThreads.slice(-this.maxArchivedThreads);
+    }
+
+    const pruned = originalCount - this.archivedThreads.length;
+    if (pruned > 0) {
+      console.log(`[StoryGenerationService] Pruned ${pruned} old archived threads (remaining: ${this.archivedThreads.length})`);
+    }
+  }
+
+  /**
+   * Get archived threads for potential callbacks or references
+   * @param {string} type - Optional thread type filter
+   * @param {Array} characters - Optional character filter
+   */
+  getArchivedThreads(type = null, characters = null) {
+    let results = [...this.archivedThreads];
+
+    if (type) {
+      results = results.filter(t => t.type === type);
+    }
+
+    if (characters && characters.length > 0) {
+      const charLower = characters.map(c => c.toLowerCase());
+      results = results.filter(t =>
+        t.characters?.some(c => charLower.includes(c.toLowerCase()))
+      );
+    }
+
+    return results;
+  }
+
+  /**
+   * Get thread archive statistics
+   */
+  getThreadArchiveStats() {
+    const byType = {};
+    for (const thread of this.archivedThreads) {
+      byType[thread.type] = (byType[thread.type] || 0) + 1;
+    }
+
+    return {
+      totalArchived: this.archivedThreads.length,
+      maxArchived: this.maxArchivedThreads,
+      byType,
+      oldestChapter: this.archivedThreads.length > 0
+        ? Math.min(...this.archivedThreads.map(t => t.resolvedChapter || 0))
+        : null,
+    };
+  }
+
+  // ==========================================================================
+  // GENERATION CONCURRENCY CONTROL
+  // ==========================================================================
+
+  /**
+   * Wait for a generation slot to become available
+   * Called when we're at maxConcurrentGenerations capacity
+   */
+  async _waitForGenerationSlot(generationKey) {
+    return new Promise((resolve, reject) => {
+      this.generationWaitQueue.push({ resolve, reject, key: generationKey });
+      console.log(`[StoryGenerationService] Generation ${generationKey} queued (${this.generationWaitQueue.length} waiting, ${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
+    });
+  }
+
+  /**
+   * Acquire a generation slot, waiting if necessary
+   * Returns true when slot is acquired
+   */
+  async _acquireGenerationSlot(generationKey) {
+    if (this.activeGenerationCount < this.maxConcurrentGenerations) {
+      this.activeGenerationCount++;
+      console.log(`[StoryGenerationService] Acquired slot for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
+      return;
+    }
+
+    // At capacity - wait for a slot
+    await this._waitForGenerationSlot(generationKey);
+    this.activeGenerationCount++;
+    console.log(`[StoryGenerationService] Acquired slot after wait for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
+  }
+
+  /**
+   * Release a generation slot and process next in queue
+   */
+  _releaseGenerationSlot(generationKey) {
+    this.activeGenerationCount = Math.max(0, this.activeGenerationCount - 1);
+    console.log(`[StoryGenerationService] Released slot for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active, ${this.generationWaitQueue.length} waiting)`);
+
+    // Process next waiting generation if any
+    if (this.generationWaitQueue.length > 0) {
+      const next = this.generationWaitQueue.shift();
+      console.log(`[StoryGenerationService] Unblocking queued generation: ${next.key}`);
+      next.resolve();
+    }
+  }
+
+  /**
+   * Get current generation queue status (for debugging/monitoring)
+   */
+  getGenerationQueueStatus() {
+    return {
+      activeGenerations: this.activeGenerationCount,
+      maxConcurrent: this.maxConcurrentGenerations,
+      queuedCount: this.generationWaitQueue.length,
+      pendingKeys: Array.from(this.pendingGenerations.keys()),
+    };
+  }
+
+  // ==========================================================================
   // GENERATION AND VALIDATION
   // ==========================================================================
 
@@ -3663,6 +3882,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       return this.pendingGenerations.get(generationKey);
     }
 
+    // Acquire a generation slot (waits if at capacity)
+    await this._acquireGenerationSlot(generationKey);
+
     const generationPromise = (async () => {
       const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
 
@@ -3688,10 +3910,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // Build comprehensive context (now includes story arc and chapter outline)
       const context = await this.buildStoryContext(chapter, subchapter, pathKey, choiceHistory);
 
-      // Apply thread normalization and capping to prevent state explosion
+      // Apply thread normalization, capping, and archival to prevent state explosion
       if (context.narrativeThreads) {
         context.narrativeThreads = this._deduplicateThreads(context.narrativeThreads);
         context.narrativeThreads = this._capActiveThreads(context.narrativeThreads, 20);
+        // Archive resolved threads to reduce memory while preserving callback potential
+        context.narrativeThreads = this._archiveResolvedThreads(context.narrativeThreads, chapter);
       }
 
       // Add story arc and chapter outline to context
@@ -3994,14 +4218,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
       // Final fallback if even the inner fallback failed
       console.error('[StoryGenerationService] Complete generation failure, using emergency fallback');
-      const chapter = parseInt(caseNumber?.slice(0, 3)) || 2;
-      const subchapter = parseInt(caseNumber?.slice(4, 5)) || 1;
-      const isDecisionPoint = subchapter === 3;
+      const chapterNum = parseInt(caseNumber?.slice(0, 3)) || 2;
+      const subchapterNum = parseInt(caseNumber?.slice(4, 5)) || 1;
+      const isDecisionPoint = subchapterNum === 3;
 
-      const emergencyFallback = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+      const emergencyFallback = this._getFallbackContent(chapterNum, subchapterNum, pathKey, isDecisionPoint);
       return {
-        chapter,
-        subchapter,
+        chapter: chapterNum,
+        subchapter: subchapterNum,
         pathKey,
         caseNumber,
         title: emergencyFallback.title,
@@ -4010,7 +4234,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         previously: emergencyFallback.previously,
         briefing: emergencyFallback.briefing,
         decision: emergencyFallback.decision,
-        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates, chapter),
+        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates, chapterNum),
         consistencyFacts: emergencyFallback.consistencyFacts,
         chapterSummary: emergencyFallback.chapterSummary,
         generatedAt: new Date().toISOString(),
@@ -4019,6 +4243,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         isEmergencyFallback: true,
         fallbackReason: e.message,
       };
+    } finally {
+      // Always release the generation slot, even on error/fallback
+      this._releaseGenerationSlot(generationKey);
     }
   }
 
@@ -4407,9 +4634,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
 
-      // Check emotional state early - desperate/angry allows personality deviations
+      // Check emotional state early - desperate/angry/regretful allows personality deviations
+      // Regretful Jack might act rashly out of guilt (e.g., confessing, taking unnecessary risks)
       const emotionalState = content.jackBehaviorDeclaration?.emotionalState;
-      const allowsPersonalityBreak = emotionalState === 'desperate' || emotionalState === 'angry';
+      const allowsPersonalityBreak = emotionalState === 'desperate' || emotionalState === 'angry' || emotionalState === 'regretful';
 
       // Validate jackActionStyle and jackRiskLevel from LLM output match expected personality
       const expectedActionStyle = personality.riskTolerance === 'low' ? 'cautious'
@@ -4512,7 +4740,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           if (allowsPersonalityBreak) {
             warnings.push(`Methodical Jack is acting recklessly, but emotional state "${emotionalState}" may justify this deviation.`);
           } else {
-            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting recklessly (rushed/charged/stormed). Rewrite with cautious approach or set emotionalState to "desperate" or "angry".');
+            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting recklessly (rushed/charged/stormed). Rewrite with cautious approach or set emotionalState to "desperate", "angry", or "regretful".');
           }
         }
 
@@ -4522,7 +4750,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           if (allowsPersonalityBreak) {
             warnings.push(`Methodical Jack is acting impulsively, but emotional state "${emotionalState}" may justify this.`);
           } else {
-            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting impulsively. Rewrite with deliberate actions or set emotionalState to "desperate" or "angry".');
+            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting impulsively. Rewrite with deliberate actions or set emotionalState to "desperate", "angry", or "regretful".');
           }
         }
       } else if (personality.riskTolerance === 'high') {
@@ -4806,9 +5034,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // Note: Category 4 handles detailed checks; this is a broader safety net
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
-      // Re-use emotional state check from above (allow breaks for desperate/angry)
+      // Re-use emotional state check from above (allow breaks for desperate/angry/regretful)
       const emotionalStateForCat11 = content.jackBehaviorDeclaration?.emotionalState;
-      const allowsBreakCat11 = emotionalStateForCat11 === 'desperate' || emotionalStateForCat11 === 'angry';
+      const allowsBreakCat11 = emotionalStateForCat11 === 'desperate' || emotionalStateForCat11 === 'angry' || emotionalStateForCat11 === 'regretful';
 
       // Check for reckless behavior when player has been methodical
       if (personality.riskTolerance === 'low' || personality.narrativeStyle?.includes('cautiously')) {
@@ -4818,7 +5046,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           if (allowsBreakCat11) {
             warnings.push(`Reckless behavior detected, but emotional state "${emotionalStateForCat11}" may justify this.`);
           } else {
-            warnings.push('Narrative shows reckless behavior that may conflict with methodical path personality. Consider setting emotionalState to "desperate" or "angry" if intentional.');
+            warnings.push('Narrative shows reckless behavior that may conflict with methodical path personality. Consider setting emotionalState to "desperate", "angry", or "regretful" if intentional.');
           }
         }
       }
