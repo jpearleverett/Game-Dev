@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
@@ -17,21 +17,9 @@ export default function SettingsScreen({
   onPurchasePremium,
   onRestorePremium,
   onBack,
-  // LLM Configuration props
+  // LLM Configuration props (auto-configured via environment)
   llmConfigured = false,
-  onConfigureLLM,
 }) {
-    // LLM configuration state (Gemini)
-    const [llmApiKey, setLlmApiKey] = useState('');
-    const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash-preview-09-2025');
-    const [showApiKey, setShowApiKey] = useState(false);
-
-    const handleSaveLLMConfig = () => {
-      if (llmApiKey.trim() && onConfigureLLM) {
-        onConfigureLLM(llmApiKey.trim(), 'gemini', geminiModel);
-        setLlmApiKey('');
-      }
-    };
     const handleVolumeChange = (key) => (rawValue) => {
       const normalized = formatVolumeValue(rawValue);
       const currentValue = typeof settings?.[key] === 'number' ? settings[key] : 0;
@@ -125,82 +113,14 @@ export default function SettingsScreen({
             <Text style={styles.sectionTitle}>AI Story Generation</Text>
             <Text style={styles.metaText}>
               {llmConfigured
-                ? 'Gemini is configured and ready to generate dynamic story content for chapters 2-12.'
-                : 'Enter your Google Gemini API key to enable dynamic story generation after Chapter 1.'}
+                ? 'Gemini 3 Flash is configured and ready to generate dynamic story content for chapters 2-12.'
+                : 'AI story generation is not configured. Please check your build configuration.'}
             </Text>
-            {llmConfigured ? (
-              <View style={styles.llmStatus}>
-                <Text style={styles.llmStatusText}>Gemini Ready</Text>
-              </View>
-            ) : (
-              <>
-                <View style={styles.providerSelector}>
-                  <Pressable
-                    style={[
-                      styles.providerOption,
-                      geminiModel === 'gemini-2.5-flash-preview-09-2025' && styles.providerOptionActive,
-                    ]}
-                    onPress={() => setGeminiModel('gemini-2.5-flash-preview-09-2025')}
-                  >
-                    <Text style={[
-                      styles.providerText,
-                      geminiModel === 'gemini-2.5-flash-preview-09-2025' && styles.providerTextActive,
-                    ]}>2.5 Flash</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.providerOption,
-                      geminiModel === 'gemini-3-pro-preview' && styles.providerOptionActive,
-                    ]}
-                    onPress={() => setGeminiModel('gemini-3-pro-preview')}
-                  >
-                    <Text style={[
-                      styles.providerText,
-                      geminiModel === 'gemini-3-pro-preview' && styles.providerTextActive,
-                    ]}>3 Pro</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.providerOption,
-                      geminiModel === 'gemini-2.5-flash-lite-preview-09-2025' && styles.providerOptionActive,
-                    ]}
-                    onPress={() => setGeminiModel('gemini-2.5-flash-lite-preview-09-2025')}
-                  >
-                    <Text style={[
-                      styles.providerText,
-                      geminiModel === 'gemini-2.5-flash-lite-preview-09-2025' && styles.providerTextActive,
-                    ]}>2.5 Flash Lite</Text>
-                  </Pressable>
-                </View>
-                <View style={styles.apiKeyContainer}>
-                  <TextInput
-                    style={styles.apiKeyInput}
-                    placeholder="Enter Gemini API Key"
-                    placeholderTextColor={COLORS.textMuted}
-                    value={llmApiKey}
-                    onChangeText={setLlmApiKey}
-                    secureTextEntry={!showApiKey}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <Pressable
-                    style={styles.showKeyButton}
-                    onPress={() => setShowApiKey(!showApiKey)}
-                  >
-                    <Text style={styles.showKeyText}>{showApiKey ? 'Hide' : 'Show'}</Text>
-                  </Pressable>
-                </View>
-                <PrimaryButton
-                  label="Save API Key"
-                  onPress={handleSaveLLMConfig}
-                  disabled={!llmApiKey.trim()}
-                />
-                <Text style={styles.apiKeyHint}>
-                  Your API key is stored locally and used only for story generation.
-                  Get your key from aistudio.google.com
-                </Text>
-              </>
-            )}
+            <View style={[styles.llmStatus, !llmConfigured && styles.llmStatusError]}>
+              <Text style={[styles.llmStatusText, !llmConfigured && styles.llmStatusTextError]}>
+                {llmConfigured ? 'Gemini 3 Flash Ready' : 'Not Configured'}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -475,6 +395,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(46, 125, 50, 0.5)',
     alignItems: 'center',
   },
+  llmStatusError: {
+    backgroundColor: 'rgba(181, 28, 28, 0.2)',
+    borderColor: 'rgba(181, 28, 28, 0.5)',
+  },
   llmStatusText: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.md,
@@ -482,71 +406,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  providerSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-  },
-  providerOption: {
-    flex: 1,
-    minWidth: 90,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.panelOutline,
-    backgroundColor: 'rgba(21, 24, 32, 0.6)',
-    alignItems: 'center',
-  },
-  providerOptionActive: {
-    borderColor: COLORS.accentPrimary,
-    backgroundColor: 'rgba(232, 213, 181, 0.1)',
-  },
-  providerText: {
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textMuted,
-  },
-  providerTextActive: {
-    color: COLORS.accentPrimary,
-    fontFamily: FONTS.primarySemiBold,
-  },
-  apiKeyContainer: {
-    flexDirection: 'row',
-    gap: SPACING.xs,
-  },
-  apiKeyInput: {
-    flex: 1,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.panelOutline,
-    backgroundColor: 'rgba(21, 24, 32, 0.82)',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textPrimary,
-  },
-  showKeyButton: {
-    paddingHorizontal: SPACING.md,
-    justifyContent: 'center',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.panelOutline,
-    backgroundColor: 'rgba(21, 24, 32, 0.6)',
-  },
-  showKeyText: {
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  apiKeyHint: {
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    fontStyle: 'italic',
-    lineHeight: LINE_HEIGHTS.relaxed,
+  llmStatusTextError: {
+    color: '#ef5350',
   },
 });

@@ -7,15 +7,19 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import Constants from 'expo-constants';
 
-const LLM_CONFIG_KEY = 'detective_portrait_llm_config';
-const OFFLINE_QUEUE_KEY = 'detective_portrait_offline_queue';
+const LLM_CONFIG_KEY = 'dead_letters_llm_config';
+const OFFLINE_QUEUE_KEY = 'dead_letters_offline_queue';
 
-// Default configuration - using Gemini
+// Get API key from environment (baked in at build time)
+const ENV_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || null;
+
+// Default configuration - using Gemini 3 Flash
 const DEFAULT_CONFIG = {
   provider: 'gemini',
-  model: 'gemini-2.5-flash-preview-09-2025', // Gemini 2.5 Flash
-  apiKey: null,
+  model: 'gemini-3-flash-preview', // Gemini 3 Flash (latest)
+  apiKey: ENV_API_KEY, // Auto-load from environment
   baseUrl: null, // For custom endpoints
   maxRetries: 3,
   timeout: 180000, // 180 seconds for longer story generations
