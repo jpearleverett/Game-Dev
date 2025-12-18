@@ -210,9 +210,9 @@ export default function SettingsScreen({
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.metaText}>Detective Portrait v1.0.0</Text>
+            <Text style={styles.metaText}>Dead Letters v1.0.0</Text>
             <Text style={styles.metaText}>Built for iOS, Android, and web via Expo.</Text>
-            <Text style={styles.metaText}>Support: support@detectiveportrait.example</Text>
+            <Text style={styles.metaText}>Support: support@deadletters.app</Text>
           </View>
         </View>
       </ScrollView>

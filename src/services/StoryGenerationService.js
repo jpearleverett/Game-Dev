@@ -547,7 +547,7 @@ const DECISION_CONTENT_SCHEMA = {
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
 // ============================================================================
-const MASTER_SYSTEM_PROMPT = `You are writing "The Detective Portrait," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
+const MASTER_SYSTEM_PROMPT = `You are writing "Dead Letters," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
 
 ## YOUR ROLE
 You continue the story of Jack Halloway, a retired detective confronting the wrongful convictions built on his career. The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
@@ -1328,7 +1328,7 @@ Whatever the morning brought, I would face it. That was all I could promise myse
   async _generateStoryArc(pathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
 
-    const arcPrompt = `You are the story architect for "The Detective Portrait," a 12-chapter noir detective mystery.
+    const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter noir detective mystery.
 
 ## STORY PREMISE
 Jack Halloway, a retired detective, discovers his career was built on manufactured evidence. The Midnight Confessor (Victoria Blackwell, secretly Emily Cross) forces him to confront each wrongful conviction.
@@ -1517,7 +1517,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
       }
     }
 
-    const outlinePrompt = `Generate a detailed outline for Chapter ${chapter} of "The Detective Portrait."
+    const outlinePrompt = `Generate a detailed outline for Chapter ${chapter} of "Dead Letters."
 
 ## STORY ARC GUIDANCE
 ${chapterArc ? `
@@ -1751,7 +1751,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
     const consequencePrompt = `Generate narrative consequences for a player decision in a noir detective story.
 
 ## STORY CONTEXT
-This is "The Detective Portrait" - Jack Halloway, a retired detective, is re-examining cases he closed after receiving letters from "The Midnight Confessor." He's discovering his best friend Tom Wade manufactured evidence for 20 years, sending innocent people to prison.
+This is "Dead Letters" - Jack Halloway, a retired detective, is re-examining cases he closed after receiving letters from "The Midnight Confessor." He's discovering his best friend Tom Wade manufactured evidence for 20 years, sending innocent people to prison.
 
 ## CHAPTER ${chapter} NARRATIVE LEADING TO DECISION
 ${narrativeContext ? `The following is the end of the narrative leading to this choice:
@@ -3206,7 +3206,7 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
    * preventing truncation from producing generic placeholder choices
    */
   async _generateDecisionStructure(context, chapter) {
-    const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "The Detective Portrait."
+    const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "Dead Letters."
 
 ## CURRENT STORY STATE
 ${context.storySummary || 'Jack Halloway is investigating the wrongful convictions built on his career.'}

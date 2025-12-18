@@ -144,7 +144,7 @@ function DetectiveProfileCard({
         {/* Footer */}
         <View style={styles.cardFooter}>
           <Text style={styles.footerDate}>{formattedDate}</Text>
-          <Text style={styles.footerBrand}>detectiveportrait.app</Text>
+          <Text style={styles.footerBrand}>deadletters.app</Text>
         </View>
 
         {/* Corner ornaments */}
@@ -189,7 +189,7 @@ function buildShareText(ending, stats, completionDate) {
     `📅 ${date}`,
     ``,
     `Can you discover all 16 endings?`,
-    `https://detectiveportrait.app`,
+    `https://deadletters.app`,
   ].join('\n');
 }
 

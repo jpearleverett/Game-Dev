@@ -128,7 +128,7 @@ function buildShareMessage(caseData, submissionHistory, solved) {
   }
 
   return [
-    `🕵️ Detective Portrait - Case #${caseData.caseNumber}: ${caseData.title}`,
+    `🕵️ Dead Letters - Case #${caseData.caseNumber}: ${caseData.title}`,
     ...rows,
     solved
       ? `Solved in ${attempts}/${caseData.attempts} attempts`

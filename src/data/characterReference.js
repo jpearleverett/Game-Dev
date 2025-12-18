@@ -1,7 +1,7 @@
 /**
  * Character Reference Guide
  *
- * A comprehensive reference of all key characters in "The Detective Portrait" story.
+ * A comprehensive reference of all key characters in "Dead Letters" story.
  * This document is designed to help the LLM maintain character consistency
  * when generating dynamic story content for chapters 2-12.
  *
