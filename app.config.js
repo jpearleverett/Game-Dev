@@ -4,10 +4,17 @@
  * This file replaces app.json to allow dynamic configuration.
  * Environment variables are loaded from .env file (gitignored for security).
  *
- * To set up:
- * 1. Copy .env.example to .env
- * 2. Add your Gemini API key to .env
- * 3. The key will be baked into the build at compile time
+ * SETUP MODES:
+ *
+ * Development (direct API - less secure):
+ * 1. Set GEMINI_API_KEY in .env
+ * 2. Leave GEMINI_PROXY_URL empty
+ *
+ * Production (proxy - secure):
+ * 1. Deploy the Cloudflare Worker (see proxy/README.md)
+ * 2. Set GEMINI_PROXY_URL to your worker URL
+ * 3. Optionally set APP_TOKEN for extra security
+ * 4. GEMINI_API_KEY is NOT needed (it's in Cloudflare secrets)
  */
 
 export default {
@@ -45,8 +52,16 @@ export default {
     },
     plugins: ['expo-font', 'expo-asset'],
     extra: {
-      // Environment variables are loaded here
-      // These get baked into the build and accessible via expo-constants
+      // ========== PRODUCTION (Recommended) ==========
+      // Your Cloudflare Worker URL - API key stays secure on server
+      geminiProxyUrl: process.env.GEMINI_PROXY_URL || null,
+
+      // Optional: App token for extra proxy authentication
+      appToken: process.env.APP_TOKEN || null,
+
+      // ========== DEVELOPMENT ONLY ==========
+      // Direct API key - only use for local development
+      // This gets embedded in the app and is NOT secure for distribution
       geminiApiKey: process.env.GEMINI_API_KEY || null,
     },
   },
