@@ -75,6 +75,7 @@ export default async function handler(req, res) {
     }
 
     const model = body.model || 'gemini-3-flash-preview';
+    const isGemini3 = model.includes('gemini-3');
 
     // Build Gemini request
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -85,9 +86,10 @@ export default async function handler(req, res) {
         parts: [{ text: msg.content }],
       })),
       generationConfig: {
-        temperature: body.temperature ?? 0.7,
-        maxOutputTokens: body.maxTokens ?? 8192,
-        topP: body.topP ?? 0.95,
+        // Gemini 3 requires temperature=1.0, others use provided value
+        temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
+        maxOutputTokens: body.maxTokens ?? 16384,
+        topP: isGemini3 ? undefined : (body.topP ?? 0.95),
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -96,6 +98,13 @@ export default async function handler(req, res) {
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
       ],
     };
+
+    // Add thinking config for Gemini 3 models
+    if (isGemini3) {
+      geminiBody.generationConfig.thinkingConfig = {
+        thinkingBudget: body.thinkingBudget ?? 2048,
+      };
+    }
 
     // Add system instruction
     if (body.systemPrompt) {
