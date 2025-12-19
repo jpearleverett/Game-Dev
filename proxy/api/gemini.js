@@ -88,7 +88,7 @@ export default async function handler(req, res) {
       generationConfig: {
         // Gemini 3 requires temperature=1.0, others use provided value
         temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
-        maxOutputTokens: body.maxTokens ?? 16384,
+        maxOutputTokens: body.maxTokens ?? 32768,
         topP: isGemini3 ? undefined : (body.topP ?? 0.95),
       },
       safetySettings: [
@@ -99,8 +99,9 @@ export default async function handler(req, res) {
       ],
     };
 
-    // Add thinking config for Gemini 3 models
-    if (isGemini3) {
+    // Add thinking config for Gemini 3 models ONLY when NOT using structured output
+    // Thinking mode consumes tokens that would otherwise be used for response content
+    if (isGemini3 && !body.responseSchema) {
       geminiBody.generationConfig.thinkingConfig = {
         thinkingBudget: body.thinkingBudget ?? 2048,
       };
