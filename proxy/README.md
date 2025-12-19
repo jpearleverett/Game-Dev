@@ -1,163 +1,127 @@
 # Dead Letters - Gemini API Proxy
 
-A secure Cloudflare Worker proxy for the Gemini API. This keeps your API key safe by storing it on Cloudflare's servers instead of in your app.
+A secure serverless proxy for the Gemini API. Keeps your API key safe by storing it on the server instead of in your app.
 
-## Why Use a Proxy?
+## Choose Your Platform
 
-When you embed an API key directly in your app:
-- Anyone can extract it from the app binary
-- They can use your key and rack up charges
-- You can't revoke access without updating the app
+- **[Vercel](#vercel-setup)** - Easiest, deploy from browser
+- **[Cloudflare Workers](#cloudflare-setup)** - Also easy, 100k free requests/day
 
-With this proxy:
-- Your API key stays on Cloudflare's secure servers
-- The app only knows the proxy URL (which is useless without the key)
-- You can add rate limiting, authentication, and monitoring
-- You can rotate the key anytime without updating the app
+---
 
-## Setup Guide (5 minutes)
+## Vercel Setup
 
-### Prerequisites
+### Step 1: Create a GitHub repo for the proxy
 
-1. A [Cloudflare account](https://dash.cloudflare.com/sign-up) (free)
-2. Node.js installed on your computer
-3. Your Gemini API key from [AI Studio](https://aistudio.google.com/)
+1. Go to https://github.com/new
+2. Name it `dead-letters-proxy`
+3. Make it **Private**
+4. Click **Create repository**
 
-### Step 1: Install Wrangler CLI
+### Step 2: Upload the proxy files
+
+On the GitHub repo page, click **"uploading an existing file"** and upload these files from the `proxy/` folder:
+- `api/gemini.js`
+- `vercel.json`
+- `package.json`
+
+Or use the GitHub web interface to create them:
+
+**api/gemini.js** - Copy contents from `proxy/api/gemini.js`
+**vercel.json** - Copy contents from `proxy/vercel.json`
+
+### Step 3: Deploy to Vercel
+
+1. Go to https://vercel.com and sign up with GitHub
+2. Click **"Add New Project"**
+3. Import your `dead-letters-proxy` repo
+4. Click **Deploy** (default settings are fine)
+
+### Step 4: Add your API key
+
+1. In Vercel, go to your project's **Settings** → **Environment Variables**
+2. Add:
+   - Name: `GEMINI_API_KEY`
+   - Value: *your Gemini API key*
+3. Click **Save**
+4. Go to **Deployments** and click **Redeploy** (or push a change)
+
+### Step 5: Get your URL
+
+Your proxy URL will be:
+```
+https://YOUR-PROJECT-NAME.vercel.app/api/gemini
+```
+
+### Step 6: Update your game's .env
+
+```
+GEMINI_PROXY_URL=https://YOUR-PROJECT-NAME.vercel.app/api/gemini
+```
+
+### Step 7: Test it
 
 ```bash
-npm install -g wrangler
-```
-
-### Step 2: Login to Cloudflare
-
-```bash
-wrangler login
-```
-
-This opens a browser to authenticate.
-
-### Step 3: Deploy the Worker
-
-From the `proxy/` directory:
-
-```bash
-cd proxy
-npm install
-wrangler deploy
-```
-
-You'll see output like:
-```
-Published dead-letters-api (1.0.0)
-  https://dead-letters-api.YOUR_SUBDOMAIN.workers.dev
-```
-
-**Save this URL** - you'll need it for your app.
-
-### Step 4: Add Your API Key as a Secret
-
-```bash
-wrangler secret put GEMINI_API_KEY
-```
-
-When prompted, paste your Gemini API key. It's stored encrypted and never visible again.
-
-### Step 5: (Optional) Add App Authentication
-
-For extra security, create a secret token that your app must send:
-
-```bash
-wrangler secret put APP_TOKEN
-```
-
-Enter a random string (e.g., generate with `openssl rand -hex 32`).
-
-### Step 6: Configure Your App
-
-Edit your `.env` file in the main project:
-
-```bash
-# Production mode - uses the secure proxy
-GEMINI_PROXY_URL=https://dead-letters-api.YOUR_SUBDOMAIN.workers.dev
-
-# If you set up APP_TOKEN, add it here too
-APP_TOKEN=your_random_token_here
-```
-
-### Step 7: Rebuild Your App
-
-```bash
-npx expo start --clear
-```
-
-## Testing the Proxy
-
-You can test your proxy with curl:
-
-```bash
-curl -X POST https://dead-letters-api.YOUR_SUBDOMAIN.workers.dev \
+curl -X POST "https://YOUR-PROJECT-NAME.vercel.app/api/gemini" \
   -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Say hello"}],
-    "model": "gemini-3-flash-preview",
-    "maxTokens": 100
-  }'
+  -d '{"messages":[{"role":"user","content":"Say hello"}],"maxTokens":50}'
 ```
 
-## Monitoring
+---
 
-View real-time logs:
+## Cloudflare Setup
 
-```bash
-wrangler tail
+### Step 1: Sign up
+
+Go to https://dash.cloudflare.com and create an account.
+
+### Step 2: Create Worker
+
+1. Click **Workers & Pages** → **Create** → **Create Worker**
+2. Name it `dead-letters-api`
+3. Click **Deploy**
+
+### Step 3: Add the code
+
+1. Click **Edit Code**
+2. Delete default code
+3. Paste contents of `index.js`
+4. Click **Deploy**
+
+### Step 4: Add API key
+
+1. Go to **Settings** → **Variables and Secrets**
+2. Add secret: `GEMINI_API_KEY` = your key
+3. Click **Save and Deploy**
+
+### Step 5: Get URL
+
+Your URL: `https://dead-letters-api.YOUR_SUBDOMAIN.workers.dev`
+
+---
+
+## Security Features
+
+| Feature | Included |
+|---------|----------|
+| API key encrypted on server | ✅ |
+| Rate limiting (30/min/IP) | ✅ |
+| Optional app token auth | ✅ |
+| CORS headers | ✅ |
+| Error handling | ✅ |
+
+## Optional: App Token
+
+For extra security, add an `APP_TOKEN` environment variable on your hosting platform, then add the same token to your game's `.env`:
+
+```
+APP_TOKEN=some_random_secret_string
 ```
 
-## Rate Limiting
-
-The proxy includes built-in rate limiting:
-- 30 requests per minute per IP address
-- Automatic retry headers for rate-limited requests
-
-You can adjust these in `index.js`:
-
-```javascript
-const RATE_LIMIT = 30;        // requests per window
-const RATE_WINDOW_MS = 60000; // 1 minute
-```
-
-## Updating the Proxy
-
-After making changes to `index.js`:
-
-```bash
-wrangler deploy
-```
+This ensures only your app can use the proxy.
 
 ## Costs
 
-- **Cloudflare Workers Free Tier**: 100,000 requests/day
-- **Gemini API**: Standard Gemini pricing applies
-
-For most games, the free tier is more than sufficient.
-
-## Troubleshooting
-
-### "Server configuration error"
-Your GEMINI_API_KEY secret isn't set. Run:
-```bash
-wrangler secret put GEMINI_API_KEY
-```
-
-### "Unauthorized"
-Your APP_TOKEN doesn't match. Make sure it's the same in:
-1. Cloudflare secrets: `wrangler secret put APP_TOKEN`
-2. Your app's `.env` file: `APP_TOKEN=...`
-
-### Rate limit errors
-Either:
-- Your IP is making too many requests (wait a minute)
-- Gemini's rate limit (check your API quota)
-
-### CORS errors
-The proxy allows all origins by default. If you want to restrict it, modify the `corsHeaders` function in `index.js`.
+- **Vercel Free**: 100GB bandwidth/month
+- **Cloudflare Free**: 100,000 requests/day
+- **Gemini**: Standard pricing
