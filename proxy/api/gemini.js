@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing or invalid messages array' });
     }
 
-    const model = body.model || 'gemini-2.5-flash-preview-05-20';
+    const model = body.model || 'gemini-3-flash-preview';
     const isGemini3 = model.includes('gemini-3');
 
     // Build Gemini request
