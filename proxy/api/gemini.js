@@ -88,8 +88,8 @@ export default async function handler(req, res) {
       generationConfig: {
         // Gemini 3 requires temperature=1.0, others use provided value
         temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
-        maxOutputTokens: body.maxTokens ?? 16384,
-        topP: isGemini3 ? undefined : (body.topP ?? 0.95),
+        ...(body.maxTokens && { maxOutputTokens: body.maxTokens }),
+        ...((!isGemini3 && body.topP) && { topP: body.topP }),
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -99,10 +99,10 @@ export default async function handler(req, res) {
       ],
     };
 
-    // Add thinking config for Gemini 3 models
+    // Add thinking config for Gemini 3 models - produces better quality output
     if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
-        thinkingBudget: body.thinkingBudget ?? 2048,
+        thinkingLevel: body.thinkingLevel ?? 'high',
       };
     }
 
