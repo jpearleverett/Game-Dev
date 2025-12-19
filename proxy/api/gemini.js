@@ -99,11 +99,10 @@ export default async function handler(req, res) {
       ],
     };
 
-    // Add thinking config for Gemini 3 models ONLY when NOT using structured output
-    // Thinking mode consumes tokens that would otherwise be used for response content
-    if (isGemini3 && !body.responseSchema) {
+    // Add thinking config for Gemini 3 models - produces better quality output
+    if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
-        thinkingBudget: body.thinkingBudget ?? 2048,
+        thinkingBudget: body.thinkingBudget ?? 8192,
       };
     }
 
