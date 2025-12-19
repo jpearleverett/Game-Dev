@@ -102,7 +102,7 @@ export default async function handler(req, res) {
     // Add thinking config for Gemini 3 models - produces better quality output
     if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
-        thinkingBudget: body.thinkingBudget ?? 8192,
+        thinkingLevel: body.thinkingLevel ?? 'high',
       };
     }
 
