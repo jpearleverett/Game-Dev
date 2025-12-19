@@ -383,7 +383,7 @@ class LLMService {
 
     const {
       temperature = 0.8,
-      maxTokens = 4000,
+      maxTokens = null, // Let Gemini use its defaults
       systemPrompt = null,
       responseSchema = null,
     } = options;
@@ -442,15 +442,15 @@ class LLMService {
     // Build generation config
     const generationConfig = {
       temperature: effectiveTemperature,
-      maxOutputTokens: maxTokens,
+      ...(maxTokens && { maxOutputTokens: maxTokens }),
       topP: 0.95,
       topK: 40,
     };
 
-    // Add thinking configuration for Gemini 3 (use "low" for faster responses)
+    // Add thinking configuration for Gemini 3 (use "high" for best quality)
     if (isGemini3) {
       generationConfig.thinkingConfig = {
-        thinkingLevel: 'low', // Minimize latency while still using Gemini 3 reasoning
+        thinkingLevel: 'high', // Maximum reasoning depth for best story quality
       };
     }
 
@@ -652,7 +652,7 @@ class LLMService {
             })),
             model,
             temperature,
-            maxTokens,
+            ...(maxTokens && { maxTokens }),
             systemPrompt,
             responseSchema,
           }),
