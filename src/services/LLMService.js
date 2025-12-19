@@ -21,6 +21,13 @@ const ENV_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || null;
 const ENV_PROXY_URL = Constants.expoConfig?.extra?.geminiProxyUrl || null;
 const ENV_APP_TOKEN = Constants.expoConfig?.extra?.appToken || null;
 
+// DEBUG: Log what was loaded from environment
+console.log('[LLMService] Environment loaded:', {
+  hasProxyUrl: !!ENV_PROXY_URL,
+  proxyUrl: ENV_PROXY_URL,
+  hasApiKey: !!ENV_API_KEY,
+});
+
 // Default configuration - using Gemini 3 Flash
 const DEFAULT_CONFIG = {
   provider: 'gemini',
@@ -400,6 +407,13 @@ class LLMService {
    */
   async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema }) {
     const model = this.config.model || 'gemini-3-flash-preview';
+
+    // DEBUG: Log config to see what mode we're in
+    console.log('[LLMService] Config:', {
+      proxyUrl: this.config.proxyUrl,
+      hasApiKey: !!this.config.apiKey,
+      model,
+    });
 
     // Check if using Gemini 3 model
     const isGemini3 = model.includes('gemini-3');
