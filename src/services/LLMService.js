@@ -637,6 +637,11 @@ class LLMService {
         }
 
         // Make request to proxy
+        console.log('[LLMService] Sending proxy request...', {
+          url: this.config.proxyUrl,
+          messageCount: messages.length,
+          hasResponseSchema: !!responseSchema,
+        });
         const response = await fetch(this.config.proxyUrl, {
           method: 'POST',
           headers,
@@ -655,6 +660,7 @@ class LLMService {
         });
 
         clearTimeout(timeoutId);
+        console.log('[LLMService] Proxy response received:', response.status);
 
         // Handle rate limiting
         if (response.status === 429) {
