@@ -111,6 +111,10 @@ export function useStoryGeneration(storyCampaign) {
   /**
    * Generate content for a specific case
    * Tracks whether this is a "cache miss" (player chose unexpected path)
+   *
+   * IMPORTANT: This function should NEVER return null for dynamic chapters.
+   * The StoryGenerationService always returns fallback content on failure,
+   * so we should always have something to return.
    */
   const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = []) => {
     if (!isConfigured) {
@@ -150,6 +154,8 @@ export function useStoryGeneration(storyCampaign) {
     try {
       generationRef.current = true;
 
+      // generateSubchapter ALWAYS returns content (fallback on error)
+      // This is guaranteed by the StoryGenerationService's error handling
       const entry = await storyGenerationService.generateSubchapter(
         chapter,
         subchapter,
@@ -158,20 +164,52 @@ export function useStoryGeneration(storyCampaign) {
       );
 
       if (!generationRef.current) {
-        // Generation was cancelled
-        return null;
+        // Generation was cancelled - but we still have the entry
+        // Cache it so player doesn't have to wait again
+        if (entry) {
+          updateGeneratedCache(caseNumber, pathKey, entry);
+        }
+        return entry;
       }
 
       // Update cache
       updateGeneratedCache(caseNumber, pathKey, entry);
 
       setProgress({ current: 1, total: 1 });
-      setStatus(GENERATION_STATUS.COMPLETE);
+
+      // Mark as complete, but note if this was a fallback
+      if (entry?.isFallback || entry?.isEmergencyFallback) {
+        setStatus(GENERATION_STATUS.COMPLETE);
+        // Set a non-blocking warning for fallback content
+        setError(entry.fallbackReason || 'Using backup story content');
+      } else {
+        setStatus(GENERATION_STATUS.COMPLETE);
+      }
 
       return entry;
     } catch (err) {
+      // This should rarely happen since generateSubchapter handles its own errors
+      // But if it does, log and try to continue gracefully
+      console.error('[useStoryGeneration] Unexpected error in generateForCase:', err.message);
       setStatus(GENERATION_STATUS.ERROR);
       setError(err.message);
+
+      // Even on unexpected error, try to get emergency fallback content
+      // so the game can continue
+      try {
+        const fallbackEntry = await storyGenerationService.getEmergencyFallback(
+          chapter,
+          subchapter,
+          pathKey
+        );
+        if (fallbackEntry) {
+          updateGeneratedCache(caseNumber, pathKey, fallbackEntry);
+          return fallbackEntry;
+        }
+      } catch (fallbackErr) {
+        console.error('[useStoryGeneration] Emergency fallback also failed:', fallbackErr.message);
+      }
+
       return null;
     } finally {
       generationRef.current = false;

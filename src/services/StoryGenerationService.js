@@ -4263,6 +4263,39 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     return results;
   }
 
+  /**
+   * Get emergency fallback content for a case
+   * This is a public method for external callers who need fallback content
+   * when generation has completely failed outside of generateSubchapter
+   */
+  getEmergencyFallback(chapter, subchapter, pathKey) {
+    const isDecisionPoint = subchapter === 3;
+    const caseNumber = `${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][subchapter - 1]}`;
+
+    const fallbackContent = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+
+    return {
+      chapter,
+      subchapter,
+      pathKey,
+      caseNumber,
+      title: fallbackContent.title,
+      narrative: fallbackContent.narrative,
+      bridgeText: fallbackContent.bridgeText,
+      previously: fallbackContent.previously,
+      briefing: fallbackContent.briefing,
+      decision: fallbackContent.decision,
+      board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
+      consistencyFacts: fallbackContent.consistencyFacts,
+      chapterSummary: fallbackContent.chapterSummary,
+      generatedAt: new Date().toISOString(),
+      wordCount: fallbackContent.narrative.split(/\s+/).length,
+      isFallback: true,
+      isEmergencyFallback: true,
+      fallbackReason: 'External emergency fallback request',
+    };
+  }
+
   // ==========================================================================
   // PARSING AND VALIDATION
   // ==========================================================================

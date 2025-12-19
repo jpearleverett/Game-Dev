@@ -88,7 +88,8 @@ export default async function handler(req, res) {
       generationConfig: {
         // Gemini 3 requires temperature=1.0, others use provided value
         temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
-        ...(body.maxTokens && { maxOutputTokens: body.maxTokens }),
+        // Don't set maxOutputTokens - let Gemini use its default (8192 for most models)
+        // This prevents truncation of complex story content with decision structures
         ...((!isGemini3 && body.topP) && { topP: body.topP }),
       },
       safetySettings: [

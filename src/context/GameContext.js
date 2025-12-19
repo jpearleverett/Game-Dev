@@ -71,13 +71,28 @@ export function GameProvider({
           const hasFirstDecision = (story.storyCampaign?.choiceHistory?.length || 0) > 0;
           if (isDynamicChapter(caseNumber) && hasFirstDecision) {
             const genResult = await story.ensureStoryContent(caseNumber, pathKey);
+
+            // ensureStoryContent now always returns content (including fallback)
+            // The only failures are LLM not configured or truly catastrophic errors
             if (!genResult.ok) {
-              return {
-                ok: false,
-                reason: genResult.reason,
-                error: genResult.error,
-                caseNumber
-              };
+              // Only block if LLM is not configured - user needs to fix this
+              if (genResult.reason === 'llm-not-configured') {
+                return {
+                  ok: false,
+                  reason: genResult.reason,
+                  error: genResult.error,
+                  caseNumber
+                };
+              }
+
+              // For other failures, log but try to continue anyway
+              // The game has fallback content that should be available
+              console.warn('[GameContext] Story generation issue, continuing with available content:', genResult);
+            }
+
+            // Log if we're using fallback content
+            if (genResult.isFallback || genResult.isEmergencyFallback) {
+              console.log('[GameContext] Using fallback story content for:', caseNumber);
             }
           }
 

@@ -62,6 +62,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
   /**
    * Check and generate story content if needed for a case
+   *
+   * This function ensures content is available for a case before the player
+   * can continue. It will generate new content if needed, and always returns
+   * success if ANY content (including fallback) is available.
    */
   const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null) => {
     // Chapter 1 is static, no generation needed
@@ -69,7 +73,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return { ok: true, generated: false };
     }
 
-    // Check if content exists
+    // Check if content exists (either generated or cached)
     const hasContent = await hasStoryContent(caseNumber, pathKey);
     if (hasContent) {
       return { ok: true, generated: false };
@@ -85,6 +89,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
       // Use optimistic history if provided, otherwise fallback to ref (avoids stale closure)
       const history = optimisticChoiceHistory || choiceHistoryRef.current;
 
+      // generateForCase now always returns content (including fallback on error)
+      // It only returns null for non-dynamic chapters or if LLM is not configured
       const entry = await generateForCase(
         caseNumber,
         pathKey,
@@ -92,10 +98,22 @@ export function StoryProvider({ children, progress, updateProgress }) {
       );
 
       if (entry) {
-        return { ok: true, generated: true, entry };
+        // Entry can be generated content or fallback content
+        // Either way, the game can proceed
+        return {
+          ok: true,
+          generated: true,
+          entry,
+          isFallback: entry.isFallback || false,
+          isEmergencyFallback: entry.isEmergencyFallback || false,
+        };
       }
+
+      // This should rarely happen now - generateForCase has its own fallback
+      console.warn('[StoryContext] generateForCase returned null unexpectedly');
       return { ok: false, reason: 'generation-failed' };
     } catch (error) {
+      console.error('[StoryContext] Unexpected error in ensureStoryContent:', error.message);
       return { ok: false, reason: 'generation-error', error: error.message };
     }
   }, [isLLMConfigured, generateForCase]);
@@ -159,32 +177,72 @@ export function StoryProvider({ children, progress, updateProgress }) {
         }
       ];
 
-      // Trigger generation immediately - do NOT await if we want to return control to UI
-      // However, ensureStoryContent handles deduplication via service now, so calling it here is safe.
-      // If the user navigates immediately, the next call to ensureStoryContent will attach to this promise.
-      ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory)
-        .then(result => {
-          if (!result.ok && result.reason !== 'llm-not-configured') {
-            // Track the error so UI can display it
+      // Trigger generation with retry logic
+      // If generation fails, retry up to 2 times with exponential backoff
+      const attemptGeneration = async (attempt = 1, maxAttempts = 3) => {
+        try {
+          const result = await ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory);
+
+          if (result.ok) {
+            // Success! Clear any error state
+            setBackgroundGenerationError(null);
+
+            // Log if using fallback content (not ideal, but game continues)
+            if (result.isFallback || result.isEmergencyFallback) {
+              console.log('[StoryContext] Background generation used fallback content');
+            }
+            return;
+          }
+
+          // Check if we should retry
+          if (result.reason === 'llm-not-configured') {
+            // Don't retry if LLM isn't configured
+            return;
+          }
+
+          if (attempt < maxAttempts) {
+            // Exponential backoff: 2s, 4s, 8s
+            const delay = Math.pow(2, attempt) * 1000;
+            console.log(`[StoryContext] Background generation attempt ${attempt} failed, retrying in ${delay/1000}s...`);
+
+            setTimeout(() => {
+              attemptGeneration(attempt + 1, maxAttempts);
+            }, delay);
+          } else {
+            // All retries exhausted
             setBackgroundGenerationError({
               caseNumber: nextCaseNumber,
               reason: result.reason,
               error: result.error,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              attempts: attempt
             });
-            console.warn('[StoryContext] Background generation failed:', result);
+            console.warn(`[StoryContext] Background generation failed after ${attempt} attempts:`, result);
           }
-        })
-        .catch(err => {
-          // Unexpected error (not from ensureStoryContent result)
-          setBackgroundGenerationError({
-            caseNumber: nextCaseNumber,
-            reason: 'unexpected-error',
-            error: err.message,
-            timestamp: new Date().toISOString()
-          });
-          console.error('[StoryContext] Background generation threw:', err);
-        });
+        } catch (err) {
+          // Unexpected error
+          if (attempt < maxAttempts) {
+            const delay = Math.pow(2, attempt) * 1000;
+            console.warn(`[StoryContext] Background generation threw on attempt ${attempt}, retrying in ${delay/1000}s...`);
+
+            setTimeout(() => {
+              attemptGeneration(attempt + 1, maxAttempts);
+            }, delay);
+          } else {
+            setBackgroundGenerationError({
+              caseNumber: nextCaseNumber,
+              reason: 'unexpected-error',
+              error: err.message,
+              timestamp: new Date().toISOString(),
+              attempts: attempt
+            });
+            console.error(`[StoryContext] Background generation threw after ${attempt} attempts:`, err);
+          }
+        }
+      };
+
+      // Start background generation (non-blocking)
+      attemptGeneration();
     }
   }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent]);
 
