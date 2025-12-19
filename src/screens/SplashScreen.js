@@ -18,7 +18,7 @@ export default function SplashScreen({ onContinue, bootReady }) {
       onPress={handlePress}
       disabled={!bootReady}
       accessibilityRole="button"
-      accessibilityLabel="Begin Detective Portrait"
+      accessibilityLabel="Begin Dead Letters"
     >
       <Image source={SPLASH_IMAGE} style={styles.image} contentFit="cover" pointerEvents="none" />
       <View style={styles.content} pointerEvents="none">

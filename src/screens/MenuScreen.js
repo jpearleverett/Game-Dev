@@ -10,10 +10,10 @@ import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
 
 const SHARE_MESSAGE = [
-  'Detective Portrait',
+  'Dead Letters',
   'A daily noir deduction ritual.',
   'Play today and solve the conspiracy.',
-  'https://detectiveportrait.example/game',
+  'https://deadletters.app/game',
 ].join('\n');
 
 export default function MenuScreen({ 

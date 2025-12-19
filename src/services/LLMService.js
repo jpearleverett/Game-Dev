@@ -3,20 +3,32 @@
  *
  * This service handles communication with Google Gemini API
  * for generating dynamic story content after Chapter 1.
+ *
+ * Supports two modes:
+ * 1. Proxy mode (secure): Calls your Cloudflare Worker proxy
+ * 2. Direct mode (dev): Calls Gemini API directly with embedded key
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import Constants from 'expo-constants';
 
-const LLM_CONFIG_KEY = 'detective_portrait_llm_config';
-const OFFLINE_QUEUE_KEY = 'detective_portrait_offline_queue';
+const LLM_CONFIG_KEY = 'dead_letters_llm_config';
+const OFFLINE_QUEUE_KEY = 'dead_letters_offline_queue';
 
-// Default configuration - using Gemini
+// Get configuration from environment (baked in at build time)
+const ENV_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || null;
+const ENV_PROXY_URL = Constants.expoConfig?.extra?.geminiProxyUrl || null;
+const ENV_APP_TOKEN = Constants.expoConfig?.extra?.appToken || null;
+
+// Default configuration - using Gemini 3 Flash
 const DEFAULT_CONFIG = {
   provider: 'gemini',
-  model: 'gemini-2.5-flash-preview-09-2025', // Gemini 2.5 Flash
-  apiKey: null,
-  baseUrl: null, // For custom endpoints
+  model: 'gemini-3-flash-preview', // Gemini 3 Flash (latest)
+  apiKey: ENV_API_KEY, // Only used in direct mode (dev)
+  proxyUrl: ENV_PROXY_URL, // Cloudflare Worker URL (production)
+  appToken: ENV_APP_TOKEN, // Optional auth token for proxy
+  baseUrl: null, // For custom endpoints (direct mode only)
   maxRetries: 3,
   timeout: 180000, // 180 seconds for longer story generations
 };
@@ -383,22 +395,39 @@ class LLMService {
    * Google Gemini API completion
    * Supports structured output via responseSchema for guaranteed valid JSON responses
    * Special handling for Gemini 3 models (temperature=1.0, thinkingConfig)
+   *
+   * Routes through proxy if configured (production), otherwise direct API (dev)
    */
   async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema }) {
-    // Gemini API endpoint
-    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
-    const model = this.config.model || 'gemini-2.5-flash-preview-05-20';
+    const model = this.config.model || 'gemini-3-flash-preview';
 
     // Check if using Gemini 3 model
     const isGemini3 = model.includes('gemini-3');
+
+    // Determine effective temperature (Gemini 3 recommends 1.0)
+    const effectiveTemperature = isGemini3 ? 1.0 : temperature;
+
+    // ========== PROXY MODE (Production - Secure) ==========
+    if (this.config.proxyUrl) {
+      return this._callViaProxy(messages, {
+        model,
+        temperature: effectiveTemperature,
+        maxTokens,
+        systemPrompt,
+        responseSchema,
+      });
+    }
+
+    // ========== DIRECT MODE (Development) ==========
+    // Gemini API endpoint
+    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
 
     // Convert messages to Gemini format
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
 
     // Build generation config
-    // For Gemini 3: Google strongly recommends temperature=1.0 to avoid looping/degraded performance
     const generationConfig = {
-      temperature: isGemini3 ? 1.0 : temperature,
+      temperature: effectiveTemperature,
       maxOutputTokens: maxTokens,
       topP: 0.95,
       topK: 40,
@@ -565,6 +594,115 @@ class LLMService {
     }
 
     throw lastError || new Error('Failed to complete request');
+  }
+
+  /**
+   * Call Gemini API via secure Cloudflare Worker proxy
+   * Used in production to keep API key secure
+   */
+  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema }) {
+    let lastError = null;
+    let attempt = 0;
+
+    while (attempt < this.config.maxRetries) {
+      let controller;
+      let timeoutId;
+
+      try {
+        controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+        // Build request headers
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+
+        // Add app token for extra security if configured
+        if (this.config.appToken) {
+          headers['X-App-Token'] = this.config.appToken;
+        }
+
+        // Make request to proxy
+        const response = await fetch(this.config.proxyUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            messages: messages.map(m => ({
+              role: m.role,
+              content: m.content,
+            })),
+            model,
+            temperature,
+            maxTokens,
+            systemPrompt,
+            responseSchema,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        // Handle rate limiting
+        if (response.status === 429) {
+          const data = await response.json().catch(() => ({}));
+          const retryAfter = data.retryAfter || 60;
+          console.warn(`[LLMService] Proxy rate limited, waiting ${retryAfter}s...`);
+          await this._sleep(retryAfter * 1000);
+          continue; // Don't count toward retries
+        }
+
+        // Handle other errors
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `Proxy error: ${response.status}`);
+        }
+
+        // Parse successful response
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Proxy returned unsuccessful response');
+        }
+
+        // Check for truncated responses
+        const isTruncated = data.finishReason === 'MAX_TOKENS' ||
+                           data.finishReason === 'LENGTH';
+
+        let content = data.content || '';
+
+        // If response was truncated and we expect JSON, try to repair it
+        if (isTruncated && responseSchema) {
+          console.warn(`[LLMService] Proxy response truncated, attempting JSON repair...`);
+          content = this._repairTruncatedJson(content);
+        }
+
+        return {
+          content,
+          usage: data.usage || {},
+          model,
+          finishReason: data.finishReason || 'STOP',
+          isTruncated,
+        };
+
+      } catch (error) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
+        lastError = error;
+
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out');
+        }
+
+        attempt++;
+        if (attempt < this.config.maxRetries) {
+          await this._sleep(Math.pow(2, attempt - 1) * 1000);
+        }
+      }
+    }
+
+    throw lastError || new Error('Failed to complete proxy request');
   }
 
   /**
