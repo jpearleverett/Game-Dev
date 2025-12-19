@@ -36,7 +36,7 @@ const DEFAULT_CONFIG = {
   proxyUrl: ENV_PROXY_URL, // Cloudflare Worker URL (production)
   appToken: ENV_APP_TOKEN, // Optional auth token for proxy
   baseUrl: null, // For custom endpoints (direct mode only)
-  maxRetries: 3,
+  maxRetries: 5, // Increased from 3 - prioritize getting AI content over fallback
   timeout: 180000, // 180 seconds for longer story generations
 };
 
@@ -617,10 +617,20 @@ class LLMService {
   async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema }) {
     let lastError = null;
     let attempt = 0;
+    const operationStart = Date.now();
+    const localRequestId = `llm_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 4)}`;
+
+    console.log(`[LLMService] [${localRequestId}] Starting proxy request`, {
+      model,
+      messageCount: messages.length,
+      hasSchema: !!responseSchema,
+      maxRetries: this.config.maxRetries,
+    });
 
     while (attempt < this.config.maxRetries) {
       let controller;
       let timeoutId;
+      const attemptStart = Date.now();
 
       try {
         controller = new AbortController();
@@ -636,12 +646,8 @@ class LLMService {
           headers['X-App-Token'] = this.config.appToken;
         }
 
-        // Make request to proxy
-        console.log('[LLMService] Sending proxy request...', {
-          url: this.config.proxyUrl,
-          messageCount: messages.length,
-          hasResponseSchema: !!responseSchema,
-        });
+        console.log(`[LLMService] [${localRequestId}] Attempt ${attempt + 1}/${this.config.maxRetries} - sending request...`);
+
         const response = await fetch(this.config.proxyUrl, {
           method: 'POST',
           headers,
@@ -660,13 +666,14 @@ class LLMService {
         });
 
         clearTimeout(timeoutId);
-        console.log('[LLMService] Proxy response received:', response.status);
+        const networkTime = Date.now() - attemptStart;
+        console.log(`[LLMService] [${localRequestId}] Response received in ${networkTime}ms: status=${response.status}`);
 
         // Handle rate limiting
         if (response.status === 429) {
           const data = await response.json().catch(() => ({}));
-          const retryAfter = data.retryAfter || 60;
-          console.warn(`[LLMService] Proxy rate limited, waiting ${retryAfter}s...`);
+          const retryAfter = Math.min(data.retryAfter || 60, 120); // Cap at 2 minutes
+          console.warn(`[LLMService] [${localRequestId}] Rate limited (429), waiting ${retryAfter}s before retry...`);
           await this._sleep(retryAfter * 1000);
           continue; // Don't count toward retries
         }
@@ -674,13 +681,17 @@ class LLMService {
         // Handle other errors
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || `Proxy error: ${response.status}`);
+          const errorMsg = data.error || `Proxy error: ${response.status}`;
+          const proxyRequestId = data.requestId || 'unknown';
+          console.error(`[LLMService] [${localRequestId}] Proxy error: ${errorMsg} (proxy requestId: ${proxyRequestId}, details: ${data.details || 'none'})`);
+          throw new Error(errorMsg);
         }
 
         // Parse successful response
         const data = await response.json();
 
         if (!data.success) {
+          console.error(`[LLMService] [${localRequestId}] Proxy returned unsuccessful: ${data.error}`);
           throw new Error(data.error || 'Proxy returned unsuccessful response');
         }
 
@@ -689,12 +700,31 @@ class LLMService {
                            data.finishReason === 'LENGTH';
 
         let content = data.content || '';
+        const contentLength = content.length;
+
+        // Log successful response details
+        console.log(`[LLMService] [${localRequestId}] Success! finishReason=${data.finishReason}, contentLength=${contentLength}, tokens=${data.usage?.totalTokens || 'unknown'}, timing=${JSON.stringify(data.timing || {})}`);
 
         // If response was truncated and we expect JSON, try to repair it
         if (isTruncated && responseSchema) {
-          console.warn(`[LLMService] Proxy response truncated, attempting JSON repair...`);
+          console.warn(`[LLMService] [${localRequestId}] Response truncated (${data.finishReason}), attempting JSON repair...`);
+          const originalLength = content.length;
           content = this._repairTruncatedJson(content);
+          console.log(`[LLMService] [${localRequestId}] JSON repair: original=${originalLength}, repaired=${content.length}`);
         }
+
+        // Validate JSON if schema was provided
+        if (responseSchema && content) {
+          try {
+            JSON.parse(content);
+            console.log(`[LLMService] [${localRequestId}] JSON validation: OK`);
+          } catch (parseErr) {
+            console.warn(`[LLMService] [${localRequestId}] JSON validation failed: ${parseErr.message} - will attempt repair in StoryGenerationService`);
+          }
+        }
+
+        const totalTime = Date.now() - operationStart;
+        console.log(`[LLMService] [${localRequestId}] Request complete in ${totalTime}ms (attempt ${attempt + 1})`);
 
         return {
           content,
@@ -702,6 +732,8 @@ class LLMService {
           model,
           finishReason: data.finishReason || 'STOP',
           isTruncated,
+          requestId: data.requestId,
+          timing: data.timing,
         };
 
       } catch (error) {
@@ -710,18 +742,26 @@ class LLMService {
         }
 
         lastError = error;
+        const attemptTime = Date.now() - attemptStart;
 
         if (error.name === 'AbortError') {
+          console.error(`[LLMService] [${localRequestId}] Request timed out after ${attemptTime}ms (timeout: ${this.config.timeout}ms)`);
           throw new Error('Request timed out');
         }
 
         attempt++;
         if (attempt < this.config.maxRetries) {
-          await this._sleep(Math.pow(2, attempt - 1) * 1000);
+          const backoffDelay = Math.pow(2, attempt - 1) * 1000;
+          console.warn(`[LLMService] [${localRequestId}] Attempt ${attempt} failed after ${attemptTime}ms: ${error.message}. Retrying in ${backoffDelay/1000}s...`);
+          await this._sleep(backoffDelay);
+        } else {
+          console.error(`[LLMService] [${localRequestId}] All ${this.config.maxRetries} attempts failed. Last error: ${error.message}`);
         }
       }
     }
 
+    const totalTime = Date.now() - operationStart;
+    console.error(`[LLMService] [${localRequestId}] Request failed after ${totalTime}ms and ${this.config.maxRetries} attempts`);
     throw lastError || new Error('Failed to complete proxy request');
   }
 

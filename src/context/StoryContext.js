@@ -177,36 +177,48 @@ export function StoryProvider({ children, progress, updateProgress }) {
         }
       ];
 
-      // Trigger generation with retry logic
-      // If generation fails, retry up to 2 times with exponential backoff
-      const attemptGeneration = async (attempt = 1, maxAttempts = 3) => {
+      // Trigger generation with aggressive retry logic
+      // Prioritize AI content - retry up to 5 times with exponential backoff
+      const maxAttempts = 5;
+      const bgGenId = `bg_${Date.now().toString(36)}`;
+
+      console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${pathKey})`);
+
+      const attemptGeneration = async (attempt = 1) => {
+        const attemptStart = Date.now();
+        console.log(`[StoryContext] [${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}...`);
+
         try {
           const result = await ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory);
+          const attemptDuration = Date.now() - attemptStart;
 
           if (result.ok) {
             // Success! Clear any error state
             setBackgroundGenerationError(null);
 
-            // Log if using fallback content (not ideal, but game continues)
             if (result.isFallback || result.isEmergencyFallback) {
-              console.log('[StoryContext] Background generation used fallback content');
+              // Fallback was used - not ideal but game continues
+              console.warn(`[StoryContext] [${bgGenId}] Completed with FALLBACK content in ${attemptDuration}ms (attempt ${attempt})`);
+            } else {
+              // AI-generated content - ideal path
+              console.log(`[StoryContext] [${bgGenId}] SUCCESS with AI content in ${attemptDuration}ms (attempt ${attempt})`);
             }
             return;
           }
 
           // Check if we should retry
           if (result.reason === 'llm-not-configured') {
-            // Don't retry if LLM isn't configured
+            console.warn(`[StoryContext] [${bgGenId}] LLM not configured - cannot generate`);
             return;
           }
 
           if (attempt < maxAttempts) {
-            // Exponential backoff: 2s, 4s, 8s
+            // Exponential backoff: 2s, 4s, 8s, 16s, 32s
             const delay = Math.pow(2, attempt) * 1000;
-            console.log(`[StoryContext] Background generation attempt ${attempt} failed, retrying in ${delay/1000}s...`);
+            console.warn(`[StoryContext] [${bgGenId}] Attempt ${attempt} failed (${result.reason}) after ${attemptDuration}ms, retrying in ${delay/1000}s...`);
 
             setTimeout(() => {
-              attemptGeneration(attempt + 1, maxAttempts);
+              attemptGeneration(attempt + 1);
             }, delay);
           } else {
             // All retries exhausted
@@ -217,16 +229,17 @@ export function StoryProvider({ children, progress, updateProgress }) {
               timestamp: new Date().toISOString(),
               attempts: attempt
             });
-            console.warn(`[StoryContext] Background generation failed after ${attempt} attempts:`, result);
+            console.error(`[StoryContext] [${bgGenId}] FAILED after ${attempt} attempts. Last reason: ${result.reason}`);
           }
         } catch (err) {
-          // Unexpected error
+          const attemptDuration = Date.now() - attemptStart;
+
           if (attempt < maxAttempts) {
             const delay = Math.pow(2, attempt) * 1000;
-            console.warn(`[StoryContext] Background generation threw on attempt ${attempt}, retrying in ${delay/1000}s...`);
+            console.warn(`[StoryContext] [${bgGenId}] Attempt ${attempt} threw after ${attemptDuration}ms: ${err.message}. Retrying in ${delay/1000}s...`);
 
             setTimeout(() => {
-              attemptGeneration(attempt + 1, maxAttempts);
+              attemptGeneration(attempt + 1);
             }, delay);
           } else {
             setBackgroundGenerationError({
@@ -236,7 +249,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
               timestamp: new Date().toISOString(),
               attempts: attempt
             });
-            console.error(`[StoryContext] Background generation threw after ${attempt} attempts:`, err);
+            console.error(`[StoryContext] [${bgGenId}] FAILED with error after ${attempt} attempts: ${err.message}`);
           }
         }
       };

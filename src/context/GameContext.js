@@ -70,13 +70,17 @@ export function GameProvider({
           // Check if we need to generate content for this case
           const hasFirstDecision = (story.storyCampaign?.choiceHistory?.length || 0) > 0;
           if (isDynamicChapter(caseNumber) && hasFirstDecision) {
+            console.log(`[GameContext] Ensuring story content for ${caseNumber} (path: ${pathKey})...`);
+            const genStartTime = Date.now();
             const genResult = await story.ensureStoryContent(caseNumber, pathKey);
+            const genDuration = Date.now() - genStartTime;
 
             // ensureStoryContent now always returns content (including fallback)
             // The only failures are LLM not configured or truly catastrophic errors
             if (!genResult.ok) {
               // Only block if LLM is not configured - user needs to fix this
               if (genResult.reason === 'llm-not-configured') {
+                console.error(`[GameContext] Cannot continue - LLM not configured`);
                 return {
                   ok: false,
                   reason: genResult.reason,
@@ -86,13 +90,16 @@ export function GameProvider({
               }
 
               // For other failures, log but try to continue anyway
-              // The game has fallback content that should be available
-              console.warn('[GameContext] Story generation issue, continuing with available content:', genResult);
-            }
-
-            // Log if we're using fallback content
-            if (genResult.isFallback || genResult.isEmergencyFallback) {
-              console.log('[GameContext] Using fallback story content for:', caseNumber);
+              console.warn(`[GameContext] Story generation issue after ${genDuration}ms (${genResult.reason}), attempting to continue...`);
+            } else {
+              // Log success details
+              if (genResult.isFallback || genResult.isEmergencyFallback) {
+                console.warn(`[GameContext] Using FALLBACK content for ${caseNumber} (generated in ${genDuration}ms)`);
+              } else if (genResult.generated) {
+                console.log(`[GameContext] AI content ready for ${caseNumber} (generated in ${genDuration}ms)`);
+              } else {
+                console.log(`[GameContext] Content already cached for ${caseNumber}`);
+              }
             }
           }
 
