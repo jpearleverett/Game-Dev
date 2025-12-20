@@ -1287,6 +1287,152 @@ Whatever the morning brought, I would face it. That was all I could promise myse
     };
   }
 
+  /**
+   * Build context-aware fallback content that maintains story continuity
+   * This is used when LLM generation fails but we still have story context available
+   *
+   * Key improvements over generic fallback:
+   * 1. References player's path personality (aggressive/methodical/balanced)
+   * 2. Acknowledges critical threads from previous chapters
+   * 3. Uses phase-appropriate narrative tone
+   * 4. Includes "previously" recap based on actual previous content
+   */
+  _buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context) {
+    // Determine story phase
+    let phase, phaseTone;
+    if (chapter <= 4) {
+      phase = 'risingAction';
+      phaseTone = 'building mystery and gathering clues';
+    } else if (chapter <= 7) {
+      phase = 'complications';
+      phaseTone = 'facing betrayals and escalating stakes';
+    } else if (chapter <= 10) {
+      phase = 'confrontations';
+      phaseTone = 'confronting difficult truths';
+    } else {
+      phase = 'resolution';
+      phaseTone = 'reaching the final reckoning';
+    }
+
+    // Get path personality for Jack's behavior
+    const personality = context?.pathPersonality || { narrativeStyle: 'Jack balances intuition with evidence', riskTolerance: 'moderate' };
+    const jackApproach = personality.riskTolerance === 'high' ? 'directly, without hesitation' :
+                         personality.riskTolerance === 'low' ? 'carefully, gathering every detail' :
+                         'with measured determination';
+
+    // Extract critical threads that need acknowledgment
+    const criticalThreads = (context?.narrativeThreads || [])
+      .filter(t => t.urgency === 'critical' && t.status === 'active')
+      .slice(0, 3); // Limit to 3 most important
+
+    // Build thread acknowledgment paragraph
+    let threadAcknowledgment = '';
+    if (criticalThreads.length > 0) {
+      const threadDescriptions = criticalThreads.map(t => {
+        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on my mind`;
+        if (t.type === 'promise') return `I remembered the promise I had made`;
+        if (t.type === 'threat') return `The threat still hung in the air`;
+        return `Unfinished business demanded attention`;
+      });
+      threadAcknowledgment = `\n\n${threadDescriptions.join('. ')}. These matters would need resolution, one way or another.`;
+    }
+
+    // Get a recap from the most recent chapter
+    let previousRecap = 'The investigation continued through Ashport\'s rain-soaked streets.';
+    if (context?.previousChapters?.length > 0) {
+      const lastChapter = context.previousChapters[context.previousChapters.length - 1];
+      if (lastChapter.chapterSummary) {
+        previousRecap = lastChapter.chapterSummary.split('.')[0] + '.';
+      } else if (lastChapter.narrative) {
+        // Extract first sentence
+        const firstSentence = lastChapter.narrative.match(/[^.!?]+[.!?]+/)?.[0]?.trim();
+        if (firstSentence) previousRecap = firstSentence;
+      }
+    }
+
+    // Build phase-appropriate narrative
+    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. I stepped out onto Morrison Street, my coat collar turned up against the chill.
+
+Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled me deeper into the corruption I had spent thirty years pretending not to see. Every case I had closed with such certainty now felt like a door I should have left open.${threadAcknowledgment}
+
+I moved ${jackApproach}. After everything I had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, my best friend for three decades, at the center of a web of manufactured truth. And me, the instrument of their justice, the fool who had believed every perfect conviction.
+
+Murphy's Bar beckoned below my office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that I was ${phaseTone}.
+
+The streets of Ashport stretched before me, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman I had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate me. Every right to make me understand what my arrogant certainty had cost.
+
+I checked my watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents I had helped convict haunted every step I took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career I had helped destroy for telling the truth.
+
+My hand found the cold metal of the door handle. Whatever waited on the other side, I would face it. That was all I could promise myself anymore.
+
+The city held its breath. So did I.`;
+
+    // Build the fallback entry
+    const adapted = {
+      title: phase === 'resolution' ? 'The Reckoning' :
+             phase === 'confrontations' ? 'Truth Unveiled' :
+             phase === 'complications' ? 'Shadows Deepen' : 'Following the Trail',
+      bridgeText: `Jack faces the consequences of ${phaseTone}.`,
+      previously: previousRecap,
+      narrative: narrative,
+      chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The weight of past mistakes pressed down as the truth drew closer.`,
+      jackActionStyle: personality.riskTolerance === 'high' ? 'direct' :
+                       personality.riskTolerance === 'low' ? 'cautious' : 'balanced',
+      jackRiskLevel: personality.riskTolerance || 'moderate',
+      puzzleCandidates: ['RAIN', 'TRUTH', 'SHADOW', 'EVIDENCE', 'CONFESSION', 'BETRAYAL', 'JUSTICE', 'GUILT'],
+      briefing: {
+        summary: `Continue the investigation through this critical phase.`,
+        objectives: ['Process the latest revelations', 'Decide on next steps', 'Face the consequences'],
+      },
+      consistencyFacts: [
+        `Chapter ${chapter}.${subchapter} used context-aware fallback content.`,
+        `Jack approached this chapter ${jackApproach}.`,
+      ],
+      // Acknowledge threads in previousThreadsAddressed
+      previousThreadsAddressed: criticalThreads.map(thread => ({
+        originalThread: thread.description,
+        howAddressed: 'acknowledged',
+        narrativeReference: 'Jack reflected on pending matters that would need resolution.',
+      })),
+      narrativeThreads: [], // Fallback doesn't create new threads
+      decision: null,
+    };
+
+    // Add decision for subchapter C
+    if (isDecisionPoint) {
+      const aggressiveOption = personality.riskTolerance === 'high' ? 'A' : 'B';
+      adapted.decision = {
+        intro: ['Two paths diverged before me, each leading to different truths, different costs.'],
+        options: [
+          {
+            key: 'A',
+            title: 'Confront the situation directly',
+            focus: 'Take immediate action, accepting the risks. This path prioritizes speed and decisive resolution.',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'A',
+            details: [],
+          },
+          {
+            key: 'B',
+            title: 'Gather more evidence first',
+            focus: 'Proceed with caution, building a stronger case. This path prioritizes thoroughness over speed.',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'B',
+            details: [],
+          },
+        ],
+      };
+    }
+
+    return adapted;
+  }
+
   // ==========================================================================
   // STORY ARC PLANNING - Generates high-level outline for 100% consistency
   // ==========================================================================
@@ -4139,7 +4285,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         if (attempts >= this.maxGenerationAttempts) {
           console.warn(`[StoryGenerationService] Using fallback content for ${caseNumber} after ${attempts} failed attempts`);
 
-          const fallbackContent = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+          // Use context-aware fallback when context is available for better continuity
+          const fallbackContent = context
+            ? this._buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context)
+            : this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
 
           // Build fallback story entry
           const fallbackEntry = {
@@ -4242,12 +4391,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * Get emergency fallback content for a case
    * This is a public method for external callers who need fallback content
    * when generation has completely failed outside of generateSubchapter
+   *
+   * @param {number} chapter - Chapter number
+   * @param {number} subchapter - Subchapter number (1, 2, or 3)
+   * @param {string} pathKey - Path key (A or B)
+   * @param {Object} context - Optional story context for context-aware fallback
    */
-  getEmergencyFallback(chapter, subchapter, pathKey) {
+  getEmergencyFallback(chapter, subchapter, pathKey, context = null) {
     const isDecisionPoint = subchapter === 3;
     const caseNumber = `${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][subchapter - 1]}`;
 
-    const fallbackContent = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+    // Use context-aware fallback when context is available for better continuity
+    const fallbackContent = context
+      ? this._buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context)
+      : this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
 
     return {
       chapter,
@@ -4267,7 +4424,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       wordCount: fallbackContent.narrative.split(/\s+/).length,
       isFallback: true,
       isEmergencyFallback: true,
-      fallbackReason: 'External emergency fallback request',
+      fallbackReason: context ? 'Context-aware emergency fallback' : 'External emergency fallback request',
     };
   }
 

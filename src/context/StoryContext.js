@@ -155,16 +155,17 @@ export function StoryProvider({ children, progress, updateProgress }) {
     const currentChapter = storyCampaign?.chapter || 1;
     // Current choice history before update
     const currentHistory = storyCampaign?.choiceHistory || [];
-    const isFirstDecision = currentHistory.length === 0;
 
     // Make the decision (updates state/persistence asynchronously)
     storySelectDecisionCore(optionKey);
 
-    // After first decision (at 1.3), trigger generation for the first case of chapter 2
-    // We do this optimistically without waiting for state update to ensure seamless transition
-    if (isFirstDecision && currentChapter === 1 && isLLMConfigured) {
-      const nextChapter = 2;
+    // After ANY decision, trigger background generation for the next chapter
+    // This ensures content is ready when the player clicks "Continue Investigation"
+    // The pathKey is the option just chosen - this determines the immediate next content
+    if (isLLMConfigured && currentChapter < 12) {
+      const nextChapter = currentChapter + 1;
       const nextCaseNumber = formatCaseNumber(nextChapter, 1);
+      // The path key is simply the option chosen - A or B
       const pathKey = optionKey;
 
       // Construct optimistic history including the choice just made
