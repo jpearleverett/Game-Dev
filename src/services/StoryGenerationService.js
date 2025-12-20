@@ -402,9 +402,50 @@ const DECISION_CONTENT_SCHEMA = {
       minimum: 1,
       maximum: 12,
     },
+    // DECISION MOVED BEFORE NARRATIVE - ensures decision is fully generated before long narrative
+    // This enables single-pass generation (no two-pass needed) since truncation affects narrative, not decision
+    decision: {
+      type: 'object',
+      description: 'The binary choice presented to the player. Generate this COMPLETELY before writing the narrative.',
+      properties: {
+        intro: {
+          type: 'string',
+          description: '1-2 sentences framing the impossible choice Jack faces',
+        },
+        optionA: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "A"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes. Second, what it explicitly risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment'],
+        },
+        optionB: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "B"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes. Second, what it explicitly risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment'],
+        },
+      },
+      required: ['intro', 'optionA', 'optionB'],
+    },
     narrative: {
       type: 'string',
-      description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words, ending at a critical decision moment',
+      description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 450 words, building to the decision moment defined above',
     },
     chapterSummary: {
       type: 'string',
@@ -501,47 +542,10 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
-    decision: {
-      type: 'object',
-      description: 'The binary choice presented to the player',
-      properties: {
-        intro: {
-          type: 'string',
-          description: '1-2 sentences framing the impossible choice Jack faces',
-        },
-        optionA: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
-            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes immediate confrontation and direct truth-seeking. Risks alienating Sarah and losing her cooperation."' },
-            personalityAlignment: {
-              type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
-              description: 'Which player personality type would naturally choose this option. aggressive=direct confrontation, methodical=careful investigation, neutral=either personality might choose'
-            },
-          },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
-        },
-        optionB: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
-            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes careful evidence gathering and maintaining alliances. Risks letting the trail go cold while the enemy prepares."' },
-            personalityAlignment: {
-              type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
-              description: 'Which player personality type would naturally choose this option. aggressive=direct confrontation, methodical=careful investigation, neutral=either personality might choose'
-            },
-          },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
-        },
-      },
-      required: ['intro', 'optionA', 'optionB'],
-    },
+    // NOTE: decision field moved BEFORE narrative in schema to ensure it's generated first
+    // This prevents truncation from cutting off decision structure
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
 };
 
 // ============================================================================
@@ -3925,68 +3929,36 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       this.isGenerating = true;
       try {
         let generatedContent;
-        let decisionStructure = null;
 
-        if (isDecisionPoint) {
-          // ========== TWO-PASS GENERATION FOR DECISION POINTS ==========
-          // Pass 1: Generate decision structure first (ensures complete, contextual choices)
-          decisionStructure = await this._generateDecisionStructure(context, chapter);
+        // ========== SINGLE-PASS GENERATION FOR ALL SUBCHAPTERS ==========
+        // Decision schema has decision field BEFORE narrative, so decision is generated first
+        // This eliminates the need for two-pass generation while ensuring complete decisions
+        const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
 
-          // Pass 2: Generate narrative with pre-determined decision
-          const decisionPrompt = this._buildDecisionNarrativePrompt(context, chapter, subchapter, decisionStructure);
+        console.log(`[StoryGenerationService] Single-pass generation for Chapter ${chapter}.${subchapter} (decision=${isDecisionPoint})`);
 
-          const response = await llmService.complete(
-            [{ role: 'user', content: decisionPrompt }],
-            {
-              systemPrompt: MASTER_SYSTEM_PROMPT,
-              temperature: GENERATION_CONFIG.temperature.decisions,
-              maxTokens: GENERATION_CONFIG.maxTokens.subchapter + 2000,
-              responseSchema: DECISION_CONTENT_SCHEMA,
-            }
-          );
-
-          generatedContent = this._parseGeneratedContent(response.content, true);
-
-          // Ensure the decision from Pass 1 is used (in case LLM modified it)
-          if (decisionStructure.decision) {
-            generatedContent.decision = {
-              intro: decisionStructure.decision.intro,
-              optionA: {
-                key: 'A',
-                title: decisionStructure.decision.optionA.title,
-                focus: decisionStructure.decision.optionA.focus,
-                personalityAlignment: decisionStructure.decision.optionA.personalityAlignment,
-              },
-              optionB: {
-                key: 'B',
-                title: decisionStructure.decision.optionB.title,
-                focus: decisionStructure.decision.optionB.focus,
-                personalityAlignment: decisionStructure.decision.optionB.personalityAlignment,
-              },
-            };
-            console.log(`[StoryGenerationService] Two-pass complete: Decision preserved from Pass 1`);
+        const response = await llmService.complete(
+          [{ role: 'user', content: prompt }],
+          {
+            systemPrompt: MASTER_SYSTEM_PROMPT,
+            temperature: isDecisionPoint ? GENERATION_CONFIG.temperature.decisions : GENERATION_CONFIG.temperature.narrative,
+            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+            responseSchema: schema,
           }
-        } else {
-          // ========== STANDARD SINGLE-PASS FOR NON-DECISION SUBCHAPTERS ==========
-          const prompt = this._buildGenerationPrompt(context, chapter, subchapter, false);
+        );
 
-          const response = await llmService.complete(
-            [{ role: 'user', content: prompt }],
-            {
-              systemPrompt: MASTER_SYSTEM_PROMPT,
-              temperature: GENERATION_CONFIG.temperature.narrative,
-              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-              responseSchema: STORY_CONTENT_SCHEMA,
-            }
-          );
+        generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
 
-          generatedContent = this._parseGeneratedContent(response.content, false);
+        // Validate decision structure for decision points
+        if (isDecisionPoint && generatedContent.decision) {
+          console.log(`[StoryGenerationService] Decision generated: "${generatedContent.decision.optionA?.title}" vs "${generatedContent.decision.optionB?.title}"`);
         }
 
-        // Validate word count with retry logic
+        // Validate word count - only expand if significantly short
         let wordCount = generatedContent.narrative.split(/\s+/).length;
         let expansionAttempts = 0;
-        const MAX_EXPANSION_ATTEMPTS = 2;
+        const MAX_EXPANSION_ATTEMPTS = 1; // Reduced to minimize API calls
 
         while (wordCount < MIN_WORDS_PER_SUBCHAPTER && expansionAttempts < MAX_EXPANSION_ATTEMPTS) {
           expansionAttempts++;

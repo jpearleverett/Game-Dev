@@ -528,16 +528,16 @@ export const GENERATION_CONFIG = {
 
   // Token limits - generous to prevent truncation
   maxTokens: {
-    subchapter: 10000,    // Increased to ensure complete JSON + narrative in single call
-    expansion: 3000,      // For fallback expansion (rarely needed with optimized prompts)
+    subchapter: 6000,     // Sufficient for 500-word narrative + JSON structure
+    expansion: 2000,      // For fallback expansion (rarely needed)
     validation: 500,
   },
 
-  // Word count requirements - balanced for quality and reliability
+  // Word count requirements - optimized for fast background generation
   wordCount: {
-    minimum: 450,         // Lowered to reduce expansion API calls (still ~1.5 pages)
-    target: 650,          // Slightly lower target for faster generation
-    maximum: 1000,        // Tighter cap to prevent token issues
+    minimum: 450,         // ~1.5 pages, enough for immersion
+    target: 500,          // Lean but quality-focused - faster generation
+    maximum: 1000,        // Cap to ensure fast generation
   },
 
   // Quality assurance settings
