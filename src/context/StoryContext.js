@@ -62,6 +62,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
   /**
    * Check and generate story content if needed for a case
+   *
+   * This function ensures content is available for a case before the player
+   * can continue. It will generate new content if needed, and always returns
+   * success if ANY content (including fallback) is available.
    */
   const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null) => {
     // Chapter 1 is static, no generation needed
@@ -69,7 +73,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return { ok: true, generated: false };
     }
 
-    // Check if content exists
+    // Check if content exists (either generated or cached)
     const hasContent = await hasStoryContent(caseNumber, pathKey);
     if (hasContent) {
       return { ok: true, generated: false };
@@ -85,6 +89,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
       // Use optimistic history if provided, otherwise fallback to ref (avoids stale closure)
       const history = optimisticChoiceHistory || choiceHistoryRef.current;
 
+      // generateForCase now always returns content (including fallback on error)
+      // It only returns null for non-dynamic chapters or if LLM is not configured
       const entry = await generateForCase(
         caseNumber,
         pathKey,
@@ -92,10 +98,22 @@ export function StoryProvider({ children, progress, updateProgress }) {
       );
 
       if (entry) {
-        return { ok: true, generated: true, entry };
+        // Entry can be generated content or fallback content
+        // Either way, the game can proceed
+        return {
+          ok: true,
+          generated: true,
+          entry,
+          isFallback: entry.isFallback || false,
+          isEmergencyFallback: entry.isEmergencyFallback || false,
+        };
       }
+
+      // This should rarely happen now - generateForCase has its own fallback
+      console.warn('[StoryContext] generateForCase returned null unexpectedly');
       return { ok: false, reason: 'generation-failed' };
     } catch (error) {
+      console.error('[StoryContext] Unexpected error in ensureStoryContent:', error.message);
       return { ok: false, reason: 'generation-error', error: error.message };
     }
   }, [isLLMConfigured, generateForCase]);
@@ -137,16 +155,17 @@ export function StoryProvider({ children, progress, updateProgress }) {
     const currentChapter = storyCampaign?.chapter || 1;
     // Current choice history before update
     const currentHistory = storyCampaign?.choiceHistory || [];
-    const isFirstDecision = currentHistory.length === 0;
 
     // Make the decision (updates state/persistence asynchronously)
     storySelectDecisionCore(optionKey);
 
-    // After first decision (at 1.3), trigger generation for the first case of chapter 2
-    // We do this optimistically without waiting for state update to ensure seamless transition
-    if (isFirstDecision && currentChapter === 1 && isLLMConfigured) {
-      const nextChapter = 2;
+    // After ANY decision, trigger background generation for the next chapter
+    // This ensures content is ready when the player clicks "Continue Investigation"
+    // The pathKey is the option just chosen - this determines the immediate next content
+    if (isLLMConfigured && currentChapter < 12) {
+      const nextChapter = currentChapter + 1;
       const nextCaseNumber = formatCaseNumber(nextChapter, 1);
+      // The path key is simply the option chosen - A or B
       const pathKey = optionKey;
 
       // Construct optimistic history including the choice just made
@@ -159,32 +178,85 @@ export function StoryProvider({ children, progress, updateProgress }) {
         }
       ];
 
-      // Trigger generation immediately - do NOT await if we want to return control to UI
-      // However, ensureStoryContent handles deduplication via service now, so calling it here is safe.
-      // If the user navigates immediately, the next call to ensureStoryContent will attach to this promise.
-      ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory)
-        .then(result => {
-          if (!result.ok && result.reason !== 'llm-not-configured') {
-            // Track the error so UI can display it
+      // Trigger generation with retry logic
+      // With root causes fixed (typos, word count, stylistic warnings), fewer retries needed
+      const maxAttempts = 3;
+      const bgGenId = `bg_${Date.now().toString(36)}`;
+
+      console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${pathKey})`);
+
+      const attemptGeneration = async (attempt = 1) => {
+        const attemptStart = Date.now();
+        console.log(`[StoryContext] [${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}...`);
+
+        try {
+          const result = await ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory);
+          const attemptDuration = Date.now() - attemptStart;
+
+          if (result.ok) {
+            // Success! Clear any error state
+            setBackgroundGenerationError(null);
+
+            if (result.isFallback || result.isEmergencyFallback) {
+              // Fallback was used - not ideal but game continues
+              console.warn(`[StoryContext] [${bgGenId}] Completed with FALLBACK content in ${attemptDuration}ms (attempt ${attempt})`);
+            } else {
+              // AI-generated content - ideal path
+              console.log(`[StoryContext] [${bgGenId}] SUCCESS with AI content in ${attemptDuration}ms (attempt ${attempt})`);
+            }
+            return;
+          }
+
+          // Check if we should retry
+          if (result.reason === 'llm-not-configured') {
+            console.warn(`[StoryContext] [${bgGenId}] LLM not configured - cannot generate`);
+            return;
+          }
+
+          if (attempt < maxAttempts) {
+            // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+            const delay = Math.pow(2, attempt) * 1000;
+            console.warn(`[StoryContext] [${bgGenId}] Attempt ${attempt} failed (${result.reason}) after ${attemptDuration}ms, retrying in ${delay/1000}s...`);
+
+            setTimeout(() => {
+              attemptGeneration(attempt + 1);
+            }, delay);
+          } else {
+            // All retries exhausted
             setBackgroundGenerationError({
               caseNumber: nextCaseNumber,
               reason: result.reason,
               error: result.error,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              attempts: attempt
             });
-            console.warn('[StoryContext] Background generation failed:', result);
+            console.error(`[StoryContext] [${bgGenId}] FAILED after ${attempt} attempts. Last reason: ${result.reason}`);
           }
-        })
-        .catch(err => {
-          // Unexpected error (not from ensureStoryContent result)
-          setBackgroundGenerationError({
-            caseNumber: nextCaseNumber,
-            reason: 'unexpected-error',
-            error: err.message,
-            timestamp: new Date().toISOString()
-          });
-          console.error('[StoryContext] Background generation threw:', err);
-        });
+        } catch (err) {
+          const attemptDuration = Date.now() - attemptStart;
+
+          if (attempt < maxAttempts) {
+            const delay = Math.pow(2, attempt) * 1000;
+            console.warn(`[StoryContext] [${bgGenId}] Attempt ${attempt} threw after ${attemptDuration}ms: ${err.message}. Retrying in ${delay/1000}s...`);
+
+            setTimeout(() => {
+              attemptGeneration(attempt + 1);
+            }, delay);
+          } else {
+            setBackgroundGenerationError({
+              caseNumber: nextCaseNumber,
+              reason: 'unexpected-error',
+              error: err.message,
+              timestamp: new Date().toISOString(),
+              attempts: attempt
+            });
+            console.error(`[StoryContext] [${bgGenId}] FAILED with error after ${attempt} attempts: ${err.message}`);
+          }
+        }
+      };
+
+      // Start background generation (non-blocking)
+      attemptGeneration();
     }
   }, [storySelectDecisionCore, storyCampaign, isLLMConfigured, ensureStoryContent]);
 

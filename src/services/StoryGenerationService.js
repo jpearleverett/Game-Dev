@@ -402,9 +402,50 @@ const DECISION_CONTENT_SCHEMA = {
       minimum: 1,
       maximum: 12,
     },
+    // DECISION MOVED BEFORE NARRATIVE - ensures decision is fully generated before long narrative
+    // This enables single-pass generation (no two-pass needed) since truncation affects narrative, not decision
+    decision: {
+      type: 'object',
+      description: 'The binary choice presented to the player. Generate this COMPLETELY before writing the narrative.',
+      properties: {
+        intro: {
+          type: 'string',
+          description: '1-2 sentences framing the impossible choice Jack faces',
+        },
+        optionA: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "A"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes. Second, what it explicitly risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment'],
+        },
+        optionB: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Always "B"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes. Second, what it explicitly risks.' },
+            personalityAlignment: {
+              type: 'string',
+              enum: ['aggressive', 'methodical', 'neutral'],
+              description: 'Which player personality type would naturally choose this option',
+            },
+          },
+          required: ['key', 'title', 'focus', 'personalityAlignment'],
+        },
+      },
+      required: ['intro', 'optionA', 'optionB'],
+    },
     narrative: {
       type: 'string',
-      description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 500 words, ending at a critical decision moment',
+      description: 'Full noir prose narrative from Jack Halloway first-person perspective, minimum 450 words, building to the decision moment defined above',
     },
     chapterSummary: {
       type: 'string',
@@ -501,47 +542,10 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
-    decision: {
-      type: 'object',
-      description: 'The binary choice presented to the player',
-      properties: {
-        intro: {
-          type: 'string',
-          description: '1-2 sentences framing the impossible choice Jack faces',
-        },
-        optionA: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
-            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes immediate confrontation and direct truth-seeking. Risks alienating Sarah and losing her cooperation."' },
-            personalityAlignment: {
-              type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
-              description: 'Which player personality type would naturally choose this option. aggressive=direct confrontation, methodical=careful investigation, neutral=either personality might choose'
-            },
-          },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
-        },
-        optionB: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
-            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes (investigation style, relationship, goal). Second, what it explicitly risks or sacrifices. Example: "Prioritizes careful evidence gathering and maintaining alliances. Risks letting the trail go cold while the enemy prepares."' },
-            personalityAlignment: {
-              type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
-              description: 'Which player personality type would naturally choose this option. aggressive=direct confrontation, methodical=careful investigation, neutral=either personality might choose'
-            },
-          },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
-        },
-      },
-      required: ['intro', 'optionA', 'optionB'],
-    },
+    // NOTE: decision field moved BEFORE narrative in schema to ensure it's generated first
+    // This prevents truncation from cutting off decision structure
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'decision'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
 };
 
 // ============================================================================
@@ -1281,6 +1285,152 @@ Whatever the morning brought, I would face it. That was all I could promise myse
         ],
       } : null,
     };
+  }
+
+  /**
+   * Build context-aware fallback content that maintains story continuity
+   * This is used when LLM generation fails but we still have story context available
+   *
+   * Key improvements over generic fallback:
+   * 1. References player's path personality (aggressive/methodical/balanced)
+   * 2. Acknowledges critical threads from previous chapters
+   * 3. Uses phase-appropriate narrative tone
+   * 4. Includes "previously" recap based on actual previous content
+   */
+  _buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context) {
+    // Determine story phase
+    let phase, phaseTone;
+    if (chapter <= 4) {
+      phase = 'risingAction';
+      phaseTone = 'building mystery and gathering clues';
+    } else if (chapter <= 7) {
+      phase = 'complications';
+      phaseTone = 'facing betrayals and escalating stakes';
+    } else if (chapter <= 10) {
+      phase = 'confrontations';
+      phaseTone = 'confronting difficult truths';
+    } else {
+      phase = 'resolution';
+      phaseTone = 'reaching the final reckoning';
+    }
+
+    // Get path personality for Jack's behavior
+    const personality = context?.pathPersonality || { narrativeStyle: 'Jack balances intuition with evidence', riskTolerance: 'moderate' };
+    const jackApproach = personality.riskTolerance === 'high' ? 'directly, without hesitation' :
+                         personality.riskTolerance === 'low' ? 'carefully, gathering every detail' :
+                         'with measured determination';
+
+    // Extract critical threads that need acknowledgment
+    const criticalThreads = (context?.narrativeThreads || [])
+      .filter(t => t.urgency === 'critical' && t.status === 'active')
+      .slice(0, 3); // Limit to 3 most important
+
+    // Build thread acknowledgment paragraph
+    let threadAcknowledgment = '';
+    if (criticalThreads.length > 0) {
+      const threadDescriptions = criticalThreads.map(t => {
+        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on my mind`;
+        if (t.type === 'promise') return `I remembered the promise I had made`;
+        if (t.type === 'threat') return `The threat still hung in the air`;
+        return `Unfinished business demanded attention`;
+      });
+      threadAcknowledgment = `\n\n${threadDescriptions.join('. ')}. These matters would need resolution, one way or another.`;
+    }
+
+    // Get a recap from the most recent chapter
+    let previousRecap = 'The investigation continued through Ashport\'s rain-soaked streets.';
+    if (context?.previousChapters?.length > 0) {
+      const lastChapter = context.previousChapters[context.previousChapters.length - 1];
+      if (lastChapter.chapterSummary) {
+        previousRecap = lastChapter.chapterSummary.split('.')[0] + '.';
+      } else if (lastChapter.narrative) {
+        // Extract first sentence
+        const firstSentence = lastChapter.narrative.match(/[^.!?]+[.!?]+/)?.[0]?.trim();
+        if (firstSentence) previousRecap = firstSentence;
+      }
+    }
+
+    // Build phase-appropriate narrative
+    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. I stepped out onto Morrison Street, my coat collar turned up against the chill.
+
+Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled me deeper into the corruption I had spent thirty years pretending not to see. Every case I had closed with such certainty now felt like a door I should have left open.${threadAcknowledgment}
+
+I moved ${jackApproach}. After everything I had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, my best friend for three decades, at the center of a web of manufactured truth. And me, the instrument of their justice, the fool who had believed every perfect conviction.
+
+Murphy's Bar beckoned below my office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that I was ${phaseTone}.
+
+The streets of Ashport stretched before me, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman I had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate me. Every right to make me understand what my arrogant certainty had cost.
+
+I checked my watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents I had helped convict haunted every step I took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career I had helped destroy for telling the truth.
+
+My hand found the cold metal of the door handle. Whatever waited on the other side, I would face it. That was all I could promise myself anymore.
+
+The city held its breath. So did I.`;
+
+    // Build the fallback entry
+    const adapted = {
+      title: phase === 'resolution' ? 'The Reckoning' :
+             phase === 'confrontations' ? 'Truth Unveiled' :
+             phase === 'complications' ? 'Shadows Deepen' : 'Following the Trail',
+      bridgeText: `Jack faces the consequences of ${phaseTone}.`,
+      previously: previousRecap,
+      narrative: narrative,
+      chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The weight of past mistakes pressed down as the truth drew closer.`,
+      jackActionStyle: personality.riskTolerance === 'high' ? 'direct' :
+                       personality.riskTolerance === 'low' ? 'cautious' : 'balanced',
+      jackRiskLevel: personality.riskTolerance || 'moderate',
+      puzzleCandidates: ['RAIN', 'TRUTH', 'SHADOW', 'EVIDENCE', 'CONFESSION', 'BETRAYAL', 'JUSTICE', 'GUILT'],
+      briefing: {
+        summary: `Continue the investigation through this critical phase.`,
+        objectives: ['Process the latest revelations', 'Decide on next steps', 'Face the consequences'],
+      },
+      consistencyFacts: [
+        `Chapter ${chapter}.${subchapter} used context-aware fallback content.`,
+        `Jack approached this chapter ${jackApproach}.`,
+      ],
+      // Acknowledge threads in previousThreadsAddressed
+      previousThreadsAddressed: criticalThreads.map(thread => ({
+        originalThread: thread.description,
+        howAddressed: 'acknowledged',
+        narrativeReference: 'Jack reflected on pending matters that would need resolution.',
+      })),
+      narrativeThreads: [], // Fallback doesn't create new threads
+      decision: null,
+    };
+
+    // Add decision for subchapter C
+    if (isDecisionPoint) {
+      const aggressiveOption = personality.riskTolerance === 'high' ? 'A' : 'B';
+      adapted.decision = {
+        intro: ['Two paths diverged before me, each leading to different truths, different costs.'],
+        options: [
+          {
+            key: 'A',
+            title: 'Confront the situation directly',
+            focus: 'Take immediate action, accepting the risks. This path prioritizes speed and decisive resolution.',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'A',
+            details: [],
+          },
+          {
+            key: 'B',
+            title: 'Gather more evidence first',
+            focus: 'Proceed with caution, building a stronger case. This path prioritizes thoroughness over speed.',
+            consequence: null,
+            stats: null,
+            outcome: null,
+            nextChapter: null,
+            nextPathKey: 'B',
+            details: [],
+          },
+        ],
+      };
+    }
+
+    return adapted;
   }
 
   // ==========================================================================
@@ -3925,68 +4075,36 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       this.isGenerating = true;
       try {
         let generatedContent;
-        let decisionStructure = null;
 
-        if (isDecisionPoint) {
-          // ========== TWO-PASS GENERATION FOR DECISION POINTS ==========
-          // Pass 1: Generate decision structure first (ensures complete, contextual choices)
-          decisionStructure = await this._generateDecisionStructure(context, chapter);
+        // ========== SINGLE-PASS GENERATION FOR ALL SUBCHAPTERS ==========
+        // Decision schema has decision field BEFORE narrative, so decision is generated first
+        // This eliminates the need for two-pass generation while ensuring complete decisions
+        const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
 
-          // Pass 2: Generate narrative with pre-determined decision
-          const decisionPrompt = this._buildDecisionNarrativePrompt(context, chapter, subchapter, decisionStructure);
+        console.log(`[StoryGenerationService] Single-pass generation for Chapter ${chapter}.${subchapter} (decision=${isDecisionPoint})`);
 
-          const response = await llmService.complete(
-            [{ role: 'user', content: decisionPrompt }],
-            {
-              systemPrompt: MASTER_SYSTEM_PROMPT,
-              temperature: GENERATION_CONFIG.temperature.decisions,
-              maxTokens: GENERATION_CONFIG.maxTokens.subchapter + 2000,
-              responseSchema: DECISION_CONTENT_SCHEMA,
-            }
-          );
-
-          generatedContent = this._parseGeneratedContent(response.content, true);
-
-          // Ensure the decision from Pass 1 is used (in case LLM modified it)
-          if (decisionStructure.decision) {
-            generatedContent.decision = {
-              intro: decisionStructure.decision.intro,
-              optionA: {
-                key: 'A',
-                title: decisionStructure.decision.optionA.title,
-                focus: decisionStructure.decision.optionA.focus,
-                personalityAlignment: decisionStructure.decision.optionA.personalityAlignment,
-              },
-              optionB: {
-                key: 'B',
-                title: decisionStructure.decision.optionB.title,
-                focus: decisionStructure.decision.optionB.focus,
-                personalityAlignment: decisionStructure.decision.optionB.personalityAlignment,
-              },
-            };
-            console.log(`[StoryGenerationService] Two-pass complete: Decision preserved from Pass 1`);
+        const response = await llmService.complete(
+          [{ role: 'user', content: prompt }],
+          {
+            systemPrompt: MASTER_SYSTEM_PROMPT,
+            temperature: isDecisionPoint ? GENERATION_CONFIG.temperature.decisions : GENERATION_CONFIG.temperature.narrative,
+            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+            responseSchema: schema,
           }
-        } else {
-          // ========== STANDARD SINGLE-PASS FOR NON-DECISION SUBCHAPTERS ==========
-          const prompt = this._buildGenerationPrompt(context, chapter, subchapter, false);
+        );
 
-          const response = await llmService.complete(
-            [{ role: 'user', content: prompt }],
-            {
-              systemPrompt: MASTER_SYSTEM_PROMPT,
-              temperature: GENERATION_CONFIG.temperature.narrative,
-              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-              responseSchema: STORY_CONTENT_SCHEMA,
-            }
-          );
+        generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
 
-          generatedContent = this._parseGeneratedContent(response.content, false);
+        // Validate decision structure for decision points
+        if (isDecisionPoint && generatedContent.decision) {
+          console.log(`[StoryGenerationService] Decision generated: "${generatedContent.decision.optionA?.title}" vs "${generatedContent.decision.optionB?.title}"`);
         }
 
-        // Validate word count with retry logic
+        // Validate word count - only expand if significantly short
         let wordCount = generatedContent.narrative.split(/\s+/).length;
         let expansionAttempts = 0;
-        const MAX_EXPANSION_ATTEMPTS = 2;
+        const MAX_EXPANSION_ATTEMPTS = 1; // Reduced to minimize API calls
 
         while (wordCount < MIN_WORDS_PER_SUBCHAPTER && expansionAttempts < MAX_EXPANSION_ATTEMPTS) {
           expansionAttempts++;
@@ -4017,6 +4135,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
 
         // Validate consistency (check for obvious violations)
+        // FIRST: Fix simple typos locally without LLM call
+        generatedContent = this._fixTyposLocally(generatedContent);
+
         let validationResult = this._validateConsistency(generatedContent, context);
 
         // ========== A+ QUALITY VALIDATION ==========
@@ -4164,7 +4285,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         if (attempts >= this.maxGenerationAttempts) {
           console.warn(`[StoryGenerationService] Using fallback content for ${caseNumber} after ${attempts} failed attempts`);
 
-          const fallbackContent = this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+          // Use context-aware fallback when context is available for better continuity
+          const fallbackContent = context
+            ? this._buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context)
+            : this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
 
           // Build fallback story entry
           const fallbackEntry = {
@@ -4261,6 +4385,47 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     return results;
+  }
+
+  /**
+   * Get emergency fallback content for a case
+   * This is a public method for external callers who need fallback content
+   * when generation has completely failed outside of generateSubchapter
+   *
+   * @param {number} chapter - Chapter number
+   * @param {number} subchapter - Subchapter number (1, 2, or 3)
+   * @param {string} pathKey - Path key (A or B)
+   * @param {Object} context - Optional story context for context-aware fallback
+   */
+  getEmergencyFallback(chapter, subchapter, pathKey, context = null) {
+    const isDecisionPoint = subchapter === 3;
+    const caseNumber = `${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][subchapter - 1]}`;
+
+    // Use context-aware fallback when context is available for better continuity
+    const fallbackContent = context
+      ? this._buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context)
+      : this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
+
+    return {
+      chapter,
+      subchapter,
+      pathKey,
+      caseNumber,
+      title: fallbackContent.title,
+      narrative: fallbackContent.narrative,
+      bridgeText: fallbackContent.bridgeText,
+      previously: fallbackContent.previously,
+      briefing: fallbackContent.briefing,
+      decision: fallbackContent.decision,
+      board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
+      consistencyFacts: fallbackContent.consistencyFacts,
+      chapterSummary: fallbackContent.chapterSummary,
+      generatedAt: new Date().toISOString(),
+      wordCount: fallbackContent.narrative.split(/\s+/).length,
+      isFallback: true,
+      isEmergencyFallback: true,
+      fallbackReason: context ? 'Context-aware emergency fallback' : 'External emergency fallback request',
+    };
   }
 
   // ==========================================================================
@@ -4542,6 +4707,61 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   }
 
   /**
+   * Fix common typos locally without calling the LLM
+   * This prevents expensive API calls for simple string replacements
+   */
+  _fixTyposLocally(content) {
+    if (!content?.narrative) return content;
+
+    let narrative = content.narrative;
+    let fixCount = 0;
+
+    // Name typos - case-insensitive replacement with proper capitalization
+    const typoFixes = [
+      // Character names
+      { pattern: /\bhallaway\b/gi, replacement: 'Halloway' },
+      { pattern: /\bholloway\b/gi, replacement: 'Halloway' },
+      { pattern: /\bhaloway\b/gi, replacement: 'Halloway' },
+      { pattern: /\bhallo way\b/gi, replacement: 'Halloway' },
+      { pattern: /\bblackwood\b/gi, replacement: 'Blackwell' },
+      { pattern: /\bblackwel\b/gi, replacement: 'Blackwell' },
+      { pattern: /\bblack well\b/gi, replacement: 'Blackwell' },
+      { pattern: /\breaves\b/gi, replacement: 'Reeves' },
+      { pattern: /\breevs\b/gi, replacement: 'Reeves' },
+      { pattern: /\breeve\s/gi, replacement: 'Reeves ' },
+      { pattern: /\bbellami\b/gi, replacement: 'Bellamy' },
+      { pattern: /\bbella my\b/gi, replacement: 'Bellamy' },
+      { pattern: /\bthornhil\b/gi, replacement: 'Thornhill' },
+      { pattern: /\bthorn hill\b/gi, replacement: 'Thornhill' },
+      { pattern: /\bgranges\b/gi, replacement: 'Grange' },
+      { pattern: /\bgrang\s/gi, replacement: 'Grange ' },
+      { pattern: /\bsilias\b/gi, replacement: 'Silas' },
+      { pattern: /\bsilass\b/gi, replacement: 'Silas' },
+      { pattern: /\bsi las\b/gi, replacement: 'Silas' },
+      // Location names
+      { pattern: /\bashport's\b/gi, replacement: "Ashport's" },
+      { pattern: /\bash port\b/gi, replacement: 'Ashport' },
+    ];
+
+    for (const { pattern, replacement } of typoFixes) {
+      const before = narrative;
+      narrative = narrative.replace(pattern, replacement);
+      if (before !== narrative) {
+        fixCount++;
+      }
+    }
+
+    if (fixCount > 0) {
+      console.log(`[StoryGenerationService] Fixed ${fixCount} typos locally (no LLM call needed)`);
+    }
+
+    return {
+      ...content,
+      narrative,
+    };
+  }
+
+  /**
    * Validate content against established facts - COMPREHENSIVE VERSION
    * Checks for: name spelling, timeline, setting, character behavior, relationship states,
    * plot continuity, and path personality consistency
@@ -4554,6 +4774,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 1: NAME AND SPELLING CONSISTENCY
+    // These should rarely trigger now since _fixTyposLocally runs first
     // =========================================================================
     const nameChecks = [
       { wrong: ['hallaway', 'holloway', 'haloway', 'hallo way'], correct: 'Halloway' },
@@ -4923,16 +5144,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       { pattern: /\bit'?s (?:important|worth) (?:to note|noting)\b/i, issue: 'Forbidden meta-phrase detected ("it\'s important/worth noting")' },
     ];
 
+    // Forbidden patterns are now WARNINGS, not errors
+    // Stylistic preferences should not trigger expensive LLM retries
     forbiddenPatterns.forEach(({ pattern, issue, count }) => {
       if (count) {
         const matches = narrativeOriginal.match(pattern);
-        if (matches && matches.length > 2) {
-          issues.push(`${issue} (found ${matches.length} instances)`);
-        } else if (matches && matches.length > 0) {
+        if (matches && matches.length > 0) {
           warnings.push(`${issue} (found ${matches.length} instances)`);
         }
       } else if (pattern.test(narrativeOriginal)) {
-        issues.push(issue);
+        warnings.push(issue);
       }
     });
 
@@ -5409,8 +5630,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     }
 
+    // I-stacking is now a WARNING, not an error - stylistic issue shouldn't trigger retries
     if (maxConsecutiveI >= 4) {
-      issues.push(`I-stacking detected: ${maxConsecutiveI} consecutive sentences start with "I". Vary sentence openers.`);
+      warnings.push(`I-stacking detected: ${maxConsecutiveI} consecutive sentences start with "I". Vary sentence openers.`);
     } else if (maxConsecutiveI >= 3) {
       warnings.push(`Minor I-stacking: ${maxConsecutiveI} consecutive "I" sentences. Consider varying openers.`);
     }

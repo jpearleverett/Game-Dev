@@ -111,9 +111,19 @@ export function useStoryGeneration(storyCampaign) {
   /**
    * Generate content for a specific case
    * Tracks whether this is a "cache miss" (player chose unexpected path)
+   *
+   * IMPORTANT: This function should NEVER return null for dynamic chapters.
+   * The StoryGenerationService always returns fallback content on failure,
+   * so we should always have something to return.
    */
   const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = []) => {
+    const genId = `gen_${Date.now().toString(36)}`;
+    const startTime = Date.now();
+
+    console.log(`[useStoryGeneration] [${genId}] generateForCase called: case=${caseNumber}, path=${pathKey}`);
+
     if (!isConfigured) {
+      console.warn(`[useStoryGeneration] [${genId}] LLM not configured`);
       setStatus(GENERATION_STATUS.NOT_CONFIGURED);
       setError('LLM not configured. Please set an API key in settings.');
       return null;
@@ -123,23 +133,26 @@ export function useStoryGeneration(storyCampaign) {
 
     // Skip if not dynamic
     if (!isDynamicChapter(caseNumber)) {
+      console.log(`[useStoryGeneration] [${genId}] Skipping - not a dynamic chapter`);
       return null;
     }
 
     // Check if already generated
     const hasContent = await hasStoryContent(caseNumber, pathKey);
     if (hasContent) {
+      console.log(`[useStoryGeneration] [${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
       return null; // Already generated
     }
 
     // Determine if this is a cache miss (player chose unexpected path)
-    // A cache miss occurs when we predicted a different path than what was chosen
-    // Threshold aligned with pregenerate: we generate both paths when confidence < 0.70
-    // So only flag cache miss when we were confident (>= 0.70) but player chose differently
     const wasCacheMiss = lastPredictionRef.current &&
       lastPredictionRef.current.primary !== pathKey &&
       lastPredictionRef.current.confidence >= 0.70;
+
+    if (wasCacheMiss) {
+      console.log(`[useStoryGeneration] [${genId}] CACHE MISS: predicted=${lastPredictionRef.current.primary}, actual=${pathKey}`);
+    }
 
     setStatus(GENERATION_STATUS.GENERATING);
     setGenerationType(GENERATION_TYPE.IMMEDIATE);
@@ -147,9 +160,13 @@ export function useStoryGeneration(storyCampaign) {
     setError(null);
     setProgress({ current: 0, total: 1 });
 
+    console.log(`[useStoryGeneration] [${genId}] Starting generation for Chapter ${chapter}.${subchapter} (path ${pathKey})...`);
+
     try {
       generationRef.current = true;
 
+      // generateSubchapter ALWAYS returns content (fallback on error)
+      // This is guaranteed by the StoryGenerationService's error handling
       const entry = await storyGenerationService.generateSubchapter(
         chapter,
         subchapter,
@@ -157,21 +174,55 @@ export function useStoryGeneration(storyCampaign) {
         choiceHistory
       );
 
+      const duration = Date.now() - startTime;
+
       if (!generationRef.current) {
-        // Generation was cancelled
-        return null;
+        // Generation was cancelled - but we still have the entry
+        console.log(`[useStoryGeneration] [${genId}] Generation cancelled after ${duration}ms, but caching entry`);
+        if (entry) {
+          updateGeneratedCache(caseNumber, pathKey, entry);
+        }
+        return entry;
       }
 
       // Update cache
       updateGeneratedCache(caseNumber, pathKey, entry);
-
       setProgress({ current: 1, total: 1 });
-      setStatus(GENERATION_STATUS.COMPLETE);
+
+      // Log result details
+      if (entry?.isFallback || entry?.isEmergencyFallback) {
+        console.warn(`[useStoryGeneration] [${genId}] Completed with FALLBACK in ${duration}ms: ${entry.fallbackReason || 'unknown reason'}`);
+        setStatus(GENERATION_STATUS.COMPLETE);
+        setError(entry.fallbackReason || 'Using backup story content');
+      } else {
+        console.log(`[useStoryGeneration] [${genId}] SUCCESS with AI content in ${duration}ms. Title: "${entry?.title}", wordCount: ${entry?.wordCount || 'unknown'}`);
+        setStatus(GENERATION_STATUS.COMPLETE);
+      }
 
       return entry;
     } catch (err) {
+      const duration = Date.now() - startTime;
+      console.error(`[useStoryGeneration] [${genId}] ERROR after ${duration}ms: ${err.message}`);
       setStatus(GENERATION_STATUS.ERROR);
       setError(err.message);
+
+      // Even on unexpected error, try to get emergency fallback content
+      console.log(`[useStoryGeneration] [${genId}] Attempting emergency fallback...`);
+      try {
+        const fallbackEntry = storyGenerationService.getEmergencyFallback(
+          chapter,
+          subchapter,
+          pathKey
+        );
+        if (fallbackEntry) {
+          console.log(`[useStoryGeneration] [${genId}] Emergency fallback succeeded`);
+          updateGeneratedCache(caseNumber, pathKey, fallbackEntry);
+          return fallbackEntry;
+        }
+      } catch (fallbackErr) {
+        console.error(`[useStoryGeneration] [${genId}] Emergency fallback FAILED: ${fallbackErr.message}`);
+      }
+
       return null;
     } finally {
       generationRef.current = false;

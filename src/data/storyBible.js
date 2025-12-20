@@ -528,21 +528,21 @@ export const GENERATION_CONFIG = {
 
   // Token limits - generous to prevent truncation
   maxTokens: {
-    subchapter: 10000,    // Increased to ensure complete JSON + narrative in single call
-    expansion: 3000,      // For fallback expansion (rarely needed with optimized prompts)
+    subchapter: 6000,     // Sufficient for 500-word narrative + JSON structure
+    expansion: 2000,      // For fallback expansion (rarely needed)
     validation: 500,
   },
 
-  // Word count requirements - optimized for immersion
+  // Word count requirements - optimized for fast background generation
   wordCount: {
-    minimum: 550,         // Slightly increased minimum
-    target: 750,          // Higher target for richer content
-    maximum: 1200,        // Cap to prevent runaway generation
+    minimum: 450,         // ~1.5 pages, enough for immersion
+    target: 500,          // Lean but quality-focused - faster generation
+    maximum: 1000,        // Cap to ensure fast generation
   },
 
   // Quality assurance settings
   qualitySettings: {
-    maxRetries: 2,                    // Retries for consistency failures
+    maxRetries: 1,                    // Reduced - prefer warnings over expensive retries
     minSentencesPerParagraph: 3,      // Ensures substantial paragraphs
     maxConsecutiveDialogue: 6,        // Prevents wall-of-dialogue
     requireAtmosphericOpening: true,  // Every chapter should set the scene
