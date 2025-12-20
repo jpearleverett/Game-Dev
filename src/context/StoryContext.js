@@ -177,9 +177,9 @@ export function StoryProvider({ children, progress, updateProgress }) {
         }
       ];
 
-      // Trigger generation with aggressive retry logic
-      // Prioritize AI content - retry up to 5 times with exponential backoff
-      const maxAttempts = 5;
+      // Trigger generation with retry logic
+      // With root causes fixed (typos, word count, stylistic warnings), fewer retries needed
+      const maxAttempts = 3;
       const bgGenId = `bg_${Date.now().toString(36)}`;
 
       console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${pathKey})`);

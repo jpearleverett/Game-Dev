@@ -4017,6 +4017,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
 
         // Validate consistency (check for obvious violations)
+        // FIRST: Fix simple typos locally without LLM call
+        generatedContent = this._fixTyposLocally(generatedContent);
+
         let validationResult = this._validateConsistency(generatedContent, context);
 
         // ========== A+ QUALITY VALIDATION ==========
@@ -4575,6 +4578,61 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   }
 
   /**
+   * Fix common typos locally without calling the LLM
+   * This prevents expensive API calls for simple string replacements
+   */
+  _fixTyposLocally(content) {
+    if (!content?.narrative) return content;
+
+    let narrative = content.narrative;
+    let fixCount = 0;
+
+    // Name typos - case-insensitive replacement with proper capitalization
+    const typoFixes = [
+      // Character names
+      { pattern: /\bhallaway\b/gi, replacement: 'Halloway' },
+      { pattern: /\bholloway\b/gi, replacement: 'Halloway' },
+      { pattern: /\bhaloway\b/gi, replacement: 'Halloway' },
+      { pattern: /\bhallo way\b/gi, replacement: 'Halloway' },
+      { pattern: /\bblackwood\b/gi, replacement: 'Blackwell' },
+      { pattern: /\bblackwel\b/gi, replacement: 'Blackwell' },
+      { pattern: /\bblack well\b/gi, replacement: 'Blackwell' },
+      { pattern: /\breaves\b/gi, replacement: 'Reeves' },
+      { pattern: /\breevs\b/gi, replacement: 'Reeves' },
+      { pattern: /\breeve\s/gi, replacement: 'Reeves ' },
+      { pattern: /\bbellami\b/gi, replacement: 'Bellamy' },
+      { pattern: /\bbella my\b/gi, replacement: 'Bellamy' },
+      { pattern: /\bthornhil\b/gi, replacement: 'Thornhill' },
+      { pattern: /\bthorn hill\b/gi, replacement: 'Thornhill' },
+      { pattern: /\bgranges\b/gi, replacement: 'Grange' },
+      { pattern: /\bgrang\s/gi, replacement: 'Grange ' },
+      { pattern: /\bsilias\b/gi, replacement: 'Silas' },
+      { pattern: /\bsilass\b/gi, replacement: 'Silas' },
+      { pattern: /\bsi las\b/gi, replacement: 'Silas' },
+      // Location names
+      { pattern: /\bashport's\b/gi, replacement: "Ashport's" },
+      { pattern: /\bash port\b/gi, replacement: 'Ashport' },
+    ];
+
+    for (const { pattern, replacement } of typoFixes) {
+      const before = narrative;
+      narrative = narrative.replace(pattern, replacement);
+      if (before !== narrative) {
+        fixCount++;
+      }
+    }
+
+    if (fixCount > 0) {
+      console.log(`[StoryGenerationService] Fixed ${fixCount} typos locally (no LLM call needed)`);
+    }
+
+    return {
+      ...content,
+      narrative,
+    };
+  }
+
+  /**
    * Validate content against established facts - COMPREHENSIVE VERSION
    * Checks for: name spelling, timeline, setting, character behavior, relationship states,
    * plot continuity, and path personality consistency
@@ -4587,6 +4645,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 1: NAME AND SPELLING CONSISTENCY
+    // These should rarely trigger now since _fixTyposLocally runs first
     // =========================================================================
     const nameChecks = [
       { wrong: ['hallaway', 'holloway', 'haloway', 'hallo way'], correct: 'Halloway' },
@@ -4956,16 +5015,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       { pattern: /\bit'?s (?:important|worth) (?:to note|noting)\b/i, issue: 'Forbidden meta-phrase detected ("it\'s important/worth noting")' },
     ];
 
+    // Forbidden patterns are now WARNINGS, not errors
+    // Stylistic preferences should not trigger expensive LLM retries
     forbiddenPatterns.forEach(({ pattern, issue, count }) => {
       if (count) {
         const matches = narrativeOriginal.match(pattern);
-        if (matches && matches.length > 2) {
-          issues.push(`${issue} (found ${matches.length} instances)`);
-        } else if (matches && matches.length > 0) {
+        if (matches && matches.length > 0) {
           warnings.push(`${issue} (found ${matches.length} instances)`);
         }
       } else if (pattern.test(narrativeOriginal)) {
-        issues.push(issue);
+        warnings.push(issue);
       }
     });
 
@@ -5442,8 +5501,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     }
 
+    // I-stacking is now a WARNING, not an error - stylistic issue shouldn't trigger retries
     if (maxConsecutiveI >= 4) {
-      issues.push(`I-stacking detected: ${maxConsecutiveI} consecutive sentences start with "I". Vary sentence openers.`);
+      warnings.push(`I-stacking detected: ${maxConsecutiveI} consecutive sentences start with "I". Vary sentence openers.`);
     } else if (maxConsecutiveI >= 3) {
       warnings.push(`Minor I-stacking: ${maxConsecutiveI} consecutive "I" sentences. Consider varying openers.`);
     }

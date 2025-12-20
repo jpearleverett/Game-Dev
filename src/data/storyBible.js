@@ -533,16 +533,16 @@ export const GENERATION_CONFIG = {
     validation: 500,
   },
 
-  // Word count requirements - optimized for immersion
+  // Word count requirements - balanced for quality and reliability
   wordCount: {
-    minimum: 550,         // Slightly increased minimum
-    target: 750,          // Higher target for richer content
-    maximum: 1200,        // Cap to prevent runaway generation
+    minimum: 450,         // Lowered to reduce expansion API calls (still ~1.5 pages)
+    target: 650,          // Slightly lower target for faster generation
+    maximum: 1000,        // Tighter cap to prevent token issues
   },
 
   // Quality assurance settings
   qualitySettings: {
-    maxRetries: 2,                    // Retries for consistency failures
+    maxRetries: 1,                    // Reduced - prefer warnings over expensive retries
     minSentencesPerParagraph: 3,      // Ensures substantial paragraphs
     maxConsecutiveDialogue: 6,        // Prevents wall-of-dialogue
     requireAtmosphericOpening: true,  // Every chapter should set the scene

@@ -36,7 +36,7 @@ const DEFAULT_CONFIG = {
   proxyUrl: ENV_PROXY_URL, // Cloudflare Worker URL (production)
   appToken: ENV_APP_TOKEN, // Optional auth token for proxy
   baseUrl: null, // For custom endpoints (direct mode only)
-  maxRetries: 5, // Increased from 3 - prioritize getting AI content over fallback
+  maxRetries: 3, // 3 retries for network issues (root cause fixes reduce need for more)
   timeout: 180000, // 180 seconds for longer story generations
 };
 
