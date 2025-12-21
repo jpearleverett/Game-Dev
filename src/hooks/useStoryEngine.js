@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
-import { resolveStoryPathKey, getStoryEntry } from '../data/storyContent';
+import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../data/storyContent';
 import { saveStoredProgress } from '../storage/progressStorage';
 
 // Configurable unlock delay (24 hours default)
@@ -42,6 +42,18 @@ export function useStoryEngine(progress, updateProgress) {
     const nextSubchapter = 1;
     const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
 
+    // Build updated choice history first, then compute the cumulative branch key for the next chapter.
+    // This ensures generated content is keyed by the full decision history (not just "A"/"B").
+    const nextChoiceHistory = [
+      ...storyCampaign.choiceHistory,
+      {
+        caseNumber: decisionCase,
+        optionKey: optionKey,
+        timestamp: decisionTime,
+      },
+    ];
+    const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
+
     const updatedStory = {
       ...storyCampaign,
       awaitingDecision: false,
@@ -50,21 +62,20 @@ export function useStoryEngine(progress, updateProgress) {
         caseNumber: decisionCase,
         selectedAt: decisionTime,
         optionKey: optionKey,
-        nextChapter: nextChapter
+        nextChapter: nextChapter,
+        nextPathKey,
       },
-      choiceHistory: [
-        ...storyCampaign.choiceHistory,
-        {
-          caseNumber: decisionCase,
-          optionKey: optionKey,
-          timestamp: decisionTime
-        }
-      ],
+      choiceHistory: nextChoiceHistory.map((entry) => ({
+        ...entry,
+        // Useful for UI history display and debugging
+        nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
+      })),
       pathHistory: {
         ...storyCampaign.pathHistory,
-        [nextChapter]: optionKey
+        // Store the cumulative branch key for this chapter for deterministic retrieval.
+        [nextChapter]: nextPathKey,
       },
-      currentPathKey: optionKey,
+      currentPathKey: nextPathKey,
       chapter: nextChapter,
       subchapter: nextSubchapter,
       activeCaseNumber: nextCaseNumber,

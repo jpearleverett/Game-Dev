@@ -15,6 +15,7 @@ import {
   updateGeneratedCache,
   parseCaseNumber,
   formatCaseNumber,
+  computeBranchPathKey,
 } from '../data/storyContent';
 
 // Generation states
@@ -76,20 +77,6 @@ export function useStoryGeneration(storyCampaign) {
     }, 'info');
 
     const startOne = async (optionKey) => {
-      const key = `${nextCaseNumber}_${optionKey}`;
-      if (branchPrefetchInFlightRef.current.has(key)) {
-        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.skip.inflight', { key }, 'debug');
-        return;
-      }
-
-      const already = await hasStoryContent(nextCaseNumber, optionKey);
-      if (already) {
-        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.skip.cached', { key }, 'debug');
-        return;
-      }
-
-      branchPrefetchInFlightRef.current.add(key);
-
       const optimisticHistory = [
         ...(choiceHistory || []),
         {
@@ -99,20 +86,38 @@ export function useStoryGeneration(storyCampaign) {
         },
       ];
 
+      // IMPORTANT: dynamic generation is keyed by the cumulative branch key, not raw "A"/"B".
+      const nextPathKey = computeBranchPathKey(optimisticHistory, nextChapter);
+      const key = `${nextCaseNumber}_${nextPathKey}`;
+      if (branchPrefetchInFlightRef.current.has(key)) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.skip.inflight', { key }, 'debug');
+        return;
+      }
+
+      const already = await hasStoryContent(nextCaseNumber, nextPathKey);
+      if (already) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.skip.cached', { key }, 'debug');
+        return;
+      }
+
+      branchPrefetchInFlightRef.current.add(key);
+
       llmTrace('useStoryGeneration', traceId, 'prefetch.branch.start', {
         key,
         nextCaseNumber,
         optionKey,
+        nextPathKey,
         optimisticHistoryLength: optimisticHistory.length,
       }, 'info');
 
-      storyGenerationService.generateSubchapter(nextChapter, 1, optionKey, optimisticHistory, {
-        traceId: createTraceId(`sg_${nextCaseNumber}_${optionKey}`),
+      storyGenerationService.generateSubchapter(nextChapter, 1, nextPathKey, optimisticHistory, {
+        traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
         reason: `prefetch-next-chapter-branches:${source}`,
       })
         .then((entry) => {
           if (entry && isMountedRef.current) {
-            updateGeneratedCache(nextCaseNumber, optionKey, entry);
+            // Cache under the actual returned pathKey (should equal nextPathKey, but treat as source of truth)
+            updateGeneratedCache(nextCaseNumber, entry.pathKey || nextPathKey, entry);
           }
           llmTrace('useStoryGeneration', traceId, 'prefetch.branch.complete', {
             key,
@@ -176,9 +181,14 @@ export function useStoryGeneration(storyCampaign) {
   /**
    * Configure the LLM service with API key
    */
-  const configureLLM = useCallback(async (apiKey, provider = 'openai', model = 'gpt-4o') => {
+  const configureLLM = useCallback(async (apiKey, _provider = 'gemini', model = null) => {
     llmService.setApiKey(apiKey);
-    await llmService.setConfig({ provider, model });
+    // Always Gemini in this app.
+    // If a caller passes non-gemini values, force-correct to prevent hard failures in LLMService.
+    const safeModel = typeof model === 'string' && model.toLowerCase().includes('gemini')
+      ? model
+      : 'gemini-3-flash-preview';
+    await llmService.setConfig({ provider: 'gemini', model: safeModel });
     setIsConfigured(true);
     setError(null);
   }, []);
@@ -222,6 +232,7 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
+    const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
 
     // Skip if not dynamic
     if (!isDynamicChapter(caseNumber)) {
@@ -230,7 +241,7 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     // Check if already generated
-    const hasContent = await hasStoryContent(caseNumber, pathKey);
+    const hasContent = await hasStoryContent(caseNumber, canonicalPathKey);
     if (hasContent) {
       console.log(`[useStoryGeneration] [${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
@@ -239,9 +250,17 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     // Determine if this is a cache miss (player chose unexpected path)
-    const wasCacheMiss = lastPredictionRef.current &&
-      lastPredictionRef.current.primary !== pathKey &&
-      lastPredictionRef.current.confidence >= 0.70;
+    // lastPredictionRef predicts the DECISION optionKey ("A"/"B"), not the cumulative pathKey.
+    const priorDecision = Array.isArray(choiceHistory)
+      ? [...choiceHistory].reverse().find((c) => parseCaseNumber(c?.caseNumber).chapter === chapter - 1)
+      : null;
+    const actualOptionKey = priorDecision?.optionKey || null;
+    const wasCacheMiss = !!(
+      lastPredictionRef.current &&
+      actualOptionKey &&
+      lastPredictionRef.current.primary !== actualOptionKey &&
+      lastPredictionRef.current.confidence >= 0.70
+    );
 
     if (wasCacheMiss) {
       console.log(`[useStoryGeneration] [${genId}] CACHE MISS: predicted=${lastPredictionRef.current.primary}, actual=${pathKey}`);
@@ -263,7 +282,7 @@ export function useStoryGeneration(storyCampaign) {
       const entry = await storyGenerationService.generateSubchapter(
         chapter,
         subchapter,
-        pathKey,
+        canonicalPathKey,
         choiceHistory,
         {
           traceId,
@@ -283,10 +302,10 @@ export function useStoryGeneration(storyCampaign) {
       }
 
       // Update cache
-      updateGeneratedCache(caseNumber, pathKey, entry);
+      updateGeneratedCache(caseNumber, entry?.pathKey || canonicalPathKey, entry);
       llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.write', {
         caseNumber,
-        pathKey,
+        pathKey: entry?.pathKey || pathKey,
         ok: !!entry,
         isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
         wordCount: entry?.wordCount,
@@ -316,11 +335,11 @@ export function useStoryGeneration(storyCampaign) {
         const fallbackEntry = storyGenerationService.getEmergencyFallback(
           chapter,
           subchapter,
-          pathKey
+          canonicalPathKey
         );
         if (fallbackEntry) {
           console.log(`[useStoryGeneration] [${genId}] Emergency fallback succeeded`);
-          updateGeneratedCache(caseNumber, pathKey, fallbackEntry);
+          updateGeneratedCache(caseNumber, fallbackEntry?.pathKey || canonicalPathKey, fallbackEntry);
           return fallbackEntry;
         }
       } catch (fallbackErr) {
@@ -351,6 +370,7 @@ export function useStoryGeneration(storyCampaign) {
    * @param {boolean} options.silent - If true, skip progress/status updates (for background preloading)
    */
   const generateChapter = useCallback(async (chapter, pathKey, choiceHistory = [], options = {}) => {
+    const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
     const { silent = false } = options;
 
     if (!isConfigured) {
@@ -393,7 +413,7 @@ export function useStoryGeneration(storyCampaign) {
         const caseNumber = `${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][sub - 1]}`;
 
         // Skip if already generated
-        const hasContent = await hasStoryContent(caseNumber, pathKey);
+        const hasContent = await hasStoryContent(caseNumber, canonicalPathKey);
         if (hasContent) {
           if (!silent) {
             setProgress({ current: sub, total: 3 });
@@ -404,15 +424,15 @@ export function useStoryGeneration(storyCampaign) {
         const entry = await storyGenerationService.generateSubchapter(
           chapter,
           sub,
-          pathKey,
+          canonicalPathKey,
           choiceHistory,
           {
-            traceId: createTraceId(`case_${caseNumber}_${pathKey}`),
+            traceId: createTraceId(`case_${caseNumber}_${canonicalPathKey}`),
             reason: silent ? 'preload-generateChapter' : 'immediate-generateChapter',
           }
         );
 
-        updateGeneratedCache(caseNumber, pathKey, entry);
+        updateGeneratedCache(caseNumber, entry?.pathKey || canonicalPathKey, entry);
         results.push(entry);
         if (!silent) {
           setProgress({ current: sub, total: 3 });
@@ -675,12 +695,6 @@ export function useStoryGeneration(storyCampaign) {
                              prediction.confidence < 0.70;
 
     // Check what needs generation upfront (parallel async checks)
-    const [needsPrimaryGen, needsSecondaryGen] = await Promise.all([
-      needsGeneration(firstCaseOfNextChapter, prediction.primary),
-      needsGeneration(firstCaseOfNextChapter, prediction.secondary),
-    ]);
-
-    // Build speculative histories
     const speculativeHistoryPrimary = [
       ...choiceHistory,
       {
@@ -699,6 +713,15 @@ export function useStoryGeneration(storyCampaign) {
       }
     ];
 
+    // Compute cumulative branch keys for next chapter for each speculative decision.
+    const primaryNextPathKey = computeBranchPathKey(speculativeHistoryPrimary, nextChapter);
+    const secondaryNextPathKey = computeBranchPathKey(speculativeHistorySecondary, nextChapter);
+
+    const [needsPrimaryGen, needsSecondaryGen] = await Promise.all([
+      needsGeneration(firstCaseOfNextChapter, primaryNextPathKey),
+      needsGeneration(firstCaseOfNextChapter, secondaryNextPathKey),
+    ]);
+
     // ========== PARALLEL GENERATION FOR BALANCED PLAYERS ==========
     if (isBalancedPlayer) {
       console.log(`[useStoryGeneration] Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}, personality: ${prediction.playerPersonality}). Generating both paths in parallel.`);
@@ -709,10 +732,10 @@ export function useStoryGeneration(storyCampaign) {
       // Fire both generations simultaneously with silent: true to prevent progress thrashing
       // When multiple generations run in parallel, they would otherwise interleave setProgress calls
       if (needsPrimaryGen) {
-        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary, { silent: true });
+        generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
       }
       if (needsSecondaryGen) {
-        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary, { silent: true });
+        generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
       }
     } else {
       // ========== CONFIDENT PREDICTION: Prioritize primary path ==========
@@ -720,7 +743,7 @@ export function useStoryGeneration(storyCampaign) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
         // Use silent: true for all background preloading to avoid UI state conflicts
-        generateChapter(nextChapter, prediction.primary, speculativeHistoryPrimary, { silent: true });
+        generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
       }
 
       // Generate secondary path if:
@@ -731,7 +754,7 @@ export function useStoryGeneration(storyCampaign) {
       if (shouldGenerateSecondary && needsSecondaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
-        generateChapter(nextChapter, prediction.secondary, speculativeHistorySecondary, { silent: true });
+        generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
       }
     }
 
@@ -756,7 +779,8 @@ export function useStoryGeneration(storyCampaign) {
         }
       ];
 
-      const needsTier2Gen = await needsGeneration(firstCaseTwoAhead, prediction.primary);
+      const tier2PathKey = computeBranchPathKey(speculativeHistoryTier2, twoAheadChapter);
+      const needsTier2Gen = await needsGeneration(firstCaseTwoAhead, tier2PathKey);
 
       if (needsTier2Gen) {
         // Use a slight delay to prioritize Tier 1 completion
@@ -775,7 +799,7 @@ export function useStoryGeneration(storyCampaign) {
             await storyGenerationService.generateSubchapter(
               tier2Chapter,
               tier2Sub,
-              prediction.primary,
+              tier2PathKey,
               speculativeHistoryTier2
             );
           } catch (err) {

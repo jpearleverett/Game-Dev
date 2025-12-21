@@ -43,6 +43,51 @@ export function normalizeStoryPathKey(token) {
   return cleaned || ROOT_PATH_KEY;
 }
 
+/**
+ * Compute a stable, cumulative branch key for a given chapter from choice history.
+ *
+ * IMPORTANT:
+ * - Decisions are recorded on subchapter C caseNumbers (e.g., "001C", "002C").
+ * - The choice made at Chapter N ("00NC") determines the branch identity for Chapter N+1.
+ * - Therefore, the branch key for Chapter K is the sequence of optionKeys for decision chapters < K.
+ *
+ * Example:
+ * - choiceHistory: [{caseNumber:"001C", optionKey:"A"}, {caseNumber:"002C", optionKey:"B"}]
+ * - branchKey for chapter 3 => "AB"
+ *
+ * @param {Array} choiceHistory
+ * @param {number} chapterNumber - The chapter being entered/generated (2..12)
+ * @returns {string} Normalized path key ("ROOT" if no prior decisions)
+ */
+export function computeBranchPathKey(choiceHistory, chapterNumber) {
+  const chapter = Number(chapterNumber) || 1;
+  const history = Array.isArray(choiceHistory) ? choiceHistory : [];
+  if (chapter <= 1 || history.length === 0) {
+    return ROOT_PATH_KEY;
+  }
+
+  // Sort by decision chapter ascending for determinism.
+  const sorted = [...history].sort((a, b) => {
+    const ca = parseCaseNumber(a?.caseNumber).chapter;
+    const cb = parseCaseNumber(b?.caseNumber).chapter;
+    return ca - cb;
+  });
+
+  const letters = [];
+  for (const entry of sorted) {
+    const decisionChapter = parseCaseNumber(entry?.caseNumber).chapter;
+    // decision at chapter N affects chapter N+1, so include decisions strictly before the target chapter
+    if (decisionChapter > 0 && decisionChapter < chapter) {
+      const ok = entry?.optionKey === 'A' || entry?.optionKey === 'B';
+      if (ok) {
+        letters.push(entry.optionKey);
+      }
+    }
+  }
+
+  return normalizeStoryPathKey(letters.join('')) || ROOT_PATH_KEY;
+}
+
 export function resolveStoryPathKey(caseNumber, storyCampaign) {
     if (!caseNumber) {
         return ROOT_PATH_KEY;
@@ -55,6 +100,16 @@ export function resolveStoryPathKey(caseNumber, storyCampaign) {
     if (Number.isNaN(chapterNumber)) {
         return storyCampaign.currentPathKey || ROOT_PATH_KEY;
     }
+
+    // Prefer deterministic branch key from choiceHistory for dynamic chapters.
+    // This prevents collisions where currentPathKey is only "A"/"B" or otherwise incomplete.
+    if (chapterNumber >= FIRST_DYNAMIC_CHAPTER) {
+      const computed = computeBranchPathKey(storyCampaign.choiceHistory, chapterNumber);
+      if (computed && computed !== ROOT_PATH_KEY) {
+        return computed;
+      }
+    }
+
     const historyKey =
         storyCampaign.pathHistory && storyCampaign.pathHistory[chapterNumber];
     if (historyKey) {
