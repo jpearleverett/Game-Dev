@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
+import { llmTrace } from '../utils/llmTrace';
 
 const LLM_CONFIG_KEY = 'dead_letters_llm_config';
 const OFFLINE_QUEUE_KEY = 'dead_letters_offline_queue';
@@ -341,7 +342,9 @@ class LLMService {
    * Check if service is configured and ready
    */
   isConfigured() {
-    return !!this.config.apiKey;
+    // Proxy mode (production) does not require an API key on-device.
+    // Direct mode requires a key.
+    return !!this.config.proxyUrl || !!this.config.apiKey;
   }
 
   /**
@@ -386,12 +389,14 @@ class LLMService {
       maxTokens = 4000,
       systemPrompt = null,
       responseSchema = null,
+      traceId = null,
+      requestContext = null,
     } = options;
 
     if (this.config.provider === 'gemini') {
       // Use rate-limited request wrapper to prevent API overload during preloading bursts
       return this._rateLimitedRequest(() =>
-        this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema })
+        this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext })
       );
     }
 
@@ -405,7 +410,7 @@ class LLMService {
    *
    * Routes through proxy if configured (production), otherwise direct API (dev)
    */
-  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema }) {
+  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext }) {
     const model = this.config.model || 'gemini-3-flash-preview';
 
     // DEBUG: Log config to see what mode we're in
@@ -429,6 +434,8 @@ class LLMService {
         maxTokens,
         systemPrompt,
         responseSchema,
+        traceId,
+        requestContext,
       });
     }
 
@@ -458,6 +465,19 @@ class LLMService {
     if (responseSchema) {
       generationConfig.responseMimeType = 'application/json';
       generationConfig.responseSchema = responseSchema;
+    }
+
+    if (traceId) {
+      llmTrace('LLMService', traceId, 'llm.direct.request.plan', {
+        provider: 'gemini',
+        mode: 'direct',
+        model,
+        messageCount: messages?.length || 0,
+        maxTokens,
+        hasSchema: !!responseSchema,
+        temperature: effectiveTemperature,
+        requestContext,
+      }, 'debug');
     }
 
     let lastError = null;
@@ -577,6 +597,21 @@ class LLMService {
           content = this._repairTruncatedJson(content);
         }
 
+        if (traceId) {
+          llmTrace('LLMService', traceId, 'llm.direct.response.ok', {
+            model,
+            finishReason,
+            isTruncated,
+            contentLength: content?.length || 0,
+            usage: {
+              promptTokens: data.usageMetadata?.promptTokenCount,
+              completionTokens: data.usageMetadata?.candidatesTokenCount,
+              totalTokens: data.usageMetadata?.totalTokenCount,
+            },
+            requestContext,
+          }, 'debug');
+        }
+
         return {
           content,
           usage: {
@@ -595,6 +630,15 @@ class LLMService {
         }
 
         lastError = error;
+        if (traceId) {
+          llmTrace('LLMService', traceId, 'llm.direct.response.error', {
+            model,
+            attempt,
+            error: error?.message,
+            name: error?.name,
+            requestContext,
+          }, 'warn');
+        }
         if (error.name === 'AbortError') {
           throw new Error('Request timed out');
         }
@@ -614,7 +658,7 @@ class LLMService {
    * Call Gemini API via secure Cloudflare Worker proxy
    * Used in production to keep API key secure
    */
-  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema }) {
+  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext }) {
     let lastError = null;
     let attempt = 0;
     const operationStart = Date.now();
@@ -626,6 +670,20 @@ class LLMService {
       hasSchema: !!responseSchema,
       maxRetries: this.config.maxRetries,
     });
+
+    if (traceId) {
+      llmTrace('LLMService', traceId, 'llm.proxy.request.plan', {
+        provider: 'gemini',
+        mode: 'proxy',
+        model,
+        messageCount: messages?.length || 0,
+        maxTokens,
+        hasSchema: !!responseSchema,
+        temperature,
+        localRequestId,
+        requestContext,
+      }, 'debug');
+    }
 
     while (attempt < this.config.maxRetries) {
       let controller;
@@ -661,6 +719,8 @@ class LLMService {
             maxTokens,
             systemPrompt,
             responseSchema,
+            clientTraceId: traceId || null,
+            clientRequestContext: requestContext || null,
           }),
           signal: controller.signal,
         });
@@ -726,6 +786,21 @@ class LLMService {
         const totalTime = Date.now() - operationStart;
         console.log(`[LLMService] [${localRequestId}] Request complete in ${totalTime}ms (attempt ${attempt + 1})`);
 
+        if (traceId) {
+          llmTrace('LLMService', traceId, 'llm.proxy.response.ok', {
+            model,
+            finishReason: data.finishReason || 'STOP',
+            isTruncated,
+            contentLength: content?.length || 0,
+            proxyRequestId: data.requestId,
+            timing: data.timing,
+            totalTimeMs: totalTime,
+            attempt: attempt + 1,
+            localRequestId,
+            requestContext,
+          }, 'debug');
+        }
+
         return {
           content,
           usage: data.usage || {},
@@ -743,6 +818,18 @@ class LLMService {
 
         lastError = error;
         const attemptTime = Date.now() - attemptStart;
+
+        if (traceId) {
+          llmTrace('LLMService', traceId, 'llm.proxy.response.error', {
+            model,
+            attempt: attempt + 1,
+            attemptTimeMs: attemptTime,
+            error: error?.message,
+            name: error?.name,
+            localRequestId,
+            requestContext,
+          }, 'warn');
+        }
 
         if (error.name === 'AbortError') {
           console.error(`[LLMService] [${localRequestId}] Request timed out after ${attemptTime}ms (timeout: ${this.config.timeout}ms)`);

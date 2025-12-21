@@ -4,6 +4,7 @@ import { useStoryGeneration } from '../hooks/useStoryGeneration';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter, hasStoryContent } from '../data/storyContent';
 import { formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { analytics } from '../services/AnalyticsService';
+import { createTraceId, llmTrace } from '../utils/llmTrace';
 
 const StoryStateContext = createContext(null);
 const StoryDispatchContext = createContext(null);
@@ -68,19 +69,29 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * success if ANY content (including fallback) is available.
    */
   const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null) => {
+    const traceId = createTraceId(`ensure_${caseNumber}_${pathKey}`);
+    llmTrace('StoryContext', traceId, 'ensureStoryContent.start', {
+      caseNumber,
+      pathKey,
+      hasOptimisticHistory: !!optimisticChoiceHistory,
+      optimisticHistoryLength: optimisticChoiceHistory?.length || 0,
+    }, 'info');
     // Chapter 1 is static, no generation needed
     if (!isDynamicChapter(caseNumber)) {
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.skip.static', { caseNumber }, 'debug');
       return { ok: true, generated: false };
     }
 
     // Check if content exists (either generated or cached)
     const hasContent = await hasStoryContent(caseNumber, pathKey);
     if (hasContent) {
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.cache.hit', { caseNumber, pathKey }, 'debug');
       return { ok: true, generated: false };
     }
 
     // Check if LLM is configured
     if (!isLLMConfigured) {
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.notConfigured', { caseNumber, pathKey }, 'warn');
       return { ok: false, reason: 'llm-not-configured' };
     }
 
@@ -98,6 +109,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
       );
 
       if (entry) {
+        llmTrace('StoryContext', traceId, 'ensureStoryContent.ok', {
+          caseNumber,
+          pathKey,
+          generated: true,
+          isFallback: !!entry.isFallback,
+          isEmergencyFallback: !!entry.isEmergencyFallback,
+          wordCount: entry.wordCount,
+        }, entry.isFallback || entry.isEmergencyFallback ? 'warn' : 'info');
         // Entry can be generated content or fallback content
         // Either way, the game can proceed
         return {
@@ -111,9 +130,11 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
       // This should rarely happen now - generateForCase has its own fallback
       console.warn('[StoryContext] generateForCase returned null unexpectedly');
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.nullEntry', { caseNumber, pathKey }, 'warn');
       return { ok: false, reason: 'generation-failed' };
     } catch (error) {
       console.error('[StoryContext] Unexpected error in ensureStoryContent:', error.message);
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.error', { caseNumber, pathKey, error: error.message }, 'error');
       return { ok: false, reason: 'generation-error', error: error.message };
     }
   }, [isLLMConfigured, generateForCase]);
@@ -128,6 +149,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
     // Use ref to avoid stale closure
     const choiceHistory = choiceHistoryRef.current;
+    const traceId = createTraceId(`bg_${caseNumber}_${pathKey}`);
+    llmTrace('StoryContext', traceId, 'backgroundGeneration.trigger', {
+      caseNumber,
+      pathKey,
+      chapter,
+      subchapter,
+      choiceHistoryLength: choiceHistory?.length || 0,
+    }, 'debug');
 
     // Strategy:
     // 1. Ensure current chapter's remaining subchapters (siblings) are ready
@@ -148,6 +177,15 @@ export function StoryProvider({ children, progress, updateProgress }) {
   }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, pregenerate]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
+    const traceId = createTraceId(`decision_${storyCampaign?.pendingDecisionCase || 'unknown'}`);
+    llmTrace('StoryContext', traceId, 'decision.select.start', {
+      optionKey,
+      pendingDecisionCase: storyCampaign?.pendingDecisionCase,
+      currentChapter: storyCampaign?.chapter,
+      currentSubchapter: storyCampaign?.subchapter,
+      currentPathKey: storyCampaign?.currentPathKey,
+      choiceHistoryLength: storyCampaign?.choiceHistory?.length || 0,
+    }, 'info');
     // Clear any previous background generation error when starting a new decision
     setBackgroundGenerationError(null);
 
@@ -158,6 +196,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Make the decision (updates state/persistence asynchronously)
     storySelectDecisionCore(optionKey);
+    llmTrace('StoryContext', traceId, 'decision.select.queuedStateUpdate', {
+      optionKey,
+      note: 'Progress state update is async; Continue may be pressed immediately after.',
+    }, 'debug');
 
     // After ANY decision, trigger background generation for the next chapter
     // This ensures content is ready when the player clicks "Continue Investigation"
@@ -184,6 +226,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
       const bgGenId = `bg_${Date.now().toString(36)}`;
 
       console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${pathKey})`);
+      llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.start', {
+        nextCaseNumber,
+        nextChapter,
+        pathKey,
+        bgGenId,
+      }, 'info');
 
       const attemptGeneration = async (attempt = 1) => {
         const attemptStart = Date.now();
@@ -204,6 +252,15 @@ export function StoryProvider({ children, progress, updateProgress }) {
               // AI-generated content - ideal path
               console.log(`[StoryContext] [${bgGenId}] SUCCESS with AI content in ${attemptDuration}ms (attempt ${attempt})`);
             }
+            llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
+              ok: true,
+              nextCaseNumber,
+              pathKey,
+              isFallback: !!result.isFallback,
+              isEmergencyFallback: !!result.isEmergencyFallback,
+              attempt,
+              attemptDurationMs: attemptDuration,
+            }, result.isFallback || result.isEmergencyFallback ? 'warn' : 'info');
             return;
           }
 
@@ -231,6 +288,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
               attempts: attempt
             });
             console.error(`[StoryContext] [${bgGenId}] FAILED after ${attempt} attempts. Last reason: ${result.reason}`);
+            llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
+              ok: false,
+              nextCaseNumber,
+              pathKey,
+              reason: result.reason,
+              error: result.error,
+              attempt,
+            }, 'error');
           }
         } catch (err) {
           const attemptDuration = Date.now() - attemptStart;
@@ -251,6 +316,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
               attempts: attempt
             });
             console.error(`[StoryContext] [${bgGenId}] FAILED with error after ${attempt} attempts: ${err.message}`);
+            llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
+              ok: false,
+              nextCaseNumber,
+              pathKey,
+              reason: 'unexpected-error',
+              error: err.message,
+              attempt,
+            }, 'error');
           }
         }
       };
