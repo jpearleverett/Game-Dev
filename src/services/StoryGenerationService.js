@@ -12,6 +12,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { llmService } from './LLMService';
+import { llmTrace, createTraceId } from '../utils/llmTrace';
 import {
   loadGeneratedStory,
   saveGeneratedChapter,
@@ -4014,7 +4015,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * Now integrates Story Arc Planning and Chapter Outlines for 100% consistency
    * Decision points use two-pass generation to ensure complete, contextual choices
    */
-  async generateSubchapter(chapter, subchapter, pathKey, choiceHistory = []) {
+  async generateSubchapter(chapter, subchapter, pathKey, choiceHistory = [], options = {}) {
     if (!llmService.isConfigured()) {
       throw new Error('LLM Service not configured. Please set an API key in settings.');
     }
@@ -4025,10 +4026,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     const caseNumber = formatCaseNumber(chapter, subchapter);
     const generationKey = `${caseNumber}_${pathKey}`;
+    const traceId = options?.traceId || createTraceId(`sg_${caseNumber}_${pathKey}`);
+    const reason = options?.reason || 'unspecified';
 
     // Deduplication: Return existing promise if generation is already in flight for this exact content
     if (this.pendingGenerations.has(generationKey)) {
       console.log(`[StoryGenerationService] Reusing pending generation for ${generationKey}`);
+      llmTrace('StoryGenerationService', traceId, 'generation.dedupe.hit', { generationKey, caseNumber, pathKey, reason }, 'debug');
       return this.pendingGenerations.get(generationKey);
     }
 
@@ -4037,6 +4041,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     const generationPromise = (async () => {
       const isDecisionPoint = subchapter === DECISION_SUBCHAPTER;
+      llmTrace('StoryGenerationService', traceId, 'generation.start', {
+        generationKey,
+        caseNumber,
+        chapter,
+        subchapter,
+        isDecisionPoint,
+        pathKey,
+        choiceHistoryLength: choiceHistory?.length || 0,
+        reason,
+      }, 'info');
 
       // ========== NEW: Story Arc Planning Integration ==========
       // Ensure we have the global story arc for narrative consistency
@@ -4083,6 +4097,22 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
 
         console.log(`[StoryGenerationService] Single-pass generation for Chapter ${chapter}.${subchapter} (decision=${isDecisionPoint})`);
+        llmTrace('StoryGenerationService', traceId, 'prompt.built', {
+          caseNumber,
+          pathKey,
+          chapter,
+          subchapter,
+          isDecisionPoint,
+          promptLength: prompt?.length || 0,
+          schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+          contextSummary: {
+            previousChapters: context?.previousChapters?.length || 0,
+            establishedFacts: context?.establishedFacts?.length || 0,
+            playerChoices: context?.playerChoices?.length || 0,
+            narrativeThreads: context?.narrativeThreads?.length || 0,
+          },
+          reason,
+        }, 'debug');
 
         const response = await llmService.complete(
           [{ role: 'user', content: prompt }],
@@ -4091,14 +4121,49 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             temperature: isDecisionPoint ? GENERATION_CONFIG.temperature.decisions : GENERATION_CONFIG.temperature.narrative,
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
+            traceId,
+            requestContext: {
+              caseNumber,
+              chapter,
+              subchapter,
+              pathKey,
+              isDecisionPoint,
+              reason,
+            },
           }
         );
 
+        llmTrace('StoryGenerationService', traceId, 'llm.response.received', {
+          model: response?.model,
+          finishReason: response?.finishReason,
+          isTruncated: response?.isTruncated,
+          contentLength: response?.content?.length || 0,
+          usage: response?.usage || null,
+        }, 'debug');
+
         generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+        llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
+          hasTitle: !!generatedContent?.title,
+          narrativeLength: generatedContent?.narrative?.length || 0,
+          hasDecision: !!generatedContent?.decision,
+          hasBridgeText: !!generatedContent?.bridgeText,
+          hasPreviously: !!generatedContent?.previously,
+          hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
+        }, 'debug');
 
         // Validate decision structure for decision points
         if (isDecisionPoint && generatedContent.decision) {
           console.log(`[StoryGenerationService] Decision generated: "${generatedContent.decision.optionA?.title}" vs "${generatedContent.decision.optionB?.title}"`);
+          llmTrace('StoryGenerationService', traceId, 'decision.generated', {
+            optionA: {
+              key: generatedContent?.decision?.optionA?.key,
+              title: generatedContent?.decision?.optionA?.title,
+            },
+            optionB: {
+              key: generatedContent?.decision?.optionB?.key,
+              title: generatedContent?.decision?.optionB?.title,
+            },
+          }, 'debug');
         }
 
         // Validate word count - only expand if significantly short
@@ -4252,6 +4317,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         // Save the generated content
         await saveGeneratedChapter(caseNumber, pathKey, storyEntry);
+        llmTrace('StoryGenerationService', traceId, 'storage.saved', {
+          caseNumber,
+          pathKey,
+          wordCount: storyEntry.wordCount,
+          generatedAt: storyEntry.generatedAt,
+          hasDecision: !!storyEntry.decision,
+        }, 'debug');
 
         // Update local cache
         if (!this.generatedStory) {
@@ -4261,20 +4333,49 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         // Update story context
         await this._updateStoryContext(storyEntry);
+        llmTrace('StoryGenerationService', traceId, 'context.updated', {
+          caseNumber,
+          pathKey,
+          chapter,
+          subchapter,
+        }, 'debug');
 
         // ========== NEW: Create consistency checkpoint for state validation ==========
         // Checkpoints are created after each subchapter C (end of chapter) for validation
         if (subchapter === 3) {
           await this._createConsistencyCheckpoint(chapter, pathKey, storyEntry);
+          llmTrace('StoryGenerationService', traceId, 'checkpoint.created', { chapter, pathKey, caseNumber }, 'debug');
         }
 
         this.isGenerating = false;
+        llmTrace('StoryGenerationService', traceId, 'generation.complete', {
+          generationKey,
+          caseNumber,
+          pathKey,
+          chapter,
+          subchapter,
+          isDecisionPoint,
+          wordCount: storyEntry.wordCount,
+          isFallback: false,
+          reason,
+        }, 'info');
         return storyEntry;
       } catch (error) {
         this.isGenerating = false;
 
         // ========== GRACEFUL DEGRADATION: Use fallback content on failure ==========
         console.error(`[StoryGenerationService] Generation failed for ${caseNumber}_${pathKey}:`, error.message);
+        llmTrace('StoryGenerationService', traceId, 'generation.error', {
+          generationKey,
+          caseNumber,
+          pathKey,
+          chapter,
+          subchapter,
+          isDecisionPoint,
+          error: error?.message,
+          name: error?.name,
+          reason,
+        }, 'error');
 
         // Track attempts
         const attemptKey = `${caseNumber}_${pathKey}`;

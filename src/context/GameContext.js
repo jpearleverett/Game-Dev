@@ -6,6 +6,7 @@ import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/st
 import { useGameLogic } from '../hooks/useGameLogic';
 import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { analytics } from '../services/AnalyticsService';
+import { createTraceId, llmTrace } from '../utils/llmTrace';
 import { purchaseService } from '../services/PurchaseService';
 import { ACHIEVEMENTS } from '../data/achievementsData';
 import { useAudio } from './AudioContext';
@@ -61,11 +62,24 @@ export function GameProvider({
     async ({ skipLock = false, mode: targetMode = 'daily' } = {}) => {
       // Story Mode Logic
       if (targetMode === 'story') {
+          const traceId = createTraceId('activateStoryCase');
           const result = story.activateStoryCase({ skipLock });
+          llmTrace('GameContext', traceId, 'activateStoryCase.activateStoryCaseResult', {
+            ok: !!result?.ok,
+            reason: result?.reason,
+            skipLock,
+            returnedCaseNumber: result?.caseNumber,
+            awaitingDecision: !!story.storyCampaign?.awaitingDecision,
+            pendingDecisionCase: story.storyCampaign?.pendingDecisionCase,
+            storyChapter: story.storyCampaign?.chapter,
+            storySubchapter: story.storyCampaign?.subchapter,
+            activeCaseNumber: story.storyCampaign?.activeCaseNumber,
+          }, result?.ok ? 'debug' : 'warn');
           if (!result.ok) return result;
 
           const caseNumber = result.caseNumber;
           const pathKey = story.getCurrentPathKey(caseNumber);
+          llmTrace('GameContext', traceId, 'activateStoryCase.resolvedTarget', { caseNumber, pathKey }, 'debug');
 
           // Check if we need to generate content for this case
           const hasFirstDecision = (story.storyCampaign?.choiceHistory?.length || 0) > 0;
@@ -74,6 +88,16 @@ export function GameProvider({
             const genStartTime = Date.now();
             const genResult = await story.ensureStoryContent(caseNumber, pathKey);
             const genDuration = Date.now() - genStartTime;
+            llmTrace('GameContext', traceId, 'activateStoryCase.ensureStoryContent.result', {
+              caseNumber,
+              pathKey,
+              ok: !!genResult?.ok,
+              reason: genResult?.reason,
+              generated: !!genResult?.generated,
+              isFallback: !!genResult?.isFallback,
+              isEmergencyFallback: !!genResult?.isEmergencyFallback,
+              durationMs: genDuration,
+            }, genResult?.ok ? 'debug' : 'warn');
 
             // ensureStoryContent now always returns content (including fallback)
             // The only failures are LLM not configured or truly catastrophic errors
@@ -109,6 +133,11 @@ export function GameProvider({
 
           setActiveCaseInternal(targetCase.id);
           setMode('story');
+          llmTrace('GameContext', traceId, 'activateStoryCase.navigationReady', {
+            caseId: targetCase.id,
+            caseNumber,
+            pathKey,
+          }, 'debug');
 
           // Analytics
           analytics.logLevelStart(targetCase.id, 'story', pathKey);

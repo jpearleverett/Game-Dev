@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { storyGenerationService } from '../services/StoryGenerationService';
 import { llmService } from '../services/LLMService';
+import { createTraceId, llmTrace } from '../utils/llmTrace';
 import {
   isDynamicChapter,
   hasStoryContent,
@@ -50,6 +51,91 @@ export function useStoryGeneration(storyCampaign) {
   const [isCacheMiss, setIsCacheMiss] = useState(false); // Track unexpected path choices
   const generationRef = useRef(null);
   const lastPredictionRef = useRef(null); // Track what we predicted
+  const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
+
+  /**
+   * Prefetch next chapter (Subchapter A) for BOTH possible decision branches.
+   * Triggered as soon as Subchapter C is generated so the eventual player choice is seamless.
+   */
+  const prefetchNextChapterBranchesAfterC = useCallback(async (currentChapter, choiceHistory = [], source = 'unknown') => {
+    if (!isConfigured) return;
+    if (!currentChapter || currentChapter >= 12) return;
+
+    const decisionCaseNumber = formatCaseNumber(currentChapter, 3);
+    const nextChapter = currentChapter + 1;
+    const nextCaseNumber = formatCaseNumber(nextChapter, 1); // Next chapter, subchapter A
+
+    const traceId = createTraceId(`prefetch_${decisionCaseNumber}`);
+    llmTrace('useStoryGeneration', traceId, 'prefetch.branches.requested', {
+      source,
+      currentChapter,
+      decisionCaseNumber,
+      nextChapter,
+      nextCaseNumber,
+      choiceHistoryLength: choiceHistory?.length || 0,
+    }, 'info');
+
+    const startOne = async (optionKey) => {
+      const key = `${nextCaseNumber}_${optionKey}`;
+      if (branchPrefetchInFlightRef.current.has(key)) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.skip.inflight', { key }, 'debug');
+        return;
+      }
+
+      const already = await hasStoryContent(nextCaseNumber, optionKey);
+      if (already) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.skip.cached', { key }, 'debug');
+        return;
+      }
+
+      branchPrefetchInFlightRef.current.add(key);
+
+      const optimisticHistory = [
+        ...(choiceHistory || []),
+        {
+          caseNumber: decisionCaseNumber,
+          optionKey,
+          timestamp: new Date().toISOString(),
+        },
+      ];
+
+      llmTrace('useStoryGeneration', traceId, 'prefetch.branch.start', {
+        key,
+        nextCaseNumber,
+        optionKey,
+        optimisticHistoryLength: optimisticHistory.length,
+      }, 'info');
+
+      storyGenerationService.generateSubchapter(nextChapter, 1, optionKey, optimisticHistory, {
+        traceId: createTraceId(`sg_${nextCaseNumber}_${optionKey}`),
+        reason: `prefetch-next-chapter-branches:${source}`,
+      })
+        .then((entry) => {
+          if (entry && isMountedRef.current) {
+            updateGeneratedCache(nextCaseNumber, optionKey, entry);
+          }
+          llmTrace('useStoryGeneration', traceId, 'prefetch.branch.complete', {
+            key,
+            ok: !!entry,
+            isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
+            wordCount: entry?.wordCount,
+          }, 'info');
+        })
+        .catch((err) => {
+          llmTrace('useStoryGeneration', traceId, 'prefetch.branch.error', {
+            key,
+            error: err?.message,
+          }, 'warn');
+        })
+        .finally(() => {
+          branchPrefetchInFlightRef.current.delete(key);
+        });
+    };
+
+    // Fire both prefetches immediately (true parallel). LLMService has its own queue/rate-limiting.
+    startOne('A');
+    startOne('B');
+  }, [isConfigured]);
 
   // Track mounted state to prevent state updates on unmounted component
   const isMountedRef = useRef(true);
@@ -121,6 +207,12 @@ export function useStoryGeneration(storyCampaign) {
     const startTime = Date.now();
 
     console.log(`[useStoryGeneration] [${genId}] generateForCase called: case=${caseNumber}, path=${pathKey}`);
+    const traceId = createTraceId(`case_${caseNumber}_${pathKey}`);
+    llmTrace('useStoryGeneration', traceId, 'generateForCase.called', {
+      caseNumber,
+      pathKey,
+      choiceHistoryLength: choiceHistory?.length || 0,
+    }, 'info');
 
     if (!isConfigured) {
       console.warn(`[useStoryGeneration] [${genId}] LLM not configured`);
@@ -142,6 +234,7 @@ export function useStoryGeneration(storyCampaign) {
     if (hasContent) {
       console.log(`[useStoryGeneration] [${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
+      llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.hit', { caseNumber, pathKey }, 'debug');
       return null; // Already generated
     }
 
@@ -171,7 +264,11 @@ export function useStoryGeneration(storyCampaign) {
         chapter,
         subchapter,
         pathKey,
-        choiceHistory
+        choiceHistory,
+        {
+          traceId,
+          reason: 'immediate-generateForCase',
+        }
       );
 
       const duration = Date.now() - startTime;
@@ -187,6 +284,13 @@ export function useStoryGeneration(storyCampaign) {
 
       // Update cache
       updateGeneratedCache(caseNumber, pathKey, entry);
+      llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.write', {
+        caseNumber,
+        pathKey,
+        ok: !!entry,
+        isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
+        wordCount: entry?.wordCount,
+      }, 'debug');
       setProgress({ current: 1, total: 1 });
 
       // Log result details
@@ -226,8 +330,17 @@ export function useStoryGeneration(storyCampaign) {
       return null;
     } finally {
       generationRef.current = false;
+      // If we just generated Subchapter C, immediately prefetch next chapter for BOTH branches.
+      // This guarantees seamless "Continue Investigation" after the eventual player choice.
+      try {
+        if (chapter && subchapter === 3) {
+          prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:C-complete');
+        }
+      } catch (e) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.trigger.error', { error: e?.message }, 'warn');
+      }
     }
-  }, [isConfigured]);
+  }, [isConfigured, prefetchNextChapterBranchesAfterC]);
 
   /**
    * Generate all subchapters for a chapter
@@ -292,7 +405,11 @@ export function useStoryGeneration(storyCampaign) {
           chapter,
           sub,
           pathKey,
-          choiceHistory
+          choiceHistory,
+          {
+            traceId: createTraceId(`case_${caseNumber}_${pathKey}`),
+            reason: silent ? 'preload-generateChapter' : 'immediate-generateChapter',
+          }
         );
 
         updateGeneratedCache(caseNumber, pathKey, entry);
@@ -367,13 +484,17 @@ export function useStoryGeneration(storyCampaign) {
             if (entry && isMountedRef.current) {
               updateGeneratedCache(targetCase, targetPath, entry);
             }
+            // If we just finished generating Subchapter C in the background, immediately prefetch BOTH next branches.
+            if (subIndex === 3) {
+              prefetchNextChapterBranchesAfterC(targetChapter, history, 'pregenerateCurrentChapterSiblings:C-complete');
+            }
           })
           .catch(err => {
             console.warn(`[useStoryGeneration] Background generation failed for ${targetCase}:`, err.message);
           });
       }
     }
-  }, [isConfigured, needsGeneration]);
+  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
   /**
    * Analyze choice history to predict most likely next path
