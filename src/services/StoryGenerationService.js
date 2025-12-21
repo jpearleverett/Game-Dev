@@ -1692,6 +1692,17 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
       }
     }
 
+    // Include the most recent decision that affects THIS chapter, so the outline enforces causality.
+    const last = [...(choiceHistory || [])].reverse().find((c) => this._extractChapterFromCase(c?.caseNumber) === chapter - 1);
+    const lastDecision = last
+      ? {
+        caseNumber: last.caseNumber,
+        chapter: chapter - 1,
+        optionKey: last.optionKey,
+        consequence: DECISION_CONSEQUENCES[last.caseNumber]?.[last.optionKey] || null,
+      }
+      : null;
+
     const outlinePrompt = `Generate a detailed outline for Chapter ${chapter} of "Dead Letters."
 
 ## STORY ARC GUIDANCE
@@ -1708,14 +1719,25 @@ ${chapterArc ? `
 ## PREVIOUS CHAPTERS SUMMARY
 ${previousOutlines.map(o => `Chapter ${o.chapter}: ${o.summary}`).join('\n') || 'Starting fresh from Chapter 1'}
 
+## MOST RECENT PLAYER DECISION (MUST DRIVE CHAPTER ${chapter} OPENING)
+${lastDecision
+  ? `Decision from Chapter ${lastDecision.chapter} (${lastDecision.caseNumber}) => Option "${lastDecision.optionKey}"
+Immediate consequence to open on: ${lastDecision.consequence?.immediate || '(derive from choice)'}
+Ongoing effects: ${(lastDecision.consequence?.ongoing || []).slice(0, 4).join(' | ') || '(none tracked)'}`
+  : 'None'}
+
 ## REQUIREMENTS
 Create a 3-part outline (Subchapters A, B, C) that:
 1. Flows seamlessly as ONE coherent chapter experience
-2. Subchapter A: Opens with atmosphere, establishes chapter's focus
+2. Subchapter A: Opens with atmosphere AND shows concrete causality from the most recent player decision
 3. Subchapter B: Develops the investigation/revelation
 4. Subchapter C: Builds to decision point with genuine moral complexity
 
-Each subchapter should feel like a natural continuation, not a separate scene.`;
+Each subchapter should feel like a natural continuation, not a separate scene.
+
+## OUTPUT RULES (IMPORTANT)
+- Include an explicit "openingCausality" field that states what changes because of the last decision.
+- Include a short "mustReference" list (2-4 items) of specific details that MUST appear in the prose (locations, objects, names, actions).`;
 
     const outlineSchema = {
       type: 'object',
@@ -1723,6 +1745,8 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
         chapter: { type: 'number' },
         summary: { type: 'string', description: 'One sentence summary of the entire chapter' },
         openingMood: { type: 'string', description: 'Atmospheric tone for chapter opening' },
+        openingCausality: { type: 'string', description: 'One sentence: what is different because of the last player choice, and how the chapter opens on that consequence.' },
+        mustReference: { type: 'array', items: { type: 'string' }, description: '2-4 concrete details that MUST appear in the prose for this chapter.' },
         subchapterA: {
           type: 'object',
           properties: {
@@ -1763,7 +1787,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
           description: 'Facts that must be maintained across this chapter',
         },
       },
-      required: ['chapter', 'summary', 'subchapterA', 'subchapterB', 'subchapterC'],
+      required: ['chapter', 'summary', 'openingCausality', 'mustReference', 'subchapterA', 'subchapterB', 'subchapterC'],
     };
 
     const response = await llmService.complete(
@@ -1818,6 +1842,8 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
       isFallback: true,
       summary: `Chapter ${chapter}: Jack continues his investigation into the conspiracy.`,
       openingMood: 'Noir atmosphere with building tension',
+      openingCausality: 'The chapter opens by showing the immediate consequence of the player’s last decision (location, character reaction, and next action).',
+      mustReference: ['Ashport rain', "Murphy's jukebox below Jack’s office", 'The Midnight Confessor’s black envelope', 'One named character from the current investigation'],
       subchapterA: {
         focus: `Opening: ${focus}`,
         keyBeats: [
@@ -3094,6 +3120,12 @@ Generate realistic, specific consequences based on the actual narrative content.
    */
   _buildStorySummarySection(context) {
     let summary = '## PREVIOUS STORY EVENTS\n\n';
+    const cw = GENERATION_CONFIG?.contextWindowing || {};
+    const MAX_OLDER = cw.maxOlderChapterEntries ?? 8;
+    const MAX_RECENT = cw.maxRecentChapterEntries ?? 4;
+    const MAX_RECENT_CHARS = cw.maxRecentNarrativeCharsPerEntry ?? 1200;
+    const MAX_CURRENT_CHARS = cw.maxCurrentChapterBackrefCharsPerEntry ?? 1600;
+    const MAX_PREV_CHARS = cw.maxPreviousEventsChars ?? 14000;
 
     // Build quick lookup: chapter -> chosen optionKey (from choice history)
     const choicesByChapter = new Map();
@@ -3107,30 +3139,44 @@ Generate realistic, specific consequences based on the actual narrative content.
     const recentChapters = context.previousChapters.filter(ch => ch.isRecent);
     const olderChapters = context.previousChapters.filter(ch => !ch.isRecent);
 
+    const truncateEnd = (text, maxChars) => {
+      if (!text || typeof text !== 'string') return '';
+      if (text.length <= maxChars) return text;
+      // Keep the end so we preserve immediate continuity hooks.
+      return `…${text.slice(-maxChars)}`;
+    };
+
+    const summarizeEntry = (ch) => {
+      if (ch.chapterSummary) return ch.chapterSummary;
+      // Fallback: first 2-3 sentences
+      const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
+      return sentences.slice(0, 3).join(' ').trim();
+    };
+
     // Summarize older chapters (compressed)
     if (olderChapters.length > 0) {
       summary += '### EARLIER CHAPTERS (Summary)\n';
-      for (const ch of olderChapters) {
+      for (const ch of olderChapters.slice(-MAX_OLDER)) {
         summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}": `;
 
-        // Use generated summary if available (High Quality), otherwise fallback to slicing (Legacy)
-        if (ch.chapterSummary) {
-          summary += ch.chapterSummary;
-        } else {
-          // Extract first 2-3 sentences as summary
-          const sentences = ch.narrative.match(/[^.!?]+[.!?]+/g) || [];
-          summary += sentences.slice(0, 3).join(' ').trim();
-        }
+        summary += summarizeEntry(ch);
         summary += '\n\n';
       }
     }
 
-    // Full text for recent chapters
+    // Recent chapters: include limited excerpts (not full text) to reduce token load.
     if (recentChapters.length > 0) {
-      summary += '### RECENT CHAPTERS (Full Text - Maintain Continuity)\n';
-      for (const ch of recentChapters) {
+      summary += '### RECENT CHAPTERS (Key Excerpts - Maintain Continuity)\n';
+      for (const ch of recentChapters.slice(-MAX_RECENT)) {
         summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}"\n`;
-        summary += ch.narrative + '\n';
+
+        const isCurrentChapterBackref = (
+          context?.currentPosition?.chapter === ch.chapter &&
+          context?.currentPosition?.subchapter > ch.subchapter
+        );
+        const maxChars = isCurrentChapterBackref ? MAX_CURRENT_CHARS : MAX_RECENT_CHARS;
+        summary += `${truncateEnd(ch.narrative, maxChars)}\n`;
+
         // If this was a decision subchapter, record the actual choice made (from choice history).
         if (ch.subchapter === 3) {
           const choice = choicesByChapter.get(ch.chapter);
@@ -3148,6 +3194,11 @@ Generate realistic, specific consequences based on the actual narrative content.
       context.playerChoices.forEach(choice => {
         summary += `- Chapter ${choice.chapter}: Chose path "${choice.optionKey}"\n`;
       });
+    }
+
+    // Hard cap: keep this section from ballooning.
+    if (summary.length > MAX_PREV_CHARS) {
+      summary = `${summary.slice(0, MAX_PREV_CHARS)}\n\n[TRUNCATED FOR CONTEXT WINDOW LIMITS]\n`;
     }
 
     return summary;
@@ -3293,6 +3344,20 @@ ${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOu
 - **Option A Direction:** ${subchapterOutline.optionADirection || 'More direct approach'}
 - **Option B Direction:** ${subchapterOutline.optionBDirection || 'More cautious approach'}`;
       }
+    }
+
+    // ========== NEW: Outline Causality + Must-Reference Anchors ==========
+    if (outline?.openingCausality && subchapter === 1) {
+      task += `
+
+### OPENING CAUSALITY (Mandatory)
+${outline.openingCausality}`;
+    }
+    if (Array.isArray(outline?.mustReference) && outline.mustReference.length > 0) {
+      task += `
+
+### MUST-REFERENCE ANCHORS (Mandatory)
+${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
     }
 
     // ========== NEW: Narrative Thread Continuity ==========
