@@ -680,6 +680,10 @@ export function createBlankStoryContext() {
     lastGeneratedSubchapter: null,
     lastPathKey: null,
 
+    // Persisted decision consequences (lightweight) so choice causality survives restarts
+    // key format: "${caseNumber}_${optionKey}" => { immediate, ongoing, characterImpact }
+    decisionConsequencesByKey: {},
+
     version: 1,
   };
 }

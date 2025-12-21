@@ -53,6 +53,7 @@ export function useStoryGeneration(storyCampaign) {
   const generationRef = useRef(null);
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
+  const subchapterPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate within-chapter subchapter prefetch
 
   /**
    * Prefetch next chapter (Subchapter A) for BOTH possible decision branches.
@@ -140,6 +141,76 @@ export function useStoryGeneration(storyCampaign) {
     // Fire both prefetches immediately (true parallel). LLMService has its own queue/rate-limiting.
     startOne('A');
     startOne('B');
+  }, [isConfigured]);
+
+  /**
+   * Prefetch remaining subchapters (B/C) within the same chapter for the CURRENT path.
+   * Triggered after an A/B subchapter is generated so the next "Continue" feels instant.
+   */
+  const prefetchRemainingSubchapters = useCallback((chapter, fromSubchapter, pathKey, choiceHistory = [], source = 'unknown') => {
+    if (!isConfigured) return;
+    if (!chapter || chapter < 2 || chapter > 12) return;
+    if (!fromSubchapter || fromSubchapter >= 3) return;
+
+    const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
+    const traceId = createTraceId(`prefetch_subs_${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][fromSubchapter - 1]}`);
+
+    const fireOne = async (sub) => {
+      const caseNumber = formatCaseNumber(chapter, sub);
+      const key = `${caseNumber}_${canonicalPathKey}`;
+      if (subchapterPrefetchInFlightRef.current.has(key)) return;
+
+      const already = await hasStoryContent(caseNumber, canonicalPathKey);
+      if (already) return;
+
+      subchapterPrefetchInFlightRef.current.add(key);
+      llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.start', {
+        source,
+        chapter,
+        sub,
+        caseNumber,
+        pathKey: canonicalPathKey,
+      }, 'debug');
+
+      storyGenerationService.generateSubchapter(chapter, sub, canonicalPathKey, choiceHistory, {
+        traceId: createTraceId(`sg_${caseNumber}_${canonicalPathKey}`),
+        reason: `prefetch-within-chapter:${source}`,
+      })
+        .then((entry) => {
+          if (entry && isMountedRef.current) {
+            updateGeneratedCache(caseNumber, entry.pathKey || canonicalPathKey, entry);
+          }
+          llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.complete', {
+            caseNumber,
+            ok: !!entry,
+            isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
+          }, 'debug');
+        })
+        .catch((err) => {
+          llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.error', {
+            caseNumber,
+            error: err?.message,
+          }, 'warn');
+        })
+        .finally(() => {
+          subchapterPrefetchInFlightRef.current.delete(key);
+        });
+    };
+
+    // Prefetch next one or two subchapters.
+    fireOne(fromSubchapter + 1);
+    if (fromSubchapter + 2 <= 3) {
+      // Small stagger so we prioritize the immediate next subchapter.
+      let timeoutId = null;
+      timeoutId = setTimeout(() => {
+        try {
+          fireOne(fromSubchapter + 2);
+        } finally {
+          if (timeoutId) pendingTimeoutsRef.current.delete(timeoutId);
+        }
+      }, 1200);
+      pendingTimeoutsRef.current.add(timeoutId);
+    }
   }, [isConfigured]);
 
   // Track mounted state to prevent state updates on unmounted component
@@ -246,6 +317,15 @@ export function useStoryGeneration(storyCampaign) {
       console.log(`[useStoryGeneration] [${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
       llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.hit', { caseNumber, pathKey }, 'debug');
+      // Even on a cache hit, proactively prefetch the remaining subchapters for this chapter
+      // so the player never sees a mid-chapter generation stall.
+      try {
+        if (chapter && subchapter && subchapter < 3) {
+          prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `cache-hit:${caseNumber}`);
+        }
+      } catch (e) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.cacheHit.error', { error: e?.message }, 'warn');
+      }
       return null; // Already generated
     }
 
@@ -322,6 +402,16 @@ export function useStoryGeneration(storyCampaign) {
         setStatus(GENERATION_STATUS.COMPLETE);
       }
 
+      // Prefetch remaining subchapters within this chapter for the current path.
+      // This makes "Continue" transitions feel instant.
+      try {
+        if (chapter && subchapter && subchapter < 3) {
+          prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `generateForCase:${caseNumber}`);
+        }
+      } catch (e) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.trigger.error', { error: e?.message }, 'warn');
+      }
+
       return entry;
     } catch (err) {
       const duration = Date.now() - startTime;
@@ -359,7 +449,7 @@ export function useStoryGeneration(storyCampaign) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.branches.trigger.error', { error: e?.message }, 'warn');
       }
     }
-  }, [isConfigured, prefetchNextChapterBranchesAfterC]);
+  }, [isConfigured, prefetchNextChapterBranchesAfterC, prefetchRemainingSubchapters]);
 
   /**
    * Generate all subchapters for a chapter

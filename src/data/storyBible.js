@@ -546,6 +546,9 @@ export const GENERATION_CONFIG = {
     minSentencesPerParagraph: 3,      // Ensures substantial paragraphs
     maxConsecutiveDialogue: 6,        // Prevents wall-of-dialogue
     requireAtmosphericOpening: true,  // Every chapter should set the scene
+    // Expensive. Keep OFF for normal gameplay latency.
+    // When enabled, the engine may make extra LLM calls to invent consequences for past decisions.
+    enableLLMDecisionConsequences: false,
   },
 };
 

@@ -71,14 +71,14 @@ const DECISION_CONSEQUENCES = {
   // Chapter 1 decision consequences
   '001C': {
     A: {
-      immediate: 'Jack chose to confront the situation directly',
-      ongoing: ['More adversarial relationships', 'Faster revelation of threats', 'Higher personal risk'],
-      characterImpact: { trust: -10, aggression: +15, thoroughness: -5 },
+      immediate: 'Jack chose to go to the Blueline Diner to meet Marcus Thornhill’s daughter and secure the ledger',
+      ongoing: ['More careful approach', 'More complete evidence trail', 'Slower confrontation with suspects', 'Higher Sarah trust'],
+      characterImpact: { trust: +10, aggression: -5, thoroughness: +15 },
     },
     B: {
-      immediate: 'Jack chose to gather more information first',
-      ongoing: ['More careful approach', 'Slower but more complete understanding', 'Lower immediate risk'],
-      characterImpact: { trust: +5, aggression: -5, thoroughness: +15 },
+      immediate: 'Jack chose to confront Silas Reed immediately at his penthouse',
+      ongoing: ['More adversarial relationships', 'Faster revelation of threats', 'Higher personal risk', 'Lower Sarah trust'],
+      characterImpact: { trust: -10, aggression: +15, thoroughness: -5 },
     },
   },
   // Additional chapter consequences will be generated dynamically
@@ -594,7 +594,7 @@ NEVER use:
 - Em dashes (—). Use commas, periods, or semicolons
 - "X is not just Y, it's Z" or similar constructions
 - "In a world where..." or "Little did [anyone] know..."
-- First-person narration (no "I", "me", "my", "we", "our" in narration)
+- First-person narration (no "I/me/my/we/our" in NARRATION. Dialogue may use first-person naturally.)
 - "I couldn't help but..." or "I found myself..." (also avoid these in dialogue unless quoting/paraphrasing)
 - "couldn't help but notice" or "couldn't shake the feeling"
 - Excessive sentences starting with "And" or "But"
@@ -1906,6 +1906,89 @@ Each subchapter should feel like a natural continuation, not a separate scene.`;
   }
 
   /**
+   * Fast, non-LLM consequence hydration.
+   *
+   * Goal: preserve choice causality in prompts without adding latency.
+   * - Uses DECISION_CONSEQUENCES if present
+   * - Falls back to storyContext.decisionConsequencesByKey if persisted
+   * - Otherwise derives a lightweight consequence from the decision entry metadata
+   */
+  _ensureDecisionConsequencesFast(choiceHistory) {
+    const history = Array.isArray(choiceHistory) ? choiceHistory : [];
+    if (history.length === 0) return;
+
+    const ctx = this.storyContext || {};
+    if (!ctx.decisionConsequencesByKey) ctx.decisionConsequencesByKey = {};
+
+    const deriveFromDecisionEntry = (choice) => {
+      const chapter = this._extractChapterFromCase(choice.caseNumber);
+      const decisionPathKey = this._getPathKeyForChapter(chapter, history);
+      const decisionEntry = this.getGeneratedEntry(choice.caseNumber, decisionPathKey) || getStoryEntry(choice.caseNumber, 'ROOT');
+      const chosen = decisionEntry?.decision?.options?.find((o) => o.key === choice.optionKey) || null;
+
+      const title = chosen?.title || `Option ${choice.optionKey}`;
+      const focus = chosen?.focus || '';
+      const stats = chosen?.stats || '';
+
+      const ongoing = [];
+      if (typeof stats === 'string') {
+        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? 'Sarah’s trust decreases' : 'Sarah’s trust increases');
+        if (stats.toLowerCase().includes('investig')) ongoing.push('Jack gains better leads through evidence');
+        if (stats.toLowerCase().includes('aggress')) ongoing.push('Jack’s approach grows more confrontational');
+      }
+      if (typeof focus === 'string' && focus.length > 0) {
+        ongoing.unshift(`Tone shift: ${focus}`);
+      }
+
+      const characterImpact = {
+        trust: stats.includes('-SarahTrust') ? -10 : stats.includes('+SarahTrust') ? 10 : 0,
+        aggression: focus.toLowerCase().includes('confront') ? 10 : focus.toLowerCase().includes('cautious') ? -5 : 0,
+        thoroughness: focus.toLowerCase().includes('evidence') ? 10 : 0,
+      };
+
+      return {
+        immediate: `Jack chose: ${title}`,
+        ongoing: ongoing.length > 0 ? ongoing.slice(0, 4) : ['This choice will shape what Jack can prove, and who will trust him.'],
+        characterImpact,
+      };
+    };
+
+    for (const choice of history) {
+      const caseNumber = choice?.caseNumber;
+      const optionKey = choice?.optionKey;
+      if (!caseNumber || (optionKey !== 'A' && optionKey !== 'B')) continue;
+
+      const consequenceKey = `${caseNumber}_${optionKey}`;
+
+      // Already known?
+      if (DECISION_CONSEQUENCES[caseNumber]?.[optionKey]) {
+        ctx.decisionConsequencesByKey[consequenceKey] = DECISION_CONSEQUENCES[caseNumber][optionKey];
+        continue;
+      }
+
+      // Persisted?
+      const persisted = ctx.decisionConsequencesByKey[consequenceKey];
+      if (persisted) {
+        if (!DECISION_CONSEQUENCES[caseNumber]) DECISION_CONSEQUENCES[caseNumber] = {};
+        DECISION_CONSEQUENCES[caseNumber][optionKey] = persisted;
+        continue;
+      }
+
+      // Derive cheaply from decision metadata.
+      const derived = deriveFromDecisionEntry(choice);
+      if (!DECISION_CONSEQUENCES[caseNumber]) DECISION_CONSEQUENCES[caseNumber] = {};
+      DECISION_CONSEQUENCES[caseNumber][optionKey] = derived;
+      ctx.decisionConsequencesByKey[consequenceKey] = derived;
+    }
+
+    // Fire-and-forget persistence (small payload).
+    this.storyContext = ctx;
+    saveStoryContext(ctx).catch((e) => {
+      console.warn('[StoryGenerationService] Failed to persist decision consequences (fast):', e?.message);
+    });
+  }
+
+  /**
    * Generate consequences for a single decision
    * Enhanced with full narrative context for more meaningful consequences
    */
@@ -2235,11 +2318,12 @@ Generate realistic, specific consequences based on the actual narrative content.
         aggressiveScore += (consequence.characterImpact.aggression || 0) * weight;
         methodicalScore += (consequence.characterImpact.thoroughness || 0) * weight;
       } else {
-        // Default scoring based on option key patterns
+        // Default scoring: A tends to be "methodical/evidence-first", B tends to be "aggressive/instinct-first".
+        // (Individual chapters can override via generated DECISION_CONSEQUENCES.)
         if (choice.optionKey === 'A') {
-          aggressiveScore += 5 * weight;
-        } else {
           methodicalScore += 5 * weight;
+        } else if (choice.optionKey === 'B') {
+          aggressiveScore += 5 * weight;
         }
       }
     });
@@ -2411,6 +2495,24 @@ Generate realistic, specific consequences based on the actual narrative content.
   async init() {
     this.generatedStory = await loadGeneratedStory();
     this.storyContext = await getStoryContext();
+
+    // Hydrate any persisted dynamic decision consequences back into memory so
+    // choice-driven context remains stable across app restarts.
+    if (this.storyContext?.decisionConsequencesByKey && typeof this.storyContext.decisionConsequencesByKey === 'object') {
+      try {
+        for (const [k, consequence] of Object.entries(this.storyContext.decisionConsequencesByKey)) {
+          const [caseNumber, optionKey] = String(k).split('_');
+          if (!caseNumber || !optionKey) continue;
+          if (!DECISION_CONSEQUENCES[caseNumber]) DECISION_CONSEQUENCES[caseNumber] = {};
+          if (!DECISION_CONSEQUENCES[caseNumber][optionKey]) {
+            DECISION_CONSEQUENCES[caseNumber][optionKey] = consequence;
+          }
+          this.generatedConsequences.set(`${caseNumber}_${optionKey}`, consequence);
+        }
+      } catch (e) {
+        console.warn('[StoryGenerationService] Failed to hydrate decision consequences from storyContext:', e?.message);
+      }
+    }
 
     // Reset thread acknowledgment counts on init to prevent stale data from affecting
     // validation when starting a new session or reloading the app
@@ -2830,6 +2932,37 @@ Generate realistic, specific consequences based on the actual narrative content.
       timestamp: choice.timestamp,
     }));
 
+    // Identify the most recent decision that affects the current chapter (Chapter N decision affects N+1)
+    const lastDecision = (() => {
+      const last = [...(choiceHistory || [])].reverse().find((c) => {
+        const decisionChapter = this._extractChapterFromCase(c?.caseNumber);
+        return decisionChapter === targetChapter - 1;
+      });
+      if (!last) return null;
+
+      const consequence = DECISION_CONSEQUENCES[last.caseNumber]?.[last.optionKey];
+      const decisionChapter = this._extractChapterFromCase(last.caseNumber);
+      const decisionPathKey = this._getPathKeyForChapter(decisionChapter, choiceHistory);
+      const decisionEntry = this.getGeneratedEntry(last.caseNumber, decisionPathKey) || getStoryEntry(last.caseNumber, 'ROOT');
+      const chosenOption = decisionEntry?.decision?.options?.find((o) => o.key === last.optionKey) || null;
+      const otherOption = decisionEntry?.decision?.options?.find((o) => o.key !== last.optionKey) || null;
+
+      return {
+        caseNumber: last.caseNumber,
+        chapter: decisionChapter,
+        optionKey: last.optionKey,
+        immediate: consequence?.immediate || chosenOption?.focus || `Chose option ${last.optionKey}`,
+        ongoing: consequence?.ongoing || [],
+        chosenTitle: chosenOption?.title || null,
+        chosenFocus: chosenOption?.focus || null,
+        chosenStats: chosenOption?.stats || null,
+        otherTitle: otherOption?.title || null,
+        otherFocus: otherOption?.focus || null,
+      };
+    })();
+
+    context.lastDecision = lastDecision;
+
     // Extract established facts from generated content
     context.establishedFacts = this._extractEstablishedFacts(context.previousChapters);
 
@@ -2962,6 +3095,14 @@ Generate realistic, specific consequences based on the actual narrative content.
   _buildStorySummarySection(context) {
     let summary = '## PREVIOUS STORY EVENTS\n\n';
 
+    // Build quick lookup: chapter -> chosen optionKey (from choice history)
+    const choicesByChapter = new Map();
+    if (Array.isArray(context.playerChoices)) {
+      context.playerChoices.forEach((c) => {
+        if (c?.chapter) choicesByChapter.set(c.chapter, c.optionKey);
+      });
+    }
+
     // Group chapters by recency
     const recentChapters = context.previousChapters.filter(ch => ch.isRecent);
     const olderChapters = context.previousChapters.filter(ch => !ch.isRecent);
@@ -2990,8 +3131,12 @@ Generate realistic, specific consequences based on the actual narrative content.
       for (const ch of recentChapters) {
         summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}"\n`;
         summary += ch.narrative + '\n';
-        if (ch.decision) {
-          summary += `[DECISION MADE: Player chose "${ch.decision.selectedOption || 'unknown'}"]\n`;
+        // If this was a decision subchapter, record the actual choice made (from choice history).
+        if (ch.subchapter === 3) {
+          const choice = choicesByChapter.get(ch.chapter);
+          if (choice) {
+            summary += `[DECISION MADE: Chapter ${ch.chapter} => Option "${choice}"]\n`;
+          }
         }
         summary += '\n---\n\n';
       }
@@ -3174,9 +3319,9 @@ ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.agg
 
 **AGGRESSIVE JACK VOICE EXAMPLES:**
 Same scene, written for aggressive Jack:
-- Entering a dangerous location: "I kicked the door open before my better judgment could catch up. The warehouse stank of rust and old violence. Good. I was in the mood for both."
-- Confronting a suspect: "'Cut the crap,' I said, grabbing his collar. 'I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry.'"
-- Internal monologue: "Thirty years of being the patient detective. Look where it got me. This time, I wasn't waiting for permission."
+- Entering a dangerous location: "Jack kicked the door open before better judgment could catch up. The warehouse stank of rust and old violence. Good. He was in the mood for both."
+- Confronting a suspect: "'Cut the crap,' Jack said, grabbing his collar. 'I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry.'"
+- Internal monologue: "Thirty years of being the patient detective. Look where it got him. This time, he wasn't waiting for permission."
 - DO: Push, confront, act first and deal with consequences later
 - DON'T: Hesitate, gather excessive evidence, wait patiently`;
     } else if (personality.riskTolerance === 'low') {
@@ -3184,9 +3329,9 @@ Same scene, written for aggressive Jack:
 
 **METHODICAL JACK VOICE EXAMPLES:**
 Same scene, written for methodical Jack:
-- Entering a dangerous location: "I circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did I try the door."
-- Confronting a suspect: "'I have some questions,' I said, keeping my voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
-- Internal monologue: "Every case I'd closed in thirty years taught me the same lesson: patience catches more killers than speed. I could wait. I'd gotten good at waiting."
+- Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
+- Confronting a suspect: "'I've got some questions,' Jack said, keeping his voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
+- Internal monologue: "Every case Jack closed in thirty years taught the same lesson: patience caught more killers than speed. He could wait. He’d gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
     } else {
@@ -3203,6 +3348,14 @@ ${context.decisionConsequences?.immediate?.length > 0 ? context.decisionConseque
 
 ### ONGOING EFFECTS FROM CHOICES
 ${context.decisionConsequences?.ongoing?.length > 0 ? [...new Set(context.decisionConsequences.ongoing)].slice(0, 5).map(e => `- ${e}`).join('\n') : '- Starting fresh'}
+
+### MOST RECENT PLAYER DECISION (This MUST drive this subchapter)
+${context.lastDecision
+  ? `- Decision: Chapter ${context.lastDecision.chapter} (${context.lastDecision.caseNumber}) => Option "${context.lastDecision.optionKey}"
+- Chosen action: ${context.lastDecision.chosenTitle || '(title unavailable)'}
+- Immediate consequence to OPEN ON: ${context.lastDecision.immediate}
+- The road not taken: ${context.lastDecision.otherTitle || '(unknown)'}`
+  : '- None (start of story)'}
 
 ### PACING REQUIREMENTS
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
@@ -3226,7 +3379,7 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 The player JUST made a crucial decision at the end of the previous chapter.
 You MUST acknowledge this choice immediately.
 PLAYER CHOICE: "${lastChoice.optionKey}"
-This choice determines the current path. Ensure the narrative reflects this specific outcome.`;
+This choice determines the current path. Ensure the narrative reflects this specific outcome in the FIRST 200 WORDS, with concrete, scene-level causality (location, character reaction, and what Jack does next).`;
       }
     }
 
@@ -4110,7 +4263,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // ========== NEW: Dynamic Consequence Generation ==========
       // If this follows a decision, ensure we have generated consequences
       if (choiceHistory.length > 0) {
-        await this._ensureDecisionConsequences(choiceHistory);
+        // Keep gameplay fast: hydrate consequences without extra LLM calls.
+        this._ensureDecisionConsequencesFast(choiceHistory);
+        if (GENERATION_CONFIG.qualitySettings?.enableLLMDecisionConsequences) {
+          // Optional, expensive improvement. Never block core narrative generation.
+          this._ensureDecisionConsequences(choiceHistory).catch((e) => {
+            console.warn('[StoryGenerationService] Background consequence generation failed:', e?.message);
+          });
+        }
       }
 
       // Build comprehensive context (now includes story arc and chapter outline)
@@ -5068,6 +5228,41 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     });
 
     // =========================================================================
+    // CATEGORY 2.75: CHOICE CAUSALITY (Respect the most recent player decision)
+    // =========================================================================
+    // If this is the first subchapter of a new chapter, the narrative must quickly reflect
+    // the last decision's immediate consequence. This prevents "generic reset" feeling.
+    if (
+      context?.currentPosition?.subchapter === 1 &&
+      context?.currentPosition?.chapter > 1 &&
+      context?.lastDecision &&
+      context?.lastDecision?.chapter === context.currentPosition.chapter - 1
+    ) {
+      const prefix = narrativeOriginal
+        .split(/\s+/)
+        .slice(0, 200)
+        .join(' ')
+        .toLowerCase();
+
+      const stop = new Set(['jack', 'said', 'the', 'and', 'that', 'with', 'from', 'into', 'then', 'over', 'under', 'were', 'was', 'had', 'have', 'this', 'there', 'their', 'they', 'them', 'what', 'when', 'where', 'which', 'while', 'because', 'before', 'after', 'could', 'would', 'should', 'about', 'again', 'still']);
+      const seedText = `${context.lastDecision.immediate || ''} ${context.lastDecision.chosenTitle || ''} ${context.lastDecision.chosenFocus || ''}`;
+      const keywords = [...new Set(
+        seedText
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter(w => w.length >= 4 && !stop.has(w))
+      )].slice(0, 10);
+
+      const hit = keywords.some((k) => prefix.includes(k));
+      if (!hit && keywords.length > 0) {
+        issues.push(
+          `CHOICE RESPECT VIOLATION: Chapter start does not reflect last decision (Chapter ${context.lastDecision.chapter} option "${context.lastDecision.optionKey}") within first 200 words. Must show concrete consequence: ${context.lastDecision.immediate}`
+        );
+      }
+    }
+
+    // =========================================================================
     // CATEGORY 3: SETTING CONSISTENCY
     // =========================================================================
     const settingViolations = [
@@ -5399,21 +5594,99 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     } else if (wordCount < TARGET_WORDS * 0.85) {
       warnings.push(`Narrative shorter than target: ${wordCount} words (target ${TARGET_WORDS})`);
     }
+    const maxWords = GENERATION_CONFIG?.wordCount?.maximum;
+    if (typeof maxWords === 'number' && wordCount > maxWords) {
+      warnings.push(`Narrative longer than maximum: ${wordCount} words (max ${maxWords}). Consider tightening for pacing/latency.`);
+    }
+
+    // =========================================================================
+    // CATEGORY 8.5: STRUCTURED FIELDS QUALITY (Bridge/Previously/Summary/Puzzle words)
+    // =========================================================================
+    // Bridge: hook sentence should be short.
+    if (typeof content.bridgeText === 'string') {
+      const bridgeWords = content.bridgeText.split(/\s+/).filter(Boolean).length;
+      if (bridgeWords > 18) warnings.push(`Bridge text is long (${bridgeWords} words). Aim for <= 15 words for a punchy hook.`);
+    }
+
+    // Previously: 1-2 sentences, <= 40 words.
+    if (typeof content.previously === 'string') {
+      const prevWords = content.previously.split(/\s+/).filter(Boolean).length;
+      if (prevWords > 60) {
+        warnings.push(`"previously" is too long (${prevWords} words). Must be 1-2 sentences and <= 40 words.`);
+      } else if (prevWords > 40) {
+        warnings.push(`"previously" exceeds 40-word target (${prevWords}). Consider tightening.`);
+      }
+    }
+
+    // Chapter summary: should be concise, memory-friendly.
+    if (typeof content.chapterSummary === 'string') {
+      const summarySentences = content.chapterSummary.match(/[^.!?]+[.!?]+/g) || [];
+      if (summarySentences.length > 5) warnings.push(`chapterSummary has many sentences (${summarySentences.length}). Aim for 2-3 sentences.`);
+      const summaryWords = content.chapterSummary.split(/\s+/).filter(Boolean).length;
+      if (summaryWords > 120) warnings.push(`chapterSummary is long (${summaryWords} words). Aim for <= 60-80 words.`);
+    }
+
+    // Puzzle candidates should be anchored in the narrative so the board feels fair.
+    if (Array.isArray(content.puzzleCandidates)) {
+      if (content.puzzleCandidates.length < 6) warnings.push(`puzzleCandidates has only ${content.puzzleCandidates.length} words. Aim for 6-8 distinct words.`);
+      const lowerNarr = narrativeOriginal.toLowerCase();
+      content.puzzleCandidates.forEach((w) => {
+        if (!w || typeof w !== 'string') return;
+        const token = w.toLowerCase();
+        // Allow minor variations (plural) by checking substring match.
+        if (!lowerNarr.includes(token)) {
+          warnings.push(`puzzleCandidates word "${w}" does not appear in narrative. Prefer words drawn directly from the prose for fairness.`);
+        }
+      });
+    }
 
     // =========================================================================
     // CATEGORY 9: PERSPECTIVE/TENSE CONSISTENCY
     // =========================================================================
     // This game is THIRD-PERSON LIMITED (close on Jack), past tense.
-    // Reject first-person narration pronouns to prevent POV drift.
+    // Reject first-person narration pronouns to prevent POV drift,
+    // but allow first-person INSIDE dialogue.
+    const containsPronounOutsideQuotes = (text, pronounRegex) => {
+      if (!text) return false;
+      let inQuote = false;
+      let buf = '';
+      const flush = () => {
+        if (!buf) return false;
+        const hit = pronounRegex.test(buf);
+        buf = '';
+        return hit;
+      };
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+          if (!inQuote) {
+            // entering quote: check accumulated narration segment
+            if (flush()) return true;
+          } else {
+            // leaving quote: discard dialogue segment buffer
+            buf = '';
+          }
+          inQuote = !inQuote;
+          continue;
+        }
+        // Only accumulate narration segments (outside quotes)
+        if (!inQuote) {
+          buf += ch;
+        }
+      }
+      return flush();
+    };
+
     const firstPersonPronouns = /\b(?:i|me|my|mine|we|us|our|ours)\b/i;
-    if (firstPersonPronouns.test(narrativeOriginal)) {
-      issues.push('POV VIOLATION: First-person pronouns detected. Narrative must be third-person limited past tense (no "I/me/my/we/our").');
+    if (containsPronounOutsideQuotes(narrativeOriginal, firstPersonPronouns)) {
+      issues.push('POV VIOLATION: First-person pronouns detected in narration. Narrative must be third-person limited past tense (dialogue may be first-person).');
     }
 
-    // Discourage second-person narration as well.
+    // Discourage second-person narration as well (outside dialogue).
     const secondPersonPronouns = /\b(?:you|your|yours|yourself)\b/i;
-    if (secondPersonPronouns.test(narrativeOriginal)) {
-      warnings.push('Possible second-person phrasing detected ("you/your"). Narrative should remain third-person limited.');
+    if (containsPronounOutsideQuotes(narrativeOriginal, secondPersonPronouns)) {
+      warnings.push('Possible second-person phrasing detected in narration ("you/your"). Narrative should remain third-person limited.');
     }
 
     // =========================================================================
