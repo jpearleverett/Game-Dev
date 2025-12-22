@@ -368,6 +368,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     selectStoryDecision,
     ensureStoryContent,
     handleBackgroundGeneration, // Exposed for GameContext
+    prefetchNextChapterBranchesAfterC, // Exposed for early Chapter 2 prefetch
     configureLLM,
     generateForCase,
     generateChapter,
@@ -381,6 +382,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     selectStoryDecision,
     ensureStoryContent,
     handleBackgroundGeneration,
+    prefetchNextChapterBranchesAfterC,
     configureLLM,
     generateForCase,
     generateChapter,

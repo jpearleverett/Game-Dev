@@ -5094,32 +5094,40 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * Convert JSON decision format to internal game format
    */
   _convertDecisionFormat(decision) {
+    // Build option objects once
+    const optionAObj = {
+      key: decision.optionA?.key || 'A',
+      title: decision.optionA?.title || 'Option A',
+      focus: decision.optionA?.focus || '',
+      personalityAlignment: decision.optionA?.personalityAlignment || 'neutral',
+      consequence: null,
+      stats: null,
+      outcome: null,
+      nextChapter: null, // Will be set by game logic
+      nextPathKey: decision.optionA?.key || 'A',
+      details: [],
+    };
+    const optionBObj = {
+      key: decision.optionB?.key || 'B',
+      title: decision.optionB?.title || 'Option B',
+      focus: decision.optionB?.focus || '',
+      personalityAlignment: decision.optionB?.personalityAlignment || 'neutral',
+      consequence: null,
+      stats: null,
+      outcome: null,
+      nextChapter: null, // Will be set by game logic
+      nextPathKey: decision.optionB?.key || 'B',
+      details: [],
+    };
+
     return {
       intro: [decision.intro || ''],
-      options: [
-        {
-          key: decision.optionA?.key || 'A',
-          title: decision.optionA?.title || 'Option A',
-          focus: decision.optionA?.focus || '',
-          consequence: null,
-          stats: null,
-          outcome: null,
-          nextChapter: null, // Will be set by game logic
-          nextPathKey: decision.optionA?.key || 'A',
-          details: [],
-        },
-        {
-          key: decision.optionB?.key || 'B',
-          title: decision.optionB?.title || 'Option B',
-          focus: decision.optionB?.focus || '',
-          consequence: null,
-          stats: null,
-          outcome: null,
-          nextChapter: null, // Will be set by game logic
-          nextPathKey: decision.optionB?.key || 'B',
-          details: [],
-        },
-      ],
+      // Keep both formats for compatibility:
+      // - options[] array for iteration
+      // - optionA/optionB for direct access
+      options: [optionAObj, optionBObj],
+      optionA: optionAObj,
+      optionB: optionBObj,
     };
   }
 
