@@ -805,61 +805,61 @@ class StoryGenerationService {
       risingAction: {
         subchapterA: {
           title: 'The Trail Continues',
-          narrative: `The rain hadn't let up since morning. I stood at the window of my office, watching Ashport's streets turn to rivers of reflected neon. Another day, another lead that might go nowhere.
+          narrative: `The rain hadn't let up since morning. Jack stood at the window of his office, watching Ashport's streets turn to rivers of reflected neon. Another day, another lead that might go nowhere.
 
-Murphy's jukebox bled through the floorboards below, some sad song about chances missed and roads not taken. The melody matched my mood. Every case I'd closed in thirty years felt like it was reopening, one envelope at a time.
+Murphy's jukebox bled through the floorboards below, some sad song about chances missed and roads not taken. The melody matched his mood. Every case he'd closed in thirty years felt like it was reopening, one envelope at a time.
 
-The Confessor's latest message sat on my desk. Black paper, red wax, silver ink spelling out accusations I couldn't deny. They knew things. Things I'd buried so deep I'd almost convinced myself they'd never happened.
+The Confessor's latest message sat on his desk. Black paper, red wax, silver ink spelling out accusations he couldn't deny. They knew things. Things he'd buried so deep he'd almost convinced himself they'd never happened.
 
-I poured two fingers of Jameson and let it burn down my throat. The whiskey didn't help, but it didn't hurt either. At my age, that's about all you can ask for.
+He poured two fingers of Jameson and let it burn down his throat. The whiskey didn't help, but it didn't hurt either. At his age, that's about all he could ask for.
 
-My phone buzzed. A text from an unknown number: "The next piece of the puzzle awaits. Are you ready to see what you've been blind to?"
+His phone buzzed. A text from an unknown number: "The next piece of the puzzle awaits. Are you ready to see what you've been blind to?"
 
-I grabbed my coat and headed for the door. Ready or not, the truth was coming. And I had a feeling it wouldn't be kind.
+Jack grabbed his coat and headed for the door. Ready or not, the truth was coming. And he had a feeling it wouldn't be kind.
 
-The streets of Ashport welcomed me with their usual indifference. Neon signs flickered in the rain, advertising bars and bail bondsmen and dreams that died a long time ago. I'd walked these streets for three decades. Now they felt like a stranger's territory.
+The streets of Ashport welcomed him with their usual indifference. Neon signs flickered in the rain, advertising bars and bail bondsmen and dreams that died a long time ago. He'd walked these streets for three decades. Now they felt like a stranger's territory.
 
-Whatever came next, I'd face it the way I always had: one step at a time, eyes open, hoping the shadows wouldn't swallow me whole.`,
+Whatever came next, he'd face it the way he always had: one step at a time, eyes open, hoping the shadows wouldn't swallow him whole.`,
           bridgeText: 'The investigation deepens.',
         },
         subchapterB: {
           title: 'Shadows and Revelations',
-          narrative: `The address led me to a part of town I knew too well. Back alleys where witnesses disappeared and evidence got lost. The kind of place where cops like me used to be kings.
+          narrative: `The address led Jack to a part of town he knew too well. Back alleys where witnesses disappeared and evidence got lost. The kind of place where cops like him used to be kings.
 
 Not anymore.
 
-I found what I was looking for in an abandoned warehouse. Files, photographs, documents that should have been destroyed years ago. Someone had been collecting the pieces of cases I'd closed, building a picture I never wanted to see.
+He found what he was looking for in an abandoned warehouse. Files, photographs, documents that should have been destroyed years ago. Someone had been collecting the pieces of cases he'd closed, building a picture he never wanted to see.
 
-My hands shook as I flipped through the pages. Names I recognized. Faces I'd forgotten. Evidence that looked too perfect to be real—because it wasn't. Not all of it, anyway.
+His hands shook as he flipped through the pages. Names he recognized. Faces he'd forgotten. Evidence that looked too perfect to be real—because it wasn't. Not all of it, anyway.
 
-How many times had I looked at forensic reports without questioning where they came from? How many confessions had I accepted because the physical evidence seemed so airtight?
+How many times had he looked at forensic reports without questioning where they came from? How many confessions had he accepted because the physical evidence seemed so airtight?
 
-The warehouse door creaked behind me. I spun, hand going to the gun I still carried out of habit more than necessity.
+The warehouse door creaked behind him. Jack spun, hand going to the gun he still carried out of habit more than necessity.
 
 "You're starting to understand." The voice echoed from the shadows. "That's good. That's progress."
 
-I couldn't see them, but I knew who it was. The Confessor. Victoria. Whatever name she was using today.
+He couldn't see them, but he knew who it was. The Confessor. Victoria. Whatever name she was using today.
 
-"Show yourself," I said, but my voice lacked conviction.
+"Show yourself," Jack said, but his voice lacked conviction.
 
 "Not yet. You're not ready. But soon, Jack. Soon you'll see everything."
 
-When I turned back to the files, my eye caught something new. A photograph I hadn't noticed before. A face from the past that changed everything I thought I knew.
+When he turned back to the files, his eye caught something new. A photograph he hadn't noticed before. A face from the past that changed everything he thought he knew.
 
 The rain outside seemed to intensify, as if the city itself was crying for all the wrongs that had been done in its name.`,
           bridgeText: 'The truth begins to emerge.',
         },
         subchapterC: {
           title: 'The Choice',
-          narrative: `By the time I pieced together what the documents meant, the sun had set and risen again. I'd spent the night in that warehouse, surrounded by ghosts of cases past, trying to make sense of a career that suddenly felt like a lie.
+          narrative: `By the time Jack pieced together what the documents meant, the sun had set and risen again. He'd spent the night in that warehouse, surrounded by ghosts of cases past, trying to make sense of a career that suddenly felt like a lie.
 
 The evidence pointed in two directions. Two paths forward. Each one leading to different truths, different consequences.
 
-On one hand, I could follow the paper trail that led to the highest levels of the department. The kind of investigation that would burn bridges and end careers—mine included. But it might expose the full scope of what had been done.
+On one hand, he could follow the paper trail that led to the highest levels of the department. The kind of investigation that would burn bridges and end careers—his included. But it might expose the full scope of what had been done.
 
-On the other hand, I could focus on the individual cases. The people who'd been hurt. The innocents who might still be saved. A smaller scope, but perhaps more tangible results.
+On the other hand, he could focus on the individual cases. The people who'd been hurt. The innocents who might still be saved. A smaller scope, but perhaps more tangible results.
 
-My phone rang. Sarah's name on the screen. My former partner, the only person in this city I still trusted.
+His phone rang. Sarah's name on the screen. His former partner, the only person in this city he still trusted.
 
 "Jack, I've been doing some digging," she said without preamble. "Whatever you're into, it's bigger than you think. I've got contacts who want to help, but you need to choose your battles carefully."
 
@@ -867,63 +867,63 @@ She was right. She usually was.
 
 The Confessor's game had brought me here, to this moment of decision. Victoria wanted me to understand the cost of certainty, the price of closing cases without questioning the evidence.
 
-Well, I understood now. The question was what I was going to do about it.
+Well, Jack understood now. The question was what he was going to do about it.
 
-Two paths. Two possibilities. The rain kept falling, and Ashport kept its secrets, waiting to see which road I'd choose.`,
+Two paths. Two possibilities. The rain kept falling, and Ashport kept its secrets, waiting to see which road he'd choose.`,
           bridgeText: 'A crucial decision awaits.',
         },
       },
       complications: {
         subchapterA: {
           title: 'Walls Closing In',
-          narrative: `Three days since my last lead went cold. Three days of paranoia and dead ends and the growing certainty that someone was watching my every move.
+          narrative: `Three days since Jack's last lead went cold. Three days of paranoia and dead ends and the growing certainty that someone was watching his every move.
 
-The walls of my office felt closer than they used to. Murphy's Bar below had gone quiet—too quiet for this time of night. Even the jukebox had stopped playing.
+The walls of his office felt closer than they used to. Murphy's Bar below had gone quiet—too quiet for this time of night. Even the jukebox had stopped playing.
 
-I checked the window. A car I didn't recognize sat across the street, engine running, headlights off. Could be nothing. Could be everything.
+Jack checked the window. A car he didn't recognize sat across the street, engine running, headlights off. Could be nothing. Could be everything.
 
-The Confessor's latest envelope had arrived that morning. This one was different. More urgent. The silver ink spelled out a name I hadn't thought about in years, attached to a case I'd considered closed.
+The Confessor's latest envelope had arrived that morning. This one was different. More urgent. The silver ink spelled out a name he hadn't thought about in years, attached to a case he'd considered closed.
 
 Nothing was closed anymore.
 
-I pulled out the case file I'd kept hidden in my desk drawer. Seven years of dust on the cover, but the details were burned into my memory. Emily Cross. Art student. Missing person case that became a death investigation when we found evidence of suicide.
+He pulled out the case file he'd kept hidden in his desk drawer. Seven years of dust on the cover, but the details were burned into his memory. Emily Cross. Art student. Missing person case that became a death investigation when they found evidence of suicide.
 
-Only now I was learning we might have been wrong. That she might have survived. That everything I thought I knew about that case—about a lot of cases—was built on foundations of sand.
+Only now he was learning they might have been wrong. That she might have survived. That everything he thought he knew about that case—about a lot of cases—was built on foundations of sand.
 
-My phone buzzed. Unknown number again.
+His phone buzzed. Unknown number again.
 
 "Time is running out, Jack. The people who built this system are getting nervous. They know you're asking questions. They're taking steps to ensure those questions stop."
 
-The line went dead before I could respond.
+The line went dead before he could respond.
 
-I grabbed my coat and gun. Whatever was coming, I couldn't face it sitting still. The streets of Ashport awaited, rain-slicked and treacherous as always.`,
+Jack grabbed his coat and gun. Whatever was coming, he couldn't face it sitting still. The streets of Ashport awaited, rain-slicked and treacherous as always.`,
           bridgeText: 'The stakes continue to rise.',
         },
         subchapterB: {
           title: 'Betrayal\'s Edge',
           narrative: `The meeting was set for midnight. An informant who claimed to have proof of evidence tampering going back two decades. The kind of information that could bring down half the department.
 
-I should have known it was too good to be true.
+Jack should have known it was too good to be true.
 
-The warehouse was empty when I arrived. No informant. No evidence. Just shadows and the echo of footsteps that weren't mine.
+The warehouse was empty when he arrived. No informant. No evidence. Just shadows and the echo of footsteps that weren't his.
 
 "You came alone," a voice said from the darkness. "That was either brave or stupid."
 
-I recognized the voice. Someone I'd trusted. Someone I'd worked with for years. The betrayal hit harder than any bullet could.
+Jack recognized the voice. Someone he'd trusted. Someone he'd worked with for years. The betrayal hit harder than any bullet could.
 
-"Why?" I asked, though part of me already knew the answer.
+"Why?" Jack asked, though part of him already knew the answer.
 
 "Because some secrets are worth killing for, Jack. And you're getting too close to all of them."
 
-The first shot went wide. The second one would have found its mark if I hadn't moved when I did. Years of instinct, survival reflexes that wouldn't quit even when my conscious mind had given up.
+The first shot went wide. The second one would have found its mark if he hadn't moved when he did. Years of instinct, survival reflexes that wouldn't quit even when his conscious mind had given up.
 
-I ran. Through the warehouse, out a back exit, into the rain-soaked streets of Ashport. Behind me, I could hear pursuit. Ahead of me, only uncertainty.
+He ran. Through the warehouse, out a back exit, into the rain-soaked streets of Ashport. Behind him, he could hear pursuit. Ahead of him, only uncertainty.
 
-The city that had been my home for thirty years had become a maze of enemies. Every shadow held a potential threat. Every familiar face might be hiding treachery.
+ The city that had been his home for thirty years had become a maze of enemies. Every shadow held a potential threat. Every familiar face might be hiding treachery.
 
-But I kept moving. Because stopping meant dying, and I wasn't ready to die. Not yet. Not until I knew the full truth about what I'd helped build with my career of certainty and closed cases.
+But he kept moving. Because stopping meant dying, and he wasn't ready to die. Not yet. Not until he knew the full truth about what he'd helped build with his career of certainty and closed cases.
 
-The rain washed the blood from my hands—I'd cut myself on broken glass during the escape—but it couldn't wash away the stain on my conscience. That would take more than water.`,
+The rain washed the blood from his hands—he'd cut himself on broken glass during the escape—but it couldn't wash away the stain on his conscience. That would take more than water.`,
           bridgeText: 'Trust shatters.',
         },
         subchapterC: {
@@ -5191,14 +5191,24 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // Common first-person tokens -> third-person equivalents (close on Jack)
       const replacements = {
         'i': 'Jack',
-        "i'd": "Jack had",
-        "i've": "Jack had",
-        "i'll": "Jack would",
-        "i'm": "Jack was",
+        // Contractions (best-effort; fallback text only)
+        "i'd": "Jack had",   // ambiguous (had/would); "had" is safer in past-tense narration
+        "i've": "Jack has",
+        "i'll": "Jack will",
+        "i'm": "Jack is",
         'me': 'him',
         'my': 'his',
         'mine': 'his',
         'myself': 'himself',
+        'we': 'they',
+        "we've": 'they have',
+        "we'd": 'they had',
+        "we'll": 'they will',
+        "we're": 'they are',
+        'us': 'them',
+        'our': 'their',
+        'ours': 'theirs',
+        'ourselves': 'themselves',
       };
 
       if (replacements[lower]) {
