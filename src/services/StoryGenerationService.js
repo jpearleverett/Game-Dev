@@ -557,6 +557,26 @@ const MASTER_SYSTEM_PROMPT = `You are writing "Dead Letters," an interactive noi
 ## YOUR ROLE
 You continue the story of Jack Halloway, a retired detective confronting the wrongful convictions built on his career. The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
 
+## CONTINUATION MANDATE - THIS IS YOUR PRIMARY DIRECTIVE
+**You are continuing an ongoing story. You are NOT summarizing or starting fresh.**
+
+Your narrative MUST:
+1. **PICK UP EXACTLY** where the previous subchapter ended - continue the scene mid-action if needed
+2. **NEVER SKIP** scenes or events - if the player chose to go somewhere, SHOW them going there
+3. **NEVER SUMMARIZE** as past events what hasn't been shown yet - the reader hasn't seen it happen
+4. **SHOW, DON'T TELL** - write the actual scenes, not "After Jack did X, he then Y..."
+
+If subchapter A ended with "Jack reached for the door handle," subchapter B must start with what happens NEXT - the door opening, what's behind it, the sensory experience of entering.
+
+If the player made a decision at the end of the previous chapter (subchapter C), your new chapter MUST:
+- OPEN with the scene of Jack actively pursuing that choice
+- SHOW the action happening in real-time, not as a past event
+- Dedicate the first 200+ words to the actual scene of the chosen action
+- Include dialogue and reactions from characters Jack encounters
+
+**WRONG**: "After Jack confronted Wade at the wharf, he made his way back..."
+**RIGHT**: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."
+
 ## CRITICAL CONSTRAINTS - NEVER VIOLATE THESE
 1. You write in THIRD-PERSON LIMITED, PAST TENSE, tightly aligned to Jack Halloway (close noir narration)
 2. You NEVER contradict established facts from previous chapters
@@ -2947,6 +2967,7 @@ Generate realistic, specific consequences based on the actual narrative content.
 
   /**
    * Get generated story entry (or null if not generated)
+   * First checks in-memory cache, then falls back to storage
    */
   getGeneratedEntry(caseNumber, pathKey) {
     if (!this.generatedStory?.chapters) return null;
@@ -2954,16 +2975,44 @@ Generate realistic, specific consequences based on the actual narrative content.
     return this.generatedStory.chapters[key] || null;
   }
 
+  /**
+   * Get generated story entry with async storage fallback
+   * Ensures entries are found even if not in memory cache
+   */
+  async getGeneratedEntryAsync(caseNumber, pathKey) {
+    // First try in-memory cache
+    const memoryEntry = this.getGeneratedEntry(caseNumber, pathKey);
+    if (memoryEntry) return memoryEntry;
+
+    // Fall back to storage
+    const { getGeneratedEntry: getFromStorage } = await import('../storage/generatedStoryStorage');
+    const storageEntry = await getFromStorage(caseNumber, pathKey);
+
+    // If found in storage, add to memory cache
+    if (storageEntry && this.generatedStory?.chapters) {
+      const key = `${caseNumber}_${pathKey}`;
+      this.generatedStory.chapters[key] = storageEntry;
+    }
+
+    return storageEntry;
+  }
+
   // ==========================================================================
-  // CONTEXT BUILDING - Smart summarization for token efficiency
+  // CONTEXT BUILDING - Full story context for 1M token window
   // ==========================================================================
 
   /**
-   * Build comprehensive story context with intelligent windowing
-   * Recent chapters get full text, older chapters get compressed summaries
-   * Now includes path personality, decision consequences, and narrative threads
+   * Build comprehensive story context with FULL story history
+   * With 1M token context window, we include ALL previous content without truncation
+   * Ensures proper continuation from exactly where the previous subchapter ended
    */
   async buildStoryContext(targetChapter, targetSubchapter, pathKey, choiceHistory = []) {
+    // Ensure service is initialized and has loaded story from storage
+    if (!this.generatedStory) {
+      console.log('[StoryGenerationService] Service not initialized, loading story from storage...');
+      await this.init();
+    }
+
     // Analyze player's path personality for narrative consistency
     const pathPersonality = this._analyzePathPersonality(choiceHistory);
     this.pathPersonality = pathPersonality;
@@ -2986,7 +3035,7 @@ Generate realistic, specific consequences based on the actual narrative content.
       narrativeThreads: [], // Active story threads to maintain
     };
 
-    // Add Chapter 1 content (static)
+    // Add Chapter 1 content (static) - FULL TEXT
     for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
       const caseNum = formatCaseNumber(1, sub);
       const entry = getStoryEntry(caseNum, 'ROOT');
@@ -2998,54 +3047,66 @@ Generate realistic, specific consequences based on the actual narrative content.
           title: entry.title || `Chapter 1.${sub}`,
           narrative: entry.narrative,
           decision: entry.decision || null,
-          chapterSummary: null, // Static chapters don't have generated summaries
-          isRecent: targetChapter <= 3, // Chapter 1 is "recent" for early chapters
+          chapterSummary: entry.chapterSummary || null,
+          isRecent: true, // Mark all as recent to include full text
         });
       }
     }
 
-    // Add generated chapters 2 onwards with smart windowing
+    // Add ALL generated chapters 2 onwards - FULL TEXT, NO TRUNCATION
+    // Use async method to ensure we load from storage if not in memory
     for (let ch = 2; ch < targetChapter; ch++) {
       const chapterPathKey = this._getPathKeyForChapter(ch, choiceHistory);
       for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
         const caseNum = formatCaseNumber(ch, sub);
-        const entry = this.getGeneratedEntry(caseNum, chapterPathKey);
+        // Use async method to ensure entries are loaded from storage
+        const entry = await this.getGeneratedEntryAsync(caseNum, chapterPathKey);
         if (entry?.narrative) {
-          // Recent chapters (within 2) get full text
-          // Older chapters get compressed
-          const isRecent = ch >= targetChapter - 2;
           context.previousChapters.push({
             chapter: ch,
             subchapter: sub,
             pathKey: chapterPathKey,
             title: entry.title || `Chapter ${ch}.${sub}`,
-            narrative: entry.narrative,
-            chapterSummary: entry.chapterSummary || null, // Use generated summary if available
+            narrative: entry.narrative, // FULL narrative, no truncation
+            chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
-            isRecent,
+            isRecent: true, // Mark all as recent to include full text
           });
+        } else {
+          console.warn(`[StoryGenerationService] Missing chapter ${ch}.${sub} (${caseNum}) for path ${chapterPathKey}`);
         }
       }
     }
 
-    // Add current chapter's previous subchapters (always full detail)
+    // Add current chapter's previous subchapters - FULL TEXT
     if (targetSubchapter > 1) {
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
-        const entry = this.getGeneratedEntry(caseNum, pathKey);
+        const entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
         if (entry?.narrative) {
           context.previousChapters.push({
             chapter: targetChapter,
             subchapter: sub,
             pathKey,
             title: entry.title || `Chapter ${targetChapter}.${sub}`,
-            narrative: entry.narrative,
+            narrative: entry.narrative, // FULL narrative, no truncation
             chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
             isRecent: true, // Current chapter always recent
           });
+        } else {
+          console.warn(`[StoryGenerationService] Missing current chapter ${targetChapter}.${sub} (${caseNum})`);
         }
       }
+    }
+
+    // Log context size for debugging
+    const totalNarrativeChars = context.previousChapters.reduce(
+      (sum, ch) => sum + (ch.narrative?.length || 0), 0
+    );
+    console.log(`[StoryGenerationService] Context built: ${context.previousChapters.length} subchapters, ${totalNarrativeChars} chars of narrative`);
+    if (context.previousChapters.length === 0) {
+      console.warn('[StoryGenerationService] WARNING: No previous chapters found! Story context may be empty.');
     }
 
     // Add choice history (including title/focus for LLM prompt context)
@@ -3218,16 +3279,16 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
-   * Build story summary with intelligent compression
+   * Build COMPLETE story history with FULL narratives
+   *
+   * With 1M token context window, we include the ENTIRE story text.
+   * This ensures the LLM has full context for proper continuation.
    */
   _buildStorySummarySection(context) {
-    let summary = '## PREVIOUS STORY EVENTS\n\n';
-    const cw = GENERATION_CONFIG?.contextWindowing || {};
-    const MAX_OLDER = cw.maxOlderChapterEntries ?? 8;
-    const MAX_RECENT = cw.maxRecentChapterEntries ?? 4;
-    const MAX_RECENT_CHARS = cw.maxRecentNarrativeCharsPerEntry ?? 1200;
-    const MAX_CURRENT_CHARS = cw.maxCurrentChapterBackrefCharsPerEntry ?? 1600;
-    const MAX_PREV_CHARS = cw.maxPreviousEventsChars ?? 14000;
+    let summary = '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
+    summary += '**CRITICAL: You are continuing an ongoing story. Read ALL of this carefully.**\n';
+    summary += '**Your new subchapter MUST continue EXACTLY from where the previous subchapter ended.**\n';
+    summary += '**DO NOT summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.**\n\n';
 
     // Build quick lookup: decision chapter -> choice object (from choice history)
     const choicesByChapter = new Map();
@@ -3237,73 +3298,124 @@ Generate realistic, specific consequences based on the actual narrative content.
       });
     }
 
-    // Group chapters by recency
-    const recentChapters = context.previousChapters.filter(ch => ch.isRecent);
-    const olderChapters = context.previousChapters.filter(ch => !ch.isRecent);
+    // Sort all chapters chronologically
+    const allChapters = [...context.previousChapters].sort((a, b) => {
+      if (a.chapter !== b.chapter) return a.chapter - b.chapter;
+      return a.subchapter - b.subchapter;
+    });
 
-    const truncateEnd = (text, maxChars) => {
-      if (!text || typeof text !== 'string') return '';
-      if (text.length <= maxChars) return text;
-      // Keep the end so we preserve immediate continuity hooks.
-      return `…${text.slice(-maxChars)}`;
-    };
+    // Track the immediately preceding subchapter for emphasis
+    const currentChapter = context.currentPosition?.chapter;
+    const currentSubchapter = context.currentPosition?.subchapter;
 
-    const summarizeEntry = (ch) => {
-      if (ch.chapterSummary) return ch.chapterSummary;
-      // Fallback: first 2-3 sentences
-      const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
-      return sentences.slice(0, 3).join(' ').trim();
-    };
-
-    // Summarize older chapters (compressed)
-    if (olderChapters.length > 0) {
-      summary += '### EARLIER CHAPTERS (Summary)\n';
-      for (const ch of olderChapters.slice(-MAX_OLDER)) {
-        summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}": `;
-
-        summary += summarizeEntry(ch);
-        summary += '\n\n';
-      }
+    // Find the immediately previous subchapter
+    let immediatelyPrevious = null;
+    if (currentSubchapter > 1) {
+      // Previous subchapter in same chapter
+      immediatelyPrevious = allChapters.find(
+        ch => ch.chapter === currentChapter && ch.subchapter === currentSubchapter - 1
+      );
+    } else if (currentChapter > 1) {
+      // Last subchapter of previous chapter
+      immediatelyPrevious = allChapters.find(
+        ch => ch.chapter === currentChapter - 1 && ch.subchapter === 3
+      );
     }
 
-    // Recent chapters: include limited excerpts (not full text) to reduce token load.
-    if (recentChapters.length > 0) {
-      summary += '### RECENT CHAPTERS (Key Excerpts - Maintain Continuity)\n';
-      for (const ch of recentChapters.slice(-MAX_RECENT)) {
-        summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}"\n`;
+    // Include FULL narratives for ALL chapters
+    for (const ch of allChapters) {
+      const isImmediatelyPrevious = (
+        immediatelyPrevious &&
+        ch.chapter === immediatelyPrevious.chapter &&
+        ch.subchapter === immediatelyPrevious.subchapter
+      );
 
-        const isCurrentChapterBackref = (
-          context?.currentPosition?.chapter === ch.chapter &&
-          context?.currentPosition?.subchapter > ch.subchapter
-        );
-        const maxChars = isCurrentChapterBackref ? MAX_CURRENT_CHARS : MAX_RECENT_CHARS;
-        summary += `${truncateEnd(ch.narrative, maxChars)}\n`;
+      // Chapter header with emphasis for immediately previous
+      if (isImmediatelyPrevious) {
+        summary += `\n${'='.repeat(80)}\n`;
+        summary += `### >>> IMMEDIATELY PREVIOUS SUBCHAPTER - CONTINUE FROM HERE <<<\n`;
+        summary += `### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n`;
+        summary += `${'='.repeat(80)}\n\n`;
+      } else {
+        summary += `\n### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n\n`;
+      }
 
-        // If this was a decision subchapter, record the actual choice made (from choice history).
-        if (ch.subchapter === 3) {
-          const choice = choicesByChapter.get(ch.chapter);
-          if (choice?.optionKey) {
-            const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
-            summary += `[DECISION AT END OF CHAPTER: Player chose Option "${choice.optionKey}"${title}. The consequence scene has NOT happened yet; it MUST OPEN the next chapter.]\n`;
+      // Include the FULL narrative text - NO TRUNCATION
+      if (ch.narrative) {
+        summary += ch.narrative;
+        summary += '\n';
+      }
+
+      // Mark decision points and what the player chose
+      if (ch.subchapter === 3) {
+        const choice = choicesByChapter.get(ch.chapter);
+        if (choice?.optionKey) {
+          const title = choice.optionTitle ? ` "${choice.optionTitle}"` : '';
+          const focus = choice.optionFocus ? `\n   Focus: ${choice.optionFocus}` : '';
+          summary += `\n[>>> PLAYER DECISION at end of Chapter ${ch.chapter}: CHOSE OPTION ${choice.optionKey}${title}${focus}`;
+
+          // If this is the most recent decision affecting current chapter
+          if (ch.chapter === currentChapter - 1) {
+            summary += `\n   *** THIS CHOICE MUST DRIVE THE OPENING OF YOUR NARRATIVE ***`;
+            summary += `\n   *** SHOW THIS SCENE HAPPENING - DO NOT SKIP OR SUMMARIZE IT ***`;
           }
+          summary += `]\n`;
         }
-        summary += '\n---\n\n';
+
+        // Also show the decision options that were presented
+        if (ch.decision?.options) {
+          summary += `\n[Decision options were:\n`;
+          ch.decision.options.forEach(opt => {
+            const chosen = choice?.optionKey === opt.key ? ' ← CHOSEN' : '';
+            summary += `   ${opt.key}: "${opt.title}" - ${opt.focus}${chosen}\n`;
+          });
+          summary += `]\n`;
+        }
       }
+
+      // Emphasize continuation point
+      if (isImmediatelyPrevious) {
+        summary += `\n${'='.repeat(80)}\n`;
+        summary += `>>> YOUR NARRATIVE MUST CONTINUE FROM THE END OF THIS TEXT <<<\n`;
+
+        // Extract and highlight the last few sentences
+        const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
+        if (sentences.length > 0) {
+          const lastSentences = sentences.slice(-3).join(' ').trim();
+          summary += `\nTHE STORY ENDED WITH:\n"${lastSentences}"\n`;
+          summary += `\n>>> PICK UP EXACTLY HERE. What happens NEXT? <<<\n`;
+        }
+        summary += `${'='.repeat(80)}\n`;
+      }
+
+      summary += '\n---\n';
     }
 
-    // Add player choice history
+    // Add explicit player choice history section
     if (context.playerChoices.length > 0) {
-      summary += '### PLAYER CHOICE HISTORY\n';
+      summary += '\n### PLAYER CHOICE HISTORY (All decisions made)\n';
       context.playerChoices.forEach(choice => {
         const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
-        summary += `- Chapter ${choice.chapter}: Chose option "${choice.optionKey}"${title}\n`;
+        const focus = choice.optionFocus ? ` (${choice.optionFocus})` : '';
+        summary += `- Chapter ${choice.chapter} Decision: Option ${choice.optionKey}${title}${focus}\n`;
       });
+      summary += '\n';
     }
 
-    // Hard cap: keep this section from ballooning.
-    if (summary.length > MAX_PREV_CHARS) {
-      summary = `${summary.slice(0, MAX_PREV_CHARS)}\n\n[TRUNCATED FOR CONTEXT WINDOW LIMITS]\n`;
+    // Add strong continuation reminder at the end
+    summary += `\n${'#'.repeat(80)}\n`;
+    summary += `## CONTINUATION REQUIREMENTS\n\n`;
+    summary += `You are writing Chapter ${currentChapter}, Subchapter ${currentSubchapter} (${['A', 'B', 'C'][currentSubchapter - 1]}).\n\n`;
+    summary += `1. **DO NOT** summarize or recap what happened - the player already read it\n`;
+    summary += `2. **DO NOT** skip scenes or time jumps without showing what happened\n`;
+    summary += `3. **START** your narrative exactly where the previous subchapter ended\n`;
+    summary += `4. **CONTINUE** the story in real-time, scene by scene\n`;
+    if (currentSubchapter === 1 && context.lastDecision) {
+      summary += `5. **CRITICAL**: The player chose "${context.lastDecision.chosenTitle || 'Option ' + context.lastDecision.optionKey}" - SHOW THIS SCENE HAPPENING NOW\n`;
+      summary += `   - DO NOT write "After Jack did X..." - WRITE THE SCENE OF JACK DOING X\n`;
+      summary += `   - First 200+ words should be the actual scene of the chosen action\n`;
     }
+    summary += `${'#'.repeat(80)}\n`;
 
     return summary;
   }
