@@ -3131,11 +3131,11 @@ Generate realistic, specific consequences based on the actual narrative content.
     const MAX_CURRENT_CHARS = cw.maxCurrentChapterBackrefCharsPerEntry ?? 1600;
     const MAX_PREV_CHARS = cw.maxPreviousEventsChars ?? 14000;
 
-    // Build quick lookup: chapter -> chosen optionKey (from choice history)
+    // Build quick lookup: decision chapter -> choice object (from choice history)
     const choicesByChapter = new Map();
     if (Array.isArray(context.playerChoices)) {
       context.playerChoices.forEach((c) => {
-        if (c?.chapter) choicesByChapter.set(c.chapter, c.optionKey);
+        if (c?.chapter) choicesByChapter.set(c.chapter, c);
       });
     }
 
@@ -3184,8 +3184,9 @@ Generate realistic, specific consequences based on the actual narrative content.
         // If this was a decision subchapter, record the actual choice made (from choice history).
         if (ch.subchapter === 3) {
           const choice = choicesByChapter.get(ch.chapter);
-          if (choice) {
-            summary += `[DECISION MADE: Chapter ${ch.chapter} => Option "${choice}"]\n`;
+          if (choice?.optionKey) {
+            const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
+            summary += `[DECISION AT END OF CHAPTER: Player chose Option "${choice.optionKey}"${title}. The consequence scene has NOT happened yet; it MUST OPEN the next chapter.]\n`;
           }
         }
         summary += '\n---\n\n';
@@ -3196,7 +3197,8 @@ Generate realistic, specific consequences based on the actual narrative content.
     if (context.playerChoices.length > 0) {
       summary += '### PLAYER CHOICE HISTORY\n';
       context.playerChoices.forEach(choice => {
-        summary += `- Chapter ${choice.chapter}: Chose path "${choice.optionKey}"\n`;
+        const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
+        summary += `- Chapter ${choice.chapter}: Chose option "${choice.optionKey}"${title}\n`;
       });
     }
 

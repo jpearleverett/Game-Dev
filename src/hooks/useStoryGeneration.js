@@ -78,12 +78,50 @@ export function useStoryGeneration(storyCampaign) {
       choiceHistoryLength: choiceHistory?.length || 0,
     }, 'info');
 
+    // Best-effort: pull the decision's option titles/focus so the LLM sees WHAT "A"/"B" means
+    // when we generate the next chapter. This is especially important for prefetch generation,
+    // because the optimistic choice history otherwise contains only abstract keys.
+    //
+    // This should usually be available because this runs when entering/finishing subchapter C.
+    const decisionPathKey = computeBranchPathKey(choiceHistory, currentChapter) || 'ROOT';
+    let decisionEntry = null;
+    try {
+      decisionEntry = await getStoryEntryAsync(decisionCaseNumber, decisionPathKey);
+    } catch (e) {
+      // Best-effort only.
+      decisionEntry = null;
+    }
+
+    const getOptionDetails = (optionKey) => {
+      const d = decisionEntry?.decision;
+      if (!d) return { optionTitle: null, optionFocus: null };
+
+      // Current schema: decision.optionA / decision.optionB
+      if (optionKey === 'A' && d.optionA) {
+        return { optionTitle: d.optionA.title || null, optionFocus: d.optionA.focus || null };
+      }
+      if (optionKey === 'B' && d.optionB) {
+        return { optionTitle: d.optionB.title || null, optionFocus: d.optionB.focus || null };
+      }
+
+      // Back-compat: decision.options[]
+      if (Array.isArray(d.options)) {
+        const opt = d.options.find((o) => o?.key === optionKey);
+        return { optionTitle: opt?.title || null, optionFocus: opt?.focus || null };
+      }
+
+      return { optionTitle: null, optionFocus: null };
+    };
+
     const startOne = async (optionKey) => {
+      const { optionTitle, optionFocus } = getOptionDetails(optionKey);
       const optimisticHistory = [
         ...(choiceHistory || []),
         {
           caseNumber: decisionCaseNumber,
           optionKey,
+          optionTitle,
+          optionFocus,
           timestamp: new Date().toISOString(),
         },
       ];
