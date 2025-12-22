@@ -6662,50 +6662,58 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     if (!s) return false;
 
     // =======================================================================
-    // HARD FAILURES - Only truly story-breaking canonical violations
-    // These are facts that would confuse the player if wrong
+    // HARD FAILURES - Story-breaking issues that must be fixed
+    //
+    // Philosophy: We want a "pretty great" 12-chapter experience while
+    // ensuring generation succeeds. Hard failures are reserved for:
+    // 1. Things that confuse the player about basic facts
+    // 2. Things that break player agency (their choices must matter)
+    // 3. Things that create logical impossibilities
     // =======================================================================
 
+    // --- TIER 1: IDENTITY & WORLD FACTS ---
     // Critical name misspellings that would confuse the player
     if (s.startsWith('Name misspelled:')) return true;
 
-    // Wrong alcohol brand (Jack's signature vice)
+    // Wrong alcohol brand (Jack's signature vice - establishes character)
     if (s.includes('Jack drinks Jameson whiskey')) return true;
 
     // Sunny weather breaks noir atmosphere completely
     if (s.includes('Ashport is ALWAYS rainy')) return true;
 
+    // --- TIER 2: PLAYER AGENCY (Critical for branching narrative) ---
+    // If the player made a choice, the story MUST reflect that choice
+    // This is the core promise of a branching narrative game
+    if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;
+    if (s.includes('contradicts player choice')) return true;
+    if (s.includes('ignores chosen path')) return true;
+
+    // --- TIER 3: LOGICAL IMPOSSIBILITIES ---
+    // Dead characters cannot appear alive without explanation
+    if (s.includes('character is dead') && s.includes('appears alive')) return true;
+    if (s.includes('deceased character speaking')) return true;
+
+    // Major revelations cannot be "re-discovered" - breaks mystery pacing
+    if (s.includes('already revealed') && s.includes('re-discovers')) return true;
+    if (s.includes('Victoria is Emily') && s.includes('re-reveal')) return true;
+
     // =======================================================================
     // SOFT FAILURES - Convert to warnings, don't block generation
-    // These matter for quality but won't break the story
+    // These matter for quality but players are forgiving of minor issues
     // =======================================================================
 
     // Thread continuity - important but not worth failing over
-    // The LLM will usually address threads even if not perfectly
     // if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;  // DISABLED
     // if (s.startsWith('OVERDUE THREAD ERROR:')) return true;  // DISABLED
-    // if (s.startsWith('OVERDUE APPOINTMENTS:')) return true;  // DISABLED
-    // if (s.startsWith('OVERDUE PROMISES:')) return true;  // DISABLED
-
-    // Decision causality - nice to have but story continues fine without
-    // if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;  // DISABLED
 
     // Story day mismatch - minor, player won't notice
     // if (s.startsWith('STORY DAY MISMATCH:')) return true;  // DISABLED
 
     // Timeline approximations - close enough is fine
-    // if (s.includes('friendship is 30 years')) return true;  // DISABLED
-    // if (s.includes('partnership is 13 years')) return true;  // DISABLED
-    // if (s.includes('partnership is 8 years')) return true;  // DISABLED
-    // if (s.includes('Emily case was closed 7 years')) return true;  // DISABLED
-    // if (s.includes('Eleanor has been imprisoned for 8 years')) return true;  // DISABLED
     // if (s.includes('Timeline approximation')) return true;  // DISABLED
 
     // Personality enforcement - Jack can have emotional moments
     // if (s.startsWith('PERSONALITY VIOLATION:')) return true;  // DISABLED
-    // if (s.startsWith('BEHAVIOR DECLARATION MISMATCH:')) return true;  // DISABLED
-    // if (s.startsWith('Jack\'s action style mismatch:')) return true;  // DISABLED
-    // if (s.startsWith('Jack\'s risk level mismatch:')) return true;  // DISABLED
 
     return false;
   }
