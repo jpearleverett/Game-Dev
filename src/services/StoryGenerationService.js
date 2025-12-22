@@ -1260,8 +1260,6 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
   _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
     const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. Jack pulled his coat tighter and stepped into the night.
 
-Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing me closer to truths I wasn't sure I wanted to face. But there was no turning back now. Not after everything I'd seen.
-
 Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing him closer to truths he wasn't sure he wanted to face. But there was no turning back now. Not after everything he'd seen.
 
 Murphy's Bar was quiet below his office. The usual crowd had dispersed, leaving only ghosts and memories. Jack poured a glass of Jameson and let the familiar burn keep him anchored in the present.
