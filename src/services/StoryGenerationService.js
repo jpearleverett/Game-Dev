@@ -2032,7 +2032,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     const decisionIntro = decisionEntry?.decision?.intro?.[0] || '';
     const activeThreads = (
       decisionEntry?.consistencyFacts ||
-      this.storyContext?.consistencyFacts ||
+      this._getRelevantPersistedConsistencyFacts(decisionPathKey) ||
       []
     ).slice(0, 5);
     const charactersInvolved = decisionEntry?.decision?.options?.flatMap(o => o.characters || []) || [];
@@ -2996,14 +2996,14 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Extract established facts from generated content
     context.establishedFacts = this._extractEstablishedFacts(context.previousChapters);
 
-    // IMPORTANT: Persisted storage may strip per-entry consistencyFacts to save space.
-    // Merge in the rolling fact log from storyContext so continuity survives app restarts.
-    if (this.storyContext?.consistencyFacts && Array.isArray(this.storyContext.consistencyFacts)) {
+    // IMPORTANT:
+    // Persisted storage strips per-entry consistencyFacts to save space.
+    // We persist a rolling fact log keyed BY PATH to prevent branch-bleed from background prefetch.
+    // Only merge facts whose pathKey is relevant (prefix of current path).
+    const persistedFacts = this._getRelevantPersistedConsistencyFacts(pathKey);
+    if (persistedFacts.length > 0) {
       context.establishedFacts = [
-        ...new Set([
-          ...(context.establishedFacts || []),
-          ...this.storyContext.consistencyFacts,
-        ]),
+        ...new Set([...(context.establishedFacts || []), ...persistedFacts]),
       ];
     }
 
@@ -7777,7 +7777,10 @@ If no conflicts, return: {"conflicts": []}`;
       plotPoints: [],
       revelations: [],
       relationships: {},
+      // Backward-compat rolling facts (do not use for generation anymore).
       consistencyFacts: [],
+      // Preferred: facts keyed by cumulative branch key.
+      consistencyFactsByPathKey: {},
     };
 
     context.lastGeneratedChapter = entry.chapter;
@@ -7786,14 +7789,88 @@ If no conflicts, return: {"conflicts": []}`;
 
     // Store consistency facts
     if (entry.consistencyFacts?.length > 0) {
+      const pk = entry.pathKey || 'ROOT';
+      if (!context.consistencyFactsByPathKey || typeof context.consistencyFactsByPathKey !== 'object') {
+        context.consistencyFactsByPathKey = {};
+      }
+
+      const existing = context.consistencyFactsByPathKey[pk];
+      const existingFacts = Array.isArray(existing?.facts) ? existing.facts : Array.isArray(existing) ? existing : [];
+      const merged = [...existingFacts, ...entry.consistencyFacts].slice(-50); // Keep last 50 per path
+      context.consistencyFactsByPathKey[pk] = {
+        facts: merged,
+        updatedAt: entry.generatedAt || new Date().toISOString(),
+      };
+
+      // Keep the legacy rolling array too (for older code paths / debug tooling),
+      // but generation should NOT consume it (it causes branch bleed).
       context.consistencyFacts = [
         ...(context.consistencyFacts || []),
         ...entry.consistencyFacts,
-      ].slice(-50); // Keep last 50 facts
+      ].slice(-50);
+
+      // Bound total number of stored paths to prevent unbounded growth from prefetching.
+      try {
+        const keys = Object.keys(context.consistencyFactsByPathKey || {});
+        const MAX_PATHS = 24;
+        if (keys.length > MAX_PATHS) {
+          // Prefer to keep prefixes of the current path (they're always relevant),
+          // then keep the most recently updated remaining paths.
+          const current = String(context.lastPathKey || 'ROOT');
+          const keep = new Set(keys.filter((k) => current.startsWith(k)));
+          const rest = keys
+            .filter((k) => !keep.has(k))
+            .sort((a, b) => {
+              const ta = new Date(context.consistencyFactsByPathKey[a]?.updatedAt || 0).getTime();
+              const tb = new Date(context.consistencyFactsByPathKey[b]?.updatedAt || 0).getTime();
+              return tb - ta; // newest first
+            });
+          for (const k of rest) {
+            if (keep.size >= MAX_PATHS) break;
+            keep.add(k);
+          }
+          for (const k of keys) {
+            if (!keep.has(k)) delete context.consistencyFactsByPathKey[k];
+          }
+        }
+      } catch (e) {
+        // Never block story saving for pruning issues.
+      }
     }
 
     this.storyContext = context;
     await saveStoryContext(context);
+  }
+
+  /**
+   * Return persisted consistency facts relevant to a given cumulative pathKey.
+   *
+   * We only include facts for path keys that are prefixes of the current pathKey,
+   * because those represent decisions the player actually made on the way here.
+   * This prevents branch bleed from background prefetching alternative paths.
+   */
+  _getRelevantPersistedConsistencyFacts(pathKey) {
+    const pk = String(pathKey || 'ROOT');
+    const ctx = this.storyContext || {};
+    const map = ctx.consistencyFactsByPathKey;
+
+    // Backward compatibility: old installs only have a single rolling array.
+    if (!map || typeof map !== 'object') {
+      return Array.isArray(ctx.consistencyFacts) ? ctx.consistencyFacts.slice(-50) : [];
+    }
+
+    const facts = [];
+    for (const [k, v] of Object.entries(map)) {
+      if (!k) continue;
+      if (!pk.startsWith(k)) continue;
+      if (Array.isArray(v)) {
+        facts.push(...v);
+      } else if (Array.isArray(v?.facts)) {
+        facts.push(...v.facts);
+      }
+    }
+    // Deduplicate while preserving insertion order-ish.
+    return [...new Set(facts)].slice(-80);
   }
 
   /**

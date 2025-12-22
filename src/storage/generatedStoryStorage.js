@@ -684,6 +684,14 @@ export function createBlankStoryContext() {
     // key format: "${caseNumber}_${optionKey}" => { immediate, ongoing, characterImpact }
     decisionConsequencesByKey: {},
 
+    // Persisted consistency facts keyed by cumulative branch key.
+    // This prevents branch-bleed when we prefetch both paths (e.g. "BA" vs "BB").
+    // Shape: { [pathKey]: { facts: string[], updatedAt: isoString } }
+    consistencyFactsByPathKey: {},
+    // Backward-compatibility for older installs (was a single rolling array).
+    // New code should prefer consistencyFactsByPathKey.
+    consistencyFacts: [],
+
     version: 1,
   };
 }
