@@ -534,20 +534,21 @@ export const GENERATION_CONFIG = {
   },
 
   // Context windowing - controls how much prior story text is sent to the LLM.
-  // Goal: keep generation fast and consistent without flooding the model with old prose.
+  // Optimized for models with large context windows (1M+ tokens).
+  // More context = better continuity, still fast with modern LLMs.
   contextWindowing: {
     // Older chapters: prefer summaries (cheaper + less drift)
-    maxOlderChapterEntries: 8,
-    // Recent chapters: include limited excerpts instead of full text
-    maxRecentChapterEntries: 4,
-    maxRecentNarrativeCharsPerEntry: 1200,
-    // Current chapter: keep continuity tight
-    maxCurrentChapterBackrefCharsPerEntry: 1600,
+    maxOlderChapterEntries: 10,
+    // Recent chapters: include substantial excerpts for continuity
+    maxRecentChapterEntries: 6,
+    maxRecentNarrativeCharsPerEntry: 4000,  // ~1000 words - nearly full chapters
+    // Current chapter: full context for seamless flow
+    maxCurrentChapterBackrefCharsPerEntry: 6000,  // Full sibling subchapters
     // Global cap for the whole PREVIOUS STORY EVENTS section
-    maxPreviousEventsChars: 14000,
-    // Facts/threads caps (avoid runaway)
-    maxFactsInPrompt: 40,
-    maxThreadsInPrompt: 15,
+    maxPreviousEventsChars: 50000,  // ~12k tokens - plenty of room with 1M context
+    // Facts/threads caps - generous to avoid losing important plot points
+    maxFactsInPrompt: 60,
+    maxThreadsInPrompt: 30,
   },
 
   // Word count requirements - optimized for fast background generation

@@ -3507,15 +3507,19 @@ ${EXAMPLE_PASSAGES.tenseMoment}
    * Build consistency verification section
    */
   _buildConsistencySection(context) {
+    const cw = GENERATION_CONFIG?.contextWindowing || {};
+    const maxFacts = cw.maxFactsInPrompt || 60;
+    const maxThreads = cw.maxThreadsInPrompt || 30;
+
     let section = `## CONSISTENCY VERIFICATION
 
 ### ESTABLISHED FACTS (Never contradict)
-${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
+${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
 
     // Add active narrative threads that need to be maintained
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
       const threadsByType = {};
-      context.narrativeThreads.slice(-15).forEach(t => {
+      context.narrativeThreads.slice(-maxThreads).forEach(t => {
         if (!threadsByType[t.type]) threadsByType[t.type] = [];
         threadsByType[t.type].push(t);
       });
@@ -3526,12 +3530,17 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       const criticalTypes = ['appointment', 'promise', 'threat'];
       const otherTypes = Object.keys(threadsByType).filter(t => !criticalTypes.includes(t));
 
+      // With larger context windows, we can include more threads per type
+      const maxPerCriticalType = 8;
+      const maxPerOtherType = 5;
+      const maxDescLen = 300;  // More detail per thread
+
       criticalTypes.forEach(type => {
         if (threadsByType[type] && threadsByType[type].length > 0) {
           section += `\n**[CRITICAL] ${type.toUpperCase()} (must be addressed):**`;
-          threadsByType[type].slice(-4).forEach(t => {
+          threadsByType[type].slice(-maxPerCriticalType).forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > 150 ? desc.slice(0, 150) + '...' : desc;
+            const truncatedDesc = desc.length > maxDescLen ? desc.slice(0, maxDescLen) + '...' : desc;
             section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
             if (t.characters && t.characters.length > 0) {
               section += ` [Characters: ${t.characters.join(', ')}]`;
@@ -3543,9 +3552,9 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       otherTypes.forEach(type => {
         if (threadsByType[type] && threadsByType[type].length > 0) {
           section += `\n**${type.toUpperCase()}:**`;
-          threadsByType[type].slice(-3).forEach(t => {
+          threadsByType[type].slice(-maxPerOtherType).forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > 150 ? desc.slice(0, 150) + '...' : desc;
+            const truncatedDesc = desc.length > maxDescLen ? desc.slice(0, maxDescLen) + '...' : desc;
             section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
           });
         }
