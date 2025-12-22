@@ -475,6 +475,16 @@ export async function pruneOldGenerations(currentPathKey, currentChapter, maxSiz
 
       // Higher score = more important to keep
 
+      // Always keep very recent chapters across ALL paths.
+      // This prevents accidental pruning of the player's real path when we prefetch/save
+      // alternative branches (where the "currentPathKey" used for pruning might not match
+      // the active playthrough).
+      const entryChapter = entry.chapter || 1;
+      const chapterDistance = Math.abs(currentChapter - entryChapter);
+      if (chapterDistance <= 2) {
+        score += 600; // pushes above the "never prune" threshold
+      }
+
       // Current path gets highest priority
       // With cumulative branch keys, earlier chapters will have shorter prefix keys.
       // Preserve any entry whose path key is a prefix of the current path.
@@ -489,13 +499,12 @@ export async function pruneOldGenerations(currentPathKey, currentChapter, maxSiz
       }
 
       // Recent chapters are more important
-      const entryChapter = entry.chapter || 1;
-      const chapterDistance = Math.abs(currentChapter - entryChapter);
       score += (12 - chapterDistance) * 10; // Closer chapters score higher
 
       // Subchapter C (decision points) are more important
       if (entry.subchapter === 3) {
-        score += 50;
+        // Decision points are continuity anchors; keep aggressively.
+        score += 650;
       }
 
       // Recently generated content is more important
