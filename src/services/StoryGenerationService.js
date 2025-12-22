@@ -4290,10 +4290,30 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     const reason = options?.reason || 'unspecified';
 
     // Deduplication: Return existing promise if generation is already in flight for this exact content
+    // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
+    const MAX_PENDING_AGE_MS = 3 * 60 * 1000; // 3 minutes
     if (this.pendingGenerations.has(generationKey)) {
-      console.log(`[StoryGenerationService] Reusing pending generation for ${generationKey}`);
-      llmTrace('StoryGenerationService', traceId, 'generation.dedupe.hit', { generationKey, caseNumber, pathKey, reason }, 'debug');
-      return this.pendingGenerations.get(generationKey);
+      const cachedPromise = this.pendingGenerations.get(generationKey);
+      const promiseAge = Date.now() - (cachedPromise._createdAt || 0);
+
+      if (promiseAge > MAX_PENDING_AGE_MS) {
+        // Promise is stale - likely hung or failed silently. Remove it and create a new one.
+        console.warn(`[StoryGenerationService] Pending generation for ${generationKey} is stale (${Math.round(promiseAge / 1000)}s old). Discarding and retrying.`);
+        llmTrace('StoryGenerationService', traceId, 'generation.dedupe.stale', {
+          generationKey,
+          caseNumber,
+          pathKey,
+          ageMs: promiseAge,
+          reason
+        }, 'warn');
+        this.pendingGenerations.delete(generationKey);
+        // Fall through to create a new generation
+      } else {
+        // Promise is still fresh - reuse it
+        console.log(`[StoryGenerationService] Reusing pending generation for ${generationKey}`);
+        llmTrace('StoryGenerationService', traceId, 'generation.dedupe.hit', { generationKey, caseNumber, pathKey, reason }, 'debug');
+        return cachedPromise;
+      }
     }
 
     // Acquire a generation slot (waits if at capacity)
@@ -4708,15 +4728,25 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     generationPromise._createdAt = Date.now();
     this.pendingGenerations.set(generationKey, generationPromise);
 
+    // Create a timeout promise to prevent indefinite hangs
+    // This matches MAX_PENDING_AGE_MS used in stale detection above
+    const GENERATION_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Generation timeout after ${GENERATION_TIMEOUT_MS / 1000}s for ${generationKey}`));
+      }, GENERATION_TIMEOUT_MS);
+    });
+
     try {
-      const result = await generationPromise;
+      // Race between the actual generation and the timeout
+      const result = await Promise.race([generationPromise, timeoutPromise]);
       this.pendingGenerations.delete(generationKey);
       return result;
     } catch (e) {
       this.pendingGenerations.delete(generationKey);
 
-      // Final fallback if even the inner fallback failed
-      console.error('[StoryGenerationService] Complete generation failure, using emergency fallback');
+      // Final fallback if even the inner fallback failed (or timeout occurred)
+      console.error(`[StoryGenerationService] Complete generation failure for ${generationKey}, using emergency fallback: ${e.message}`);
       const chapterNum = parseInt(caseNumber?.slice(0, 3)) || 2;
       const subchapterNum = parseInt(caseNumber?.slice(4, 5)) || 1;
       const isDecisionPoint = subchapterNum === 3;
