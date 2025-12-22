@@ -317,7 +317,7 @@ export const STORY_STRUCTURE = {
 // ============================================================================
 export const WRITING_STYLE = {
   voice: {
-    perspective: 'Third person, Jack Halloway',
+    perspective: 'Third person limited (close on Jack Halloway)',
     tense: 'Past tense',
     tone: 'Hard-boiled noir, world-weary, introspective',
   },
@@ -358,113 +358,113 @@ export const WRITING_STYLE = {
 // EXAMPLE PASSAGES - For Few-Shot Learning
 // ============================================================================
 export const EXAMPLE_PASSAGES = {
-  atmosphericOpening: `Rain fell on Ashport the way memory falls on the guilty, soft at first, then relentless. I stood at the window of what used to be my office, watching the neon bleed into the wet streets below. Murphy's jukebox bled through the floorboards, some torch song about a woman who left. They all leave eventually. That's the first lesson this city teaches you.
+  atmosphericOpening: `Rain fell on Ashport the way memory falls on the guilty, soft at first, then relentless. Jack stood at the window of what used to be his office, watching neon bleed into the wet streets below. Murphy's jukebox bled through the floorboards, some torch song about a woman who left. They all left eventually. That was the first lesson the city taught, and it never got tired of repeating itself.
 
-The envelope sat on my desk where I'd dropped it twenty minutes ago. Black paper, expensive. Red wax seal I didn't recognize. Inside, silver ink that caught what little light filtered through the blinds.
+The envelope sat on his desk where he’d dropped it twenty minutes ago. Black paper, expensive. A red wax seal he didn’t recognize. Inside, silver ink that caught what little light filtered through the blinds.
 
 "Twelve days. Twelve cases. One you closed without certainty."
 
-No signature. No return address. Just that, and a photograph I'd spent seven years trying to forget.`,
+No signature. No return address. Just that, and a photograph Jack had spent seven years trying to forget.`,
 
   dialogueExample: `"Tell me you're not involved." Sarah's voice cut through the static of the precinct radio. She'd driven all the way across town for this conversation, which meant she already knew the answer.
 
 "Define involved."
 
-"Don't." She stepped closer, and I could smell coffee and cigarettes, the perfume of every cop who's worked one case too many. "Twenty years, Jack. I watched you close cases other detectives wouldn't touch. I believed in you."
+"Don't." She stepped closer, and Jack caught coffee and cigarettes, the perfume of every cop who's worked one case too many. "Twenty years, Jack. I watched you close cases other detectives wouldn't touch. I believed in you."
 
 "Past tense."
 
-"Present tense. That's the problem." She set a manila folder on my desk, the kind that holds the end of a career. "Tom Wade. You want to tell me why your best friend's been manufacturing evidence since before I made detective?"`,
+"Present tense. That's the problem." She set a manila folder on his desk, the kind that held the end of a career. "Tom Wade. You want to tell me why your best friend's been manufacturing evidence since before I made detective?"`,
 
-  internalMonologue: `I should have seen it. That's what kept circling through my skull like a vulture waiting for something to die. Twenty years of perfect evidence, pristine chains of custody, confessions that fit the physical proof like a key in a lock. And not once, not a single time, did I ask why my cases were the only ones that wrapped up so clean.
+  internalMonologue: `Jack should have seen it. The thought kept circling like a vulture waiting for something to die. Twenty years of perfect evidence, pristine chains of custody, confessions that fit the proof like a key in a lock. And not once, not a single time, had he asked why his cases were the only ones that wrapped up so clean.
 
-Because I didn't want to know. Because clearance rates mean promotions, and promotions mean you can look at yourself in the mirror and call yourself one of the good guys. I'd built my reputation on a foundation of lies, and the only person more surprised than me was the man standing in my doorway.
+Because he didn’t want to know. Because clearance rates meant promotions, and promotions meant a man could look in the mirror and call himself one of the good guys. Jack had built his reputation on a foundation of lies, and the only person more surprised than he was the woman standing in his doorway.
 
-"Hello, Jack." Victoria Blackwell smiled like she knew every thought I'd ever had. "We need to talk about certainty."`,
+"Hello, Jack." Victoria Blackwell smiled like she knew every thought he'd ever had. "We need to talk about certainty."`,
 
-  tenseMoment: `The gun felt wrong in my hand. Not the weight of it, that was familiar as breathing. But the direction it pointed. Silas Reed, my partner for eight years, the man who'd covered my back through three shootings and one divorce. Now he sat across from me in a penthouse paid for with blood money, bourbon trembling in a crystal glass.
+  tenseMoment: `The gun felt wrong in Jack's hand. Not the weight of it—that was familiar as breathing—but the direction it pointed. Silas Reed, his partner for eight years, the man who'd covered his back through three shootings and one divorce. Now Silas sat across from him in a penthouse paid for with blood money, bourbon trembling in a crystal glass.
 
-"She got to you too." His voice had gone hollow. "Victoria."
+"She got to you too." Silas’s voice had gone hollow. "Victoria."
 
 "She showed me the Thornhill documents. Your signature, Silas. Your handwriting."
 
 "I can explain."
 
-"Don't." I lowered the gun but didn't holster it. "Just tell me who else. Who else did you help bury?"`,
+"Don't." Jack lowered the gun but didn’t holster it. "Just tell me who else. Who else did you help bury?"`,
 
-  decisionSetup: `Two doors. That's what it came down to, after everything. Behind the first, Helen Price sat with a folder that could bring down half the prosecutors in the state. Behind the second, Grange was making a call that would send his next victim into a grave no one would ever find.
+  decisionSetup: `Two doors. That was what it came down to, after everything. Behind the first, Helen Price sat with a folder that could bring down half the prosecutors in the state. Behind the second, Grange was making a call that would send his next victim into a grave no one would ever find.
 
-I had minutes. Maybe less.
+Jack had minutes. Maybe less.
 
-Sarah's voice crackled through my earpiece. "Jack, we can't be in two places. You have to choose."
+Sarah's voice crackled through his earpiece. "Jack, we can't be in two places. You have to choose."
 
-Choice. Victoria's favorite word. The whole game was built on them, each one a brick in the wall I'd built around the innocent people I'd helped bury. Now she wanted me to understand what that felt like from the other side.
+Choice. Victoria's favorite word. The whole game was built on them, each one a brick in the wall Jack had built around the innocent people he'd helped bury. Now she wanted him to understand what that felt like from the other side.
 
-The floor creaked under my boots. Both paths led somewhere dark. The only question was which darkness I could live with.`,
+The floor creaked under his boots. Both paths led somewhere dark. The only question was which darkness he could live with.`,
 
   // ========== NEW A+ QUALITY EXAMPLES ==========
 
-  characterConfrontation: `Victoria's penthouse smelled of old money and new secrets. Floor-to-ceiling windows gave her a god's-eye view of Ashport, the city spread out like a game board beneath her heels. She didn't turn when I entered. Didn't need to.
+  characterConfrontation: `Victoria's penthouse smelled of old money and new secrets. Floor-to-ceiling windows gave her a god's-eye view of Ashport, the city spread out like a game board beneath her heels. She didn't turn when Jack entered. She didn't need to.
 
 "Seven years." Her voice carried the weight of every one of them. "That's how long I waited. Planned. Watched you collect your commendations while I learned to walk again."
 
-"Emily." The name felt like broken glass in my mouth. "I closed your case because the evidence—"
+"Emily." The name felt like broken glass in Jack’s mouth. "I closed your case because the evidence—"
 
-"The evidence said I was dead." She turned then, and I saw what Grange had done to her. The scars traced a map of suffering across her throat, her wrists. "I heard you, Jack. Through the floor of that basement. 'Case closed. Moving on.' Those were your words while he was still deciding whether to let me live."
+"The evidence said I was dead." She turned then, and Jack saw what Grange had done to her. The scars traced a map of suffering across her throat, her wrists. "I heard you, Jack. Through the floor of that basement. 'Case closed. Moving on.' Those were your words while he was still deciding whether to let me live."
 
-Her eyes held something worse than hatred. Understanding. She knew exactly what I was, because she'd built herself into something stronger.`,
+Her eyes held something worse than hatred. Understanding. She knew exactly what he was, because she'd built herself into something stronger.`,
 
-  emotionalRevelation: `The photograph shook in my hands. Not from age, not from the rain that had soaked through the folder. From recognition.
+  emotionalRevelation: `The photograph shook in Jack's hands. Not from age, not from the rain that had soaked through the folder. From recognition.
 
-That was Tom's handwriting. Thirty years of friendship, and I knew his chicken scratch better than my own signature. But this wasn't case notes or lab reports. This was a ledger. Names, dates, evidence reference numbers. A catalog of lies stretching back two decades.
+That was Tom's handwriting. Thirty years of friendship, and Jack knew his chicken scratch better than his own signature. But this wasn't case notes or lab reports. This was a ledger. Names, dates, evidence reference numbers. A catalog of lies stretching back two decades.
 
 Marcus Thornhill's case was on page three. The fiber analysis that put him at the scene. Tom's notation: "Sample sourced externally. Match achieved 11/4."
 
 Sourced externally. That meant fabricated. That meant Tom had watched Marcus hang himself in a cell for a crime built on nothing but manufactured threads.
 
-I'd stood at that man's funeral. Told his daughter Claire that justice had been served. Let her spend four years thinking the system worked, when the system was just another word for my best friend's lies.
+Jack had stood at that man's funeral. Told his daughter Claire that justice had been served. Let her spend four years thinking the system worked, when the system was just another word for his best friend's lies.
 
-The folder fell from my fingers. I barely heard it hit the floor. All I could hear was thirty years of certainty crumbling into dust.`,
+The folder fell from Jack's fingers. He barely heard it hit the floor. All he could hear was thirty years of certainty crumbling into dust.`,
 
-  chaseSequence: `The warehouse door splintered behind me. No time to look. No time to think.
+  chaseSequence: `The warehouse door splintered behind Jack. No time to look. No time to think.
 
-Left. Through the shipping containers. Rain hammered the metal above, masking my footsteps but theirs too. Three of them, maybe four. Grange's cleanup crew.
+Left. Through the shipping containers. Rain hammered the metal above, masking his footsteps but theirs too. Three of them, maybe four. Grange's cleanup crew.
 
-My lungs burned. Two decades of Jameson and too many cigarettes catching up at the worst possible moment. A bullet sparked off steel six inches from my head. Close. Getting closer.
+Jack’s lungs burned. Two decades of Jameson and too many cigarettes catching up at the worst possible moment. A bullet sparked off steel six inches from his head. Close. Getting closer.
 
 Corner. Right. Another row of crates. The dock had to be nearby. Had to be.
 
-Voices behind me, coordinating. Professional. The kind of men who made problems disappear for Deputy Chief Grange. Twenty-three victims. I wasn't planning to be number twenty-four.
+Voices behind him, coordinating. Professional. The kind of men who made problems disappear for Deputy Chief Grange. Twenty-three victims. Jack wasn't planning to be number twenty-four.
 
 The container ahead was open. Dark inside. A choice made in heartbeats: hide and hope, or keep running and pray.
 
-I dove into the darkness. Held my breath. Listened to their boots thunder past, hunting a ghost in the rain.`,
+Jack dove into the darkness. Held his breath. Listened to their boots thunder past, hunting a ghost in the rain.`,
 
-  investigationScene: `The Thornhill file told a story if you knew how to read it. Most people didn't. Most people saw evidence and assumed it meant truth. Thirty years on the job had taught me better. Now those lessons tasted like ash.
+  investigationScene: `The Thornhill file told a story if a man knew how to read it. Most people didn't. Most people saw evidence and assumed it meant truth. Thirty years on the job had taught Jack better. Now those lessons tasted like ash.
 
 Claire had gathered everything. Bank records showing the shell company was created three days before Marcus was fired. Emails her father never wrote, sent from a computer he never owned. The forensic timeline that proved the money moved while Marcus was in surgery getting his appendix removed.
 
 "Your partner signed the arrest warrant." Claire's voice held no accusation. She was past that. This was simple recitation of fact. "Silas Reed. He took the forgeries and stamped them real."
 
-I spread the documents across my desk. The rain on the window caught the light, made the papers glow like accusation. Every page was a nail in a coffin I'd helped build.
+Jack spread the documents across his desk. The rain on the window caught the light, made the papers glow like accusation. Every page was a nail in a coffin he'd helped build.
 
-"Why are you showing me this?" I asked, though I already knew.
+"Why are you showing me this?" Jack asked, though he already knew.
 
 "Because you're the only cop who might actually care." She leaned forward, four years of grief compressed into certainty. "And because Victoria Blackwell told me you'd want to see what you helped bury."`,
 
-  quietMoment: `Murphy's was empty at 3 AM. Just me, the jukebox, and a glass of Jameson that wasn't helping.
+  quietMoment: `Murphy's was empty at 3 AM. Just Jack, the jukebox, and a glass of Jameson that wasn't helping.
 
-The stool next to me creaked. Sarah sat down without asking, ordered a coffee she wouldn't drink. We watched the rain together for a while. Some things don't need words. Thirteen years of partnership buys you that much silence.
+The stool next to him creaked. Sarah sat down without asking, ordered a coffee she wouldn't drink. They watched the rain together for a while. Some things didn't need words. Thirteen years of partnership bought that much silence.
 
-"I filed the Conviction Integrity request today." She said it to the mirror behind the bar, not to me. "Eleanor Bellamy's case. If even half of what we've found is true..."
+"I filed the Conviction Integrity request today." She said it to the mirror behind the bar, not to him. "Eleanor Bellamy's case. If even half of what we've found is true..."
 
 "It's true." The whiskey burned going down. "All of it."
 
-"Then you know what happens next." She finally looked at me. Her eyes held something I couldn't name. Disappointment, maybe. Or worse, pity. "Internal Affairs. Grand jury. Everything you built, Jack. Gone."
+"Then you know what happens next." She finally looked at him. Her eyes held something Jack couldn't name. Disappointment, maybe. Or worse, pity. "Internal Affairs. Grand jury. Everything you built, Jack. Gone."
 
-I poured another glass. "It was never mine to build."
+Jack poured another glass. "It was never his to build."
 
-She left her coffee untouched and walked back into the rain. The jukebox played something about roads not taken. I drank until the song ended, then drank some more.`,
+She left her coffee untouched and walked back into the rain. The jukebox played something about roads not taken. Jack drank until the song ended, then drank some more.`,
 };
 
 // ============================================================================
@@ -533,6 +533,23 @@ export const GENERATION_CONFIG = {
     validation: 500,
   },
 
+  // Context windowing - controls how much prior story text is sent to the LLM.
+  // Goal: keep generation fast and consistent without flooding the model with old prose.
+  contextWindowing: {
+    // Older chapters: prefer summaries (cheaper + less drift)
+    maxOlderChapterEntries: 8,
+    // Recent chapters: include limited excerpts instead of full text
+    maxRecentChapterEntries: 4,
+    maxRecentNarrativeCharsPerEntry: 1200,
+    // Current chapter: keep continuity tight
+    maxCurrentChapterBackrefCharsPerEntry: 1600,
+    // Global cap for the whole PREVIOUS STORY EVENTS section
+    maxPreviousEventsChars: 14000,
+    // Facts/threads caps (avoid runaway)
+    maxFactsInPrompt: 40,
+    maxThreadsInPrompt: 15,
+  },
+
   // Word count requirements - optimized for fast background generation
   wordCount: {
     minimum: 450,         // ~1.5 pages, enough for immersion
@@ -546,6 +563,9 @@ export const GENERATION_CONFIG = {
     minSentencesPerParagraph: 3,      // Ensures substantial paragraphs
     maxConsecutiveDialogue: 6,        // Prevents wall-of-dialogue
     requireAtmosphericOpening: true,  // Every chapter should set the scene
+    // Expensive. Keep OFF for normal gameplay latency.
+    // When enabled, the engine may make extra LLM calls to invent consequences for past decisions.
+    enableLLMDecisionConsequences: false,
   },
 };
 

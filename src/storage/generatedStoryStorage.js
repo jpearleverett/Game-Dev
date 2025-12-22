@@ -157,6 +157,21 @@ function optimizeEntryForStorage(entry) {
     delete optimized.consistencyFacts;
   }
 
+  // Compact continuity metadata to reduce storage growth.
+  // These fields ARE important for future generation context, so we keep them but cap size.
+  if (Array.isArray(optimized.narrativeThreads)) {
+    optimized.narrativeThreads = optimized.narrativeThreads.slice(-25);
+  }
+  if (Array.isArray(optimized.previousThreadsAddressed)) {
+    optimized.previousThreadsAddressed = optimized.previousThreadsAddressed
+      .slice(-15)
+      .map((t) => ({
+        originalThread: t?.originalThread || '',
+        howAddressed: t?.howAddressed || 'acknowledged',
+        narrativeReference: (t?.narrativeReference || '').slice(0, 200),
+      }));
+  }
+
   // Optimize board data if present
   if (optimized.board) {
     const optimizedBoard = { ...optimized.board };
@@ -461,8 +476,16 @@ export async function pruneOldGenerations(currentPathKey, currentChapter, maxSiz
       // Higher score = more important to keep
 
       // Current path gets highest priority
-      if (key.includes(currentPathKey)) {
-        score += 1000;
+      // With cumulative branch keys, earlier chapters will have shorter prefix keys.
+      // Preserve any entry whose path key is a prefix of the current path.
+      const entryPathKey = typeof key === 'string' && key.includes('_') ? key.split('_').slice(1).join('_') : '';
+      if (currentPathKey && entryPathKey) {
+        if (String(currentPathKey).startsWith(String(entryPathKey))) {
+          score += 1000;
+        } else if (String(entryPathKey).startsWith(String(currentPathKey))) {
+          // Also keep if it is a child/continuation path (rare, but safe)
+          score += 500;
+        }
       }
 
       // Recent chapters are more important
@@ -656,6 +679,10 @@ export function createBlankStoryContext() {
     lastGeneratedChapter: null,
     lastGeneratedSubchapter: null,
     lastPathKey: null,
+
+    // Persisted decision consequences (lightweight) so choice causality survives restarts
+    // key format: "${caseNumber}_${optionKey}" => { immediate, ongoing, characterImpact }
+    decisionConsequencesByKey: {},
 
     version: 1,
   };

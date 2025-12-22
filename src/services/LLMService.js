@@ -304,6 +304,15 @@ class LLMService {
         this.config = { ...DEFAULT_CONFIG, ...JSON.parse(savedConfig) };
       }
 
+      // Enforce Gemini-only configuration for this app.
+      if (this.config.provider !== 'gemini') {
+        console.warn('[LLMService] Non-gemini provider found in saved config. Forcing provider="gemini".');
+        this.config.provider = 'gemini';
+      }
+      if (typeof this.config.model !== 'string' || !this.config.model.toLowerCase().includes('gemini')) {
+        this.config.model = DEFAULT_CONFIG.model;
+      }
+
       // Load any persisted offline queue
       await this._loadOfflineQueue();
 
