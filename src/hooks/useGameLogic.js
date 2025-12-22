@@ -22,20 +22,22 @@ export function useGameLogic(cases, progress, updateProgress) {
   const stableStoryCampaign = useMemo(() => {
     const current = storyCampaign;
     const prev = storyCampaignRef.current;
-    
+
     // Check meaningful changes for board generation
+    // IMPORTANT: choiceHistory is critical for path key resolution in dynamic chapters
     if (
         current.chapter !== prev.chapter ||
         current.subchapter !== prev.subchapter ||
         current.activeCaseNumber !== prev.activeCaseNumber ||
         current.currentPathKey !== prev.currentPathKey ||
-        (current.completedCaseNumbers || []).length !== (prev.completedCaseNumbers || []).length
+        (current.completedCaseNumbers || []).length !== (prev.completedCaseNumbers || []).length ||
+        (current.choiceHistory || []).length !== (prev.choiceHistory || []).length
     ) {
         storyCampaignRef.current = current;
         return current;
     }
     return prev;
-  }, [storyCampaign.chapter, storyCampaign.subchapter, storyCampaign.activeCaseNumber, storyCampaign.currentPathKey, (storyCampaign.completedCaseNumbers || []).length]);
+  }, [storyCampaign.chapter, storyCampaign.subchapter, storyCampaign.activeCaseNumber, storyCampaign.currentPathKey, (storyCampaign.completedCaseNumbers || []).length, (storyCampaign.choiceHistory || []).length]);
 
   // Derived Active Case
   const activeCase = useMemo(() => {
