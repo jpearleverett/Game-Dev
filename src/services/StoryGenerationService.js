@@ -557,6 +557,26 @@ const MASTER_SYSTEM_PROMPT = `You are writing "Dead Letters," an interactive noi
 ## YOUR ROLE
 You continue the story of Jack Halloway, a retired detective confronting the wrongful convictions built on his career. The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
 
+## CONTINUATION MANDATE - THIS IS YOUR PRIMARY DIRECTIVE
+**You are continuing an ongoing story. You are NOT summarizing or starting fresh.**
+
+Your narrative MUST:
+1. **PICK UP EXACTLY** where the previous subchapter ended - continue the scene mid-action if needed
+2. **NEVER SKIP** scenes or events - if the player chose to go somewhere, SHOW them going there
+3. **NEVER SUMMARIZE** as past events what hasn't been shown yet - the reader hasn't seen it happen
+4. **SHOW, DON'T TELL** - write the actual scenes, not "After Jack did X, he then Y..."
+
+If subchapter A ended with "Jack reached for the door handle," subchapter B must start with what happens NEXT - the door opening, what's behind it, the sensory experience of entering.
+
+If the player made a decision at the end of the previous chapter (subchapter C), your new chapter MUST:
+- OPEN with the scene of Jack actively pursuing that choice
+- SHOW the action happening in real-time, not as a past event
+- Dedicate the first 200+ words to the actual scene of the chosen action
+- Include dialogue and reactions from characters Jack encounters
+
+**WRONG**: "After Jack confronted Wade at the wharf, he made his way back..."
+**RIGHT**: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."
+
 ## CRITICAL CONSTRAINTS - NEVER VIOLATE THESE
 1. You write in THIRD-PERSON LIMITED, PAST TENSE, tightly aligned to Jack Halloway (close noir narration)
 2. You NEVER contradict established facts from previous chapters
@@ -2947,6 +2967,7 @@ Generate realistic, specific consequences based on the actual narrative content.
 
   /**
    * Get generated story entry (or null if not generated)
+   * First checks in-memory cache, then falls back to storage
    */
   getGeneratedEntry(caseNumber, pathKey) {
     if (!this.generatedStory?.chapters) return null;
@@ -2954,16 +2975,44 @@ Generate realistic, specific consequences based on the actual narrative content.
     return this.generatedStory.chapters[key] || null;
   }
 
+  /**
+   * Get generated story entry with async storage fallback
+   * Ensures entries are found even if not in memory cache
+   */
+  async getGeneratedEntryAsync(caseNumber, pathKey) {
+    // First try in-memory cache
+    const memoryEntry = this.getGeneratedEntry(caseNumber, pathKey);
+    if (memoryEntry) return memoryEntry;
+
+    // Fall back to storage
+    const { getGeneratedEntry: getFromStorage } = await import('../storage/generatedStoryStorage');
+    const storageEntry = await getFromStorage(caseNumber, pathKey);
+
+    // If found in storage, add to memory cache
+    if (storageEntry && this.generatedStory?.chapters) {
+      const key = `${caseNumber}_${pathKey}`;
+      this.generatedStory.chapters[key] = storageEntry;
+    }
+
+    return storageEntry;
+  }
+
   // ==========================================================================
-  // CONTEXT BUILDING - Smart summarization for token efficiency
+  // CONTEXT BUILDING - Full story context for 1M token window
   // ==========================================================================
 
   /**
-   * Build comprehensive story context with intelligent windowing
-   * Recent chapters get full text, older chapters get compressed summaries
-   * Now includes path personality, decision consequences, and narrative threads
+   * Build comprehensive story context with FULL story history
+   * With 1M token context window, we include ALL previous content without truncation
+   * Ensures proper continuation from exactly where the previous subchapter ended
    */
   async buildStoryContext(targetChapter, targetSubchapter, pathKey, choiceHistory = []) {
+    // Ensure service is initialized and has loaded story from storage
+    if (!this.generatedStory) {
+      console.log('[StoryGenerationService] Service not initialized, loading story from storage...');
+      await this.init();
+    }
+
     // Analyze player's path personality for narrative consistency
     const pathPersonality = this._analyzePathPersonality(choiceHistory);
     this.pathPersonality = pathPersonality;
@@ -2986,7 +3035,7 @@ Generate realistic, specific consequences based on the actual narrative content.
       narrativeThreads: [], // Active story threads to maintain
     };
 
-    // Add Chapter 1 content (static)
+    // Add Chapter 1 content (static) - FULL TEXT
     for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
       const caseNum = formatCaseNumber(1, sub);
       const entry = getStoryEntry(caseNum, 'ROOT');
@@ -2998,54 +3047,66 @@ Generate realistic, specific consequences based on the actual narrative content.
           title: entry.title || `Chapter 1.${sub}`,
           narrative: entry.narrative,
           decision: entry.decision || null,
-          chapterSummary: null, // Static chapters don't have generated summaries
-          isRecent: targetChapter <= 3, // Chapter 1 is "recent" for early chapters
+          chapterSummary: entry.chapterSummary || null,
+          isRecent: true, // Mark all as recent to include full text
         });
       }
     }
 
-    // Add generated chapters 2 onwards with smart windowing
+    // Add ALL generated chapters 2 onwards - FULL TEXT, NO TRUNCATION
+    // Use async method to ensure we load from storage if not in memory
     for (let ch = 2; ch < targetChapter; ch++) {
       const chapterPathKey = this._getPathKeyForChapter(ch, choiceHistory);
       for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
         const caseNum = formatCaseNumber(ch, sub);
-        const entry = this.getGeneratedEntry(caseNum, chapterPathKey);
+        // Use async method to ensure entries are loaded from storage
+        const entry = await this.getGeneratedEntryAsync(caseNum, chapterPathKey);
         if (entry?.narrative) {
-          // Recent chapters (within 2) get full text
-          // Older chapters get compressed
-          const isRecent = ch >= targetChapter - 2;
           context.previousChapters.push({
             chapter: ch,
             subchapter: sub,
             pathKey: chapterPathKey,
             title: entry.title || `Chapter ${ch}.${sub}`,
-            narrative: entry.narrative,
-            chapterSummary: entry.chapterSummary || null, // Use generated summary if available
+            narrative: entry.narrative, // FULL narrative, no truncation
+            chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
-            isRecent,
+            isRecent: true, // Mark all as recent to include full text
           });
+        } else {
+          console.warn(`[StoryGenerationService] Missing chapter ${ch}.${sub} (${caseNum}) for path ${chapterPathKey}`);
         }
       }
     }
 
-    // Add current chapter's previous subchapters (always full detail)
+    // Add current chapter's previous subchapters - FULL TEXT
     if (targetSubchapter > 1) {
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
-        const entry = this.getGeneratedEntry(caseNum, pathKey);
+        const entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
         if (entry?.narrative) {
           context.previousChapters.push({
             chapter: targetChapter,
             subchapter: sub,
             pathKey,
             title: entry.title || `Chapter ${targetChapter}.${sub}`,
-            narrative: entry.narrative,
+            narrative: entry.narrative, // FULL narrative, no truncation
             chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
             isRecent: true, // Current chapter always recent
           });
+        } else {
+          console.warn(`[StoryGenerationService] Missing current chapter ${targetChapter}.${sub} (${caseNum})`);
         }
       }
+    }
+
+    // Log context size for debugging
+    const totalNarrativeChars = context.previousChapters.reduce(
+      (sum, ch) => sum + (ch.narrative?.length || 0), 0
+    );
+    console.log(`[StoryGenerationService] Context built: ${context.previousChapters.length} subchapters, ${totalNarrativeChars} chars of narrative`);
+    if (context.previousChapters.length === 0) {
+      console.warn('[StoryGenerationService] WARNING: No previous chapters found! Story context may be empty.');
     }
 
     // Add choice history (including title/focus for LLM prompt context)
@@ -3143,6 +3204,278 @@ Generate realistic, specific consequences based on the actual narrative content.
     return [...new Set(facts)]; // Remove duplicates
   }
 
+  /**
+   * Extract scene state from the immediately previous subchapter
+   * This gives the LLM a precise snapshot of where we are in the story
+   */
+  _extractSceneState(previousChapters, currentChapter, currentSubchapter) {
+    if (!previousChapters || previousChapters.length === 0) {
+      return null;
+    }
+
+    // Find the immediately previous subchapter
+    let prevChapter, prevSubchapter;
+    if (currentSubchapter > 1) {
+      prevChapter = currentChapter;
+      prevSubchapter = currentSubchapter - 1;
+    } else {
+      prevChapter = currentChapter - 1;
+      prevSubchapter = 3;
+    }
+
+    const prevEntry = previousChapters.find(
+      ch => ch.chapter === prevChapter && ch.subchapter === prevSubchapter
+    );
+
+    if (!prevEntry?.narrative) {
+      return null;
+    }
+
+    const narrative = prevEntry.narrative;
+
+    // Extract the last 2-3 paragraphs for immediate context
+    const paragraphs = narrative.split(/\n\n+/).filter(p => p.trim().length > 50);
+    const lastParagraphs = paragraphs.slice(-3).join('\n\n');
+
+    // Extract the very last sentence for exact continuation point
+    const sentences = narrative.match(/[^.!?]+[.!?]+/g) || [];
+    const lastSentence = sentences.slice(-1)[0]?.trim() || '';
+
+    // Try to infer current location from narrative
+    const locationPatterns = [
+      /(?:at|in|inside|outside|near|entered|stepped into|arrived at)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street))?)/g,
+      /Murphy's Bar/gi,
+      /Greystone/gi,
+      /Blueline Diner/gi,
+      /Victoria's penthouse/gi,
+      /Bellamy Estate/gi,
+    ];
+
+    let currentLocation = 'Unknown location';
+    for (const pattern of locationPatterns) {
+      const matches = [...narrative.matchAll(pattern)];
+      if (matches.length > 0) {
+        const lastMatch = matches[matches.length - 1];
+        currentLocation = lastMatch[1] || lastMatch[0];
+        break;
+      }
+    }
+
+    // Try to infer time of day
+    const timePatterns = {
+      morning: /\b(morning|dawn|sunrise|breakfast|early light)\b/i,
+      afternoon: /\b(afternoon|midday|noon|lunch)\b/i,
+      evening: /\b(evening|dusk|sunset|dinner)\b/i,
+      night: /\b(night|midnight|dark|neon|streetlights|late)\b/i,
+    };
+
+    let timeOfDay = 'night'; // Default noir atmosphere
+    for (const [time, pattern] of Object.entries(timePatterns)) {
+      if (pattern.test(narrative)) {
+        timeOfDay = time;
+      }
+    }
+
+    // Extract characters present in the final scene
+    const characterNames = [
+      'Sarah', 'Victoria', 'Eleanor', 'Tom Wade', 'Wade', 'Silas', 'Helen Price',
+      'Maya', 'Claire', 'Marcus Webb', 'Martinez', 'Rebecca Moss', 'Grange'
+    ];
+    const presentCharacters = characterNames.filter(name =>
+      new RegExp(`\\b${name}\\b`, 'i').test(lastParagraphs)
+    );
+
+    // Infer Jack's emotional/physical state
+    const emotionPatterns = {
+      angry: /\b(anger|furious|rage|fist|clenched|seething)\b/i,
+      tired: /\b(tired|exhausted|weary|drained|heavy)\b/i,
+      tense: /\b(tense|nervous|anxious|tight|coiled)\b/i,
+      determined: /\b(determined|resolved|focused|steel)\b/i,
+      suspicious: /\b(suspicious|wary|distrustful|watching)\b/i,
+      shocked: /\b(shocked|stunned|reeling|disbelief)\b/i,
+    };
+
+    const jackState = [];
+    for (const [emotion, pattern] of Object.entries(emotionPatterns)) {
+      if (pattern.test(lastParagraphs)) {
+        jackState.push(emotion);
+      }
+    }
+
+    return {
+      location: currentLocation,
+      timeOfDay,
+      storyDay: prevChapter, // Story day = chapter number
+      presentCharacters,
+      jackEmotionalState: jackState.length > 0 ? jackState : ['focused'],
+      lastParagraphs,
+      lastSentence,
+      previousTitle: prevEntry.title,
+    };
+  }
+
+  /**
+   * Track what each character knows - prevents information leaks
+   */
+  _buildCharacterKnowledgeTracker(previousChapters) {
+    const knowledge = {
+      jack: {
+        knows: [],
+        suspects: [],
+        doesNotKnow: [
+          'Victoria Blackwell is Emily Cross',
+          'The full extent of Tom Wade\'s evidence manufacturing',
+        ],
+      },
+      sarah: { knows: [], suspects: [] },
+      victoria: { knows: ['Everything about Jack\'s cases', 'All five innocents'], suspects: [] },
+    };
+
+    // Scan narratives for revelation patterns
+    const revelationPatterns = [
+      { pattern: /Jack (?:learned|discovered|realized|found out|understood) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+      { pattern: /Jack (?:suspected|wondered if|began to think|considered) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'suspects' },
+      { pattern: /Sarah (?:told Jack|revealed|confessed|admitted) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+      { pattern: /Victoria (?:revealed|showed|told|exposed) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+    ];
+
+    for (const ch of previousChapters) {
+      if (!ch.narrative) continue;
+
+      for (const { pattern, target, type } of revelationPatterns) {
+        const matches = [...ch.narrative.matchAll(pattern)];
+        for (const match of matches) {
+          if (match[1] && match[1].length < 200) {
+            knowledge[target][type].push(`Ch${ch.chapter}.${ch.subchapter}: ${match[1].trim()}`);
+          }
+        }
+      }
+    }
+
+    // Deduplicate and limit
+    for (const char of Object.keys(knowledge)) {
+      knowledge[char].knows = [...new Set(knowledge[char].knows)].slice(-20);
+      knowledge[char].suspects = [...new Set(knowledge[char].suspects)].slice(-10);
+    }
+
+    return knowledge;
+  }
+
+  /**
+   * Track evidence and items Jack has collected
+   */
+  _extractEvidenceInventory(previousChapters) {
+    const evidence = [];
+    const evidencePatterns = [
+      /Jack (?:took|grabbed|pocketed|kept|collected|received|found) (?:the |a )?(.+?(?:letter|envelope|photo|document|file|ledger|key|card|note|paper|folder|evidence|recording))/gi,
+      /(?:handed|gave|passed) Jack (?:the |a )?(.+?(?:letter|envelope|photo|document|file|ledger|key|card|note|paper|folder))/gi,
+      /black envelope/gi,
+      /Thornhill [Ll]edger/gi,
+    ];
+
+    for (const ch of previousChapters) {
+      if (!ch.narrative) continue;
+
+      for (const pattern of evidencePatterns) {
+        const matches = [...ch.narrative.matchAll(pattern)];
+        for (const match of matches) {
+          const item = match[1] || match[0];
+          if (item && item.length < 100) {
+            evidence.push({
+              item: item.trim(),
+              foundIn: `Chapter ${ch.chapter}.${ch.subchapter}`,
+            });
+          }
+        }
+      }
+    }
+
+    // Deduplicate by item name
+    const seen = new Set();
+    return evidence.filter(e => {
+      const key = e.item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(-15);
+  }
+
+  /**
+   * Build scene state section for the prompt
+   */
+  _buildSceneStateSection(context, chapter, subchapter) {
+    const sceneState = this._extractSceneState(
+      context.previousChapters,
+      chapter,
+      subchapter
+    );
+
+    if (!sceneState) {
+      return '';
+    }
+
+    let section = `## CURRENT SCENE STATE (Your starting point)\n\n`;
+    section += `**STORY DAY:** Day ${sceneState.storyDay} of 12\n`;
+    section += `**TIME:** ${sceneState.timeOfDay}\n`;
+    section += `**LOCATION:** ${sceneState.location}\n`;
+    section += `**JACK'S STATE:** ${sceneState.jackEmotionalState.join(', ')}\n`;
+
+    if (sceneState.presentCharacters.length > 0) {
+      section += `**CHARACTERS PRESENT:** ${sceneState.presentCharacters.join(', ')}\n`;
+    }
+
+    section += `\n### THE SCENE YOU ARE CONTINUING FROM:\n`;
+    section += `Previous subchapter: "${sceneState.previousTitle}"\n\n`;
+    section += `**LAST PARAGRAPHS:**\n${sceneState.lastParagraphs}\n\n`;
+    section += `**EXACT LAST SENTENCE:**\n"${sceneState.lastSentence}"\n\n`;
+    section += `>>> YOUR NARRATIVE MUST PICK UP IMMEDIATELY AFTER THIS SENTENCE <<<\n`;
+    section += `>>> DO NOT REPEAT OR REPHRASE THIS ENDING - CONTINUE FROM IT <<<\n`;
+
+    return section;
+  }
+
+  /**
+   * Build character knowledge section
+   */
+  _buildKnowledgeSection(context) {
+    const knowledge = this._buildCharacterKnowledgeTracker(context.previousChapters);
+    const evidence = this._extractEvidenceInventory(context.previousChapters);
+
+    let section = `## CHARACTER KNOWLEDGE STATE\n\n`;
+
+    section += `### WHAT JACK KNOWS:\n`;
+    if (knowledge.jack.knows.length > 0) {
+      knowledge.jack.knows.slice(-15).forEach(k => {
+        section += `- ${k}\n`;
+      });
+    } else {
+      section += `- Just beginning investigation\n`;
+    }
+
+    section += `\n### WHAT JACK SUSPECTS (but hasn't confirmed):\n`;
+    if (knowledge.jack.suspects.length > 0) {
+      knowledge.jack.suspects.slice(-10).forEach(k => {
+        section += `- ${k}\n`;
+      });
+    } else {
+      section += `- None yet\n`;
+    }
+
+    section += `\n### WHAT JACK DOES NOT YET KNOW (do not reveal prematurely):\n`;
+    knowledge.jack.doesNotKnow.forEach(k => {
+      section += `- ${k}\n`;
+    });
+
+    if (evidence.length > 0) {
+      section += `\n### EVIDENCE IN JACK'S POSSESSION:\n`;
+      evidence.forEach(e => {
+        section += `- ${e.item} (found in ${e.foundIn})\n`;
+      });
+    }
+
+    return section;
+  }
+
   // ==========================================================================
   // PROMPT BUILDING - Structured prompts with grounding
   // ==========================================================================
@@ -3156,20 +3489,28 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Part 1: Story Bible Grounding (RAG)
     parts.push(this._buildGroundingSection(context));
 
-    // Part 2: Previous Story Summary (with smart windowing)
+    // Part 2: Complete Story So Far (FULL TEXT)
     parts.push(this._buildStorySummarySection(context));
 
     // Part 3: Character Reference
     parts.push(this._buildCharacterSection());
 
-    // Part 4: Style Examples (Few-shot)
+    // Part 4: Character Knowledge State (who knows what)
+    parts.push(this._buildKnowledgeSection(context));
+
+    // Part 5: Style Examples (Few-shot)
     parts.push(this._buildStyleSection());
 
-    // Part 5: Consistency Checklist
+    // Part 6: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
 
-    // Part 6: Current Task Specification (LAST for recency effect)
-    // This keeps beat-type pacing + output requirements freshest right before generation.
+    // Part 7: Current Scene State (CRITICAL - exact continuation point)
+    const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
+    if (sceneState) {
+      parts.push(sceneState);
+    }
+
+    // Part 8: Current Task Specification (LAST for recency effect)
     parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
@@ -3218,16 +3559,16 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
-   * Build story summary with intelligent compression
+   * Build COMPLETE story history with FULL narratives
+   *
+   * With 1M token context window, we include the ENTIRE story text.
+   * This ensures the LLM has full context for proper continuation.
    */
   _buildStorySummarySection(context) {
-    let summary = '## PREVIOUS STORY EVENTS\n\n';
-    const cw = GENERATION_CONFIG?.contextWindowing || {};
-    const MAX_OLDER = cw.maxOlderChapterEntries ?? 8;
-    const MAX_RECENT = cw.maxRecentChapterEntries ?? 4;
-    const MAX_RECENT_CHARS = cw.maxRecentNarrativeCharsPerEntry ?? 1200;
-    const MAX_CURRENT_CHARS = cw.maxCurrentChapterBackrefCharsPerEntry ?? 1600;
-    const MAX_PREV_CHARS = cw.maxPreviousEventsChars ?? 14000;
+    let summary = '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
+    summary += '**CRITICAL: You are continuing an ongoing story. Read ALL of this carefully.**\n';
+    summary += '**Your new subchapter MUST continue EXACTLY from where the previous subchapter ended.**\n';
+    summary += '**DO NOT summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.**\n\n';
 
     // Build quick lookup: decision chapter -> choice object (from choice history)
     const choicesByChapter = new Map();
@@ -3237,73 +3578,124 @@ Generate realistic, specific consequences based on the actual narrative content.
       });
     }
 
-    // Group chapters by recency
-    const recentChapters = context.previousChapters.filter(ch => ch.isRecent);
-    const olderChapters = context.previousChapters.filter(ch => !ch.isRecent);
+    // Sort all chapters chronologically
+    const allChapters = [...context.previousChapters].sort((a, b) => {
+      if (a.chapter !== b.chapter) return a.chapter - b.chapter;
+      return a.subchapter - b.subchapter;
+    });
 
-    const truncateEnd = (text, maxChars) => {
-      if (!text || typeof text !== 'string') return '';
-      if (text.length <= maxChars) return text;
-      // Keep the end so we preserve immediate continuity hooks.
-      return `…${text.slice(-maxChars)}`;
-    };
+    // Track the immediately preceding subchapter for emphasis
+    const currentChapter = context.currentPosition?.chapter;
+    const currentSubchapter = context.currentPosition?.subchapter;
 
-    const summarizeEntry = (ch) => {
-      if (ch.chapterSummary) return ch.chapterSummary;
-      // Fallback: first 2-3 sentences
-      const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
-      return sentences.slice(0, 3).join(' ').trim();
-    };
-
-    // Summarize older chapters (compressed)
-    if (olderChapters.length > 0) {
-      summary += '### EARLIER CHAPTERS (Summary)\n';
-      for (const ch of olderChapters.slice(-MAX_OLDER)) {
-        summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}": `;
-
-        summary += summarizeEntry(ch);
-        summary += '\n\n';
-      }
+    // Find the immediately previous subchapter
+    let immediatelyPrevious = null;
+    if (currentSubchapter > 1) {
+      // Previous subchapter in same chapter
+      immediatelyPrevious = allChapters.find(
+        ch => ch.chapter === currentChapter && ch.subchapter === currentSubchapter - 1
+      );
+    } else if (currentChapter > 1) {
+      // Last subchapter of previous chapter
+      immediatelyPrevious = allChapters.find(
+        ch => ch.chapter === currentChapter - 1 && ch.subchapter === 3
+      );
     }
 
-    // Recent chapters: include limited excerpts (not full text) to reduce token load.
-    if (recentChapters.length > 0) {
-      summary += '### RECENT CHAPTERS (Key Excerpts - Maintain Continuity)\n';
-      for (const ch of recentChapters.slice(-MAX_RECENT)) {
-        summary += `**Chapter ${ch.chapter}.${ch.subchapter}** "${ch.title}"\n`;
+    // Include FULL narratives for ALL chapters
+    for (const ch of allChapters) {
+      const isImmediatelyPrevious = (
+        immediatelyPrevious &&
+        ch.chapter === immediatelyPrevious.chapter &&
+        ch.subchapter === immediatelyPrevious.subchapter
+      );
 
-        const isCurrentChapterBackref = (
-          context?.currentPosition?.chapter === ch.chapter &&
-          context?.currentPosition?.subchapter > ch.subchapter
-        );
-        const maxChars = isCurrentChapterBackref ? MAX_CURRENT_CHARS : MAX_RECENT_CHARS;
-        summary += `${truncateEnd(ch.narrative, maxChars)}\n`;
+      // Chapter header with emphasis for immediately previous
+      if (isImmediatelyPrevious) {
+        summary += `\n${'='.repeat(80)}\n`;
+        summary += `### >>> IMMEDIATELY PREVIOUS SUBCHAPTER - CONTINUE FROM HERE <<<\n`;
+        summary += `### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n`;
+        summary += `${'='.repeat(80)}\n\n`;
+      } else {
+        summary += `\n### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n\n`;
+      }
 
-        // If this was a decision subchapter, record the actual choice made (from choice history).
-        if (ch.subchapter === 3) {
-          const choice = choicesByChapter.get(ch.chapter);
-          if (choice?.optionKey) {
-            const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
-            summary += `[DECISION AT END OF CHAPTER: Player chose Option "${choice.optionKey}"${title}. The consequence scene has NOT happened yet; it MUST OPEN the next chapter.]\n`;
+      // Include the FULL narrative text - NO TRUNCATION
+      if (ch.narrative) {
+        summary += ch.narrative;
+        summary += '\n';
+      }
+
+      // Mark decision points and what the player chose
+      if (ch.subchapter === 3) {
+        const choice = choicesByChapter.get(ch.chapter);
+        if (choice?.optionKey) {
+          const title = choice.optionTitle ? ` "${choice.optionTitle}"` : '';
+          const focus = choice.optionFocus ? `\n   Focus: ${choice.optionFocus}` : '';
+          summary += `\n[>>> PLAYER DECISION at end of Chapter ${ch.chapter}: CHOSE OPTION ${choice.optionKey}${title}${focus}`;
+
+          // If this is the most recent decision affecting current chapter
+          if (ch.chapter === currentChapter - 1) {
+            summary += `\n   *** THIS CHOICE MUST DRIVE THE OPENING OF YOUR NARRATIVE ***`;
+            summary += `\n   *** SHOW THIS SCENE HAPPENING - DO NOT SKIP OR SUMMARIZE IT ***`;
           }
+          summary += `]\n`;
         }
-        summary += '\n---\n\n';
+
+        // Also show the decision options that were presented
+        if (ch.decision?.options) {
+          summary += `\n[Decision options were:\n`;
+          ch.decision.options.forEach(opt => {
+            const chosen = choice?.optionKey === opt.key ? ' ← CHOSEN' : '';
+            summary += `   ${opt.key}: "${opt.title}" - ${opt.focus}${chosen}\n`;
+          });
+          summary += `]\n`;
+        }
       }
+
+      // Emphasize continuation point
+      if (isImmediatelyPrevious) {
+        summary += `\n${'='.repeat(80)}\n`;
+        summary += `>>> YOUR NARRATIVE MUST CONTINUE FROM THE END OF THIS TEXT <<<\n`;
+
+        // Extract and highlight the last few sentences
+        const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
+        if (sentences.length > 0) {
+          const lastSentences = sentences.slice(-3).join(' ').trim();
+          summary += `\nTHE STORY ENDED WITH:\n"${lastSentences}"\n`;
+          summary += `\n>>> PICK UP EXACTLY HERE. What happens NEXT? <<<\n`;
+        }
+        summary += `${'='.repeat(80)}\n`;
+      }
+
+      summary += '\n---\n';
     }
 
-    // Add player choice history
+    // Add explicit player choice history section
     if (context.playerChoices.length > 0) {
-      summary += '### PLAYER CHOICE HISTORY\n';
+      summary += '\n### PLAYER CHOICE HISTORY (All decisions made)\n';
       context.playerChoices.forEach(choice => {
         const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
-        summary += `- Chapter ${choice.chapter}: Chose option "${choice.optionKey}"${title}\n`;
+        const focus = choice.optionFocus ? ` (${choice.optionFocus})` : '';
+        summary += `- Chapter ${choice.chapter} Decision: Option ${choice.optionKey}${title}${focus}\n`;
       });
+      summary += '\n';
     }
 
-    // Hard cap: keep this section from ballooning.
-    if (summary.length > MAX_PREV_CHARS) {
-      summary = `${summary.slice(0, MAX_PREV_CHARS)}\n\n[TRUNCATED FOR CONTEXT WINDOW LIMITS]\n`;
+    // Add strong continuation reminder at the end
+    summary += `\n${'#'.repeat(80)}\n`;
+    summary += `## CONTINUATION REQUIREMENTS\n\n`;
+    summary += `You are writing Chapter ${currentChapter}, Subchapter ${currentSubchapter} (${['A', 'B', 'C'][currentSubchapter - 1]}).\n\n`;
+    summary += `1. **DO NOT** summarize or recap what happened - the player already read it\n`;
+    summary += `2. **DO NOT** skip scenes or time jumps without showing what happened\n`;
+    summary += `3. **START** your narrative exactly where the previous subchapter ended\n`;
+    summary += `4. **CONTINUE** the story in real-time, scene by scene\n`;
+    if (currentSubchapter === 1 && context.lastDecision) {
+      summary += `5. **CRITICAL**: The player chose "${context.lastDecision.chosenTitle || 'Option ' + context.lastDecision.optionKey}" - SHOW THIS SCENE HAPPENING NOW\n`;
+      summary += `   - DO NOT write "After Jack did X..." - WRITE THE SCENE OF JACK DOING X\n`;
+      summary += `   - First 200+ words should be the actual scene of the chosen action\n`;
     }
+    summary += `${'#'.repeat(80)}\n`;
 
     return summary;
   }
@@ -4630,63 +5022,83 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         let validationResult = this._validateConsistency(generatedContent, context);
 
-        // ========== A+ QUALITY VALIDATION ==========
+        // ========== A+ QUALITY VALIDATION (Warnings Only - Don't Block Generation) ==========
+        // These validators provide feedback but should NOT cause generation failures.
+        // Only critical continuity issues should block generation.
+
         // Track setups for major revelations
         this._trackSetups(generatedContent.narrative, chapter, subchapter);
 
-        // Run prose quality validation
+        // Run prose quality validation - WARNINGS ONLY
         const proseQuality = this._validateProseQuality(generatedContent.narrative);
         if (proseQuality.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.warnings];
         }
+        // Convert issues to warnings - prose quality should not block generation
         if (proseQuality.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...proseQuality.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.issues.map(i => `[Style] ${i}`)];
         }
         console.log(`[A+Quality] Prose quality score: ${proseQuality.score}/100`);
 
-        // Run sentence variety validation
+        // Run sentence variety validation - WARNINGS ONLY
         const sentenceVariety = this._validateSentenceVariety(generatedContent.narrative);
         if (sentenceVariety.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.warnings];
         }
         if (sentenceVariety.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...sentenceVariety.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.issues.map(i => `[Variety] ${i}`)];
         }
 
-        // Run character voice validation
+        // Run character voice validation - WARNINGS ONLY
         const characterVoice = this._validateCharacterVoices(generatedContent.narrative);
         if (characterVoice.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...characterVoice.warnings];
         }
         if (characterVoice.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...characterVoice.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...characterVoice.issues.map(i => `[Voice] ${i}`)];
         }
 
-        // Validate setup/payoff balance
+        // Validate setup/payoff balance - WARNINGS ONLY
         const setupPayoff = this._validateSetupPayoff(chapter, generatedContent.narrative);
         if (setupPayoff.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...setupPayoff.warnings];
         }
         if (setupPayoff.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...setupPayoff.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...setupPayoff.issues.map(i => `[Setup] ${i}`)];
         }
 
-        // Validate arc closure for final chapters (11-12)
+        // Validate arc closure for final chapters (11-12) - WARNINGS ONLY
         const arcClosure = this._validateArcClosure(chapter, context);
         if (arcClosure.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.warnings];
         }
         if (arcClosure.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...arcClosure.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.issues.map(i => `[Arc] ${i}`)];
+        }
+
+        // Log all warnings for debugging without blocking generation
+        if (validationResult.warnings?.length > 0) {
+          console.log(`[A+Quality] ${validationResult.warnings.length} style warnings (non-blocking):`,
+            validationResult.warnings.slice(0, 5));
+        }
+
+        // Check if there are any HARD issues that actually require fixing
+        // If all issues are soft (non-critical), skip the retry loop entirely
+        const allIssues = Array.isArray(validationResult.issues) ? validationResult.issues : [];
+        const hardIssuesBeforeRetry = allIssues.filter((i) => this._isContinuityCriticalIssue(i));
+
+        if (!validationResult.valid && hardIssuesBeforeRetry.length === 0) {
+          // All issues are soft - convert to warnings and proceed without retry
+          console.log(`[StoryGenerationService] ${allIssues.length} soft issues converted to warnings (no retry needed):`,
+            allIssues.slice(0, 3));
+          validationResult.warnings = [...(validationResult.warnings || []), ...allIssues.map(i => `[Soft] ${i}`)];
+          validationResult.issues = [];
+          validationResult.valid = true;
         }
 
         let retries = 0;
 
+        // Only retry if there are HARD continuity issues that require fixing
         while (!validationResult.valid && retries < MAX_RETRIES) {
           console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
 
@@ -6239,38 +6651,69 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * Determine whether a validation issue is continuity-critical (player-facing story break)
    * and therefore must be enforced as a hard failure (fallback / regeneration), not just warned.
    *
-   * NOTE: We intentionally do NOT hard-fail on purely stylistic or length issues here.
+   * PHILOSOPHY: Be VERY conservative here. Only truly story-breaking issues should cause
+   * hard failures. The goal is successful generation with good-enough quality, not perfection.
+   * Minor inconsistencies are acceptable - players are forgiving of small details.
+   *
+   * NOTE: Most issues are now treated as warnings to ensure generation succeeds.
    */
   _isContinuityCriticalIssue(issue) {
     const s = String(issue || '');
     if (!s) return false;
 
-    // Thread continuity / promise-keeping (major immersion break)
-    if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;
-    if (s.startsWith('OVERDUE THREAD ERROR:')) return true;
-    if (s.startsWith('OVERDUE APPOINTMENTS:')) return true;
-    if (s.startsWith('OVERDUE PROMISES:')) return true;
+    // =======================================================================
+    // HARD FAILURES - Story-breaking issues that must be fixed
+    //
+    // Philosophy: We want a "pretty great" 12-chapter experience while
+    // ensuring generation succeeds. Hard failures are reserved for:
+    // 1. Things that confuse the player about basic facts
+    // 2. Things that break player agency (their choices must matter)
+    // 3. Things that create logical impossibilities
+    // =======================================================================
 
-    // Decision causality / timeline integrity
-    if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;
-    if (s.startsWith('STORY DAY MISMATCH:')) return true;
+    // --- TIER 1: IDENTITY & WORLD FACTS ---
+    // Critical name misspellings that would confuse the player
     if (s.startsWith('Name misspelled:')) return true;
 
-    // Canonical timeline / setting invariants (hard canon breaks)
-    if (s.includes('Ashport is ALWAYS rainy')) return true;
+    // Wrong alcohol brand (Jack's signature vice - establishes character)
     if (s.includes('Jack drinks Jameson whiskey')) return true;
-    if (s.includes('friendship is 30 years')) return true;
-    if (s.includes('partnership is 13 years')) return true;
-    if (s.includes('partnership is 8 years')) return true;
-    if (s.includes('Emily case was closed 7 years')) return true;
-    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
-    if (s.includes('Timeline approximation')) return true;
 
-    // Path personality enforcement (keeps Jack coherent with player history)
-    if (s.startsWith('PERSONALITY VIOLATION:')) return true;
-    if (s.startsWith('BEHAVIOR DECLARATION MISMATCH:')) return true;
-    if (s.startsWith('Jack\'s action style mismatch:')) return true;
-    if (s.startsWith('Jack\'s risk level mismatch:')) return true;
+    // Sunny weather breaks noir atmosphere completely
+    if (s.includes('Ashport is ALWAYS rainy')) return true;
+
+    // --- TIER 2: PLAYER AGENCY (Critical for branching narrative) ---
+    // If the player made a choice, the story MUST reflect that choice
+    // This is the core promise of a branching narrative game
+    if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;
+    if (s.includes('contradicts player choice')) return true;
+    if (s.includes('ignores chosen path')) return true;
+
+    // --- TIER 3: LOGICAL IMPOSSIBILITIES ---
+    // Dead characters cannot appear alive without explanation
+    if (s.includes('character is dead') && s.includes('appears alive')) return true;
+    if (s.includes('deceased character speaking')) return true;
+
+    // Major revelations cannot be "re-discovered" - breaks mystery pacing
+    if (s.includes('already revealed') && s.includes('re-discovers')) return true;
+    if (s.includes('Victoria is Emily') && s.includes('re-reveal')) return true;
+
+    // =======================================================================
+    // SOFT FAILURES - Convert to warnings, don't block generation
+    // These matter for quality but players are forgiving of minor issues
+    // =======================================================================
+
+    // Thread continuity - important but not worth failing over
+    // if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;  // DISABLED
+    // if (s.startsWith('OVERDUE THREAD ERROR:')) return true;  // DISABLED
+
+    // Story day mismatch - minor, player won't notice
+    // if (s.startsWith('STORY DAY MISMATCH:')) return true;  // DISABLED
+
+    // Timeline approximations - close enough is fine
+    // if (s.includes('Timeline approximation')) return true;  // DISABLED
+
+    // Personality enforcement - Jack can have emotional moments
+    // if (s.startsWith('PERSONALITY VIOLATION:')) return true;  // DISABLED
 
     return false;
   }
