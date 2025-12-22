@@ -322,6 +322,12 @@ export function useStoryGeneration(storyCampaign) {
       try {
         if (chapter && subchapter && subchapter < 3) {
           prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `cache-hit:${caseNumber}`);
+
+          // EARLY PREFETCH: When accessing subchapter B (even from cache), start prefetching
+          // both next-chapter paths so content is ready when player reaches the decision.
+          if (subchapter === 2 && chapter < 12) {
+            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'cache-hit:B-early');
+          }
         }
       } catch (e) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.cacheHit.error', { error: e?.message }, 'warn');
@@ -407,6 +413,14 @@ export function useStoryGeneration(storyCampaign) {
       try {
         if (chapter && subchapter && subchapter < 3) {
           prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `generateForCase:${caseNumber}`);
+
+          // EARLY PREFETCH: When subchapter B finishes, also start prefetching BOTH
+          // next-chapter paths immediately. This way, by the time the player reaches
+          // subchapter C and makes a decision, content for both options is likely ready.
+          if (subchapter === 2 && chapter < 12) {
+            console.log(`[useStoryGeneration] [${genId}] Subchapter B complete - starting early next-chapter prefetch`);
+            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:B-complete-early');
+          }
         }
       } catch (e) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.trigger.error', { error: e?.message }, 'warn');
@@ -936,6 +950,7 @@ export function useStoryGeneration(storyCampaign) {
     generateChapter,
     pregenerate,
     pregenerateCurrentChapterSiblings,
+    prefetchNextChapterBranchesAfterC, // Prefetch both decision paths when entering subchapter C
     cancelGeneration,
     clearError,
   };

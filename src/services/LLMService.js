@@ -715,6 +715,16 @@ class LLMService {
 
         console.log(`[LLMService] [${localRequestId}] Attempt ${attempt + 1}/${this.config.maxRetries} - sending request...`);
 
+        if (traceId) {
+          llmTrace('LLMService', traceId, 'llm.proxy.request.start', {
+            attempt: attempt + 1,
+            maxRetries: this.config.maxRetries,
+            proxyUrl: this.config.proxyUrl,
+            timeout: this.config.timeout,
+            localRequestId,
+          }, 'info');
+        }
+
         const response = await fetch(this.config.proxyUrl, {
           method: 'POST',
           headers,
@@ -743,6 +753,13 @@ class LLMService {
           const data = await response.json().catch(() => ({}));
           const retryAfter = Math.min(data.retryAfter || 60, 120); // Cap at 2 minutes
           console.warn(`[LLMService] [${localRequestId}] Rate limited (429), waiting ${retryAfter}s before retry...`);
+          if (traceId) {
+            llmTrace('LLMService', traceId, 'llm.proxy.rate_limited', {
+              retryAfter,
+              attempt: attempt + 1,
+              localRequestId,
+            }, 'warn');
+          }
           await this._sleep(retryAfter * 1000);
           continue; // Don't count toward retries
         }
@@ -753,6 +770,16 @@ class LLMService {
           const errorMsg = data.error || `Proxy error: ${response.status}`;
           const proxyRequestId = data.requestId || 'unknown';
           console.error(`[LLMService] [${localRequestId}] Proxy error: ${errorMsg} (proxy requestId: ${proxyRequestId}, details: ${data.details || 'none'})`);
+          if (traceId) {
+            llmTrace('LLMService', traceId, 'llm.proxy.error', {
+              status: response.status,
+              error: errorMsg,
+              proxyRequestId,
+              details: data.details,
+              attempt: attempt + 1,
+              localRequestId,
+            }, 'error');
+          }
           throw new Error(errorMsg);
         }
 
@@ -842,6 +869,14 @@ class LLMService {
 
         if (error.name === 'AbortError') {
           console.error(`[LLMService] [${localRequestId}] Request timed out after ${attemptTime}ms (timeout: ${this.config.timeout}ms)`);
+          if (traceId) {
+            llmTrace('LLMService', traceId, 'llm.proxy.timeout', {
+              timeoutMs: this.config.timeout,
+              attemptTimeMs: attemptTime,
+              attempt: attempt + 1,
+              localRequestId,
+            }, 'error');
+          }
           throw new Error('Request timed out');
         }
 
@@ -849,9 +884,25 @@ class LLMService {
         if (attempt < this.config.maxRetries) {
           const backoffDelay = Math.pow(2, attempt - 1) * 1000;
           console.warn(`[LLMService] [${localRequestId}] Attempt ${attempt} failed after ${attemptTime}ms: ${error.message}. Retrying in ${backoffDelay/1000}s...`);
+          if (traceId) {
+            llmTrace('LLMService', traceId, 'llm.proxy.retry', {
+              attempt: attempt + 1,
+              maxRetries: this.config.maxRetries,
+              backoffMs: backoffDelay,
+              previousError: error.message,
+              localRequestId,
+            }, 'warn');
+          }
           await this._sleep(backoffDelay);
         } else {
           console.error(`[LLMService] [${localRequestId}] All ${this.config.maxRetries} attempts failed. Last error: ${error.message}`);
+          if (traceId) {
+            llmTrace('LLMService', traceId, 'llm.proxy.all_retries_exhausted', {
+              totalAttempts: this.config.maxRetries,
+              lastError: error.message,
+              localRequestId,
+            }, 'error');
+          }
         }
       }
     }

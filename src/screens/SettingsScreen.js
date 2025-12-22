@@ -121,6 +121,16 @@ export default function SettingsScreen({
                 {llmConfigured ? 'Gemini 3 Flash Ready' : 'Not Configured'}
               </Text>
             </View>
+            <SettingToggle
+              label="Verbose Mode"
+              value={settings.verboseMode}
+              onToggle={handleToggle('verboseMode')}
+            />
+            <Text style={styles.metaText}>
+              {settings.verboseMode
+                ? 'Debug overlay active. Shows real-time LLM generation status.'
+                : 'Enable to see detailed LLM generation logs.'}
+            </Text>
           </View>
 
           <View style={styles.section}>

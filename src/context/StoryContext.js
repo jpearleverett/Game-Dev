@@ -36,6 +36,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     generateChapter,
     pregenerate,
     pregenerateCurrentChapterSiblings,
+    prefetchNextChapterBranchesAfterC,
     cancelGeneration,
     clearError: clearGenerationError,
   } = useStoryGeneration(storyCampaign);
@@ -161,11 +162,20 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // Strategy:
     // 1. Ensure current chapter's remaining subchapters (siblings) are ready
     // 2. Ensure next chapter is pre-loading (lookahead)
+    // 3. For decision subchapters (C), prefetch BOTH possible next paths immediately
 
     // Logic for Subchapters A (1) and B (2) -> Generate remaining siblings
     // If we are in A, we need B and C. If in B, we need C.
     if (chapter >= 2 && subchapter < 3) {
       pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
+    }
+
+    // Logic for Subchapter C (decision point) -> Prefetch BOTH next chapter paths
+    // This is critical: while the player reads the decision, we prefetch both options
+    // so whichever path they choose, content is already ready.
+    if (chapter >= 1 && subchapter === 3 && chapter < 12) {
+      console.log(`[StoryContext] Entering decision subchapter ${caseNumber} - prefetching both next chapter paths`);
+      prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'handleBackgroundGeneration:C-entered');
     }
 
     // Logic for all Subchapters -> Look ahead to next chapter
@@ -174,7 +184,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     if (chapter >= 1 && chapter < 12) {
       pregenerate(chapter, pathKey, choiceHistory);
     }
-  }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, pregenerate]);
+  }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, prefetchNextChapterBranchesAfterC, pregenerate]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
     const traceId = createTraceId(`decision_${storyCampaign?.pendingDecisionCase || 'unknown'}`);
