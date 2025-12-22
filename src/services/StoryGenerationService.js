@@ -2972,8 +2972,25 @@ Generate realistic, specific consequences based on the actual narrative content.
       const decisionChapter = this._extractChapterFromCase(last.caseNumber);
       const decisionPathKey = this._getPathKeyForChapter(decisionChapter, choiceHistory);
       const decisionEntry = this.getGeneratedEntry(last.caseNumber, decisionPathKey) || getStoryEntry(last.caseNumber, 'ROOT');
-      const chosenOption = decisionEntry?.decision?.options?.find((o) => o.key === last.optionKey) || null;
-      const otherOption = decisionEntry?.decision?.options?.find((o) => o.key !== last.optionKey) || null;
+
+      // Support both formats: options[] array (static) AND optionA/optionB (generated)
+      const getOption = (key) => {
+        // First try direct optionA/optionB access (generated content format)
+        const directOption = decisionEntry?.decision?.[`option${key}`];
+        if (directOption?.title) return directOption;
+        // Then try options[] array (static content format)
+        return decisionEntry?.decision?.options?.find((o) => o.key === key) || null;
+      };
+
+      const chosenOption = getOption(last.optionKey);
+      const otherKey = last.optionKey === 'A' ? 'B' : 'A';
+      const otherOption = getOption(otherKey);
+
+      // Also extract the narrative excerpt from the decision chapter if available
+      // This provides rich context about what led to the decision
+      const decisionNarrativeExcerpt = decisionEntry?.narrative
+        ? decisionEntry.narrative.slice(-800) // Last 800 chars of decision scene
+        : null;
 
       // Prefer stored title/focus from choice history (always available after decision),
       // fall back to looking it up from the decision entry
@@ -2988,6 +3005,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         chosenStats: chosenOption?.stats || null,
         otherTitle: otherOption?.title || null,
         otherFocus: otherOption?.focus || null,
+        decisionNarrativeExcerpt, // New: excerpt from the decision scene for context
       };
     })();
 
@@ -3422,9 +3440,17 @@ ${context.decisionConsequences?.ongoing?.length > 0 ? [...new Set(context.decisi
 ${context.lastDecision
   ? `- Decision: Chapter ${context.lastDecision.chapter} (${context.lastDecision.caseNumber}) => Option "${context.lastDecision.optionKey}"
 - Chosen action: ${context.lastDecision.chosenTitle || '(title unavailable)'}
+- What this choice means: ${context.lastDecision.chosenFocus || context.lastDecision.immediate}
 - Immediate consequence to OPEN ON: ${context.lastDecision.immediate}
-- The road not taken: ${context.lastDecision.otherTitle || '(unknown)'}`
+- The road not taken: ${context.lastDecision.otherTitle || '(unknown)'} (${context.lastDecision.otherFocus || 'different approach'})`
   : '- None (start of story)'}
+${context.lastDecision?.decisionNarrativeExcerpt ? `
+
+### WHERE WE LEFT OFF (End of previous chapter's decision scene):
+"""
+${context.lastDecision.decisionNarrativeExcerpt}
+"""
+Continue DIRECTLY from this moment. Show what happens next.` : ''}
 
 ### PACING REQUIREMENTS
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
@@ -3445,24 +3471,57 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
       const lastChoice = context.playerChoices[context.playerChoices.length - 1];
       if (lastChoice.chapter === chapter - 1) {
         // Use the stored title/focus if available, otherwise fall back to key
-        const choiceTitle = lastChoice.optionTitle || `Option ${lastChoice.optionKey}`;
-        const choiceFocus = lastChoice.optionFocus ? `\nFOCUS: ${lastChoice.optionFocus}` : '';
+        // Also check context.lastDecision which has richer info including the other option
+        const choiceTitle = lastChoice.optionTitle || context.lastDecision?.chosenTitle || `Option ${lastChoice.optionKey}`;
+        const choiceFocus = lastChoice.optionFocus || context.lastDecision?.chosenFocus || '';
+        const roadNotTaken = context.lastDecision?.otherTitle || 'the other path';
+        const narrativeContext = context.lastDecision?.immediate || '';
 
-        task += `\n\n### CRITICAL CONTEXT: PREVIOUS DECISION
-The player JUST made a crucial decision at the end of the previous chapter.
-You MUST SHOW THIS SCENE - do NOT skip it or summarize it as past events.
+        task += `\n\n### ⚠️ CRITICAL: PREVIOUS DECISION SCENE (MUST NOT SKIP) ⚠️
+The player JUST made a crucial decision at the end of Chapter ${chapter - 1}.
+This decision determines what happens in THIS chapter. You MUST SHOW the chosen scene.
 
-PLAYER'S CHOICE: "${choiceTitle}"${choiceFocus}
+═══════════════════════════════════════════════════════════
+🎬 PLAYER CHOSE: "${choiceTitle}"
+${choiceFocus ? `📋 WHAT THIS MEANS: ${choiceFocus}` : ''}
+🚫 REJECTED: "${roadNotTaken}"
+${narrativeContext ? `📍 SCENE TO SHOW: ${narrativeContext}` : ''}
+═══════════════════════════════════════════════════════════
 
-**MANDATORY REQUIREMENTS:**
-1. The chapter MUST OPEN with Jack actively pursuing this choice - we see the scene unfold in real-time
-2. DO NOT start with "After going to..." or "Having confronted..." - START IN THE MOMENT
-3. The FIRST 200+ WORDS should be the actual scene of the chosen action
-4. Show sensory details: what Jack sees, hears, feels as he takes this action
-5. Include dialogue and character reactions from whoever Jack encounters
+**🚨 ABSOLUTE REQUIREMENTS - FAILURE TO COMPLY = REJECTED GENERATION:**
 
-Example of WRONG approach: "After Jack confronted Wade at the wharf, he returned to his office..."
-Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."`;
+1. **OPEN IN THE MOMENT**: The VERY FIRST paragraph must place Jack IN the scene of the chosen action.
+   - If player chose "Confront Silas at his penthouse" → Open with Jack AT the penthouse, confronting Silas
+   - If player chose "Go to the diner for the ledger" → Open with Jack AT the diner, talking to Thornhill's daughter
+   
+2. **NEVER SKIP OR SUMMARIZE**: Do NOT write "After confronting..." or "Having visited..." or "Jack had already..."
+   - ❌ WRONG: "After Jack's confrontation with Silas at the penthouse, he sat in his office..."
+   - ❌ WRONG: "The meeting at the penthouse had been brutal. Now Jack..."
+   - ❌ WRONG: "Having secured the ledger from the diner, Jack reviewed..."
+   - ✅ RIGHT: "The elevator doors opened on the penthouse floor. Jack's hand rested on his .38 as he stepped into..."
+   - ✅ RIGHT: "The diner smelled of burnt coffee and old grease. Maya Thornhill stood behind the counter..."
+
+3. **FIRST 300+ WORDS = THE CHOSEN SCENE**: The player's decision is the main event. Show it completely:
+   - The approach (Jack arriving, preparing)
+   - The confrontation/encounter (dialogue, tension, revelations)
+   - The outcome (what Jack learns, how others react)
+
+4. **SENSORY GROUNDING**: Describe what Jack sees, hears, smells, feels DURING this scene
+
+5. **DIALOGUE IS REQUIRED**: Include actual conversation with the characters Jack encounters
+
+**EXAMPLE OF CORRECT SCENE EXECUTION:**
+If player chose "Confront Silas at his penthouse":
+
+"The penthouse elevator opened with a soft chime that seemed obscene in the circumstances. Jack stepped out onto marble floors that probably cost more than his annual salary used to be. Silas Reed stood by the floor-to-ceiling windows, a glass of scotch catching the city lights.
+
+'You've got some nerve showing up here, Jack.' Silas didn't turn around. His reflection in the glass looked haunted.
+
+'Nice place for a cop's salary,' Jack said. 'Want to tell me about those wire transfers?'
+
+Silas finally turned. His eyes were red-rimmed, the eyes of a man who hadn't slept in days. 'You don't understand what you're getting into.'..."
+
+**THIS IS THE MOST IMPORTANT PART OF YOUR GENERATION. THE PLAYER MADE A CHOICE - SHOW THEM THE RESULT.**`;
       }
     }
 

@@ -220,12 +220,20 @@ export function StoryProvider({ children, progress, updateProgress }) {
       // The path key is simply the option chosen - A or B
       const pathKey = optionKey;
 
+      // Get the decision option details from storyCampaign.pendingDecisionOptions
+      // This ensures the LLM knows WHAT the player chose, not just "A" or "B"
+      const pendingOptions = storyCampaign?.pendingDecisionOptions || {};
+      const selectedOption = pendingOptions[optionKey] || {};
+
       // Construct optimistic history including the choice just made
+      // CRITICAL: Include optionTitle and optionFocus so the LLM knows what scene to show
       const optimisticChoiceHistory = [
         ...currentHistory,
         {
           caseNumber: formatCaseNumber(currentChapter, 3), // Decision happens at subchapter 3
           optionKey: optionKey,
+          optionTitle: selectedOption.title || null,  // e.g., "Confront Silas at his penthouse"
+          optionFocus: selectedOption.focus || null,  // e.g., "Confrontational. Instinct first."
           timestamp: new Date().toISOString()
         }
       ];

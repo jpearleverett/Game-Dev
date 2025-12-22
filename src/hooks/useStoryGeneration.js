@@ -16,6 +16,8 @@ import {
   parseCaseNumber,
   formatCaseNumber,
   computeBranchPathKey,
+  getStoryEntry,
+  getStoryEntryAsync,
 } from '../data/storyContent';
 
 // Generation states
@@ -77,12 +79,43 @@ export function useStoryGeneration(storyCampaign) {
       choiceHistoryLength: choiceHistory?.length || 0,
     }, 'info');
 
+    // Look up the decision entry to get option titles/focus for the optimistic history
+    // This ensures the LLM knows WHAT the player chose, not just "A" or "B"
+    const decisionPathKey = computeBranchPathKey(choiceHistory, currentChapter);
+    let decisionEntry = null;
+    try {
+      // Try generated content first, then static content
+      decisionEntry = await getStoryEntryAsync(decisionCaseNumber, decisionPathKey);
+      if (!decisionEntry) {
+        decisionEntry = getStoryEntry(decisionCaseNumber, 'ROOT');
+      }
+    } catch (e) {
+      console.warn('[useStoryGeneration] Failed to look up decision entry for prefetch:', e?.message);
+    }
+
+    // Extract option details from decision entry
+    const getOptionDetails = (key) => {
+      if (!decisionEntry?.decision) return { title: null, focus: null };
+      // Support both formats: optionA/optionB and options[] array
+      const option = decisionEntry.decision[`option${key}`] ||
+        decisionEntry.decision.options?.find(o => o.key === key);
+      return {
+        title: option?.title || null,
+        focus: option?.focus || null,
+      };
+    };
+
     const startOne = async (optionKey) => {
+      // Get the specific option's title and focus
+      const optionDetails = getOptionDetails(optionKey);
+
       const optimisticHistory = [
         ...(choiceHistory || []),
         {
           caseNumber: decisionCaseNumber,
           optionKey,
+          optionTitle: optionDetails.title,  // e.g., "Confront Silas at his penthouse"
+          optionFocus: optionDetails.focus,  // e.g., "Confrontational. Instinct first."
           timestamp: new Date().toISOString(),
         },
       ];
@@ -798,12 +831,40 @@ export function useStoryGeneration(storyCampaign) {
     const isBalancedPlayer = prediction.playerPersonality === 'balanced' ||
                              prediction.confidence < 0.70;
 
+    // Look up the decision entry to get option titles/focus for the speculative history
+    // This ensures the LLM knows WHAT the player would choose, not just "A" or "B"
+    const decisionCaseNumber = formatCaseNumber(currentChapter, 3);
+    const decisionPathKey = computeBranchPathKey(choiceHistory, currentChapter);
+    let decisionEntry = null;
+    try {
+      decisionEntry = await getStoryEntryAsync(decisionCaseNumber, decisionPathKey);
+      if (!decisionEntry) {
+        decisionEntry = getStoryEntry(decisionCaseNumber, 'ROOT');
+      }
+    } catch (e) {
+      // Non-blocking - just means we won't have title/focus
+    }
+
+    // Helper to get option details
+    const getOptionDetails = (key) => {
+      if (!decisionEntry?.decision) return { title: null, focus: null };
+      const option = decisionEntry.decision[`option${key}`] ||
+        decisionEntry.decision.options?.find(o => o.key === key);
+      return { title: option?.title || null, focus: option?.focus || null };
+    };
+
+    const primaryDetails = getOptionDetails(prediction.primary);
+    const secondaryDetails = getOptionDetails(prediction.secondary);
+
     // Check what needs generation upfront (parallel async checks)
+    // CRITICAL: Include optionTitle and optionFocus so the LLM knows what scene to show
     const speculativeHistoryPrimary = [
       ...choiceHistory,
       {
         caseNumber: formatCaseNumber(currentChapter, 3),
         optionKey: prediction.primary,
+        optionTitle: primaryDetails.title,
+        optionFocus: primaryDetails.focus,
         timestamp: new Date().toISOString()
       }
     ];
@@ -813,6 +874,8 @@ export function useStoryGeneration(storyCampaign) {
       {
         caseNumber: formatCaseNumber(currentChapter, 3),
         optionKey: prediction.secondary,
+        optionTitle: secondaryDetails.title,
+        optionFocus: secondaryDetails.focus,
         timestamp: new Date().toISOString()
       }
     ];
@@ -869,16 +932,20 @@ export function useStoryGeneration(storyCampaign) {
       const firstCaseTwoAhead = `${String(twoAheadChapter).padStart(3, '0')}A`;
 
       // Build speculative history for two chapters ahead (assume primary path for both)
+      // Include optionTitle/optionFocus for the current chapter decision where we have it
       const speculativeHistoryTier2 = [
         ...choiceHistory,
         {
           caseNumber: formatCaseNumber(currentChapter, 3),
           optionKey: prediction.primary,
+          optionTitle: primaryDetails.title,
+          optionFocus: primaryDetails.focus,
           timestamp: new Date().toISOString()
         },
         {
           caseNumber: formatCaseNumber(nextChapter, 3),
           optionKey: prediction.primary, // Assume same pattern continues
+          // Note: We don't have title/focus for this future decision yet
           timestamp: new Date().toISOString()
         }
       ];
