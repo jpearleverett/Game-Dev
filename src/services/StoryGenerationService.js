@@ -35,8 +35,8 @@ import {
 // Story configuration
 const TOTAL_CHAPTERS = 12;
 const SUBCHAPTERS_PER_CHAPTER = 3;
-const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 550
-const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 750
+const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // e.g. 450
+const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // e.g. 500
 const DECISION_SUBCHAPTER = 3;
 const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 2;
 
@@ -161,7 +161,7 @@ const STORY_CONTENT_SCHEMA = {
     },
     narrative: {
       type: 'string',
-      description: 'Full noir prose narrative in third-person limited (close on Jack Halloway), past tense, minimum 500 words',
+      description: `Full noir prose narrative in third-person limited (close on Jack Halloway), past tense, minimum ${MIN_WORDS_PER_SUBCHAPTER} words`,
     },
     chapterSummary: {
       type: 'string',
@@ -2392,12 +2392,37 @@ Generate realistic, specific consequences based on the actual narrative content.
         aggressiveScore += (consequence.characterImpact.aggression || 0) * weight;
         methodicalScore += (consequence.characterImpact.thoroughness || 0) * weight;
       } else {
-        // Default scoring: A tends to be "methodical/evidence-first", B tends to be "aggressive/instinct-first".
-        // (Individual chapters can override via generated DECISION_CONSEQUENCES.)
-        if (choice.optionKey === 'A') {
-          methodicalScore += 5 * weight;
-        } else if (choice.optionKey === 'B') {
-          aggressiveScore += 5 * weight;
+        // Prefer the decision's explicit personalityAlignment when available.
+        // This avoids baking in A=methodical/B=aggressive when the narrative frames choices differently.
+        let alignment = null;
+        try {
+          const decisionChapter = this._extractChapterFromCase(choice.caseNumber);
+          const decisionPathKey = this._getPathKeyForChapter(decisionChapter, choiceHistory);
+          const decisionEntry =
+            this.getGeneratedEntry(choice.caseNumber, decisionPathKey) ||
+            getStoryEntry(choice.caseNumber, 'ROOT');
+
+          const opt =
+            decisionEntry?.decision?.options?.find((o) => o?.key === choice.optionKey) ||
+            (choice.optionKey === 'A' ? decisionEntry?.decision?.optionA : decisionEntry?.decision?.optionB) ||
+            null;
+
+          alignment = opt?.personalityAlignment || null;
+        } catch {
+          alignment = null;
+        }
+
+        if (alignment === 'methodical') {
+          methodicalScore += 6 * weight;
+        } else if (alignment === 'aggressive') {
+          aggressiveScore += 6 * weight;
+        } else {
+          // Fallback scoring: A tends to be "methodical/evidence-first", B tends to be "aggressive/instinct-first".
+          if (choice.optionKey === 'A') {
+            methodicalScore += 5 * weight;
+          } else if (choice.optionKey === 'B') {
+            aggressiveScore += 5 * weight;
+          }
         }
       }
     });
@@ -6184,6 +6209,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     }
 
+    // Soft fuzzy timeline checks: these don't necessarily contradict canon, but they invite drift.
+    // Prefer explicit numbers ("exactly 30 years") over vague magnitude language ("decades").
+    const fuzzyTimeline = [
+      { pattern: /\bdecades?\s+(?:of\s+)?(?:friendship|knowing|loyalty)\b/i, warning: 'Timeline phrasing is vague ("decades"). Prefer exact: Tom Wade friendship is exactly 30 years.' },
+      { pattern: /\b(?:a\s+)?decade\s+(?:of\s+)?(?:partnership|working\s+together)\b/i, warning: 'Timeline phrasing is vague ("a decade"). Prefer exact: Silas partnership is exactly 8 years; Sarah partnership is exactly 13 years.' },
+      { pattern: /\bthree\s+decades?\b/i, warning: 'Prefer numeric exactness: write "30 years" (exactly) instead of "three decades".' },
+      { pattern: /\b(?:years?\s+and\s+years?|for\s+years)\b/i, warning: 'Avoid vague time spans ("for years"). Use the exact canonical durations when referring to key relationships/cases.' },
+    ];
+    for (const { pattern, warning } of fuzzyTimeline) {
+      if (pattern.test(narrativeOriginal)) {
+        warnings.push(warning);
+      }
+    }
+
     // Log warnings but don't block on them
     if (warnings.length > 0) {
       console.log('[ConsistencyValidator] Warnings:', warnings);
@@ -7069,6 +7108,13 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
   _generateBoardData(narrative, isDecisionPoint, decision, puzzleCandidates = [], chapter = 2) {
     // Combine LLM candidates with regex extraction, prioritizing LLM candidates
     const regexWords = this._extractKeywordsFromNarrative(narrative);
+    const narrativeUpperWordSet = new Set(
+      String(narrative || '')
+        .toUpperCase()
+        .replace(/[^A-Z\s]/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean)
+    );
 
     // ========== DIFFICULTY SCALING BASED ON CHAPTER ==========
     // Early chapters (2-4): Easier puzzles with more obvious words
@@ -7123,6 +7169,9 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
         if (!/^[A-Z]+$/.test(w)) return false;
         // Quality filter
         if (boringWords.has(w)) return false;
+        // Fairness: keep candidates grounded in the actual narrative text.
+        // (The generator already asks for words "directly from your narrative", but enforce it here.)
+        if (!narrativeUpperWordSet.has(w)) return false;
         return true;
       });
 
@@ -7211,7 +7260,9 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     outlierWords = this._validatePuzzleSemanticsSync(
       outlierWords,
       mainGridWords,
-      [...availableReplacements, ...shuffledFillers]
+      // IMPORTANT: Do NOT use filler words as outlier replacements.
+      // Replacements must remain grounded in the narrative-derived pools for puzzle fairness.
+      availableReplacements
     );
 
     // Update grid with validated outliers
@@ -7472,6 +7523,12 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       ['NEON', 'GLOW', 'SIGN', 'LIGHT', 'FLASH', 'FLICKER'],
       ['SMOKE', 'FOG', 'MIST', 'HAZE', 'VAPOR', 'CLOUD'],
       ['COAT', 'HAT', 'TRENCH', 'JACKET', 'COLLAR'],
+
+      // Noir emotional collocations (rain-as-grief, past-as-haunting, favors-as-debt, scars-as-history)
+      ['RAIN', 'TEARS', 'CRY', 'WEEP', 'GRIEF', 'MOURN', 'SOB'],
+      ['SHADOW', 'GHOST', 'PAST', 'MEMORY', 'HAUNT', 'HAUNTED', 'SPECTER', 'ECHO'],
+      ['DEBT', 'FAVOR', 'OWE', 'PRICE', 'COST', 'DUES', 'PAYBACK'],
+      ['SCAR', 'MARK', 'WOUND', 'BRAND', 'BURNED', 'STITCH', 'BRUISE'],
 
       // Characters (Story-Specific)
       ['VICTORIA', 'CONFESSOR', 'EMILY', 'BLACKWELL'],
@@ -7862,7 +7919,8 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
           const sharedLetters = [...outlierLetters].filter(l => gridLetters.has(l)).length;
           const maxLength = Math.max(outlier.length, gridWord.length);
           // If more than 70% letters are shared, might be confusing
-          if (sharedLetters / maxLength > 0.7) {
+          // Guard: short words have naturally high letter overlap and cause false positives (e.g., GUN/RUN).
+          if (maxLength > 4 && sharedLetters / maxLength > 0.7) {
             needsReplacement = true;
             console.log(`[StoryGenerationService] Letter overlap detected: "${outlier}" ~ "${gridWord}" (${Math.round(sharedLetters/maxLength*100)}% shared)`);
             break;
