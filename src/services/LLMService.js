@@ -433,11 +433,9 @@ class LLMService {
     const isGemini3 = model.includes('gemini-3');
 
     // Determine effective temperature.
-    // We should respect caller-provided temperature for narrative consistency.
-    // (For Gemini 3, 1.0 may increase creativity but can also increase continuity drift.)
-    const effectiveTemperature = typeof temperature === 'number'
-      ? temperature
-      : (isGemini3 ? 1.0 : 0.8);
+    // Per Gemini guidance for these models, temperature must be 1.0.
+    // We force it here so callers can't accidentally send lower values.
+    const effectiveTemperature = 1.0;
 
     // ========== PROXY MODE (Production - Secure) ==========
     if (this.config.proxyUrl) {

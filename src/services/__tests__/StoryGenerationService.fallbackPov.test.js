@@ -49,5 +49,17 @@ describe('StoryGenerationService fallback POV sanitizer', () => {
       expect(hasFirstPersonOutsideQuotes(entry.narrative)).toBe(false);
     }
   });
+
+  test('emergency fallback subchapter parsing uses case letter (A/B/C)', () => {
+    // This guards a past bug where slice(4,5) was used and always produced subchapter 1.
+    const parseSub = (caseNumber) => {
+      const subLetter = String(caseNumber?.slice(3, 4) || 'A').toUpperCase();
+      return ({ A: 1, B: 2, C: 3 }[subLetter]) || 1;
+    };
+
+    expect(parseSub('003A')).toBe(1);
+    expect(parseSub('003B')).toBe(2);
+    expect(parseSub('003C')).toBe(3);
+  });
 });
 

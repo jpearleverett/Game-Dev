@@ -4785,7 +4785,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // Final fallback if even the inner fallback failed (or timeout occurred)
       console.error(`[StoryGenerationService] Complete generation failure for ${generationKey}, using emergency fallback: ${e.message}`);
       const chapterNum = parseInt(caseNumber?.slice(0, 3)) || 2;
-      const subchapterNum = parseInt(caseNumber?.slice(4, 5)) || 1;
+      const subLetter = String(caseNumber?.slice(3, 4) || 'A').toUpperCase();
+      const subchapterNum = ({ A: 1, B: 2, C: 3 }[subLetter]) || 1;
       const isDecisionPoint = subchapterNum === 3;
 
       const emergencyFallback = this._getFallbackContent(chapterNum, subchapterNum, pathKey, isDecisionPoint);
