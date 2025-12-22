@@ -3185,7 +3185,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         if (ch.subchapter === 3) {
           const choice = choicesByChapter.get(ch.chapter);
           if (choice) {
-            summary += `[DECISION MADE: Chapter ${ch.chapter} => Option "${choice}"]\n`;
+            summary += `[PLAYER CHOSE OPTION: "${choice}" - Action to be depicted in next chapter]\n`;
           }
         }
         summary += '\n---\n\n';
@@ -3462,7 +3462,12 @@ PLAYER'S CHOICE: "${choiceTitle}"${choiceFocus}
 5. Include dialogue and character reactions from whoever Jack encounters
 
 Example of WRONG approach: "After Jack confronted Wade at the wharf, he returned to his office..."
-Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."`;
+Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."
+
+**CRITICAL INSTRUCTION:**
+The "PREVIOUS STORY EVENTS" section lists the player's choice, but the ACTION has NOT occurred in the narrative yet.
+Do not be confused by the summary. You are picking up exactly where the previous chapter ended: at the moment of decision.
+NOW you must write the consequence.`;
       }
     }
 

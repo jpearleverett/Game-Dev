@@ -12,6 +12,7 @@ import { createTraceId, llmTrace } from '../utils/llmTrace';
 import {
   isDynamicChapter,
   hasStoryContent,
+  getStoryEntryAsync,
   updateGeneratedCache,
   parseCaseNumber,
   formatCaseNumber,
@@ -317,6 +318,10 @@ export function useStoryGeneration(storyCampaign) {
       console.log(`[useStoryGeneration] [${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
       llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.hit', { caseNumber, pathKey }, 'debug');
+
+      // Load and return the cached entry
+      const cachedEntry = await getStoryEntryAsync(caseNumber, canonicalPathKey);
+
       // Even on a cache hit, proactively prefetch the remaining subchapters for this chapter
       // so the player never sees a mid-chapter generation stall.
       try {
@@ -332,7 +337,7 @@ export function useStoryGeneration(storyCampaign) {
       } catch (e) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.cacheHit.error', { error: e?.message }, 'warn');
       }
-      return null; // Already generated
+      return cachedEntry;
     }
 
     // Determine if this is a cache miss (player chose unexpected path)

@@ -220,12 +220,20 @@ export function StoryProvider({ children, progress, updateProgress }) {
       // The path key is simply the option chosen - A or B
       const pathKey = optionKey;
 
+      // Find the option details to pass to context for better prompt generation
+      const pendingOptions = storyCampaign?.pendingDecisionOptions || {};
+      const chosenOption = pendingOptions[optionKey] || {};
+      const optionTitle = chosenOption.title;
+      const optionFocus = chosenOption.focus;
+
       // Construct optimistic history including the choice just made
       const optimisticChoiceHistory = [
         ...currentHistory,
         {
           caseNumber: formatCaseNumber(currentChapter, 3), // Decision happens at subchapter 3
           optionKey: optionKey,
+          optionTitle,
+          optionFocus,
           timestamp: new Date().toISOString()
         }
       ];
