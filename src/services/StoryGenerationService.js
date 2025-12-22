@@ -4221,8 +4221,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   /**
    * Acquire a generation slot, waiting if necessary
    * Returns true when slot is acquired
+   * Throws if queue is too long (prevents queue explosion from aggressive prefetching)
    */
   async _acquireGenerationSlot(generationKey) {
+    // Prevent queue explosion - reject if queue is already too long
+    const MAX_QUEUE_SIZE = 6; // Allow some queuing but prevent explosion
+    if (this.generationWaitQueue.length >= MAX_QUEUE_SIZE) {
+      console.warn(`[StoryGenerationService] Queue full (${this.generationWaitQueue.length} waiting), rejecting ${generationKey}`);
+      throw new Error(`Generation queue full - try again later`);
+    }
+
     if (this.activeGenerationCount < this.maxConcurrentGenerations) {
       this.activeGenerationCount++;
       console.log(`[StoryGenerationService] Acquired slot for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
@@ -4869,7 +4877,17 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
       // Convert decision format if present
       if (isDecisionPoint && parsed.decision) {
+        // DEBUG: Log raw decision from LLM to diagnose parsing issues
+        console.log('[StoryGenerationService] Raw decision from LLM:', JSON.stringify(parsed.decision, null, 2));
         result.decision = this._convertDecisionFormat(parsed.decision);
+        // DEBUG: Log converted decision
+        if (!result.decision?.options?.[0]?.title || !result.decision?.options?.[1]?.title) {
+          console.error('[StoryGenerationService] DECISION PARSING FAILED - options missing titles:', {
+            rawOptionA: parsed.decision.optionA,
+            rawOptionB: parsed.decision.optionB,
+            convertedOptions: result.decision?.options,
+          });
+        }
       }
 
       return result;
