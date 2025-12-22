@@ -67,5 +67,29 @@ describe('StoryGenerationService branch-scoped persisted facts', () => {
     expect(bb).toEqual(expect.arrayContaining(['CH2_B_FACT', 'CH3_BB_FACT']));
     expect(bb).not.toEqual(expect.arrayContaining(['CH3_BA_FACT']));
   });
+
+  test('thread extraction does not resurrect threads after they are resolved', () => {
+    const chapters = [
+      {
+        chapter: 2,
+        subchapter: 1,
+        narrative: 'x',
+        narrativeThreads: [
+          { type: 'appointment', description: 'Meet Silas at the penthouse', status: 'active', urgency: 'critical' },
+        ],
+      },
+      {
+        chapter: 2,
+        subchapter: 2,
+        narrative: 'x',
+        narrativeThreads: [
+          { type: 'appointment', description: 'Meet Silas at the penthouse', status: 'resolved', urgency: 'critical', resolvedChapter: 2 },
+        ],
+      },
+    ];
+
+    const active = storyGenerationService._extractNarrativeThreads(chapters);
+    expect(active.find(t => t.type === 'appointment' && /silas/i.test(t.description))).toBeFalsy();
+  });
 });
 

@@ -2398,34 +2398,54 @@ Generate realistic, specific consequences based on the actual narrative content.
    */
   _extractNarrativeThreads(chapters) {
     const threads = [];
-    const seenDescriptions = new Set(); // Prevent duplicate threads
+    const seenDescriptions = new Set(); // Prevent duplicate active threads in legacy mode
+
+    // For structured threads, track latest status per normalized key so resolved threads
+    // cannot "reappear" from earlier chapters (zombie thread bug).
+    const latestByKey = new Map(); // key -> { thread, chapter, subchapter }
 
     // First priority: Use LLM-generated structured threads
     chapters.forEach(ch => {
       if (ch.narrativeThreads && Array.isArray(ch.narrativeThreads)) {
         ch.narrativeThreads.forEach(thread => {
-          // Only include active threads (not resolved or failed)
-          if (thread.status === 'active') {
-            const key = `${thread.type}:${thread.description}`.toLowerCase();
-            if (!seenDescriptions.has(key)) {
-              seenDescriptions.add(key);
-              threads.push({
-                type: thread.type,
-                chapter: ch.chapter,
-                subchapter: ch.subchapter,
-                description: thread.description,
-                characters: thread.characters || [],
-                status: thread.status,
-                urgency: thread.urgency,
-                deadline: thread.deadline,
-                dueChapter: thread.dueChapter,
-                source: 'llm', // Track that this came from structured output
-              });
-            }
+          const type = thread?.type;
+          const desc = thread?.description;
+          const status = thread?.status;
+          if (!type || !desc) return;
+
+          const key = `${type}:${desc}`.toLowerCase();
+          const candidate = {
+            type,
+            chapter: ch.chapter,
+            subchapter: ch.subchapter,
+            description: desc,
+            characters: thread.characters || [],
+            status: status || 'active',
+            urgency: thread.urgency,
+            deadline: thread.deadline,
+            dueChapter: thread.dueChapter,
+            resolvedChapter: thread.resolvedChapter,
+            source: 'llm',
+          };
+
+          const existing = latestByKey.get(key);
+          const isNewer = !existing ||
+            (candidate.chapter > existing.chapter) ||
+            (candidate.chapter === existing.chapter && candidate.subchapter > existing.subchapter);
+          if (isNewer) {
+            latestByKey.set(key, { ...candidate, chapter: candidate.chapter, subchapter: candidate.subchapter });
           }
         });
       }
     });
+
+    // Materialize only active structured threads (latest status wins).
+    // If a thread was resolved/failed later, it won't show up here.
+    for (const [, t] of latestByKey.entries()) {
+      if (t.status === 'active') {
+        threads.push(t);
+      }
+    }
 
     // Fallback: Regex extraction for chapters without LLM threads (legacy content)
     const threadPatterns = [
@@ -2457,6 +2477,8 @@ Generate realistic, specific consequences based on the actual narrative content.
                 subchapter: ch.subchapter,
                 description: excerpt,
                 excerpt, // Keep for backwards compatibility
+                status: 'active',
+                urgency: 'background',
                 source: 'regex', // Track that this came from regex fallback
               });
             }
@@ -4004,10 +4026,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         thread._normalizedId = normalizedId;
         deduplicated.push(thread);
       } else {
-        // Merge: keep the more recent or more urgent version
+        // Merge: keep the more urgent version, or the more recent if equal urgency
         const existing = seen.get(normalizedId);
 
-        if ((urgencyRank[thread.urgency] || 0) > (urgencyRank[existing.urgency] || 0)) {
+        const urgencyA = (urgencyRank[thread.urgency] || 0);
+        const urgencyB = (urgencyRank[existing.urgency] || 0);
+        const isNewer = (thread.chapter > existing.chapter) ||
+          (thread.chapter === existing.chapter && (thread.subchapter || 0) > (existing.subchapter || 0));
+
+        if (urgencyA > urgencyB || (urgencyA === urgencyB && isNewer)) {
           const idx = deduplicated.indexOf(existing);
           if (idx !== -1) {
             thread._normalizedId = normalizedId;
@@ -5405,7 +5432,17 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         .join(' ')
         .toLowerCase();
 
-      const stop = new Set(['jack', 'said', 'the', 'and', 'that', 'with', 'from', 'into', 'then', 'over', 'under', 'were', 'was', 'had', 'have', 'this', 'there', 'their', 'they', 'them', 'what', 'when', 'where', 'which', 'while', 'because', 'before', 'after', 'could', 'would', 'should', 'about', 'again', 'still']);
+      // Stopwords used for choice-causality keyword extraction.
+      // Include common noir/setting tokens so we don't get false positives like "truth/rain/case".
+      const stop = new Set([
+        'jack', 'halloway', 'ashport', 'sarah', 'victoria', 'confessor', 'wade', 'tom',
+        'said', 'the', 'and', 'that', 'with', 'from', 'into', 'then', 'over', 'under',
+        'were', 'was', 'had', 'have', 'this', 'there', 'their', 'they', 'them', 'what',
+        'when', 'where', 'which', 'while', 'because', 'before', 'after', 'could', 'would',
+        'should', 'about', 'again', 'still', 'rain', 'truth', 'case', 'cases', 'evidence',
+        'investigation', 'city', 'street', 'streets', 'office', 'night', 'days', 'years',
+        'choice', 'chose', 'decided', 'decision', 'option', 'path', 'plan',
+      ]);
       const seedText = `${context.lastDecision.immediate || ''} ${context.lastDecision.chosenTitle || ''} ${context.lastDecision.chosenFocus || ''}`;
       const keywords = [...new Set(
         seedText
@@ -5415,8 +5452,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           .filter(w => w.length >= 4 && !stop.has(w))
       )].slice(0, 10);
 
-      const hit = keywords.some((k) => prefix.includes(k));
-      if (!hit && keywords.length > 0) {
+      const hitCount = keywords.reduce((acc, k) => acc + (prefix.includes(k) ? 1 : 0), 0);
+      if (hitCount === 0 && keywords.length > 0) {
         issues.push(
           `CHOICE RESPECT VIOLATION: Chapter start does not reflect last decision (Chapter ${context.lastDecision.chapter} option "${context.lastDecision.optionKey}") within first 200 words. Must show concrete consequence: ${context.lastDecision.immediate}`
         );
