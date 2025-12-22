@@ -936,6 +936,7 @@ export function useStoryGeneration(storyCampaign) {
     generateChapter,
     pregenerate,
     pregenerateCurrentChapterSiblings,
+    prefetchNextChapterBranchesAfterC, // Prefetch both decision paths when entering subchapter C
     cancelGeneration,
     clearError,
   };
