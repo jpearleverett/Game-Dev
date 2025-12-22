@@ -3204,6 +3204,278 @@ Generate realistic, specific consequences based on the actual narrative content.
     return [...new Set(facts)]; // Remove duplicates
   }
 
+  /**
+   * Extract scene state from the immediately previous subchapter
+   * This gives the LLM a precise snapshot of where we are in the story
+   */
+  _extractSceneState(previousChapters, currentChapter, currentSubchapter) {
+    if (!previousChapters || previousChapters.length === 0) {
+      return null;
+    }
+
+    // Find the immediately previous subchapter
+    let prevChapter, prevSubchapter;
+    if (currentSubchapter > 1) {
+      prevChapter = currentChapter;
+      prevSubchapter = currentSubchapter - 1;
+    } else {
+      prevChapter = currentChapter - 1;
+      prevSubchapter = 3;
+    }
+
+    const prevEntry = previousChapters.find(
+      ch => ch.chapter === prevChapter && ch.subchapter === prevSubchapter
+    );
+
+    if (!prevEntry?.narrative) {
+      return null;
+    }
+
+    const narrative = prevEntry.narrative;
+
+    // Extract the last 2-3 paragraphs for immediate context
+    const paragraphs = narrative.split(/\n\n+/).filter(p => p.trim().length > 50);
+    const lastParagraphs = paragraphs.slice(-3).join('\n\n');
+
+    // Extract the very last sentence for exact continuation point
+    const sentences = narrative.match(/[^.!?]+[.!?]+/g) || [];
+    const lastSentence = sentences.slice(-1)[0]?.trim() || '';
+
+    // Try to infer current location from narrative
+    const locationPatterns = [
+      /(?:at|in|inside|outside|near|entered|stepped into|arrived at)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street))?)/g,
+      /Murphy's Bar/gi,
+      /Greystone/gi,
+      /Blueline Diner/gi,
+      /Victoria's penthouse/gi,
+      /Bellamy Estate/gi,
+    ];
+
+    let currentLocation = 'Unknown location';
+    for (const pattern of locationPatterns) {
+      const matches = [...narrative.matchAll(pattern)];
+      if (matches.length > 0) {
+        const lastMatch = matches[matches.length - 1];
+        currentLocation = lastMatch[1] || lastMatch[0];
+        break;
+      }
+    }
+
+    // Try to infer time of day
+    const timePatterns = {
+      morning: /\b(morning|dawn|sunrise|breakfast|early light)\b/i,
+      afternoon: /\b(afternoon|midday|noon|lunch)\b/i,
+      evening: /\b(evening|dusk|sunset|dinner)\b/i,
+      night: /\b(night|midnight|dark|neon|streetlights|late)\b/i,
+    };
+
+    let timeOfDay = 'night'; // Default noir atmosphere
+    for (const [time, pattern] of Object.entries(timePatterns)) {
+      if (pattern.test(narrative)) {
+        timeOfDay = time;
+      }
+    }
+
+    // Extract characters present in the final scene
+    const characterNames = [
+      'Sarah', 'Victoria', 'Eleanor', 'Tom Wade', 'Wade', 'Silas', 'Helen Price',
+      'Maya', 'Claire', 'Marcus Webb', 'Martinez', 'Rebecca Moss', 'Grange'
+    ];
+    const presentCharacters = characterNames.filter(name =>
+      new RegExp(`\\b${name}\\b`, 'i').test(lastParagraphs)
+    );
+
+    // Infer Jack's emotional/physical state
+    const emotionPatterns = {
+      angry: /\b(anger|furious|rage|fist|clenched|seething)\b/i,
+      tired: /\b(tired|exhausted|weary|drained|heavy)\b/i,
+      tense: /\b(tense|nervous|anxious|tight|coiled)\b/i,
+      determined: /\b(determined|resolved|focused|steel)\b/i,
+      suspicious: /\b(suspicious|wary|distrustful|watching)\b/i,
+      shocked: /\b(shocked|stunned|reeling|disbelief)\b/i,
+    };
+
+    const jackState = [];
+    for (const [emotion, pattern] of Object.entries(emotionPatterns)) {
+      if (pattern.test(lastParagraphs)) {
+        jackState.push(emotion);
+      }
+    }
+
+    return {
+      location: currentLocation,
+      timeOfDay,
+      storyDay: prevChapter, // Story day = chapter number
+      presentCharacters,
+      jackEmotionalState: jackState.length > 0 ? jackState : ['focused'],
+      lastParagraphs,
+      lastSentence,
+      previousTitle: prevEntry.title,
+    };
+  }
+
+  /**
+   * Track what each character knows - prevents information leaks
+   */
+  _buildCharacterKnowledgeTracker(previousChapters) {
+    const knowledge = {
+      jack: {
+        knows: [],
+        suspects: [],
+        doesNotKnow: [
+          'Victoria Blackwell is Emily Cross',
+          'The full extent of Tom Wade\'s evidence manufacturing',
+        ],
+      },
+      sarah: { knows: [], suspects: [] },
+      victoria: { knows: ['Everything about Jack\'s cases', 'All five innocents'], suspects: [] },
+    };
+
+    // Scan narratives for revelation patterns
+    const revelationPatterns = [
+      { pattern: /Jack (?:learned|discovered|realized|found out|understood) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+      { pattern: /Jack (?:suspected|wondered if|began to think|considered) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'suspects' },
+      { pattern: /Sarah (?:told Jack|revealed|confessed|admitted) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+      { pattern: /Victoria (?:revealed|showed|told|exposed) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+    ];
+
+    for (const ch of previousChapters) {
+      if (!ch.narrative) continue;
+
+      for (const { pattern, target, type } of revelationPatterns) {
+        const matches = [...ch.narrative.matchAll(pattern)];
+        for (const match of matches) {
+          if (match[1] && match[1].length < 200) {
+            knowledge[target][type].push(`Ch${ch.chapter}.${ch.subchapter}: ${match[1].trim()}`);
+          }
+        }
+      }
+    }
+
+    // Deduplicate and limit
+    for (const char of Object.keys(knowledge)) {
+      knowledge[char].knows = [...new Set(knowledge[char].knows)].slice(-20);
+      knowledge[char].suspects = [...new Set(knowledge[char].suspects)].slice(-10);
+    }
+
+    return knowledge;
+  }
+
+  /**
+   * Track evidence and items Jack has collected
+   */
+  _extractEvidenceInventory(previousChapters) {
+    const evidence = [];
+    const evidencePatterns = [
+      /Jack (?:took|grabbed|pocketed|kept|collected|received|found) (?:the |a )?(.+?(?:letter|envelope|photo|document|file|ledger|key|card|note|paper|folder|evidence|recording))/gi,
+      /(?:handed|gave|passed) Jack (?:the |a )?(.+?(?:letter|envelope|photo|document|file|ledger|key|card|note|paper|folder))/gi,
+      /black envelope/gi,
+      /Thornhill [Ll]edger/gi,
+    ];
+
+    for (const ch of previousChapters) {
+      if (!ch.narrative) continue;
+
+      for (const pattern of evidencePatterns) {
+        const matches = [...ch.narrative.matchAll(pattern)];
+        for (const match of matches) {
+          const item = match[1] || match[0];
+          if (item && item.length < 100) {
+            evidence.push({
+              item: item.trim(),
+              foundIn: `Chapter ${ch.chapter}.${ch.subchapter}`,
+            });
+          }
+        }
+      }
+    }
+
+    // Deduplicate by item name
+    const seen = new Set();
+    return evidence.filter(e => {
+      const key = e.item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(-15);
+  }
+
+  /**
+   * Build scene state section for the prompt
+   */
+  _buildSceneStateSection(context, chapter, subchapter) {
+    const sceneState = this._extractSceneState(
+      context.previousChapters,
+      chapter,
+      subchapter
+    );
+
+    if (!sceneState) {
+      return '';
+    }
+
+    let section = `## CURRENT SCENE STATE (Your starting point)\n\n`;
+    section += `**STORY DAY:** Day ${sceneState.storyDay} of 12\n`;
+    section += `**TIME:** ${sceneState.timeOfDay}\n`;
+    section += `**LOCATION:** ${sceneState.location}\n`;
+    section += `**JACK'S STATE:** ${sceneState.jackEmotionalState.join(', ')}\n`;
+
+    if (sceneState.presentCharacters.length > 0) {
+      section += `**CHARACTERS PRESENT:** ${sceneState.presentCharacters.join(', ')}\n`;
+    }
+
+    section += `\n### THE SCENE YOU ARE CONTINUING FROM:\n`;
+    section += `Previous subchapter: "${sceneState.previousTitle}"\n\n`;
+    section += `**LAST PARAGRAPHS:**\n${sceneState.lastParagraphs}\n\n`;
+    section += `**EXACT LAST SENTENCE:**\n"${sceneState.lastSentence}"\n\n`;
+    section += `>>> YOUR NARRATIVE MUST PICK UP IMMEDIATELY AFTER THIS SENTENCE <<<\n`;
+    section += `>>> DO NOT REPEAT OR REPHRASE THIS ENDING - CONTINUE FROM IT <<<\n`;
+
+    return section;
+  }
+
+  /**
+   * Build character knowledge section
+   */
+  _buildKnowledgeSection(context) {
+    const knowledge = this._buildCharacterKnowledgeTracker(context.previousChapters);
+    const evidence = this._extractEvidenceInventory(context.previousChapters);
+
+    let section = `## CHARACTER KNOWLEDGE STATE\n\n`;
+
+    section += `### WHAT JACK KNOWS:\n`;
+    if (knowledge.jack.knows.length > 0) {
+      knowledge.jack.knows.slice(-15).forEach(k => {
+        section += `- ${k}\n`;
+      });
+    } else {
+      section += `- Just beginning investigation\n`;
+    }
+
+    section += `\n### WHAT JACK SUSPECTS (but hasn't confirmed):\n`;
+    if (knowledge.jack.suspects.length > 0) {
+      knowledge.jack.suspects.slice(-10).forEach(k => {
+        section += `- ${k}\n`;
+      });
+    } else {
+      section += `- None yet\n`;
+    }
+
+    section += `\n### WHAT JACK DOES NOT YET KNOW (do not reveal prematurely):\n`;
+    knowledge.jack.doesNotKnow.forEach(k => {
+      section += `- ${k}\n`;
+    });
+
+    if (evidence.length > 0) {
+      section += `\n### EVIDENCE IN JACK'S POSSESSION:\n`;
+      evidence.forEach(e => {
+        section += `- ${e.item} (found in ${e.foundIn})\n`;
+      });
+    }
+
+    return section;
+  }
+
   // ==========================================================================
   // PROMPT BUILDING - Structured prompts with grounding
   // ==========================================================================
@@ -3217,20 +3489,28 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Part 1: Story Bible Grounding (RAG)
     parts.push(this._buildGroundingSection(context));
 
-    // Part 2: Previous Story Summary (with smart windowing)
+    // Part 2: Complete Story So Far (FULL TEXT)
     parts.push(this._buildStorySummarySection(context));
 
     // Part 3: Character Reference
     parts.push(this._buildCharacterSection());
 
-    // Part 4: Style Examples (Few-shot)
+    // Part 4: Character Knowledge State (who knows what)
+    parts.push(this._buildKnowledgeSection(context));
+
+    // Part 5: Style Examples (Few-shot)
     parts.push(this._buildStyleSection());
 
-    // Part 5: Consistency Checklist
+    // Part 6: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
 
-    // Part 6: Current Task Specification (LAST for recency effect)
-    // This keeps beat-type pacing + output requirements freshest right before generation.
+    // Part 7: Current Scene State (CRITICAL - exact continuation point)
+    const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
+    if (sceneState) {
+      parts.push(sceneState);
+    }
+
+    // Part 8: Current Task Specification (LAST for recency effect)
     parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
