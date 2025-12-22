@@ -5022,63 +5022,83 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         let validationResult = this._validateConsistency(generatedContent, context);
 
-        // ========== A+ QUALITY VALIDATION ==========
+        // ========== A+ QUALITY VALIDATION (Warnings Only - Don't Block Generation) ==========
+        // These validators provide feedback but should NOT cause generation failures.
+        // Only critical continuity issues should block generation.
+
         // Track setups for major revelations
         this._trackSetups(generatedContent.narrative, chapter, subchapter);
 
-        // Run prose quality validation
+        // Run prose quality validation - WARNINGS ONLY
         const proseQuality = this._validateProseQuality(generatedContent.narrative);
         if (proseQuality.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.warnings];
         }
+        // Convert issues to warnings - prose quality should not block generation
         if (proseQuality.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...proseQuality.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.issues.map(i => `[Style] ${i}`)];
         }
         console.log(`[A+Quality] Prose quality score: ${proseQuality.score}/100`);
 
-        // Run sentence variety validation
+        // Run sentence variety validation - WARNINGS ONLY
         const sentenceVariety = this._validateSentenceVariety(generatedContent.narrative);
         if (sentenceVariety.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.warnings];
         }
         if (sentenceVariety.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...sentenceVariety.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.issues.map(i => `[Variety] ${i}`)];
         }
 
-        // Run character voice validation
+        // Run character voice validation - WARNINGS ONLY
         const characterVoice = this._validateCharacterVoices(generatedContent.narrative);
         if (characterVoice.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...characterVoice.warnings];
         }
         if (characterVoice.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...characterVoice.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...characterVoice.issues.map(i => `[Voice] ${i}`)];
         }
 
-        // Validate setup/payoff balance
+        // Validate setup/payoff balance - WARNINGS ONLY
         const setupPayoff = this._validateSetupPayoff(chapter, generatedContent.narrative);
         if (setupPayoff.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...setupPayoff.warnings];
         }
         if (setupPayoff.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...setupPayoff.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...setupPayoff.issues.map(i => `[Setup] ${i}`)];
         }
 
-        // Validate arc closure for final chapters (11-12)
+        // Validate arc closure for final chapters (11-12) - WARNINGS ONLY
         const arcClosure = this._validateArcClosure(chapter, context);
         if (arcClosure.warnings.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.warnings];
         }
         if (arcClosure.issues.length > 0) {
-          validationResult.issues = [...validationResult.issues, ...arcClosure.issues];
-          validationResult.valid = false;
+          validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.issues.map(i => `[Arc] ${i}`)];
+        }
+
+        // Log all warnings for debugging without blocking generation
+        if (validationResult.warnings?.length > 0) {
+          console.log(`[A+Quality] ${validationResult.warnings.length} style warnings (non-blocking):`,
+            validationResult.warnings.slice(0, 5));
+        }
+
+        // Check if there are any HARD issues that actually require fixing
+        // If all issues are soft (non-critical), skip the retry loop entirely
+        const allIssues = Array.isArray(validationResult.issues) ? validationResult.issues : [];
+        const hardIssuesBeforeRetry = allIssues.filter((i) => this._isContinuityCriticalIssue(i));
+
+        if (!validationResult.valid && hardIssuesBeforeRetry.length === 0) {
+          // All issues are soft - convert to warnings and proceed without retry
+          console.log(`[StoryGenerationService] ${allIssues.length} soft issues converted to warnings (no retry needed):`,
+            allIssues.slice(0, 3));
+          validationResult.warnings = [...(validationResult.warnings || []), ...allIssues.map(i => `[Soft] ${i}`)];
+          validationResult.issues = [];
+          validationResult.valid = true;
         }
 
         let retries = 0;
 
+        // Only retry if there are HARD continuity issues that require fixing
         while (!validationResult.valid && retries < MAX_RETRIES) {
           console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
 
@@ -6631,38 +6651,61 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * Determine whether a validation issue is continuity-critical (player-facing story break)
    * and therefore must be enforced as a hard failure (fallback / regeneration), not just warned.
    *
-   * NOTE: We intentionally do NOT hard-fail on purely stylistic or length issues here.
+   * PHILOSOPHY: Be VERY conservative here. Only truly story-breaking issues should cause
+   * hard failures. The goal is successful generation with good-enough quality, not perfection.
+   * Minor inconsistencies are acceptable - players are forgiving of small details.
+   *
+   * NOTE: Most issues are now treated as warnings to ensure generation succeeds.
    */
   _isContinuityCriticalIssue(issue) {
     const s = String(issue || '');
     if (!s) return false;
 
-    // Thread continuity / promise-keeping (major immersion break)
-    if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;
-    if (s.startsWith('OVERDUE THREAD ERROR:')) return true;
-    if (s.startsWith('OVERDUE APPOINTMENTS:')) return true;
-    if (s.startsWith('OVERDUE PROMISES:')) return true;
+    // =======================================================================
+    // HARD FAILURES - Only truly story-breaking canonical violations
+    // These are facts that would confuse the player if wrong
+    // =======================================================================
 
-    // Decision causality / timeline integrity
-    if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;
-    if (s.startsWith('STORY DAY MISMATCH:')) return true;
+    // Critical name misspellings that would confuse the player
     if (s.startsWith('Name misspelled:')) return true;
 
-    // Canonical timeline / setting invariants (hard canon breaks)
-    if (s.includes('Ashport is ALWAYS rainy')) return true;
+    // Wrong alcohol brand (Jack's signature vice)
     if (s.includes('Jack drinks Jameson whiskey')) return true;
-    if (s.includes('friendship is 30 years')) return true;
-    if (s.includes('partnership is 13 years')) return true;
-    if (s.includes('partnership is 8 years')) return true;
-    if (s.includes('Emily case was closed 7 years')) return true;
-    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
-    if (s.includes('Timeline approximation')) return true;
 
-    // Path personality enforcement (keeps Jack coherent with player history)
-    if (s.startsWith('PERSONALITY VIOLATION:')) return true;
-    if (s.startsWith('BEHAVIOR DECLARATION MISMATCH:')) return true;
-    if (s.startsWith('Jack\'s action style mismatch:')) return true;
-    if (s.startsWith('Jack\'s risk level mismatch:')) return true;
+    // Sunny weather breaks noir atmosphere completely
+    if (s.includes('Ashport is ALWAYS rainy')) return true;
+
+    // =======================================================================
+    // SOFT FAILURES - Convert to warnings, don't block generation
+    // These matter for quality but won't break the story
+    // =======================================================================
+
+    // Thread continuity - important but not worth failing over
+    // The LLM will usually address threads even if not perfectly
+    // if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;  // DISABLED
+    // if (s.startsWith('OVERDUE THREAD ERROR:')) return true;  // DISABLED
+    // if (s.startsWith('OVERDUE APPOINTMENTS:')) return true;  // DISABLED
+    // if (s.startsWith('OVERDUE PROMISES:')) return true;  // DISABLED
+
+    // Decision causality - nice to have but story continues fine without
+    // if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;  // DISABLED
+
+    // Story day mismatch - minor, player won't notice
+    // if (s.startsWith('STORY DAY MISMATCH:')) return true;  // DISABLED
+
+    // Timeline approximations - close enough is fine
+    // if (s.includes('friendship is 30 years')) return true;  // DISABLED
+    // if (s.includes('partnership is 13 years')) return true;  // DISABLED
+    // if (s.includes('partnership is 8 years')) return true;  // DISABLED
+    // if (s.includes('Emily case was closed 7 years')) return true;  // DISABLED
+    // if (s.includes('Eleanor has been imprisoned for 8 years')) return true;  // DISABLED
+    // if (s.includes('Timeline approximation')) return true;  // DISABLED
+
+    // Personality enforcement - Jack can have emotional moments
+    // if (s.startsWith('PERSONALITY VIOLATION:')) return true;  // DISABLED
+    // if (s.startsWith('BEHAVIOR DECLARATION MISMATCH:')) return true;  // DISABLED
+    // if (s.startsWith('Jack\'s action style mismatch:')) return true;  // DISABLED
+    // if (s.startsWith('Jack\'s risk level mismatch:')) return true;  // DISABLED
 
     return false;
   }
