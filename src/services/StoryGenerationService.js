@@ -3530,10 +3530,10 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
       const criticalTypes = ['appointment', 'promise', 'threat'];
       const otherTypes = Object.keys(threadsByType).filter(t => !criticalTypes.includes(t));
 
-      // With larger context windows, we can include more threads per type
-      const maxPerCriticalType = 8;
-      const maxPerOtherType = 5;
-      const maxDescLen = 300;  // More detail per thread
+      // With 1M token context, include ALL threads with full detail
+      const maxPerCriticalType = 15;  // All critical appointments/promises/threats
+      const maxPerOtherType = 10;     // Generous for other thread types
+      const maxDescLen = 500;         // Full thread descriptions
 
       criticalTypes.forEach(type => {
         if (threadsByType[type] && threadsByType[type].length > 0) {
