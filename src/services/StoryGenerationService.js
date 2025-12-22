@@ -676,7 +676,8 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 
   *** GENERATION WILL BE REJECTED IF CRITICAL THREADS ARE NOT IN previousThreadsAddressed ***
   The validation system automatically checks that every thread with urgency="critical"
-  appears in your previousThreadsAddressed array. Missing critical threads = regeneration.
+  appears in your previousThreadsAddressed array. Missing critical threads will cause the
+  engine to reject the output and use repair/fallback rather than shipping plot holes.
 
   *** OVERDUE THREAD ESCALATION ***
   If a thread has been "acknowledged" 2+ times without "resolved" or "progressed",
@@ -779,6 +780,9 @@ class StoryGenerationService {
 
     // ========== NEW: Fallback Content System for Graceful Degradation ==========
     this.fallbackTemplates = this._initializeFallbackTemplates();
+    // Normalize fallback templates to third-person limited narration (dialogue may remain first-person).
+    // This prevents immersion breaks if a template accidentally includes first-person narration.
+    this._normalizeFallbackTemplatesToThirdPerson();
     this.generationAttempts = new Map(); // Track retry attempts per content
     this.maxGenerationAttempts = 3; // Max attempts before using fallback
 
@@ -1148,6 +1152,29 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
   }
 
   /**
+   * Ensure all fallback template narratives adhere to global POV rules (third-person limited).
+   * Dialogue inside quotes is preserved as-is.
+   */
+  _normalizeFallbackTemplatesToThirdPerson() {
+    try {
+      const phases = this.fallbackTemplates || {};
+      for (const phaseKey of Object.keys(phases)) {
+        const phase = phases[phaseKey];
+        if (!phase || typeof phase !== 'object') continue;
+        for (const subKey of Object.keys(phase)) {
+          const tpl = phase[subKey];
+          if (!tpl || typeof tpl !== 'object') continue;
+          if (typeof tpl.narrative === 'string' && tpl.narrative.length > 0) {
+            tpl.narrative = this._sanitizeNarrativeToThirdPerson(tpl.narrative);
+          }
+        }
+      }
+    } catch (e) {
+      // Best-effort only. Never block initialization.
+    }
+  }
+
+  /**
    * Get appropriate fallback content based on chapter and subchapter
    */
   _getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint) {
@@ -1231,21 +1258,21 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
    * Generate minimal fallback when no template is available
    */
   _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
-    const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. I pulled my coat tighter and stepped into the night.
+    const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. Jack pulled his coat tighter and stepped into the night.
 
-Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing me closer to truths I wasn't sure I wanted to face. But there was no turning back now. Not after everything I'd seen.
+Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing him closer to truths he wasn't sure he wanted to face. But there was no turning back now. Not after everything he'd seen.
 
-Murphy's Bar was quiet below my office. The usual crowd had dispersed, leaving only ghosts and memories. I poured a glass of Jameson and let the familiar burn ground me in the present.
+Murphy's Bar was quiet below his office. The usual crowd had dispersed, leaving only ghosts and memories. Jack poured a glass of Jameson and let the familiar burn keep him anchored in the present.
 
-Tomorrow would bring new challenges. New choices. New opportunities to get things right—or to fail, as I had failed so many times before.
+Tomorrow would bring new challenges. New choices. New opportunities to get things right—or to fail, as he had failed so many times before.
 
-But that was tomorrow. Tonight, I would rest. Gather my strength. Prepare for whatever came next.
+But that was tomorrow. Tonight, Jack would rest. Gather his strength. Prepare for whatever came next.
 
-The city outside my window sparkled with neon and rain. Beautiful and treacherous, like everything else in Ashport. I watched it for a long time before finally turning away.
+The city outside his window sparkled with neon and rain. Beautiful and treacherous, like everything else in Ashport. Jack watched it for a long time before finally turning away.
 
-Whatever the morning brought, I would face it. That was all I could promise myself anymore.`;
+Whatever the morning brought, he'd face it. That was all he could promise himself anymore.`;
 
-    return {
+    const result = {
       title: 'The Investigation Continues',
       bridgeText: 'The journey continues.',
       previously: 'Jack continued his investigation through the rain-soaked streets of Ashport.',
@@ -1291,6 +1318,14 @@ Whatever the morning brought, I would face it. That was all I could promise myse
         ],
       } : null,
     };
+
+    // Enforce global POV rules (third-person limited) for minimal fallback too.
+    // This prevents immersion-breaking first-person narration during worst-case degradation.
+    if (result?.narrative) {
+      result.narrative = this._sanitizeNarrativeToThirdPerson(result.narrative);
+    }
+
+    return result;
   }
 
   /**
@@ -1335,8 +1370,8 @@ Whatever the morning brought, I would face it. That was all I could promise myse
     let threadAcknowledgment = '';
     if (criticalThreads.length > 0) {
       const threadDescriptions = criticalThreads.map(t => {
-        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on my mind`;
-        if (t.type === 'promise') return `I remembered the promise I had made`;
+        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on Jack's mind`;
+        if (t.type === 'promise') return `Jack remembered the promise he had made`;
         if (t.type === 'threat') return `The threat still hung in the air`;
         return `Unfinished business demanded attention`;
       });
@@ -1357,21 +1392,21 @@ Whatever the morning brought, I would face it. That was all I could promise myse
     }
 
     // Build phase-appropriate narrative
-    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. I stepped out onto Morrison Street, my coat collar turned up against the chill.
+    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. Jack stepped out onto Morrison Street, his coat collar turned up against the chill.
 
-Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled me deeper into the corruption I had spent thirty years pretending not to see. Every case I had closed with such certainty now felt like a door I should have left open.${threadAcknowledgment}
+Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled Jack deeper into the corruption he had spent thirty years pretending not to see. Every case he had closed with such certainty now felt like a door he should have left open.${threadAcknowledgment}
 
-I moved ${jackApproach}. After everything I had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, my best friend for three decades, at the center of a web of manufactured truth. And me, the instrument of their justice, the fool who had believed every perfect conviction.
+Jack moved ${jackApproach}. After everything he had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, his best friend for three decades, at the center of a web of manufactured truth. And Jack, the instrument of their justice, the fool who had believed every perfect conviction.
 
-Murphy's Bar beckoned below my office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that I was ${phaseTone}.
+Murphy's Bar beckoned below his office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that he was ${phaseTone}.
 
-The streets of Ashport stretched before me, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman I had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate me. Every right to make me understand what my arrogant certainty had cost.
+The streets of Ashport stretched before him, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman Jack had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate him. Every right to make him understand what his arrogant certainty had cost.
 
-I checked my watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents I had helped convict haunted every step I took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career I had helped destroy for telling the truth.
+Jack checked his watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents he had helped convict haunted every step he took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career he had helped destroy for telling the truth.
 
-My hand found the cold metal of the door handle. Whatever waited on the other side, I would face it. That was all I could promise myself anymore.
+His hand found the cold metal of the door handle. Whatever waited on the other side, he'd face it. That was all he could promise himself anymore.
 
-The city held its breath. So did I.`;
+The city held its breath. So did Jack.`;
 
     // Build the fallback entry
     const adapted = {
@@ -1569,7 +1604,6 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
       [{ role: 'user', content: arcPrompt }],
       {
         systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive noir mystery.',
-        temperature: 0.6, // Lower temperature for planning consistency
         maxTokens: 4000,
         responseSchema: arcSchema,
       }
@@ -1794,7 +1828,6 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       [{ role: 'user', content: outlinePrompt }],
       {
         systemPrompt: 'You are outlining a single chapter of an interactive noir mystery. Ensure the three subchapters flow as one seamless narrative.',
-        temperature: 0.65,
         maxTokens: 2000,
         responseSchema: outlineSchema,
       }
@@ -1972,8 +2005,23 @@ Each subchapter should feel like a natural continuation, not a separate scene.
         thoroughness: focus.toLowerCase().includes('evidence') ? 10 : 0,
       };
 
+      // Make the "immediate" consequence feel concrete even without an LLM call.
+      // Titles are imperative; convert to an infinitive-ish phrase ("Confront Wade" -> "confront Wade").
+      const toAction = String(title || '')
+        .trim()
+        .replace(/^[A-Z]/, (m) => m.toLowerCase());
+      const focusSnippet = String(focus || '')
+        .split('.')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('. ');
+      const immediate = toAction
+        ? `Jack chose to ${toAction}${focusSnippet ? `. ${focusSnippet}.` : '.'}`
+        : `Jack chose: ${title}`;
+
       return {
-        immediate: `Jack chose: ${title}`,
+        immediate,
         ongoing: ongoing.length > 0 ? ongoing.slice(0, 4) : ['This choice will shape what Jack can prove, and who will trust him.'],
         characterImpact,
       };
@@ -2100,7 +2148,6 @@ Generate realistic, specific consequences based on the actual narrative content.
         [{ role: 'user', content: consequencePrompt }],
         {
           systemPrompt: 'You are generating narrative consequences for player choices in a noir detective mystery.',
-          temperature: 0.6,
           maxTokens: 500,
           responseSchema: consequenceSchema,
         }
@@ -2117,7 +2164,8 @@ Generate realistic, specific consequences based on the actual narrative content.
       return {
         immediate: `Jack chose path ${choice.optionKey}`,
         ongoing: ['This choice will affect future events'],
-        characterImpact: { trust: 0, aggression: choice.optionKey === 'A' ? 5 : -5, thoroughness: choice.optionKey === 'B' ? 5 : -5 },
+        // Default mapping: Option A tends to be evidence-first/methodical; Option B tends to be direct/aggressive.
+        characterImpact: { trust: 0, aggression: choice.optionKey === 'B' ? 5 : -5, thoroughness: choice.optionKey === 'A' ? 5 : -5 },
       };
     }
   }
@@ -2587,7 +2635,9 @@ Generate realistic, specific consequences based on the actual narrative content.
       const keysToRemove = allKeys.filter(key =>
         key.startsWith('story_arc_') ||
         key.startsWith('chapter_outline_') ||
-        key === 'detective_portrait_offline_queue'
+        // Clear offline queue key(s) (legacy + current).
+        key === 'detective_portrait_offline_queue' ||
+        key === 'dead_letters_offline_queue'
       );
 
       // Remove story arc keys
@@ -3087,14 +3137,15 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Part 3: Character Reference
     parts.push(this._buildCharacterSection());
 
-    // Part 4: Current Task Specification
-    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
-
-    // Part 5: Style Examples (Few-shot)
+    // Part 4: Style Examples (Few-shot)
     parts.push(this._buildStyleSection());
 
-    // Part 6: Consistency Checklist
+    // Part 5: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
+
+    // Part 6: Current Task Specification (LAST for recency effect)
+    // This keeps beat-type pacing + output requirements freshest right before generation.
+    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
   }
@@ -3698,7 +3749,6 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
       [{ role: 'user', content: decisionPrompt }],
       {
         systemPrompt: 'You are a noir narrative designer creating morally complex choices. Every decision must have real stakes and no clear "correct" answer.',
-        temperature: GENERATION_CONFIG.temperature.decisions,
         maxTokens: 2000,
         responseSchema: DECISION_ONLY_SCHEMA,
       }
@@ -4469,7 +4519,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           [{ role: 'user', content: prompt }],
           {
             systemPrompt: MASTER_SYSTEM_PROMPT,
-            temperature: isDecisionPoint ? GENERATION_CONFIG.temperature.decisions : GENERATION_CONFIG.temperature.narrative,
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
             traceId,
@@ -4644,7 +4693,88 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
 
         if (!validationResult.valid) {
-          console.warn('Consistency warning (Unresolved):', validationResult.issues);
+          const allIssues = Array.isArray(validationResult.issues) ? validationResult.issues : [];
+          const hardIssues = allIssues.filter((i) => this._isContinuityCriticalIssue(i));
+
+          if (hardIssues.length > 0) {
+            // Hard continuity failure: do NOT ship broken canon to the player.
+            // Use a context-aware fallback that stays in-bounds (and acknowledges threads).
+            console.warn('[StoryGenerationService] Hard validation failure; falling back:', hardIssues);
+            llmTrace('StoryGenerationService', traceId, 'validation.hard_fail.fallback', {
+              caseNumber,
+              pathKey: effectivePathKey,
+              chapter,
+              subchapter,
+              isDecisionPoint,
+              hardIssues: hardIssues.slice(0, 10),
+              reason,
+            }, 'warn');
+
+            const fallbackContent = context
+              ? this._buildContextAwareFallback(chapter, subchapter, effectivePathKey, isDecisionPoint, context)
+              : this._getFallbackContent(chapter, subchapter, effectivePathKey, isDecisionPoint);
+
+            const fallbackEntry = {
+              chapter,
+              subchapter,
+              pathKey: effectivePathKey,
+              caseNumber,
+              title: fallbackContent.title,
+              narrative: fallbackContent.narrative,
+              bridgeText: fallbackContent.bridgeText,
+              previously: fallbackContent.previously,
+              briefing: fallbackContent.briefing,
+              decision: fallbackContent.decision,
+              board: this._generateBoardData(
+                fallbackContent.narrative,
+                isDecisionPoint,
+                fallbackContent.decision,
+                fallbackContent.puzzleCandidates,
+                chapter
+              ),
+              consistencyFacts: fallbackContent.consistencyFacts,
+              chapterSummary: fallbackContent.chapterSummary,
+              // Preserve continuity metadata when fallback provides it.
+              storyDay: fallbackContent.storyDay,
+              jackActionStyle: fallbackContent.jackActionStyle,
+              jackRiskLevel: fallbackContent.jackRiskLevel,
+              jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
+              narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
+              previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
+              generatedAt: new Date().toISOString(),
+              wordCount: fallbackContent.narrative.split(/\s+/).length,
+              isFallback: true,
+              fallbackReason: `Hard validation failure: ${hardIssues.slice(0, 3).join(' | ')}`,
+            };
+
+            // Save + cache + persist context so future generations stay consistent.
+            await saveGeneratedChapter(caseNumber, effectivePathKey, fallbackEntry);
+            if (!this.generatedStory) {
+              this.generatedStory = { chapters: {} };
+            }
+            this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
+            await this._updateStoryContext(fallbackEntry);
+
+            if (subchapter === 3) {
+              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
+            }
+
+            llmTrace('StoryGenerationService', traceId, 'generation.complete', {
+              generationKey,
+              caseNumber,
+              pathKey: effectivePathKey,
+              chapter,
+              subchapter,
+              isDecisionPoint,
+              wordCount: fallbackEntry.wordCount,
+              isFallback: true,
+              reason: `hard-validation-fallback:${reason}`,
+            }, 'info');
+
+            return fallbackEntry;
+          }
+
+          console.warn('Consistency warning (Unresolved):', allIssues);
         }
 
         // Build the story entry
@@ -4764,6 +4894,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
             consistencyFacts: fallbackContent.consistencyFacts,
             chapterSummary: fallbackContent.chapterSummary,
+            // Preserve continuity metadata when available so future prompts stay consistent.
+            storyDay: fallbackContent.storyDay,
+            jackActionStyle: fallbackContent.jackActionStyle,
+            jackRiskLevel: fallbackContent.jackRiskLevel,
+            jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
+            narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
+            previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
             generatedAt: new Date().toISOString(),
             wordCount: fallbackContent.narrative.split(/\s+/).length,
             isFallback: true, // Flag to indicate this is fallback content
@@ -4776,6 +4913,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             this.generatedStory = { chapters: {} };
           }
           this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
+
+          // Persist story context facts (storage strips per-entry consistencyFacts).
+          try {
+            await this._updateStoryContext(fallbackEntry);
+          } catch (e) {
+            // Never block fallback return on context persistence.
+            console.warn('[StoryGenerationService] Failed to update story context for fallbackEntry:', e?.message);
+          }
+
+          // Maintain checkpoint cadence even on fallback decision points.
+          if (subchapter === 3) {
+            try {
+              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
+            } catch (e) {
+              // Best-effort only.
+            }
+          }
 
           // Clear attempt count on successful fallback
           this.generationAttempts.delete(attemptKey);
@@ -5658,11 +5812,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }
         }
 
-        // Require at least 50% of critical threads to be VALIDLY acknowledged
+        // Require ALL critical threads to be VALIDLY acknowledged.
+        // The system prompt instructs the model to copy originalThread exactly and the engine treats
+        // missing critical threads as a hard continuity failure (we will hard-enforce in generation).
         const criticalCount = criticalThreads.length;
-        const requiredAcknowledgments = Math.ceil(criticalCount * 0.5);
+        const requiredAcknowledgments = criticalCount;
         if (validAddressedCount < requiredAcknowledgments) {
-          issues.push(`THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge at least ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`);
+          issues.push(
+            `THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge ALL ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`
+          );
         }
 
         // =========================================================================
@@ -6036,6 +6194,46 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       issues,
       warnings,
     };
+  }
+
+  /**
+   * Determine whether a validation issue is continuity-critical (player-facing story break)
+   * and therefore must be enforced as a hard failure (fallback / regeneration), not just warned.
+   *
+   * NOTE: We intentionally do NOT hard-fail on purely stylistic or length issues here.
+   */
+  _isContinuityCriticalIssue(issue) {
+    const s = String(issue || '');
+    if (!s) return false;
+
+    // Thread continuity / promise-keeping (major immersion break)
+    if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;
+    if (s.startsWith('OVERDUE THREAD ERROR:')) return true;
+    if (s.startsWith('OVERDUE APPOINTMENTS:')) return true;
+    if (s.startsWith('OVERDUE PROMISES:')) return true;
+
+    // Decision causality / timeline integrity
+    if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;
+    if (s.startsWith('STORY DAY MISMATCH:')) return true;
+    if (s.startsWith('Name misspelled:')) return true;
+
+    // Canonical timeline / setting invariants (hard canon breaks)
+    if (s.includes('Ashport is ALWAYS rainy')) return true;
+    if (s.includes('Jack drinks Jameson whiskey')) return true;
+    if (s.includes('friendship is 30 years')) return true;
+    if (s.includes('partnership is 13 years')) return true;
+    if (s.includes('partnership is 8 years')) return true;
+    if (s.includes('Emily case was closed 7 years')) return true;
+    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
+    if (s.includes('Timeline approximation')) return true;
+
+    // Path personality enforcement (keeps Jack coherent with player history)
+    if (s.startsWith('PERSONALITY VIOLATION:')) return true;
+    if (s.startsWith('BEHAVIOR DECLARATION MISMATCH:')) return true;
+    if (s.startsWith('Jack\'s action style mismatch:')) return true;
+    if (s.startsWith('Jack\'s risk level mismatch:')) return true;
+
+    return false;
   }
 
   // ==========================================================================
@@ -6747,7 +6945,6 @@ Rewrite the narrative to fix ALL issues while maintaining the noir style and sto
       [{ role: 'user', content: fixPrompt }],
       {
         systemPrompt: 'You are an expert noir editor. Fix all issues while enhancing the atmospheric prose quality. Never change the plot, only improve the writing.',
-        temperature: GENERATION_CONFIG.temperature.narrative,
         maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
         responseSchema,
       }
@@ -6789,7 +6986,6 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       [{ role: 'user', content: expandPrompt }],
       {
         systemPrompt: 'You are expanding noir fiction. Match the existing style exactly. Never contradict established facts.',
-        temperature: GENERATION_CONFIG.temperature.expansion,
         maxTokens: GENERATION_CONFIG.maxTokens.expansion,
       }
     );
@@ -7724,7 +7920,6 @@ If no conflicts, return: {"conflicts": []}`;
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          temperature: 0.1,
           maxTokens: 500,
           responseSchema: {
             type: 'object',
