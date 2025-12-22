@@ -10,6 +10,7 @@ import { useAudioController } from './src/hooks/useAudioController';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import useCachedResources from './src/hooks/useCachedResources';
 import StoryGenerationOverlay from './src/components/StoryGenerationOverlay';
+import LLMDebugOverlay from './src/components/LLMDebugOverlay';
 import { usePersistence } from './src/hooks/usePersistence';
 
 const ROUTE_TO_AUDIO_KEY = {
@@ -75,9 +76,11 @@ function AppContent({ fontsReady, audioController, onStateChange }) {
     cancelGeneration,
     clearGenerationError,
     exitStoryCampaign,
+    updateSettings,
   } = game;
 
   const navigationRef = useRef(null);
+  const verboseMode = progress?.settings?.verboseMode || false;
 
   // Global Game Loop: Check for case unlocks
   useEffect(() => {
@@ -114,9 +117,17 @@ function AppContent({ fontsReady, audioController, onStateChange }) {
     storyGeneration?.status === 'error' ||
     storyGeneration?.status === 'not_configured';
 
+  const handleCloseVerboseOverlay = useCallback(() => {
+    updateSettings?.({ verboseMode: false });
+  }, [updateSettings]);
+
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" />
+      <LLMDebugOverlay
+        visible={verboseMode}
+        onClose={handleCloseVerboseOverlay}
+      />
       <NavigationContainer ref={navigationRef} onStateChange={onStateChange}>
         <AppNavigator fontsReady={fontsReady} audio={audioController} />
       </NavigationContainer>

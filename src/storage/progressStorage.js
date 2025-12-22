@@ -147,6 +147,7 @@ export const createBlankProgress = () => ({
     colorBlindMode: false,
     highContrast: false,
     hintsEnabled: false,
+    verboseMode: false,
   },
   shareHistory: [],
   storyCampaign: createBlankStoryCampaign(),
