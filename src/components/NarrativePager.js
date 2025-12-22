@@ -89,12 +89,13 @@ export default function NarrativePager({
   const [narrativeWidth, setNarrativeWidth] = useState(0);
   const [activePage, setActivePage] = useState(0);
   const [completedPages, setCompletedPages] = useState(new Set());
-  const [sound, setSound] = useState();
   
   const listRef = useRef(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
   const flipLockRef = useRef(false);
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 60 });
+  const soundRef = useRef(null);
+  const soundLoadAttempted = useRef(false);
 
   // Layout Constants
   const blockRadius = scaleRadius(RADIUS.lg);
@@ -135,25 +136,39 @@ export default function NarrativePager({
     }
   });
 
+  // Load the page flip sound once on mount
+  useEffect(() => {
+    if (soundLoadAttempted.current) return;
+    soundLoadAttempted.current = true;
+
+    (async () => {
+      try {
+        const { sound: loadedSound } = await Audio.Sound.createAsync(
+          require('../../assets/audio/sfx/ui/page-flip.mp3')
+        );
+        soundRef.current = loadedSound;
+      } catch {
+        // Sound file is missing or invalid - fail silently
+        soundRef.current = null;
+      }
+    })();
+
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+    };
+  }, []);
+
   async function playPageFlipSound() {
+    if (!soundRef.current) return;
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/audio/sfx/ui/page-flip.mp3')
-      );
-      setSound(sound);
-      await sound.playAsync();
-    } catch (error) {
-      console.log("Error playing page flip sound:", error);
+      await soundRef.current.replayAsync();
+    } catch {
+      // Fail silently - sound is non-critical UI feedback
     }
   }
-
-  useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
 
   const triggerPageFlip = useCallback(
     (direction) => {
