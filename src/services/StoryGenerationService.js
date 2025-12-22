@@ -676,7 +676,8 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 
   *** GENERATION WILL BE REJECTED IF CRITICAL THREADS ARE NOT IN previousThreadsAddressed ***
   The validation system automatically checks that every thread with urgency="critical"
-  appears in your previousThreadsAddressed array. Missing critical threads = regeneration.
+  appears in your previousThreadsAddressed array. Missing critical threads will cause the
+  engine to reject the output and use repair/fallback rather than shipping plot holes.
 
   *** OVERDUE THREAD ESCALATION ***
   If a thread has been "acknowledged" 2+ times without "resolved" or "progressed",
@@ -1245,7 +1246,7 @@ The city outside my window sparkled with neon and rain. Beautiful and treacherou
 
 Whatever the morning brought, I would face it. That was all I could promise myself anymore.`;
 
-    return {
+    const result = {
       title: 'The Investigation Continues',
       bridgeText: 'The journey continues.',
       previously: 'Jack continued his investigation through the rain-soaked streets of Ashport.',
@@ -1291,6 +1292,14 @@ Whatever the morning brought, I would face it. That was all I could promise myse
         ],
       } : null,
     };
+
+    // Enforce global POV rules (third-person limited) for minimal fallback too.
+    // This prevents immersion-breaking first-person narration during worst-case degradation.
+    if (result?.narrative) {
+      result.narrative = this._sanitizeNarrativeToThirdPerson(result.narrative);
+    }
+
+    return result;
   }
 
   /**
@@ -1970,8 +1979,23 @@ Each subchapter should feel like a natural continuation, not a separate scene.
         thoroughness: focus.toLowerCase().includes('evidence') ? 10 : 0,
       };
 
+      // Make the "immediate" consequence feel concrete even without an LLM call.
+      // Titles are imperative; convert to an infinitive-ish phrase ("Confront Wade" -> "confront Wade").
+      const toAction = String(title || '')
+        .trim()
+        .replace(/^[A-Z]/, (m) => m.toLowerCase());
+      const focusSnippet = String(focus || '')
+        .split('.')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('. ');
+      const immediate = toAction
+        ? `Jack chose to ${toAction}${focusSnippet ? `. ${focusSnippet}.` : '.'}`
+        : `Jack chose: ${title}`;
+
       return {
-        immediate: `Jack chose: ${title}`,
+        immediate,
         ongoing: ongoing.length > 0 ? ongoing.slice(0, 4) : ['This choice will shape what Jack can prove, and who will trust him.'],
         characterImpact,
       };
@@ -2114,7 +2138,8 @@ Generate realistic, specific consequences based on the actual narrative content.
       return {
         immediate: `Jack chose path ${choice.optionKey}`,
         ongoing: ['This choice will affect future events'],
-        characterImpact: { trust: 0, aggression: choice.optionKey === 'A' ? 5 : -5, thoroughness: choice.optionKey === 'B' ? 5 : -5 },
+        // Default mapping: Option A tends to be evidence-first/methodical; Option B tends to be direct/aggressive.
+        characterImpact: { trust: 0, aggression: choice.optionKey === 'B' ? 5 : -5, thoroughness: choice.optionKey === 'A' ? 5 : -5 },
       };
     }
   }
@@ -2584,7 +2609,9 @@ Generate realistic, specific consequences based on the actual narrative content.
       const keysToRemove = allKeys.filter(key =>
         key.startsWith('story_arc_') ||
         key.startsWith('chapter_outline_') ||
-        key === 'detective_portrait_offline_queue'
+        // Clear offline queue key(s) (legacy + current).
+        key === 'detective_portrait_offline_queue' ||
+        key === 'dead_letters_offline_queue'
       );
 
       // Remove story arc keys
@@ -3084,14 +3111,15 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Part 3: Character Reference
     parts.push(this._buildCharacterSection());
 
-    // Part 4: Current Task Specification
-    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
-
-    // Part 5: Style Examples (Few-shot)
+    // Part 4: Style Examples (Few-shot)
     parts.push(this._buildStyleSection());
 
-    // Part 6: Consistency Checklist
+    // Part 5: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
+
+    // Part 6: Current Task Specification (LAST for recency effect)
+    // This keeps beat-type pacing + output requirements freshest right before generation.
+    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
   }
@@ -4639,7 +4667,88 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
 
         if (!validationResult.valid) {
-          console.warn('Consistency warning (Unresolved):', validationResult.issues);
+          const allIssues = Array.isArray(validationResult.issues) ? validationResult.issues : [];
+          const hardIssues = allIssues.filter((i) => this._isContinuityCriticalIssue(i));
+
+          if (hardIssues.length > 0) {
+            // Hard continuity failure: do NOT ship broken canon to the player.
+            // Use a context-aware fallback that stays in-bounds (and acknowledges threads).
+            console.warn('[StoryGenerationService] Hard validation failure; falling back:', hardIssues);
+            llmTrace('StoryGenerationService', traceId, 'validation.hard_fail.fallback', {
+              caseNumber,
+              pathKey: effectivePathKey,
+              chapter,
+              subchapter,
+              isDecisionPoint,
+              hardIssues: hardIssues.slice(0, 10),
+              reason,
+            }, 'warn');
+
+            const fallbackContent = context
+              ? this._buildContextAwareFallback(chapter, subchapter, effectivePathKey, isDecisionPoint, context)
+              : this._getFallbackContent(chapter, subchapter, effectivePathKey, isDecisionPoint);
+
+            const fallbackEntry = {
+              chapter,
+              subchapter,
+              pathKey: effectivePathKey,
+              caseNumber,
+              title: fallbackContent.title,
+              narrative: fallbackContent.narrative,
+              bridgeText: fallbackContent.bridgeText,
+              previously: fallbackContent.previously,
+              briefing: fallbackContent.briefing,
+              decision: fallbackContent.decision,
+              board: this._generateBoardData(
+                fallbackContent.narrative,
+                isDecisionPoint,
+                fallbackContent.decision,
+                fallbackContent.puzzleCandidates,
+                chapter
+              ),
+              consistencyFacts: fallbackContent.consistencyFacts,
+              chapterSummary: fallbackContent.chapterSummary,
+              // Preserve continuity metadata when fallback provides it.
+              storyDay: fallbackContent.storyDay,
+              jackActionStyle: fallbackContent.jackActionStyle,
+              jackRiskLevel: fallbackContent.jackRiskLevel,
+              jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
+              narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
+              previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
+              generatedAt: new Date().toISOString(),
+              wordCount: fallbackContent.narrative.split(/\s+/).length,
+              isFallback: true,
+              fallbackReason: `Hard validation failure: ${hardIssues.slice(0, 3).join(' | ')}`,
+            };
+
+            // Save + cache + persist context so future generations stay consistent.
+            await saveGeneratedChapter(caseNumber, effectivePathKey, fallbackEntry);
+            if (!this.generatedStory) {
+              this.generatedStory = { chapters: {} };
+            }
+            this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
+            await this._updateStoryContext(fallbackEntry);
+
+            if (subchapter === 3) {
+              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
+            }
+
+            llmTrace('StoryGenerationService', traceId, 'generation.complete', {
+              generationKey,
+              caseNumber,
+              pathKey: effectivePathKey,
+              chapter,
+              subchapter,
+              isDecisionPoint,
+              wordCount: fallbackEntry.wordCount,
+              isFallback: true,
+              reason: `hard-validation-fallback:${reason}`,
+            }, 'info');
+
+            return fallbackEntry;
+          }
+
+          console.warn('Consistency warning (Unresolved):', allIssues);
         }
 
         // Build the story entry
@@ -4759,6 +4868,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
             consistencyFacts: fallbackContent.consistencyFacts,
             chapterSummary: fallbackContent.chapterSummary,
+            // Preserve continuity metadata when available so future prompts stay consistent.
+            storyDay: fallbackContent.storyDay,
+            jackActionStyle: fallbackContent.jackActionStyle,
+            jackRiskLevel: fallbackContent.jackRiskLevel,
+            jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
+            narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
+            previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
             generatedAt: new Date().toISOString(),
             wordCount: fallbackContent.narrative.split(/\s+/).length,
             isFallback: true, // Flag to indicate this is fallback content
@@ -4771,6 +4887,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             this.generatedStory = { chapters: {} };
           }
           this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
+
+          // Persist story context facts (storage strips per-entry consistencyFacts).
+          try {
+            await this._updateStoryContext(fallbackEntry);
+          } catch (e) {
+            // Never block fallback return on context persistence.
+            console.warn('[StoryGenerationService] Failed to update story context for fallbackEntry:', e?.message);
+          }
+
+          // Maintain checkpoint cadence even on fallback decision points.
+          if (subchapter === 3) {
+            try {
+              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
+            } catch (e) {
+              // Best-effort only.
+            }
+          }
 
           // Clear attempt count on successful fallback
           this.generationAttempts.delete(attemptKey);
@@ -5653,11 +5786,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }
         }
 
-        // Require at least 50% of critical threads to be VALIDLY acknowledged
+        // Require ALL critical threads to be VALIDLY acknowledged.
+        // The system prompt instructs the model to copy originalThread exactly and the engine treats
+        // missing critical threads as a hard continuity failure (we will hard-enforce in generation).
         const criticalCount = criticalThreads.length;
-        const requiredAcknowledgments = Math.ceil(criticalCount * 0.5);
+        const requiredAcknowledgments = criticalCount;
         if (validAddressedCount < requiredAcknowledgments) {
-          issues.push(`THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge at least ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`);
+          issues.push(
+            `THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge ALL ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`
+          );
         }
 
         // =========================================================================
@@ -6031,6 +6168,46 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       issues,
       warnings,
     };
+  }
+
+  /**
+   * Determine whether a validation issue is continuity-critical (player-facing story break)
+   * and therefore must be enforced as a hard failure (fallback / regeneration), not just warned.
+   *
+   * NOTE: We intentionally do NOT hard-fail on purely stylistic or length issues here.
+   */
+  _isContinuityCriticalIssue(issue) {
+    const s = String(issue || '');
+    if (!s) return false;
+
+    // Thread continuity / promise-keeping (major immersion break)
+    if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;
+    if (s.startsWith('OVERDUE THREAD ERROR:')) return true;
+    if (s.startsWith('OVERDUE APPOINTMENTS:')) return true;
+    if (s.startsWith('OVERDUE PROMISES:')) return true;
+
+    // Decision causality / timeline integrity
+    if (s.startsWith('CHOICE RESPECT VIOLATION:')) return true;
+    if (s.startsWith('STORY DAY MISMATCH:')) return true;
+    if (s.startsWith('Name misspelled:')) return true;
+
+    // Canonical timeline / setting invariants (hard canon breaks)
+    if (s.includes('Ashport is ALWAYS rainy')) return true;
+    if (s.includes('Jack drinks Jameson whiskey')) return true;
+    if (s.includes('friendship is 30 years')) return true;
+    if (s.includes('partnership is 13 years')) return true;
+    if (s.includes('partnership is 8 years')) return true;
+    if (s.includes('Emily case was closed 7 years')) return true;
+    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
+    if (s.includes('Timeline approximation')) return true;
+
+    // Path personality enforcement (keeps Jack coherent with player history)
+    if (s.startsWith('PERSONALITY VIOLATION:')) return true;
+    if (s.startsWith('BEHAVIOR DECLARATION MISMATCH:')) return true;
+    if (s.startsWith('Jack\'s action style mismatch:')) return true;
+    if (s.startsWith('Jack\'s risk level mismatch:')) return true;
+
+    return false;
   }
 
   // ==========================================================================

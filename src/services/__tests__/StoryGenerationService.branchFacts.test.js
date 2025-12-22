@@ -25,6 +25,31 @@ jest.mock('../LLMService', () => ({
 import { storyGenerationService } from '../StoryGenerationService';
 
 describe('StoryGenerationService branch-scoped persisted facts', () => {
+  test('minimal fallback narrative is sanitized to third-person', () => {
+    const entry = storyGenerationService._generateMinimalFallback(99, 1, 'ROOT', false);
+    expect(entry).toBeTruthy();
+    // No first-person narration tokens should remain after sanitization.
+    expect(entry.narrative).not.toMatch(/\bI\b/);
+    expect(entry.narrative).not.toMatch(/\bmy\b/i);
+    expect(entry.narrative).toMatch(/\bJack\b/); // sanity: should still be close on Jack
+  });
+
+  test('path personality mapping treats A as methodical and B as aggressive by default', () => {
+    const methodical = storyGenerationService._analyzePathPersonality([
+      { caseNumber: '001C', optionKey: 'A' },
+      { caseNumber: '002C', optionKey: 'A' },
+      { caseNumber: '003C', optionKey: 'A' },
+    ]);
+    expect(methodical?.riskTolerance).toBe('low');
+
+    const aggressive = storyGenerationService._analyzePathPersonality([
+      { caseNumber: '001C', optionKey: 'B' },
+      { caseNumber: '002C', optionKey: 'B' },
+      { caseNumber: '003C', optionKey: 'B' },
+    ]);
+    expect(aggressive?.riskTolerance).toBe('high');
+  });
+
   test('returns only prefix-relevant facts for a pathKey', async () => {
     // Reset in-memory context for this test.
     storyGenerationService.storyContext = {

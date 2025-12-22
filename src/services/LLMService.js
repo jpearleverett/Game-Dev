@@ -59,6 +59,8 @@ class LLMService {
     this.isOnline = true;
     this.offlineQueue = []; // Queue of requests to retry when back online
     this.offlineListeners = new Set(); // Callbacks for offline/online state changes
+    // Callbacks cannot be persisted; keep a best-effort in-memory registry for this session.
+    this.offlineCallbackRegistry = new Map(); // callbackId -> function
     this.networkUnsubscribe = null;
     this._setupNetworkListener();
   }
@@ -125,10 +127,23 @@ class LLMService {
    * Add a request to the offline queue for later processing
    */
   async _queueOfflineRequest(requestData) {
+    // Never persist function references (AsyncStorage JSON cannot serialize them).
+    const safeData = { ...(requestData || {}) };
+    if (typeof safeData.callback === 'function') {
+      // Register callback for this session and persist only an id.
+      const callbackId = safeData.callbackId || `${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      this.offlineCallbackRegistry.set(callbackId, safeData.callback);
+      safeData.callbackId = callbackId;
+      delete safeData.callback;
+    } else if (safeData.callback) {
+      // If something non-function was provided, drop it (avoid persisting junk).
+      delete safeData.callback;
+    }
+
     const queueItem = {
       id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),
-      data: requestData,
+      data: safeData,
       retryCount: 0,
     };
 
@@ -184,9 +199,17 @@ class LLMService {
 
       try {
         // Attempt to process the queued request
-        // Note: The callback will handle the actual request
-        if (item.data.callback) {
-          await item.data.callback();
+        // Note: callbacks are best-effort and only available within the same app session.
+        const callbackId = item?.data?.callbackId;
+        if (callbackId) {
+          const cb = this.offlineCallbackRegistry.get(callbackId);
+          if (typeof cb === 'function') {
+            await cb();
+            // Callback succeeded; remove it so we don't repeat work.
+            this.offlineCallbackRegistry.delete(callbackId);
+          } else {
+            console.warn('[LLMService] Offline queue item has callbackId but no in-memory callback (likely app restart). Dropping item.');
+          }
         }
       } catch (error) {
         console.warn(`[LLMService] Failed to process offline queue item:`, error);
@@ -224,6 +247,7 @@ class LLMService {
    */
   async clearOfflineQueue() {
     this.offlineQueue = [];
+    this.offlineCallbackRegistry.clear();
     try {
       await AsyncStorage.removeItem(OFFLINE_QUEUE_KEY);
     } catch (error) {
@@ -240,6 +264,7 @@ class LLMService {
       this.networkUnsubscribe = null;
     }
     this.offlineListeners.clear();
+    this.offlineCallbackRegistry.clear();
   }
 
   /**

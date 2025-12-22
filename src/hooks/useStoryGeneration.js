@@ -698,9 +698,11 @@ export function useStoryGeneration(storyCampaign) {
     // Determine player personality from choice patterns
     let playerPersonality = 'balanced';
     if (aRatio > 0.65) {
-      playerPersonality = 'aggressive'; // Option A is typically more direct/confrontational
+      // In this game, Option A is generally framed as the more methodical/evidence-first choice.
+      playerPersonality = 'methodical';
     } else if (aRatio < 0.35) {
-      playerPersonality = 'methodical'; // Option B is typically more cautious
+      // Option B is generally framed as the more aggressive/direct choice.
+      playerPersonality = 'aggressive';
     }
 
     // ========== DECISION PERSONALITY ALIGNMENT ANALYSIS ==========
