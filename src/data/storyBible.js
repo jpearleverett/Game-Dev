@@ -518,12 +518,15 @@ export const CONSISTENCY_RULES = [
 // GENERATION PARAMETERS - Optimized for quality and consistency
 // ============================================================================
 export const GENERATION_CONFIG = {
-  // Temperature settings - balanced for consistency with creativity
+  // Temperature settings
+  // IMPORTANT (Gemini 3): temperature MUST be 1.0. The LLM layer enforces this.
+  // Keep this section for backward compatibility and future provider swaps,
+  // but do not set values below 1.0 in this codebase.
   temperature: {
-    narrative: 0.72,      // Slightly lower for better consistency while maintaining creativity
-    dialogue: 0.75,       // Balanced for natural dialogue
-    decisions: 0.68,      // More controlled for critical choice points
-    expansion: 0.65,      // Conservative when expanding (rarely used now)
+    narrative: 1.0,
+    dialogue: 1.0,
+    decisions: 1.0,
+    expansion: 1.0,
   },
 
   // Token limits - generous to prevent truncation

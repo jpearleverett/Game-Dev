@@ -1569,7 +1569,6 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
       [{ role: 'user', content: arcPrompt }],
       {
         systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive noir mystery.',
-        temperature: 0.6, // Lower temperature for planning consistency
         maxTokens: 4000,
         responseSchema: arcSchema,
       }
@@ -1794,7 +1793,6 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       [{ role: 'user', content: outlinePrompt }],
       {
         systemPrompt: 'You are outlining a single chapter of an interactive noir mystery. Ensure the three subchapters flow as one seamless narrative.',
-        temperature: 0.65,
         maxTokens: 2000,
         responseSchema: outlineSchema,
       }
@@ -2100,7 +2098,6 @@ Generate realistic, specific consequences based on the actual narrative content.
         [{ role: 'user', content: consequencePrompt }],
         {
           systemPrompt: 'You are generating narrative consequences for player choices in a noir detective mystery.',
-          temperature: 0.6,
           maxTokens: 500,
           responseSchema: consequenceSchema,
         }
@@ -3698,7 +3695,6 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
       [{ role: 'user', content: decisionPrompt }],
       {
         systemPrompt: 'You are a noir narrative designer creating morally complex choices. Every decision must have real stakes and no clear "correct" answer.',
-        temperature: GENERATION_CONFIG.temperature.decisions,
         maxTokens: 2000,
         responseSchema: DECISION_ONLY_SCHEMA,
       }
@@ -4469,7 +4465,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           [{ role: 'user', content: prompt }],
           {
             systemPrompt: MASTER_SYSTEM_PROMPT,
-            temperature: isDecisionPoint ? GENERATION_CONFIG.temperature.decisions : GENERATION_CONFIG.temperature.narrative,
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
             traceId,
@@ -6747,7 +6742,6 @@ Rewrite the narrative to fix ALL issues while maintaining the noir style and sto
       [{ role: 'user', content: fixPrompt }],
       {
         systemPrompt: 'You are an expert noir editor. Fix all issues while enhancing the atmospheric prose quality. Never change the plot, only improve the writing.',
-        temperature: GENERATION_CONFIG.temperature.narrative,
         maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
         responseSchema,
       }
@@ -6789,7 +6783,6 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
       [{ role: 'user', content: expandPrompt }],
       {
         systemPrompt: 'You are expanding noir fiction. Match the existing style exactly. Never contradict established facts.',
-        temperature: GENERATION_CONFIG.temperature.expansion,
         maxTokens: GENERATION_CONFIG.maxTokens.expansion,
       }
     );
@@ -7724,7 +7717,6 @@ If no conflicts, return: {"conflicts": []}`;
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          temperature: 0.1,
           maxTokens: 500,
           responseSchema: {
             type: 'object',
