@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useStoryEngine } from '../hooks/useStoryEngine';
 import { useStoryGeneration } from '../hooks/useStoryGeneration';
-import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter, hasStoryContent } from '../data/storyContent';
+import {
+  resolveStoryPathKey,
+  ROOT_PATH_KEY,
+  isDynamicChapter,
+  hasStoryContent,
+  computeBranchPathKey,
+  normalizeStoryPathKey,
+} from '../data/storyContent';
 import { formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { analytics } from '../services/AnalyticsService';
 import { createTraceId, llmTrace } from '../utils/llmTrace';
@@ -83,10 +90,23 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return { ok: true, generated: false };
     }
 
-    // Check if content exists (either generated or cached)
-    const hasContent = await hasStoryContent(caseNumber, pathKey);
+    // Normalize and canonicalize pathKey.
+    // Dynamic chapters are keyed by the *cumulative* branch key (e.g. "BA", "BB"), not raw "A"/"B".
+    const history = optimisticChoiceHistory || choiceHistoryRef.current;
+    const { chapter } = parseCaseNumber(caseNumber);
+    const computed = computeBranchPathKey(history, chapter);
+    const canonicalPathKey = computed && computed !== ROOT_PATH_KEY
+      ? computed
+      : normalizeStoryPathKey(pathKey);
+
+    // Check if content exists (either generated or cached) under the canonical key.
+    const hasContent = await hasStoryContent(caseNumber, canonicalPathKey);
     if (hasContent) {
-      llmTrace('StoryContext', traceId, 'ensureStoryContent.cache.hit', { caseNumber, pathKey }, 'debug');
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.cache.hit', {
+        caseNumber,
+        pathKey,
+        canonicalPathKey,
+      }, 'debug');
       return { ok: true, generated: false };
     }
 
@@ -98,14 +118,11 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Generate the content
     try {
-      // Use optimistic history if provided, otherwise fallback to ref (avoids stale closure)
-      const history = optimisticChoiceHistory || choiceHistoryRef.current;
-
       // generateForCase now always returns content (including fallback on error)
       // It only returns null for non-dynamic chapters or if LLM is not configured
       const entry = await generateForCase(
         caseNumber,
-        pathKey,
+        canonicalPathKey,
         history
       );
 
@@ -113,6 +130,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
         llmTrace('StoryContext', traceId, 'ensureStoryContent.ok', {
           caseNumber,
           pathKey,
+          canonicalPathKey,
           generated: true,
           isFallback: !!entry.isFallback,
           isEmergencyFallback: !!entry.isEmergencyFallback,
@@ -131,11 +149,19 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
       // This should rarely happen now - generateForCase has its own fallback
       console.warn('[StoryContext] generateForCase returned null unexpectedly');
-      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.nullEntry', { caseNumber, pathKey }, 'warn');
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.nullEntry', {
+        caseNumber,
+        pathKey,
+        canonicalPathKey,
+      }, 'warn');
       return { ok: false, reason: 'generation-failed' };
     } catch (error) {
       console.error('[StoryContext] Unexpected error in ensureStoryContent:', error.message);
-      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.error', { caseNumber, pathKey, error: error.message }, 'error');
+      llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.error', {
+        caseNumber,
+        pathKey,
+        error: error.message,
+      }, 'error');
       return { ok: false, reason: 'generation-error', error: error.message };
     }
   }, [isLLMConfigured, generateForCase]);
@@ -217,29 +243,35 @@ export function StoryProvider({ children, progress, updateProgress }) {
     if (isLLMConfigured && currentChapter < 12) {
       const nextChapter = currentChapter + 1;
       const nextCaseNumber = formatCaseNumber(nextChapter, 1);
-      // The path key is simply the option chosen - A or B
-      const pathKey = optionKey;
+      // IMPORTANT: next content is keyed by the *cumulative* branch key (e.g. "BA", "BB"), not raw "A"/"B".
+      // Using raw keys causes cache mismatches and apparent scene skips.
 
       // Construct optimistic history including the choice just made
+      const pendingOptions = storyCampaign?.pendingDecisionOptions || {};
+      const selectedOption = pendingOptions?.[optionKey] || {};
       const optimisticChoiceHistory = [
         ...currentHistory,
         {
           caseNumber: formatCaseNumber(currentChapter, 3), // Decision happens at subchapter 3
           optionKey: optionKey,
+          optionTitle: selectedOption.title || null,
+          optionFocus: selectedOption.focus || null,
           timestamp: new Date().toISOString()
         }
       ];
+
+      const nextPathKey = computeBranchPathKey(optimisticChoiceHistory, nextChapter);
 
       // Trigger generation with retry logic
       // With root causes fixed (typos, word count, stylistic warnings), fewer retries needed
       const maxAttempts = 3;
       const bgGenId = `bg_${Date.now().toString(36)}`;
 
-      console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${pathKey})`);
+      console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${nextPathKey})`);
       llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.start', {
         nextCaseNumber,
         nextChapter,
-        pathKey,
+        pathKey: nextPathKey,
         bgGenId,
       }, 'info');
 
@@ -248,7 +280,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
         console.log(`[StoryContext] [${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}...`);
 
         try {
-          const result = await ensureStoryContent(nextCaseNumber, pathKey, optimisticChoiceHistory);
+          const result = await ensureStoryContent(nextCaseNumber, nextPathKey, optimisticChoiceHistory);
           const attemptDuration = Date.now() - attemptStart;
 
           if (result.ok) {
@@ -265,7 +297,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
             llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
               ok: true,
               nextCaseNumber,
-              pathKey,
+              pathKey: nextPathKey,
               isFallback: !!result.isFallback,
               isEmergencyFallback: !!result.isEmergencyFallback,
               attempt,
@@ -301,7 +333,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
             llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
               ok: false,
               nextCaseNumber,
-              pathKey,
+              pathKey: nextPathKey,
               reason: result.reason,
               error: result.error,
               attempt,
@@ -329,7 +361,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
             llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
               ok: false,
               nextCaseNumber,
-              pathKey,
+              pathKey: nextPathKey,
               reason: 'unexpected-error',
               error: err.message,
               attempt,
