@@ -2951,10 +2951,12 @@ Generate realistic, specific consequences based on the actual narrative content.
       }
     }
 
-    // Add choice history
+    // Add choice history (including title/focus for LLM prompt context)
     context.playerChoices = choiceHistory.map(choice => ({
       chapter: this._extractChapterFromCase(choice.caseNumber),
       optionKey: choice.optionKey,
+      optionTitle: choice.optionTitle || null,  // "Go to the wharf and confront the confessor"
+      optionFocus: choice.optionFocus || null,  // "Prioritizes direct action over caution"
       timestamp: choice.timestamp,
     }));
 
@@ -2973,14 +2975,16 @@ Generate realistic, specific consequences based on the actual narrative content.
       const chosenOption = decisionEntry?.decision?.options?.find((o) => o.key === last.optionKey) || null;
       const otherOption = decisionEntry?.decision?.options?.find((o) => o.key !== last.optionKey) || null;
 
+      // Prefer stored title/focus from choice history (always available after decision),
+      // fall back to looking it up from the decision entry
       return {
         caseNumber: last.caseNumber,
         chapter: decisionChapter,
         optionKey: last.optionKey,
-        immediate: consequence?.immediate || chosenOption?.focus || `Chose option ${last.optionKey}`,
+        immediate: consequence?.immediate || chosenOption?.focus || last.optionFocus || `Chose option ${last.optionKey}`,
         ongoing: consequence?.ongoing || [],
-        chosenTitle: chosenOption?.title || null,
-        chosenFocus: chosenOption?.focus || null,
+        chosenTitle: last.optionTitle || chosenOption?.title || null,
+        chosenFocus: last.optionFocus || chosenOption?.focus || null,
         chosenStats: chosenOption?.stats || null,
         otherTitle: otherOption?.title || null,
         otherFocus: otherOption?.focus || null,
@@ -3440,11 +3444,25 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
     if (subchapter === 1 && context.playerChoices.length > 0) {
       const lastChoice = context.playerChoices[context.playerChoices.length - 1];
       if (lastChoice.chapter === chapter - 1) {
+        // Use the stored title/focus if available, otherwise fall back to key
+        const choiceTitle = lastChoice.optionTitle || `Option ${lastChoice.optionKey}`;
+        const choiceFocus = lastChoice.optionFocus ? `\nFOCUS: ${lastChoice.optionFocus}` : '';
+
         task += `\n\n### CRITICAL CONTEXT: PREVIOUS DECISION
 The player JUST made a crucial decision at the end of the previous chapter.
-You MUST acknowledge this choice immediately.
-PLAYER CHOICE: "${lastChoice.optionKey}"
-This choice determines the current path. Ensure the narrative reflects this specific outcome in the FIRST 200 WORDS, with concrete, scene-level causality (location, character reaction, and what Jack does next).`;
+You MUST SHOW THIS SCENE - do NOT skip it or summarize it as past events.
+
+PLAYER'S CHOICE: "${choiceTitle}"${choiceFocus}
+
+**MANDATORY REQUIREMENTS:**
+1. The chapter MUST OPEN with Jack actively pursuing this choice - we see the scene unfold in real-time
+2. DO NOT start with "After going to..." or "Having confronted..." - START IN THE MOMENT
+3. The FIRST 200+ WORDS should be the actual scene of the chosen action
+4. Show sensory details: what Jack sees, hears, feels as he takes this action
+5. Include dialogue and character reactions from whoever Jack encounters
+
+Example of WRONG approach: "After Jack confronted Wade at the wharf, he returned to his office..."
+Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."`;
       }
     }
 
@@ -3489,15 +3507,19 @@ ${EXAMPLE_PASSAGES.tenseMoment}
    * Build consistency verification section
    */
   _buildConsistencySection(context) {
+    const cw = GENERATION_CONFIG?.contextWindowing || {};
+    const maxFacts = cw.maxFactsInPrompt || 60;
+    const maxThreads = cw.maxThreadsInPrompt || 30;
+
     let section = `## CONSISTENCY VERIFICATION
 
 ### ESTABLISHED FACTS (Never contradict)
-${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
+${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
 
     // Add active narrative threads that need to be maintained
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
       const threadsByType = {};
-      context.narrativeThreads.slice(-15).forEach(t => {
+      context.narrativeThreads.slice(-maxThreads).forEach(t => {
         if (!threadsByType[t.type]) threadsByType[t.type] = [];
         threadsByType[t.type].push(t);
       });
@@ -3508,12 +3530,17 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       const criticalTypes = ['appointment', 'promise', 'threat'];
       const otherTypes = Object.keys(threadsByType).filter(t => !criticalTypes.includes(t));
 
+      // With 1M token context, include ALL threads with full detail
+      const maxPerCriticalType = 15;  // All critical appointments/promises/threats
+      const maxPerOtherType = 10;     // Generous for other thread types
+      const maxDescLen = 500;         // Full thread descriptions
+
       criticalTypes.forEach(type => {
         if (threadsByType[type] && threadsByType[type].length > 0) {
           section += `\n**[CRITICAL] ${type.toUpperCase()} (must be addressed):**`;
-          threadsByType[type].slice(-4).forEach(t => {
+          threadsByType[type].slice(-maxPerCriticalType).forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > 150 ? desc.slice(0, 150) + '...' : desc;
+            const truncatedDesc = desc.length > maxDescLen ? desc.slice(0, maxDescLen) + '...' : desc;
             section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
             if (t.characters && t.characters.length > 0) {
               section += ` [Characters: ${t.characters.join(', ')}]`;
@@ -3525,9 +3552,9 @@ ${context.establishedFacts.slice(0, 10).map(f => `- ${f}`).join('\n')}`;
       otherTypes.forEach(type => {
         if (threadsByType[type] && threadsByType[type].length > 0) {
           section += `\n**${type.toUpperCase()}:**`;
-          threadsByType[type].slice(-3).forEach(t => {
+          threadsByType[type].slice(-maxPerOtherType).forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > 150 ? desc.slice(0, 150) + '...' : desc;
+            const truncatedDesc = desc.length > maxDescLen ? desc.slice(0, maxDescLen) + '...' : desc;
             section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
           });
         }
@@ -5094,32 +5121,40 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * Convert JSON decision format to internal game format
    */
   _convertDecisionFormat(decision) {
+    // Build option objects once
+    const optionAObj = {
+      key: decision.optionA?.key || 'A',
+      title: decision.optionA?.title || 'Option A',
+      focus: decision.optionA?.focus || '',
+      personalityAlignment: decision.optionA?.personalityAlignment || 'neutral',
+      consequence: null,
+      stats: null,
+      outcome: null,
+      nextChapter: null, // Will be set by game logic
+      nextPathKey: decision.optionA?.key || 'A',
+      details: [],
+    };
+    const optionBObj = {
+      key: decision.optionB?.key || 'B',
+      title: decision.optionB?.title || 'Option B',
+      focus: decision.optionB?.focus || '',
+      personalityAlignment: decision.optionB?.personalityAlignment || 'neutral',
+      consequence: null,
+      stats: null,
+      outcome: null,
+      nextChapter: null, // Will be set by game logic
+      nextPathKey: decision.optionB?.key || 'B',
+      details: [],
+    };
+
     return {
       intro: [decision.intro || ''],
-      options: [
-        {
-          key: decision.optionA?.key || 'A',
-          title: decision.optionA?.title || 'Option A',
-          focus: decision.optionA?.focus || '',
-          consequence: null,
-          stats: null,
-          outcome: null,
-          nextChapter: null, // Will be set by game logic
-          nextPathKey: decision.optionA?.key || 'A',
-          details: [],
-        },
-        {
-          key: decision.optionB?.key || 'B',
-          title: decision.optionB?.title || 'Option B',
-          focus: decision.optionB?.focus || '',
-          consequence: null,
-          stats: null,
-          outcome: null,
-          nextChapter: null, // Will be set by game logic
-          nextPathKey: decision.optionB?.key || 'B',
-          details: [],
-        },
-      ],
+      // Keep both formats for compatibility:
+      // - options[] array for iteration
+      // - optionA/optionB for direct access
+      options: [optionAObj, optionBObj],
+      optionA: optionAObj,
+      optionB: optionBObj,
     };
   }
 

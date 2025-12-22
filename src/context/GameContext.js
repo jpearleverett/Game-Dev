@@ -149,6 +149,19 @@ export function GameProvider({
             story.handleBackgroundGeneration(caseNumber, pathKey);
           }
 
+          // Early prefetch: When in Chapter 1 (pre-written), start generating Chapter 2 immediately
+          // This ensures content is ready by the time player reaches the first decision in 001C
+          if (chapter === 1 && story.generation?.isConfigured) {
+            console.log(`[GameContext] Chapter 1 detected - prefetching Chapter 2 paths early`);
+            llmTrace('GameContext', traceId, 'activateStoryCase.earlyPrefetch.chapter2', {
+              caseNumber,
+              note: 'Chapter 1 is pre-written, starting Chapter 2 generation now',
+            }, 'info');
+            // Prefetch both A and B paths for Chapter 2 with empty choice history
+            // (player hasn't made any decisions yet)
+            story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch');
+          }
+
           return { ok: true, caseId: targetCase.id };
       }
 
@@ -364,10 +377,36 @@ export function GameProvider({
               };
 
               if (isFinalSubchapter) {
+                  // Store the decision options so we can include title/focus in choice history
+                  // This enables the LLM to know WHAT the player chose, not just "A" or "B"
+                  const pendingDecisionOptions = {};
+                  if (activeCase.storyDecision?.optionA) {
+                    pendingDecisionOptions.A = {
+                      title: activeCase.storyDecision.optionA.title,
+                      focus: activeCase.storyDecision.optionA.focus,
+                    };
+                  }
+                  if (activeCase.storyDecision?.optionB) {
+                    pendingDecisionOptions.B = {
+                      title: activeCase.storyDecision.optionB.title,
+                      focus: activeCase.storyDecision.optionB.focus,
+                    };
+                  }
+                  // Fallback to options[] array if optionA/optionB not available
+                  if (!pendingDecisionOptions.A && activeCase.storyDecision?.options?.[0]) {
+                    const opt = activeCase.storyDecision.options[0];
+                    pendingDecisionOptions[opt.key || 'A'] = { title: opt.title, focus: opt.focus };
+                  }
+                  if (!pendingDecisionOptions.B && activeCase.storyDecision?.options?.[1]) {
+                    const opt = activeCase.storyDecision.options[1];
+                    pendingDecisionOptions[opt.key || 'B'] = { title: opt.title, focus: opt.focus };
+                  }
+
                   updatedStory = {
                       ...updatedStory,
                       awaitingDecision: true,
                       pendingDecisionCase: activeCase.caseNumber,
+                      pendingDecisionOptions, // Store decision titles for LLM context
                       lastDecision: null,
                   };
               } else {

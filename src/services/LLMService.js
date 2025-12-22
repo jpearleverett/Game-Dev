@@ -463,10 +463,10 @@ class LLMService {
       topK: 40,
     };
 
-    // Add thinking configuration for Gemini 3 (use "low" for faster responses)
+    // Add thinking configuration for Gemini 3
     if (isGemini3) {
       generationConfig.thinkingConfig = {
-        thinkingLevel: 'low', // Minimize latency while still using Gemini 3 reasoning
+        thinkingLevel: 'medium', // Balance quality with speed
       };
     }
 
