@@ -44,11 +44,16 @@ export function useStoryEngine(progress, updateProgress) {
 
     // Build updated choice history first, then compute the cumulative branch key for the next chapter.
     // This ensures generated content is keyed by the full decision history (not just "A"/"B").
+    // Include optionTitle and optionFocus so the LLM knows WHAT the player chose
+    const pendingOptions = storyCampaign.pendingDecisionOptions || {};
+    const selectedOption = pendingOptions[optionKey] || {};
     const nextChoiceHistory = [
       ...storyCampaign.choiceHistory,
       {
         caseNumber: decisionCase,
         optionKey: optionKey,
+        optionTitle: selectedOption.title || null,  // e.g., "Go to the wharf and confront the confessor"
+        optionFocus: selectedOption.focus || null,  // e.g., "Prioritizes direct confrontation over evidence"
         timestamp: decisionTime,
       },
     ];

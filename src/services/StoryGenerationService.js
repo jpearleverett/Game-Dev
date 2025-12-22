@@ -2951,10 +2951,12 @@ Generate realistic, specific consequences based on the actual narrative content.
       }
     }
 
-    // Add choice history
+    // Add choice history (including title/focus for LLM prompt context)
     context.playerChoices = choiceHistory.map(choice => ({
       chapter: this._extractChapterFromCase(choice.caseNumber),
       optionKey: choice.optionKey,
+      optionTitle: choice.optionTitle || null,  // "Go to the wharf and confront the confessor"
+      optionFocus: choice.optionFocus || null,  // "Prioritizes direct action over caution"
       timestamp: choice.timestamp,
     }));
 
@@ -2973,14 +2975,16 @@ Generate realistic, specific consequences based on the actual narrative content.
       const chosenOption = decisionEntry?.decision?.options?.find((o) => o.key === last.optionKey) || null;
       const otherOption = decisionEntry?.decision?.options?.find((o) => o.key !== last.optionKey) || null;
 
+      // Prefer stored title/focus from choice history (always available after decision),
+      // fall back to looking it up from the decision entry
       return {
         caseNumber: last.caseNumber,
         chapter: decisionChapter,
         optionKey: last.optionKey,
-        immediate: consequence?.immediate || chosenOption?.focus || `Chose option ${last.optionKey}`,
+        immediate: consequence?.immediate || chosenOption?.focus || last.optionFocus || `Chose option ${last.optionKey}`,
         ongoing: consequence?.ongoing || [],
-        chosenTitle: chosenOption?.title || null,
-        chosenFocus: chosenOption?.focus || null,
+        chosenTitle: last.optionTitle || chosenOption?.title || null,
+        chosenFocus: last.optionFocus || chosenOption?.focus || null,
         chosenStats: chosenOption?.stats || null,
         otherTitle: otherOption?.title || null,
         otherFocus: otherOption?.focus || null,
@@ -3440,11 +3444,25 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
     if (subchapter === 1 && context.playerChoices.length > 0) {
       const lastChoice = context.playerChoices[context.playerChoices.length - 1];
       if (lastChoice.chapter === chapter - 1) {
+        // Use the stored title/focus if available, otherwise fall back to key
+        const choiceTitle = lastChoice.optionTitle || `Option ${lastChoice.optionKey}`;
+        const choiceFocus = lastChoice.optionFocus ? `\nFOCUS: ${lastChoice.optionFocus}` : '';
+
         task += `\n\n### CRITICAL CONTEXT: PREVIOUS DECISION
 The player JUST made a crucial decision at the end of the previous chapter.
-You MUST acknowledge this choice immediately.
-PLAYER CHOICE: "${lastChoice.optionKey}"
-This choice determines the current path. Ensure the narrative reflects this specific outcome in the FIRST 200 WORDS, with concrete, scene-level causality (location, character reaction, and what Jack does next).`;
+You MUST SHOW THIS SCENE - do NOT skip it or summarize it as past events.
+
+PLAYER'S CHOICE: "${choiceTitle}"${choiceFocus}
+
+**MANDATORY REQUIREMENTS:**
+1. The chapter MUST OPEN with Jack actively pursuing this choice - we see the scene unfold in real-time
+2. DO NOT start with "After going to..." or "Having confronted..." - START IN THE MOMENT
+3. The FIRST 200+ WORDS should be the actual scene of the chosen action
+4. Show sensory details: what Jack sees, hears, feels as he takes this action
+5. Include dialogue and character reactions from whoever Jack encounters
+
+Example of WRONG approach: "After Jack confronted Wade at the wharf, he returned to his office..."
+Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."`;
       }
     }
 
