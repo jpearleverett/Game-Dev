@@ -117,9 +117,10 @@ export default async function handler(req, res) {
     };
 
     // Add thinking config for Gemini 3 models - produces better quality output
+    // Medium level balances quality with speed/cost
     if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
-        thinkingLevel: body.thinkingLevel ?? 'high',
+        thinkingLevel: body.thinkingLevel ?? 'medium',
       };
     }
 
