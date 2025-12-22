@@ -780,6 +780,9 @@ class StoryGenerationService {
 
     // ========== NEW: Fallback Content System for Graceful Degradation ==========
     this.fallbackTemplates = this._initializeFallbackTemplates();
+    // Normalize fallback templates to third-person limited narration (dialogue may remain first-person).
+    // This prevents immersion breaks if a template accidentally includes first-person narration.
+    this._normalizeFallbackTemplatesToThirdPerson();
     this.generationAttempts = new Map(); // Track retry attempts per content
     this.maxGenerationAttempts = 3; // Max attempts before using fallback
 
@@ -1149,6 +1152,29 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
   }
 
   /**
+   * Ensure all fallback template narratives adhere to global POV rules (third-person limited).
+   * Dialogue inside quotes is preserved as-is.
+   */
+  _normalizeFallbackTemplatesToThirdPerson() {
+    try {
+      const phases = this.fallbackTemplates || {};
+      for (const phaseKey of Object.keys(phases)) {
+        const phase = phases[phaseKey];
+        if (!phase || typeof phase !== 'object') continue;
+        for (const subKey of Object.keys(phase)) {
+          const tpl = phase[subKey];
+          if (!tpl || typeof tpl !== 'object') continue;
+          if (typeof tpl.narrative === 'string' && tpl.narrative.length > 0) {
+            tpl.narrative = this._sanitizeNarrativeToThirdPerson(tpl.narrative);
+          }
+        }
+      }
+    } catch (e) {
+      // Best-effort only. Never block initialization.
+    }
+  }
+
+  /**
    * Get appropriate fallback content based on chapter and subchapter
    */
   _getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint) {
@@ -1232,19 +1258,21 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
    * Generate minimal fallback when no template is available
    */
   _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
-    const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. I pulled my coat tighter and stepped into the night.
+    const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. Jack pulled his coat tighter and stepped into the night.
 
 Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing me closer to truths I wasn't sure I wanted to face. But there was no turning back now. Not after everything I'd seen.
 
-Murphy's Bar was quiet below my office. The usual crowd had dispersed, leaving only ghosts and memories. I poured a glass of Jameson and let the familiar burn ground me in the present.
+Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing him closer to truths he wasn't sure he wanted to face. But there was no turning back now. Not after everything he'd seen.
 
-Tomorrow would bring new challenges. New choices. New opportunities to get things right—or to fail, as I had failed so many times before.
+Murphy's Bar was quiet below his office. The usual crowd had dispersed, leaving only ghosts and memories. Jack poured a glass of Jameson and let the familiar burn keep him anchored in the present.
 
-But that was tomorrow. Tonight, I would rest. Gather my strength. Prepare for whatever came next.
+Tomorrow would bring new challenges. New choices. New opportunities to get things right—or to fail, as he had failed so many times before.
 
-The city outside my window sparkled with neon and rain. Beautiful and treacherous, like everything else in Ashport. I watched it for a long time before finally turning away.
+But that was tomorrow. Tonight, Jack would rest. Gather his strength. Prepare for whatever came next.
 
-Whatever the morning brought, I would face it. That was all I could promise myself anymore.`;
+The city outside his window sparkled with neon and rain. Beautiful and treacherous, like everything else in Ashport. Jack watched it for a long time before finally turning away.
+
+Whatever the morning brought, he'd face it. That was all he could promise himself anymore.`;
 
     const result = {
       title: 'The Investigation Continues',
@@ -1344,8 +1372,8 @@ Whatever the morning brought, I would face it. That was all I could promise myse
     let threadAcknowledgment = '';
     if (criticalThreads.length > 0) {
       const threadDescriptions = criticalThreads.map(t => {
-        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on my mind`;
-        if (t.type === 'promise') return `I remembered the promise I had made`;
+        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on Jack's mind`;
+        if (t.type === 'promise') return `Jack remembered the promise he had made`;
         if (t.type === 'threat') return `The threat still hung in the air`;
         return `Unfinished business demanded attention`;
       });
@@ -1366,21 +1394,21 @@ Whatever the morning brought, I would face it. That was all I could promise myse
     }
 
     // Build phase-appropriate narrative
-    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. I stepped out onto Morrison Street, my coat collar turned up against the chill.
+    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. Jack stepped out onto Morrison Street, his coat collar turned up against the chill.
 
-Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled me deeper into the corruption I had spent thirty years pretending not to see. Every case I had closed with such certainty now felt like a door I should have left open.${threadAcknowledgment}
+Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled Jack deeper into the corruption he had spent thirty years pretending not to see. Every case he had closed with such certainty now felt like a door he should have left open.${threadAcknowledgment}
 
-I moved ${jackApproach}. After everything I had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, my best friend for three decades, at the center of a web of manufactured truth. And me, the instrument of their justice, the fool who had believed every perfect conviction.
+Jack moved ${jackApproach}. After everything he had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, his best friend for three decades, at the center of a web of manufactured truth. And Jack, the instrument of their justice, the fool who had believed every perfect conviction.
 
-Murphy's Bar beckoned below my office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that I was ${phaseTone}.
+Murphy's Bar beckoned below his office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that he was ${phaseTone}.
 
-The streets of Ashport stretched before me, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman I had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate me. Every right to make me understand what my arrogant certainty had cost.
+The streets of Ashport stretched before him, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman Jack had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate him. Every right to make him understand what his arrogant certainty had cost.
 
-I checked my watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents I had helped convict haunted every step I took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career I had helped destroy for telling the truth.
+Jack checked his watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents he had helped convict haunted every step he took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career he had helped destroy for telling the truth.
 
-My hand found the cold metal of the door handle. Whatever waited on the other side, I would face it. That was all I could promise myself anymore.
+His hand found the cold metal of the door handle. Whatever waited on the other side, he'd face it. That was all he could promise himself anymore.
 
-The city held its breath. So did I.`;
+The city held its breath. So did Jack.`;
 
     // Build the fallback entry
     const adapted = {
