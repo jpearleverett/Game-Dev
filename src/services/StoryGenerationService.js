@@ -6307,10 +6307,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Extract key nouns/names from the thread description
             const keyWords = threadLower.match(/\b(?:jack|sarah|victoria|eleanor|silas|tom|wade|grange|meet|promise|call|contact|investigate|reveal)\b/g) || [];
 
-            // Use word boundaries to prevent false positives (e.g., "meet" matching "meeting")
-            const mentionedInNarrative = keyWords.some(word => {
-              const pattern = new RegExp(`\\b${word}\\b`, 'i');
-              return pattern.test(narrativeLower);
+            // Use prefix matching to allow word variations (meet/meeting, promise/promised)
+            // but prevent false positives (case/showcase)
+            const narrativeWords = narrativeLower.match(/\b\w+\b/g) || [];
+            const mentionedInNarrative = keyWords.some(keyword => {
+              return narrativeWords.some(w => {
+                if (keyword.length < 4 || w.length < 4) return keyword === w;
+                return keyword.startsWith(w) || w.startsWith(keyword);
+              });
             });
 
             if (!mentionedInNarrative && keyWords.length > 0) {
@@ -6441,13 +6445,18 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     if (Array.isArray(content.puzzleCandidates)) {
       if (content.puzzleCandidates.length < 6) warnings.push(`puzzleCandidates has only ${content.puzzleCandidates.length} words. Aim for 6-8 distinct words.`);
       const lowerNarr = narrativeOriginal.toLowerCase();
+      const narrativeWords = lowerNarr.match(/\b\w+\b/g) || [];
       content.puzzleCandidates.forEach((w) => {
         if (!w || typeof w !== 'string') return;
-        const token = w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // Use word boundary to find exact word, but allow common suffixes (s, ed, ing, ly, er, est)
-        // This prevents "rain" matching "train" while still allowing "rains" or "rained"
-        const pattern = new RegExp(`\\b${token}(?:s|ed|ing|ly|er|est)?\\b`, 'i');
-        if (!pattern.test(lowerNarr)) {
+        const token = w.toLowerCase();
+        // Use prefix matching: puzzle word should be recognizable in narrative
+        // "rain" matches "raining" ✓, "investigate" matches "investigation" ✓
+        // but "rain" doesn't match "train" ✓ (neither is prefix of other)
+        const foundInNarrative = narrativeWords.some(nw => {
+          if (token.length < 4 || nw.length < 4) return token === nw;
+          return token.startsWith(nw) || nw.startsWith(token);
+        });
+        if (!foundInNarrative) {
           warnings.push(`puzzleCandidates word "${w}" does not appear in narrative. Prefer words drawn directly from the prose for fairness.`);
         }
       });
@@ -6553,24 +6562,29 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const threadDescription = (thread.description || thread.excerpt || '').toLowerCase();
         const threadKeywords = threadDescription.split(/\s+/).filter(w => w.length > 4).slice(0, 5);
 
+        // Helper: prefix matching to allow word variations (promise/promised, meet/meeting)
+        // but prevent false matches (case/showcase, rain/train)
+        const wordMatchesInText = (keyword, text) => {
+          // Find all words in text and check if any is a prefix match with keyword
+          const words = text.match(/\b\w+\b/g) || [];
+          return words.some(w => {
+            if (keyword.length < 4 || w.length < 4) return keyword === w;
+            return keyword.startsWith(w) || w.startsWith(keyword);
+          });
+        };
+
         const wasAddressed = addressedThreads.some(addressed => {
           if (!addressed.originalThread) return false;
           const addressedLower = addressed.originalThread.toLowerCase();
-          // Check if at least 2 key words match using word boundaries
-          // This prevents "case" matching "showcase" or "meet" matching "meeting"
-          const matchingKeywords = threadKeywords.filter(kw => {
-            const pattern = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-            return pattern.test(addressedLower);
-          });
+          // Check if at least 2 key words match using prefix matching
+          // This allows "promise" to match "promised" but prevents "case" matching "showcase"
+          const matchingKeywords = threadKeywords.filter(kw => wordMatchesInText(kw, addressedLower));
           return matchingKeywords.length >= 2;
         });
 
-        // Also check if the thread is mentioned in the narrative itself using word boundaries
+        // Also check if the thread is mentioned in the narrative itself
         const narrativeLower = narrative.toLowerCase();
-        const mentionedInNarrative = threadKeywords.some(kw => {
-          const pattern = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-          return pattern.test(narrativeLower);
-        });
+        const mentionedInNarrative = threadKeywords.some(kw => wordMatchesInText(kw, narrativeLower));
 
         if (!wasAddressed && !mentionedInNarrative) {
           const threadChapter = thread.chapter || 0;
