@@ -6243,9 +6243,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Match if there's significant overlap in key terms
             const addressedWords = addressedLower.split(/\s+/).filter(w => w.length > 3);
             const criticalWords = criticalLower.split(/\s+/).filter(w => w.length > 3);
-            // Use exact word matching instead of substring to prevent false positives
-            // e.g., "meet" should not match "meeting", "promise" should not match "promised"
-            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => cw === w));
+            // Use prefix matching: one word must be a prefix of the other (min 4 chars)
+            // This allows "promise" to match "promised" but prevents "case" matching "showcase"
+            const wordsMatch = (a, b) => {
+              if (a.length < 4 || b.length < 4) return a === b;
+              return a.startsWith(b) || b.startsWith(a);
+            };
+            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => wordsMatch(w, cw)));
             // Require at least 2 matching words or 40% overlap
             return matchingWords.length >= 2 || matchingWords.length / Math.max(addressedWords.length, 1) > 0.4;
           });
