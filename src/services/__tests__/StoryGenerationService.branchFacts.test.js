@@ -93,6 +93,58 @@ describe('StoryGenerationService branch-scoped persisted facts', () => {
     expect(bb).not.toEqual(expect.arrayContaining(['CH3_BA_FACT']));
   });
 
+  test('ROOT facts are included for all branched paths', async () => {
+    // Reset in-memory context for this test.
+    storyGenerationService.storyContext = {
+      consistencyFactsByPathKey: {},
+      consistencyFacts: [],
+      lastPathKey: null,
+      lastGeneratedChapter: null,
+      lastGeneratedSubchapter: null,
+    };
+
+    // Simulate Chapter 2 generated before any player decisions (pathKey = ROOT)
+    await storyGenerationService._updateStoryContext({
+      chapter: 2,
+      subchapter: 1,
+      pathKey: 'ROOT',
+      generatedAt: '2025-12-22T00:00:00.000Z',
+      consistencyFacts: ['CH2_ROOT_FACT_1', 'CH2_ROOT_FACT_2'],
+    });
+
+    // Simulate Chapter 3 after player chose 'A'
+    await storyGenerationService._updateStoryContext({
+      chapter: 3,
+      subchapter: 1,
+      pathKey: 'A',
+      generatedAt: '2025-12-22T00:01:00.000Z',
+      consistencyFacts: ['CH3_A_FACT'],
+    });
+
+    // Simulate Chapter 3 after player chose 'B' (prefetched alternative)
+    await storyGenerationService._updateStoryContext({
+      chapter: 3,
+      subchapter: 1,
+      pathKey: 'B',
+      generatedAt: '2025-12-22T00:02:00.000Z',
+      consistencyFacts: ['CH3_B_FACT'],
+    });
+
+    // When querying for path 'A', should get ROOT facts + A facts, not B facts
+    const pathA = storyGenerationService._getRelevantPersistedConsistencyFacts('A');
+    expect(pathA).toEqual(expect.arrayContaining(['CH2_ROOT_FACT_1', 'CH2_ROOT_FACT_2', 'CH3_A_FACT']));
+    expect(pathA).not.toEqual(expect.arrayContaining(['CH3_B_FACT']));
+
+    // When querying for path 'B', should get ROOT facts + B facts, not A facts
+    const pathB = storyGenerationService._getRelevantPersistedConsistencyFacts('B');
+    expect(pathB).toEqual(expect.arrayContaining(['CH2_ROOT_FACT_1', 'CH2_ROOT_FACT_2', 'CH3_B_FACT']));
+    expect(pathB).not.toEqual(expect.arrayContaining(['CH3_A_FACT']));
+
+    // When querying for deeper path 'AB', should still get ROOT facts
+    const pathAB = storyGenerationService._getRelevantPersistedConsistencyFacts('AB');
+    expect(pathAB).toEqual(expect.arrayContaining(['CH2_ROOT_FACT_1', 'CH2_ROOT_FACT_2']));
+  });
+
   test('thread extraction does not resurrect threads after they are resolved', () => {
     const chapters = [
       {

@@ -8901,8 +8901,9 @@ If no conflicts, return: {"conflicts": []}`;
         if (keys.length > MAX_PATHS) {
           // Prefer to keep prefixes of the current path (they're always relevant),
           // then keep the most recently updated remaining paths.
+          // Always keep ROOT - it contains pre-branch facts from Chapters 1-2.
           const current = String(context.lastPathKey || 'ROOT');
-          const keep = new Set(keys.filter((k) => current.startsWith(k)));
+          const keep = new Set(keys.filter((k) => k === 'ROOT' || current.startsWith(k)));
           const rest = keys
             .filter((k) => !keep.has(k))
             .sort((a, b) => {
@@ -8947,7 +8948,9 @@ If no conflicts, return: {"conflicts": []}`;
     const facts = [];
     for (const [k, v] of Object.entries(map)) {
       if (!k) continue;
-      if (!pk.startsWith(k)) continue;
+      // Always include ROOT facts (pre-branch content from Chapters 1-2)
+      // plus facts from any path that is a prefix of the current path
+      if (k !== 'ROOT' && !pk.startsWith(k)) continue;
       if (Array.isArray(v)) {
         facts.push(...v);
       } else if (Array.isArray(v?.facts)) {
