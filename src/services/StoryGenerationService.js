@@ -6051,7 +6051,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           .filter(w => w.length >= 4 && !stop.has(w))
       )].slice(0, 10);
 
-      const hitCount = keywords.reduce((acc, k) => acc + (prefix.includes(k) ? 1 : 0), 0);
+      // Use word-based prefix matching to prevent false positives (e.g., "case" matching "showcase")
+      const prefixWords = prefix.match(/\b\w+\b/g) || [];
+      const hitCount = keywords.reduce((acc, k) => {
+        const found = prefixWords.some(pw => {
+          if (k.length < 4 || pw.length < 4) return k === pw;
+          return k.startsWith(pw) || pw.startsWith(k);
+        });
+        return acc + (found ? 1 : 0);
+      }, 0);
       if (hitCount === 0 && keywords.length > 0) {
         issues.push(
           `CHOICE RESPECT VIOLATION: Chapter start does not reflect last decision (Chapter ${context.lastDecision.chapter} option "${context.lastDecision.optionKey}") within first 200 words. Must show concrete consequence: ${context.lastDecision.immediate}`
