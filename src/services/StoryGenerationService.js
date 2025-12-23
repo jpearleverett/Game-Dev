@@ -6458,17 +6458,26 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         return hit;
       };
 
+      // Handle all common quote types:
+      // - ASCII double quote: "
+      // - Left/right curly double quotes: " " (U+201C, U+201D)
+      // - ASCII single quote: '
+      // - Left/right curly single quotes: ' ' (U+2018, U+2019)
+      const isOpeningQuote = (ch) => ch === '"' || ch === '\u201C' || ch === "'" || ch === '\u2018';
+      const isClosingQuote = (ch) => ch === '"' || ch === '\u201D' || ch === "'" || ch === '\u2019';
+
       for (let i = 0; i < text.length; i++) {
         const ch = text[i];
-        if (ch === '"') {
-          if (!inQuote) {
-            // entering quote: check accumulated narration segment
-            if (flush()) return true;
-          } else {
-            // leaving quote: discard dialogue segment buffer
-            buf = '';
-          }
-          inQuote = !inQuote;
+        if (!inQuote && isOpeningQuote(ch)) {
+          // entering quote: check accumulated narration segment
+          if (flush()) return true;
+          inQuote = true;
+          continue;
+        }
+        if (inQuote && isClosingQuote(ch)) {
+          // leaving quote: discard dialogue segment buffer
+          buf = '';
+          inQuote = false;
           continue;
         }
         // Only accumulate narration segments (outside quotes)

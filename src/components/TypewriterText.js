@@ -3,10 +3,11 @@ import { Text, Pressable, View, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 
-export default function TypewriterText({ 
-  text, 
-  style, 
-  speed = 25, 
+// Memoized to prevent expensive re-renders in FlatList
+function TypewriterText({
+  text,
+  style,
+  speed = 25,
   delay = 0,
   onComplete,
   isActive = true,
@@ -182,3 +183,16 @@ export default function TypewriterText({
     </Pressable>
   );
 }
+
+// Custom comparison to avoid re-renders when only callbacks change
+export default React.memo(TypewriterText, (prevProps, nextProps) => {
+  return (
+    prevProps.text === nextProps.text &&
+    prevProps.speed === nextProps.speed &&
+    prevProps.delay === nextProps.delay &&
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.isFinished === nextProps.isFinished &&
+    prevProps.inline === nextProps.inline &&
+    prevProps.style === nextProps.style
+  );
+});
