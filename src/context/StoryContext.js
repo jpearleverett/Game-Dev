@@ -193,7 +193,16 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // Logic for Subchapters A (1) and B (2) -> Generate remaining siblings
     // If we are in A, we need B and C. If in B, we need C.
     if (chapter >= 2 && subchapter < 3) {
-      pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
+      // Flush storage first to ensure current content is available for dependent generations
+      import('../storage/generatedStoryStorage').then(({ flushPendingWrites }) => {
+        flushPendingWrites().then(() => {
+          pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
+        }).catch(err => {
+          console.warn('[StoryContext] Failed to flush before sibling generation:', err);
+          // Continue anyway - missing context warnings are better than no generation
+          pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
+        });
+      });
     }
 
     // Logic for Subchapter C (decision point) -> Prefetch BOTH next chapter paths
@@ -280,6 +289,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
         console.log(`[StoryContext] [${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}...`);
 
         try {
+          // CRITICAL: Flush any pending storage writes before generation
+          // This ensures that previously generated content (e.g., 002A) is available
+          // when generating dependent content (e.g., 002B which needs 002A for context)
+          const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
+          await flushPendingWrites();
+
           const result = await ensureStoryContent(nextCaseNumber, nextPathKey, optimisticChoiceHistory);
           const attemptDuration = Date.now() - attemptStart;
 

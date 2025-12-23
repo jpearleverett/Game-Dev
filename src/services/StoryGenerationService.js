@@ -6272,8 +6272,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     this.pendingGenerations.set(generationKey, generationPromise);
 
     // Create a timeout promise to prevent indefinite hangs
-    // This matches MAX_PENDING_AGE_MS used in stale detection above
-    const GENERATION_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+    // IMPORTANT: This must be longer than LLMService timeout (180s) * max retries (3)
+    // to allow retries to complete. Adding 60s buffer for network delays.
+    // Formula: (180s * 3 attempts) + 60s buffer = 600s = 10 minutes
+    const GENERATION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes (allows for 3 retries @ 180s each)
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error(`Generation timeout after ${GENERATION_TIMEOUT_MS / 1000}s for ${generationKey}`));

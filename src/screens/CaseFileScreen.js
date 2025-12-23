@@ -59,6 +59,8 @@ export default function CaseFileScreen({
   isStoryMode = false,
   onContinueStory,
   onReturnHome,
+  isGenerating = false,
+  generationStatus,
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
@@ -588,7 +590,17 @@ export default function CaseFileScreen({
                 {/* CTA for next briefing */}
                 {showNextBriefingCTA && (
                   <View style={{ marginTop: scaleSpacing(SPACING.xs) }}>
-                    <PrimaryButton label="Continue Investigation" onPress={onContinueStory} fullWidth />
+                    <PrimaryButton
+                      label={isGenerating ? "Generating Chapter..." : "Continue Investigation"}
+                      onPress={onContinueStory}
+                      disabled={isGenerating}
+                      fullWidth
+                    />
+                    {isGenerating && (
+                      <Text style={[styles.generatingHint, { color: palette.badgeText, fontSize: slugSize, marginTop: scaleSpacing(SPACING.xs) }]}>
+                        Please wait while the next chapter is being generated...
+                      </Text>
+                    )}
                   </View>
                 )}
 
@@ -786,4 +798,5 @@ const styles = StyleSheet.create({
   footerHint: { fontFamily: FONTS.primarySemiBold, textTransform: "uppercase", letterSpacing: 1.2 },
   goHomeButton: { flexShrink: 0, alignSelf: "flex-start" },
   goHomeButtonFullWidth: { alignSelf: "stretch", flexGrow: 1 },
+  generatingHint: { fontFamily: FONTS.mono, letterSpacing: 1.2, textAlign: "center", fontStyle: "italic" },
 });

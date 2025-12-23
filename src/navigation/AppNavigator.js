@@ -184,6 +184,8 @@ export default function AppNavigator({ fontsReady, audio }) {
               isStoryMode={isStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}
+              isGenerating={game.story?.generation?.isGenerating || false}
+              generationStatus={game.story?.generation?.status}
               onBack={() => {
                  if (status === GAME_STATUS.SOLVED || status === GAME_STATUS.FAILED) {
                      navigation.navigate('Solved');
