@@ -118,8 +118,9 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Generate the content
     try {
-      // generateForCase now always returns content (including fallback on error)
-      // It only returns null for non-dynamic chapters or if LLM is not configured
+      // CRITICAL: For user-facing generation, generateForCase will throw on error
+      // It returns null on failure, which triggers the error path below
+      // The UI will show a retry screen - player NEVER sees fallback content
       const entry = await generateForCase(
         caseNumber,
         canonicalPathKey,
@@ -136,8 +137,6 @@ export function StoryProvider({ children, progress, updateProgress }) {
           isEmergencyFallback: !!entry.isEmergencyFallback,
           wordCount: entry.wordCount,
         }, entry.isFallback || entry.isEmergencyFallback ? 'warn' : 'info');
-        // Entry can be generated content or fallback content
-        // Either way, the game can proceed
         return {
           ok: true,
           generated: true,
@@ -147,14 +146,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
         };
       }
 
-      // This should rarely happen now - generateForCase has its own fallback
-      console.warn('[StoryContext] generateForCase returned null unexpectedly');
+      // Generation failed - return error to trigger UI retry screen
+      console.error('[StoryContext] Generation failed - player must retry');
       llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.nullEntry', {
         caseNumber,
         pathKey,
         canonicalPathKey,
-      }, 'warn');
-      return { ok: false, reason: 'generation-failed' };
+      }, 'error');
+      return { ok: false, reason: 'generation-failed', error: 'Chapter generation failed. Please try again.' };
     } catch (error) {
       console.error('[StoryContext] Unexpected error in ensureStoryContent:', error.message);
       llmTrace('StoryContext', traceId, 'ensureStoryContent.fail.error', {

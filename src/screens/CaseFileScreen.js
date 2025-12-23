@@ -61,6 +61,7 @@ export default function CaseFileScreen({
   onReturnHome,
   isGenerating = false,
   generationStatus,
+  generationError,
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
@@ -591,7 +592,7 @@ export default function CaseFileScreen({
                 {showNextBriefingCTA && (
                   <View style={{ marginTop: scaleSpacing(SPACING.xs) }}>
                     <PrimaryButton
-                      label={isGenerating ? "Generating Chapter..." : "Continue Investigation"}
+                      label={isGenerating ? "Generating Chapter..." : generationError ? "Retry Chapter Generation" : "Continue Investigation"}
                       onPress={onContinueStory}
                       disabled={isGenerating}
                       fullWidth
@@ -599,6 +600,11 @@ export default function CaseFileScreen({
                     {isGenerating && (
                       <Text style={[styles.generatingHint, { color: palette.badgeText, fontSize: slugSize, marginTop: scaleSpacing(SPACING.xs) }]}>
                         Please wait while the next chapter is being generated...
+                      </Text>
+                    )}
+                    {generationError && !isGenerating && (
+                      <Text style={[styles.errorHint, { color: '#ff4444', fontSize: slugSize, marginTop: scaleSpacing(SPACING.xs) }]}>
+                        ⚠️ {generationError}
                       </Text>
                     )}
                   </View>
@@ -799,4 +805,5 @@ const styles = StyleSheet.create({
   goHomeButton: { flexShrink: 0, alignSelf: "flex-start" },
   goHomeButtonFullWidth: { alignSelf: "stretch", flexGrow: 1 },
   generatingHint: { fontFamily: FONTS.mono, letterSpacing: 1.2, textAlign: "center", fontStyle: "italic" },
+  errorHint: { fontFamily: FONTS.mono, letterSpacing: 1.2, textAlign: "center", fontWeight: "bold" },
 });

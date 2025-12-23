@@ -99,22 +99,17 @@ export function GameProvider({
               durationMs: genDuration,
             }, genResult?.ok ? 'debug' : 'warn');
 
-            // ensureStoryContent now always returns content (including fallback)
-            // The only failures are LLM not configured or truly catastrophic errors
+            // CRITICAL: If generation fails, we MUST return error - never continue
+            // Player will see error screen with retry button
             if (!genResult.ok) {
-              // Only block if LLM is not configured - user needs to fix this
-              if (genResult.reason === 'llm-not-configured') {
-                console.error(`[GameContext] Cannot continue - LLM not configured`);
-                return {
-                  ok: false,
-                  reason: genResult.reason,
-                  error: genResult.error,
-                  caseNumber
-                };
-              }
-
-              // For other failures, log but try to continue anyway
-              console.warn(`[GameContext] Story generation issue after ${genDuration}ms (${genResult.reason}), attempting to continue...`);
+              console.error(`[GameContext] Cannot continue - generation failed: ${genResult.reason}`);
+              console.error(`[GameContext] Error details: ${genResult.error || 'unknown error'}`);
+              return {
+                ok: false,
+                reason: genResult.reason,
+                error: genResult.error || 'Generation failed. Please try again.',
+                caseNumber
+              };
             } else {
               // Log success details
               if (genResult.isFallback || genResult.isEmergencyFallback) {

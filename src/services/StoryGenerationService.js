@@ -5708,6 +5708,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     const traceId = options?.traceId || createTraceId(`sg_${caseNumber}_${pathKey}`);
     const reason = options?.reason || 'unspecified';
 
+    // CRITICAL: Distinguish between user-facing and background generation
+    // User-facing = player is actively waiting (clicked Continue)
+    // Background = prefetching for future use
+    // If user-facing, we NEVER show fallback - we throw errors and let UI handle retry
+    const isUserFacing = options?.isUserFacing || false;
+
     // Deduplication: Return existing promise if generation is already in flight for this exact content
     // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
     const MAX_PENDING_AGE_MS = 3 * 60 * 1000; // 3 minutes
@@ -6290,8 +6296,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     } catch (e) {
       this.pendingGenerations.delete(generationKey);
 
-      // Final fallback if even the inner fallback failed (or timeout occurred)
-      console.error(`[StoryGenerationService] Complete generation failure for ${generationKey}, using emergency fallback: ${e.message}`);
+      // CRITICAL: If this is user-facing generation, NEVER show fallback
+      // Instead, throw the error and let the UI show a proper retry screen
+      if (isUserFacing) {
+        console.error(`[StoryGenerationService] User-facing generation failed for ${generationKey}: ${e.message}`);
+        console.error(`[StoryGenerationService] Throwing error to UI - no fallback for user-facing content`);
+        llmTrace('StoryGenerationService', traceId, 'generation.userFacing.failed', {
+          generationKey,
+          caseNumber,
+          pathKey: effectivePathKey,
+          error: e.message,
+          reason
+        }, 'error');
+        throw e; // Let UI handle retry
+      }
+
+      // For background/prefetch generation, use fallback to avoid blocking the game
+      console.error(`[StoryGenerationService] Background generation failure for ${generationKey}, using emergency fallback: ${e.message}`);
       const chapterNum = parseInt(caseNumber?.slice(0, 3)) || 2;
       const subLetter = String(caseNumber?.slice(3, 4) || 'A').toUpperCase();
       const subchapterNum = ({ A: 1, B: 2, C: 3 }[subLetter]) || 1;
