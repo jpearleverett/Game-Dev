@@ -5960,8 +5960,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     nameChecks.forEach(({ wrong, correct }) => {
       wrong.forEach(misspelling => {
-        if (narrative.includes(misspelling)) {
-          issues.push(`Name misspelled: found "${misspelling}", should be "${correct}"`);
+        // Use word boundary regex instead of includes() to prevent false positives
+        // e.g., correct spelling "thornhill" should NOT match misspelling "thornhil"
+        // e.g., correct spelling "blackwell" should NOT match misspelling "blackwel"
+        const trimmedMisspelling = misspelling.trim();
+        const escapedMisspelling = trimmedMisspelling.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Handle multi-word misspellings like "thorn hill" -> /\bthorn\s+hill\b/
+        const patternStr = escapedMisspelling.replace(/\s+/g, '\\s+');
+        const pattern = new RegExp(`\\b${patternStr}\\b`, 'i');
+        if (pattern.test(narrative)) {
+          issues.push(`Name misspelled: found "${trimmedMisspelling}", should be "${correct}"`);
         }
       });
     });
