@@ -5960,8 +5960,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     nameChecks.forEach(({ wrong, correct }) => {
       wrong.forEach(misspelling => {
-        if (narrative.includes(misspelling)) {
-          issues.push(`Name misspelled: found "${misspelling}", should be "${correct}"`);
+        // Use word boundary regex instead of includes() to prevent false positives
+        // e.g., correct spelling "thornhill" should NOT match misspelling "thornhil"
+        // e.g., correct spelling "blackwell" should NOT match misspelling "blackwel"
+        const trimmedMisspelling = misspelling.trim();
+        const escapedMisspelling = trimmedMisspelling.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Handle multi-word misspellings like "thorn hill" -> /\bthorn\s+hill\b/
+        const patternStr = escapedMisspelling.replace(/\s+/g, '\\s+');
+        const pattern = new RegExp(`\\b${patternStr}\\b`, 'i');
+        if (pattern.test(narrative)) {
+          issues.push(`Name misspelled: found "${trimmedMisspelling}", should be "${correct}"`);
         }
       });
     });
@@ -6043,7 +6051,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           .filter(w => w.length >= 4 && !stop.has(w))
       )].slice(0, 10);
 
-      const hitCount = keywords.reduce((acc, k) => acc + (prefix.includes(k) ? 1 : 0), 0);
+      // Use word-based prefix matching to prevent false positives (e.g., "case" matching "showcase")
+      const prefixWords = prefix.match(/\b\w+\b/g) || [];
+      const hitCount = keywords.reduce((acc, k) => {
+        const found = prefixWords.some(pw => {
+          if (k.length < 4 || pw.length < 4) return k === pw;
+          return k.startsWith(pw) || pw.startsWith(k);
+        });
+        return acc + (found ? 1 : 0);
+      }, 0);
       if (hitCount === 0 && keywords.length > 0) {
         issues.push(
           `CHOICE RESPECT VIOLATION: Chapter start does not reflect last decision (Chapter ${context.lastDecision.chapter} option "${context.lastDecision.optionKey}") within first 200 words. Must show concrete consequence: ${context.lastDecision.immediate}`
@@ -6235,7 +6251,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Match if there's significant overlap in key terms
             const addressedWords = addressedLower.split(/\s+/).filter(w => w.length > 3);
             const criticalWords = criticalLower.split(/\s+/).filter(w => w.length > 3);
-            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => cw.includes(w) || w.includes(cw)));
+            // Use prefix matching: one word must be a prefix of the other (min 4 chars)
+            // This allows "promise" to match "promised" but prevents "case" matching "showcase"
+            const wordsMatch = (a, b) => {
+              if (a.length < 4 || b.length < 4) return a === b;
+              return a.startsWith(b) || b.startsWith(a);
+            };
+            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => wordsMatch(w, cw)));
             // Require at least 2 matching words or 40% overlap
             return matchingWords.length >= 2 || matchingWords.length / Math.max(addressedWords.length, 1) > 0.4;
           });
@@ -6273,9 +6295,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
             // If acknowledged 2+ times without progress, flag as OVERDUE ERROR
             if (currentCount >= 2) {
-              const matchingCritical = criticalThreads.find(t =>
-                t.description && t.description.toLowerCase().includes(threadId.toLowerCase().slice(0, 20))
-              );
+              // Use word-based prefix matching to find the corresponding critical thread
+              // This handles LLM rewording (e.g., "promised to meet" → "meeting") while
+              // distinguishing similar threads (e.g., "meet Sarah" vs "call Sarah")
+              const threadIdWords = threadId.toLowerCase().match(/\b\w{4,}\b/g) || [];
+              const wordsMatchFn = (a, b) => {
+                if (a.length < 4 || b.length < 4) return a === b;
+                return a.startsWith(b) || b.startsWith(a);
+              };
+              const matchingCritical = criticalThreads.find(t => {
+                if (!t.description) return false;
+                const descWords = t.description.toLowerCase().match(/\b\w{4,}\b/g) || [];
+                const matchingWords = threadIdWords.filter(tw =>
+                  descWords.some(dw => wordsMatchFn(tw, dw))
+                );
+                // Require at least 2 matching words AND 40% overlap
+                return matchingWords.length >= 2 && matchingWords.length / Math.max(threadIdWords.length, 1) > 0.4;
+              });
               if (matchingCritical) {
                 issues.push(`OVERDUE THREAD ERROR: "${addressed.originalThread.slice(0, 60)}..." has been acknowledged ${currentCount} times without resolution. You MUST either resolve it, progress it meaningfully, or mark it as "failed" with explanation.`);
               }
@@ -6288,12 +6324,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           // Verify acknowledged threads actually appear in narrative
           if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed') {
             const threadLower = addressed.originalThread.toLowerCase();
-            const narrativeLower = narrative;
+            const narrativeLower = narrative.toLowerCase();
 
             // Extract key nouns/names from the thread description
             const keyWords = threadLower.match(/\b(?:jack|sarah|victoria|eleanor|silas|tom|wade|grange|meet|promise|call|contact|investigate|reveal)\b/g) || [];
 
-            const mentionedInNarrative = keyWords.some(word => narrativeLower.includes(word));
+            // Use prefix matching to allow word variations (meet/meeting, promise/promised)
+            // but prevent false positives (case/showcase)
+            const narrativeWords = narrativeLower.match(/\b\w+\b/g) || [];
+            const mentionedInNarrative = keyWords.some(keyword => {
+              return narrativeWords.some(w => {
+                if (keyword.length < 4 || w.length < 4) return keyword === w;
+                return keyword.startsWith(w) || w.startsWith(keyword);
+              });
+            });
 
             if (!mentionedInNarrative && keyWords.length > 0) {
               warnings.push(`Thread claimed as "${addressed.howAddressed}" but may not appear in narrative: "${addressed.originalThread.slice(0, 60)}..."`);
@@ -6423,11 +6467,18 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     if (Array.isArray(content.puzzleCandidates)) {
       if (content.puzzleCandidates.length < 6) warnings.push(`puzzleCandidates has only ${content.puzzleCandidates.length} words. Aim for 6-8 distinct words.`);
       const lowerNarr = narrativeOriginal.toLowerCase();
+      const narrativeWords = lowerNarr.match(/\b\w+\b/g) || [];
       content.puzzleCandidates.forEach((w) => {
         if (!w || typeof w !== 'string') return;
         const token = w.toLowerCase();
-        // Allow minor variations (plural) by checking substring match.
-        if (!lowerNarr.includes(token)) {
+        // Use prefix matching: puzzle word should be recognizable in narrative
+        // "rain" matches "raining" ✓, "investigate" matches "investigation" ✓
+        // but "rain" doesn't match "train" ✓ (neither is prefix of other)
+        const foundInNarrative = narrativeWords.some(nw => {
+          if (token.length < 4 || nw.length < 4) return token === nw;
+          return token.startsWith(nw) || nw.startsWith(token);
+        });
+        if (!foundInNarrative) {
           warnings.push(`puzzleCandidates word "${w}" does not appear in narrative. Prefer words drawn directly from the prose for fairness.`);
         }
       });
@@ -6441,7 +6492,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // but allow first-person INSIDE dialogue.
     const containsPronounOutsideQuotes = (text, pronounRegex) => {
       if (!text) return false;
-      let inQuote = false;
+      let quoteType = null; // null = not in quote, 'single' or 'double'
       let buf = '';
       const flush = () => {
         if (!buf) return false;
@@ -6450,21 +6501,48 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         return hit;
       };
 
+      // Handle all common quote types, tracking single vs double separately
+      // to prevent apostrophes from closing double-quoted dialogue
+      // - ASCII double quote: "
+      // - Left/right curly double quotes: " " (U+201C, U+201D)
+      // - Left curly single quote: ' (U+2018) - used for dialogue
+      // - Right curly single quote: ' (U+2019) - used for dialogue AND apostrophes
+      // NOTE: ASCII single quote ' is ambiguous (apostrophe vs quote) so we only
+      // treat curly single quotes as dialogue markers to avoid false positives
+      const isOpeningDouble = (ch) => ch === '"' || ch === '\u201C';
+      const isClosingDouble = (ch) => ch === '"' || ch === '\u201D';
+      const isOpeningSingle = (ch) => ch === '\u2018'; // Only curly opening single quote
+      const isClosingSingle = (ch) => ch === '\u2019'; // Only curly closing single quote
+
       for (let i = 0; i < text.length; i++) {
         const ch = text[i];
-        if (ch === '"') {
-          if (!inQuote) {
-            // entering quote: check accumulated narration segment
-            if (flush()) return true;
-          } else {
-            // leaving quote: discard dialogue segment buffer
-            buf = '';
-          }
-          inQuote = !inQuote;
+
+        // Handle double quotes
+        if (quoteType === null && isOpeningDouble(ch)) {
+          if (flush()) return true;
+          quoteType = 'double';
           continue;
         }
+        if (quoteType === 'double' && isClosingDouble(ch)) {
+          buf = '';
+          quoteType = null;
+          continue;
+        }
+
+        // Handle single quotes (only curly quotes to avoid apostrophe confusion)
+        if (quoteType === null && isOpeningSingle(ch)) {
+          if (flush()) return true;
+          quoteType = 'single';
+          continue;
+        }
+        if (quoteType === 'single' && isClosingSingle(ch)) {
+          buf = '';
+          quoteType = null;
+          continue;
+        }
+
         // Only accumulate narration segments (outside quotes)
-        if (!inQuote) {
+        if (quoteType === null) {
           buf += ch;
         }
       }
@@ -6506,16 +6584,29 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const threadDescription = (thread.description || thread.excerpt || '').toLowerCase();
         const threadKeywords = threadDescription.split(/\s+/).filter(w => w.length > 4).slice(0, 5);
 
+        // Helper: prefix matching to allow word variations (promise/promised, meet/meeting)
+        // but prevent false matches (case/showcase, rain/train)
+        const wordMatchesInText = (keyword, text) => {
+          // Find all words in text and check if any is a prefix match with keyword
+          const words = text.match(/\b\w+\b/g) || [];
+          return words.some(w => {
+            if (keyword.length < 4 || w.length < 4) return keyword === w;
+            return keyword.startsWith(w) || w.startsWith(keyword);
+          });
+        };
+
         const wasAddressed = addressedThreads.some(addressed => {
           if (!addressed.originalThread) return false;
           const addressedLower = addressed.originalThread.toLowerCase();
-          // Check if at least 2 key words match
-          const matchingKeywords = threadKeywords.filter(kw => addressedLower.includes(kw));
+          // Check if at least 2 key words match using prefix matching
+          // This allows "promise" to match "promised" but prevents "case" matching "showcase"
+          const matchingKeywords = threadKeywords.filter(kw => wordMatchesInText(kw, addressedLower));
           return matchingKeywords.length >= 2;
         });
 
         // Also check if the thread is mentioned in the narrative itself
-        const mentionedInNarrative = threadKeywords.some(kw => narrative.includes(kw));
+        const narrativeLower = narrative.toLowerCase();
+        const mentionedInNarrative = threadKeywords.some(kw => wordMatchesInText(kw, narrativeLower));
 
         if (!wasAddressed && !mentionedInNarrative) {
           const threadChapter = thread.chapter || 0;
@@ -6784,7 +6875,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // ========== 3. DIALOGUE QUALITY CHECK ==========
     // Extract dialogue and check for quality
-    const dialogueMatches = narrative.match(/"[^"]+"/g) || [];
+    // Support both ASCII quotes (") and curly/smart quotes (" ")
+    const dialogueMatches = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]/g) || [];
     if (dialogueMatches.length > 0) {
       // Check for weak dialogue tags
       const weakTags = /(?:he|she|i)\s+(?:said|asked|replied)\s+(?:quietly|loudly|softly|quickly|slowly)/gi;
@@ -6794,7 +6886,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
 
       // Check for talking heads (no action beats between dialogue)
-      const consecutiveDialogue = narrative.match(/"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"/g);
+      // Support both ASCII and curly quotes
+      const consecutiveDialogue = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]\s*\n*\s*[""\u201C][^""\u201C\u201D]+[""\u201D]\s*\n*\s*[""\u201C][^""\u201C\u201D]+[""\u201D]\s*\n*\s*[""\u201C][^""\u201C\u201D]+[""\u201D]/g);
       if (consecutiveDialogue && consecutiveDialogue.length > 0) {
         warnings.push('Dialogue passages lack action beats. Break up long exchanges with physical actions or observations.');
         qualityScore -= 5;
@@ -6952,13 +7045,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // Extract dialogue with speaker attribution
     // Pattern: "dialogue" [optional: character said/spoke/etc]
-    const dialogueWithAttribution = narrative.match(/"[^"]+"\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
+    // Support both ASCII quotes (") and curly/smart quotes (" ")
+    const dialogueWithAttribution = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
 
     // Check for dialogue that could be attributed to specific characters
     const characterNames = ['victoria', 'sarah', 'eleanor', 'silas', 'tom', 'wade', 'reeves', 'bellamy', 'reed', 'confessor', 'blackwell'];
 
     for (const dialogue of dialogueWithAttribution) {
-      const text = dialogue.match(/"([^"]+)"/)?.[1] || '';
+      // Extract text from either ASCII or curly quotes
+      const text = dialogue.match(/[""\u201C]([^""\u201C\u201D]+)[""\u201D]/)?.[1] || '';
       const attribution = dialogue.toLowerCase();
 
       for (const [character, signature] of Object.entries(voiceSignatures)) {
@@ -6980,9 +7075,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // Cross-check: Victoria should never sound casual like a cop
-    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^"]*"([^"]+)"/gi) || [];
+    // Support both ASCII quotes (") and curly/smart quotes (" ")
+    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^""\u201C\u201D]*[""\u201C]([^""\u201C\u201D]+)[""\u201D]/gi) || [];
     for (const match of victoriaDialogue) {
-      const text = match.match(/"([^"]+)"/)?.[1] || '';
+      const text = match.match(/[""\u201C]([^""\u201C\u201D]+)[""\u201D]/)?.[1] || '';
       if (/\b(?:gonna|gotta|ain't|ya|hey|buddy|pal)\b/i.test(text)) {
         issues.push('Victoria/Confessor uses overly casual language - should be elegant and formal');
       }
@@ -7214,23 +7310,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       patterns.push(new RegExp(keywords.slice(0, 2).join('.*').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\.\\\*/g, '.{0,100}'), 'i'));
     }
 
-    // Character-specific patterns
-    if (setupLower.includes('emily')) {
+    // Character-specific patterns - use word boundaries to prevent substring false matches
+    if (/\bemily\b/i.test(setupLower)) {
       patterns.push(/emily\s+cross/i, /cross\s+case/i, /that\s+girl.*(?:dead|missing|closed)/i);
     }
-    if (setupLower.includes('tom')) {
+    if (/\btom\b/i.test(setupLower)) {
       patterns.push(/tom.*(?:evidence|forensic|perfect)/i, /wade.*(?:lab|report|test)/i);
     }
-    if (setupLower.includes('victoria')) {
+    if (/\bvictoria\b/i.test(setupLower)) {
       patterns.push(/victoria.*(?:know|scar|past|trauma)/i, /blackwell.*(?:secret|truth)/i);
     }
-    if (setupLower.includes('grange')) {
+    if (/\bgrange\b/i.test(setupLower)) {
       patterns.push(/grange.*(?:power|access|missing|girl)/i, /deputy.*(?:chief|suspicious)/i);
     }
-    if (setupLower.includes('silas')) {
+    if (/\bsilas\b/i.test(setupLower)) {
       patterns.push(/silas.*(?:drink|guilt|hiding|secret)/i, /reed.*(?:nervous|scared)/i);
     }
-    if (setupLower.includes('thornhill')) {
+    if (/\bthornhill\b/i.test(setupLower)) {
       patterns.push(/thornhill.*(?:case|frame|innocent|dead)/i, /marcus.*(?:suicide|lockup)/i);
     }
 

@@ -21,8 +21,23 @@ const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
 // Lined notebook paper background component
-function NotebookLines({ lineHeight, pageHeight, marginLeft }) {
+// Memoized to prevent expensive re-renders when parent updates
+const NotebookLines = React.memo(function NotebookLines({ lineHeight, pageHeight, marginLeft }) {
   const lineCount = Math.floor(pageHeight / lineHeight);
+
+  // Memoize the lines array to avoid recreating on every render
+  const lines = useMemo(() =>
+    Array.from({ length: lineCount }).map((_, i) => (
+      <View
+        key={`line-${i}`}
+        style={[
+          styles.ruleLine,
+          { top: (i + 1) * lineHeight }
+        ]}
+      />
+    )),
+    [lineCount, lineHeight]
+  );
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -34,20 +49,13 @@ function NotebookLines({ lineHeight, pageHeight, marginLeft }) {
         ]}
       />
       {/* Horizontal ruled lines */}
-      {Array.from({ length: lineCount }).map((_, i) => (
-        <View
-          key={`line-${i}`}
-          style={[
-            styles.ruleLine,
-            { top: (i + 1) * lineHeight }
-          ]}
-        />
-      ))}
+      {lines}
     </View>
   );
-}
+});
 
-function PulsingArrow() {
+// Memoized to prevent recreating animation instances on parent re-renders
+const PulsingArrow = React.memo(function PulsingArrow() {
   const opacity = useRef(new Animated.Value(0.2)).current;
   const loopRef = useRef(null);
 
@@ -73,7 +81,7 @@ function PulsingArrow() {
       &gt;&gt;
     </Animated.Text>
   );
-}
+});
 
 export default function NarrativePager({
   pages,
