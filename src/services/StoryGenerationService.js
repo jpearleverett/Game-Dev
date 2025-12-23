@@ -1505,21 +1505,52 @@ The city held its breath. So did Jack.`;
   /**
    * Generate or retrieve the story arc - called once at the start of dynamic generation
    * This ensures ALL 12 chapters follow a coherent narrative thread regardless of player choices
+   *
+   * PERSONALITY DRIFT HANDLING:
+   * If the player's personality has shifted significantly since the arc was created,
+   * we adapt the remaining (unplayed) chapters rather than fully regenerating.
+   * This preserves narrative continuity while allowing the story to evolve with the player.
    */
   async ensureStoryArc(choiceHistory = []) {
-    // Story arcs should be stable across a playthrough and should NOT churn every chapter.
-    // Key by "super-path" (personality) rather than the per-chapter cumulative branch key.
+    const currentPersonality = this._analyzePathPersonality(choiceHistory);
     const superPathKey = this._getSuperPathKey(choiceHistory);
     const arcKey = `arc_${superPathKey}`;
 
-    // Check if we already have a valid arc
-    if (this.storyArc && this.storyArc.key === arcKey) {
-      return this.storyArc;
+    // If we have an existing arc, check for personality drift
+    if (this.storyArc) {
+      const drift = this._detectPersonalityDrift(this.storyArc, currentPersonality, choiceHistory);
+
+      if (drift.shouldAdapt) {
+        console.log(`[StoryGenerationService] Personality drift detected: ${drift.from} -> ${drift.to} (magnitude: ${drift.magnitude.toFixed(1)})`);
+
+        // Adapt the arc for the new personality (only future chapters)
+        const currentChapter = Math.max(2, choiceHistory.length + 2); // Estimate current chapter
+        const adaptedArc = await this._adaptStoryArcForDrift(this.storyArc, currentPersonality, currentChapter, choiceHistory);
+        this.storyArc = adaptedArc;
+        await this._saveStoryArc(adaptedArc.key, adaptedArc);
+        return adaptedArc;
+      }
+
+      // No significant drift, return existing arc
+      if (this.storyArc.key === arcKey) {
+        return this.storyArc;
+      }
     }
 
     // Check persistent storage
     const savedArc = await this._loadStoryArc(arcKey);
     if (savedArc) {
+      // Check for drift against saved arc too
+      const drift = this._detectPersonalityDrift(savedArc, currentPersonality, choiceHistory);
+      if (drift.shouldAdapt) {
+        console.log(`[StoryGenerationService] Personality drift from saved arc: ${drift.from} -> ${drift.to}`);
+        const currentChapter = Math.max(2, choiceHistory.length + 2);
+        const adaptedArc = await this._adaptStoryArcForDrift(savedArc, currentPersonality, currentChapter, choiceHistory);
+        this.storyArc = adaptedArc;
+        await this._saveStoryArc(adaptedArc.key, adaptedArc);
+        return adaptedArc;
+      }
+
       this.storyArc = savedArc;
       return savedArc;
     }
@@ -1528,16 +1559,228 @@ The city held its breath. So did Jack.`;
     console.log('[StoryGenerationService] Generating story arc for super-path:', superPathKey);
     try {
       const arc = await this._generateStoryArc(superPathKey, choiceHistory);
+      // Store personality snapshot for drift detection
+      arc.personalitySnapshot = {
+        riskTolerance: currentPersonality.riskTolerance,
+        scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
+        choiceCount: choiceHistory.length,
+      };
       this.storyArc = arc;
       await this._saveStoryArc(arcKey, arc);
       return arc;
     } catch (error) {
       console.warn('[StoryGenerationService] Story arc generation failed, using fallback:', error.message);
       const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
+      fallbackArc.personalitySnapshot = {
+        riskTolerance: currentPersonality.riskTolerance,
+        scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
+        choiceCount: choiceHistory.length,
+      };
       this.storyArc = fallbackArc;
       // Don't persist fallback - allow retry on next session
       return fallbackArc;
     }
+  }
+
+  /**
+   * Detect if player personality has drifted significantly from when the arc was created.
+   *
+   * Drift is significant when:
+   * 1. Risk tolerance category has changed (low->high, high->low, or to/from moderate)
+   * 2. Score magnitude has shifted by more than 20 points
+   * 3. At least 2 new decisions have been made since arc creation
+   */
+  _detectPersonalityDrift(arc, currentPersonality, choiceHistory) {
+    const snapshot = arc.personalitySnapshot;
+
+    // No snapshot means old arc format - can't detect drift
+    if (!snapshot) {
+      return { shouldAdapt: false, magnitude: 0 };
+    }
+
+    const currentScores = currentPersonality.scores || { aggressive: 0, methodical: 0 };
+    const snapshotScores = snapshot.scores || { aggressive: 0, methodical: 0 };
+
+    // Calculate score drift magnitude
+    const aggressiveDrift = currentScores.aggressive - snapshotScores.aggressive;
+    const methodicalDrift = currentScores.methodical - snapshotScores.methodical;
+    const magnitude = Math.abs(aggressiveDrift - methodicalDrift);
+
+    // Check if risk tolerance category changed
+    const categoryChanged = snapshot.riskTolerance !== currentPersonality.riskTolerance;
+
+    // Require at least 2 new decisions to consider adaptation
+    const newDecisions = choiceHistory.length - (snapshot.choiceCount || 0);
+    const hasEnoughNewDecisions = newDecisions >= 2;
+
+    // Determine if we should adapt
+    // Threshold: category change OR significant score drift (>25 points)
+    const significantDrift = magnitude > 25;
+    const shouldAdapt = hasEnoughNewDecisions && (categoryChanged || significantDrift);
+
+    return {
+      shouldAdapt,
+      magnitude,
+      from: snapshot.riskTolerance,
+      to: currentPersonality.riskTolerance,
+      categoryChanged,
+      newDecisions,
+      aggressiveDrift,
+      methodicalDrift,
+    };
+  }
+
+  /**
+   * Adapt the story arc for a personality shift without regenerating played chapters.
+   *
+   * This preserves:
+   * - Chapter arcs that have already been played
+   * - Core consistency anchors
+   * - Character arc foundations
+   *
+   * This adapts:
+   * - Future chapter focuses and tension levels
+   * - Decision themes for upcoming choices
+   * - Overall theme evolution
+   */
+  async _adaptStoryArcForDrift(originalArc, newPersonality, currentChapter, choiceHistory) {
+    const newSuperPathKey = this._getSuperPathKey(choiceHistory);
+
+    // Start with the original arc
+    const adaptedArc = {
+      ...originalArc,
+      key: `arc_${newSuperPathKey}`,
+      superPathKey: newSuperPathKey,
+      previousSuperPathKey: originalArc.superPathKey,
+      adaptedAt: new Date().toISOString(),
+      adaptedFromChapter: currentChapter,
+      personalitySnapshot: {
+        riskTolerance: newPersonality.riskTolerance,
+        scores: newPersonality.scores || { aggressive: 0, methodical: 0 },
+        choiceCount: choiceHistory.length,
+      },
+    };
+
+    // Adapt the overall theme to reflect personality evolution
+    adaptedArc.overallTheme = this._adaptThemeForPersonality(
+      originalArc.overallTheme,
+      originalArc.superPathKey,
+      newSuperPathKey
+    );
+
+    // Adapt future chapter arcs (preserve played chapters)
+    if (adaptedArc.chapterArcs && Array.isArray(adaptedArc.chapterArcs)) {
+      adaptedArc.chapterArcs = adaptedArc.chapterArcs.map(chapterArc => {
+        // Don't modify chapters already played
+        if (chapterArc.chapter < currentChapter) {
+          return chapterArc;
+        }
+
+        // Adapt future chapters for new personality
+        return this._adaptChapterArcForPersonality(chapterArc, newPersonality, originalArc.superPathKey);
+      });
+    }
+
+    // Update character arcs to reflect evolution
+    if (adaptedArc.characterArcs) {
+      adaptedArc.characterArcs = {
+        ...adaptedArc.characterArcs,
+        jack: this._adaptJackArcForPersonality(
+          adaptedArc.characterArcs.jack,
+          newPersonality,
+          currentChapter
+        ),
+      };
+    }
+
+    console.log(`[StoryGenerationService] Arc adapted: ${originalArc.superPathKey} -> ${newSuperPathKey} (from chapter ${currentChapter})`);
+
+    return adaptedArc;
+  }
+
+  /**
+   * Adapt the overall theme when personality shifts
+   */
+  _adaptThemeForPersonality(originalTheme, oldPath, newPath) {
+    // If shifting to aggressive, emphasize action and confrontation
+    if (newPath === 'AGGRESSIVE' && oldPath !== 'AGGRESSIVE') {
+      if (originalTheme.includes('patient') || originalTheme.includes('investigation')) {
+        return originalTheme.replace(
+          /patient investigation|careful investigation|truth-seeking/gi,
+          'decisive action and hard truths'
+        );
+      }
+      return `${originalTheme}, now driven by urgency and confrontation`;
+    }
+
+    // If shifting to methodical, emphasize evidence and patience
+    if (newPath === 'METHODICAL' && oldPath !== 'METHODICAL') {
+      if (originalTheme.includes('action') || originalTheme.includes('confrontation')) {
+        return originalTheme.replace(
+          /decisive action|confrontation|urgency/gi,
+          'methodical truth-seeking'
+        );
+      }
+      return `${originalTheme}, tempered by careful investigation`;
+    }
+
+    // Shifting to balanced
+    if (newPath === 'BALANCED') {
+      return `${originalTheme}, adapting approach as circumstances demand`;
+    }
+
+    return originalTheme;
+  }
+
+  /**
+   * Adapt a single chapter arc for the new personality
+   */
+  _adaptChapterArcForPersonality(chapterArc, newPersonality, oldPath) {
+    const adapted = { ...chapterArc };
+
+    // Adjust tension levels based on personality
+    if (newPersonality.riskTolerance === 'high') {
+      // Aggressive players: higher tension, more confrontational focuses
+      adapted.tensionLevel = Math.min(10, (chapterArc.tensionLevel || 5) + 1);
+      if (adapted.decisionTheme) {
+        adapted.decisionTheme = adapted.decisionTheme.replace(
+          /wait|gather|investigate carefully/gi,
+          'act decisively'
+        );
+      }
+    } else if (newPersonality.riskTolerance === 'low') {
+      // Methodical players: slightly lower tension, more investigation focus
+      adapted.tensionLevel = Math.max(1, (chapterArc.tensionLevel || 5) - 1);
+      if (adapted.decisionTheme) {
+        adapted.decisionTheme = adapted.decisionTheme.replace(
+          /confront|attack|force/gi,
+          'investigate thoroughly'
+        );
+      }
+    }
+
+    // Add personality adaptation note
+    adapted.personalityAdapted = true;
+    adapted.adaptedForPath = newPersonality.riskTolerance;
+
+    return adapted;
+  }
+
+  /**
+   * Adapt Jack's character arc description for personality evolution
+   */
+  _adaptJackArcForPersonality(originalJackArc, newPersonality, currentChapter) {
+    const phaseDescriptor = currentChapter <= 4 ? 'early' :
+                            currentChapter <= 7 ? 'mid-story' :
+                            currentChapter <= 10 ? 'late' : 'final';
+
+    if (newPersonality.riskTolerance === 'high') {
+      return `${originalJackArc}. In the ${phaseDescriptor} chapters, Jack's patience wears thin and he pushes harder for answers.`;
+    } else if (newPersonality.riskTolerance === 'low') {
+      return `${originalJackArc}. In the ${phaseDescriptor} chapters, Jack becomes more deliberate, building his case methodically.`;
+    }
+
+    return `${originalJackArc}. In the ${phaseDescriptor} chapters, Jack adapts his approach to the situation at hand.`;
   }
 
   /**
@@ -8658,8 +8901,9 @@ If no conflicts, return: {"conflicts": []}`;
         if (keys.length > MAX_PATHS) {
           // Prefer to keep prefixes of the current path (they're always relevant),
           // then keep the most recently updated remaining paths.
+          // Always keep ROOT - it contains pre-branch facts from Chapters 1-2.
           const current = String(context.lastPathKey || 'ROOT');
-          const keep = new Set(keys.filter((k) => current.startsWith(k)));
+          const keep = new Set(keys.filter((k) => k === 'ROOT' || current.startsWith(k)));
           const rest = keys
             .filter((k) => !keep.has(k))
             .sort((a, b) => {
@@ -8704,7 +8948,9 @@ If no conflicts, return: {"conflicts": []}`;
     const facts = [];
     for (const [k, v] of Object.entries(map)) {
       if (!k) continue;
-      if (!pk.startsWith(k)) continue;
+      // Always include ROOT facts (pre-branch content from Chapters 1-2)
+      // plus facts from any path that is a prefix of the current path
+      if (k !== 'ROOT' && !pk.startsWith(k)) continue;
       if (Array.isArray(v)) {
         facts.push(...v);
       } else if (Array.isArray(v?.facts)) {
