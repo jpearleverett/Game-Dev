@@ -219,7 +219,27 @@ export async function saveGeneratedChapter(caseNumber, pathKey, entry) {
       // Only update if the entry doesn't already exist or is newer
       const existingEntry = storyCache.chapters[key];
       if (existingEntry && existingEntry.generatedAt && entry.generatedAt) {
-        if (new Date(existingEntry.generatedAt) >= new Date(entry.generatedAt)) {
+        const existingDate = new Date(existingEntry.generatedAt);
+        const newDate = new Date(entry.generatedAt);
+
+        // CRITICAL: If existing entry is an emergency fallback and new entry arrived late,
+        // DO NOT replace the fallback. User may have already started reading it.
+        // This prevents the jarring "content replacement" bug when retries complete after timeout.
+        if (existingEntry.isEmergencyFallback && !entry.isEmergencyFallback) {
+          // Calculate time delta to detect late arrivals
+          const timeDelta = newDate - existingDate;
+
+          // If the new content arrived more than 10 seconds after fallback,
+          // it's likely a late retry completion. Don't replace to avoid disrupting user.
+          if (timeDelta > 10000) {
+            console.warn(`[GeneratedStoryStorage] Skipping late save for ${key} - emergency fallback already shown ${Math.round(timeDelta/1000)}s ago`);
+            console.warn(`[GeneratedStoryStorage] To avoid disrupting user experience, keeping fallback content`);
+            return true;
+          }
+        }
+
+        // Normal case: keep newer or same content
+        if (existingDate >= newDate) {
           console.log(`[GeneratedStoryStorage] Skipping save for ${key} - existing entry is newer or same`);
           return true; // Already have this or newer
         }

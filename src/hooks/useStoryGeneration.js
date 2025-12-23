@@ -408,8 +408,9 @@ export function useStoryGeneration(storyCampaign) {
     try {
       generationRef.current = true;
 
-      // generateSubchapter ALWAYS returns content (fallback on error)
-      // This is guaranteed by the StoryGenerationService's error handling
+      // CRITICAL: This is user-facing generation (player actively waiting)
+      // We pass isUserFacing=true to ensure NO fallback is shown
+      // If generation fails, an error will be thrown and caught below
       const entry = await storyGenerationService.generateSubchapter(
         chapter,
         subchapter,
@@ -418,6 +419,7 @@ export function useStoryGeneration(storyCampaign) {
         {
           traceId,
           reason: 'immediate-generateForCase',
+          isUserFacing: true, // Never show fallback to player
         }
       );
 
@@ -478,24 +480,13 @@ export function useStoryGeneration(storyCampaign) {
       setStatus(GENERATION_STATUS.ERROR);
       setError(err.message);
 
-      // Even on unexpected error, try to get emergency fallback content
-      console.log(`[useStoryGeneration] [${genId}] Attempting emergency fallback...`);
-      try {
-        const fallbackEntry = storyGenerationService.getEmergencyFallback(
-          chapter,
-          subchapter,
-          canonicalPathKey
-        );
-        if (fallbackEntry) {
-          console.log(`[useStoryGeneration] [${genId}] Emergency fallback succeeded`);
-          updateGeneratedCache(caseNumber, fallbackEntry?.pathKey || canonicalPathKey, fallbackEntry);
-          return fallbackEntry;
-        }
-      } catch (fallbackErr) {
-        console.error(`[useStoryGeneration] [${genId}] Emergency fallback FAILED: ${fallbackErr.message}`);
-      }
+      // CRITICAL: For user-facing generation, we do NOT use fallback
+      // The error state will trigger UI to show retry button
+      // This ensures player NEVER sees generic fallback content
+      console.error(`[useStoryGeneration] [${genId}] Generation failed - no fallback for user-facing content`);
+      console.error(`[useStoryGeneration] [${genId}] Player must retry or check network connection`);
 
-      return null;
+      return null; // UI will check for null and show error/retry screen
     } finally {
       generationRef.current = false;
       // If we just generated Subchapter C, immediately prefetch next chapter for BOTH branches.
