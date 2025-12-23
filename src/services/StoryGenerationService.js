@@ -258,8 +258,67 @@ const STORY_CONTENT_SCHEMA = {
       },
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
+    // ========== ENGAGEMENT TRACKING FIELDS ==========
+    engagementMetrics: {
+      type: 'object',
+      description: 'Metrics tracking reader engagement elements in this subchapter',
+      properties: {
+        questionsRaised: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'New questions planted in the reader\'s mind this subchapter (mystery, character, threat, or thematic questions)',
+        },
+        questionsAnswered: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Questions from previous chapters addressed (partially or fully) in this subchapter',
+        },
+        emotionalPeak: {
+          type: 'string',
+          description: 'Quote the single most emotionally intense moment in this subchapter (the gut-punch line)',
+        },
+        cliffhangerStrength: {
+          type: 'string',
+          enum: ['soft_hook', 'medium_tension', 'unbearable'],
+          description: 'How desperately will the reader want to continue? unbearable = they cannot stop here',
+        },
+      },
+      required: ['questionsRaised', 'emotionalPeak', 'cliffhangerStrength'],
+    },
+    sensoryAnchors: {
+      type: 'object',
+      description: 'Sensory grounding for this scene to make it viscerally real',
+      properties: {
+        dominantSense: {
+          type: 'string',
+          enum: ['sight', 'sound', 'smell', 'touch', 'taste'],
+          description: 'Primary sense emphasized in this scene',
+        },
+        recurringDetail: {
+          type: 'string',
+          description: 'One specific sensory detail mentioned 2-3 times (e.g., "the drip of the faucet", "the smell of old cigarettes", "rain on the windows")',
+        },
+        atmosphereNote: {
+          type: 'string',
+          description: 'Brief description of the overall sensory atmosphere (e.g., "claustrophobic and damp", "sterile and cold", "chaotic and loud")',
+        },
+      },
+      required: ['dominantSense', 'recurringDetail', 'atmosphereNote'],
+    },
+    finalMoment: {
+      type: 'string',
+      description: 'The EXACT last 1-2 sentences of your narrative. Must create unbearable forward momentum. Examples: a character entering, a name spoken, a realization that reframes everything, a gun cocking, a phone ringing with a dead person\'s number.',
+    },
+    microRevelation: {
+      type: 'string',
+      description: 'The small truth or clue revealed in this subchapter. Every subchapter must reveal SOMETHING new (a name, a date, a connection, a lie exposed).',
+    },
+    personalStakesThisChapter: {
+      type: 'string',
+      description: 'What does Jack personally stand to lose if he fails in THIS specific chapter? Be viscerally specific (not "his reputation" but "the last person who still believes in him").',
+    },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 /**
@@ -543,10 +602,69 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
+    // ========== ENGAGEMENT TRACKING FIELDS (DECISION SCHEMA) ==========
+    engagementMetrics: {
+      type: 'object',
+      description: 'Metrics tracking reader engagement elements in this subchapter',
+      properties: {
+        questionsRaised: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'New questions planted in the reader\'s mind this subchapter (mystery, character, threat, or thematic questions)',
+        },
+        questionsAnswered: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Questions from previous chapters addressed (partially or fully) in this subchapter',
+        },
+        emotionalPeak: {
+          type: 'string',
+          description: 'Quote the single most emotionally intense moment in this subchapter (the gut-punch line)',
+        },
+        cliffhangerStrength: {
+          type: 'string',
+          enum: ['soft_hook', 'medium_tension', 'unbearable'],
+          description: 'For decision points, this should almost always be "unbearable" - the decision itself is the hook',
+        },
+      },
+      required: ['questionsRaised', 'emotionalPeak', 'cliffhangerStrength'],
+    },
+    sensoryAnchors: {
+      type: 'object',
+      description: 'Sensory grounding for this scene to make it viscerally real',
+      properties: {
+        dominantSense: {
+          type: 'string',
+          enum: ['sight', 'sound', 'smell', 'touch', 'taste'],
+          description: 'Primary sense emphasized in this scene',
+        },
+        recurringDetail: {
+          type: 'string',
+          description: 'One specific sensory detail mentioned 2-3 times (e.g., "the drip of the faucet", "the smell of old cigarettes", "rain on the windows")',
+        },
+        atmosphereNote: {
+          type: 'string',
+          description: 'Brief description of the overall sensory atmosphere (e.g., "claustrophobic and damp", "sterile and cold", "chaotic and loud")',
+        },
+      },
+      required: ['dominantSense', 'recurringDetail', 'atmosphereNote'],
+    },
+    finalMoment: {
+      type: 'string',
+      description: 'The EXACT last 1-2 sentences BEFORE the decision prompt. Must create maximum tension at the moment of choice.',
+    },
+    microRevelation: {
+      type: 'string',
+      description: 'The small truth or clue revealed in this subchapter. Every subchapter must reveal SOMETHING new (a name, a date, a connection, a lie exposed).',
+    },
+    personalStakesThisChapter: {
+      type: 'string',
+      description: 'What does Jack personally stand to lose if he fails in THIS specific chapter? Be viscerally specific (not "his reputation" but "the last person who still believes in him").',
+    },
     // NOTE: decision field moved BEFORE narrative in schema to ensure it's generated first
     // This prevents truncation from cutting off decision structure
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 // ============================================================================
@@ -709,6 +827,122 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   Plot holes from ignored threads will break the player's immersion.
 
 - "decision": (Only for decision points) The binary choice with intro, optionA, and optionB
+- "engagementMetrics": Track what hooks the reader (see ENGAGEMENT REQUIREMENTS below)
+- "sensoryAnchors": Ground each scene in specific sensory details
+- "finalMoment": The EXACT last 1-2 sentences - must create unbearable forward momentum
+- "microRevelation": The small truth revealed this subchapter - every scene must reveal SOMETHING
+- "personalStakesThisChapter": What Jack personally loses if he fails HERE (be specific!)
+
+## ENGAGEMENT REQUIREMENTS - WHAT MAKES READERS UNABLE TO STOP
+
+### The Question Economy
+Every subchapter should plant new questions and selectively answer others.
+- Mystery questions: What happened? Who did it? What does it mean?
+- Character questions: Will Sarah forgive Jack? Can Tom be redeemed?
+- Threat questions: Will Grange find him? Is Victoria ally or enemy?
+- Thematic questions: Can Jack truly change? Is redemption possible?
+
+BALANCE RULE: Maintain 3-5 active burning questions at all times. Answer one, plant two.
+
+### The Final Line Requirement
+The last 1-2 sentences of EVERY subchapter must create unbearable forward momentum.
+Techniques that work:
+- A character entering unexpectedly
+- A name spoken that changes everything
+- A question that demands an answer
+- A door opening to reveal something
+- A phone ringing with an impossible caller ID
+- A realization that reframes everything
+- A physical threat made concrete
+- A choice that must be made NOW
+
+Examples of EXCELLENT final moments:
+- "Victoria Blackwell smiled. 'Hello, Jack. It's time we talked about endgames.'"
+- "The caller ID showed a number Jack knew by heart. Tom's number. But Tom was dead."
+- "He'd always been the evidence."
+
+### Personal Stakes Escalation
+What Jack personally stands to lose should escalate through the story:
+- Chapters 2-4: Jack's self-image and reputation at stake
+- Chapters 5-7: Jack's relationships at stake (Sarah, his sense of purpose)
+- Chapters 8-10: Jack's freedom and physical safety at stake
+- Chapters 11-12: Jack's redemption and legacy at stake
+
+Each chapter must make viscerally clear what Jack loses if he fails THIS chapter.
+
+### Revelation Gradient
+Revelations follow a deliberate pattern:
+- MICRO (every subchapter): A clue, a connection, a small truth (a name, a date, a lie exposed)
+- CHAPTER (end of each chapter): A character's true nature revealed, a conspiracy layer peeled
+- ARC (chapters 4, 7, 10): Game-changers that recontextualize everything
+
+Revelations should make readers say "I KNEW something was off" or "Oh god, that changes everything."
+
+### Emotional Anchor Requirement
+Every chapter needs ONE moment that hits the reader in the gut. Not plot, but FEELING.
+- A specific face from Jack's guilt (not abstract guilt)
+- A character saying something that lands like a punch
+- A memory that intrudes unwanted
+- Physical manifestation of pain (hands shaking, throat tight)
+- A photograph, a voice, a smell that triggers grief
+
+## SENTENCE RHYTHM - CRITICAL FOR NOIR CADENCE
+
+Vary your sentence lengths deliberately:
+
+SHORT. For impact.
+Medium sentences carry the narrative forward, building momentum.
+Longer sentences work when you need to unspool a thought, let the reader sink into Jack's mind as he pieces together the implications of what he's just seen, each connection leading to another, the way a crack spreads across ice.
+Then short again.
+
+RULES:
+- If three sentences in a row are similar length, revise
+- Use fragments for emotional impact (one-word paragraphs, incomplete thoughts)
+- Long sentences for rumination, short for action and revelation
+- Paragraph breaks create pacing—don't be afraid of one-line paragraphs
+
+## MICRO-TENSION REQUIREMENT
+
+Every paragraph must contain at least ONE tension element:
+- A question (stated or implied)
+- A contradiction or inconsistency noticed
+- An incomplete action (reaching for something, about to speak)
+- A sensory discomfort (cold, pressure, pain)
+- A hint of threat (sound, movement, presence)
+- An emotional undercurrent (anger beneath calm, fear behind bravado)
+- A ticking clock reference (time passing, deadline approaching)
+- Information withheld (character knows something they won't say)
+
+Paragraphs without tension are paragraphs where readers check their phone.
+
+## SUBTEXT LAYER REQUIREMENTS
+
+Every significant dialogue exchange must have TWO layers:
+1. What the characters are SAYING (surface)
+2. What they're ACTUALLY communicating (subtext: emotion, power, hidden meaning)
+
+Example:
+- "Coffee?" Sarah asked. [Surface: Offering coffee. Subtext: I'm willing to have this conversation.]
+- "I'm good." [Surface: Declining. Subtext: I don't deserve your care / I'm pushing you away.]
+
+RULE: Never write dialogue where characters say exactly what they mean. That's not how broken people talk.
+
+## THE ICEBERG TECHNIQUE
+
+For every piece of backstory or information: show 10%, imply 30%, leave 60% unspoken.
+- Characters reference events that happened "that night in February" without explaining
+- Jack avoids looking at the third barstool at Murphy's without saying why
+- Victoria touches her wrist when lying—we never learn why
+- Tom's laugh changes when Helen Price is mentioned
+
+Mystery isn't about what you reveal. It's about what you deliberately don't.
+
+## SENSORY ANCHORING
+
+Every scene needs specific sensory grounding:
+- Choose a DOMINANT SENSE (sight, sound, smell, touch, taste)
+- Include a RECURRING DETAIL mentioned 2-3 times (the drip of a faucet, the smell of old cigarettes, rain on windows)
+- Establish ATMOSPHERE through sensory specifics, not adjectives
 
 ## SELF-VERIFICATION CHECKLIST (Complete before submitting)
 Before outputting your JSON response, verify:
@@ -722,7 +956,25 @@ Before outputting your JSON response, verify:
 7. **TIMELINE FACTS**: Any durations mentioned use EXACT numbers from ABSOLUTE_FACTS (30 years Tom, 8 years Eleanor, etc.)
 8. **DECISION ALIGNMENT**: If decision point, both options have personalityAlignment field filled
 
-If any check fails, revise before outputting.`;
+## ENGAGEMENT SELF-CHECK (The "What If They Stop Here" Test)
+Before outputting, imagine the reader puts down their phone at this exact moment.
+- What question will haunt them?
+- What image will stay with them?
+- What do they NEED to know that you haven't told them yet?
+If the answer is "nothing," rewrite the ending.
+
+Additional engagement checks:
+9. **FIRST SENTENCE**: Does it create a physical sensation or immediate tension? (Not setting, but hook)
+10. **QUESTION PLANTED**: Is there a question planted in the first 100 words?
+11. **DIALOGUE PUNCH**: Does at least one piece of dialogue hit like a punch?
+12. **EMOTIONAL VULNERABILITY**: Is there a moment of genuine emotional vulnerability?
+13. **DRAMATIC IRONY**: Does the reader know something Jack doesn't (and feel the tension)?
+14. **TICKING CLOCK**: Is there time pressure felt in the prose (not just mentioned)?
+15. **FINAL LINE**: Does the final line make stopping feel impossible?
+16. **SENSORY ANCHOR**: Is there a recurring sensory detail grounding the scene?
+17. **MICRO-REVELATION**: Does this scene reveal at least ONE new piece of information?
+
+If any answer is NO, revise before outputting.`;
 
 // ============================================================================
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
@@ -766,6 +1018,234 @@ Study these examples carefully. Note the:
 
 Your writing should feel like it belongs in the same novel as these passages.
 `;
+
+// ============================================================================
+// EXTENDED STYLE EXAMPLES - Full scenes for deep pattern learning
+// ============================================================================
+const buildExtendedStyleExamples = () => {
+  // Import dynamically to avoid circular dependencies
+  const { EXTENDED_STYLE_GROUNDING, ANNOTATED_EXAMPLES, NEGATIVE_EXAMPLES } = require('../data/storyBible');
+
+  return `
+## EXTENDED EXAMPLE: COMPLETE TENSION SCENE
+Study how this scene builds tension through dialogue, physical action, and emotional undercurrent:
+
+${EXTENDED_STYLE_GROUNDING.tensionScene}
+
+---
+
+## EXTENDED EXAMPLE: REVELATION MOMENT
+Study how this scene delivers a game-changing revelation while maintaining emotional impact:
+
+${EXTENDED_STYLE_GROUNDING.revelationScene}
+
+---
+
+## EXTENDED EXAMPLE: CHAPTER ENDING (CLIFFHANGER)
+Study how this scene creates unbearable forward momentum:
+
+${EXTENDED_STYLE_GROUNDING.chapterEnding}
+
+---
+
+## EXTENDED EXAMPLE: DIALOGUE UNDER TENSION (SUBTEXT)
+Study how every line carries surface meaning AND hidden subtext:
+
+${EXTENDED_STYLE_GROUNDING.dialogueUnderTension}
+
+---
+
+## ANNOTATED EXAMPLE: Physical Emotion
+"${ANNOTATED_EXAMPLES.physicalEmotionExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.physicalEmotionExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Dialogue Subtext
+"${ANNOTATED_EXAMPLES.dialogueSubtextExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.dialogueSubtextExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Tension Building
+"${ANNOTATED_EXAMPLES.tensionBuildingExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.tensionBuildingExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Chapter Hook
+"${ANNOTATED_EXAMPLES.chapterHookExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.chapterHookExample.annotations.map(a => `- ${a}`).join('\n')}
+
+---
+
+## WHAT NOT TO WRITE - NEGATIVE EXAMPLES
+
+### BAD: Telling Instead of Showing
+"${NEGATIVE_EXAMPLES.tellDontShow.badVersion}"
+
+PROBLEMS:
+${NEGATIVE_EXAMPLES.tellDontShow.problems.map(p => `- ${p}`).join('\n')}
+
+### GOOD VERSION:
+"${NEGATIVE_EXAMPLES.tellDontShow.goodVersion}"
+
+---
+
+### BAD: Overwritten Dialogue
+"${NEGATIVE_EXAMPLES.overwrittenDialogue.badVersion}"
+
+PROBLEMS:
+${NEGATIVE_EXAMPLES.overwrittenDialogue.problems.map(p => `- ${p}`).join('\n')}
+
+### GOOD VERSION:
+"${NEGATIVE_EXAMPLES.overwrittenDialogue.goodVersion}"
+
+---
+
+### BAD: Flat Pacing
+"${NEGATIVE_EXAMPLES.flatPacing.badVersion}"
+
+PROBLEMS:
+${NEGATIVE_EXAMPLES.flatPacing.problems.map(p => `- ${p}`).join('\n')}
+
+### GOOD VERSION:
+"${NEGATIVE_EXAMPLES.flatPacing.goodVersion}"
+
+---
+
+### BAD: Heavy Foreshadowing
+"${NEGATIVE_EXAMPLES.heavyForeshadowing.badVersion}"
+
+PROBLEMS:
+${NEGATIVE_EXAMPLES.heavyForeshadowing.problems.map(p => `- ${p}`).join('\n')}
+
+### GOOD VERSION:
+"${NEGATIVE_EXAMPLES.heavyForeshadowing.goodVersion}"
+`;
+};
+
+// ============================================================================
+// VOICE DNA - Character-specific speech patterns
+// ============================================================================
+const buildVoiceDNASection = (charactersInScene = []) => {
+  const { VOICE_DNA } = require('../data/characterReference');
+
+  // Always include Jack's voice
+  const voicesToInclude = ['jack'];
+
+  // Add any other characters specified
+  charactersInScene.forEach(char => {
+    const normalizedChar = char.toLowerCase();
+    if (normalizedChar.includes('victoria') || normalizedChar.includes('emily')) {
+      voicesToInclude.push('victoria');
+    } else if (normalizedChar.includes('sarah')) {
+      voicesToInclude.push('sarah');
+    } else if (normalizedChar.includes('tom') || normalizedChar.includes('wade')) {
+      voicesToInclude.push('tomWade');
+    } else if (normalizedChar.includes('eleanor')) {
+      voicesToInclude.push('eleanor');
+    } else if (normalizedChar.includes('claire')) {
+      voicesToInclude.push('claire');
+    }
+  });
+
+  // Deduplicate
+  const uniqueVoices = [...new Set(voicesToInclude)];
+
+  let voiceSection = `
+## CHARACTER VOICE DNA
+Use these patterns to maintain consistent character voices:
+
+`;
+
+  uniqueVoices.forEach(voiceKey => {
+    const voice = VOICE_DNA[voiceKey];
+    if (!voice) return;
+
+    voiceSection += `### ${voice.name}
+**Sentence Patterns:**
+${voice.sentencePatterns.map(p => `- ${p}`).join('\n')}
+
+**Vocabulary Tendencies:**
+${voice.vocabularyTendencies.map(v => `- ${v}`).join('\n')}
+
+**Physical Tells:**
+${voice.physicalTells.map(t => `- ${t}`).join('\n')}
+
+**Dialogue Rhythm:**
+${voice.dialogueRhythm.map(r => `- ${r}`).join('\n')}
+
+`;
+  });
+
+  return voiceSection;
+};
+
+// ============================================================================
+// DRAMATIC IRONY SECTION - What the reader knows that Jack doesn't
+// ============================================================================
+const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
+  const ironies = [];
+
+  // Victoria = Emily irony (revealed progressively)
+  if (chapter <= 8) {
+    ironies.push({
+      secret: 'Victoria Blackwell is Emily Cross, the woman Jack declared dead 7 years ago',
+      jackKnows: chapter < 6 ? 'Jack knows Victoria as a mysterious benefactor/adversary' :
+        'Jack suspects Victoria has a personal connection to his past cases',
+      readerKnows: 'The reader knows Victoria IS Emily, the woman Jack failed to save',
+      useFor: 'Write scenes where Victoria drops hints Jack misses. Let readers cringe at his obliviousness.',
+    });
+  }
+
+  // Tom's betrayal irony (early chapters)
+  if (chapter <= 5) {
+    ironies.push({
+      secret: 'Tom Wade has been manufacturing evidence for 20 years',
+      jackKnows: 'Jack trusts Tom completely as his best friend of 30 years',
+      readerKnows: 'From Chapter 1 hints, readers suspect Tom is not what he seems',
+      useFor: 'Write scenes where Jack relies on Tom or speaks fondly of their friendship. Maximum dramatic tension.',
+    });
+  }
+
+  // Grange as predator (mid chapters)
+  if (chapter >= 4 && chapter <= 9) {
+    ironies.push({
+      secret: 'Deputy Chief Grange is a serial kidnapper with 23 victims',
+      jackKnows: chapter < 7 ? 'Jack sees Grange as a political obstacle or suspicious figure' :
+        'Jack knows Grange is dangerous but not the full extent',
+      readerKnows: 'Readers understand the scope of Grange\'s evil from earlier revelations',
+      useFor: 'When Jack encounters Grange, let readers feel the danger Jack doesn\'t fully grasp.',
+    });
+  }
+
+  if (ironies.length === 0) {
+    return '';
+  }
+
+  let section = `
+## DRAMATIC IRONY - LEVERAGE WHAT THE READER KNOWS
+
+The reader knows things Jack doesn't. USE THIS for tension:
+
+`;
+
+  ironies.forEach(irony => {
+    section += `### ${irony.secret}
+- **What Jack knows:** ${irony.jackKnows}
+- **What the reader knows:** ${irony.readerKnows}
+- **Use for:** ${irony.useFor}
+
+`;
+  });
+
+  section += `Write scenes that let readers CRINGE at Jack's ignorance. Let them see the trap closing. The tension between what we know and what Jack knows is incredibly powerful.`;
+
+  return section;
+};
 
 class StoryGenerationService {
   constructor() {
@@ -1805,12 +2285,18 @@ Create a high-level story arc outline for Chapters 2-12 that:
 3. Ensures each chapter has a clear purpose advancing the mystery
 4. Creates meaningful decision points that reflect player personality
 5. Weaves all 5 innocents' stories together naturally
+6. CRITICAL: Defines what Jack PERSONALLY STANDS TO LOSE in each chapter
+7. CRITICAL: Includes an EMOTIONAL ANCHOR moment for each chapter
 
 ## STORY PHASES
 - Chapters 2-4: RISING ACTION (investigating, uncovering clues)
+  * Personal stakes focus: Jack's self-image and reputation
 - Chapters 5-7: COMPLICATIONS (betrayals revealed, stakes escalate)
+  * Personal stakes focus: Jack's relationships (Sarah, sense of purpose)
 - Chapters 8-10: CONFRONTATIONS (major revelations, direct confrontations)
+  * Personal stakes focus: Jack's freedom and physical safety
 - Chapters 11-12: RESOLUTION (final confrontation, consequences manifest)
+  * Personal stakes focus: Jack's redemption and legacy
 
 ## FIVE INNOCENTS TO WEAVE IN
 1. Eleanor Bellamy - wrongly convicted of husband's murder (8 years in Greystone)
@@ -1819,7 +2305,17 @@ Create a high-level story arc outline for Chapters 2-12 that:
 4. James Sullivan - details revealed progressively
 5. Teresa Wade - Tom Wade's own daughter (convicted using his methods)
 
-Provide a structured arc ensuring each innocent's story gets proper attention.`;
+## ENGAGEMENT REQUIREMENTS FOR EACH CHAPTER
+For each chapter, you MUST provide:
+1. **personalStakes**: What Jack personally loses if he fails THIS chapter. Be viscerally specific.
+   - NOT "his reputation" → "the last colleague who still respects him"
+   - NOT "his safety" → "the ability to walk into Murphy's without checking the door"
+2. **emotionalAnchor**: The gut-punch moment for this chapter. Not plot, but FEELING.
+   - A face, a memory, a realization that hits the reader in the chest
+   - Examples: "Seeing Eleanor's hands aged from prison labor", "Reading his own signature on the warrant that destroyed Marcus"
+3. **microRevelationHint**: What small truth should be revealed in each subchapter
+
+Provide a structured arc ensuring each innocent's story gets proper attention and EVERY chapter has personal stakes that escalate.`;
 
     const arcSchema = {
       type: 'object',
@@ -1841,8 +2337,11 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
               tensionLevel: { type: 'number', description: '1-10 tension scale' },
               endingHook: { type: 'string', description: 'How this chapter should end to hook into the next' },
               decisionTheme: { type: 'string', description: 'What kind of choice the player faces' },
+              personalStakes: { type: 'string', description: 'What Jack personally stands to lose in this chapter. Be viscerally specific: Ch2-4=self-image/reputation, Ch5-7=relationships, Ch8-10=freedom/safety, Ch11-12=redemption/legacy' },
+              emotionalAnchor: { type: 'string', description: 'The gut-punch emotional moment for this chapter. Not plot, but FEELING.' },
+              microRevelationHint: { type: 'string', description: 'The small truth that should be revealed in each subchapter of this chapter' },
             },
-            required: ['chapter', 'phase', 'primaryFocus', 'tensionLevel', 'endingHook'],
+            required: ['chapter', 'phase', 'primaryFocus', 'tensionLevel', 'endingHook', 'personalStakes'],
           },
         },
         characterArcs: {
@@ -1905,17 +2404,17 @@ Provide a structured arc ensuring each innocent's story gets proper attention.`;
       playerPersonality: personality.riskTolerance || 'balanced',
       overallTheme: theme,
       chapterArcs: [
-        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First innocent discovered', tensionLevel: 4, endingHook: 'A new lead emerges' },
-        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Evidence of conspiracy', tensionLevel: 5, endingHook: 'Trust begins to fracture' },
-        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Second innocent revealed', tensionLevel: 5, endingHook: 'The pattern becomes clear' },
-        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Betrayal discovered', tensionLevel: 6, endingHook: 'An ally becomes suspect' },
-        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Third innocent confronted', tensionLevel: 7, endingHook: 'Stakes escalate dramatically' },
-        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'The web tightens', tensionLevel: 7, endingHook: 'No one can be trusted' },
-        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Major revelation', tensionLevel: 8, endingHook: 'The truth emerges' },
-        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Fourth innocent found', tensionLevel: 8, endingHook: 'Confrontation looms' },
-        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'Final pieces fall', tensionLevel: 9, endingHook: 'The mastermind revealed' },
-        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation', tensionLevel: 10, endingHook: 'Justice or vengeance' },
-        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'The story concludes' },
+        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First innocent discovered', tensionLevel: 4, endingHook: 'A new lead emerges', personalStakes: 'Jack\'s belief that he was a good detective - the foundation of his self-image', emotionalAnchor: 'Seeing the first victim\'s face and knowing he put them there' },
+        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Evidence of conspiracy', tensionLevel: 5, endingHook: 'Trust begins to fracture', personalStakes: 'Jack\'s reputation among the people who still respect him', emotionalAnchor: 'A former colleague looking at him differently' },
+        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Second innocent revealed', tensionLevel: 5, endingHook: 'The pattern becomes clear', personalStakes: 'The last shred of certainty Jack has about his career', emotionalAnchor: 'Reading a case file he was proud of and seeing the lies in it' },
+        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Betrayal discovered', tensionLevel: 6, endingHook: 'An ally becomes suspect', personalStakes: 'Sarah\'s trust - the last real partnership Jack has left', emotionalAnchor: 'Sarah\'s silence when she should defend him' },
+        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Third innocent confronted', tensionLevel: 7, endingHook: 'Stakes escalate dramatically', personalStakes: 'Jack\'s sense of purpose - what is he if not a detective?', emotionalAnchor: 'Looking in a mirror and not recognizing the man looking back' },
+        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'The web tightens', tensionLevel: 7, endingHook: 'No one can be trusted', personalStakes: 'The last relationship that still matters - Tom or Sarah', emotionalAnchor: 'Realizing someone he trusted has been lying to him' },
+        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Major revelation', tensionLevel: 8, endingHook: 'The truth emerges', personalStakes: 'Jack\'s physical safety - they\'re coming for him now', emotionalAnchor: 'The moment he realizes he might not survive this' },
+        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Fourth innocent found', tensionLevel: 8, endingHook: 'Confrontation looms', personalStakes: 'Jack\'s freedom - arrest warrant or worse', emotionalAnchor: 'Becoming the thing he spent his career hunting' },
+        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'Final pieces fall', tensionLevel: 9, endingHook: 'The mastermind revealed', personalStakes: 'Jack\'s life - they will kill him if he continues', emotionalAnchor: 'Choosing to continue knowing he might die' },
+        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation', tensionLevel: 10, endingHook: 'Justice or vengeance', personalStakes: 'Jack\'s chance at redemption - this is his last opportunity to make things right', emotionalAnchor: 'Facing Victoria/Emily and understanding what he cost her' },
+        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'The story concludes', personalStakes: 'Jack\'s legacy - how will he be remembered?', emotionalAnchor: 'The faces of everyone he failed, and the question of whether he\'s made it right' },
       ],
       characterArcs: {
         jack: 'From guilt-ridden detective to seeker of truth',
@@ -3741,8 +4240,12 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Part 4: Character Knowledge State (who knows what)
     parts.push(this._buildKnowledgeSection(context));
 
-    // Part 5: Style Examples (Few-shot)
-    parts.push(this._buildStyleSection());
+    // Part 5: Style Examples (Few-shot) with Voice DNA and Dramatic Irony
+    // Determine which characters might be in this scene based on context
+    const charactersInScene = this._extractCharactersFromContext(context, chapter);
+    const pathKey = context.pathKey || '';
+    const choiceHistory = context.playerChoices || [];
+    parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory));
 
     // Part 6: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
@@ -3753,10 +4256,117 @@ Generate realistic, specific consequences based on the actual narrative content.
       parts.push(sceneState);
     }
 
-    // Part 8: Current Task Specification (LAST for recency effect)
+    // Part 8: Personal Stakes & Engagement Guidance (from story arc)
+    const engagementGuidance = this._buildEngagementGuidanceSection(context, chapter, subchapter);
+    if (engagementGuidance) {
+      parts.push(engagementGuidance);
+    }
+
+    // Part 9: Current Task Specification (LAST for recency effect)
     parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
+  }
+
+  /**
+   * Extract characters likely to appear in a scene based on context
+   */
+  _extractCharactersFromContext(context, chapter) {
+    const characters = [];
+
+    // Always include Jack (protagonist)
+    // Check story arc for chapter-specific characters
+    if (this.storyArc?.chapterArcs) {
+      const chapterArc = this.storyArc.chapterArcs.find(a => a.chapter === chapter);
+      if (chapterArc?.innocentFeatured) {
+        characters.push(chapterArc.innocentFeatured);
+      }
+    }
+
+    // Check active threads for characters
+    if (context.narrativeThreads) {
+      context.narrativeThreads.forEach(thread => {
+        if (thread.characters) {
+          characters.push(...thread.characters);
+        }
+      });
+    }
+
+    // Check recent narrative for character mentions
+    if (context.previousChapters?.length > 0) {
+      const recentChapter = context.previousChapters[context.previousChapters.length - 1];
+      if (recentChapter?.narrative) {
+        const narrative = recentChapter.narrative.toLowerCase();
+        if (narrative.includes('victoria') || narrative.includes('blackwell')) characters.push('Victoria');
+        if (narrative.includes('sarah') || narrative.includes('reeves')) characters.push('Sarah');
+        if (narrative.includes('tom') || narrative.includes('wade')) characters.push('Tom');
+        if (narrative.includes('eleanor') || narrative.includes('bellamy')) characters.push('Eleanor');
+        if (narrative.includes('claire') || narrative.includes('thornhill')) characters.push('Claire');
+      }
+    }
+
+    // Deduplicate and return
+    return [...new Set(characters)];
+  }
+
+  /**
+   * Build engagement guidance section with personal stakes and emotional anchors
+   */
+  _buildEngagementGuidanceSection(context, chapter, subchapter) {
+    let section = `## ENGAGEMENT GUIDANCE FOR THIS CHAPTER\n\n`;
+
+    // Get chapter-specific guidance from story arc
+    if (this.storyArc?.chapterArcs) {
+      const chapterArc = this.storyArc.chapterArcs.find(a => a.chapter === chapter);
+      if (chapterArc) {
+        section += `### CHAPTER ${chapter} FOCUS\n`;
+        section += `**Phase:** ${chapterArc.phase}\n`;
+        section += `**Primary Focus:** ${chapterArc.primaryFocus}\n`;
+        section += `**Tension Level:** ${chapterArc.tensionLevel}/10\n`;
+
+        if (chapterArc.personalStakes) {
+          section += `\n### PERSONAL STAKES (What Jack loses if he fails HERE)\n`;
+          section += `${chapterArc.personalStakes}\n`;
+          section += `\n**Make the reader FEEL this is at risk. Show it, don't tell it.**\n`;
+        }
+
+        if (chapterArc.emotionalAnchor) {
+          section += `\n### EMOTIONAL ANCHOR (The gut-punch moment for this chapter)\n`;
+          section += `${chapterArc.emotionalAnchor}\n`;
+          section += `\n**This is not plot. This is FEELING. Write it to hit the reader in the chest.**\n`;
+        }
+
+        if (chapterArc.keyRevelation) {
+          section += `\n### KEY REVELATION\n`;
+          section += `${chapterArc.keyRevelation}\n`;
+        }
+
+        section += `\n### ENDING HOOK\n`;
+        section += `This chapter should end with: "${chapterArc.endingHook}"\n`;
+        section += `\n**For subchapter ${['A', 'B', 'C'][subchapter - 1]}: Build toward this ending while creating micro-hooks at the end of your subchapter.**\n`;
+      }
+    }
+
+    // Add subchapter-specific guidance
+    section += `\n### SUBCHAPTER ${['A', 'B', 'C'][subchapter - 1]} ROLE\n`;
+    if (subchapter === 1) {
+      section += `- This is the OPENING of the chapter\n`;
+      section += `- Establish atmosphere and continue from the previous choice\n`;
+      section += `- Plant the seeds of this chapter's conflict\n`;
+      section += `- Hook: End with a question or complication that demands continuation\n`;
+    } else if (subchapter === 2) {
+      section += `- This is the MIDDLE of the chapter\n`;
+      section += `- Escalate the tension established in A\n`;
+      section += `- Deliver at least one micro-revelation\n`;
+      section += `- Hook: End with raised stakes or a turning point\n`;
+    } else {
+      section += `- This is the CLIMAX/DECISION of the chapter\n`;
+      section += `- Deliver the emotional anchor moment\n`;
+      section += `- Build to an impossible choice\n`;
+      section += `- Hook: The decision itself is the ultimate cliffhanger\n`;
+    }
+
+    return section;
   }
 
   /**
@@ -4228,14 +4838,49 @@ For the decision object:
   /**
    * Build style examples section (few-shot learning)
    */
-  _buildStyleSection() {
+  _buildStyleSection(charactersInScene = [], chapter = 2, pathKey = '', choiceHistory = []) {
+    // Build extended examples section
+    let extendedExamples = '';
+    try {
+      extendedExamples = buildExtendedStyleExamples();
+    } catch (e) {
+      // Fallback if extended examples fail to load
+      extendedExamples = '';
+    }
+
+    // Build voice DNA section for characters in this scene
+    let voiceDNA = '';
+    try {
+      voiceDNA = buildVoiceDNASection(charactersInScene);
+    } catch (e) {
+      // Fallback if voice DNA fails to load
+      voiceDNA = '';
+    }
+
+    // Build dramatic irony section based on chapter
+    let dramaticIrony = '';
+    try {
+      dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
+    } catch (e) {
+      // Fallback if dramatic irony fails to load
+      dramaticIrony = '';
+    }
+
     return `## STYLE REFERENCE
 
 Study this example passage and match its quality:
 
 ${EXAMPLE_PASSAGES.tenseMoment}
 
-**Note the:** punchy sentences, sensory grounding, character voice through action, tension without melodrama.`;
+**Note the:** punchy sentences, sensory grounding, character voice through action, tension without melodrama.
+
+${STYLE_EXAMPLES}
+
+${extendedExamples}
+
+${voiceDNA}
+
+${dramaticIrony}`;
   }
 
   /**

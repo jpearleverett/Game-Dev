@@ -573,6 +573,546 @@ export const GENERATION_CONFIG = {
   },
 };
 
+// ============================================================================
+// EXTENDED STYLE GROUNDING - Longer examples for deep pattern learning
+// ============================================================================
+export const EXTENDED_STYLE_GROUNDING = {
+  // A complete scene with rising tension (shows pacing, dialogue interleaved with action)
+  tensionScene: `The Blueline Diner smelled like coffee that had been sitting too long and secrets that had been kept even longer. Jack slid into the booth across from Claire Thornhill and watched her not look at him.
+
+She was younger than he expected. Mid-twenties, maybe, with hair pulled back tight and a uniform worn thin from too many washes. But her eyes were older. They carried the kind of weight that came from watching a father hang himself in a jail cell.
+
+"You're Halloway." Not a question.
+
+"I'm Halloway."
+
+The waitress appeared, refilled Claire's coffee without being asked, and vanished with the practiced invisibility of someone who'd learned not to hear things. Claire wrapped both hands around her cup but didn't drink.
+
+"Victoria said you'd come. She said you were starting to understand."
+
+Jack's coffee sat untouched. "What I understand is that your father was framed. What I understand is that my partner signed the documents that made it happen." He paused. "What I don't understand is why you're willing to talk to the detective who could have stopped it."
+
+Claire laughed. It was not a pleasant sound. "Could have? You think that makes it better? 'Could have' means you saw something wrong and decided it wasn't your problem. 'Could have' means my father begged you to look at the evidence again, and you told him the case was closed."
+
+The coffee in Jack's cup had gone cold. He drank it anyway. Cold coffee was still better than the taste of truth.
+
+"Four years." Claire's voice dropped to something between a whisper and a weapon. "I've spent four years building the case you should have built in a weekend. Bank records. Shell company filings. Emails that were spoofed from accounts created days before the 'embezzlement' was discovered." She reached into her bag and pulled out a manila folder worn soft at the edges. "This is the Thornhill Ledger. Every lie, documented. Every signature, traced. Every person who looked the other way, named."
+
+She slid it across the table.
+
+"My father used to say the truth was the only thing that mattered. He believed in the system. Believed in people like you." She stood, dropped a five on the table. "He was wrong about all of it. But maybe, if you're half the detective you used to pretend to be, you can prove that he was right about one thing."
+
+"What's that?"
+
+Claire Thornhill looked at him the way a surgeon looks at a tumor. "That the truth comes out eventually. Even when good men fail to find it."
+
+She walked out into the rain. Jack sat with the folder and the cold coffee and thirty years of certainty dissolving like sugar in water.`,
+
+  // A revelation moment (shows how to deliver information that recontextualizes everything)
+  revelationScene: `The storage unit was supposed to be empty. Tom had told him that, years ago, when he'd helped move Tom's ex-wife's things after the divorce. "Cleaned out completely," Tom had said. "Nothing left but dust and regret."
+
+Tom had lied.
+
+The boxes filled every available inch, stacked floor to ceiling with the kind of meticulous organization that spoke to decades of habit. Jack pulled down the nearest one, already knowing he wouldn't like what he found.
+
+Case files. Hundreds of them. But not the official versions—these were annotated, marked up in Tom's distinctive handwriting. Jack recognized the first case: Morrison, 2019. Open-and-shut murder conviction. The forensic evidence had been airtight.
+
+Except here, in Tom's private notes, was a different story. "Hair sample from secondary source—cleaning brush from barber." "Fingerprint lifted from subject's gym membership card, transferred via silicone." "Blood typing matched to donor sample from Red Cross drive."
+
+Each annotation was a confession. Each page was a grave.
+
+Jack's hands moved on their own, pulling box after box. Names he recognized. Cases he'd closed. Convictions he'd celebrated over drinks at Murphy's while Tom smiled and ordered another round.
+
+Eleanor Bellamy. The sapphire necklace that proved she'd hidden assets. Tom's note: "Necklace purchased at estate sale, receipt destroyed. Deposit box key copied from locksmith records."
+
+Marcus Thornhill. The forged financial documents. Tom's note: "Silas provided signatures under duress. Original blackmail materials in safety deposit box 447."
+
+Dr. Lisa Chen. The lab tech who'd tried to blow the whistle. Tom's note: "Transfer paperwork expedited. Husband's immigration status flagged for leverage. Problem contained."
+
+Twenty years. Twenty years of manufactured justice, and Jack had swallowed every piece of it because the evidence was too perfect to question.
+
+He sat down on a box that couldn't hold his weight. Didn't care when it collapsed. Didn't care about anything except the sound of his own breathing and the weight of the paper scattered around him like fallen leaves.
+
+His phone buzzed. A text from an unknown number.
+
+"Now you see. Now you understand. The question is: what will you do about it? — V.B."
+
+Jack looked at the message for a long time. Then he started photographing every page.`,
+
+  // A chapter ending (shows how to create that "one more chapter" compulsion)
+  chapterEnding: `Sarah found him at Murphy's. She always did.
+
+"You look like hell." She didn't sit down.
+
+"Feel like it too." Jack poured two fingers of Jameson. Then two more. "I figured it out. All of it. Tom, Silas, the whole machine."
+
+"I know. I've been working the same case from the inside." She finally took the stool next to him. "Internal Affairs has a file three inches thick. We just needed someone who was there. Someone who could connect the dots."
+
+"You need me to testify."
+
+"I need you to do what you should have done twenty years ago. I need you to tell the truth."
+
+The jukebox in the corner played something sad. It always played something sad. Jack had stopped hearing the specific songs years ago; they all blurred into the same melody of regret.
+
+"If I do this, I lose everything. My pension. My reputation. Whatever's left of my name."
+
+"If you don't do this, we lose the case. Tom walks. Silas walks. Everyone walks except the five people rotting in cells for crimes they didn't commit."
+
+Jack drained his glass. The whiskey didn't burn anymore. Nothing did.
+
+"There's something else." Sarah's voice dropped. "Victoria Blackwell. We've been tracking her movements. She's not just exposing corruption, Jack. She's dismantling something bigger. Something that goes beyond Tom, beyond the department. And she's doing it on a schedule."
+
+"What kind of schedule?"
+
+Sarah pulled out her phone. Showed him a photograph of a wall covered in photographs, connected by red string. In the center, circled in black marker: a date. Three days from now.
+
+"We don't know what happens then. But every piece she's moved, every person she's exposed—it's all building to that moment." She put the phone away. "Whatever she's planning, Jack, you're part of it. She's been positioning you since the first envelope."
+
+The door to Murphy's opened. A woman stepped inside, rain dripping from a red coat, eyes finding Jack's across the bar with the precision of a scope finding a target.
+
+Victoria Blackwell smiled. "Hello, Jack. It's time we talked about endgames."
+
+The jukebox skipped. The rain fell. And Jack realized, with the cold clarity of a man seeing his own grave, that he'd never been the detective in this story.
+
+He'd always been the evidence.`,
+
+  // Dialogue under tension (shows subtext, what's unsaid, power dynamics)
+  dialogueUnderTension: `"You came alone." Victoria circled the desk, trailing one finger along its mahogany edge. "Either you're brave, or you're still underestimating me. I'm curious which."
+
+"I came because you asked." Jack stayed near the door. Not afraid to enter. Just aware of exits. Old habit. "Your letter said you had information about Grange."
+
+"I have information about everything." She sat, crossing her legs with the practiced ease of someone who'd learned to make every movement a statement. "But we're not here to talk about Grange. We're here to talk about you."
+
+"I don't need to understand myself. I need to understand why you're doing this."
+
+"No. You need to understand why you're letting me." She smiled, and it reached her eyes the way a scalpel reaches a wound—precisely, surgically. "You could have gone to the FBI the moment you found Tom's storage unit. You could have handed everything to Sarah and walked away. Instead, you're here. In my office. Playing my game."
+
+Jack didn't answer. The silence stretched, filled only by the rain against the windows and the distant sound of traffic twenty stories below.
+
+"You feel guilty." Victoria said it like a diagnosis. "Not about the convictions—not yet. You feel guilty because some part of you knew. Some part of you looked at the evidence Tom provided and thought 'this is too clean.' But that part was quieter than the part that wanted to close cases. That wanted the win."
+
+"Is that why you chose me? For the guilt?"
+
+"I chose you because you're capable of change. Most of them aren't." She stood, walked to the window. The city spread beneath her like a circuit board, all lights and hidden connections. "Tom Wade knows what he did. He simply doesn't care. Silas Reed knows, and it's eating him alive, but not enough to act. Helen Price knows, and she's already written her suicide note—she just hasn't decided on the date."
+
+"And me?"
+
+Victoria turned. In the rain-streaked light, the scars on her wrists were visible for just a moment before her sleeves fell back into place.
+
+"You're the one who closed my case, Jack. You're the one who told the world I was dead while I was still screaming in that basement." Her voice never wavered. "And you're the one who can undo it. Not the conviction—that's already done. But the system. The machine that made me and Tom and Grange and all of it possible."
+
+She walked toward him, stopped close enough that he could smell her perfume. French. Expensive. The same scent that had been on the envelopes.
+
+"I'm offering you a choice. The same kind of choice you've been making your whole career, except this time you'll know the stakes. You can walk out that door, take what you know to the FBI, and spend the rest of your life testifying in courtrooms. They'll call you a hero. They'll say you did the right thing."
+
+"Or?"
+
+"Or you can stay. Play the game through to the end. Help me dismantle not just the corrupt cops, but the thing that makes cops corrupt. The thing that let a man like Grange operate in plain sight for twenty years." She smiled again, but this time it was almost sad. "The thing that made you possible, Jack. The thing that made both of us."
+
+The rain fell. The city glittered. And Jack Halloway stood at the crossroads of everything he'd ever believed about justice.
+
+"What happens if I stay?"
+
+Victoria's smile widened. "Then we'll see what you're really made of."`,
+};
+
+// ============================================================================
+// ANNOTATED EXAMPLES - Teaching WHY techniques work
+// ============================================================================
+export const ANNOTATED_EXAMPLES = {
+  physicalEmotionExample: {
+    passage: `The photograph shook in Jack's hands. Not from age—from recognition.`,
+    annotations: [
+      'Opens with PHYSICAL ACTION revealing emotion (hands shaking) - never say "Jack felt shocked"',
+      'The dash creates a beat, a moment of realization the reader experiences WITH Jack',
+      'The word "recognition" is more specific than "shock" - tells us this is about seeing something known',
+      'Two short sentences create staccato rhythm that mirrors sudden realization',
+    ],
+  },
+
+  dialogueSubtextExample: {
+    passage: `"Coffee?" Sarah asked.
+
+"I'm good."
+
+She poured two cups anyway.`,
+    annotations: [
+      'Surface: Offering and declining coffee. Subtext: Testing if he\'ll accept care',
+      '"I\'m good" is a deflection, not an answer—Jack pushes away comfort',
+      'Sarah ignoring his refusal shows: she knows him, she won\'t let him retreat',
+      'Action (pouring anyway) speaks louder than any dialogue could',
+      'Three lines accomplish what a paragraph of internal monologue would do worse',
+    ],
+  },
+
+  tensionBuildingExample: {
+    passage: `The warehouse door was open three inches. It hadn't been open when Jack left.
+
+Someone had been here.
+
+Someone might still be here.
+
+His hand found his gun. The weight was familiar. What waited inside was not.`,
+    annotations: [
+      'Establishes threat through ABSENCE of expected state (door position changed)',
+      'Two short paragraphs that could be one—but separation creates mounting dread',
+      '"Might still be" leaves threat unresolved, maintains tension',
+      'Final paragraph contrasts familiar (gun) with unfamiliar (unknown threat)',
+      'Note: No adverbs. No "suddenly." No telling us to be scared. Pure showing.',
+    ],
+  },
+
+  revealPacingExample: {
+    passage: `The signature on the document was familiar.
+
+Too familiar.
+
+Tom's handwriting. Tom's pen. Tom's distinctive loop on the letter "T" that Jack had seen on birthday cards and case files and the note Tom left when he borrowed Jack's car in '98.
+
+Thirty years of friendship, catalogued in that one letter.
+
+Thirty years of lies, proven in the line beneath it.`,
+    annotations: [
+      'Delays the reveal across multiple lines—builds anticipation',
+      'Uses the mundane (birthday cards, borrowed car) to establish intimacy before betrayal',
+      'Specific detail ("loop on the letter T") makes recognition visceral and undeniable',
+      'Parallel structure in final lines (Thirty years of X / Thirty years of Y) creates impact',
+      'The reveal isn\'t just WHO—it\'s the weight of the relationship destroyed',
+    ],
+  },
+
+  chapterHookExample: {
+    passage: `Victoria Blackwell smiled. "Hello, Jack. It's time we talked about endgames."
+
+The jukebox skipped. The rain fell. And Jack realized, with the cold clarity of a man seeing his own grave, that he'd never been the detective in this story.
+
+He'd always been the evidence.`,
+    annotations: [
+      'Character entrance at chapter end = irresistible hook',
+      '"Endgames" promises confrontation and finality—reader MUST continue',
+      'Jukebox skipping = tiny detail that creates unease, wrongness',
+      'Final revelation reframes EVERYTHING reader thought they knew',
+      'Last line is a conceptual gut-punch: Jack as evidence, not investigator',
+      'This ending makes putting down the book feel physically difficult',
+    ],
+  },
+
+  sensoryAnchoringExample: {
+    passage: `The storage unit smelled of dust and old paper and something else—something chemical that reminded Jack of the forensics lab. Of Tom, hunched over a microscope, whistling off-key while he manufactured another conviction.
+
+The smell was evidence. The smell was memory. The smell was thirty years of friendship rotting in cardboard boxes.`,
+    annotations: [
+      'Opens with specific, layered smells—not generic "musty"',
+      '"Something chemical" creates mystery before explanation',
+      'Connects physical sensation to memory and emotion',
+      'Repetition of "the smell was" creates rhythm and escalation',
+      'Synesthetic metaphor: "friendship rotting" makes abstract concrete',
+    ],
+  },
+
+  microTensionExample: {
+    passage: `Sarah\'s text was short. "Murphy's. Now. Come alone."
+
+Jack read it twice. Sarah never texted in commands.
+
+He grabbed his coat. Didn't check if it was raining. It was always raining.
+
+Murphy's was six blocks away. He made it in four minutes. Would have made it in three, but his knee was acting up again—souvenir from a case he'd closed wrong, like all the others.`,
+    annotations: [
+      'Opens with unusual behavior—Sarah texting differently creates micro-tension',
+      '"Read it twice" shows Jack registering wrongness without stating it',
+      'Weather detail with resignation ("always raining") = character in single phrase',
+      'Physical limitation (knee) does triple duty: realism, vulnerability, thematic guilt',
+      'Every sentence adds tension or character—no filler, no pause in engagement',
+    ],
+  },
+};
+
+// ============================================================================
+// NEGATIVE EXAMPLES - What NOT to write (with explanations)
+// ============================================================================
+export const NEGATIVE_EXAMPLES = {
+  tellDontShow: {
+    badVersion: `Jack suddenly felt a wave of shock wash over him as he realized the horrifying truth. The weight of the revelation was almost too much to bear. He couldn't help but notice that everything had changed in that moment, and he felt a profound sense of betrayal.`,
+    problems: [
+      '"Suddenly" - false urgency, tells instead of shows',
+      '"Felt a wave of shock" - abstract emotion, not physical',
+      '"Weight of the revelation" - cliché metaphor',
+      '"Couldn\'t help but notice" - forbidden phrase, passive voice',
+      '"In that moment" - filler phrase, adds nothing',
+      '"Profound sense of betrayal" - abstract, tells reader what to feel',
+    ],
+    goodVersion: `The signature on the page—Jack knew that handwriting. Had known it for thirty years.
+
+Tom.
+
+His coffee cup found the desk. Jack didn't remember setting it down. Didn't remember his hands going numb. The only thing that existed was that signature and the lie it exposed.`,
+    whyItWorks: [
+      'Physical action (cup finding desk) shows dissociation',
+      '"Didn\'t remember" shows shock through lost time',
+      'One-word paragraph creates impact through isolation',
+      'Specific (signature, handwriting) beats abstract (betrayal, shock)',
+    ],
+  },
+
+  overwrittenDialogue: {
+    badVersion: `"I can't believe what you've done," Jack said angrily, his voice trembling with rage. "You've betrayed everything we ever stood for. How could you do this to me, to us, to everything we built together?"
+
+"You have to understand," Tom replied desperately, "I never meant for it to go this far. I was just trying to help, to make sure the guilty paid for their crimes."`,
+    problems: [
+      'Adverb tags ("angrily," "desperately") tell what dialogue should show',
+      'Characters explaining their emotions explicitly',
+      'Dialogue too on-the-nose—people don\'t speak their subtext',
+      'No physical action—talking heads',
+      'Melodramatic phrasing ("everything we ever stood for")',
+    ],
+    goodVersion: `"Tom." Just the name. Jack couldn't find more.
+
+"Let me explain—"
+
+"Don't." Jack's hand found the edge of the desk. Held on. "Just tell me how many. How many cases. How many people."
+
+Tom didn't answer. The silence was answer enough.`,
+    whyItWorks: [
+      'Minimal dialogue does more than speeches',
+      'Physical grounding (hand on desk) shows need for stability',
+      '"Just the name" - narration notes the inadequacy of words',
+      'The unanswered question is more damning than any answer',
+      'Subtext (devastation, betrayal) lives beneath simple words',
+    ],
+  },
+
+  flatPacing: {
+    badVersion: `Jack walked to the warehouse. He opened the door and went inside. He looked around at all the boxes. There were a lot of them. He opened one box and found documents. The documents were about cases. He read some of them. They were very interesting. He found evidence of corruption.`,
+    problems: [
+      'Every sentence same length and structure',
+      'No variation in rhythm—monotonous',
+      'Action without meaning or tension',
+      '"Very interesting" - empty value judgment',
+      'No sensory detail, no atmosphere',
+      'Events listed rather than experienced',
+    ],
+    goodVersion: `The warehouse door complained on its hinges—metal on rust, the sound of something that wanted to stay closed.
+
+Jack paused. Let his eyes adjust.
+
+Boxes. Hundreds of them. Floor to ceiling in rows that stretched back into darkness, each one labeled in a handwriting that made his stomach drop.
+
+He knew that handwriting.
+
+The first box came open with a whisper of old tape. Inside: case files. Not copies—originals, annotated in margins and between lines with the casual precision of a man who never expected to be caught.`,
+    whyItWorks: [
+      'Varied sentence length creates rhythm',
+      'Sensory details (rusty hinges, sound) establish atmosphere',
+      'Short paragraphs create pacing, build tension',
+      'Delayed recognition ("he knew that handwriting") creates dread',
+      'Specific physical details (whisper of tape) make scene real',
+    ],
+  },
+
+  heavyForeshadowing: {
+    badVersion: `Jack looked at Tom, not knowing that this would be the last time he would see his friend as anything other than a monster. Little did he know that the contents of that folder would change everything forever. The truth was waiting, and when it came, nothing would ever be the same.`,
+    problems: [
+      '"Little did he know" - forbidden phrase, breaks immersion',
+      'Tells reader something important is coming—destroys tension',
+      '"Change everything forever" - vague, melodramatic',
+      'Narrator intruding with future knowledge Jack doesn\'t have',
+      'Promises impact instead of delivering it',
+    ],
+    goodVersion: `Jack handed Tom the folder. Just like he had a hundred times before. Just like he would again, he assumed, because some things didn't change.
+
+Tom's smile stayed perfectly in place as he took it.
+
+Perfectly.
+
+In thirty years, Jack had never noticed how little that smile moved.`,
+    whyItWorks: [
+      'Shows routine being disrupted, not announcing disruption',
+      'Jack\'s false assumption creates dramatic irony',
+      'The repeated "perfectly" signals wrongness without explaining',
+      '"Never noticed" puts reader ahead of Jack subtly',
+      'Foreshadows through observation, not narration',
+    ],
+  },
+};
+
+// ============================================================================
+// ENGAGEMENT REQUIREMENTS - What makes readers unable to stop
+// ============================================================================
+export const ENGAGEMENT_REQUIREMENTS = {
+  // The unanswered question economy
+  questionEconomy: {
+    description: 'Every subchapter should plant new questions and selectively answer others',
+    questionTypes: {
+      mystery: 'What happened? Who did it? What does it mean? (Plot questions)',
+      character: 'Will Sarah forgive Jack? Can Tom be redeemed? (Relationship questions)',
+      threat: 'Will Grange find him? Is Victoria ally or enemy? (Tension questions)',
+      thematic: 'Can Jack truly change? Is redemption possible? (Meaning questions)',
+    },
+    balanceRule: 'Maintain 3-5 active burning questions at all times. Answer one, plant two.',
+  },
+
+  // The final line requirement
+  finalLineHook: {
+    description: 'The last 1-2 sentences must create unbearable forward momentum',
+    techniques: [
+      'A character entering unexpectedly',
+      'A name spoken that changes everything',
+      'A question that demands an answer',
+      'A door opening to reveal something',
+      'A phone ringing with impossible caller ID',
+      'A realization that reframes everything',
+      'A physical threat made concrete',
+      'A choice that must be made NOW',
+    ],
+    examples: [
+      'Victoria Blackwell smiled. "Hello, Jack. It\'s time we talked about endgames."',
+      'The caller ID showed a number Jack knew by heart. Tom\'s number. But Tom was dead.',
+      'Sarah didn\'t answer. Couldn\'t. Because standing behind her, gun drawn, was the last person Jack expected.',
+      'He\'d always been the evidence.',
+    ],
+  },
+
+  // Personal stakes escalation
+  personalStakes: {
+    description: 'What Jack personally loses should escalate through the story',
+    progression: {
+      chapters2to4: 'Jack\'s self-image and reputation at stake',
+      chapters5to7: 'Jack\'s relationships at stake (Sarah, his sense of purpose)',
+      chapters8to10: 'Jack\'s freedom and physical safety at stake',
+      chapters11to12: 'Jack\'s redemption and legacy at stake',
+    },
+    requirement: 'Each chapter must make clear what Jack loses if he fails THIS chapter.',
+  },
+
+  // Revelation gradient
+  revelationGradient: {
+    description: 'Revelations should follow a deliberate pattern',
+    levels: {
+      micro: 'Every subchapter - a clue, a connection, a small truth (e.g., a name, a date, a lie exposed)',
+      chapter: 'End of each chapter - a character\'s true nature revealed, a conspiracy layer peeled',
+      arc: 'Chapters 4, 7, 10 - game-changers that recontextualize everything the reader thought they knew',
+    },
+    rule: 'Revelations should make readers say "I KNEW something was off" or "Oh god, that changes everything"',
+  },
+
+  // Dramatic irony leverage
+  dramaticIrony: {
+    description: 'The reader knows things Jack doesn\'t - USE THIS',
+    examples: [
+      'Reader knows Victoria = Emily before Jack does',
+      'Reader suspects Tom before Jack confirms it',
+      'Reader sees danger Jack walks into blind',
+    ],
+    technique: 'Write scenes where readers CRINGE at Jack\'s ignorance. Let them see the trap closing.',
+  },
+
+  // The ticking clock
+  tickingClock: {
+    description: 'Time pressure should be FELT, not just mentioned',
+    implementation: {
+      element: 'What time-sensitive pressure exists (midnight meeting, 24 hours until evidence destroyed)',
+      reminders: 'The clock should be referenced 2-3 times per subchapter',
+      physicality: 'Show the clock through physical symptoms: checking watch, sun position, exhaustion',
+    },
+  },
+
+  // Emotional anchor requirement
+  emotionalAnchor: {
+    description: 'Every chapter needs ONE moment that hits the reader in the gut',
+    types: [
+      'A specific face from Jack\'s guilt, not abstract guilt',
+      'A character saying something that lands like a punch',
+      'A memory that intrudes unwanted',
+      'Physical manifestation of pain (hands shaking, throat tight)',
+      'A photograph, a voice, a smell that triggers grief',
+    ],
+    rule: 'Not plot, but FEELING. The moment readers stop and have to process.',
+  },
+};
+
+// ============================================================================
+// MICRO-TENSION TECHNIQUES - Keep readers engaged at paragraph level
+// ============================================================================
+export const MICRO_TENSION_TECHNIQUES = {
+  description: 'Every paragraph must contain at least one tension element',
+  elements: [
+    'A question (stated or implied)',
+    'A contradiction or inconsistency noticed',
+    'An incomplete action (reaching for something, about to speak)',
+    'A sensory discomfort (cold, pressure, pain)',
+    'A hint of threat (sound, movement, presence)',
+    'An emotional undercurrent (anger beneath calm, fear behind bravado)',
+    'A ticking clock reference (time passing, deadline approaching)',
+    'Information withheld (character knows something they won\'t say)',
+  ],
+  warning: 'Paragraphs without tension are paragraphs where readers check their phone.',
+};
+
+// ============================================================================
+// SENTENCE RHYTHM PATTERNS - Noir cadence
+// ============================================================================
+export const SENTENCE_RHYTHM = {
+  description: 'Vary sentence length deliberately for noir cadence',
+  pattern: `
+SHORT. For impact.
+Medium sentences carry the narrative forward, building momentum.
+Longer sentences work when you need to unspool a thought, let the reader sink into Jack's mind as he pieces together the implications of what he's just seen, each connection leading to another, the way a crack spreads across ice.
+Then short again.
+  `,
+  rules: [
+    'If three sentences in a row are similar length, revise',
+    'Use fragments for emotional impact (one-word paragraphs, incomplete thoughts)',
+    'Long sentences for rumination, short for action and revelation',
+    'Paragraph breaks create pacing—don\'t be afraid of one-line paragraphs',
+  ],
+};
+
+// ============================================================================
+// THE ICEBERG TECHNIQUE - Show less, imply more
+// ============================================================================
+export const ICEBERG_TECHNIQUE = {
+  description: 'For every piece of backstory or information: show 10%, imply 30%, leave 60% unspoken',
+  applications: [
+    'Characters reference events that happened "that night in February" without explaining',
+    'Jack avoids looking at the third barstool at Murphy\'s without saying why',
+    'Victoria touches her wrist when lying—we never learn why',
+    'Tom\'s laugh changes when Helen Price is mentioned',
+  ],
+  principle: 'Mystery isn\'t about what you reveal. It\'s about what you deliberately don\'t.',
+  execution: 'Let readers sense depths they can\'t see. The unspoken creates intrigue.',
+};
+
+// ============================================================================
+// SUBTEXT LAYER REQUIREMENTS - What characters REALLY mean
+// ============================================================================
+export const SUBTEXT_REQUIREMENTS = {
+  description: 'Every significant dialogue exchange must have two layers',
+  layers: {
+    surface: 'What the characters are literally saying',
+    actual: 'What they\'re actually communicating (emotion, power, hidden meaning)',
+  },
+  examples: [
+    {
+      surface: '"Coffee?" Sarah asked.',
+      subtext: 'I\'m willing to have this conversation if you are.',
+    },
+    {
+      surface: '"I\'m good."',
+      subtext: 'I don\'t deserve your care / I\'m pushing you away.',
+    },
+    {
+      surface: '"It\'s late. You should go home."',
+      subtext: 'I can\'t protect you anymore if you stay involved.',
+    },
+    {
+      surface: '"How\'s the case going?"',
+      subtext: 'I know more than you think. Are you getting close?',
+    },
+  ],
+  rule: 'Never write dialogue where characters say exactly what they mean. That\'s not how broken people talk.',
+};
+
 export default {
   TIMELINE,
   ABSOLUTE_FACTS,
@@ -581,4 +1121,12 @@ export default {
   EXAMPLE_PASSAGES,
   CONSISTENCY_RULES,
   GENERATION_CONFIG,
+  EXTENDED_STYLE_GROUNDING,
+  ANNOTATED_EXAMPLES,
+  NEGATIVE_EXAMPLES,
+  ENGAGEMENT_REQUIREMENTS,
+  MICRO_TENSION_TECHNIQUES,
+  SENTENCE_RHYTHM,
+  ICEBERG_TECHNIQUE,
+  SUBTEXT_REQUIREMENTS,
 };

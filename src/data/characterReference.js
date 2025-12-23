@@ -691,6 +691,265 @@ export const CHARACTER_REFERENCE = {
   },
 };
 
+// ============================================================================
+// VOICE DNA - Deep patterns for character voice consistency
+// ============================================================================
+export const VOICE_DNA = {
+  jack: {
+    name: 'Jack Halloway',
+    sentencePatterns: [
+      'Short declaratives when thinking or in shock ("Tom. Just the name.")',
+      'Longer, self-interrupting sentences when rationalizing or avoiding',
+      'Fragments when emotional or exhausted ("Thirty years. All of it.")',
+      'Questions he doesn\'t expect answers to',
+    ],
+    vocabularyTendencies: [
+      'Uses cop jargon ("perp," "case closed," "evidence chain") when deflecting emotion',
+      'Gets more poetic/metaphorical when drunk or exhausted',
+      'Avoids emotional words—says "complicated" instead of "painful," "a lot" instead of "devastating"',
+      'Never uses modern slang—his language is timeless noir',
+      'Self-deprecating humor as defense mechanism',
+    ],
+    physicalTells: [
+      'Reaches for Jameson when uncomfortable or overwhelmed',
+      'Checks his watch when lying or avoiding',
+      'Looks at his hands when guilty—they remind him of what he\'s done',
+      'Adjusts his coat collar when preparing for confrontation',
+      'Goes still, very still, when processing a revelation',
+    ],
+    internalMonologueStyle: [
+      'Self-questioning that expects no answers',
+      'Noir metaphors tied to rain, shadows, city decay',
+      'Counting things (years, cases, drinks) as way of processing',
+      'Past tense reflection on present events ("Should have seen it.")',
+      'Dark humor that\'s more bitter than funny',
+    ],
+    dialogueRhythm: [
+      'Terse responses when cornered—one or two words',
+      'Longer when explaining or deflecting',
+      'Never monologues—if he talks more than three sentences, he\'s avoiding something',
+      'Uses other person\'s words against them ("Define involved.")',
+    ],
+  },
+
+  victoria: {
+    name: 'Victoria Blackwell / Emily Cross',
+    sentencePatterns: [
+      'Complete, controlled sentences—NEVER fragments (control is everything to her)',
+      'Uses questions as weapons, not for information',
+      'Pauses before key words (shown with comma placement for emphasis)',
+      'Building rhythm: short, medium, long, then the killing stroke',
+    ],
+    vocabularyTendencies: [
+      'Formal register even when threatening—"I do not" not "I don\'t"',
+      'Never contractions in serious moments (contractions = vulnerability)',
+      'Uses Jack\'s own words against him, verbatim',
+      'Chess metaphors, game language ("endgame," "position," "move")',
+      'Academic precision—she was an art student, she notices aesthetics',
+    ],
+    physicalTells: [
+      'Touches her wrist scars unconsciously when the mask slips',
+      'Perfect posture except when genuinely angry—then she leans forward',
+      'Always faces the door, the window—she learned to track exits',
+      'Smile reaches her eyes only when she\'s won something',
+      'Her perfume (French floral) is a deliberate weapon—makes her memorable',
+    ],
+    emotionalLeakage: [
+      'Voice drops when discussing Grange—the only time she can\'t control it fully',
+      'Uses "we" when she means "I"—distancing from trauma',
+      'Speaks about Emily Cross in third person—separation from victim self',
+      'The only time she\'s honest is when she talks about pain in abstract terms',
+    ],
+    dialogueRhythm: [
+      'Always lets others speak first—she\'s gathering information',
+      'Rhetorical questions that corner the listener',
+      'Builds to her point rather than leading with it',
+      'Final statements land like gavels—declarative, absolute',
+    ],
+  },
+
+  sarah: {
+    name: 'Sarah Reeves',
+    sentencePatterns: [
+      'Direct and efficient—no wasted words',
+      'Commands when stressed ("Get in. Now.")',
+      'Questions that are actually accusations',
+      'Complete sentences—she says exactly what she means',
+    ],
+    vocabularyTendencies: [
+      'Professional cop language—reports, procedures, evidence',
+      'No metaphors—she\'s too practical',
+      'Occasional profanity when genuinely angry (rare, therefore impactful)',
+      'Uses "we" for the force, "you" to separate from Jack',
+    ],
+    physicalTells: [
+      'Doesn\'t sit when agitated—stands, paces, stays near exits',
+      'Orders coffee she doesn\'t drink—gives her hands something to hold',
+      'Direct eye contact when accusing, looks away when disappointed',
+      'Badge-check habit—touches it when reminding herself why she does this',
+    ],
+    emotionalLeakage: [
+      'Voice goes flat when she\'s hiding hurt',
+      'Uses professional distance to mask personal betrayal',
+      'The more she cares, the colder she sounds',
+      'Silence is her loudest condemnation',
+    ],
+    dialogueRhythm: [
+      'Short exchanges—she doesn\'t explain herself',
+      'Statements, not explanations ("I filed the papers.")',
+      'Walks away mid-conversation when she\'s done—doesn\'t wait for response',
+      'The more Jack tries to explain, the less she says',
+    ],
+  },
+
+  tomWade: {
+    name: 'Dr. Thomas "Tom" Wade',
+    sentencePatterns: [
+      'Friendly surface—inclusive language, buddy-buddy tone',
+      'Technical jargon as deflection when cornered',
+      'Incomplete thoughts when lying—trails off, changes subject',
+      'Justifications that sound reasonable until examined',
+    ],
+    vocabularyTendencies: [
+      'Forensic terminology to hide behind ("chain of custody," "fiber analysis")',
+      '"We" when talking about crimes—spreads responsibility',
+      'Diminishing language: "just," "a little," "only"',
+      'Reasonable-sounding hedges: "you have to understand," "it wasn\'t that simple"',
+    ],
+    physicalTells: [
+      'Smiles that don\'t reach his eyes—Jack never noticed until now',
+      'Hands busy (fidgeting, adjusting glasses) when lying',
+      'Too much eye contact when fabricating',
+      'Pours drinks for others as control mechanism',
+    ],
+    emotionalLeakage: [
+      'Gets technical/clinical when emotions run high',
+      'Voice pitches slightly higher when lying',
+      'Laughs at inappropriate moments—nervous habit',
+      'The more guilty, the more he calls Jack "buddy," "partner"',
+    ],
+    dialogueRhythm: [
+      'Over-explains when simple answer would do',
+      'Answers questions with questions',
+      'Friendly deflection: "Let\'s not talk about work, let\'s just—"',
+      'Long pauses before committing to a lie',
+    ],
+  },
+
+  eleanor: {
+    name: 'Eleanor Bellamy',
+    sentencePatterns: [
+      'Clipped, economical—prison taught her not to waste words',
+      'Present tense for trauma that never ends ("Eight years. It\'s still happening.")',
+      'Short sentences that land like strikes',
+      'Bitter corrections of Jack\'s assumptions',
+    ],
+    vocabularyTendencies: [
+      'Prison language has seeped in—institutional terms',
+      'Refuses euphemisms: "you put me in a cage," not "convicted"',
+      'Uses Jack\'s name like a weapon—makes him accountable',
+      'Specific numbers—she\'s counted every day',
+    ],
+    physicalTells: [
+      'Still moves like a prisoner—checking corners, giving space',
+      'Doesn\'t take up space—makes herself small (habit)',
+      'Eyes track movement constantly—survival instinct',
+      'Hands scarred and aged from eight years of prison labor',
+    ],
+    emotionalLeakage: [
+      'Anger is controlled, cold—hot anger got beaten out of her',
+      'Voice cracks only when talking about Maya',
+      'Dark humor about prison as armor',
+      'Exhaustion under every word—she\'s so tired',
+    ],
+    dialogueRhythm: [
+      'Lets silence do the work',
+      'Single-word corrections that destroy Jack\'s rationalizations',
+      'Never raises voice—quiet is more devastating',
+      'Finishes conversations by simply stopping—no farewells',
+    ],
+  },
+
+  claire: {
+    name: 'Claire Thornhill',
+    sentencePatterns: [
+      'Building arguments—she\'s been preparing these words for four years',
+      'Rhetorical questions that demand accountability',
+      'Present tense for her father—he\'s still present for her',
+      'Escalating intensity—starts calm, builds to controlled fury',
+    ],
+    vocabularyTendencies: [
+      'Legal and financial terms—she\'s self-educated on the case',
+      'Never calls Jack "detective"—refuses the title',
+      'Uses "my father," never "Marcus"—keeps it personal',
+      'Evidence terminology—she\'s built her case meticulously',
+    ],
+    physicalTells: [
+      'The Thornhill Ledger is always with her—it\'s her proof',
+      'Waitress posture (tired feet, hands busy) even when confronting',
+      'Makes eye contact and holds it—dares Jack to look away',
+      'Older than her years in every movement',
+    ],
+    emotionalLeakage: [
+      'Voice catches when she talks about the day her father died',
+      'Anger at Jack is easier than grief—she uses it as shield',
+      'The scholarship she lost is a wound she never mentions directly',
+      'Hardest when she describes her father believing in the system',
+    ],
+    dialogueRhythm: [
+      'Prepared statements—she\'s rehearsed this confrontation',
+      'Quotes exactly—dates, names, details (she has it memorized)',
+      'Pauses for Jack to defend himself, then demolishes the defense',
+      'Ends conversations by walking away—she\'s said what she came to say',
+    ],
+  },
+};
+
+/**
+ * Get voice DNA for a specific character
+ * @param {string} name - Character name or partial name
+ * @returns {Object|null} Voice DNA configuration or null if not found
+ */
+export function getVoiceDNA(name) {
+  const normalizedName = name.toLowerCase();
+
+  // Direct match
+  for (const [key, dna] of Object.entries(VOICE_DNA)) {
+    if (normalizedName.includes(key.toLowerCase()) ||
+        normalizedName.includes(dna.name.toLowerCase().split(' ')[0].toLowerCase())) {
+      return dna;
+    }
+  }
+
+  // Check aliases
+  if (normalizedName.includes('victoria') || normalizedName.includes('emily') ||
+      normalizedName.includes('confessor') || normalizedName.includes('blackwell')) {
+    return VOICE_DNA.victoria;
+  }
+
+  if (normalizedName.includes('halloway')) {
+    return VOICE_DNA.jack;
+  }
+
+  if (normalizedName.includes('reeves')) {
+    return VOICE_DNA.sarah;
+  }
+
+  if (normalizedName.includes('wade')) {
+    return VOICE_DNA.tomWade;
+  }
+
+  if (normalizedName.includes('bellamy') && !normalizedName.includes('maya')) {
+    return VOICE_DNA.eleanor;
+  }
+
+  if (normalizedName.includes('thornhill') && !normalizedName.includes('marcus')) {
+    return VOICE_DNA.claire;
+  }
+
+  return null;
+}
+
 /**
  * Quick lookup function for character details
  */
