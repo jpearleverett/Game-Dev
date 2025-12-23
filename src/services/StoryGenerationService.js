@@ -6243,7 +6243,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Match if there's significant overlap in key terms
             const addressedWords = addressedLower.split(/\s+/).filter(w => w.length > 3);
             const criticalWords = criticalLower.split(/\s+/).filter(w => w.length > 3);
-            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => cw.includes(w) || w.includes(cw)));
+            // Use exact word matching instead of substring to prevent false positives
+            // e.g., "meet" should not match "meeting", "promise" should not match "promised"
+            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => cw === w));
             // Require at least 2 matching words or 40% overlap
             return matchingWords.length >= 2 || matchingWords.length / Math.max(addressedWords.length, 1) > 0.4;
           });
@@ -6296,12 +6298,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           // Verify acknowledged threads actually appear in narrative
           if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed') {
             const threadLower = addressed.originalThread.toLowerCase();
-            const narrativeLower = narrative;
+            const narrativeLower = narrative.toLowerCase();
 
             // Extract key nouns/names from the thread description
             const keyWords = threadLower.match(/\b(?:jack|sarah|victoria|eleanor|silas|tom|wade|grange|meet|promise|call|contact|investigate|reveal)\b/g) || [];
 
-            const mentionedInNarrative = keyWords.some(word => narrativeLower.includes(word));
+            // Use word boundaries to prevent false positives (e.g., "meet" matching "meeting")
+            const mentionedInNarrative = keyWords.some(word => {
+              const pattern = new RegExp(`\\b${word}\\b`, 'i');
+              return pattern.test(narrativeLower);
+            });
 
             if (!mentionedInNarrative && keyWords.length > 0) {
               warnings.push(`Thread claimed as "${addressed.howAddressed}" but may not appear in narrative: "${addressed.originalThread.slice(0, 60)}..."`);
@@ -6433,9 +6439,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       const lowerNarr = narrativeOriginal.toLowerCase();
       content.puzzleCandidates.forEach((w) => {
         if (!w || typeof w !== 'string') return;
-        const token = w.toLowerCase();
-        // Allow minor variations (plural) by checking substring match.
-        if (!lowerNarr.includes(token)) {
+        const token = w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Use word boundary to find exact word, but allow common suffixes (s, ed, ing, ly, er, est)
+        // This prevents "rain" matching "train" while still allowing "rains" or "rained"
+        const pattern = new RegExp(`\\b${token}(?:s|ed|ing|ly|er|est)?\\b`, 'i');
+        if (!pattern.test(lowerNarr)) {
           warnings.push(`puzzleCandidates word "${w}" does not appear in narrative. Prefer words drawn directly from the prose for fairness.`);
         }
       });
@@ -6449,7 +6457,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // but allow first-person INSIDE dialogue.
     const containsPronounOutsideQuotes = (text, pronounRegex) => {
       if (!text) return false;
-      let inQuote = false;
+      let quoteType = null; // null = not in quote, 'single' or 'double'
       let buf = '';
       const flush = () => {
         if (!buf) return false;
@@ -6458,30 +6466,48 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         return hit;
       };
 
-      // Handle all common quote types:
+      // Handle all common quote types, tracking single vs double separately
+      // to prevent apostrophes from closing double-quoted dialogue
       // - ASCII double quote: "
       // - Left/right curly double quotes: " " (U+201C, U+201D)
-      // - ASCII single quote: '
-      // - Left/right curly single quotes: ' ' (U+2018, U+2019)
-      const isOpeningQuote = (ch) => ch === '"' || ch === '\u201C' || ch === "'" || ch === '\u2018';
-      const isClosingQuote = (ch) => ch === '"' || ch === '\u201D' || ch === "'" || ch === '\u2019';
+      // - Left curly single quote: ' (U+2018) - used for dialogue
+      // - Right curly single quote: ' (U+2019) - used for dialogue AND apostrophes
+      // NOTE: ASCII single quote ' is ambiguous (apostrophe vs quote) so we only
+      // treat curly single quotes as dialogue markers to avoid false positives
+      const isOpeningDouble = (ch) => ch === '"' || ch === '\u201C';
+      const isClosingDouble = (ch) => ch === '"' || ch === '\u201D';
+      const isOpeningSingle = (ch) => ch === '\u2018'; // Only curly opening single quote
+      const isClosingSingle = (ch) => ch === '\u2019'; // Only curly closing single quote
 
       for (let i = 0; i < text.length; i++) {
         const ch = text[i];
-        if (!inQuote && isOpeningQuote(ch)) {
-          // entering quote: check accumulated narration segment
+
+        // Handle double quotes
+        if (quoteType === null && isOpeningDouble(ch)) {
           if (flush()) return true;
-          inQuote = true;
+          quoteType = 'double';
           continue;
         }
-        if (inQuote && isClosingQuote(ch)) {
-          // leaving quote: discard dialogue segment buffer
+        if (quoteType === 'double' && isClosingDouble(ch)) {
           buf = '';
-          inQuote = false;
+          quoteType = null;
           continue;
         }
+
+        // Handle single quotes (only curly quotes to avoid apostrophe confusion)
+        if (quoteType === null && isOpeningSingle(ch)) {
+          if (flush()) return true;
+          quoteType = 'single';
+          continue;
+        }
+        if (quoteType === 'single' && isClosingSingle(ch)) {
+          buf = '';
+          quoteType = null;
+          continue;
+        }
+
         // Only accumulate narration segments (outside quotes)
-        if (!inQuote) {
+        if (quoteType === null) {
           buf += ch;
         }
       }
@@ -6526,13 +6552,21 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const wasAddressed = addressedThreads.some(addressed => {
           if (!addressed.originalThread) return false;
           const addressedLower = addressed.originalThread.toLowerCase();
-          // Check if at least 2 key words match
-          const matchingKeywords = threadKeywords.filter(kw => addressedLower.includes(kw));
+          // Check if at least 2 key words match using word boundaries
+          // This prevents "case" matching "showcase" or "meet" matching "meeting"
+          const matchingKeywords = threadKeywords.filter(kw => {
+            const pattern = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            return pattern.test(addressedLower);
+          });
           return matchingKeywords.length >= 2;
         });
 
-        // Also check if the thread is mentioned in the narrative itself
-        const mentionedInNarrative = threadKeywords.some(kw => narrative.includes(kw));
+        // Also check if the thread is mentioned in the narrative itself using word boundaries
+        const narrativeLower = narrative.toLowerCase();
+        const mentionedInNarrative = threadKeywords.some(kw => {
+          const pattern = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          return pattern.test(narrativeLower);
+        });
 
         if (!wasAddressed && !mentionedInNarrative) {
           const threadChapter = thread.chapter || 0;
@@ -6801,7 +6835,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // ========== 3. DIALOGUE QUALITY CHECK ==========
     // Extract dialogue and check for quality
-    const dialogueMatches = narrative.match(/"[^"]+"/g) || [];
+    // Support both ASCII quotes (") and curly/smart quotes (" ")
+    const dialogueMatches = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]/g) || [];
     if (dialogueMatches.length > 0) {
       // Check for weak dialogue tags
       const weakTags = /(?:he|she|i)\s+(?:said|asked|replied)\s+(?:quietly|loudly|softly|quickly|slowly)/gi;
@@ -6811,7 +6846,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
 
       // Check for talking heads (no action beats between dialogue)
-      const consecutiveDialogue = narrative.match(/"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"\s*\n*\s*"[^"]+"/g);
+      // Support both ASCII and curly quotes
+      const consecutiveDialogue = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]\s*\n*\s*[""\u201C][^""\u201C\u201D]+[""\u201D]\s*\n*\s*[""\u201C][^""\u201C\u201D]+[""\u201D]\s*\n*\s*[""\u201C][^""\u201C\u201D]+[""\u201D]/g);
       if (consecutiveDialogue && consecutiveDialogue.length > 0) {
         warnings.push('Dialogue passages lack action beats. Break up long exchanges with physical actions or observations.');
         qualityScore -= 5;
@@ -6969,13 +7005,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // Extract dialogue with speaker attribution
     // Pattern: "dialogue" [optional: character said/spoke/etc]
-    const dialogueWithAttribution = narrative.match(/"[^"]+"\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
+    // Support both ASCII quotes (") and curly/smart quotes (" ")
+    const dialogueWithAttribution = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
 
     // Check for dialogue that could be attributed to specific characters
     const characterNames = ['victoria', 'sarah', 'eleanor', 'silas', 'tom', 'wade', 'reeves', 'bellamy', 'reed', 'confessor', 'blackwell'];
 
     for (const dialogue of dialogueWithAttribution) {
-      const text = dialogue.match(/"([^"]+)"/)?.[1] || '';
+      // Extract text from either ASCII or curly quotes
+      const text = dialogue.match(/[""\u201C]([^""\u201C\u201D]+)[""\u201D]/)?.[1] || '';
       const attribution = dialogue.toLowerCase();
 
       for (const [character, signature] of Object.entries(voiceSignatures)) {
@@ -6997,9 +7035,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // Cross-check: Victoria should never sound casual like a cop
-    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^"]*"([^"]+)"/gi) || [];
+    // Support both ASCII quotes (") and curly/smart quotes (" ")
+    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^""\u201C\u201D]*[""\u201C]([^""\u201C\u201D]+)[""\u201D]/gi) || [];
     for (const match of victoriaDialogue) {
-      const text = match.match(/"([^"]+)"/)?.[1] || '';
+      const text = match.match(/[""\u201C]([^""\u201C\u201D]+)[""\u201D]/)?.[1] || '';
       if (/\b(?:gonna|gotta|ain't|ya|hey|buddy|pal)\b/i.test(text)) {
         issues.push('Victoria/Confessor uses overly casual language - should be elegant and formal');
       }
@@ -7231,23 +7270,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       patterns.push(new RegExp(keywords.slice(0, 2).join('.*').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\.\\\*/g, '.{0,100}'), 'i'));
     }
 
-    // Character-specific patterns
-    if (setupLower.includes('emily')) {
+    // Character-specific patterns - use word boundaries to prevent substring false matches
+    if (/\bemily\b/i.test(setupLower)) {
       patterns.push(/emily\s+cross/i, /cross\s+case/i, /that\s+girl.*(?:dead|missing|closed)/i);
     }
-    if (setupLower.includes('tom')) {
+    if (/\btom\b/i.test(setupLower)) {
       patterns.push(/tom.*(?:evidence|forensic|perfect)/i, /wade.*(?:lab|report|test)/i);
     }
-    if (setupLower.includes('victoria')) {
+    if (/\bvictoria\b/i.test(setupLower)) {
       patterns.push(/victoria.*(?:know|scar|past|trauma)/i, /blackwell.*(?:secret|truth)/i);
     }
-    if (setupLower.includes('grange')) {
+    if (/\bgrange\b/i.test(setupLower)) {
       patterns.push(/grange.*(?:power|access|missing|girl)/i, /deputy.*(?:chief|suspicious)/i);
     }
-    if (setupLower.includes('silas')) {
+    if (/\bsilas\b/i.test(setupLower)) {
       patterns.push(/silas.*(?:drink|guilt|hiding|secret)/i, /reed.*(?:nervous|scared)/i);
     }
-    if (setupLower.includes('thornhill')) {
+    if (/\bthornhill\b/i.test(setupLower)) {
       patterns.push(/thornhill.*(?:case|frame|innocent|dead)/i, /marcus.*(?:suicide|lockup)/i);
     }
 
