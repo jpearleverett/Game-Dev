@@ -6295,9 +6295,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
             // If acknowledged 2+ times without progress, flag as OVERDUE ERROR
             if (currentCount >= 2) {
-              const matchingCritical = criticalThreads.find(t =>
-                t.description && t.description.toLowerCase().includes(threadId.toLowerCase().slice(0, 20))
-              );
+              // Use word-based prefix matching to find the corresponding critical thread
+              // This handles LLM rewording (e.g., "promised to meet" → "meeting") while
+              // distinguishing similar threads (e.g., "meet Sarah" vs "call Sarah")
+              const threadIdWords = threadId.toLowerCase().match(/\b\w{4,}\b/g) || [];
+              const wordsMatchFn = (a, b) => {
+                if (a.length < 4 || b.length < 4) return a === b;
+                return a.startsWith(b) || b.startsWith(a);
+              };
+              const matchingCritical = criticalThreads.find(t => {
+                if (!t.description) return false;
+                const descWords = t.description.toLowerCase().match(/\b\w{4,}\b/g) || [];
+                const matchingWords = threadIdWords.filter(tw =>
+                  descWords.some(dw => wordsMatchFn(tw, dw))
+                );
+                // Require at least 2 matching words AND 40% overlap
+                return matchingWords.length >= 2 && matchingWords.length / Math.max(threadIdWords.length, 1) > 0.4;
+              });
               if (matchingCritical) {
                 issues.push(`OVERDUE THREAD ERROR: "${addressed.originalThread.slice(0, 60)}..." has been acknowledged ${currentCount} times without resolution. You MUST either resolve it, progress it meaningfully, or mark it as "failed" with explanation.`);
               }
