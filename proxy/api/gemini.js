@@ -3,12 +3,20 @@
  *
  * Securely proxies requests to Google Gemini API.
  * The API key is stored in Vercel's environment variables.
+ *
+ * Uses streaming with heartbeats to prevent mobile network timeouts.
+ * Mobile networks often kill idle connections after 30-40 seconds,
+ * but Gemini's "thinking" phase can take 20-60 seconds.
+ * Heartbeats keep the connection alive during generation.
  */
 
 // Simple in-memory rate limiting (resets on cold start, which is fine)
 const rateLimitStore = new Map();
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60 * 1000;
+
+// Heartbeat interval - send every 15 seconds to prevent mobile timeout
+const HEARTBEAT_INTERVAL_MS = 15000;
 
 function isRateLimited(ip) {
   const now = Date.now();
@@ -77,6 +85,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error', requestId });
   }
 
+  // Check if client wants streaming (to prevent mobile timeouts)
+  const useStreaming = req.body?.stream !== false; // Default to streaming
+
   try {
     const body = req.body;
 
@@ -91,7 +102,7 @@ export default async function handler(req, res) {
     const hasSchema = !!body.responseSchema;
 
     // Log incoming request details
-    console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, isGemini3=${isGemini3}`);
+    console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, isGemini3=${isGemini3}, streaming=${useStreaming}`);
 
     // Build Gemini request
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -138,9 +149,139 @@ export default async function handler(req, res) {
       geminiBody.generationConfig.responseSchema = body.responseSchema;
     }
 
-    // Call Gemini with timing
+    // If streaming is enabled, set up NDJSON streaming with heartbeats
+    if (useStreaming) {
+      // Set headers for newline-delimited JSON streaming
+      res.setHeader('Content-Type', 'application/x-ndjson');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      // Start heartbeat timer to keep mobile connection alive
+      let heartbeatCount = 0;
+      const heartbeatTimer = setInterval(() => {
+        heartbeatCount++;
+        const heartbeat = JSON.stringify({
+          type: 'heartbeat',
+          seq: heartbeatCount,
+          elapsed: Date.now() - startTime
+        }) + '\n';
+        res.write(heartbeat);
+        // Only log first heartbeat to confirm streaming is working
+        if (heartbeatCount === 1) {
+          console.log(`[${requestId}] Heartbeat streaming active`);
+        }
+      }, HEARTBEAT_INTERVAL_MS);
+
+      try {
+        // Call Gemini with timing
+        const geminiStartTime = Date.now();
+        console.log(`[${requestId}] Calling Gemini API (with heartbeats)...`);
+
+        const geminiResponse = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiBody),
+        });
+
+        const geminiDuration = Date.now() - geminiStartTime;
+
+        // Stop heartbeats - we have a response
+        clearInterval(heartbeatTimer);
+
+        if (!geminiResponse.ok) {
+          const errorText = await geminiResponse.text();
+          console.error(`[${requestId}] Gemini error after ${geminiDuration}ms: status=${geminiResponse.status}, body=${errorText.substring(0, 500)}`);
+
+          const errorResponse = JSON.stringify({
+            type: 'error',
+            error: geminiResponse.status === 429 ? 'API rate limit exceeded' :
+                   geminiResponse.status === 403 ? 'API quota exceeded' :
+                   'Failed to generate content',
+            requestId,
+            geminiStatus: geminiResponse.status,
+            details: errorText.substring(0, 200),
+          }) + '\n';
+          res.write(errorResponse);
+          return res.end();
+        }
+
+        const geminiData = await geminiResponse.json();
+        const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
+        const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const contentLength = content.length;
+
+        const usage = geminiData.usageMetadata || {};
+
+        // Only warn on problematic finish reasons
+        if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
+          console.warn(`[${requestId}] Response truncated (${finishReason})`);
+        }
+
+        if (finishReason === 'SAFETY') {
+          console.error(`[${requestId}] Content blocked by safety filters`);
+          const safetyError = JSON.stringify({
+            type: 'error',
+            error: 'Content blocked by safety filters',
+            requestId,
+            finishReason,
+          }) + '\n';
+          res.write(safetyError);
+          return res.end();
+        }
+
+        // Validate content for schema responses
+        let jsonValid = true;
+        if (hasSchema && contentLength > 0) {
+          try {
+            JSON.parse(content);
+          } catch (parseErr) {
+            jsonValid = false;
+            console.warn(`[${requestId}] JSON parse failed - client will repair: ${parseErr.message}`);
+          }
+        }
+
+        const totalDuration = Date.now() - startTime;
+        console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars, ${heartbeatCount} heartbeats${!jsonValid ? ' (JSON needs repair)' : ''}`);
+
+        // Send the final response
+        const finalResponse = JSON.stringify({
+          type: 'response',
+          success: true,
+          content,
+          usage: {
+            promptTokens: usage.promptTokenCount || 0,
+            completionTokens: usage.candidatesTokenCount || 0,
+            totalTokens: usage.totalTokenCount || 0,
+          },
+          finishReason,
+          requestId,
+          timing: {
+            total: totalDuration,
+            gemini: geminiDuration,
+          },
+        }) + '\n';
+        res.write(finalResponse);
+        return res.end();
+
+      } catch (error) {
+        clearInterval(heartbeatTimer);
+        const totalDuration = Date.now() - startTime;
+        console.error(`[${requestId}] Proxy error after ${totalDuration}ms:`, error.message, error.stack);
+
+        const errorResponse = JSON.stringify({
+          type: 'error',
+          error: 'Internal server error',
+          requestId,
+          details: error.message,
+        }) + '\n';
+        res.write(errorResponse);
+        return res.end();
+      }
+    }
+
+    // Non-streaming fallback (original behavior)
     const geminiStartTime = Date.now();
-    console.log(`[${requestId}] Calling Gemini API...`);
+    console.log(`[${requestId}] Calling Gemini API (non-streaming)...`);
 
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
@@ -182,13 +323,11 @@ export default async function handler(req, res) {
     const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const contentLength = content.length;
 
-    // Log response details
     const usage = geminiData.usageMetadata || {};
-    console.log(`[${requestId}] Gemini response after ${geminiDuration}ms: finishReason=${finishReason}, contentLength=${contentLength}, promptTokens=${usage.promptTokenCount || 0}, completionTokens=${usage.candidatesTokenCount || 0}`);
 
-    // Check for problematic finish reasons
+    // Only warn on problematic finish reasons
     if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-      console.warn(`[${requestId}] WARNING: Response may be truncated (finishReason=${finishReason})`);
+      console.warn(`[${requestId}] Response truncated (${finishReason})`);
     }
 
     if (finishReason === 'SAFETY') {
@@ -201,18 +340,18 @@ export default async function handler(req, res) {
     }
 
     // Validate content for schema responses
+    let jsonValid = true;
     if (hasSchema && contentLength > 0) {
       try {
         JSON.parse(content);
-        console.log(`[${requestId}] JSON validation: OK`);
       } catch (parseErr) {
-        console.warn(`[${requestId}] JSON validation: FAILED - ${parseErr.message}`);
-        // Still return the content - client will handle repair
+        jsonValid = false;
+        console.warn(`[${requestId}] JSON parse failed - client will repair: ${parseErr.message}`);
       }
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`[${requestId}] Request complete in ${totalDuration}ms (Gemini: ${geminiDuration}ms)`);
+    console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars${!jsonValid ? ' (JSON needs repair)' : ''}`);
 
     return res.status(200).json({
       success: true,
