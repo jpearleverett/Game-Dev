@@ -704,12 +704,7 @@ class LLMService {
     const operationStart = Date.now();
     const localRequestId = `llm_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 4)}`;
 
-    console.log(`[LLMService] [${localRequestId}] Starting proxy request`, {
-      model,
-      messageCount: messages.length,
-      hasSchema: !!responseSchema,
-      maxRetries: this.config.maxRetries,
-    });
+    console.log(`[LLMService] [${localRequestId}] Starting: ${model}, ${messages.length} msgs${responseSchema ? ', structured' : ''}`);
 
     if (traceId) {
       llmTrace('LLMService', traceId, 'llm.proxy.request.plan', {
@@ -744,7 +739,9 @@ class LLMService {
           headers['X-App-Token'] = this.config.appToken;
         }
 
-        console.log(`[LLMService] [${localRequestId}] Attempt ${attempt + 1}/${this.config.maxRetries} - sending request (streaming mode)...`);
+        if (attempt > 0) {
+          console.log(`[LLMService] [${localRequestId}] Retry ${attempt + 1}/${this.config.maxRetries}...`);
+        }
 
         if (traceId) {
           llmTrace('LLMService', traceId, 'llm.proxy.request.start', {
@@ -782,7 +779,6 @@ class LLMService {
         // For streaming responses, we need to read the full body as text and parse NDJSON
         const responseText = await response.text();
         const networkTime = Date.now() - attemptStart;
-        console.log(`[LLMService] [${localRequestId}] Response received in ${networkTime}ms: status=${response.status}, bytes=${responseText.length}`);
 
         // Parse NDJSON - split by newlines and parse each line
         const lines = responseText.split('\n').filter(line => line.trim());
@@ -812,10 +808,6 @@ class LLMService {
           } catch (parseErr) {
             console.warn(`[LLMService] [${localRequestId}] Failed to parse NDJSON line: ${line.substring(0, 100)}`);
           }
-        }
-
-        if (heartbeatCount > 0) {
-          console.log(`[LLMService] [${localRequestId}] Received ${heartbeatCount} heartbeats during generation`);
         }
 
         // Handle rate limiting (from non-streaming error path)
@@ -863,29 +855,26 @@ class LLMService {
         let content = data.content || '';
         const contentLength = content.length;
 
-        // Log successful response details
-        console.log(`[LLMService] [${localRequestId}] Success! finishReason=${data.finishReason}, contentLength=${contentLength}, tokens=${data.usage?.totalTokens || 'unknown'}, heartbeats=${heartbeatCount}, timing=${JSON.stringify(data.timing || {})}`);
-
         // If response was truncated and we expect JSON, try to repair it
         if (isTruncated && responseSchema) {
-          console.warn(`[LLMService] [${localRequestId}] Response truncated (${data.finishReason}), attempting JSON repair...`);
-          const originalLength = content.length;
+          console.warn(`[LLMService] [${localRequestId}] Truncated response, repairing JSON...`);
           content = this._repairTruncatedJson(content);
-          console.log(`[LLMService] [${localRequestId}] JSON repair: original=${originalLength}, repaired=${content.length}`);
         }
 
         // Validate JSON if schema was provided
+        let jsonValid = true;
         if (responseSchema && content) {
           try {
             JSON.parse(content);
-            console.log(`[LLMService] [${localRequestId}] JSON validation: OK`);
           } catch (parseErr) {
-            console.warn(`[LLMService] [${localRequestId}] JSON validation failed: ${parseErr.message} - will attempt repair in StoryGenerationService`);
+            jsonValid = false;
+            console.warn(`[LLMService] [${localRequestId}] JSON invalid - StoryGenerationService will repair`);
           }
         }
 
         const totalTime = Date.now() - operationStart;
-        console.log(`[LLMService] [${localRequestId}] Request complete in ${totalTime}ms (attempt ${attempt + 1})`);
+        // Single consolidated success log
+        console.log(`[LLMService] [${localRequestId}] Complete: ${totalTime}ms, ${contentLength} chars${heartbeatCount > 0 ? `, ${heartbeatCount} heartbeats` : ''}${!jsonValid ? ' (needs repair)' : ''}`);
 
         if (traceId) {
           llmTrace('LLMService', traceId, 'llm.proxy.response.ok', {

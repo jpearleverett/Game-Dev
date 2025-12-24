@@ -166,7 +166,10 @@ export default async function handler(req, res) {
           elapsed: Date.now() - startTime
         }) + '\n';
         res.write(heartbeat);
-        console.log(`[${requestId}] Sent heartbeat #${heartbeatCount} at ${Date.now() - startTime}ms`);
+        // Only log first heartbeat to confirm streaming is working
+        if (heartbeatCount === 1) {
+          console.log(`[${requestId}] Heartbeat streaming active`);
+        }
       }, HEARTBEAT_INTERVAL_MS);
 
       try {
@@ -207,13 +210,11 @@ export default async function handler(req, res) {
         const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const contentLength = content.length;
 
-        // Log response details
         const usage = geminiData.usageMetadata || {};
-        console.log(`[${requestId}] Gemini response after ${geminiDuration}ms: finishReason=${finishReason}, contentLength=${contentLength}, promptTokens=${usage.promptTokenCount || 0}, completionTokens=${usage.candidatesTokenCount || 0}`);
 
-        // Check for problematic finish reasons
+        // Only warn on problematic finish reasons
         if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-          console.warn(`[${requestId}] WARNING: Response may be truncated (finishReason=${finishReason})`);
+          console.warn(`[${requestId}] Response truncated (${finishReason})`);
         }
 
         if (finishReason === 'SAFETY') {
@@ -229,18 +230,18 @@ export default async function handler(req, res) {
         }
 
         // Validate content for schema responses
+        let jsonValid = true;
         if (hasSchema && contentLength > 0) {
           try {
             JSON.parse(content);
-            console.log(`[${requestId}] JSON validation: OK`);
           } catch (parseErr) {
-            console.warn(`[${requestId}] JSON validation: FAILED - ${parseErr.message}`);
-            // Still return the content - client will handle repair
+            jsonValid = false;
+            console.warn(`[${requestId}] JSON parse failed - client will repair: ${parseErr.message}`);
           }
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] Request complete in ${totalDuration}ms (Gemini: ${geminiDuration}ms, heartbeats: ${heartbeatCount})`);
+        console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars, ${heartbeatCount} heartbeats${!jsonValid ? ' (JSON needs repair)' : ''}`);
 
         // Send the final response
         const finalResponse = JSON.stringify({
@@ -322,13 +323,11 @@ export default async function handler(req, res) {
     const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const contentLength = content.length;
 
-    // Log response details
     const usage = geminiData.usageMetadata || {};
-    console.log(`[${requestId}] Gemini response after ${geminiDuration}ms: finishReason=${finishReason}, contentLength=${contentLength}, promptTokens=${usage.promptTokenCount || 0}, completionTokens=${usage.candidatesTokenCount || 0}`);
 
-    // Check for problematic finish reasons
+    // Only warn on problematic finish reasons
     if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-      console.warn(`[${requestId}] WARNING: Response may be truncated (finishReason=${finishReason})`);
+      console.warn(`[${requestId}] Response truncated (${finishReason})`);
     }
 
     if (finishReason === 'SAFETY') {
@@ -341,18 +340,18 @@ export default async function handler(req, res) {
     }
 
     // Validate content for schema responses
+    let jsonValid = true;
     if (hasSchema && contentLength > 0) {
       try {
         JSON.parse(content);
-        console.log(`[${requestId}] JSON validation: OK`);
       } catch (parseErr) {
-        console.warn(`[${requestId}] JSON validation: FAILED - ${parseErr.message}`);
-        // Still return the content - client will handle repair
+        jsonValid = false;
+        console.warn(`[${requestId}] JSON parse failed - client will repair: ${parseErr.message}`);
       }
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`[${requestId}] Request complete in ${totalDuration}ms (Gemini: ${geminiDuration}ms)`);
+    console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars${!jsonValid ? ' (JSON needs repair)' : ''}`);
 
     return res.status(200).json({
       success: true,
