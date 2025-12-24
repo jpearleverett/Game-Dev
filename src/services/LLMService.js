@@ -38,7 +38,7 @@ const DEFAULT_CONFIG = {
   appToken: ENV_APP_TOKEN, // Optional auth token for proxy
   baseUrl: null, // For custom endpoints (direct mode only)
   maxRetries: 3, // 3 retries for network issues (root cause fixes reduce need for more)
-  timeout: 180000, // 180 seconds for longer story generations
+  timeout: 300000, // 300 seconds (5 min) - matches Vercel maxDuration for long generations
 };
 
 class LLMService {
@@ -693,6 +693,10 @@ class LLMService {
   /**
    * Call Gemini API via secure Cloudflare Worker proxy
    * Used in production to keep API key secure
+   *
+   * Uses NDJSON streaming with heartbeats to prevent mobile network timeouts.
+   * Mobile networks often kill idle connections after 30-40 seconds,
+   * but Gemini's "thinking" phase can take 20-60 seconds.
    */
   async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext }) {
     let lastError = null;
@@ -740,7 +744,7 @@ class LLMService {
           headers['X-App-Token'] = this.config.appToken;
         }
 
-        console.log(`[LLMService] [${localRequestId}] Attempt ${attempt + 1}/${this.config.maxRetries} - sending request...`);
+        console.log(`[LLMService] [${localRequestId}] Attempt ${attempt + 1}/${this.config.maxRetries} - sending request (streaming mode)...`);
 
         if (traceId) {
           llmTrace('LLMService', traceId, 'llm.proxy.request.start', {
@@ -749,6 +753,7 @@ class LLMService {
             proxyUrl: this.config.proxyUrl,
             timeout: this.config.timeout,
             localRequestId,
+            streaming: true,
           }, 'info');
         }
 
@@ -765,6 +770,7 @@ class LLMService {
             maxTokens,
             systemPrompt,
             responseSchema,
+            stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
             clientTraceId: traceId || null,
             clientRequestContext: requestContext || null,
           }),
@@ -772,13 +778,49 @@ class LLMService {
         });
 
         clearTimeout(timeoutId);
-        const networkTime = Date.now() - attemptStart;
-        console.log(`[LLMService] [${localRequestId}] Response received in ${networkTime}ms: status=${response.status}`);
 
-        // Handle rate limiting
+        // For streaming responses, we need to read the full body as text and parse NDJSON
+        const responseText = await response.text();
+        const networkTime = Date.now() - attemptStart;
+        console.log(`[LLMService] [${localRequestId}] Response received in ${networkTime}ms: status=${response.status}, bytes=${responseText.length}`);
+
+        // Parse NDJSON - split by newlines and parse each line
+        const lines = responseText.split('\n').filter(line => line.trim());
+        let data = null;
+        let heartbeatCount = 0;
+
+        for (const line of lines) {
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.type === 'heartbeat') {
+              heartbeatCount++;
+              // Heartbeats just keep connection alive, ignore them
+              continue;
+            } else if (parsed.type === 'error') {
+              // Error response from proxy
+              console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}`);
+              throw new Error(parsed.error || 'Proxy returned error in stream');
+            } else if (parsed.type === 'response') {
+              // This is the actual response
+              data = parsed;
+              break;
+            } else if (parsed.success !== undefined) {
+              // Non-streaming fallback format (backwards compatibility)
+              data = parsed;
+              break;
+            }
+          } catch (parseErr) {
+            console.warn(`[LLMService] [${localRequestId}] Failed to parse NDJSON line: ${line.substring(0, 100)}`);
+          }
+        }
+
+        if (heartbeatCount > 0) {
+          console.log(`[LLMService] [${localRequestId}] Received ${heartbeatCount} heartbeats during generation`);
+        }
+
+        // Handle rate limiting (from non-streaming error path)
         if (response.status === 429) {
-          const data = await response.json().catch(() => ({}));
-          const retryAfter = Math.min(data.retryAfter || 60, 120); // Cap at 2 minutes
+          const retryAfter = Math.min(data?.retryAfter || 60, 120);
           console.warn(`[LLMService] [${localRequestId}] Rate limited (429), waiting ${retryAfter}s before retry...`);
           if (traceId) {
             llmTrace('LLMService', traceId, 'llm.proxy.rate_limited', {
@@ -788,21 +830,19 @@ class LLMService {
             }, 'warn');
           }
           await this._sleep(retryAfter * 1000);
-          continue; // Don't count toward retries
+          continue;
         }
 
-        // Handle other errors
+        // Handle other HTTP errors
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          const errorMsg = data.error || `Proxy error: ${response.status}`;
-          const proxyRequestId = data.requestId || 'unknown';
-          console.error(`[LLMService] [${localRequestId}] Proxy error: ${errorMsg} (proxy requestId: ${proxyRequestId}, details: ${data.details || 'none'})`);
+          const errorMsg = data?.error || `Proxy error: ${response.status}`;
+          const proxyRequestId = data?.requestId || 'unknown';
+          console.error(`[LLMService] [${localRequestId}] Proxy error: ${errorMsg} (proxy requestId: ${proxyRequestId})`);
           if (traceId) {
             llmTrace('LLMService', traceId, 'llm.proxy.error', {
               status: response.status,
               error: errorMsg,
               proxyRequestId,
-              details: data.details,
               attempt: attempt + 1,
               localRequestId,
             }, 'error');
@@ -810,12 +850,10 @@ class LLMService {
           throw new Error(errorMsg);
         }
 
-        // Parse successful response
-        const data = await response.json();
-
-        if (!data.success) {
-          console.error(`[LLMService] [${localRequestId}] Proxy returned unsuccessful: ${data.error}`);
-          throw new Error(data.error || 'Proxy returned unsuccessful response');
+        // Validate we got actual data
+        if (!data || !data.success) {
+          console.error(`[LLMService] [${localRequestId}] No valid response in stream`);
+          throw new Error(data?.error || 'No valid response received from proxy');
         }
 
         // Check for truncated responses
@@ -826,7 +864,7 @@ class LLMService {
         const contentLength = content.length;
 
         // Log successful response details
-        console.log(`[LLMService] [${localRequestId}] Success! finishReason=${data.finishReason}, contentLength=${contentLength}, tokens=${data.usage?.totalTokens || 'unknown'}, timing=${JSON.stringify(data.timing || {})}`);
+        console.log(`[LLMService] [${localRequestId}] Success! finishReason=${data.finishReason}, contentLength=${contentLength}, tokens=${data.usage?.totalTokens || 'unknown'}, heartbeats=${heartbeatCount}, timing=${JSON.stringify(data.timing || {})}`);
 
         // If response was truncated and we expect JSON, try to repair it
         if (isTruncated && responseSchema) {
@@ -860,6 +898,7 @@ class LLMService {
             totalTimeMs: totalTime,
             attempt: attempt + 1,
             localRequestId,
+            heartbeatCount,
             requestContext,
           }, 'debug');
         }
