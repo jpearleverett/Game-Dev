@@ -529,10 +529,11 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - let Gemini use what it needs based on our word count targets
-  // We tell Gemini "write 500 words" in prompts, so we don't need to artificially restrict tokens
+  // Token limits - match our word count targets for efficiency
+  // 500 words ≈ 700 tokens + 200 for JSON structure + 300 buffer = 1200 total
+  // This prevents Gemini from rambling beyond our target and keeps generation fast
   maxTokens: {
-    subchapter: null,     // No limit - let Gemini decide based on prompt (we specify 500 words)
+    subchapter: 1200,     // Matches 500-word target, completes in ~15-20s
     expansion: 2000,      // For fallback expansion (rarely needed)
     validation: 500,
   },
