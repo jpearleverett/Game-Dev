@@ -529,9 +529,10 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - generous to prevent truncation
+  // Token limits - let Gemini use what it needs based on our word count targets
+  // We tell Gemini "write 500 words" in prompts, so we don't need to artificially restrict tokens
   maxTokens: {
-    subchapter: 6000,     // Sufficient for 500-word narrative + JSON structure
+    subchapter: null,     // No limit - let Gemini decide based on prompt (we specify 500 words)
     expansion: 2000,      // For fallback expansion (rarely needed)
     validation: 500,
   },

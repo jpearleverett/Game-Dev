@@ -420,7 +420,7 @@ class LLMService {
 
     const {
       temperature = 0.8,
-      maxTokens = 4000,
+      maxTokens = null,  // null = let Gemini decide based on prompt instructions
       systemPrompt = null,
       responseSchema = null,
       traceId = null,
