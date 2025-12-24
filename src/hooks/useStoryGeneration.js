@@ -150,36 +150,48 @@ export function useStoryGeneration(storyCampaign) {
         optimisticHistoryLength: optimisticHistory.length,
       }, 'info');
 
-      storyGenerationService.generateSubchapter(nextChapter, 1, nextPathKey, optimisticHistory, {
-        traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
-        reason: `prefetch-next-chapter-branches:${source}`,
-      })
-        .then((entry) => {
-          if (entry && isMountedRef.current) {
-            // Cache under the actual returned pathKey (should equal nextPathKey, but treat as source of truth)
-            updateGeneratedCache(nextCaseNumber, entry.pathKey || nextPathKey, entry);
-          }
-          llmTrace('useStoryGeneration', traceId, 'prefetch.branch.complete', {
-            key,
-            ok: !!entry,
-            isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
-            wordCount: entry?.wordCount,
-          }, 'info');
-        })
-        .catch((err) => {
-          llmTrace('useStoryGeneration', traceId, 'prefetch.branch.error', {
-            key,
-            error: err?.message,
-          }, 'warn');
-        })
-        .finally(() => {
-          branchPrefetchInFlightRef.current.delete(key);
+      try {
+        const entry = await storyGenerationService.generateSubchapter(nextChapter, 1, nextPathKey, optimisticHistory, {
+          traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
+          reason: `prefetch-next-chapter-branches:${source}`,
         });
+
+        if (entry && isMountedRef.current) {
+          // Cache under the actual returned pathKey (should equal nextPathKey, but treat as source of truth)
+          updateGeneratedCache(nextCaseNumber, entry.pathKey || nextPathKey, entry);
+        }
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branch.complete', {
+          key,
+          ok: !!entry,
+          isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
+          wordCount: entry?.wordCount,
+        }, 'info');
+      } catch (err) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.branch.error', {
+          key,
+          error: err?.message,
+        }, 'warn');
+        throw err; // Re-throw so the caller can handle it
+      } finally {
+        branchPrefetchInFlightRef.current.delete(key);
+      }
     };
 
-    // Fire both prefetches immediately (true parallel). LLMService has its own queue/rate-limiting.
-    startOne('A');
-    startOne('B');
+    // Fire prefetches SEQUENTIALLY to avoid overwhelming mobile network connections.
+    // Mobile networks often struggle with concurrent long-running requests, causing one to fail.
+    // By running A first and B after, we ensure both complete reliably.
+    try {
+      await startOne('A');
+    } catch (e) {
+      // Log but continue - we still want to try path B even if A fails
+      llmTrace('useStoryGeneration', traceId, 'prefetch.branch.A.failed', { error: e?.message }, 'warn');
+    }
+
+    try {
+      await startOne('B');
+    } catch (e) {
+      llmTrace('useStoryGeneration', traceId, 'prefetch.branch.B.failed', { error: e?.message }, 'warn');
+    }
   }, [isConfigured]);
 
   /**
@@ -864,28 +876,28 @@ export function useStoryGeneration(storyCampaign) {
       needsGeneration(firstCaseOfNextChapter, secondaryNextPathKey),
     ]);
 
-    // ========== PARALLEL GENERATION FOR BALANCED PLAYERS ==========
+    // ========== SEQUENTIAL GENERATION FOR BALANCED PLAYERS ==========
+    // Mobile networks struggle with concurrent long-running requests, so we run them one at a time.
     if (isBalancedPlayer) {
-      console.log(`[useStoryGeneration] Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}, personality: ${prediction.playerPersonality}). Generating both paths in parallel.`);
+      console.log(`[useStoryGeneration] Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}, personality: ${prediction.playerPersonality}). Generating both paths sequentially.`);
 
       setStatus(GENERATION_STATUS.GENERATING);
       setGenerationType(GENERATION_TYPE.PRELOAD);
 
-      // Fire both generations simultaneously with silent: true to prevent progress thrashing
-      // When multiple generations run in parallel, they would otherwise interleave setProgress calls
+      // Generate primary path first, then secondary
       if (needsPrimaryGen) {
-        generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
+        await generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
       }
       if (needsSecondaryGen) {
-        generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
+        await generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
       }
     } else {
       // ========== CONFIDENT PREDICTION: Prioritize primary path ==========
+      // Sequential generation to avoid overwhelming mobile networks
       if (needsPrimaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
-        // Use silent: true for all background preloading to avoid UI state conflicts
-        generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
+        await generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
       }
 
       // Generate secondary path if:
@@ -896,7 +908,7 @@ export function useStoryGeneration(storyCampaign) {
       if (shouldGenerateSecondary && needsSecondaryGen) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
-        generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
+        await generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
       }
     }
 
