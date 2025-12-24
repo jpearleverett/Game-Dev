@@ -529,11 +529,13 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - match our word count targets for efficiency
-  // 500 words ≈ 700 tokens + 200 for JSON structure + 300 buffer = 1200 total
-  // This prevents Gemini from rambling beyond our target and keeps generation fast
+  // Token limits - balanced for speed and completeness
+  // 500 words ≈ 700 tokens
+  // + JSON structure (title, bridgeText, previously, etc.) ≈ 300-500 tokens
+  // + Decision structure (intro, optionA, optionB) ≈ 400 tokens (if applicable)
+  // Total: ~1400-1800 tokens needed for complete response
   maxTokens: {
-    subchapter: 1200,     // Matches 500-word target, completes in ~15-20s
+    subchapter: 1800,     // Enough for 500-word narrative + full JSON structure
     expansion: 2000,      // For fallback expansion (rarely needed)
     validation: 500,
   },
