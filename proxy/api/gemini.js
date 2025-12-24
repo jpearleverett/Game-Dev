@@ -118,9 +118,8 @@ export default async function handler(req, res) {
     };
 
     // Add thinking config for Gemini 3 models - produces better quality output
-    // NOTE: Thinking tokens count toward output limit, so disable for structured JSON
-    // to avoid truncation (thinking can consume 1900+ of 2000 output tokens)
-    if (isGemini3 && !hasSchema) {
+    // Medium level balances quality with speed/cost
+    if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
         thinkingLevel: body.thinkingLevel ?? 'medium',
       };

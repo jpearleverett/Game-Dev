@@ -529,15 +529,17 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - balanced for speed and completeness
-  // 500 words ≈ 700 tokens
-  // + JSON structure (title, bridgeText, previously, etc.) ≈ 300-500 tokens
-  // + Decision structure (intro, optionA, optionB) ≈ 400 tokens (if applicable)
-  // Total: ~1400-1800 tokens needed for complete response
+  // Token limits - accounting for Gemini 3 thinking mode overhead
+  // Thinking mode (medium) uses ~2000 tokens for internal reasoning
+  // Then generates actual response:
+  //   - 500 words ≈ 700 tokens
+  //   - JSON structure ≈ 300-500 tokens
+  //   - Decision structure ≈ 400 tokens (if applicable)
+  // Total needed: ~2000 (thinking) + ~1800 (output) = ~3800-4000 tokens
   maxTokens: {
-    subchapter: 1800,     // Enough for 500-word narrative + full JSON structure
-    expansion: 2000,      // For fallback expansion (rarely needed)
-    validation: 500,
+    subchapter: 4000,     // Thinking overhead + 500-word narrative + full JSON
+    expansion: 4000,      // For fallback expansion (rarely needed)
+    validation: 1000,     // For validation tasks
   },
 
   // Context windowing - controls how much prior story text is sent to the LLM.
