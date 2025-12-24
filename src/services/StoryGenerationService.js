@@ -3777,14 +3777,11 @@ Generate realistic, specific consequences based on the actual narrative content.
       narrativeThreads: [], // Active story threads to maintain
     };
 
-    // Add Chapter 1 content (static)
-    // Only keep full text for recent chapters to stay within Gemini's 21k token limit
+    // Add Chapter 1 content (static) - FULL TEXT
     for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
       const caseNum = formatCaseNumber(1, sub);
       const entry = getStoryEntry(caseNum, 'ROOT');
       if (entry?.narrative) {
-        // Chapter 1 is only "recent" if we're in Chapter 2
-        const isRecent = targetChapter <= 2;
         context.previousChapters.push({
           chapter: 1,
           subchapter: sub,
@@ -3793,17 +3790,15 @@ Generate realistic, specific consequences based on the actual narrative content.
           narrative: entry.narrative,
           decision: entry.decision || null,
           chapterSummary: entry.chapterSummary || null,
-          isRecent, // Only recent if in early chapters
+          isRecent: true, // Mark all as recent to include full text
         });
       }
     }
 
-    // Add generated chapters 2 onwards
-    // Only keep full text for the most recent chapter to stay within Gemini's 21k token limit
+    // Add ALL generated chapters 2 onwards - FULL TEXT, NO TRUNCATION
+    // Use async method to ensure we load from storage if not in memory
     for (let ch = 2; ch < targetChapter; ch++) {
       const chapterPathKey = this._getPathKeyForChapter(ch, choiceHistory);
-      // Only the immediately previous chapter gets full text, others get summaries
-      const isRecent = ch >= targetChapter - 1;
       for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
         const caseNum = formatCaseNumber(ch, sub);
         // Use async method to ensure entries are loaded from storage
@@ -3814,10 +3809,10 @@ Generate realistic, specific consequences based on the actual narrative content.
             subchapter: sub,
             pathKey: chapterPathKey,
             title: entry.title || `Chapter ${ch}.${sub}`,
-            narrative: entry.narrative,
+            narrative: entry.narrative, // FULL narrative, no truncation
             chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
-            isRecent, // Only recent if previous chapter
+            isRecent: true, // Mark all as recent to include full text
           });
         } else {
           console.warn(`[StoryGenerationService] Missing chapter ${ch}.${sub} (${caseNum}) for path ${chapterPathKey}`);
@@ -3825,7 +3820,7 @@ Generate realistic, specific consequences based on the actual narrative content.
       }
     }
 
-    // Add current chapter's previous subchapters - always full text
+    // Add current chapter's previous subchapters - FULL TEXT
     if (targetSubchapter > 1) {
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
@@ -3836,10 +3831,10 @@ Generate realistic, specific consequences based on the actual narrative content.
             subchapter: sub,
             pathKey,
             title: entry.title || `Chapter ${targetChapter}.${sub}`,
-            narrative: entry.narrative,
+            narrative: entry.narrative, // FULL narrative, no truncation
             chapterSummary: entry.chapterSummary || null,
             decision: entry.decision || null,
-            isRecent: true, // Current chapter always gets full text
+            isRecent: true, // Current chapter always recent
           });
         } else {
           console.warn(`[StoryGenerationService] Missing current chapter ${targetChapter}.${sub} (${caseNum})`);
@@ -3848,12 +3843,10 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     // Log context size for debugging
-    const recentChapters = context.previousChapters.filter(ch => ch.isRecent);
-    const olderChapters = context.previousChapters.filter(ch => !ch.isRecent);
     const totalNarrativeChars = context.previousChapters.reduce(
       (sum, ch) => sum + (ch.narrative?.length || 0), 0
     );
-    console.log(`[StoryGenerationService] Context built: ${context.previousChapters.length} subchapters (${recentChapters.length} full text, ${olderChapters.length} summaries), ${totalNarrativeChars} chars of narrative`);
+    console.log(`[StoryGenerationService] Context built: ${context.previousChapters.length} subchapters, ${totalNarrativeChars} chars of narrative`);
     if (context.previousChapters.length === 0) {
       console.warn('[StoryGenerationService] WARNING: No previous chapters found! Story context may be empty.');
     }
@@ -4419,14 +4412,13 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
-   * Build story history with smart windowing
+   * Build COMPLETE story history with FULL narratives
    *
-   * To stay within Gemini's 21k token limit, we include:
-   * - Full text for recent chapters (current + previous)
-   * - Chapter summaries for older chapters
+   * With 1M token context window, we include the ENTIRE story text.
+   * This ensures the LLM has full context for proper continuation.
    */
   _buildStorySummarySection(context) {
-    let summary = '## STORY SO FAR\n\n';
+    let summary = '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
     summary += '**CRITICAL: You are continuing an ongoing story. Read ALL of this carefully.**\n';
     summary += '**Your new subchapter MUST continue EXACTLY from where the previous subchapter ended.**\n';
     summary += '**DO NOT summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.**\n\n';
@@ -4481,19 +4473,10 @@ Generate realistic, specific consequences based on the actual narrative content.
         summary += `\n### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n\n`;
       }
 
-      // Include full narrative for recent chapters, summary for older chapters
-      if (ch.isRecent && ch.narrative) {
-        // Recent chapters: include full text for proper continuation
+      // Include the FULL narrative text - NO TRUNCATION
+      if (ch.narrative) {
         summary += ch.narrative;
         summary += '\n';
-      } else if (!ch.isRecent && ch.chapterSummary) {
-        // Older chapters: use summary to save tokens
-        summary += `[SUMMARY]: ${ch.chapterSummary}\n`;
-      } else if (!ch.isRecent && ch.narrative) {
-        // Fallback: if no summary exists, create a brief one from narrative
-        const words = ch.narrative.split(/\s+/);
-        const briefSummary = words.slice(0, 100).join(' ') + (words.length > 100 ? '...' : '');
-        summary += `[SUMMARY]: ${briefSummary}\n`;
       }
 
       // Mark decision points and what the player chose
