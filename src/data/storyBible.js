@@ -533,8 +533,8 @@ export const GENERATION_CONFIG = {
   // 500 words ≈ 700 tokens + 200 for JSON structure + 300 buffer = 1200 total
   // This prevents Gemini from rambling beyond our target and keeps generation fast
   maxTokens: {
-    subchapter: 2000,     // Matches 500-word target, completes in ~15-20s
-    expansion: 2000,      // For fallback expansion (rarely needed)
+    subchapter: 60000,     // Matches 500-word target, completes in ~15-20s
+    expansion: 3000,      // For fallback expansion (rarely needed)
     validation: 500,
   },
 
