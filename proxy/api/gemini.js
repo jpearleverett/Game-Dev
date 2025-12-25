@@ -15,8 +15,9 @@ const rateLimitStore = new Map();
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60 * 1000;
 
-// Heartbeat interval - send every 15 seconds to prevent mobile timeout
-const HEARTBEAT_INTERVAL_MS = 15000;
+// Heartbeat interval - send every 10 seconds to prevent mobile timeout
+// More aggressive than 15s to handle flaky mobile networks
+const HEARTBEAT_INTERVAL_MS = 10000;
 
 function isRateLimited(ip) {
   const now = Date.now();
@@ -155,10 +156,16 @@ export default async function handler(req, res) {
       res.setHeader('Content-Type', 'application/x-ndjson');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering if present
+
+      // Force headers to be sent immediately to establish the stream
+      res.flushHeaders();
 
       // Start heartbeat timer to keep mobile connection alive
       let heartbeatCount = 0;
-      const heartbeatTimer = setInterval(() => {
+
+      // Send initial heartbeat immediately to confirm stream is working
+      const sendHeartbeat = () => {
         heartbeatCount++;
         const heartbeat = JSON.stringify({
           type: 'heartbeat',
@@ -166,11 +173,14 @@ export default async function handler(req, res) {
           elapsed: Date.now() - startTime
         }) + '\n';
         res.write(heartbeat);
-        // Only log first heartbeat to confirm streaming is working
-        if (heartbeatCount === 1) {
-          console.log(`[${requestId}] Heartbeat streaming active`);
-        }
-      }, HEARTBEAT_INTERVAL_MS);
+      };
+
+      // Send first heartbeat immediately
+      sendHeartbeat();
+      console.log(`[${requestId}] Heartbeat streaming active`);
+
+      // Then send heartbeats every 10 seconds
+      const heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
 
       try {
         // Call Gemini with timing
