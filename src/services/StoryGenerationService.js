@@ -7726,6 +7726,46 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     }
 
+    // =========================================================================
+    // CATEGORY 13: PREMATURE REVELATION PREVENTION
+    // =========================================================================
+    // The mystery has a carefully designed revelation gradient. Major twists
+    // must not be revealed before their intended chapter to preserve suspense.
+    const currentChapter = context?.currentPosition?.chapter || 2;
+
+    const prematureRevelationChecks = [
+      // Victoria's true identity (Emily Cross) - should not be revealed before Chapter 10
+      {
+        pattern: /\b(?:victoria\s+(?:is|was)\s+emily|emily\s+(?:is|was)\s+victoria|victoria.*true\s+(?:name|identity).*emily|emily.*(?:became|now\s+called|goes\s+by)\s+victoria|she\s+(?:is|was)\s+emily\s+cross)\b/i,
+        minChapter: 10,
+        revelation: 'Victoria is Emily Cross',
+      },
+      // Tom's evidence manufacturing - should not be revealed before Chapter 7
+      {
+        pattern: /\b(?:tom\s+(?:wade\s+)?(?:manufactured|planted|fabricated|faked)\s+evidence|tom.*evidence\s+(?:was\s+)?(?:manufactured|planted|faked)|wade.*(?:been|was)\s+(?:manufacturing|planting|fabricating)\s+evidence|tom.*framing\s+(?:the\s+)?innocents?)\b/i,
+        minChapter: 7,
+        revelation: 'Tom Wade manufactured evidence',
+      },
+      // The Five Innocents connection - should not be fully revealed before Chapter 5
+      {
+        pattern: /\b(?:five\s+innocents?.*tom\s+wade|tom\s+wade.*five\s+innocents?|wade.*framed.*(?:all\s+)?five|teresa.*tom['']?s?\s+(?:own\s+)?daughter.*(?:framed|convicted))\b/i,
+        minChapter: 5,
+        revelation: 'Tom Wade framed the Five Innocents',
+      },
+      // The Confessor's true motive (revenge for Five Innocents) - should not be revealed before Chapter 8
+      {
+        pattern: /\b(?:confessor.*aveng(?:e|ing)\s+(?:the\s+)?(?:five\s+)?innocents?|midnight\s+confessor.*(?:revenge|vengeance)\s+for.*innocents?|confessor['']?s?\s+(?:true\s+)?motive.*innocents?)\b/i,
+        minChapter: 8,
+        revelation: "The Confessor's revenge motive for the Five Innocents",
+      },
+    ];
+
+    for (const { pattern, minChapter, revelation } of prematureRevelationChecks) {
+      if (currentChapter < minChapter && pattern.test(narrativeOriginal)) {
+        issues.push(`PREMATURE REVELATION: "${revelation}" revealed in Chapter ${currentChapter}, but should not appear before Chapter ${minChapter}. This ruins the mystery's pacing.`);
+      }
+    }
+
     // Log warnings but don't block on them
     if (warnings.length > 0) {
       console.log('[ConsistencyValidator] Warnings:', warnings);
@@ -7788,6 +7828,24 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     if (s.includes('already revealed') && s.includes('re-discovers')) return true;
     if (s.includes('Victoria is Emily') && s.includes('re-reveal')) return true;
 
+    // --- TIER 4: TIMELINE FACTS (Core relationship/event durations) ---
+    // These durations are emotionally significant - "30 years of friendship betrayed"
+    // is very different from "20 years". Players may notice inconsistencies.
+    if (s.includes('Tom Wade friendship is 30 years')) return true;
+    if (s.includes('Sarah partnership is 13 years')) return true;
+    if (s.includes('Silas partnership is 8 years')) return true;
+    if (s.includes('Emily case was closed 7 years ago')) return true;
+    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
+
+    // --- TIER 5: STORY DAY CONSISTENCY ---
+    // The story spans exactly 12 days, one per chapter. Wrong day = confusion.
+    if (s.startsWith('STORY DAY MISMATCH:')) return true;
+
+    // --- TIER 6: PREMATURE REVELATIONS ---
+    // The mystery has a carefully designed revelation gradient.
+    // Revealing major twists too early ruins the entire experience.
+    if (s.startsWith('PREMATURE REVELATION:')) return true;
+
     // =======================================================================
     // SOFT FAILURES - Convert to warnings, don't block generation
     // These matter for quality but players are forgiving of minor issues
@@ -7797,10 +7855,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;  // DISABLED
     // if (s.startsWith('OVERDUE THREAD ERROR:')) return true;  // DISABLED
 
-    // Story day mismatch - minor, player won't notice
-    // if (s.startsWith('STORY DAY MISMATCH:')) return true;  // DISABLED
-
-    // Timeline approximations - close enough is fine
+    // Timeline approximations (vague references) - close enough is fine
     // if (s.includes('Timeline approximation')) return true;  // DISABLED
 
     // Personality enforcement - Jack can have emotional moments
