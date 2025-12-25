@@ -212,13 +212,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
       prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'handleBackgroundGeneration:C-entered');
     }
 
-    // Logic for all Subchapters -> Look ahead to next chapter
-    // If we are in A, B, or C, we should ensure the Next Chapter is ready.
-    // This is especially critical for C, but useful for A/B to fill the queue.
-    if (chapter >= 1 && chapter < 12) {
-      pregenerate(chapter, pathKey, choiceHistory);
-    }
-  }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, prefetchNextChapterBranchesAfterC, pregenerate]);
+    // NOTE: Next chapter prefetch is triggered SEQUENTIALLY after current chapter completes:
+    // - pregenerateCurrentChapterSiblings generates B, then C (sequentially)
+    // - After C completes, it calls prefetchNextChapterBranchesAfterC
+    // This ensures next chapter generation has full context from current chapter.
+    // DO NOT call pregenerate() here - it would run in parallel and cause "Missing chapter" warnings.
+  }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, prefetchNextChapterBranchesAfterC]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
     const traceId = createTraceId(`decision_${storyCampaign?.pendingDecisionCase || 'unknown'}`);
