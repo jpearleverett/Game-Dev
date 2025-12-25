@@ -1491,6 +1491,15 @@ class LLMService {
    * @returns {Promise<Object>} Generation response with usage metadata
    */
   async completeWithCache({ cacheKey, dynamicPrompt, options = {} }) {
+    // IMPORTANT: Caching only works in direct mode (requires API key)
+    // In proxy mode (production), fall back to regular complete() with full prompt
+    if (this.config.proxyUrl) {
+      console.warn('[LLMService] ⚠️ Caching not supported in proxy mode, falling back to regular generation');
+      // TODO: Add proxy support for caching in future
+      // For now, caller must handle this by using regular complete() in proxy mode
+      throw new Error('Caching not yet supported in proxy mode. Use direct mode or regular complete() method.');
+    }
+
     await this._initializeCacheStorage();
 
     const cache = await this.getCache(cacheKey);

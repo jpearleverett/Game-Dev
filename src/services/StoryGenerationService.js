@@ -4237,106 +4237,16 @@ Generate realistic, specific consequences based on the actual narrative content.
     const parts = [];
 
     // Part 1: Story Bible Grounding (STATIC)
-    parts.push(`## STORY BIBLE - Canonical Facts & Timeline
-
-These are ABSOLUTE FACTS that must NEVER be contradicted:
-
-### Timeline & History
-${Object.entries(TIMELINE)
-  .map(([key, event]) => `- **${key}**: ${event}`)
-  .join('\n')}
-
-### Absolute Facts
-${Object.entries(ABSOLUTE_FACTS)
-  .map(([category, facts]) => {
-    if (Array.isArray(facts)) {
-      return `**${category}**:\n${facts.map(f => `  - ${f}`).join('\n')}`;
-    }
-    return `**${category}**: ${JSON.stringify(facts, null, 2)}`;
-  })
-  .join('\n\n')}
-`);
+    // Use the existing method to ensure exact same format
+    parts.push(this._buildGroundingSection(null));
 
     // Part 2: Character Reference (STATIC)
-    parts.push(`## CHARACTER REFERENCE - Core Attributes
-
-${Object.entries(CHARACTER_REFERENCE)
-  .map(([name, char]) => {
-    return `### ${name}
-**Age**: ${char.age}
-**Background**: ${char.background}
-**Personality**: ${char.personality}
-**Appearance**: ${char.appearance}
-**Speech Pattern**: ${char.speechPattern}
-**Relationship with Jack**: ${char.relationshipWithJack}
-${char.secrets ? `**Secrets**: ${char.secrets}` : ''}
-${char.motivations ? `**Motivations**: ${char.motivations}` : ''}`;
-  })
-  .join('\n\n')}
-`);
+    // Use the existing method to ensure exact same format
+    parts.push(this._buildCharacterSection());
 
     // Part 3: Craft Techniques (STATIC)
-    parts.push(`## CRAFT TECHNIQUES - How to Write Compelling Prose
-
-### ENGAGEMENT REQUIREMENTS
-
-**Question Economy:** ${ENGAGEMENT_REQUIREMENTS.questionEconomy.description}
-- Balance Rule: ${ENGAGEMENT_REQUIREMENTS.questionEconomy.balanceRule}
-- Question Types: Mystery (plot), Character (relationships), Threat (tension), Thematic (meaning)
-
-**Final Line Hook:** ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
-Techniques:
-${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')}
-
-**Personal Stakes Progression:**
-- Chapters 2-4: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters2to4}
-- Chapters 5-7: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters5to7}
-- Chapters 8-10: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters8to10}
-- Chapters 11-12: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters11to12}
-
-**Revelation Gradient:**
-- Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
-- Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
-- Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
-
-**Dramatic Irony:** ${ENGAGEMENT_REQUIREMENTS.dramaticIrony.description}
-${ENGAGEMENT_REQUIREMENTS.dramaticIrony.examples.map(e => `- ${e}`).join('\n')}
-
-**Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
-Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
-
-### MICRO-TENSION TECHNIQUES
-${MICRO_TENSION_TECHNIQUES.description}
-
-Every paragraph MUST contain at least one:
-${MICRO_TENSION_TECHNIQUES.elements.map(e => `- ${e}`).join('\n')}
-
-**Warning:** ${MICRO_TENSION_TECHNIQUES.warning}
-
-### SENTENCE RHYTHM (Noir Cadence)
-${SENTENCE_RHYTHM.description}
-
-Pattern example:
-${SENTENCE_RHYTHM.pattern}
-
-Rules:
-${SENTENCE_RHYTHM.rules.map(r => `- ${r}`).join('\n')}
-
-### THE ICEBERG TECHNIQUE
-${ICEBERG_TECHNIQUE.description}
-
-Rules:
-${ICEBERG_TECHNIQUE.rules.map(r => `- ${r}`).join('\n')}
-
-### SUBTEXT REQUIREMENTS
-${SUBTEXT_REQUIREMENTS.description}
-
-Techniques:
-${SUBTEXT_REQUIREMENTS.techniques.map(t => `- ${t}`).join('\n')}
-
-Examples:
-${SUBTEXT_REQUIREMENTS.examples.map(e => `- ${e}`).join('\n')}
-`);
+    // Use the existing method to ensure exact same format
+    parts.push(this._buildCraftTechniquesSection());
 
     // Part 4: Writing Style Examples (STATIC)
     parts.push(`## WRITING STYLE - Voice DNA Examples
@@ -6152,41 +6062,99 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Decision schema has decision field BEFORE narrative, so decision is generated first
         // This eliminates the need for two-pass generation while ensuring complete decisions
 
-        // Ensure static cache exists (creates on first call, reuses thereafter)
-        const cacheKey = await this._ensureStaticCache();
-
-        // Build only dynamic prompt (story history, current state, task)
-        const dynamicPrompt = this._buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint);
         const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
+        let response;
 
-        console.log(`[StoryGenerationService] Cached generation for Chapter ${chapter}.${subchapter} (decision=${isDecisionPoint})`);
-        llmTrace('StoryGenerationService', traceId, 'prompt.built', {
-          caseNumber,
-          pathKey,
-          chapter,
-          subchapter,
-          isDecisionPoint,
-          cacheKey,
-          dynamicPromptLength: dynamicPrompt?.length || 0,
-          schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
-          contextSummary: {
-            previousChapters: context?.previousChapters?.length || 0,
-            establishedFacts: context?.establishedFacts?.length || 0,
-            playerChoices: context?.playerChoices?.length || 0,
-            narrativeThreads: context?.narrativeThreads?.length || 0,
-          },
-          reason,
-        }, 'debug');
+        // Check if proxy mode (proxy mode doesn't support caching yet)
+        const isProxyMode = llmService.isConfigured() && llmService.config.proxyUrl;
 
-        const response = await llmService.completeWithCache({
-          cacheKey,
-          dynamicPrompt,
-          options: {
-            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-            responseSchema: schema,
-            thinkingLevel: 'medium', // Configurable - test 'low' vs 'medium' for quality/speed tradeoff
-          },
-        });
+        if (!isProxyMode) {
+          try {
+            // Ensure static cache exists (creates on first call, reuses thereafter)
+            const cacheKey = await this._ensureStaticCache();
+
+            // Build only dynamic prompt (story history, current state, task)
+            const dynamicPrompt = this._buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint);
+
+            console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
+            llmTrace('StoryGenerationService', traceId, 'prompt.built', {
+              caseNumber,
+              pathKey,
+              chapter,
+              subchapter,
+              isDecisionPoint,
+              cacheKey,
+              cachingEnabled: true,
+              dynamicPromptLength: dynamicPrompt?.length || 0,
+              schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+              contextSummary: {
+                previousChapters: context?.previousChapters?.length || 0,
+                establishedFacts: context?.establishedFacts?.length || 0,
+                playerChoices: context?.playerChoices?.length || 0,
+                narrativeThreads: context?.narrativeThreads?.length || 0,
+              },
+              reason,
+            }, 'debug');
+
+            response = await llmService.completeWithCache({
+              cacheKey,
+              dynamicPrompt,
+              options: {
+                maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+                responseSchema: schema,
+                thinkingLevel: 'medium',
+              },
+            });
+          } catch (cacheError) {
+            console.warn(`[StoryGenerationService] ⚠️ Caching failed:`, cacheError.message);
+            console.warn(`[StoryGenerationService] Falling back to non-cached generation`);
+            // Fall through to non-cached generation
+            response = null;
+          }
+        }
+
+        // Fallback: Use regular generation if proxy mode or caching failed
+        if (!response) {
+          console.log(`[StoryGenerationService] Regular generation for Chapter ${chapter}.${subchapter} (no caching)`);
+
+          const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+
+          llmTrace('StoryGenerationService', traceId, 'prompt.built', {
+            caseNumber,
+            pathKey,
+            chapter,
+            subchapter,
+            isDecisionPoint,
+            cachingEnabled: false,
+            promptLength: prompt?.length || 0,
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+            contextSummary: {
+              previousChapters: context?.previousChapters?.length || 0,
+              establishedFacts: context?.establishedFacts?.length || 0,
+              playerChoices: context?.playerChoices?.length || 0,
+              narrativeThreads: context?.narrativeThreads?.length || 0,
+            },
+            reason,
+          }, 'debug');
+
+          response = await llmService.complete(
+            [{ role: 'user', content: prompt }],
+            {
+              systemPrompt: MASTER_SYSTEM_PROMPT,
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+              responseSchema: schema,
+              traceId,
+              requestContext: {
+                caseNumber,
+                chapter,
+                subchapter,
+                pathKey,
+                isDecisionPoint,
+                reason,
+              },
+            }
+          );
+        }
 
         llmTrace('StoryGenerationService', traceId, 'llm.response.received', {
           model: response?.model,
