@@ -197,8 +197,9 @@ export function useStoryGeneration(storyCampaign) {
   /**
    * Prefetch remaining subchapters (B/C) within the same chapter for the CURRENT path.
    * Triggered after an A/B subchapter is generated so the next "Continue" feels instant.
+   * SEQUENTIAL: Each subchapter waits for the previous to complete for proper context.
    */
-  const prefetchRemainingSubchapters = useCallback((chapter, fromSubchapter, pathKey, choiceHistory = [], source = 'unknown') => {
+  const prefetchRemainingSubchapters = useCallback(async (chapter, fromSubchapter, pathKey, choiceHistory = [], source = 'unknown') => {
     if (!isConfigured) return;
     if (!chapter || chapter < 2 || chapter > 12) return;
     if (!fromSubchapter || fromSubchapter >= 3) return;
@@ -206,13 +207,16 @@ export function useStoryGeneration(storyCampaign) {
     const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
     const traceId = createTraceId(`prefetch_subs_${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][fromSubchapter - 1]}`);
 
-    const fireOne = async (sub) => {
+    // Generate remaining subchapters SEQUENTIALLY.
+    // Each subchapter depends on the previous one for proper context.
+    for (let sub = fromSubchapter + 1; sub <= 3; sub++) {
       const caseNumber = formatCaseNumber(chapter, sub);
       const key = `${caseNumber}_${canonicalPathKey}`;
-      if (subchapterPrefetchInFlightRef.current.has(key)) return;
+
+      if (subchapterPrefetchInFlightRef.current.has(key)) continue;
 
       const already = await hasStoryContent(caseNumber, canonicalPathKey);
-      if (already) return;
+      if (already) continue;
 
       subchapterPrefetchInFlightRef.current.add(key);
       llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.start', {
@@ -223,44 +227,30 @@ export function useStoryGeneration(storyCampaign) {
         pathKey: canonicalPathKey,
       }, 'debug');
 
-      storyGenerationService.generateSubchapter(chapter, sub, canonicalPathKey, choiceHistory, {
-        traceId: createTraceId(`sg_${caseNumber}_${canonicalPathKey}`),
-        reason: `prefetch-within-chapter:${source}`,
-      })
-        .then((entry) => {
-          if (entry && isMountedRef.current) {
-            updateGeneratedCache(caseNumber, entry.pathKey || canonicalPathKey, entry);
-          }
-          llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.complete', {
-            caseNumber,
-            ok: !!entry,
-            isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
-          }, 'debug');
-        })
-        .catch((err) => {
-          llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.error', {
-            caseNumber,
-            error: err?.message,
-          }, 'warn');
-        })
-        .finally(() => {
-          subchapterPrefetchInFlightRef.current.delete(key);
+      try {
+        // SEQUENTIAL: Await each subchapter before starting the next.
+        const entry = await storyGenerationService.generateSubchapter(chapter, sub, canonicalPathKey, choiceHistory, {
+          traceId: createTraceId(`sg_${caseNumber}_${canonicalPathKey}`),
+          reason: `prefetch-within-chapter:${source}`,
         });
-    };
 
-    // Prefetch next one or two subchapters.
-    fireOne(fromSubchapter + 1);
-    if (fromSubchapter + 2 <= 3) {
-      // Small stagger so we prioritize the immediate next subchapter.
-      let timeoutId = null;
-      timeoutId = setTimeout(() => {
-        try {
-          fireOne(fromSubchapter + 2);
-        } finally {
-          if (timeoutId) pendingTimeoutsRef.current.delete(timeoutId);
+        if (entry && isMountedRef.current) {
+          updateGeneratedCache(caseNumber, entry.pathKey || canonicalPathKey, entry);
         }
-      }, 1200);
-      pendingTimeoutsRef.current.add(timeoutId);
+        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.complete', {
+          caseNumber,
+          ok: !!entry,
+          isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
+        }, 'debug');
+      } catch (err) {
+        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.error', {
+          caseNumber,
+          error: err?.message,
+        }, 'warn');
+        // Continue to next subchapter even if this one fails
+      } finally {
+        subchapterPrefetchInFlightRef.current.delete(key);
+      }
     }
   }, [isConfigured]);
 
@@ -627,7 +617,9 @@ export function useStoryGeneration(storyCampaign) {
     const targetPath = pathKey;
     const history = [...choiceHistory]; // Create a copy to prevent mutation issues
 
-    // Generate subchapters B and C in background
+    // Generate subchapters B and C SEQUENTIALLY.
+    // Each subchapter depends on the previous one for proper context.
+    // Running in parallel causes "Missing chapter X.Y" warnings and poor narrative continuity.
     const subchaptersToGenerate = ['B', 'C'];
 
     // Set status once at the start, not in the loop (prevents thrashing)
@@ -645,25 +637,26 @@ export function useStoryGeneration(storyCampaign) {
           anyNeedsGen = true;
         }
 
-        // Capture loop variables in local scope for the async closure
-        const targetCase = caseNumber;
         const subIndex = { 'B': 2, 'C': 3 }[subLetter];
 
-        // Generate in background without blocking
-        storyGenerationService.generateSubchapter(targetChapter, subIndex, targetPath, history)
-          .then(entry => {
-            // Guard against state updates on unmounted component
-            if (entry && isMountedRef.current) {
-              updateGeneratedCache(targetCase, targetPath, entry);
-            }
-            // If we just finished generating Subchapter C in the background, immediately prefetch BOTH next branches.
-            if (subIndex === 3) {
-              prefetchNextChapterBranchesAfterC(targetChapter, history, 'pregenerateCurrentChapterSiblings:C-complete');
-            }
-          })
-          .catch(err => {
-            console.warn(`[useStoryGeneration] Background generation failed for ${targetCase}:`, err.message);
-          });
+        try {
+          // SEQUENTIAL: Await each subchapter before starting the next.
+          // This ensures proper context and prevents mobile network overload.
+          const entry = await storyGenerationService.generateSubchapter(targetChapter, subIndex, targetPath, history);
+
+          // Guard against state updates on unmounted component
+          if (entry && isMountedRef.current) {
+            updateGeneratedCache(caseNumber, targetPath, entry);
+          }
+
+          // If we just finished generating Subchapter C, immediately prefetch BOTH next branches.
+          if (subIndex === 3) {
+            prefetchNextChapterBranchesAfterC(targetChapter, history, 'pregenerateCurrentChapterSiblings:C-complete');
+          }
+        } catch (err) {
+          console.warn(`[useStoryGeneration] Background generation failed for ${caseNumber}:`, err.message);
+          // Continue to next subchapter even if this one fails
+        }
       }
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
