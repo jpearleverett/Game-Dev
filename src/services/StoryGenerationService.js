@@ -22,12 +22,18 @@ import {
 import { getStoryEntry, formatCaseNumber } from '../data/storyContent';
 import { CHARACTER_REFERENCE } from '../data/characterReference';
 import {
+  TIMELINE,
   ABSOLUTE_FACTS,
   STORY_STRUCTURE,
   WRITING_STYLE,
   EXAMPLE_PASSAGES,
   CONSISTENCY_RULES,
   GENERATION_CONFIG,
+  ENGAGEMENT_REQUIREMENTS,
+  MICRO_TENSION_TECHNIQUES,
+  SENTENCE_RHYTHM,
+  ICEBERG_TECHNIQUE,
+  SUBTEXT_REQUIREMENTS,
 } from '../data/storyBible';
 
 // Note: STORY_STRUCTURE.chapterBeatTypes is now used for tempo variation
@@ -2035,31 +2041,19 @@ The city held its breath. So did Jack.`;
       return savedArc;
     }
 
-    // Generate new arc with fallback on failure
-    console.log('[StoryGenerationService] Generating story arc for super-path:', superPathKey);
-    try {
-      const arc = await this._generateStoryArc(superPathKey, choiceHistory);
-      // Store personality snapshot for drift detection
-      arc.personalitySnapshot = {
-        riskTolerance: currentPersonality.riskTolerance,
-        scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
-        choiceCount: choiceHistory.length,
-      };
-      this.storyArc = arc;
-      await this._saveStoryArc(arcKey, arc);
-      return arc;
-    } catch (error) {
-      console.warn('[StoryGenerationService] Story arc generation failed, using fallback:', error.message);
-      const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
-      fallbackArc.personalitySnapshot = {
-        riskTolerance: currentPersonality.riskTolerance,
-        scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
-        choiceCount: choiceHistory.length,
-      };
-      this.storyArc = fallbackArc;
-      // Don't persist fallback - allow retry on next session
-      return fallbackArc;
-    }
+    // OPTIMIZATION: Skip LLM call for story arc generation.
+    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.
+    // Using static fallback eliminates ~22s LLM call per path while maintaining narrative quality.
+    console.log('[StoryGenerationService] Using static story arc for super-path:', superPathKey);
+    const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
+    fallbackArc.personalitySnapshot = {
+      riskTolerance: currentPersonality.riskTolerance,
+      scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
+      choiceCount: choiceHistory.length,
+    };
+    this.storyArc = fallbackArc;
+    await this._saveStoryArc(arcKey, fallbackArc);
+    return fallbackArc;
   }
 
   /**
@@ -2460,17 +2454,13 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
     // Ensure we have the story arc first
     await this.ensureStoryArc(choiceHistory);
 
-    // Generate outline with fallback on failure
-    try {
-      const outline = await this._generateChapterOutline(chapter, chapterPathKey, choiceHistory);
-      this.chapterOutlines.set(outlineKey, outline);
-      return outline;
-    } catch (error) {
-      console.warn('[StoryGenerationService] Chapter outline generation failed, using fallback:', error.message);
-      const fallbackOutline = this._createFallbackChapterOutline(chapter, chapterPathKey);
-      this.chapterOutlines.set(outlineKey, fallbackOutline);
-      return fallbackOutline;
-    }
+    // OPTIMIZATION: Skip LLM call for chapter outline generation.
+    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.chapterBeatTypes.
+    // Using static fallback eliminates ~10s LLM call per chapter while maintaining narrative structure.
+    console.log(`[StoryGenerationService] Using static chapter outline for Chapter ${chapter}`);
+    const fallbackOutline = this._createFallbackChapterOutline(chapter, chapterPathKey);
+    this.chapterOutlines.set(outlineKey, fallbackOutline);
+    return fallbackOutline;
   }
 
   /**
@@ -4262,10 +4252,85 @@ Generate realistic, specific consequences based on the actual narrative content.
       parts.push(engagementGuidance);
     }
 
-    // Part 9: Current Task Specification (LAST for recency effect)
+    // Part 9: Craft Techniques (static storyBible reference)
+    parts.push(this._buildCraftTechniquesSection());
+
+    // Part 10: Current Task Specification (LAST for recency effect)
     parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
+  }
+
+  /**
+   * Build craft techniques section with engagement requirements, micro-tension, rhythm, etc.
+   * These are static techniques from storyBible that guide HOW to write compelling prose.
+   */
+  _buildCraftTechniquesSection() {
+    return `## CRAFT TECHNIQUES - How to Write Compelling Prose
+
+### ENGAGEMENT REQUIREMENTS
+
+**Question Economy:** ${ENGAGEMENT_REQUIREMENTS.questionEconomy.description}
+- Balance Rule: ${ENGAGEMENT_REQUIREMENTS.questionEconomy.balanceRule}
+- Question Types: Mystery (plot), Character (relationships), Threat (tension), Thematic (meaning)
+
+**Final Line Hook:** ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
+Techniques:
+${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')}
+
+**Personal Stakes Progression:**
+- Chapters 2-4: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters2to4}
+- Chapters 5-7: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters5to7}
+- Chapters 8-10: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters8to10}
+- Chapters 11-12: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters11to12}
+
+**Revelation Gradient:**
+- Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
+- Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
+- Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
+
+**Dramatic Irony:** ${ENGAGEMENT_REQUIREMENTS.dramaticIrony.description}
+${ENGAGEMENT_REQUIREMENTS.dramaticIrony.examples.map(e => `- ${e}`).join('\n')}
+
+**Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
+Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
+
+### MICRO-TENSION TECHNIQUES
+${MICRO_TENSION_TECHNIQUES.description}
+
+Every paragraph MUST contain at least one:
+${MICRO_TENSION_TECHNIQUES.elements.map(e => `- ${e}`).join('\n')}
+
+**Warning:** ${MICRO_TENSION_TECHNIQUES.warning}
+
+### SENTENCE RHYTHM (Noir Cadence)
+${SENTENCE_RHYTHM.description}
+
+Pattern example:
+${SENTENCE_RHYTHM.pattern}
+
+Rules:
+${SENTENCE_RHYTHM.rules.map(r => `- ${r}`).join('\n')}
+
+### THE ICEBERG TECHNIQUE
+${ICEBERG_TECHNIQUE.description}
+
+Applications:
+${ICEBERG_TECHNIQUE.applications.map(a => `- ${a}`).join('\n')}
+
+Principle: ${ICEBERG_TECHNIQUE.principle}
+
+### SUBTEXT IN DIALOGUE
+${SUBTEXT_REQUIREMENTS.description}
+
+Layers:
+- Surface: ${SUBTEXT_REQUIREMENTS.layers.surface}
+- Actual: ${SUBTEXT_REQUIREMENTS.layers.actual}
+
+Examples:
+${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subtext}"`).join('\n')}
+
+**Rule:** ${SUBTEXT_REQUIREMENTS.rule}`;
   }
 
   /**
@@ -4408,7 +4473,31 @@ Generate realistic, specific consequences based on the actual narrative content.
 - Jack and Sarah Reeves: Partners for 13 years
 - Jack and Silas Reed: Partners for 8 years
 - Emily's "death": 7 years ago exactly
-- Eleanor's imprisonment: 8 years exactly`;
+- Eleanor's imprisonment: 8 years exactly
+
+### TIMELINE (Use these exact dates/durations)
+- 30 years ago: ${TIMELINE.yearsAgo[30]}
+- 25 years ago: ${TIMELINE.yearsAgo[25]}
+- 20 years ago: ${TIMELINE.yearsAgo[20]}
+- 15 years ago: ${TIMELINE.yearsAgo[15]}
+- 13 years ago: ${TIMELINE.yearsAgo[13]}
+- 10 years ago: ${TIMELINE.yearsAgo[10]}
+- 8 years ago: ${TIMELINE.yearsAgo[8]}
+- 7 years ago: Emily Cross events (affair, suicide attempt, kidnapping, Jack closes case)
+- 5 years ago: ${TIMELINE.yearsAgo[5]}
+- 3 years ago: ${TIMELINE.yearsAgo[3]}
+- 1 year ago: ${TIMELINE.yearsAgo[1]}
+
+### WRITING STYLE REQUIREMENTS
+**Voice:** ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
+**Tone:** ${WRITING_STYLE.voice.tone}
+**Influences:** ${WRITING_STYLE.influences.join(', ')}
+
+**MUST INCLUDE:**
+${WRITING_STYLE.mustInclude.map(item => `- ${item}`).join('\n')}
+
+**ABSOLUTELY FORBIDDEN (Never use these):**
+${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
   }
 
   /**
