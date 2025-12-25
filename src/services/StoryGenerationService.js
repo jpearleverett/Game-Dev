@@ -4218,6 +4218,18 @@ Generate realistic, specific consequences based on the actual narrative content.
   // ==========================================================================
 
   /**
+   * Build extended style examples for cache (wrapper for buildExtendedStyleExamples)
+   */
+  _buildExtendedStyleExamplesForCache() {
+    try {
+      return buildExtendedStyleExamples();
+    } catch (e) {
+      console.warn('[StoryGenerationService] Failed to build extended style examples:', e);
+      return '';
+    }
+  }
+
+  /**
    * Build static content for caching (Story Bible, Characters, Craft Techniques, etc.)
    * This content doesn't change across requests and is perfect for caching.
    */
@@ -4339,12 +4351,15 @@ ${WRITING_STYLE.required.map(r => `- ${r}`).join('\n')}
 
 ### Example Passages:
 ${Object.entries(EXAMPLE_PASSAGES)
-  .slice(0, 3) // Include first 3 examples
   .map(([key, passage]) => {
     return `**${key}**:
 ${passage}`;
   })
   .join('\n\n')}
+
+${STYLE_EXAMPLES}
+
+${this._buildExtendedStyleExamplesForCache()}
 `);
 
     // Part 5: Consistency Rules (STATIC)
@@ -4416,19 +4431,37 @@ ${CONSISTENCY_RULES.commonErrors.map(e => `- ${e}`).join('\n')}
     // Dynamic Part 2: Character Knowledge State (who knows what)
     parts.push(this._buildKnowledgeSection(context));
 
-    // Dynamic Part 3: Current Scene State (exact continuation point)
+    // Dynamic Part 3: Voice DNA (character-specific dialogue patterns for this scene)
+    const charactersInScene = this._extractCharactersFromContext(context, chapter);
+    const voiceDNA = buildVoiceDNASection(charactersInScene);
+    if (voiceDNA) {
+      parts.push(voiceDNA);
+    }
+
+    // Dynamic Part 4: Dramatic Irony (chapter-specific ironies)
+    const pathKey = context.pathKey || '';
+    const choiceHistory = context.playerChoices || [];
+    const dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
+    if (dramaticIrony) {
+      parts.push(dramaticIrony);
+    }
+
+    // Dynamic Part 5: Consistency Checklist (established facts + active threads)
+    parts.push(this._buildConsistencySection(context));
+
+    // Dynamic Part 6: Current Scene State (exact continuation point)
     const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
     if (sceneState) {
       parts.push(sceneState);
     }
 
-    // Dynamic Part 4: Personal Stakes & Engagement Guidance
+    // Dynamic Part 7: Personal Stakes & Engagement Guidance
     const engagementGuidance = this._buildEngagementGuidanceSection(context, chapter, subchapter);
     if (engagementGuidance) {
       parts.push(engagementGuidance);
     }
 
-    // Dynamic Part 5: Current Task Specification (LAST per Gemini 3 best practices)
+    // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
     parts.push('\n\n**Based on all the information above, here is your task:**\n\n');
     parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
