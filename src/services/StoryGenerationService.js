@@ -6117,10 +6117,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           const hardIssues = allIssues.filter((i) => this._isContinuityCriticalIssue(i));
 
           if (hardIssues.length > 0) {
-            // Hard continuity failure: do NOT ship broken canon to the player.
-            // Use a context-aware fallback that stays in-bounds (and acknowledges threads).
-            console.warn('[StoryGenerationService] Hard validation failure; falling back:', hardIssues);
-            llmTrace('StoryGenerationService', traceId, 'validation.hard_fail.fallback', {
+            // Hard continuity failure: throw error to prompt player retry.
+            // No fallback narratives - player should retry generation.
+            console.error('[StoryGenerationService] Hard validation failure after retries:', hardIssues);
+            llmTrace('StoryGenerationService', traceId, 'validation.hard_fail.error', {
               caseNumber,
               pathKey: effectivePathKey,
               chapter,
@@ -6128,70 +6128,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               isDecisionPoint,
               hardIssues: hardIssues.slice(0, 10),
               reason,
-            }, 'warn');
+            }, 'error');
 
-            const fallbackContent = context
-              ? this._buildContextAwareFallback(chapter, subchapter, effectivePathKey, isDecisionPoint, context)
-              : this._getFallbackContent(chapter, subchapter, effectivePathKey, isDecisionPoint);
-
-            const fallbackEntry = {
-              chapter,
-              subchapter,
-              pathKey: effectivePathKey,
-              caseNumber,
-              title: fallbackContent.title,
-              narrative: fallbackContent.narrative,
-              bridgeText: fallbackContent.bridgeText,
-              previously: fallbackContent.previously,
-              briefing: fallbackContent.briefing,
-              decision: fallbackContent.decision,
-              board: this._generateBoardData(
-                fallbackContent.narrative,
-                isDecisionPoint,
-                fallbackContent.decision,
-                fallbackContent.puzzleCandidates,
-                chapter
-              ),
-              consistencyFacts: fallbackContent.consistencyFacts,
-              chapterSummary: fallbackContent.chapterSummary,
-              // Preserve continuity metadata when fallback provides it.
-              storyDay: fallbackContent.storyDay,
-              jackActionStyle: fallbackContent.jackActionStyle,
-              jackRiskLevel: fallbackContent.jackRiskLevel,
-              jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
-              narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
-              previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
-              generatedAt: new Date().toISOString(),
-              wordCount: fallbackContent.narrative.split(/\s+/).length,
-              isFallback: true,
-              fallbackReason: `Hard validation failure: ${hardIssues.slice(0, 3).join(' | ')}`,
-            };
-
-            // Save + cache + persist context so future generations stay consistent.
-            await saveGeneratedChapter(caseNumber, effectivePathKey, fallbackEntry);
-            if (!this.generatedStory) {
-              this.generatedStory = { chapters: {} };
-            }
-            this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
-            await this._updateStoryContext(fallbackEntry);
-
-            if (subchapter === 3) {
-              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
-            }
-
-            llmTrace('StoryGenerationService', traceId, 'generation.complete', {
-              generationKey,
-              caseNumber,
-              pathKey: effectivePathKey,
-              chapter,
-              subchapter,
-              isDecisionPoint,
-              wordCount: fallbackEntry.wordCount,
-              isFallback: true,
-              reason: `hard-validation-fallback:${reason}`,
-            }, 'info');
-
-            return fallbackEntry;
+            const error = new Error(`Story generation failed validation: ${hardIssues.slice(0, 2).join('; ')}`);
+            error.isValidationFailure = true;
+            error.hardIssues = hardIssues;
+            error.chapter = chapter;
+            error.subchapter = subchapter;
+            error.retryable = true;
+            throw error;
           }
 
           console.warn('Consistency warning (Unresolved):', allIssues);
@@ -6290,71 +6235,30 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const attempts = (this.generationAttempts.get(attemptKey) || 0) + 1;
         this.generationAttempts.set(attemptKey, attempts);
 
-        // If we've exhausted retries, use fallback content
+        // If we've exhausted retries, throw error - no fallback narratives
         if (attempts >= this.maxGenerationAttempts) {
-          console.warn(`[StoryGenerationService] Using fallback content for ${caseNumber} after ${attempts} failed attempts`);
-
-          // Use context-aware fallback when context is available for better continuity
-          const fallbackContent = context
-            ? this._buildContextAwareFallback(chapter, subchapter, effectivePathKey, isDecisionPoint, context)
-            : this._getFallbackContent(chapter, subchapter, effectivePathKey, isDecisionPoint);
-
-          // Build fallback story entry
-          const fallbackEntry = {
+          console.error(`[StoryGenerationService] Generation failed for ${caseNumber} after ${attempts} attempts - no fallback`);
+          llmTrace('StoryGenerationService', traceId, 'generation.exhausted.error', {
+            caseNumber,
+            pathKey: effectivePathKey,
             chapter,
             subchapter,
-            pathKey: effectivePathKey,
-            caseNumber,
-            title: fallbackContent.title,
-            narrative: fallbackContent.narrative,
-            bridgeText: fallbackContent.bridgeText,
-            previously: fallbackContent.previously,
-            briefing: fallbackContent.briefing,
-            decision: fallbackContent.decision,
-            board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
-            consistencyFacts: fallbackContent.consistencyFacts,
-            chapterSummary: fallbackContent.chapterSummary,
-            // Preserve continuity metadata when available so future prompts stay consistent.
-            storyDay: fallbackContent.storyDay,
-            jackActionStyle: fallbackContent.jackActionStyle,
-            jackRiskLevel: fallbackContent.jackRiskLevel,
-            jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
-            narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
-            previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
-            generatedAt: new Date().toISOString(),
-            wordCount: fallbackContent.narrative.split(/\s+/).length,
-            isFallback: true, // Flag to indicate this is fallback content
-            fallbackReason: error.message,
-          };
+            attempts,
+            originalError: error.message,
+            reason,
+          }, 'error');
 
-          // Save and return fallback
-          await saveGeneratedChapter(caseNumber, effectivePathKey, fallbackEntry);
-          if (!this.generatedStory) {
-            this.generatedStory = { chapters: {} };
-          }
-          this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
-
-          // Persist story context facts (storage strips per-entry consistencyFacts).
-          try {
-            await this._updateStoryContext(fallbackEntry);
-          } catch (e) {
-            // Never block fallback return on context persistence.
-            console.warn('[StoryGenerationService] Failed to update story context for fallbackEntry:', e?.message);
-          }
-
-          // Maintain checkpoint cadence even on fallback decision points.
-          if (subchapter === 3) {
-            try {
-              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
-            } catch (e) {
-              // Best-effort only.
-            }
-          }
-
-          // Clear attempt count on successful fallback
+          // Clear attempt count
           this.generationAttempts.delete(attemptKey);
 
-          return fallbackEntry;
+          // Throw retryable error for UI to handle
+          const retryError = new Error(`Story generation failed after ${attempts} attempts: ${error.message}`);
+          retryError.isGenerationFailure = true;
+          retryError.attempts = attempts;
+          retryError.chapter = chapter;
+          retryError.subchapter = subchapter;
+          retryError.retryable = true;
+          throw retryError;
         }
 
         // Re-throw to allow caller to retry if attempts remain
@@ -6400,34 +6304,19 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         throw e; // Let UI handle retry
       }
 
-      // For background/prefetch generation, use fallback to avoid blocking the game
-      console.error(`[StoryGenerationService] Background generation failure for ${generationKey}, using emergency fallback: ${e.message}`);
-      const chapterNum = parseInt(caseNumber?.slice(0, 3)) || 2;
-      const subLetter = String(caseNumber?.slice(3, 4) || 'A').toUpperCase();
-      const subchapterNum = ({ A: 1, B: 2, C: 3 }[subLetter]) || 1;
-      const isDecisionPoint = subchapterNum === 3;
-
-      const emergencyFallback = this._getFallbackContent(chapterNum, subchapterNum, pathKey, isDecisionPoint);
-      return {
-        chapter: chapterNum,
-        subchapter: subchapterNum,
-        pathKey,
+      // For background/prefetch generation, also throw error - no fallback narratives
+      // The prefetch will fail, and when player needs content, a new generation will be triggered
+      console.error(`[StoryGenerationService] Background generation failure for ${generationKey} - no fallback: ${e.message}`);
+      llmTrace('StoryGenerationService', traceId, 'generation.background.failed', {
+        generationKey,
         caseNumber,
-        title: emergencyFallback.title,
-        narrative: emergencyFallback.narrative,
-        bridgeText: emergencyFallback.bridgeText,
-        previously: emergencyFallback.previously,
-        briefing: emergencyFallback.briefing,
-        decision: emergencyFallback.decision,
-        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates, chapterNum),
-        consistencyFacts: emergencyFallback.consistencyFacts,
-        chapterSummary: emergencyFallback.chapterSummary,
-        generatedAt: new Date().toISOString(),
-        wordCount: emergencyFallback.narrative.split(/\s+/).length,
-        isFallback: true,
-        isEmergencyFallback: true,
-        fallbackReason: e.message,
-      };
+        pathKey: effectivePathKey,
+        error: e.message,
+        reason,
+      }, 'error');
+
+      // Throw error - caller (prefetch) will catch and log, player retries when needed
+      throw e;
     } finally {
       // Always release the generation slot, even on error/fallback
       this._releaseGenerationSlot(generationKey);
@@ -6459,34 +6348,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * @param {Object} context - Optional story context for context-aware fallback
    */
   getEmergencyFallback(chapter, subchapter, pathKey, context = null) {
-    const isDecisionPoint = subchapter === 3;
-    const caseNumber = `${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][subchapter - 1]}`;
-
-    // Use context-aware fallback when context is available for better continuity
-    const fallbackContent = context
-      ? this._buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context)
-      : this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
-
-    return {
-      chapter,
-      subchapter,
-      pathKey,
-      caseNumber,
-      title: fallbackContent.title,
-      narrative: fallbackContent.narrative,
-      bridgeText: fallbackContent.bridgeText,
-      previously: fallbackContent.previously,
-      briefing: fallbackContent.briefing,
-      decision: fallbackContent.decision,
-      board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
-      consistencyFacts: fallbackContent.consistencyFacts,
-      chapterSummary: fallbackContent.chapterSummary,
-      generatedAt: new Date().toISOString(),
-      wordCount: fallbackContent.narrative.split(/\s+/).length,
-      isFallback: true,
-      isEmergencyFallback: true,
-      fallbackReason: context ? 'Context-aware emergency fallback' : 'External emergency fallback request',
-    };
+    // DISABLED: No fallback narratives allowed.
+    // Callers should handle errors and prompt player to retry.
+    const error = new Error(`Emergency fallback requested for Chapter ${chapter}.${subchapter} but fallbacks are disabled. Player should retry generation.`);
+    error.isFallbackDisabled = true;
+    error.chapter = chapter;
+    error.subchapter = subchapter;
+    error.retryable = true;
+    throw error;
   }
 
   // ==========================================================================
