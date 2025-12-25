@@ -22,12 +22,18 @@ import {
 import { getStoryEntry, formatCaseNumber } from '../data/storyContent';
 import { CHARACTER_REFERENCE } from '../data/characterReference';
 import {
+  TIMELINE,
   ABSOLUTE_FACTS,
   STORY_STRUCTURE,
   WRITING_STYLE,
   EXAMPLE_PASSAGES,
   CONSISTENCY_RULES,
   GENERATION_CONFIG,
+  ENGAGEMENT_REQUIREMENTS,
+  MICRO_TENSION_TECHNIQUES,
+  SENTENCE_RHYTHM,
+  ICEBERG_TECHNIQUE,
+  SUBTEXT_REQUIREMENTS,
 } from '../data/storyBible';
 
 // Note: STORY_STRUCTURE.chapterBeatTypes is now used for tempo variation
@@ -2035,31 +2041,19 @@ The city held its breath. So did Jack.`;
       return savedArc;
     }
 
-    // Generate new arc with fallback on failure
-    console.log('[StoryGenerationService] Generating story arc for super-path:', superPathKey);
-    try {
-      const arc = await this._generateStoryArc(superPathKey, choiceHistory);
-      // Store personality snapshot for drift detection
-      arc.personalitySnapshot = {
-        riskTolerance: currentPersonality.riskTolerance,
-        scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
-        choiceCount: choiceHistory.length,
-      };
-      this.storyArc = arc;
-      await this._saveStoryArc(arcKey, arc);
-      return arc;
-    } catch (error) {
-      console.warn('[StoryGenerationService] Story arc generation failed, using fallback:', error.message);
-      const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
-      fallbackArc.personalitySnapshot = {
-        riskTolerance: currentPersonality.riskTolerance,
-        scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
-        choiceCount: choiceHistory.length,
-      };
-      this.storyArc = fallbackArc;
-      // Don't persist fallback - allow retry on next session
-      return fallbackArc;
-    }
+    // OPTIMIZATION: Skip LLM call for story arc generation.
+    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.
+    // Using static fallback eliminates ~22s LLM call per path while maintaining narrative quality.
+    console.log('[StoryGenerationService] Using static story arc for super-path:', superPathKey);
+    const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
+    fallbackArc.personalitySnapshot = {
+      riskTolerance: currentPersonality.riskTolerance,
+      scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
+      choiceCount: choiceHistory.length,
+    };
+    this.storyArc = fallbackArc;
+    await this._saveStoryArc(arcKey, fallbackArc);
+    return fallbackArc;
   }
 
   /**
@@ -2460,17 +2454,13 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
     // Ensure we have the story arc first
     await this.ensureStoryArc(choiceHistory);
 
-    // Generate outline with fallback on failure
-    try {
-      const outline = await this._generateChapterOutline(chapter, chapterPathKey, choiceHistory);
-      this.chapterOutlines.set(outlineKey, outline);
-      return outline;
-    } catch (error) {
-      console.warn('[StoryGenerationService] Chapter outline generation failed, using fallback:', error.message);
-      const fallbackOutline = this._createFallbackChapterOutline(chapter, chapterPathKey);
-      this.chapterOutlines.set(outlineKey, fallbackOutline);
-      return fallbackOutline;
-    }
+    // OPTIMIZATION: Skip LLM call for chapter outline generation.
+    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.chapterBeatTypes.
+    // Using static fallback eliminates ~10s LLM call per chapter while maintaining narrative structure.
+    console.log(`[StoryGenerationService] Using static chapter outline for Chapter ${chapter}`);
+    const fallbackOutline = this._createFallbackChapterOutline(chapter, chapterPathKey);
+    this.chapterOutlines.set(outlineKey, fallbackOutline);
+    return fallbackOutline;
   }
 
   /**
@@ -4262,10 +4252,85 @@ Generate realistic, specific consequences based on the actual narrative content.
       parts.push(engagementGuidance);
     }
 
-    // Part 9: Current Task Specification (LAST for recency effect)
+    // Part 9: Craft Techniques (static storyBible reference)
+    parts.push(this._buildCraftTechniquesSection());
+
+    // Part 10: Current Task Specification (LAST for recency effect)
     parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
 
     return parts.join('\n\n---\n\n');
+  }
+
+  /**
+   * Build craft techniques section with engagement requirements, micro-tension, rhythm, etc.
+   * These are static techniques from storyBible that guide HOW to write compelling prose.
+   */
+  _buildCraftTechniquesSection() {
+    return `## CRAFT TECHNIQUES - How to Write Compelling Prose
+
+### ENGAGEMENT REQUIREMENTS
+
+**Question Economy:** ${ENGAGEMENT_REQUIREMENTS.questionEconomy.description}
+- Balance Rule: ${ENGAGEMENT_REQUIREMENTS.questionEconomy.balanceRule}
+- Question Types: Mystery (plot), Character (relationships), Threat (tension), Thematic (meaning)
+
+**Final Line Hook:** ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
+Techniques:
+${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')}
+
+**Personal Stakes Progression:**
+- Chapters 2-4: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters2to4}
+- Chapters 5-7: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters5to7}
+- Chapters 8-10: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters8to10}
+- Chapters 11-12: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters11to12}
+
+**Revelation Gradient:**
+- Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
+- Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
+- Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
+
+**Dramatic Irony:** ${ENGAGEMENT_REQUIREMENTS.dramaticIrony.description}
+${ENGAGEMENT_REQUIREMENTS.dramaticIrony.examples.map(e => `- ${e}`).join('\n')}
+
+**Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
+Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
+
+### MICRO-TENSION TECHNIQUES
+${MICRO_TENSION_TECHNIQUES.description}
+
+Every paragraph MUST contain at least one:
+${MICRO_TENSION_TECHNIQUES.elements.map(e => `- ${e}`).join('\n')}
+
+**Warning:** ${MICRO_TENSION_TECHNIQUES.warning}
+
+### SENTENCE RHYTHM (Noir Cadence)
+${SENTENCE_RHYTHM.description}
+
+Pattern example:
+${SENTENCE_RHYTHM.pattern}
+
+Rules:
+${SENTENCE_RHYTHM.rules.map(r => `- ${r}`).join('\n')}
+
+### THE ICEBERG TECHNIQUE
+${ICEBERG_TECHNIQUE.description}
+
+Applications:
+${ICEBERG_TECHNIQUE.applications.map(a => `- ${a}`).join('\n')}
+
+Principle: ${ICEBERG_TECHNIQUE.principle}
+
+### SUBTEXT IN DIALOGUE
+${SUBTEXT_REQUIREMENTS.description}
+
+Layers:
+- Surface: ${SUBTEXT_REQUIREMENTS.layers.surface}
+- Actual: ${SUBTEXT_REQUIREMENTS.layers.actual}
+
+Examples:
+${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subtext}"`).join('\n')}
+
+**Rule:** ${SUBTEXT_REQUIREMENTS.rule}`;
   }
 
   /**
@@ -4408,7 +4473,31 @@ Generate realistic, specific consequences based on the actual narrative content.
 - Jack and Sarah Reeves: Partners for 13 years
 - Jack and Silas Reed: Partners for 8 years
 - Emily's "death": 7 years ago exactly
-- Eleanor's imprisonment: 8 years exactly`;
+- Eleanor's imprisonment: 8 years exactly
+
+### TIMELINE (Use these exact dates/durations)
+- 30 years ago: ${TIMELINE.yearsAgo[30]}
+- 25 years ago: ${TIMELINE.yearsAgo[25]}
+- 20 years ago: ${TIMELINE.yearsAgo[20]}
+- 15 years ago: ${TIMELINE.yearsAgo[15]}
+- 13 years ago: ${TIMELINE.yearsAgo[13]}
+- 10 years ago: ${TIMELINE.yearsAgo[10]}
+- 8 years ago: ${TIMELINE.yearsAgo[8]}
+- 7 years ago: Emily Cross events (affair, suicide attempt, kidnapping, Jack closes case)
+- 5 years ago: ${TIMELINE.yearsAgo[5]}
+- 3 years ago: ${TIMELINE.yearsAgo[3]}
+- 1 year ago: ${TIMELINE.yearsAgo[1]}
+
+### WRITING STYLE REQUIREMENTS
+**Voice:** ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
+**Tone:** ${WRITING_STYLE.voice.tone}
+**Influences:** ${WRITING_STYLE.influences.join(', ')}
+
+**MUST INCLUDE:**
+${WRITING_STYLE.mustInclude.map(item => `- ${item}`).join('\n')}
+
+**ABSOLUTELY FORBIDDEN (Never use these):**
+${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
   }
 
   /**
@@ -6028,10 +6117,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           const hardIssues = allIssues.filter((i) => this._isContinuityCriticalIssue(i));
 
           if (hardIssues.length > 0) {
-            // Hard continuity failure: do NOT ship broken canon to the player.
-            // Use a context-aware fallback that stays in-bounds (and acknowledges threads).
-            console.warn('[StoryGenerationService] Hard validation failure; falling back:', hardIssues);
-            llmTrace('StoryGenerationService', traceId, 'validation.hard_fail.fallback', {
+            // Hard continuity failure: throw error to prompt player retry.
+            // No fallback narratives - player should retry generation.
+            console.error('[StoryGenerationService] Hard validation failure after retries:', hardIssues);
+            llmTrace('StoryGenerationService', traceId, 'validation.hard_fail.error', {
               caseNumber,
               pathKey: effectivePathKey,
               chapter,
@@ -6039,70 +6128,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               isDecisionPoint,
               hardIssues: hardIssues.slice(0, 10),
               reason,
-            }, 'warn');
+            }, 'error');
 
-            const fallbackContent = context
-              ? this._buildContextAwareFallback(chapter, subchapter, effectivePathKey, isDecisionPoint, context)
-              : this._getFallbackContent(chapter, subchapter, effectivePathKey, isDecisionPoint);
-
-            const fallbackEntry = {
-              chapter,
-              subchapter,
-              pathKey: effectivePathKey,
-              caseNumber,
-              title: fallbackContent.title,
-              narrative: fallbackContent.narrative,
-              bridgeText: fallbackContent.bridgeText,
-              previously: fallbackContent.previously,
-              briefing: fallbackContent.briefing,
-              decision: fallbackContent.decision,
-              board: this._generateBoardData(
-                fallbackContent.narrative,
-                isDecisionPoint,
-                fallbackContent.decision,
-                fallbackContent.puzzleCandidates,
-                chapter
-              ),
-              consistencyFacts: fallbackContent.consistencyFacts,
-              chapterSummary: fallbackContent.chapterSummary,
-              // Preserve continuity metadata when fallback provides it.
-              storyDay: fallbackContent.storyDay,
-              jackActionStyle: fallbackContent.jackActionStyle,
-              jackRiskLevel: fallbackContent.jackRiskLevel,
-              jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
-              narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
-              previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
-              generatedAt: new Date().toISOString(),
-              wordCount: fallbackContent.narrative.split(/\s+/).length,
-              isFallback: true,
-              fallbackReason: `Hard validation failure: ${hardIssues.slice(0, 3).join(' | ')}`,
-            };
-
-            // Save + cache + persist context so future generations stay consistent.
-            await saveGeneratedChapter(caseNumber, effectivePathKey, fallbackEntry);
-            if (!this.generatedStory) {
-              this.generatedStory = { chapters: {} };
-            }
-            this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
-            await this._updateStoryContext(fallbackEntry);
-
-            if (subchapter === 3) {
-              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
-            }
-
-            llmTrace('StoryGenerationService', traceId, 'generation.complete', {
-              generationKey,
-              caseNumber,
-              pathKey: effectivePathKey,
-              chapter,
-              subchapter,
-              isDecisionPoint,
-              wordCount: fallbackEntry.wordCount,
-              isFallback: true,
-              reason: `hard-validation-fallback:${reason}`,
-            }, 'info');
-
-            return fallbackEntry;
+            const error = new Error(`Story generation failed validation: ${hardIssues.slice(0, 2).join('; ')}`);
+            error.isValidationFailure = true;
+            error.hardIssues = hardIssues;
+            error.chapter = chapter;
+            error.subchapter = subchapter;
+            error.retryable = true;
+            throw error;
           }
 
           console.warn('Consistency warning (Unresolved):', allIssues);
@@ -6201,71 +6235,30 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const attempts = (this.generationAttempts.get(attemptKey) || 0) + 1;
         this.generationAttempts.set(attemptKey, attempts);
 
-        // If we've exhausted retries, use fallback content
+        // If we've exhausted retries, throw error - no fallback narratives
         if (attempts >= this.maxGenerationAttempts) {
-          console.warn(`[StoryGenerationService] Using fallback content for ${caseNumber} after ${attempts} failed attempts`);
-
-          // Use context-aware fallback when context is available for better continuity
-          const fallbackContent = context
-            ? this._buildContextAwareFallback(chapter, subchapter, effectivePathKey, isDecisionPoint, context)
-            : this._getFallbackContent(chapter, subchapter, effectivePathKey, isDecisionPoint);
-
-          // Build fallback story entry
-          const fallbackEntry = {
+          console.error(`[StoryGenerationService] Generation failed for ${caseNumber} after ${attempts} attempts - no fallback`);
+          llmTrace('StoryGenerationService', traceId, 'generation.exhausted.error', {
+            caseNumber,
+            pathKey: effectivePathKey,
             chapter,
             subchapter,
-            pathKey: effectivePathKey,
-            caseNumber,
-            title: fallbackContent.title,
-            narrative: fallbackContent.narrative,
-            bridgeText: fallbackContent.bridgeText,
-            previously: fallbackContent.previously,
-            briefing: fallbackContent.briefing,
-            decision: fallbackContent.decision,
-            board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
-            consistencyFacts: fallbackContent.consistencyFacts,
-            chapterSummary: fallbackContent.chapterSummary,
-            // Preserve continuity metadata when available so future prompts stay consistent.
-            storyDay: fallbackContent.storyDay,
-            jackActionStyle: fallbackContent.jackActionStyle,
-            jackRiskLevel: fallbackContent.jackRiskLevel,
-            jackBehaviorDeclaration: fallbackContent.jackBehaviorDeclaration,
-            narrativeThreads: Array.isArray(fallbackContent.narrativeThreads) ? fallbackContent.narrativeThreads : [],
-            previousThreadsAddressed: Array.isArray(fallbackContent.previousThreadsAddressed) ? fallbackContent.previousThreadsAddressed : [],
-            generatedAt: new Date().toISOString(),
-            wordCount: fallbackContent.narrative.split(/\s+/).length,
-            isFallback: true, // Flag to indicate this is fallback content
-            fallbackReason: error.message,
-          };
+            attempts,
+            originalError: error.message,
+            reason,
+          }, 'error');
 
-          // Save and return fallback
-          await saveGeneratedChapter(caseNumber, effectivePathKey, fallbackEntry);
-          if (!this.generatedStory) {
-            this.generatedStory = { chapters: {} };
-          }
-          this.generatedStory.chapters[`${caseNumber}_${effectivePathKey}`] = fallbackEntry;
-
-          // Persist story context facts (storage strips per-entry consistencyFacts).
-          try {
-            await this._updateStoryContext(fallbackEntry);
-          } catch (e) {
-            // Never block fallback return on context persistence.
-            console.warn('[StoryGenerationService] Failed to update story context for fallbackEntry:', e?.message);
-          }
-
-          // Maintain checkpoint cadence even on fallback decision points.
-          if (subchapter === 3) {
-            try {
-              await this._createConsistencyCheckpoint(chapter, effectivePathKey, fallbackEntry, choiceHistory);
-            } catch (e) {
-              // Best-effort only.
-            }
-          }
-
-          // Clear attempt count on successful fallback
+          // Clear attempt count
           this.generationAttempts.delete(attemptKey);
 
-          return fallbackEntry;
+          // Throw retryable error for UI to handle
+          const retryError = new Error(`Story generation failed after ${attempts} attempts: ${error.message}`);
+          retryError.isGenerationFailure = true;
+          retryError.attempts = attempts;
+          retryError.chapter = chapter;
+          retryError.subchapter = subchapter;
+          retryError.retryable = true;
+          throw retryError;
         }
 
         // Re-throw to allow caller to retry if attempts remain
@@ -6311,34 +6304,19 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         throw e; // Let UI handle retry
       }
 
-      // For background/prefetch generation, use fallback to avoid blocking the game
-      console.error(`[StoryGenerationService] Background generation failure for ${generationKey}, using emergency fallback: ${e.message}`);
-      const chapterNum = parseInt(caseNumber?.slice(0, 3)) || 2;
-      const subLetter = String(caseNumber?.slice(3, 4) || 'A').toUpperCase();
-      const subchapterNum = ({ A: 1, B: 2, C: 3 }[subLetter]) || 1;
-      const isDecisionPoint = subchapterNum === 3;
-
-      const emergencyFallback = this._getFallbackContent(chapterNum, subchapterNum, pathKey, isDecisionPoint);
-      return {
-        chapter: chapterNum,
-        subchapter: subchapterNum,
-        pathKey,
+      // For background/prefetch generation, also throw error - no fallback narratives
+      // The prefetch will fail, and when player needs content, a new generation will be triggered
+      console.error(`[StoryGenerationService] Background generation failure for ${generationKey} - no fallback: ${e.message}`);
+      llmTrace('StoryGenerationService', traceId, 'generation.background.failed', {
+        generationKey,
         caseNumber,
-        title: emergencyFallback.title,
-        narrative: emergencyFallback.narrative,
-        bridgeText: emergencyFallback.bridgeText,
-        previously: emergencyFallback.previously,
-        briefing: emergencyFallback.briefing,
-        decision: emergencyFallback.decision,
-        board: this._generateBoardData(emergencyFallback.narrative, isDecisionPoint, emergencyFallback.decision, emergencyFallback.puzzleCandidates, chapterNum),
-        consistencyFacts: emergencyFallback.consistencyFacts,
-        chapterSummary: emergencyFallback.chapterSummary,
-        generatedAt: new Date().toISOString(),
-        wordCount: emergencyFallback.narrative.split(/\s+/).length,
-        isFallback: true,
-        isEmergencyFallback: true,
-        fallbackReason: e.message,
-      };
+        pathKey: effectivePathKey,
+        error: e.message,
+        reason,
+      }, 'error');
+
+      // Throw error - caller (prefetch) will catch and log, player retries when needed
+      throw e;
     } finally {
       // Always release the generation slot, even on error/fallback
       this._releaseGenerationSlot(generationKey);
@@ -6370,34 +6348,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * @param {Object} context - Optional story context for context-aware fallback
    */
   getEmergencyFallback(chapter, subchapter, pathKey, context = null) {
-    const isDecisionPoint = subchapter === 3;
-    const caseNumber = `${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][subchapter - 1]}`;
-
-    // Use context-aware fallback when context is available for better continuity
-    const fallbackContent = context
-      ? this._buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context)
-      : this._getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint);
-
-    return {
-      chapter,
-      subchapter,
-      pathKey,
-      caseNumber,
-      title: fallbackContent.title,
-      narrative: fallbackContent.narrative,
-      bridgeText: fallbackContent.bridgeText,
-      previously: fallbackContent.previously,
-      briefing: fallbackContent.briefing,
-      decision: fallbackContent.decision,
-      board: this._generateBoardData(fallbackContent.narrative, isDecisionPoint, fallbackContent.decision, fallbackContent.puzzleCandidates, chapter),
-      consistencyFacts: fallbackContent.consistencyFacts,
-      chapterSummary: fallbackContent.chapterSummary,
-      generatedAt: new Date().toISOString(),
-      wordCount: fallbackContent.narrative.split(/\s+/).length,
-      isFallback: true,
-      isEmergencyFallback: true,
-      fallbackReason: context ? 'Context-aware emergency fallback' : 'External emergency fallback request',
-    };
+    // DISABLED: No fallback narratives allowed.
+    // Callers should handle errors and prompt player to retry.
+    const error = new Error(`Emergency fallback requested for Chapter ${chapter}.${subchapter} but fallbacks are disabled. Player should retry generation.`);
+    error.isFallbackDisabled = true;
+    error.chapter = chapter;
+    error.subchapter = subchapter;
+    error.retryable = true;
+    throw error;
   }
 
   // ==========================================================================
@@ -7637,6 +7595,46 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     }
 
+    // =========================================================================
+    // CATEGORY 13: PREMATURE REVELATION PREVENTION
+    // =========================================================================
+    // The mystery has a carefully designed revelation gradient. Major twists
+    // must not be revealed before their intended chapter to preserve suspense.
+    const currentChapter = context?.currentPosition?.chapter || 2;
+
+    const prematureRevelationChecks = [
+      // Victoria's true identity (Emily Cross) - should not be revealed before Chapter 10
+      {
+        pattern: /\b(?:victoria\s+(?:is|was)\s+emily|emily\s+(?:is|was)\s+victoria|victoria.*true\s+(?:name|identity).*emily|emily.*(?:became|now\s+called|goes\s+by)\s+victoria|she\s+(?:is|was)\s+emily\s+cross)\b/i,
+        minChapter: 10,
+        revelation: 'Victoria is Emily Cross',
+      },
+      // Tom's evidence manufacturing - should not be revealed before Chapter 7
+      {
+        pattern: /\b(?:tom\s+(?:wade\s+)?(?:manufactured|planted|fabricated|faked)\s+evidence|tom.*evidence\s+(?:was\s+)?(?:manufactured|planted|faked)|wade.*(?:been|was)\s+(?:manufacturing|planting|fabricating)\s+evidence|tom.*framing\s+(?:the\s+)?innocents?)\b/i,
+        minChapter: 7,
+        revelation: 'Tom Wade manufactured evidence',
+      },
+      // The Five Innocents connection - should not be fully revealed before Chapter 5
+      {
+        pattern: /\b(?:five\s+innocents?.*tom\s+wade|tom\s+wade.*five\s+innocents?|wade.*framed.*(?:all\s+)?five|teresa.*tom['']?s?\s+(?:own\s+)?daughter.*(?:framed|convicted))\b/i,
+        minChapter: 5,
+        revelation: 'Tom Wade framed the Five Innocents',
+      },
+      // The Confessor's true motive (revenge for Five Innocents) - should not be revealed before Chapter 8
+      {
+        pattern: /\b(?:confessor.*aveng(?:e|ing)\s+(?:the\s+)?(?:five\s+)?innocents?|midnight\s+confessor.*(?:revenge|vengeance)\s+for.*innocents?|confessor['']?s?\s+(?:true\s+)?motive.*innocents?)\b/i,
+        minChapter: 8,
+        revelation: "The Confessor's revenge motive for the Five Innocents",
+      },
+    ];
+
+    for (const { pattern, minChapter, revelation } of prematureRevelationChecks) {
+      if (currentChapter < minChapter && pattern.test(narrativeOriginal)) {
+        issues.push(`PREMATURE REVELATION: "${revelation}" revealed in Chapter ${currentChapter}, but should not appear before Chapter ${minChapter}. This ruins the mystery's pacing.`);
+      }
+    }
+
     // Log warnings but don't block on them
     if (warnings.length > 0) {
       console.log('[ConsistencyValidator] Warnings:', warnings);
@@ -7699,6 +7697,24 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     if (s.includes('already revealed') && s.includes('re-discovers')) return true;
     if (s.includes('Victoria is Emily') && s.includes('re-reveal')) return true;
 
+    // --- TIER 4: TIMELINE FACTS (Core relationship/event durations) ---
+    // These durations are emotionally significant - "30 years of friendship betrayed"
+    // is very different from "20 years". Players may notice inconsistencies.
+    if (s.includes('Tom Wade friendship is 30 years')) return true;
+    if (s.includes('Sarah partnership is 13 years')) return true;
+    if (s.includes('Silas partnership is 8 years')) return true;
+    if (s.includes('Emily case was closed 7 years ago')) return true;
+    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
+
+    // --- TIER 5: STORY DAY CONSISTENCY ---
+    // The story spans exactly 12 days, one per chapter. Wrong day = confusion.
+    if (s.startsWith('STORY DAY MISMATCH:')) return true;
+
+    // --- TIER 6: PREMATURE REVELATIONS ---
+    // The mystery has a carefully designed revelation gradient.
+    // Revealing major twists too early ruins the entire experience.
+    if (s.startsWith('PREMATURE REVELATION:')) return true;
+
     // =======================================================================
     // SOFT FAILURES - Convert to warnings, don't block generation
     // These matter for quality but players are forgiving of minor issues
@@ -7708,10 +7724,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;  // DISABLED
     // if (s.startsWith('OVERDUE THREAD ERROR:')) return true;  // DISABLED
 
-    // Story day mismatch - minor, player won't notice
-    // if (s.startsWith('STORY DAY MISMATCH:')) return true;  // DISABLED
-
-    // Timeline approximations - close enough is fine
+    // Timeline approximations (vague references) - close enough is fine
     // if (s.includes('Timeline approximation')) return true;  // DISABLED
 
     // Personality enforcement - Jack can have emotional moments
