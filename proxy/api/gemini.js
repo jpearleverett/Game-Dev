@@ -92,6 +92,67 @@ export default async function handler(req, res) {
   try {
     const body = req.body;
 
+    // ========== CACHE CREATION REQUEST ==========
+    if (body.operation === 'createCache') {
+      console.log(`[${requestId}] Cache creation request: ${body.cacheKey}`);
+
+      const { cacheKey, model, systemInstruction, content, ttl } = body;
+
+      if (!model || !systemInstruction || !content) {
+        return res.status(400).json({
+          error: 'Missing required cache parameters (model, systemInstruction, content)',
+          requestId
+        });
+      }
+
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1alpha/cachedContents?key=${process.env.GEMINI_API_KEY}`;
+
+      const cacheResponse = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${model}`,
+          system_instruction: {
+            parts: [{ text: systemInstruction }],
+          },
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: content }],
+            },
+          ],
+          ttl: ttl || '3600s',
+          display_name: cacheKey,
+        }),
+      });
+
+      if (!cacheResponse.ok) {
+        const errorText = await cacheResponse.text();
+        console.error(`[${requestId}] Cache creation failed: ${cacheResponse.status} - ${errorText.substring(0, 200)}`);
+        return res.status(cacheResponse.status).json({
+          error: 'Cache creation failed',
+          requestId,
+          details: errorText.substring(0, 200),
+        });
+      }
+
+      const cache = await cacheResponse.json();
+      console.log(`[${requestId}] Cache created: ${cache.name}, tokens: ${cache.usageMetadata?.totalTokenCount || 'unknown'}`);
+
+      return res.status(200).json({
+        success: true,
+        cache: {
+          name: cache.name,
+          expireTime: cache.expireTime,
+          createTime: cache.createTime,
+          updateTime: cache.updateTime,
+          usageMetadata: cache.usageMetadata,
+        },
+        requestId,
+      });
+    }
+
+    // ========== GENERATION REQUEST ==========
     // Validate request
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       console.warn(`[${requestId}] Invalid request: missing messages`);

@@ -1291,38 +1291,77 @@ class LLMService {
 
     console.log(`[LLMService] 🔧 Creating new cache: ${key} (ttl: ${ttl})`);
 
-    // Use the v1alpha endpoint for caching
-    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
-
     try {
-      const response = await fetch(`${baseUrl}/cachedContents`, {
-        method: 'POST',
-        headers: {
+      let cache;
+
+      // Use proxy if configured (production), otherwise direct API (dev)
+      if (this.config.proxyUrl) {
+        console.log('[LLMService] Creating cache via proxy');
+
+        const headers = {
           'Content-Type': 'application/json',
-          'x-goog-api-key': this.config.apiKey,
-        },
-        body: JSON.stringify({
-          model: `models/${model}`,
-          system_instruction: {
-            parts: [{ text: systemInstruction }],
+        };
+
+        if (this.config.appToken) {
+          headers['X-App-Token'] = this.config.appToken;
+        }
+
+        const response = await fetch(this.config.proxyUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            operation: 'createCache',
+            cacheKey: key,
+            model,
+            systemInstruction,
+            content,
+            ttl,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(`Cache creation failed: ${response.status} - ${error.error || error.details || 'Unknown error'}`);
+        }
+
+        const result = await response.json();
+        cache = result.cache;
+
+      } else {
+        console.log('[LLMService] Creating cache via direct API');
+
+        // Use the v1alpha endpoint for caching
+        const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+
+        const response = await fetch(`${baseUrl}/cachedContents`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': this.config.apiKey,
           },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: content }],
+          body: JSON.stringify({
+            model: `models/${model}`,
+            system_instruction: {
+              parts: [{ text: systemInstruction }],
             },
-          ],
-          ttl,
-          display_name: key,
-        }),
-      });
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: content }],
+              },
+            ],
+            ttl,
+            display_name: key,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(`Cache creation failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(`Cache creation failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+        }
+
+        cache = await response.json();
       }
-
-      const cache = await response.json();
 
       // Store cache info
       const cacheInfo = {
