@@ -1304,7 +1304,7 @@ class StoryGenerationService {
     // ========== CONTEXT CACHING OPTIMIZATION ==========
     // Cache for static prompt content (Story Bible, Character Reference, etc.)
     this.staticCacheKey = null; // Key for the static content cache
-    this.staticCacheVersion = 1; // Increment when static content changes
+    this.staticCacheVersion = 2; // Increment when static content changes
   }
 
   // ==========================================================================
@@ -4829,29 +4829,71 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
    * Build character reference section
    */
   _buildCharacterSection() {
-    const { protagonist, antagonist, allies, villains } = CHARACTER_REFERENCE;
+    const { protagonist, antagonist, allies, villains, victims, secondary } = CHARACTER_REFERENCE;
+
+    // Helper to format example phrases
+    const formatExamples = (phrases) => {
+      return phrases.map(phrase => `  - "${phrase}"`).join('\n');
+    };
 
     return `## CHARACTER VOICES (Match these exactly)
 
-### JACK HALLOWAY (Narration is close third-person on Jack)
+### JACK HALLOWAY (Protagonist - Narration is close third-person on Jack)
+Role: ${protagonist.role}, ${protagonist.age}
 Voice: ${protagonist.voiceAndStyle.narrative}
-Example: "${protagonist.voiceAndStyle.examplePhrases[0]}"
+Internal Monologue: ${protagonist.voiceAndStyle.internalMonologue}
+Dialogue: ${protagonist.voiceAndStyle.dialogue}
+Example Phrases:
+${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
 
-### VICTORIA BLACKWELL / THE CONFESSOR
-Voice: Elegant, calculating, formal diction with sardonic edge
-Example: "${antagonist.voiceAndStyle.examplePhrases[0]}"
+### VICTORIA BLACKWELL / THE CONFESSOR / EMILY CROSS
+Role: ${antagonist.role}
+Aliases: ${antagonist.aliases.join(', ')}
+Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
+Voice (Written): ${antagonist.voiceAndStyle.written}
+Example Phrases:
+${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
 
 ### SARAH REEVES
-Voice: Direct, no-nonsense, increasingly independent
-Example: "${allies.sarahReeves.voiceAndStyle.examplePhrases[0]}"
+Role: ${allies.sarahReeves.role}
+Voice: ${allies.sarahReeves.voiceAndStyle.speaking}
+Example Phrases:
+${formatExamples(allies.sarahReeves.voiceAndStyle.examplePhrases)}
 
 ### ELEANOR BELLAMY
-Voice: Bitter, resilient, voice like gravel and broken glass
-Example: "${allies.eleanorBellamy.voiceAndStyle.examplePhrases[0]}"
+Role: ${allies.eleanorBellamy.role}
+Voice: ${allies.eleanorBellamy.voiceAndStyle.speaking}
+Example Phrases:
+${formatExamples(allies.eleanorBellamy.voiceAndStyle.examplePhrases)}
+
+### TOM WADE
+Role: ${villains.tomWade.role}
+Voice: ${villains.tomWade.voiceAndStyle?.speaking || 'Friendly surface with technical jargon as deflection'}
+Note: Jack's best friend for 30 years who manufactured evidence
 
 ### SILAS REED
-Voice: Defeated, alcoholic, confessional
-Example: "${villains.silasReed.voiceAndStyle?.examplePhrases?.[0] || 'I told myself Thornhill was probably guilty anyway.'}"`;
+Role: ${villains.silasReed.role}
+Voice: ${villains.silasReed.voiceAndStyle.speaking}
+Example Phrases:
+${formatExamples(villains.silasReed.voiceAndStyle.examplePhrases)}
+
+### HELEN PRICE
+Role: ${villains.helenPrice.title} - ${villains.helenPrice.role}
+Voice: ${villains.helenPrice.voiceAndStyle.speaking}
+Example Phrases:
+${formatExamples(villains.helenPrice.voiceAndStyle.examplePhrases)}
+
+### CLAIRE THORNHILL
+Role: ${victims.claireThornhill.role}
+Voice: ${victims.claireThornhill.voiceAndStyle.speaking}
+Example Phrases:
+${formatExamples(victims.claireThornhill.voiceAndStyle.examplePhrases)}
+
+### MARCUS WEBB
+Role: ${secondary.marcusWebb.role}
+Voice: ${secondary.marcusWebb.voiceAndStyle.speaking}
+Example Phrases:
+${formatExamples(secondary.marcusWebb.voiceAndStyle.examplePhrases)}`;
   }
 
   /**
