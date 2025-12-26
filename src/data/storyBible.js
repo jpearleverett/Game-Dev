@@ -366,15 +366,123 @@ The envelope sat on his desk where he’d dropped it twenty minutes ago. Black p
 
 No signature. No return address. Just that, and a photograph Jack had spent seven years trying to forget.`,
 
-  dialogueExample: `"Tell me you're not involved." Sarah's voice cut through the static of the precinct radio. She'd driven all the way across town for this conversation, which meant she already knew the answer.
-
-"Define involved."
-
-"Don't." She stepped closer, and Jack caught coffee and cigarettes, the perfume of every cop who's worked one case too many. "Twenty years, Jack. I watched you close cases other detectives wouldn't touch. I believed in you."
-
-"Past tense."
-
-"Present tense. That's the problem." She set a manila folder on his desk, the kind that held the end of a career. "Tom Wade. You want to tell me why your best friend's been manufacturing evidence since before I made detective?"`,
+  dialogueExample: `"Sean sat on the back porch with Annabeth Marcus as she took tiny
+sips from a glass of white wine and smoked her cigarettes no more than
+halfway before she'd extinguish them, her face lit by the exposed bulb
+above them. It was a strong face, never pretty probably, but always striking.
+She was not unused to being stared at, Sean guessed, and yet she was
+probably oblivious as to why she was worth the trouble. She reminded Sean
+a bit of Jimmy's mother but without the air of resignation and defeat, and
+she reminded Sean of his own mother in her complete and effortless self-
+possession, reminded him of Jimmy, actually, in that way, as well. He could
+see Annabeth Marcus as being a fun woman, but never a frivolous one.
+"So," she said to Sean as he lit a cigarette for her, "what are you doing
+with your evening after you're released from comforting me?"
+ "I'm not— "
+ She waved it away. "I appreciate it. So what're you doing?"
+ "Going to see my mother."
+"Really?"
+ He nodded. "It's her birthday. Go celebrate it with her and the old man."
+ "Uh-huh," she said. "And how long have you been divorced?"
+ "It shows?"
+ "You wear it like a suit."
+ "Ah. Separated, actually, for a bit over a year."
+ "She live here?"
+ "Not anymore. She travels."
+ "You said that with acid. 'Travels.'"
+ "Did I?" He shrugged.
+She held up a hand. "I hate to keep doing this to you— getting my mind
+off Katie at your expense. So you don't have to answer any of my questions.
+I'm just nosy, and you're an interesting guy."
+He smiled. "No, I'm not. I'm actually very boring, Mrs. Marcus. You take
+away my job, and I disappear."
+ "Annabeth," she said. "Call me that, would you?"
+ "Sure."
+"I find it hard to believe, Trooper Devine, that you're boring. You know
+what's odd, though?"
+ "What's that?"
+She turned in her chair and looked at him. "You don't strike me as the
+kind of guy who'd give someone phantom tickets."
+ "Why's that?"
+ "It seems childish," she said. "You don't seem like a childish man."
+Sean shrugged. In his experience, everyone was childish at one time or
+another. It's what you reverted to, particularly when the shit piled up.
+In more than a year, he'd never spoken to anyone about Lauren— not his
+parents, his few stray friends, not even the police psychologist the
+commander had made a brief and pointed mention of once Lauren's moving
+out had become common knowledge around the barracks. But here was
+Annabeth, a stranger who'd suffered a loss, and he could feel her probing
+for his loss, needing to see it or share it or something along those lines,
+needing to know, Sean figured, that she wasn't being singled out.
+"My wife's a stage manager," he said quietly. "For road shows, you
+know? Lord of the Dance toured the country last year— my wife stage-
+managed. That sort of thing. She's doing one now— Annie Get Your Gun,
+maybe. I'm not sure, to tell you the truth. Whatever they're recycling this
+year. We were a weird couple. I mean, our jobs, right, how further apart can
+you get?"
+ "But you loved her," Annabeth said.
+He nodded. "Yeah. Still do." He took a breath, leaning back in his chair
+and sucking it down. "So the guy I gave the tickets to, he was…" Sean's
+mouth went dry and he shook his head, had the sudden urge to just get the
+hell off this porch and out of this house.
+ "He was a rival?" Annabeth said, her voice delicate.
+Sean took a cigarette from the pack and lit one, nodding. "That's a nice
+word for it. Yeah, we'll say that. A rival. And my wife and I, we were going
+through some shit for a while. Neither of us was around much, and so on.
+And this, uh, rival— he moved in on her."
+ "And you reacted badly," Annabeth said. A statement, not a question.
+Sean rolled his eyes in her direction. "You know anyone who reacts
+well?"
+Annabeth gave him a hard look, one that seemed to suggest that sarcasm
+was below him, or maybe just something she wasn't fan of in general.
+ "You still love her, though."
+"Sure. Hell, I think she still loves me." He stubbed out his cigarette. "She
+calls me all the time. Calls me and doesn't talk."
+ "Wait, she— "
+ "I know," he said.
+ "— calls you up and doesn't say a word?"
+ "Yup. Been going on for about eight months now."
+Annabeth laughed. "No offense, but that's the weirdest thing I've heard in
+a while."
+"No argument." He watched a fly dart in and away from the bare
+lightbulb. "One of these days, I figure, she's gotta talk. That's what I'm
+holding out for."
+He heard his half-assed chuckle die in the night and the echo of it
+embarrassed him. So they sat in silence for a bit, smoking, listening to the
+buzz of the fly as it made its crazy darts toward the light.
+"What's her name?" Annabeth asked. "This whole time, you've never
+once said her name."
+ "Lauren," he said. "Her name's Lauren."
+ Her name hung in the air for a bit like the loose strand of a cobweb.
+"And you loved her since you were kids?”
+"Freshman year of college," he said. "Yeah, I guess we were kids."
+He could remember a November rainstorm, the two of them kissing for
+the first time in a doorway, the feel of goose bumps on her flesh, both of
+them shaking.
+ "Maybe that's the problem," Annabeth said.
+ Sean looked at her. "That we're not kids anymore?"
+ "One of you, at least," she said.
+ Sean didn't ask which one.
+"Jimmy told me you said Katie was planning to elope with Brendan
+Harris."
+ Sean nodded.
+ "Well, that's just it, isn't it?"
+ He turned in his chair. "What?"
+She blew a stream of smoke up at the empty clotheslines. "These silly
+dreams you have when you're young. I mean, what, Katie and Brendan
+Harris were going to make a life in Las Vegas? How long would that little
+Eden have lasted? Maybe they'd be on their second trailer park, second kid,
+but it would hit them sooner or later— life isn't happily ever after and
+golden sunsets and shit like that. It's work. The person you love is rarely
+worthy of how big your love is. Because no one is worthy of that and
+maybe no one deserves the burden of it, either. You'll be let down. You'll be
+disappointed and have your trust broken and have a lot of real sucky days.
+You lose more than you win. You hate the person you love as much as you
+love him. But, shit, you roll up your sleeves and work— at everything—
+because that's what growing older is."
+ "Annabeth," Sean said, "anyone ever tell you that you're a hard woman?"
+She turned her head to him, her eyes closed, a dreamy smile on her face.
+"All the time."`,
 
   internalMonologue: `Jack should have seen it. The thought kept circling like a vulture waiting for something to die. Twenty years of perfect evidence, pristine chains of custody, confessions that fit the proof like a key in a lock. And not once, not a single time, had he asked why his cases were the only ones that wrapped up so clean.
 
