@@ -4251,13 +4251,17 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Part 4: Writing Style Examples (STATIC)
     parts.push(`## WRITING STYLE - Voice DNA Examples
 
-${WRITING_STYLE.description}
+Voice: ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
+Tone: ${WRITING_STYLE.voice.tone}
+
+Influences:
+${WRITING_STYLE.influences.map(i => `- ${i}`).join('\n')}
 
 ### Forbidden Patterns (NEVER use):
-${WRITING_STYLE.forbidden.map(f => `- ${f}`).join('\n')}
+${WRITING_STYLE.absolutelyForbidden.map(f => `- ${f}`).join('\n')}
 
 ### Required Elements:
-${WRITING_STYLE.required.map(r => `- ${r}`).join('\n')}
+${WRITING_STYLE.mustInclude.map(r => `- ${r}`).join('\n')}
 
 ### Example Passages:
 ${Object.entries(EXAMPLE_PASSAGES)
@@ -4275,13 +4279,9 @@ ${this._buildExtendedStyleExamplesForCache()}
     // Part 5: Consistency Rules (STATIC)
     parts.push(`## CONSISTENCY CHECKLIST - Self-Validation Rules
 
-${CONSISTENCY_RULES.description}
+Before generating, verify these facts are never contradicted:
 
-### Mandatory Checks:
-${CONSISTENCY_RULES.mandatoryChecks.map(c => `- ${c}`).join('\n')}
-
-### Common Errors to Avoid:
-${CONSISTENCY_RULES.commonErrors.map(e => `- ${e}`).join('\n')}
+${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
 `);
 
     return parts.join('\n\n---\n\n');
