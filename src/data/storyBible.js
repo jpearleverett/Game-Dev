@@ -319,22 +319,23 @@ export const WRITING_STYLE = {
   voice: {
     perspective: 'Third person limited (close on Jack Halloway)',
     tense: 'Past tense',
-    tone: 'Hard-boiled noir, world-weary, introspective',
+    tone: 'Literary crime fiction, psychologically rich, elegiac',
   },
 
   influences: [
-    'Raymond Chandler (metaphors, prose rhythm)',
-    'Dashiell Hammett (terse dialogue, moral ambiguity)',
-    'James Ellroy (dark corruption, systemic evil)',
-    'Walter Mosley (character depth, social commentary)',
+    'Dennis Lehane (trauma echoing through time, working-class authenticity, grief as undercurrent)',
+    'Tana French (atmospheric dread, psychological interiority, the past haunting the present)',
+    'Kate Atkinson (structural complexity, dark wit beneath sorrow)',
+    'Richard Price (dialogue that reveals class and character, institutional rot)',
   ],
 
   mustInclude: [
-    'Atmospheric descriptions (rain, shadows, neon)',
-    'Internal monologue revealing Jack\'s guilt and self-doubt',
-    'Sensory details (sounds, smells, textures)',
-    'Dialogue that reveals character',
-    'Metaphors grounded in noir imagery',
+    'Atmospheric descriptions rooted in place and weather',
+    'Deep psychological interiority revealing Jack\'s guilt and fractured self-perception',
+    'Sensory details that trigger memory and emotion (sounds, smells, textures)',
+    'Dialogue that reveals character, class, and unspoken history',
+    'The weight of the past pressing on present moments',
+    'Trauma expressed through behavior rather than explanation',
   ],
 
   absolutelyForbidden: [
