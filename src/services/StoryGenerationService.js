@@ -3234,6 +3234,10 @@ Generate realistic, specific consequences based on the actual narrative content.
     // cannot "reappear" from earlier chapters (zombie thread bug).
     const latestByKey = new Map(); // key -> { thread, chapter, subchapter }
 
+    // Track normalized IDs of threads that have been resolved/failed.
+    // This prevents regex fallback from resurrecting them as "zombie threads".
+    const resolvedThreadIds = new Set();
+
     // First priority: Use LLM-generated structured threads
     chapters.forEach(ch => {
       if (ch.narrativeThreads && Array.isArray(ch.narrativeThreads)) {
@@ -3244,6 +3248,15 @@ Generate realistic, specific consequences based on the actual narrative content.
           if (!type || !desc) return;
 
           const key = `${type}:${desc}`.toLowerCase();
+
+          // Track resolved/failed threads to prevent regex resurrection
+          if (status === 'resolved' || status === 'failed') {
+            const normalizedId = this._normalizeThreadId(thread);
+            if (normalizedId) {
+              resolvedThreadIds.add(normalizedId);
+            }
+          }
+
           const candidate = {
             type,
             chapter: ch.chapter,
@@ -3299,7 +3312,14 @@ Generate realistic, specific consequences based on the actual narrative content.
           matches.forEach(match => {
             const excerpt = match.trim();
             const key = `${type}:${excerpt}`.toLowerCase();
-            if (!seenDescriptions.has(key)) {
+
+            // Build candidate to check its normalized ID against resolved threads
+            const candidate = { type, description: excerpt };
+            const normalizedId = this._normalizeThreadId(candidate);
+
+            // Only add if not a duplicate AND not previously resolved (zombie prevention)
+            const isResolved = normalizedId && resolvedThreadIds.has(normalizedId);
+            if (!seenDescriptions.has(key) && !isResolved) {
               seenDescriptions.add(key);
               threads.push({
                 type,
