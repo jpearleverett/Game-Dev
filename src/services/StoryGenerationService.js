@@ -4238,18 +4238,27 @@ Generate realistic, specific consequences based on the actual narrative content.
 
     // Part 1: Story Bible Grounding (STATIC)
     // Use the existing method to ensure exact same format
-    parts.push(this._buildGroundingSection(null));
+    const groundingSection = this._buildGroundingSection(null);
+    parts.push(groundingSection);
+    console.log(`[Cache] Grounding section: ${groundingSection.length} chars`);
 
     // Part 2: Character Reference (STATIC)
     // Use the existing method to ensure exact same format
-    parts.push(this._buildCharacterSection());
+    const characterSection = this._buildCharacterSection();
+    parts.push(characterSection);
+    console.log(`[Cache] Character section: ${characterSection.length} chars`);
 
     // Part 3: Craft Techniques (STATIC)
     // Use the existing method to ensure exact same format
-    parts.push(this._buildCraftTechniquesSection());
+    const craftSection = this._buildCraftTechniquesSection();
+    parts.push(craftSection);
+    console.log(`[Cache] Craft techniques: ${craftSection.length} chars`);
 
     // Part 4: Writing Style Examples (STATIC)
-    parts.push(`## WRITING STYLE - Voice DNA Examples
+    const extendedExamples = this._buildExtendedStyleExamplesForCache();
+    console.log(`[Cache] Extended examples: ${extendedExamples.length} chars`);
+
+    const styleSection = `## WRITING STYLE - Voice DNA Examples
 
 Voice: ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
 Tone: ${WRITING_STYLE.voice.tone}
@@ -4273,18 +4282,25 @@ ${passage}`;
 
 ${STYLE_EXAMPLES}
 
-${this._buildExtendedStyleExamplesForCache()}
-`);
+${extendedExamples}
+`;
+    parts.push(styleSection);
+    console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
     // Part 5: Consistency Rules (STATIC)
-    parts.push(`## CONSISTENCY CHECKLIST - Self-Validation Rules
+    const rulesSection = `## CONSISTENCY CHECKLIST - Self-Validation Rules
 
 Before generating, verify these facts are never contradicted:
 
 ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
-`);
+`;
+    parts.push(rulesSection);
+    console.log(`[Cache] Consistency rules: ${rulesSection.length} chars`);
 
-    return parts.join('\n\n---\n\n');
+    const fullContent = parts.join('\n\n---\n\n');
+    console.log(`[Cache] TOTAL static content: ${fullContent.length} chars (~${Math.round(fullContent.length / 4)} tokens est.)`);
+
+    return fullContent;
   }
 
   /**
