@@ -6065,55 +6065,51 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
         let response;
 
-        // Check if proxy mode (proxy mode doesn't support caching yet)
-        const isProxyMode = llmService.isConfigured() && llmService.config.proxyUrl;
+        // Try cached generation first (works in both proxy and direct mode)
+        try {
+          // Ensure static cache exists (creates on first call, reuses thereafter)
+          const cacheKey = await this._ensureStaticCache();
 
-        if (!isProxyMode) {
-          try {
-            // Ensure static cache exists (creates on first call, reuses thereafter)
-            const cacheKey = await this._ensureStaticCache();
+          // Build only dynamic prompt (story history, current state, task)
+          const dynamicPrompt = this._buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint);
 
-            // Build only dynamic prompt (story history, current state, task)
-            const dynamicPrompt = this._buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint);
+          console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
+          llmTrace('StoryGenerationService', traceId, 'prompt.built', {
+            caseNumber,
+            pathKey,
+            chapter,
+            subchapter,
+            isDecisionPoint,
+            cacheKey,
+            cachingEnabled: true,
+            dynamicPromptLength: dynamicPrompt?.length || 0,
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+            contextSummary: {
+              previousChapters: context?.previousChapters?.length || 0,
+              establishedFacts: context?.establishedFacts?.length || 0,
+              playerChoices: context?.playerChoices?.length || 0,
+              narrativeThreads: context?.narrativeThreads?.length || 0,
+            },
+            reason,
+          }, 'debug');
 
-            console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
-            llmTrace('StoryGenerationService', traceId, 'prompt.built', {
-              caseNumber,
-              pathKey,
-              chapter,
-              subchapter,
-              isDecisionPoint,
-              cacheKey,
-              cachingEnabled: true,
-              dynamicPromptLength: dynamicPrompt?.length || 0,
-              schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
-              contextSummary: {
-                previousChapters: context?.previousChapters?.length || 0,
-                establishedFacts: context?.establishedFacts?.length || 0,
-                playerChoices: context?.playerChoices?.length || 0,
-                narrativeThreads: context?.narrativeThreads?.length || 0,
-              },
-              reason,
-            }, 'debug');
-
-            response = await llmService.completeWithCache({
-              cacheKey,
-              dynamicPrompt,
-              options: {
-                maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-                responseSchema: schema,
-                thinkingLevel: 'medium',
-              },
-            });
-          } catch (cacheError) {
-            console.warn(`[StoryGenerationService] ⚠️ Caching failed:`, cacheError.message);
-            console.warn(`[StoryGenerationService] Falling back to non-cached generation`);
-            // Fall through to non-cached generation
-            response = null;
-          }
+          response = await llmService.completeWithCache({
+            cacheKey,
+            dynamicPrompt,
+            options: {
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+              responseSchema: schema,
+              thinkingLevel: 'medium',
+            },
+          });
+        } catch (cacheError) {
+          console.warn(`[StoryGenerationService] ⚠️ Caching failed:`, cacheError.message);
+          console.warn(`[StoryGenerationService] Falling back to non-cached generation`);
+          // Fall through to non-cached generation
+          response = null;
         }
 
-        // Fallback: Use regular generation if proxy mode or caching failed
+        // Fallback: Use regular generation if caching failed
         if (!response) {
           console.log(`[StoryGenerationService] Regular generation for Chapter ${chapter}.${subchapter} (no caching)`);
 

@@ -704,7 +704,7 @@ class LLMService {
    * Mobile networks often kill idle connections after 30-40 seconds,
    * but Gemini's "thinking" phase can take 20-60 seconds.
    */
-  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext }) {
+  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent }) {
     let lastError = null;
     let attempt = 0;
     const operationStart = Date.now();
@@ -773,6 +773,7 @@ class LLMService {
             maxTokens,
             systemPrompt,
             responseSchema,
+            cachedContent, // Optional: cached content reference for context caching
             stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
             clientTraceId: traceId || null,
             clientRequestContext: requestContext || null,
@@ -1491,15 +1492,6 @@ class LLMService {
    * @returns {Promise<Object>} Generation response with usage metadata
    */
   async completeWithCache({ cacheKey, dynamicPrompt, options = {} }) {
-    // IMPORTANT: Caching only works in direct mode (requires API key)
-    // In proxy mode (production), fall back to regular complete() with full prompt
-    if (this.config.proxyUrl) {
-      console.warn('[LLMService] ⚠️ Caching not supported in proxy mode, falling back to regular generation');
-      // TODO: Add proxy support for caching in future
-      // For now, caller must handle this by using regular complete() in proxy mode
-      throw new Error('Caching not yet supported in proxy mode. Use direct mode or regular complete() method.');
-    }
-
     await this._initializeCacheStorage();
 
     const cache = await this.getCache(cacheKey);
@@ -1508,6 +1500,42 @@ class LLMService {
     }
 
     const model = options.model || cache.model || this.config.model;
+
+    console.log(`[LLMService] 🎯 Generating with cache: ${cacheKey}`);
+
+    // Use proxy mode if configured (production), otherwise direct API call (dev)
+    if (this.config.proxyUrl) {
+      console.log('[LLMService] Using proxy mode for cached generation');
+
+      // Call via proxy with cachedContent parameter
+      const response = await this._callViaProxy(
+        [{ role: 'user', content: dynamicPrompt }],
+        {
+          model,
+          temperature: 1.0, // Forced for Gemini 3
+          maxTokens: options.maxTokens || 8192,
+          systemPrompt: null, // System prompt is in cache
+          responseSchema: options.responseSchema,
+          cachedContent: cache.name,
+          traceId: options.traceId,
+          requestContext: options.requestContext,
+        }
+      );
+
+      // Log token usage with cache metrics
+      this._logCachedTokenUsage({
+        promptTokenCount: response.usage.promptTokens,
+        cachedContentTokenCount: response.usage.cachedTokens,
+        candidatesTokenCount: response.usage.completionTokens,
+        totalTokenCount: response.usage.totalTokens,
+      }, cacheKey);
+
+      return response;
+    }
+
+    // Direct mode (dev) - call Gemini API directly
+    console.log('[LLMService] Using direct mode for cached generation');
+
     const isGemini3 = model.includes('gemini-3');
 
     // Build generation config
@@ -1532,8 +1560,6 @@ class LLMService {
     }
 
     const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
-
-    console.log(`[LLMService] 🎯 Generating with cache: ${cacheKey}`);
 
     try {
       const controller = new AbortController();
