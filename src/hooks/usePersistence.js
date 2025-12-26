@@ -67,6 +67,11 @@ export function usePersistence() {
         SEASON_ONE_CASES.find((c) => c.id === stored.currentCaseId) ||
         SEASON_ONE_CASES[0];
       
+      // Ensure unlockedCaseIds is an array before using it
+      if (!Array.isArray(stored.unlockedCaseIds)) {
+        stored.unlockedCaseIds = [1];
+      }
+
       if (fallbackCase?.id) {
         stored.currentCaseId = fallbackCase.id;
         if (!stored.unlockedCaseIds.includes(fallbackCase.id)) {
