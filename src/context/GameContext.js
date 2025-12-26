@@ -358,7 +358,9 @@ export function GameProvider({
           const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
           const isStoryCase = activeCase.caseNumber === currentStory.activeCaseNumber;
 
-          if (mode === 'story' || (isStoryCase && nextStatus === STATUS.SOLVED)) {
+          // Only update story state if we're solving the ACTUAL current story case.
+          // This prevents state corruption when solving a non-story case while in story mode.
+          if (isStoryCase && (mode === 'story' || nextStatus === STATUS.SOLVED)) {
               const completedCaseNumbers = Array.from(
                   new Set([...(currentStory.completedCaseNumbers || []), activeCase.caseNumber])
               );
