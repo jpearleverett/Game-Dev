@@ -101,12 +101,15 @@ export default async function handler(req, res) {
     const model = body.model || 'gemini-3-flash-preview';
     const isGemini3 = model.includes('gemini-3');
     const hasSchema = !!body.responseSchema;
+    const cachedContent = body.cachedContent; // Optional cache reference
 
     // Log incoming request details
-    console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, isGemini3=${isGemini3}, streaming=${useStreaming}`);
+    console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, isGemini3=${isGemini3}, streaming=${useStreaming}, cached=${!!cachedContent}`);
 
     // Build Gemini request
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    // Use v1alpha for caching support, v1beta for regular requests
+    const apiVersion = cachedContent ? 'v1alpha' : 'v1beta';
+    const geminiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const geminiBody = {
       contents: body.messages.map(msg => ({
@@ -127,6 +130,8 @@ export default async function handler(req, res) {
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
       ],
+      // Add cached content reference if provided (must be snake_case for Gemini API)
+      ...(cachedContent && { cached_content: cachedContent }),
     };
 
     // Add thinking config for Gemini 3 models - produces better quality output
@@ -251,7 +256,8 @@ export default async function handler(req, res) {
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars, ${heartbeatCount} heartbeats${!jsonValid ? ' (JSON needs repair)' : ''}`);
+        const cachedTokens = usage.cachedContentTokenCount || 0;
+        console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars, ${heartbeatCount} heartbeats${cachedTokens > 0 ? ` (${cachedTokens} cached tokens)` : ''}${!jsonValid ? ' (JSON needs repair)' : ''}`);
 
         // Send the final response
         const finalResponse = JSON.stringify({
@@ -260,6 +266,7 @@ export default async function handler(req, res) {
           content,
           usage: {
             promptTokens: usage.promptTokenCount || 0,
+            cachedTokens: cachedTokens,
             completionTokens: usage.candidatesTokenCount || 0,
             totalTokens: usage.totalTokenCount || 0,
           },
@@ -361,13 +368,15 @@ export default async function handler(req, res) {
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars${!jsonValid ? ' (JSON needs repair)' : ''}`);
+    const cachedTokens = usage.cachedContentTokenCount || 0;
+    console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars${cachedTokens > 0 ? ` (${cachedTokens} cached tokens)` : ''}${!jsonValid ? ' (JSON needs repair)' : ''}`);
 
     return res.status(200).json({
       success: true,
       content,
       usage: {
         promptTokens: usage.promptTokenCount || 0,
+        cachedTokens: cachedTokens,
         completionTokens: usage.candidatesTokenCount || 0,
         totalTokens: usage.totalTokenCount || 0,
       },

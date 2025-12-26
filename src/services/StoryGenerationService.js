@@ -1300,6 +1300,11 @@ class StoryGenerationService {
 
     // ========== A+ QUALITY: Setup/Payoff Registry ==========
     this._initializeSetupPayoffRegistry();
+
+    // ========== CONTEXT CACHING OPTIMIZATION ==========
+    // Cache for static prompt content (Story Bible, Character Reference, etc.)
+    this.staticCacheKey = null; // Key for the static content cache
+    this.staticCacheVersion = 1; // Increment when static content changes
   }
 
   // ==========================================================================
@@ -4213,7 +4218,169 @@ Generate realistic, specific consequences based on the actual narrative content.
   // ==========================================================================
 
   /**
+   * Build extended style examples for cache (wrapper for buildExtendedStyleExamples)
+   */
+  _buildExtendedStyleExamplesForCache() {
+    try {
+      return buildExtendedStyleExamples();
+    } catch (e) {
+      console.warn('[StoryGenerationService] Failed to build extended style examples:', e);
+      return '';
+    }
+  }
+
+  /**
+   * Build static content for caching (Story Bible, Characters, Craft Techniques, etc.)
+   * This content doesn't change across requests and is perfect for caching.
+   */
+  _buildStaticCacheContent() {
+    const parts = [];
+
+    // Part 1: Story Bible Grounding (STATIC)
+    // Use the existing method to ensure exact same format
+    parts.push(this._buildGroundingSection(null));
+
+    // Part 2: Character Reference (STATIC)
+    // Use the existing method to ensure exact same format
+    parts.push(this._buildCharacterSection());
+
+    // Part 3: Craft Techniques (STATIC)
+    // Use the existing method to ensure exact same format
+    parts.push(this._buildCraftTechniquesSection());
+
+    // Part 4: Writing Style Examples (STATIC)
+    parts.push(`## WRITING STYLE - Voice DNA Examples
+
+${WRITING_STYLE.description}
+
+### Forbidden Patterns (NEVER use):
+${WRITING_STYLE.forbidden.map(f => `- ${f}`).join('\n')}
+
+### Required Elements:
+${WRITING_STYLE.required.map(r => `- ${r}`).join('\n')}
+
+### Example Passages:
+${Object.entries(EXAMPLE_PASSAGES)
+  .map(([key, passage]) => {
+    return `**${key}**:
+${passage}`;
+  })
+  .join('\n\n')}
+
+${STYLE_EXAMPLES}
+
+${this._buildExtendedStyleExamplesForCache()}
+`);
+
+    // Part 5: Consistency Rules (STATIC)
+    parts.push(`## CONSISTENCY CHECKLIST - Self-Validation Rules
+
+${CONSISTENCY_RULES.description}
+
+### Mandatory Checks:
+${CONSISTENCY_RULES.mandatoryChecks.map(c => `- ${c}`).join('\n')}
+
+### Common Errors to Avoid:
+${CONSISTENCY_RULES.commonErrors.map(e => `- ${e}`).join('\n')}
+`);
+
+    return parts.join('\n\n---\n\n');
+  }
+
+  /**
+   * Get or create cache for static content
+   */
+  async _ensureStaticCache() {
+    const cacheKey = `story_static_v${this.staticCacheVersion}`;
+
+    // Check if cache exists
+    const existing = await llmService.getCache(cacheKey);
+    if (existing) {
+      this.staticCacheKey = cacheKey;
+      console.log(`[StoryGenerationService] ♻️ Using existing static cache: ${cacheKey}`);
+      return cacheKey;
+    }
+
+    // Create new cache
+    console.log(`[StoryGenerationService] 🔧 Creating static content cache...`);
+
+    const staticContent = this._buildStaticCacheContent();
+
+    await llmService.createCache({
+      key: cacheKey,
+      model: 'gemini-3-flash-preview',
+      systemInstruction: MASTER_SYSTEM_PROMPT,
+      content: staticContent,
+      ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
+      metadata: {
+        version: this.staticCacheVersion,
+        created: new Date().toISOString(),
+        type: 'story_generation_static',
+      },
+    });
+
+    this.staticCacheKey = cacheKey;
+    console.log(`[StoryGenerationService] ✅ Static cache created: ${cacheKey}`);
+
+    return cacheKey;
+  }
+
+  /**
+   * Build dynamic prompt content (changes per request)
+   * This is sent alongside the cached static content
+   */
+  _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint) {
+    const parts = [];
+
+    // Per Gemini 3 docs: "place your specific instructions or questions at the
+    // end of the prompt, after the data context"
+
+    // Dynamic Part 1: Complete Story So Far
+    parts.push(this._buildStorySummarySection(context));
+
+    // Dynamic Part 2: Character Knowledge State (who knows what)
+    parts.push(this._buildKnowledgeSection(context));
+
+    // Dynamic Part 3: Voice DNA (character-specific dialogue patterns for this scene)
+    const charactersInScene = this._extractCharactersFromContext(context, chapter);
+    const voiceDNA = buildVoiceDNASection(charactersInScene);
+    if (voiceDNA) {
+      parts.push(voiceDNA);
+    }
+
+    // Dynamic Part 4: Dramatic Irony (chapter-specific ironies)
+    const pathKey = context.pathKey || '';
+    const choiceHistory = context.playerChoices || [];
+    const dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
+    if (dramaticIrony) {
+      parts.push(dramaticIrony);
+    }
+
+    // Dynamic Part 5: Consistency Checklist (established facts + active threads)
+    parts.push(this._buildConsistencySection(context));
+
+    // Dynamic Part 6: Current Scene State (exact continuation point)
+    const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
+    if (sceneState) {
+      parts.push(sceneState);
+    }
+
+    // Dynamic Part 7: Personal Stakes & Engagement Guidance
+    const engagementGuidance = this._buildEngagementGuidanceSection(context, chapter, subchapter);
+    if (engagementGuidance) {
+      parts.push(engagementGuidance);
+    }
+
+    // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
+    parts.push('\n\n**Based on all the information above, here is your task:**\n\n');
+    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
+
+    return parts.join('\n\n---\n\n');
+  }
+
+  /**
    * Build the complete generation prompt with all context
+   * LEGACY METHOD - kept for backward compatibility, but now uses caching internally
    */
   _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     const parts = [];
@@ -5891,47 +6058,99 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       try {
         let generatedContent;
 
-        // ========== SINGLE-PASS GENERATION FOR ALL SUBCHAPTERS ==========
+        // ========== SINGLE-PASS GENERATION WITH CONTEXT CACHING ==========
         // Decision schema has decision field BEFORE narrative, so decision is generated first
         // This eliminates the need for two-pass generation while ensuring complete decisions
-        const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+
         const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
+        let response;
 
-        console.log(`[StoryGenerationService] Single-pass generation for Chapter ${chapter}.${subchapter} (decision=${isDecisionPoint})`);
-        llmTrace('StoryGenerationService', traceId, 'prompt.built', {
-          caseNumber,
-          pathKey,
-          chapter,
-          subchapter,
-          isDecisionPoint,
-          promptLength: prompt?.length || 0,
-          schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
-          contextSummary: {
-            previousChapters: context?.previousChapters?.length || 0,
-            establishedFacts: context?.establishedFacts?.length || 0,
-            playerChoices: context?.playerChoices?.length || 0,
-            narrativeThreads: context?.narrativeThreads?.length || 0,
-          },
-          reason,
-        }, 'debug');
+        // Try cached generation first (works in both proxy and direct mode)
+        try {
+          // Ensure static cache exists (creates on first call, reuses thereafter)
+          const cacheKey = await this._ensureStaticCache();
 
-        const response = await llmService.complete(
-          [{ role: 'user', content: prompt }],
-          {
-            systemPrompt: MASTER_SYSTEM_PROMPT,
-            maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-            responseSchema: schema,
-            traceId,
-            requestContext: {
-              caseNumber,
-              chapter,
-              subchapter,
-              pathKey,
-              isDecisionPoint,
-              reason,
+          // Build only dynamic prompt (story history, current state, task)
+          const dynamicPrompt = this._buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint);
+
+          console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
+          llmTrace('StoryGenerationService', traceId, 'prompt.built', {
+            caseNumber,
+            pathKey,
+            chapter,
+            subchapter,
+            isDecisionPoint,
+            cacheKey,
+            cachingEnabled: true,
+            dynamicPromptLength: dynamicPrompt?.length || 0,
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+            contextSummary: {
+              previousChapters: context?.previousChapters?.length || 0,
+              establishedFacts: context?.establishedFacts?.length || 0,
+              playerChoices: context?.playerChoices?.length || 0,
+              narrativeThreads: context?.narrativeThreads?.length || 0,
             },
-          }
-        );
+            reason,
+          }, 'debug');
+
+          response = await llmService.completeWithCache({
+            cacheKey,
+            dynamicPrompt,
+            options: {
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+              responseSchema: schema,
+              thinkingLevel: 'medium',
+            },
+          });
+        } catch (cacheError) {
+          console.warn(`[StoryGenerationService] ⚠️ Caching failed:`, cacheError.message);
+          console.warn(`[StoryGenerationService] Falling back to non-cached generation`);
+          // Fall through to non-cached generation
+          response = null;
+        }
+
+        // Fallback: Use regular generation if caching failed
+        if (!response) {
+          console.log(`[StoryGenerationService] Regular generation for Chapter ${chapter}.${subchapter} (no caching)`);
+
+          const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
+
+          llmTrace('StoryGenerationService', traceId, 'prompt.built', {
+            caseNumber,
+            pathKey,
+            chapter,
+            subchapter,
+            isDecisionPoint,
+            cachingEnabled: false,
+            promptLength: prompt?.length || 0,
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+            contextSummary: {
+              previousChapters: context?.previousChapters?.length || 0,
+              establishedFacts: context?.establishedFacts?.length || 0,
+              playerChoices: context?.playerChoices?.length || 0,
+              narrativeThreads: context?.narrativeThreads?.length || 0,
+            },
+            reason,
+          }, 'debug');
+
+          response = await llmService.complete(
+            [{ role: 'user', content: prompt }],
+            {
+              systemPrompt: MASTER_SYSTEM_PROMPT,
+              maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
+              responseSchema: schema,
+              traceId,
+              requestContext: {
+                caseNumber,
+                chapter,
+                subchapter,
+                pathKey,
+                isDecisionPoint,
+                reason,
+              },
+            }
+          );
+        }
 
         llmTrace('StoryGenerationService', traceId, 'llm.response.received', {
           model: response?.model,

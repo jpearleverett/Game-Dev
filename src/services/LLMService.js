@@ -16,6 +16,7 @@ import { llmTrace } from '../utils/llmTrace';
 
 const LLM_CONFIG_KEY = 'dead_letters_llm_config';
 const OFFLINE_QUEUE_KEY = 'dead_letters_offline_queue';
+const CACHE_STORAGE_KEY = 'dead_letters_llm_caches';
 
 // Get configuration from environment (baked in at build time)
 const ENV_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || null;
@@ -63,6 +64,11 @@ class LLMService {
     this.offlineCallbackRegistry = new Map(); // callbackId -> function
     this.networkUnsubscribe = null;
     this._setupNetworkListener();
+
+    // ========== CONTEXT CACHING ==========
+    // Explicit context caching for cost optimization
+    this.caches = new Map(); // In-memory cache registry: cacheKey -> { name, expireTime, metadata }
+    this.cacheInitialized = false;
   }
 
   /**
@@ -698,7 +704,7 @@ class LLMService {
    * Mobile networks often kill idle connections after 30-40 seconds,
    * but Gemini's "thinking" phase can take 20-60 seconds.
    */
-  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext }) {
+  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent }) {
     let lastError = null;
     let attempt = 0;
     const operationStart = Date.now();
@@ -767,6 +773,7 @@ class LLMService {
             maxTokens,
             systemPrompt,
             responseSchema,
+            cachedContent, // Optional: cached content reference for context caching
             stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
             clientTraceId: traceId || null,
             clientRequestContext: requestContext || null,
@@ -1211,6 +1218,473 @@ class LLMService {
     }
 
     return text;
+  }
+
+  // ========== CONTEXT CACHING METHODS ==========
+
+  /**
+   * Initialize cache storage (load existing caches from AsyncStorage)
+   */
+  async _initializeCacheStorage() {
+    if (this.cacheInitialized) return;
+
+    try {
+      const stored = await AsyncStorage.getItem(CACHE_STORAGE_KEY);
+      if (stored) {
+        const cacheData = JSON.parse(stored);
+        // Only restore non-expired caches
+        const now = Date.now();
+        for (const [key, value] of Object.entries(cacheData)) {
+          const expireTime = new Date(value.expireTime).getTime();
+          if (expireTime > now) {
+            this.caches.set(key, value);
+          } else {
+            console.log(`[LLMService] Cache expired: ${key}`);
+          }
+        }
+        console.log(`[LLMService] Loaded ${this.caches.size} active caches from storage`);
+      }
+    } catch (error) {
+      console.warn('[LLMService] Failed to load cache storage:', error);
+    }
+
+    this.cacheInitialized = true;
+  }
+
+  /**
+   * Save cache registry to AsyncStorage
+   */
+  async _saveCacheStorage() {
+    try {
+      const cacheData = Object.fromEntries(this.caches);
+      await AsyncStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cacheData));
+    } catch (error) {
+      console.warn('[LLMService] Failed to save cache storage:', error);
+    }
+  }
+
+  /**
+   * Create a new cache for static content
+   * @param {Object} config - Cache configuration
+   * @param {string} config.key - Unique cache key
+   * @param {string} config.model - Model to use
+   * @param {string} config.systemInstruction - System prompt
+   * @param {string} config.content - Static content to cache
+   * @param {string} config.ttl - Time to live (e.g., '3600s' for 1 hour)
+   * @param {Object} config.metadata - Optional metadata for cache identification
+   * @returns {Promise<Object>} Cache object with name and expireTime
+   */
+  async createCache({ key, model, systemInstruction, content, ttl = '3600s', metadata = {} }) {
+    await this._initializeCacheStorage();
+
+    // Check if cache already exists and is valid
+    const existing = this.caches.get(key);
+    if (existing) {
+      const expireTime = new Date(existing.expireTime).getTime();
+      if (expireTime > Date.now()) {
+        console.log(`[LLMService] ♻️ Reusing existing cache: ${key} (expires: ${existing.expireTime})`);
+        return existing;
+      } else {
+        console.log(`[LLMService] Cache expired, creating new: ${key}`);
+      }
+    }
+
+    console.log(`[LLMService] 🔧 Creating new cache: ${key} (ttl: ${ttl})`);
+
+    // Use the v1alpha endpoint for caching
+    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+
+    try {
+      const response = await fetch(`${baseUrl}/cachedContents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': this.config.apiKey,
+        },
+        body: JSON.stringify({
+          model: `models/${model}`,
+          system_instruction: {
+            parts: [{ text: systemInstruction }],
+          },
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: content }],
+            },
+          ],
+          ttl,
+          display_name: key,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Cache creation failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const cache = await response.json();
+
+      // Store cache info
+      const cacheInfo = {
+        name: cache.name,
+        expireTime: cache.expireTime,
+        createTime: cache.createTime,
+        updateTime: cache.updateTime,
+        key,
+        model,
+        metadata,
+      };
+
+      this.caches.set(key, cacheInfo);
+      await this._saveCacheStorage();
+
+      console.log(`[LLMService] ✅ Cache created: ${cache.name}`);
+      console.log(`[LLMService]    Expires: ${cache.expireTime}`);
+      console.log(`[LLMService]    Token count: ${cache.usageMetadata?.totalTokenCount || 'unknown'}`);
+
+      return cacheInfo;
+    } catch (error) {
+      console.error('[LLMService] Failed to create cache:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get cache by key
+   * @param {string} key - Cache key
+   * @returns {Object|null} Cache info or null if not found/expired
+   */
+  async getCache(key) {
+    await this._initializeCacheStorage();
+
+    const cache = this.caches.get(key);
+    if (!cache) return null;
+
+    const expireTime = new Date(cache.expireTime).getTime();
+    if (expireTime <= Date.now()) {
+      console.log(`[LLMService] Cache expired: ${key}`);
+      this.caches.delete(key);
+      await this._saveCacheStorage();
+      return null;
+    }
+
+    return cache;
+  }
+
+  /**
+   * Update cache TTL
+   * @param {string} key - Cache key
+   * @param {string} ttl - New TTL (e.g., '3600s')
+   */
+  async updateCache(key, ttl) {
+    await this._initializeCacheStorage();
+
+    const cache = this.caches.get(key);
+    if (!cache) {
+      throw new Error(`Cache not found: ${key}`);
+    }
+
+    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+
+    try {
+      const response = await fetch(`${baseUrl}/${cache.name}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': this.config.apiKey,
+        },
+        body: JSON.stringify({ ttl }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Cache update failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const updated = await response.json();
+      cache.expireTime = updated.expireTime;
+      cache.updateTime = updated.updateTime;
+
+      this.caches.set(key, cache);
+      await this._saveCacheStorage();
+
+      console.log(`[LLMService] ✅ Cache updated: ${cache.name}, new expiry: ${cache.expireTime}`);
+    } catch (error) {
+      console.error('[LLMService] Failed to update cache:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete cache
+   * @param {string} key - Cache key
+   */
+  async deleteCache(key) {
+    await this._initializeCacheStorage();
+
+    const cache = this.caches.get(key);
+    if (!cache) {
+      console.warn(`[LLMService] Cache not found for deletion: ${key}`);
+      return;
+    }
+
+    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+
+    try {
+      const response = await fetch(`${baseUrl}/${cache.name}`, {
+        method: 'DELETE',
+        headers: {
+          'x-goog-api-key': this.config.apiKey,
+        },
+      });
+
+      if (!response.ok && response.status !== 404) {
+        const error = await response.json().catch(() => ({}));
+        console.warn(`[LLMService] Cache deletion warning: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+      }
+
+      this.caches.delete(key);
+      await this._saveCacheStorage();
+
+      console.log(`[LLMService] ✅ Cache deleted: ${key}`);
+    } catch (error) {
+      console.error('[LLMService] Failed to delete cache:', error);
+    }
+  }
+
+  /**
+   * List all active caches
+   */
+  async listCaches() {
+    await this._initializeCacheStorage();
+    return Array.from(this.caches.values());
+  }
+
+  /**
+   * Clean up expired caches
+   */
+  async cleanExpiredCaches() {
+    await this._initializeCacheStorage();
+
+    const now = Date.now();
+    const expired = [];
+
+    for (const [key, cache] of this.caches.entries()) {
+      const expireTime = new Date(cache.expireTime).getTime();
+      if (expireTime <= now) {
+        expired.push(key);
+      }
+    }
+
+    for (const key of expired) {
+      await this.deleteCache(key);
+    }
+
+    console.log(`[LLMService] Cleaned ${expired.length} expired caches`);
+  }
+
+  /**
+   * Generate content using cached context
+   * @param {Object} params - Generation parameters
+   * @param {string} params.cacheKey - Cache key to use
+   * @param {string} params.dynamicPrompt - Dynamic prompt to append to cached content
+   * @param {Object} params.options - Standard generation options
+   * @returns {Promise<Object>} Generation response with usage metadata
+   */
+  async completeWithCache({ cacheKey, dynamicPrompt, options = {} }) {
+    await this._initializeCacheStorage();
+
+    const cache = await this.getCache(cacheKey);
+    if (!cache) {
+      throw new Error(`Cache not found or expired: ${cacheKey}`);
+    }
+
+    const model = options.model || cache.model || this.config.model;
+
+    console.log(`[LLMService] 🎯 Generating with cache: ${cacheKey}`);
+
+    // Use proxy mode if configured (production), otherwise direct API call (dev)
+    if (this.config.proxyUrl) {
+      console.log('[LLMService] Using proxy mode for cached generation');
+
+      // Call via proxy with cachedContent parameter
+      const response = await this._callViaProxy(
+        [{ role: 'user', content: dynamicPrompt }],
+        {
+          model,
+          temperature: 1.0, // Forced for Gemini 3
+          maxTokens: options.maxTokens || 8192,
+          systemPrompt: null, // System prompt is in cache
+          responseSchema: options.responseSchema,
+          cachedContent: cache.name,
+          traceId: options.traceId,
+          requestContext: options.requestContext,
+        }
+      );
+
+      // Log token usage with cache metrics
+      this._logCachedTokenUsage({
+        promptTokenCount: response.usage.promptTokens,
+        cachedContentTokenCount: response.usage.cachedTokens,
+        candidatesTokenCount: response.usage.completionTokens,
+        totalTokenCount: response.usage.totalTokens,
+      }, cacheKey);
+
+      return response;
+    }
+
+    // Direct mode (dev) - call Gemini API directly
+    console.log('[LLMService] Using direct mode for cached generation');
+
+    const isGemini3 = model.includes('gemini-3');
+
+    // Build generation config
+    const generationConfig = {
+      temperature: 1.0, // Forced for Gemini 3
+      maxOutputTokens: options.maxTokens || 8192,
+      topP: 0.95,
+      topK: 40,
+    };
+
+    // Add thinking configuration for Gemini 3
+    if (isGemini3) {
+      generationConfig.thinkingConfig = {
+        thinkingLevel: options.thinkingLevel || 'medium',
+      };
+    }
+
+    // Add structured output configuration if schema provided
+    if (options.responseSchema) {
+      generationConfig.responseMimeType = 'application/json';
+      generationConfig.responseSchema = options.responseSchema;
+    }
+
+    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+      const response = await fetch(
+        `${baseUrl}/models/${model}:generateContent?key=${this.config.apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cached_content: cache.name,
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: dynamicPrompt }],
+              },
+            ],
+            generationConfig,
+            safetySettings: [
+              {
+                category: 'HARM_CATEGORY_HARASSMENT',
+                threshold: 'BLOCK_ONLY_HIGH',
+              },
+              {
+                category: 'HARM_CATEGORY_HATE_SPEECH',
+                threshold: 'BLOCK_ONLY_HIGH',
+              },
+              {
+                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                threshold: 'BLOCK_ONLY_HIGH',
+              },
+              {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_ONLY_HIGH',
+              },
+            ],
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Generation failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      // Extract content
+      const candidate = data.candidates?.[0];
+      if (!candidate) {
+        throw new Error('No candidate in response');
+      }
+
+      const content = candidate.content?.parts?.[0]?.text || '';
+      const usage = data.usageMetadata || {};
+
+      // Log token usage with cache metrics
+      this._logCachedTokenUsage(usage, cacheKey);
+
+      return {
+        content,
+        model: data.modelVersion || model,
+        finishReason: candidate.finishReason,
+        isTruncated: candidate.finishReason === 'MAX_TOKENS',
+        usage: {
+          promptTokens: usage.promptTokenCount || 0,
+          cachedTokens: usage.cachedContentTokenCount || 0,
+          completionTokens: usage.candidatesTokenCount || 0,
+          totalTokens: usage.totalTokenCount || 0,
+        },
+      };
+    } catch (error) {
+      console.error('[LLMService] Cached generation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Log token usage with cache metrics
+   */
+  _logCachedTokenUsage(usage, cacheKey) {
+    const promptTokens = usage.promptTokenCount || 0;
+    const cachedTokens = usage.cachedContentTokenCount || 0;
+    const newTokens = promptTokens - cachedTokens;
+    const outputTokens = usage.candidatesTokenCount || 0;
+    const totalTokens = usage.totalTokenCount || 0;
+
+    const cacheHitRate = promptTokens > 0 ? ((cachedTokens / promptTokens) * 100).toFixed(1) : '0.0';
+
+    // Calculate costs (Gemini 3 Flash pricing)
+    const INPUT_RATE = 0.50 / 1_000_000;  // $0.50 per 1M tokens
+    const CACHED_RATE = INPUT_RATE * 0.25; // 75% discount estimate
+    const OUTPUT_RATE = 3.00 / 1_000_000;  // $3.00 per 1M tokens
+
+    const newTokensCost = newTokens * INPUT_RATE;
+    const cachedTokensCost = cachedTokens * CACHED_RATE;
+    const outputTokensCost = outputTokens * OUTPUT_RATE;
+    const totalCost = newTokensCost + cachedTokensCost + outputTokensCost;
+
+    // Calculate what it would have cost without caching
+    const noCacheCost = promptTokens * INPUT_RATE + outputTokensCost;
+    const savings = noCacheCost - totalCost;
+    const savingsPercent = noCacheCost > 0 ? ((savings / noCacheCost) * 100).toFixed(1) : '0.0';
+
+    console.log(`[LLMService] 📊 Token Usage (Cache: ${cacheKey}):`);
+    console.log(`  Input Tokens: ${promptTokens.toLocaleString()}`);
+    console.log(`    ├─ Cached: ${cachedTokens.toLocaleString()} (${cacheHitRate}%)`);
+    console.log(`    └─ New: ${newTokens.toLocaleString()}`);
+    console.log(`  Output Tokens: ${outputTokens.toLocaleString()}`);
+    console.log(`  Total: ${totalTokens.toLocaleString()}`);
+    console.log(`  `);
+    console.log(`  💰 Cost Breakdown:`);
+    console.log(`    ├─ New tokens: $${newTokensCost.toFixed(6)}`);
+    console.log(`    ├─ Cached tokens: $${cachedTokensCost.toFixed(6)}`);
+    console.log(`    └─ Output tokens: $${outputTokensCost.toFixed(6)}`);
+    console.log(`  Total: $${totalCost.toFixed(6)}`);
+    console.log(`  `);
+    console.log(`  💵 Savings: $${savings.toFixed(6)} (${savingsPercent}% reduction)`);
+    console.log(`  Without cache: $${noCacheCost.toFixed(6)}`);
   }
 }
 
