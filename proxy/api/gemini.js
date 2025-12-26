@@ -130,8 +130,8 @@ export default async function handler(req, res) {
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
       ],
-      // Add cached content reference if provided
-      ...(cachedContent && { cachedContent }),
+      // Add cached content reference if provided (must be snake_case for Gemini API)
+      ...(cachedContent && { cached_content: cachedContent }),
     };
 
     // Add thinking config for Gemini 3 models - produces better quality output
