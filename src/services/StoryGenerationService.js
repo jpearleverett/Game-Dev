@@ -2103,6 +2103,7 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
       bridgeText: template.bridgeText,
       previously: `The investigation continued through Ashport's rain-soaked streets.`,
       narrative: template.narrative,
+      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
       chapterSummary: `Chapter ${chapter}.${subchapter}: ${template.bridgeText}`,
       jackActionStyle: 'balanced',
       jackRiskLevel: 'moderate',
@@ -2180,6 +2181,7 @@ Whatever the morning brought, he'd face it. That was all he could promise himsel
       bridgeText: 'The journey continues.',
       previously: 'Jack continued his investigation through the rain-soaked streets of Ashport.',
       narrative: minimalNarrative,
+      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
       chapterSummary: `Chapter ${chapter}.${subchapter}: The investigation continues through Ashport.`,
       jackActionStyle: 'balanced',
       jackRiskLevel: 'moderate',
@@ -2319,6 +2321,7 @@ The city held its breath. So did Jack.`;
       bridgeText: `Jack faces the consequences of ${phaseTone}.`,
       previously: previousRecap,
       narrative: narrative,
+      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
       chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The weight of past mistakes pressed down as the truth drew closer.`,
       jackActionStyle: personality.riskTolerance === 'high' ? 'direct' :
                        personality.riskTolerance === 'low' ? 'cautious' : 'balanced',
@@ -6634,6 +6637,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
           hasTitle: !!generatedContent?.title,
           narrativeLength: generatedContent?.narrative?.length || 0,
+          hasBranchingNarrative: !!generatedContent?.branchingNarrative?.opening?.text,
           hasDecision: !!generatedContent?.decision,
           hasBridgeText: !!generatedContent?.bridgeText,
           hasPreviously: !!generatedContent?.previously,
@@ -6839,6 +6843,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           caseNumber,
           title: generatedContent.title,
           narrative: generatedContent.narrative,
+          // BRANCHING NARRATIVE: Interactive story structure with player choices
+          // This powers the BranchingNarrativeReader component for in-subchapter choices
+          branchingNarrative: generatedContent.branchingNarrative || null,
           bridgeText: generatedContent.bridgeText,
           previously: generatedContent.previously || '', // Recap of previous events
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
@@ -6854,7 +6861,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
           previousThreadsAddressed: Array.isArray(generatedContent.previousThreadsAddressed) ? generatedContent.previousThreadsAddressed : [],
           generatedAt: new Date().toISOString(),
-          wordCount: generatedContent.narrative.split(/\s+/).length,
+          wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
         };
 
         // Save the generated content
@@ -6863,6 +6870,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           caseNumber,
           pathKey,
           wordCount: storyEntry.wordCount,
+          hasBranchingNarrative: !!storyEntry.branchingNarrative?.opening?.text,
           generatedAt: storyEntry.generatedAt,
           hasDecision: !!storyEntry.decision,
         }, 'debug');
@@ -7067,6 +7075,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         bridgeText: parsed.bridge || '',
         previously: parsed.previously || '', // Recap of previous events
         narrative: this._cleanNarrative(parsed.narrative || ''),
+        // BRANCHING NARRATIVE: The interactive story structure with 9 paths
+        // Contains: opening, firstChoice, secondChoices (each with options array)
+        branchingNarrative: parsed.branchingNarrative || null,
         chapterSummary: parsed.chapterSummary || '', // High-quality summary
         puzzleCandidates: parsed.puzzleCandidates || [], // LLM suggested puzzle words
         briefing: parsed.briefing || { summary: '', objectives: [] },
@@ -7134,6 +7145,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       bridgeText: '',
       previously: '',
       narrative: '',
+      branchingNarrative: null, // Include in fallback parsing
       chapterSummary: '',
       puzzleCandidates: [],
       briefing: { summary: '', objectives: [] },
