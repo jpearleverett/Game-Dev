@@ -747,6 +747,118 @@ export function useStoryGeneration(storyCampaign) {
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
   /**
+   * TRUE INFINITE BRANCHING: Speculative prefetch after first choice is made.
+   *
+   * When the player makes their first choice in a subchapter (e.g., "1B"), we know
+   * they'll end up on one of 3 possible second-choice endings (1B-2A, 1B-2B, 1B-2C).
+   *
+   * This function generates 3 versions of the NEXT subchapter, one for each possible
+   * second choice the player might make. This happens while the player is still reading
+   * their first choice response and making their second choice - typically 30-60+ seconds.
+   *
+   * Result: By the time the player completes the subchapter, the next subchapter
+   * is already generated and ready, creating a seamless experience.
+   *
+   * @param {string} caseNumber - Current case (e.g., "002A")
+   * @param {string} firstChoiceKey - The first choice made (e.g., "1B")
+   * @param {string} pathKey - The path key for this case
+   * @param {Array} choiceHistory - Chapter-level decision history
+   * @param {Array} existingBranchingChoices - Previously made branching choices
+   */
+  const speculativePrefetchForFirstChoice = useCallback(async (
+    caseNumber,
+    firstChoiceKey,
+    pathKey,
+    choiceHistory = [],
+    existingBranchingChoices = []
+  ) => {
+    if (!isConfigured) {
+      return;
+    }
+
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+
+    // Only trigger for chapters 2+ (Chapter 1 is static)
+    if (chapter < 2) {
+      return;
+    }
+
+    // Only for subchapters A (1) and B (2) - subchapter C is the decision point
+    if (subchapter >= 3) {
+      return;
+    }
+
+    console.log(`[useStoryGeneration] Speculative prefetch: player chose ${firstChoiceKey} in ${caseNumber}`);
+    console.log(`[useStoryGeneration] Generating 3 versions of next subchapter for possible second choices`);
+
+    // Determine the next subchapter
+    const nextSubchapter = subchapter + 1;
+    const nextSubLetter = { 2: 'B', 3: 'C' }[nextSubchapter];
+    const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
+
+    // The 3 possible second choices based on first choice
+    // If firstChoiceKey is "1B", second choices are "1B-2A", "1B-2B", "1B-2C"
+    const secondChoiceOptions = ['2A', '2B', '2C'];
+
+    // Flush storage first
+    try {
+      const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
+      await flushPendingWrites();
+    } catch (err) {
+      console.warn('[useStoryGeneration] Failed to flush before speculative prefetch:', err);
+    }
+
+    // Generate 3 versions SEQUENTIALLY (avoid timeout issues on mobile)
+    for (const secondSuffix of secondChoiceOptions) {
+      const speculativeSecondChoice = `${firstChoiceKey}-${secondSuffix}`;
+
+      // Build the speculative branchingChoices as if player made this second choice
+      const speculativeBranchingChoices = [
+        ...existingBranchingChoices,
+        {
+          caseNumber,
+          firstChoice: firstChoiceKey,
+          secondChoice: speculativeSecondChoice,
+          completedAt: new Date().toISOString(),
+          isSpeculative: true, // Mark as speculative for debugging
+        },
+      ];
+
+      console.log(`[useStoryGeneration] Generating ${nextCaseNumber} for path ${speculativeSecondChoice}...`);
+
+      try {
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
+
+        // Generate with the speculative branching choices context
+        const entry = await storyGenerationService.generateSubchapter(
+          chapter,
+          nextSubchapter,
+          pathKey,
+          choiceHistory,
+          {
+            branchingChoices: speculativeBranchingChoices,
+            reason: 'speculativePrefetchForFirstChoice',
+            speculativeSecondChoice, // Pass this for potential cache keying
+          }
+        );
+
+        if (entry && isMountedRef.current) {
+          // Store with the speculative branching path so we can retrieve it later
+          // The cache key will be: ${nextCaseNumber}_${pathKey}_${speculativeSecondChoice}
+          updateGeneratedCache(nextCaseNumber, pathKey, entry, speculativeSecondChoice);
+          console.log(`[useStoryGeneration] ✅ Cached ${nextCaseNumber} for ${speculativeSecondChoice}`);
+        }
+      } catch (err) {
+        console.warn(`[useStoryGeneration] Speculative prefetch failed for ${speculativeSecondChoice}:`, err.message);
+        // Continue with other branches even if one fails
+      }
+    }
+
+    console.log(`[useStoryGeneration] Speculative prefetch complete: 3 versions of ${nextCaseNumber} ready`);
+  }, [isConfigured]);
+
+  /**
    * Analyze choice history to predict most likely next path
    * Returns the path (A or B) that the player is more likely to choose
    *
@@ -1080,6 +1192,7 @@ export function useStoryGeneration(storyCampaign) {
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC, // Prefetch both decision paths when entering subchapter C
     triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch siblings after branching choice is made
+    speculativePrefetchForFirstChoice, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths after first choice
     cancelGeneration,
     clearError,
   };

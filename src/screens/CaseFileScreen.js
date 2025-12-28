@@ -57,6 +57,7 @@ export default function CaseFileScreen({
   solvedCaseIds = [],
   onSelectDecision,
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
+  onFirstChoicePrefetch, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths when first choice is made
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -161,14 +162,33 @@ export default function CaseFileScreen({
     if (activeCase?.storyMeta) return activeCase.storyMeta;
     const caseNumber = typeof activeCase?.caseNumber === "string" ? activeCase.caseNumber : null;
     if (!caseNumber) return null;
-    
+
     const chapterSlice = caseNumber.slice(0, 3);
     const chapterNumber = Number(chapterSlice);
     const chapterKey = Number.isNaN(chapterNumber) ? null : chapterNumber;
     const pathKey = (chapterKey && storyCampaign?.pathHistory && storyCampaign.pathHistory[chapterKey]) ||
       storyCampaign?.currentPathKey || ROOT_PATH_KEY;
-      
-    return getStoryEntry(caseNumber, pathKey) || null;
+
+    // TRUE INFINITE BRANCHING: Check if we have a branching choice from the previous subchapter
+    // If so, use it to look up speculatively cached content
+    const subchapterLetter = caseNumber.slice(3, 4);
+    let previousBranchingPath = null;
+
+    if (subchapterLetter === 'B' || subchapterLetter === 'C') {
+      // Find the previous subchapter's case number
+      const prevLetter = subchapterLetter === 'B' ? 'A' : 'B';
+      const prevCaseNumber = `${chapterSlice}${prevLetter}`;
+
+      // Look for the branching choice from that case
+      const branchingChoices = storyCampaign?.branchingChoices || [];
+      const prevChoice = branchingChoices.find(bc => bc.caseNumber === prevCaseNumber);
+      if (prevChoice?.secondChoice) {
+        previousBranchingPath = prevChoice.secondChoice;
+        console.log(`[CaseFileScreen] Looking for speculative cache with path: ${previousBranchingPath}`);
+      }
+    }
+
+    return getStoryEntry(caseNumber, pathKey, previousBranchingPath) || null;
   }, [activeCase?.caseNumber, activeCase?.storyMeta, storyCampaign]);
 
   const storySummary = useMemo(() => {
@@ -251,6 +271,17 @@ export default function CaseFileScreen({
     setCollectedEvidence(prev => [...prev, evidence]);
     console.log('[CaseFileScreen] Evidence collected:', evidence);
   }, []);
+
+  // TRUE INFINITE BRANCHING: Handle first choice to trigger speculative prefetch
+  // When player makes their first choice (e.g., "1A"), we know they'll end up on one of
+  // 3 possible second choices (1A-2A, 1A-2B, 1A-2C). Start generating all 3 versions
+  // of the next subchapter so one is ready when they complete.
+  const handleFirstChoice = useCallback((firstChoiceKey) => {
+    console.log('[CaseFileScreen] First choice made:', firstChoiceKey);
+    if (onFirstChoicePrefetch && activeCase?.caseNumber) {
+      onFirstChoicePrefetch(activeCase.caseNumber, firstChoiceKey);
+    }
+  }, [onFirstChoicePrefetch, activeCase?.caseNumber]);
 
   // Legacy linear narrative (for Chapter 1 or fallback)
   const narrative = useMemo(() => {
@@ -625,6 +656,7 @@ export default function CaseFileScreen({
                       branchingNarrative={branchingNarrative}
                       palette={palette}
                       onComplete={handleBranchingComplete}
+                      onFirstChoice={handleFirstChoice}
                       onEvidenceCollected={handleEvidenceCollected}
                     />
                   </View>

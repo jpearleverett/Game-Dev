@@ -675,6 +675,7 @@ export function GameProvider({
     ensureDailyStoryCase,
     selectStoryDecision: story.selectStoryDecision,
     saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
+    speculativePrefetchForFirstChoice: story.speculativePrefetchForFirstChoice, // TRUE INFINITE BRANCHING: Prefetch 3 paths after first choice
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
     // Ideally consumers use useAudio(), but GameContext was the facade.
     // We removed setAudioController from here.

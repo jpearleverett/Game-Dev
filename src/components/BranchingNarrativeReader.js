@@ -350,6 +350,7 @@ export default function BranchingNarrativeReader({
   branchingNarrative,
   palette,
   onComplete,
+  onFirstChoice, // TRUE INFINITE BRANCHING: Called when player makes first choice (for prefetching)
   onEvidenceCollected,
   style,
 }) {
@@ -395,11 +396,17 @@ export default function BranchingNarrativeReader({
     setFirstChoiceMade(option.key);
     setMiddleState(SEGMENT_STATES.TYPING);
 
+    // TRUE INFINITE BRANCHING: Notify parent of first choice for prefetching
+    // This allows generating the 3 possible second-choice paths while player reads
+    if (onFirstChoice) {
+      onFirstChoice(option.key);
+    }
+
     // Scroll to show new content
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 100);
-  }, []);
+  }, [onFirstChoice]);
 
   // Handle middle segment complete
   const handleMiddleComplete = useCallback(() => {
