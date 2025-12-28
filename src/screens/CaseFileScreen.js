@@ -366,7 +366,6 @@ export default function CaseFileScreen({
   );
 
   // Game State Logic
-  const caseNumber = activeCase?.caseNumber;
   const storyDecision = activeCase?.storyDecision;
   const awaitingDecision = Boolean(storyDecision && storyCampaign?.awaitingDecision && storyCampaign?.pendingDecisionCase === caseNumber);
   const storyLocked = Boolean(!awaitingDecision && storyUnlockAt);
