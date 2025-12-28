@@ -784,7 +784,24 @@ class LLMService {
         clearTimeout(timeoutId);
 
         // For streaming responses, we need to read the full body as text and parse NDJSON
-        const responseText = await response.text();
+        // Add a timeout for body reading since the fetch signal only applies to the initial request
+        const bodyReadStart = Date.now();
+        const bodyReadTimeout = 180000; // 3 minutes for body read (proxy timeout is 2 min)
+
+        let responseText;
+        try {
+          responseText = await Promise.race([
+            response.text(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Response body read timeout')), bodyReadTimeout)
+            )
+          ]);
+        } catch (bodyError) {
+          const bodyReadTime = Date.now() - bodyReadStart;
+          console.error(`[LLMService] [${localRequestId}] Body read failed after ${bodyReadTime}ms: ${bodyError.message}`);
+          throw bodyError;
+        }
+
         const networkTime = Date.now() - attemptStart;
 
         // Parse NDJSON - split by newlines and parse each line
