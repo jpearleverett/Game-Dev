@@ -184,6 +184,10 @@ export function getStoryMeta(caseNumber, pathKey) {
     title: entry.title,
     bridgeText: entry.bridgeText,
     decision: entry.decision || null,
+    // Include branchingNarrative if present (new interactive format)
+    branchingNarrative: entry.branchingNarrative || null,
+    // Legacy narrative for backwards compatibility
+    narrative: entry.narrative || null,
   };
 }
 
@@ -290,7 +294,27 @@ export async function getStoryMetaAsync(caseNumber, pathKey) {
     title: entry.title,
     bridgeText: entry.bridgeText,
     decision: entry.decision || null,
+    // Include branchingNarrative if present (new interactive format)
+    branchingNarrative: entry.branchingNarrative || null,
+    // Legacy narrative for backwards compatibility
+    narrative: entry.narrative || null,
   };
+}
+
+/**
+ * Get branching narrative specifically
+ */
+export function getStoryBranchingNarrative(caseNumber, pathKey) {
+  const entry = getStoryEntry(caseNumber, pathKey);
+  return entry?.branchingNarrative || null;
+}
+
+/**
+ * Async version of getStoryBranchingNarrative
+ */
+export async function getStoryBranchingNarrativeAsync(caseNumber, pathKey) {
+  const entry = await getStoryEntryAsync(caseNumber, pathKey);
+  return entry?.branchingNarrative || null;
 }
 
 /**

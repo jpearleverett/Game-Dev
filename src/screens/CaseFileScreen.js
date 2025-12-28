@@ -24,6 +24,7 @@ import ScreenSurface from "../components/ScreenSurface";
 import SecondaryButton from "../components/SecondaryButton";
 import PrimaryButton from "../components/PrimaryButton";
 import NarrativePager from "../components/NarrativePager";
+import BranchingNarrativeReader from "../components/BranchingNarrativeReader";
 import CaseHero from "../components/case-file/CaseHero";
 import CaseSummary from "../components/case-file/CaseSummary";
 import DecisionPanel from "../components/case-file/DecisionPanel";
@@ -214,22 +215,47 @@ export default function CaseFileScreen({
     return null;
   }, [caseSummary, dailyIntro, storySummary]);
 
+  // Check if we have branching narrative (new interactive format)
+  const branchingNarrative = useMemo(() => {
+    return storyMeta?.branchingNarrative || activeCase?.branchingNarrative || null;
+  }, [storyMeta?.branchingNarrative, activeCase?.branchingNarrative]);
+
+  const hasBranchingNarrative = Boolean(branchingNarrative?.opening?.text);
+
+  // State for tracking branching narrative progress and evidence
+  const [branchingProgress, setBranchingProgress] = useState(null);
+  const [collectedEvidence, setCollectedEvidence] = useState([]);
+
+  const handleBranchingComplete = useCallback((result) => {
+    setBranchingProgress(result);
+    console.log('[CaseFileScreen] Branching narrative complete:', result);
+  }, []);
+
+  const handleEvidenceCollected = useCallback((evidence) => {
+    setCollectedEvidence(prev => [...prev, evidence]);
+    console.log('[CaseFileScreen] Evidence collected:', evidence);
+  }, []);
+
+  // Legacy linear narrative (for Chapter 1 or fallback)
   const narrative = useMemo(() => {
+    // If we have branching narrative, skip legacy processing
+    if (hasBranchingNarrative) return [];
+
     const metaNarrative = storyMeta?.narrative;
     if (Array.isArray(metaNarrative)) return metaNarrative.filter(Boolean);
     if (typeof metaNarrative === "string" && metaNarrative.trim()) return [metaNarrative];
     if (Array.isArray(activeCase?.narrative)) {
       const original = activeCase.narrative.filter(Boolean);
-      
+
       if (original.length > 0 && activeCase.board?.outlierWords?.length > 0) {
         const outliers = activeCase.board.outlierWords.slice(0, 4).join(". ");
-        
+
         // Check for {puzzle_callback} placeholder
         if (original[0].includes("{puzzle_callback}")) {
            const updatedFirstPage = original[0].replace("{puzzle_callback}", outliers);
            return [updatedFirstPage, ...original.slice(1)];
         }
-        
+
         // Fallback: Prepend if no placeholder found
         const intro = `INTEL LOG: ${outliers}. The pattern was undeniable.\n\n`;
         return [intro + original[0], ...original.slice(1)];
@@ -238,7 +264,7 @@ export default function CaseFileScreen({
     }
     if (typeof activeCase?.narrative === "string" && activeCase.narrative.trim()) return [activeCase.narrative];
     return [];
-  }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords]);
+  }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords, hasBranchingNarrative]);
 
   // Calculate pagination parameters based on actual page dimensions and typography.
   // This uses line-based pagination to prevent text cutoff at the bottom of pages.
@@ -576,8 +602,17 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
-                {/* Narrative Pager */}
-                {narrativePages.length > 0 && (
+                {/* Narrative Section - Branching or Linear */}
+                {hasBranchingNarrative ? (
+                  <View style={styles.narrativeSection}>
+                    <BranchingNarrativeReader
+                      branchingNarrative={branchingNarrative}
+                      palette={palette}
+                      onComplete={handleBranchingComplete}
+                      onEvidenceCollected={handleEvidenceCollected}
+                    />
+                  </View>
+                ) : narrativePages.length > 0 && (
                   <View style={styles.narrativeSection}>
                     <NarrativePager
                       pages={narrativePages}
