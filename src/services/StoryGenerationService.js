@@ -581,8 +581,15 @@ const STORY_CONTENT_SCHEMA = {
       type: 'string',
       description: 'What does Jack personally stand to lose if he fails in THIS specific chapter? Be viscerally specific (not "his reputation" but "the last person who still believes in him").',
     },
+    // CANONICAL NARRATIVE - String representation for context building
+    // This is the "canonical path" (opening + 1A + 1A-2A) concatenated into a single string
+    // Used by context building, scene state extraction, and narrative thread analysis
+    narrative: {
+      type: 'string',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (~500 words). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
+    },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'branchingNarrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 /**
@@ -998,10 +1005,17 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       description: 'What does Jack personally stand to lose if he fails in THIS specific chapter? Be viscerally specific (not "his reputation" but "the last person who still believes in him").',
     },
+    // CANONICAL NARRATIVE - String representation for context building
+    // This is the "canonical path" (opening + 1A + 1A-2A) concatenated into a single string
+    // Used by context building, scene state extraction, and narrative thread analysis
+    narrative: {
+      type: 'string',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (~500 words). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
+    },
     // NOTE: decision field moved BEFORE narrative in schema to ensure it's generated first
     // This prevents truncation from cutting off decision structure
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 // ============================================================================
@@ -1135,7 +1149,17 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   * "opening": { text, details[] } - The shared opening segment (~165 words)
   * "firstChoice": { prompt, options[] } - First branch point with 3 options (1A, 1B, 1C)
   * "secondChoices": Array of 3 second-choice points, each with 3 options leading to 9 endings
-- "chapterSummary": Summarize the events of THIS narrative for future memory (2-3 sentences)
+- "narrative": CANONICAL NARRATIVE for context continuity. This is a ~500 word STRING that represents ONE complete path through your branchingNarrative.
+  Concatenate: opening.text + [blank line] + firstChoice.options[0].response (the 1A path) + [blank line] + secondChoices[0].options[0].response (the 1A-2A ending).
+  This creates a single continuous narrative that the context building system reads to understand scene state, character presence, location, and emotional state.
+  Write it naturally - smooth transitions between the segments. The context system needs this string to extract:
+  * Current location (where Jack is at the end)
+  * Time of day and story day
+  * Characters present in the final scene
+  * Jack's emotional and physical state
+  * Last sentence for continuation point
+  IMPORTANT: This must match the corresponding segments from branchingNarrative exactly - just concatenate them.
+- "chapterSummary": Summarize the CANONICAL PATH (opening → 1A → 1A-2A) for future memory (2-3 sentences)
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
 - "consistencyFacts": Array of 3-5 specific facts that must remain consistent in future chapters

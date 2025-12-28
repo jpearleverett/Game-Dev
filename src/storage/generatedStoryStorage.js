@@ -626,8 +626,13 @@ export async function compactStorage() {
     const story = await loadGeneratedStory();
 
     // Remove entries with null/undefined narratives
+    // Accept entries with either narrative (canonical string) or branchingNarrative (interactive)
     const validEntries = Object.entries(story.chapters).filter(([, entry]) => {
-      return entry && entry.narrative && entry.narrative.length > 0;
+      if (!entry) return false;
+      // Entry is valid if it has canonical narrative OR branchingNarrative
+      const hasNarrative = entry.narrative && entry.narrative.length > 0;
+      const hasBranchingNarrative = entry.branchingNarrative?.opening?.text?.length > 0;
+      return hasNarrative || hasBranchingNarrative;
     });
 
     const compactedStory = {
