@@ -51,10 +51,16 @@ export function StoryProvider({ children, progress, updateProgress }) {
     clearError: clearGenerationError,
   } = useStoryGeneration(storyCampaign);
 
-  // Keep choiceHistoryRef in sync to avoid stale closures
+  // Keep refs in sync to avoid stale closures
+  const branchingChoicesRef = useRef([]);
+
   useEffect(() => {
     choiceHistoryRef.current = storyCampaign?.choiceHistory || [];
   }, [storyCampaign?.choiceHistory]);
+
+  useEffect(() => {
+    branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
+  }, [storyCampaign?.branchingChoices]);
 
   // Helper to get current path key for analytics
   const getCurrentPathKey = useCallback((caseNumber) => {
@@ -79,7 +85,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * can continue. It will generate new content if needed, and always returns
    * success if ANY content (including fallback) is available.
    */
-  const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null) => {
+  // TRUE INFINITE BRANCHING: Added branchingChoices parameter for realized narrative context
+  const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null, branchingChoices = null) => {
     const traceId = createTraceId(`ensure_${caseNumber}_${pathKey}`);
     llmTrace('StoryContext', traceId, 'ensureStoryContent.start', {
       caseNumber,
@@ -124,10 +131,13 @@ export function StoryProvider({ children, progress, updateProgress }) {
       // CRITICAL: For user-facing generation, generateForCase will throw on error
       // It returns null on failure, which triggers the error path below
       // The UI will show a retry screen - player NEVER sees fallback content
+      // TRUE INFINITE BRANCHING: Use provided branchingChoices or fall back to ref
+      const effectiveBranchingChoices = branchingChoices || branchingChoicesRef.current;
       const entry = await generateForCase(
         caseNumber,
         canonicalPathKey,
-        history
+        history,
+        effectiveBranchingChoices
       );
 
       if (entry) {
@@ -183,8 +193,9 @@ export function StoryProvider({ children, progress, updateProgress }) {
     if (!isLLMConfigured) return;
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
-    // Use ref to avoid stale closure
+    // Use refs to avoid stale closures
     const choiceHistory = choiceHistoryRef.current;
+    const branchingChoices = branchingChoicesRef.current; // TRUE INFINITE BRANCHING
     const traceId = createTraceId(`bg_${caseNumber}_${pathKey}`);
     llmTrace('StoryContext', traceId, 'backgroundGeneration.trigger', {
       caseNumber,
@@ -192,6 +203,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
       chapter,
       subchapter,
       choiceHistoryLength: choiceHistory?.length || 0,
+      branchingChoicesLength: branchingChoices?.length || 0,
     }, 'debug');
 
     // Strategy (updated for TRUE INFINITE BRANCHING):
@@ -214,7 +226,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // so we can still prefetch both paths speculatively.
     if (chapter >= 1 && subchapter === 3 && chapter < 12) {
       console.log(`[StoryContext] Entering decision subchapter ${caseNumber} - prefetching both next chapter paths`);
-      prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'handleBackgroundGeneration:C-entered');
+      // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
+      prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'handleBackgroundGeneration:C-entered', branchingChoices);
     }
 
     // NOTE: For chapters 2+, sibling prefetch now happens via triggerPrefetchAfterBranchingComplete()
@@ -295,7 +308,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
           const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
           await flushPendingWrites();
 
-          const result = await ensureStoryContent(nextCaseNumber, nextPathKey, optimisticChoiceHistory);
+          // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
+          const result = await ensureStoryContent(nextCaseNumber, nextPathKey, optimisticChoiceHistory, branchingChoicesRef.current);
           const attemptDuration = Date.now() - attemptStart;
 
           if (result.ok) {

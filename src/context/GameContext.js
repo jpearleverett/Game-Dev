@@ -153,8 +153,8 @@ export function GameProvider({
               note: 'Chapter 1 is pre-written, starting Chapter 2 generation now',
             }, 'info');
             // Prefetch both A and B paths for Chapter 2 with empty choice history
-            // (player hasn't made any decisions yet)
-            story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch');
+            // (player hasn't made any decisions yet, no branching choices from Chapter 1)
+            story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch', []);
           }
 
           return { ok: true, caseId: targetCase.id };
