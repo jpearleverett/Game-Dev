@@ -760,28 +760,38 @@ class LLMService {
           }, 'info');
         }
 
+        // Build request body for logging
+        const requestBody = {
+          messages: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+          model,
+          temperature,
+          maxTokens,
+          systemPrompt,
+          responseSchema,
+          cachedContent, // Optional: cached content reference for context caching
+          stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
+          clientTraceId: traceId || null,
+          clientRequestContext: requestContext || null,
+        };
+
+        // Log request details for debugging
+        const requestBodyStr = JSON.stringify(requestBody);
+        console.log(`[LLMService] [${localRequestId}] Request size: ${requestBodyStr.length} bytes, hasSchema: ${!!responseSchema}, hasCachedContent: ${!!cachedContent}`);
+
         const response = await fetch(this.config.proxyUrl, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            messages: messages.map(m => ({
-              role: m.role,
-              content: m.content,
-            })),
-            model,
-            temperature,
-            maxTokens,
-            systemPrompt,
-            responseSchema,
-            cachedContent, // Optional: cached content reference for context caching
-            stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
-            clientTraceId: traceId || null,
-            clientRequestContext: requestContext || null,
-          }),
+          body: requestBodyStr,
           signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
+
+        // Log response details immediately after fetch returns
+        console.log(`[LLMService] [${localRequestId}] Response received: status=${response.status}, ok=${response.ok}, headers received in ${Date.now() - attemptStart}ms`);
 
         // For streaming responses, we need to read the body and process heartbeats
         // The issue: response.text() blocks until ALL data is received
@@ -842,6 +852,13 @@ class LLMService {
           console.log(`[LLMService] [${localRequestId}] Using response.text() fallback (no streaming support)`);
           const bodyReadTimeout = 180000; // 3 minutes for body read
 
+          // Set up periodic progress logging since we can't see actual progress
+          let progressLogCount = 0;
+          const progressInterval = setInterval(() => {
+            progressLogCount++;
+            console.log(`[LLMService] [${localRequestId}] Still waiting for body... (${progressLogCount * 30}s elapsed)`);
+          }, 30000); // Log every 30 seconds
+
           try {
             responseText = await Promise.race([
               response.text(),
@@ -852,7 +869,10 @@ class LLMService {
           } catch (bodyError) {
             const bodyReadTime = Date.now() - bodyReadStart;
             console.error(`[LLMService] [${localRequestId}] Body read failed after ${bodyReadTime}ms: ${bodyError.message}`);
+            console.error(`[LLMService] [${localRequestId}] No partial data available (response.text() is all-or-nothing)`);
             throw bodyError;
+          } finally {
+            clearInterval(progressInterval);
           }
         }
 
