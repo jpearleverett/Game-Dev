@@ -26,15 +26,22 @@ export function useNavigationActions(navigation, game, audio) {
   const isStoryMode = game.mode === 'story';
   const storyCampaign = progress.storyCampaign || {};
 
-  // SUBCHAPTER C FLOW: Check if we need to show narrative before puzzle
-  // For subchapter C, the flow is: Narrative -> Puzzle -> Decision
-  // This gives the LLM time to generate next chapter while player solves puzzle
-  const needsNarrativeFirstForC = useCallback((caseNumber) => {
+  // NARRATIVE-FIRST FLOW: Check if we need to show narrative before puzzle
+  // For ALL subchapters (chapters 2+), the flow is: Narrative -> Puzzle -> Continue
+  // This gives the LLM time to generate next content while player solves puzzle
+  // Benefits:
+  // - No speculative prefetch needed (we know player's exact path)
+  // - Generate only 1 version of next subchapter instead of 3
+  // - Puzzle time masks ALL generation
+  const needsNarrativeFirst = useCallback((caseNumber) => {
     if (!caseNumber) return false;
-    const subchapterLetter = caseNumber.slice(3, 4);
-    if (subchapterLetter !== 'C') return false;
 
-    // Check if branching narrative has been completed for this C
+    // Parse chapter number - Chapter 1 is static (no branching narratives)
+    const chapterStr = caseNumber.slice(0, 3);
+    const chapter = parseInt(chapterStr, 10);
+    if (isNaN(chapter) || chapter < 2) return false;
+
+    // Check if branching narrative has been completed for this case
     const branchingChoices = storyCampaign?.branchingChoices || [];
     const hasCompletedBranching = branchingChoices.some(bc => bc.caseNumber === caseNumber);
 
@@ -165,18 +172,18 @@ export function useNavigationActions(navigation, game, audio) {
     // Starting story activates case which may trigger generation
     const result = await enterStoryCampaign({});
     if (result?.ok) {
-      // SUBCHAPTER C FLOW: For C, go to narrative first, then puzzle
-      // This gives LLM time to generate next chapter while player solves puzzle
+      // NARRATIVE-FIRST FLOW: For chapters 2+, go to narrative first, then puzzle
+      // This gives LLM time to generate next content while player solves puzzle
       const targetCaseNumber = storyCampaign?.activeCaseNumber;
-      if (needsNarrativeFirstForC(targetCaseNumber)) {
-        console.log('[Navigation] Subchapter C detected - showing narrative before puzzle');
+      if (needsNarrativeFirst(targetCaseNumber)) {
+        console.log('[Navigation] Narrative-first flow - showing narrative before puzzle');
         navigation.navigate('CaseFile');
       } else {
         navigation.navigate('Board');
       }
     }
     // If not ok, the overlay will show the error/not-configured state
-  }, [enterStoryCampaign, navigation, storyCampaign?.activeCaseNumber, needsNarrativeFirstForC]);
+  }, [enterStoryCampaign, navigation, storyCampaign?.activeCaseNumber, needsNarrativeFirst]);
 
   const handleStoryRestart = useCallback(() => {
     handleStoryStart(true);
@@ -185,18 +192,18 @@ export function useNavigationActions(navigation, game, audio) {
   const handleStoryContinue = useCallback(async () => {
     const result = await continueStoryCampaign();
     if (result?.ok) {
-      // SUBCHAPTER C FLOW: For C, go to narrative first, then puzzle
-      // This gives LLM time to generate next chapter while player solves puzzle
+      // NARRATIVE-FIRST FLOW: For chapters 2+, go to narrative first, then puzzle
+      // This gives LLM time to generate next content while player solves puzzle
       const targetCaseNumber = storyCampaign?.activeCaseNumber;
-      if (needsNarrativeFirstForC(targetCaseNumber)) {
-        console.log('[Navigation] Subchapter C detected - showing narrative before puzzle');
+      if (needsNarrativeFirst(targetCaseNumber)) {
+        console.log('[Navigation] Narrative-first flow - showing narrative before puzzle');
         navigation.navigate('CaseFile');
       } else {
         navigation.navigate('Board');
       }
     }
     // If not ok, the overlay will show the error/not-configured state
-  }, [continueStoryCampaign, navigation, storyCampaign?.activeCaseNumber, needsNarrativeFirstForC]);
+  }, [continueStoryCampaign, navigation, storyCampaign?.activeCaseNumber, needsNarrativeFirst]);
 
   const handleStorySelectCase = useCallback(async (caseId) => {
     const opened = await openStoryCase(caseId);

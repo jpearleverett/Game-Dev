@@ -717,60 +717,48 @@ export function useStoryGeneration(storyCampaign) {
       return;
     }
 
-    console.log(`[useStoryGeneration] Triggering sibling prefetch after branching complete for ${caseNumber}`);
+    // NARRATIVE-FIRST FLOW: Generate only the NEXT subchapter
+    // Player will solve puzzle while this generates, then read the next narrative
+    // This is more efficient than generating all remaining siblings
+    const nextSubLetter = subchapter === 1 ? 'B' : 'C';
+    const nextSubIndex = subchapter === 1 ? 2 : 3;
+    const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
 
-    // Determine which subchapters still need generation
-    const subchaptersToGenerate = [];
-    if (subchapter === 1) {
-      // After completing A, prefetch B and C
-      subchaptersToGenerate.push('B', 'C');
-    } else if (subchapter === 2) {
-      // After completing B, prefetch C
-      subchaptersToGenerate.push('C');
-    }
+    console.log(`[useStoryGeneration] Generating next subchapter ${nextCaseNumber} after branching complete`);
 
     // Flush storage to ensure current content is available for context
     try {
       const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
       await flushPendingWrites();
     } catch (err) {
-      console.warn('[useStoryGeneration] Failed to flush before sibling generation:', err);
+      console.warn('[useStoryGeneration] Failed to flush before generation:', err);
     }
 
-    // Generate subchapters sequentially (each depends on previous for context)
-    for (const subLetter of subchaptersToGenerate) {
-      const targetCaseNumber = `${String(chapter).padStart(3, '0')}${subLetter}`;
-      const needsGen = await needsGeneration(targetCaseNumber, pathKey);
+    const needsGen = await needsGeneration(nextCaseNumber, pathKey);
 
-      if (needsGen && isMountedRef.current) {
-        const subIndex = { 'B': 2, 'C': 3 }[subLetter];
+    if (needsGen && isMountedRef.current) {
+      try {
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
 
-        try {
-          setStatus(GENERATION_STATUS.GENERATING);
-          setGenerationType(GENERATION_TYPE.PRELOAD);
+        // IMPORTANT: Pass branchingChoices so the context includes realized narrative
+        const entry = await storyGenerationService.generateSubchapter(
+          chapter,
+          nextSubIndex,
+          pathKey,
+          choiceHistory,
+          { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete:narrative-first' }
+        );
 
-          // IMPORTANT: Pass branchingChoices so the context includes realized narrative
-          const entry = await storyGenerationService.generateSubchapter(
-            chapter,
-            subIndex,
-            pathKey,
-            choiceHistory,
-            { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete' }
-          );
-
-          if (entry && isMountedRef.current) {
-            updateGeneratedCache(targetCaseNumber, pathKey, entry);
-          }
-
-          // If we just finished C, prefetch next chapter branches
-          if (subIndex === 3 && chapter < 12) {
-            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
-            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'triggerPrefetchAfterBranchingComplete:C-complete', branchingChoices);
-          }
-        } catch (err) {
-          console.warn(`[useStoryGeneration] Prefetch failed for ${targetCaseNumber}:`, err.message);
+        if (entry && isMountedRef.current) {
+          updateGeneratedCache(nextCaseNumber, pathKey, entry);
+          console.log(`[useStoryGeneration] Successfully generated ${nextCaseNumber}`);
         }
+      } catch (err) {
+        console.warn(`[useStoryGeneration] Generation failed for ${nextCaseNumber}:`, err.message);
       }
+    } else {
+      console.log(`[useStoryGeneration] ${nextCaseNumber} already exists, skipping generation`);
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 

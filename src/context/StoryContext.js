@@ -46,7 +46,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC,
     triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch after player completes branching narrative
-    speculativePrefetchForFirstChoice, // TRUE INFINITE BRANCHING: Prefetch 3 paths after first choice
+    // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     cancelGeneration,
     clearError: clearGenerationError,
   } = useStoryGeneration(storyCampaign);
@@ -454,28 +454,14 @@ export function StoryProvider({ children, progress, updateProgress }) {
     }
   }, [saveBranchingChoice, progress.storyCampaign, isLLMConfigured, triggerPrefetchAfterBranchingComplete]);
 
-  /**
-   * TRUE INFINITE BRANCHING: Wrapper for speculative prefetch after first choice.
-   * Gets the current context (pathKey, choiceHistory, branchingChoices) and passes
-   * them to the speculative prefetch function.
-   */
-  const speculativePrefetchForFirstChoiceWrapper = useCallback((caseNumber, firstChoiceKey) => {
-    if (!isLLMConfigured) return;
-
-    const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
-    const pathKey = resolveStoryPathKey(caseNumber, currentCampaign);
-    const choiceHistory = currentCampaign.choiceHistory || [];
-    const branchingChoices = currentCampaign.branchingChoices || [];
-
-    console.log(`[StoryContext] Speculative prefetch for first choice ${firstChoiceKey} in ${caseNumber}`);
-    speculativePrefetchForFirstChoice(caseNumber, firstChoiceKey, pathKey, choiceHistory, branchingChoices);
-  }, [isLLMConfigured, progress.storyCampaign, speculativePrefetchForFirstChoice]);
+  // NOTE: speculativePrefetchForFirstChoice has been removed
+  // With NARRATIVE-FIRST FLOW, we no longer need speculative prefetch after first choice
+  // Generation now happens after branching complete (second choice), giving exact path
 
   const dispatchValue = useMemo(() => ({
     activateStoryCase,
     selectStoryDecision,
     saveBranchingChoice: saveBranchingChoiceAndPrefetch, // TRUE INFINITE BRANCHING: Save + prefetch
-    speculativePrefetchForFirstChoice: speculativePrefetchForFirstChoiceWrapper, // TRUE INFINITE BRANCHING: Prefetch 3 paths after first choice
     ensureStoryContent,
     handleBackgroundGeneration, // Exposed for GameContext
     prefetchNextChapterBranchesAfterC, // Exposed for early Chapter 2 prefetch
@@ -491,7 +477,6 @@ export function StoryProvider({ children, progress, updateProgress }) {
     activateStoryCase,
     selectStoryDecision,
     saveBranchingChoiceAndPrefetch,
-    speculativePrefetchForFirstChoiceWrapper,
     ensureStoryContent,
     handleBackgroundGeneration,
     prefetchNextChapterBranchesAfterC,

@@ -41,7 +41,6 @@ export default function AppNavigator({ fontsReady, audio }) {
     markCaseBriefingSeen,
     selectStoryDecision,
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
-    speculativePrefetchForFirstChoice, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths
     unlockNextCaseIfReady,
     mode,
     purchaseBribe,
@@ -193,7 +192,6 @@ export default function AppNavigator({ fontsReady, audio }) {
               solvedCaseIds={progress.solvedCaseIds}
               onSelectDecision={selectStoryDecision}
               onSaveBranchingChoice={saveBranchingChoice}
-              onFirstChoicePrefetch={speculativePrefetchForFirstChoice}
               onProceedToPuzzle={handleProceedToPuzzle}
               isStoryMode={isStoryMode}
               onContinueStory={actions.handleStoryContinue}

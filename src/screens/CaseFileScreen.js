@@ -57,8 +57,7 @@ export default function CaseFileScreen({
   solvedCaseIds = [],
   onSelectDecision,
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
-  onFirstChoicePrefetch, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths when first choice is made
-  onProceedToPuzzle, // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
+  onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -248,19 +247,24 @@ export default function CaseFileScreen({
   const [branchingProgress, setBranchingProgress] = useState(null);
   const [collectedEvidence, setCollectedEvidence] = useState([]);
 
-  // SUBCHAPTER C FLOW: Track if we're in C and narrative is complete (ready for puzzle)
-  const [cNarrativeComplete, setCNarrativeComplete] = useState(false);
+  // NARRATIVE-FIRST FLOW: Track if narrative is complete (ready for puzzle)
+  // Applies to ALL subchapters in chapters 2+ (not just C)
+  const [narrativeComplete, setNarrativeComplete] = useState(false);
 
-  // Check if this is subchapter C
-  const subchapterLetter = activeCase?.caseNumber?.slice(3, 4);
+  // Check chapter and subchapter info
+  const caseNumber = activeCase?.caseNumber;
+  const chapterStr = caseNumber?.slice(0, 3);
+  const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
+  const subchapterLetter = caseNumber?.slice(3, 4);
   const isSubchapterC = subchapterLetter === 'C';
+  const isDynamicChapter = chapter >= 2;
 
-  // Check if we already have a branching choice for this C (came back after puzzle)
+  // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
-    if (!isSubchapterC || !activeCase?.caseNumber) return null;
+    if (!isDynamicChapter || !caseNumber) return null;
     const branchingChoices = storyCampaign?.branchingChoices || [];
-    return branchingChoices.find(bc => bc.caseNumber === activeCase.caseNumber);
-  }, [isSubchapterC, activeCase?.caseNumber, storyCampaign?.branchingChoices]);
+    return branchingChoices.find(bc => bc.caseNumber === caseNumber);
+  }, [isDynamicChapter, caseNumber, storyCampaign?.branchingChoices]);
 
   const handleBranchingComplete = useCallback((result) => {
     setBranchingProgress(result);
@@ -268,7 +272,7 @@ export default function CaseFileScreen({
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
-    if (onSaveBranchingChoice && activeCase?.caseNumber && result?.path) {
+    if (onSaveBranchingChoice && caseNumber && result?.path) {
       // Parse the path string to extract first and second choices
       // Path format: "1A-2B" means first choice was "1A", second was "1A-2B"
       // We need to extract: firstChoice = "1A", secondChoice = "1A-2B"
@@ -276,34 +280,33 @@ export default function CaseFileScreen({
       if (parts.length >= 2) {
         const firstChoice = parts[0]; // e.g., "1A"
         const secondChoice = result.path; // e.g., "1A-2B" (full path is the second choice key)
-        onSaveBranchingChoice(activeCase.caseNumber, firstChoice, secondChoice);
-        console.log(`[CaseFileScreen] Saved branching choice for ${activeCase.caseNumber}: ${firstChoice} -> ${secondChoice}`);
+        onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
+        console.log(`[CaseFileScreen] Saved branching choice for ${caseNumber}: ${firstChoice} -> ${secondChoice}`);
       }
     }
 
-    // SUBCHAPTER C FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
-    // Note: Prefetch is already triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
-    if (isSubchapterC) {
-      console.log('[CaseFileScreen] Subchapter C narrative complete - ready for puzzle');
-      setCNarrativeComplete(true);
+    // NARRATIVE-FIRST FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
+    // Applies to ALL dynamic chapters (2+), not just C
+    // Note: Prefetch is triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
+    if (isDynamicChapter) {
+      console.log('[CaseFileScreen] Narrative complete - ready for puzzle');
+      setNarrativeComplete(true);
     }
-  }, [onSaveBranchingChoice, activeCase?.caseNumber, isSubchapterC]);
+  }, [onSaveBranchingChoice, caseNumber, isDynamicChapter]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);
     console.log('[CaseFileScreen] Evidence collected:', evidence);
   }, []);
 
-  // TRUE INFINITE BRANCHING: Handle first choice to trigger speculative prefetch
-  // When player makes their first choice (e.g., "1A"), we know they'll end up on one of
-  // 3 possible second choices (1A-2A, 1A-2B, 1A-2C). Start generating all 3 versions
-  // of the next subchapter so one is ready when they complete.
+  // NARRATIVE-FIRST FLOW: First choice is now just for tracking, no speculative prefetch
+  // With narrative-first, we wait until branching is COMPLETE to generate next content
+  // This means we only generate 1 version (the exact path player took), not 3 speculative versions
   const handleFirstChoice = useCallback((firstChoiceKey) => {
     console.log('[CaseFileScreen] First choice made:', firstChoiceKey);
-    if (onFirstChoicePrefetch && activeCase?.caseNumber) {
-      onFirstChoicePrefetch(activeCase.caseNumber, firstChoiceKey);
-    }
-  }, [onFirstChoicePrefetch, activeCase?.caseNumber]);
+    // Note: No speculative prefetch needed - generation happens after second choice
+    // via onSaveBranchingChoice -> triggerPrefetchAfterBranchingComplete
+  }, []);
 
   // Legacy linear narrative (for Chapter 1 or fallback)
   const narrative = useMemo(() => {
@@ -484,13 +487,17 @@ export default function CaseFileScreen({
   const storyPromptConfig = useMemo(() => {
     if (!isStoryMode) return null;
 
-    // SUBCHAPTER C FLOW: After narrative complete, show "Proceed to Evidence Board"
-    // This gives the LLM time to generate next chapter while player solves the puzzle
-    if (isSubchapterC && (cNarrativeComplete || existingBranchingChoice) && !isCaseSolved && typeof onProceedToPuzzle === "function") {
+    // NARRATIVE-FIRST FLOW: After narrative complete, show "Proceed to Evidence Board"
+    // This gives the LLM time to generate next content while player solves the puzzle
+    // Applies to ALL dynamic chapters (2+), not just subchapter C
+    if (isDynamicChapter && (narrativeComplete || existingBranchingChoice) && !isCaseSolved && typeof onProceedToPuzzle === "function") {
+      const hint = isSubchapterC
+        ? "Solve the puzzle to reveal your chapter decision."
+        : "Solve the puzzle to continue the investigation.";
       return {
         title: "Evidence Board Ready",
         body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
-        hint: "Solve the puzzle to reveal your chapter decision.",
+        hint,
         actionLabel: "Solve Evidence Board",
         actionIcon: "🔍",
         onPress: onProceedToPuzzle,
@@ -518,7 +525,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, cNarrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isDynamicChapter, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option || !awaitingDecision) return;
