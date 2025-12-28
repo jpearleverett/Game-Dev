@@ -56,6 +56,7 @@ export default function CaseFileScreen({
   storyCampaign,
   solvedCaseIds = [],
   onSelectDecision,
+  onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -229,7 +230,22 @@ export default function CaseFileScreen({
   const handleBranchingComplete = useCallback((result) => {
     setBranchingProgress(result);
     console.log('[CaseFileScreen] Branching narrative complete:', result);
-  }, []);
+
+    // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
+    // This enables future content to continue from their actual experience, not the canonical path
+    if (onSaveBranchingChoice && activeCase?.caseNumber && result?.path) {
+      // Parse the path string to extract first and second choices
+      // Path format: "1A-2B" means first choice was "1A", second was "1A-2B"
+      // We need to extract: firstChoice = "1A", secondChoice = "1A-2B"
+      const parts = result.path.split('-');
+      if (parts.length >= 2) {
+        const firstChoice = parts[0]; // e.g., "1A"
+        const secondChoice = result.path; // e.g., "1A-2B" (full path is the second choice key)
+        onSaveBranchingChoice(activeCase.caseNumber, firstChoice, secondChoice);
+        console.log(`[CaseFileScreen] Saved branching choice for ${activeCase.caseNumber}: ${firstChoice} -> ${secondChoice}`);
+      }
+    }
+  }, [onSaveBranchingChoice, activeCase?.caseNumber]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);

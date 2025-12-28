@@ -40,6 +40,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     toggleWordSelection,
     markCaseBriefingSeen,
     selectStoryDecision,
+    saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
     unlockNextCaseIfReady,
     mode,
     purchaseBribe,
@@ -181,6 +182,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               storyCampaign={progress.storyCampaign}
               solvedCaseIds={progress.solvedCaseIds}
               onSelectDecision={selectStoryDecision}
+              onSaveBranchingChoice={saveBranchingChoice}
               isStoryMode={isStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

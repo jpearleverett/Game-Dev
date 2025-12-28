@@ -44,6 +44,10 @@ export const createBlankStoryCampaign = () => ({
     1: 'ROOT',
   },
   choiceHistory: [],
+  // BRANCHING CHOICES: Track player's actual path through each subchapter's branching narrative
+  // Each entry: { caseNumber: "002A", firstChoice: "1B", secondChoice: "1B-2C", completedAt: timestamp }
+  // This enables true infinite branching - next subchapter continues from player's ACTUAL experience
+  branchingChoices: [],
   completedCaseNumbers: [],
   lastDecision: null,
   startedAt: null,

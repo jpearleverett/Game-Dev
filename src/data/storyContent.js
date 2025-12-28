@@ -324,3 +324,97 @@ export function updateGeneratedCache(caseNumber, pathKey, entry) {
   const key = `${caseNumber}_${normalizeStoryPathKey(pathKey)}`;
   generatedCache[key] = entry;
 }
+
+/**
+ * Build the "realized narrative" from a branchingNarrative based on player's actual choices.
+ * This is the text the player actually experienced, NOT the canonical path.
+ *
+ * @param {Object} branchingNarrative - The full branching structure
+ * @param {string} firstChoiceKey - The key of the first choice made (e.g., "1A", "1B", "1C")
+ * @param {string} secondChoiceKey - The key of the second choice made (e.g., "1A-2A", "1B-2C")
+ * @returns {string} The concatenated narrative text for the player's actual path
+ */
+export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secondChoiceKey) {
+  if (!branchingNarrative) return '';
+
+  const parts = [];
+
+  // Opening (shared by all paths)
+  if (branchingNarrative.opening?.text) {
+    parts.push(branchingNarrative.opening.text);
+  }
+
+  // First choice response
+  if (branchingNarrative.firstChoice?.options && firstChoiceKey) {
+    const firstOption = branchingNarrative.firstChoice.options.find(o => o.key === firstChoiceKey);
+    if (firstOption?.response) {
+      parts.push(firstOption.response);
+    }
+  }
+
+  // Second choice response (ending)
+  if (branchingNarrative.secondChoices && firstChoiceKey && secondChoiceKey) {
+    // Find the secondChoice group that corresponds to the first choice
+    const secondChoiceGroup = branchingNarrative.secondChoices.find(sc => sc.afterChoice === firstChoiceKey);
+    if (secondChoiceGroup?.options) {
+      const secondOption = secondChoiceGroup.options.find(o => o.key === secondChoiceKey);
+      if (secondOption?.response) {
+        parts.push(secondOption.response);
+      }
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+/**
+ * Get the realized narrative for a specific case number based on stored branching choices.
+ * Falls back to canonical narrative if no branching choices are stored.
+ *
+ * @param {string} caseNumber - The case number (e.g., "002A")
+ * @param {string} pathKey - The path key for this case
+ * @param {Array} branchingChoices - The player's stored branching choices
+ * @returns {string} The narrative text the player actually experienced
+ */
+export function getRealizedNarrativeForCase(caseNumber, pathKey, branchingChoices = []) {
+  const entry = getStoryEntry(caseNumber, pathKey);
+  if (!entry) return '';
+
+  // Check if we have branching choices for this case
+  const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNumber);
+
+  if (branchingChoice && entry.branchingNarrative) {
+    // Build from player's actual path
+    return buildRealizedNarrative(
+      entry.branchingNarrative,
+      branchingChoice.firstChoice,
+      branchingChoice.secondChoice
+    );
+  }
+
+  // Fall back to canonical narrative
+  return entry.narrative || '';
+}
+
+/**
+ * Async version of getRealizedNarrativeForCase
+ */
+export async function getRealizedNarrativeForCaseAsync(caseNumber, pathKey, branchingChoices = []) {
+  const entry = await getStoryEntryAsync(caseNumber, pathKey);
+  if (!entry) return '';
+
+  // Check if we have branching choices for this case
+  const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNumber);
+
+  if (branchingChoice && entry.branchingNarrative) {
+    // Build from player's actual path
+    return buildRealizedNarrative(
+      entry.branchingNarrative,
+      branchingChoice.firstChoice,
+      branchingChoice.secondChoice
+    );
+  }
+
+  // Fall back to canonical narrative
+  return entry.narrative || '';
+}

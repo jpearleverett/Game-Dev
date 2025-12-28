@@ -674,6 +674,7 @@ export function GameProvider({
     exitStoryCampaign,
     ensureDailyStoryCase,
     selectStoryDecision: story.selectStoryDecision,
+    saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
     // Ideally consumers use useAudio(), but GameContext was the facade.
     // We removed setAudioController from here.

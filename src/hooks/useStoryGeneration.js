@@ -662,6 +662,91 @@ export function useStoryGeneration(storyCampaign) {
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
   /**
+   * TRUE INFINITE BRANCHING: Trigger sibling prefetch AFTER player completes branching narrative.
+   *
+   * This is called when saveBranchingChoice() completes. At this point, we have the player's
+   * actual path through the branching narrative, so we can prefetch the next subchapter with
+   * proper context (realized narrative instead of canonical).
+   *
+   * @param {string} caseNumber - The case that was just completed (e.g., "002A")
+   * @param {string} pathKey - The path key for this case
+   * @param {Array} choiceHistory - Chapter-level decision history
+   * @param {Array} branchingChoices - Intra-subchapter branching choices
+   */
+  const triggerPrefetchAfterBranchingComplete = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = []) => {
+    if (!isConfigured) {
+      return;
+    }
+
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+
+    // Only trigger for chapters 2+ (Chapter 1 is static)
+    if (chapter < 2) {
+      return;
+    }
+
+    // Only trigger for subchapters A and B (subchapter C is decision-based, not branching)
+    if (subchapter >= 3) {
+      return;
+    }
+
+    console.log(`[useStoryGeneration] Triggering sibling prefetch after branching complete for ${caseNumber}`);
+
+    // Determine which subchapters still need generation
+    const subchaptersToGenerate = [];
+    if (subchapter === 1) {
+      // After completing A, prefetch B and C
+      subchaptersToGenerate.push('B', 'C');
+    } else if (subchapter === 2) {
+      // After completing B, prefetch C
+      subchaptersToGenerate.push('C');
+    }
+
+    // Flush storage to ensure current content is available for context
+    try {
+      const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
+      await flushPendingWrites();
+    } catch (err) {
+      console.warn('[useStoryGeneration] Failed to flush before sibling generation:', err);
+    }
+
+    // Generate subchapters sequentially (each depends on previous for context)
+    for (const subLetter of subchaptersToGenerate) {
+      const targetCaseNumber = `${String(chapter).padStart(3, '0')}${subLetter}`;
+      const needsGen = await needsGeneration(targetCaseNumber, pathKey);
+
+      if (needsGen && isMountedRef.current) {
+        const subIndex = { 'B': 2, 'C': 3 }[subLetter];
+
+        try {
+          setStatus(GENERATION_STATUS.GENERATING);
+          setGenerationType(GENERATION_TYPE.PRELOAD);
+
+          // IMPORTANT: Pass branchingChoices so the context includes realized narrative
+          const entry = await storyGenerationService.generateSubchapter(
+            chapter,
+            subIndex,
+            pathKey,
+            choiceHistory,
+            { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete' }
+          );
+
+          if (entry && isMountedRef.current) {
+            updateGeneratedCache(targetCaseNumber, pathKey, entry);
+          }
+
+          // If we just finished C, prefetch next chapter branches
+          if (subIndex === 3 && chapter < 12) {
+            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'triggerPrefetchAfterBranchingComplete:C-complete');
+          }
+        } catch (err) {
+          console.warn(`[useStoryGeneration] Prefetch failed for ${targetCaseNumber}:`, err.message);
+        }
+      }
+    }
+  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
+
+  /**
    * Analyze choice history to predict most likely next path
    * Returns the path (A or B) that the player is more likely to choose
    *
@@ -994,6 +1079,7 @@ export function useStoryGeneration(storyCampaign) {
     pregenerate,
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC, // Prefetch both decision paths when entering subchapter C
+    triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch siblings after branching choice is made
     cancelGeneration,
     clearError,
   };

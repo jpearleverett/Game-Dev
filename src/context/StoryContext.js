@@ -27,6 +27,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     storyCampaign,
     selectDecision: storySelectDecisionCore,
     activateStoryCase,
+    saveBranchingChoice,
   } = useStoryEngine(progress, updateProgress);
 
   const {
@@ -44,6 +45,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     pregenerate,
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC,
+    triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch after player completes branching narrative
     cancelGeneration,
     clearError: clearGenerationError,
   } = useStoryGeneration(storyCampaign);
@@ -168,6 +170,13 @@ export function StoryProvider({ children, progress, updateProgress }) {
   /**
    * Handle background generation logic seamlessly
    * Called when entering a case to ensure upcoming content is ready
+   *
+   * TRUE INFINITE BRANCHING UPDATE:
+   * For subchapters A and B (which have branching narratives), we NO LONGER prefetch siblings
+   * immediately. Instead, prefetching happens AFTER the player completes their branching choices.
+   * This ensures the next subchapter's context includes the player's ACTUAL experience.
+   *
+   * See: triggerPrefetchAfterBranchingComplete() called from saveBranchingChoice()
    */
   const handleBackgroundGeneration = useCallback((caseNumber, pathKey) => {
     if (!isLLMConfigured) return;
@@ -184,40 +193,32 @@ export function StoryProvider({ children, progress, updateProgress }) {
       choiceHistoryLength: choiceHistory?.length || 0,
     }, 'debug');
 
-    // Strategy:
-    // 1. Ensure current chapter's remaining subchapters (siblings) are ready
-    // 2. Ensure next chapter is pre-loading (lookahead)
-    // 3. For decision subchapters (C), prefetch BOTH possible next paths immediately
-
-    // Logic for Subchapters A (1) and B (2) -> Generate remaining siblings
-    // If we are in A, we need B and C. If in B, we need C.
-    if (chapter >= 2 && subchapter < 3) {
-      // Flush storage first to ensure current content is available for dependent generations
-      import('../storage/generatedStoryStorage').then(({ flushPendingWrites }) => {
-        flushPendingWrites().then(() => {
-          pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
-        }).catch(err => {
-          console.warn('[StoryContext] Failed to flush before sibling generation:', err);
-          // Continue anyway - missing context warnings are better than no generation
-          pregenerateCurrentChapterSiblings(chapter, pathKey, choiceHistory);
-        });
-      });
-    }
+    // Strategy (updated for TRUE INFINITE BRANCHING):
+    // 1. For subchapters A and B: Do NOT prefetch siblings here - wait for branching choice
+    // 2. For subchapter C (decision point): Prefetch BOTH possible next chapter paths
+    //
+    // OLD BEHAVIOR (disabled):
+    // For subchapters A and B, we used to call pregenerateCurrentChapterSiblings immediately.
+    // This no longer works with branching narratives because the next subchapter's context
+    // depends on which path the player took through the branching narrative.
+    //
+    // NEW BEHAVIOR:
+    // Prefetching is now triggered by triggerPrefetchAfterBranchingComplete() which is called
+    // when the player completes the branching narrative and saveBranchingChoice() is invoked.
 
     // Logic for Subchapter C (decision point) -> Prefetch BOTH next chapter paths
     // This is critical: while the player reads the decision, we prefetch both options
     // so whichever path they choose, content is already ready.
+    // NOTE: Subchapter C has decisions but NOT branching narratives (player makes A/B choice),
+    // so we can still prefetch both paths speculatively.
     if (chapter >= 1 && subchapter === 3 && chapter < 12) {
       console.log(`[StoryContext] Entering decision subchapter ${caseNumber} - prefetching both next chapter paths`);
       prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'handleBackgroundGeneration:C-entered');
     }
 
-    // NOTE: Next chapter prefetch is triggered SEQUENTIALLY after current chapter completes:
-    // - pregenerateCurrentChapterSiblings generates B, then C (sequentially)
-    // - After C completes, it calls prefetchNextChapterBranchesAfterC
-    // This ensures next chapter generation has full context from current chapter.
-    // DO NOT call pregenerate() here - it would run in parallel and cause "Missing chapter" warnings.
-  }, [isLLMConfigured, parseCaseNumber, pregenerateCurrentChapterSiblings, prefetchNextChapterBranchesAfterC]);
+    // NOTE: For chapters 2+, sibling prefetch now happens via triggerPrefetchAfterBranchingComplete()
+    // This ensures the context includes the player's realized narrative from their branching choices.
+  }, [isLLMConfigured, parseCaseNumber, prefetchNextChapterBranchesAfterC]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
     const traceId = createTraceId(`decision_${storyCampaign?.pendingDecisionCase || 'unknown'}`);
@@ -408,9 +409,40 @@ export function StoryProvider({ children, progress, updateProgress }) {
     getCurrentPathKey,
   }), [storyCampaign, generationStatus, generationProgress, generationError, backgroundGenerationError, isLLMConfigured, isGenerating, generationType, isPreloading, getCurrentPathKey]);
 
+  /**
+   * TRUE INFINITE BRANCHING: Wrapper that saves branching choice AND triggers prefetch.
+   * This ensures that after the player completes their branching narrative path,
+   * we immediately start generating the next subchapter with their realized narrative.
+   */
+  const saveBranchingChoiceAndPrefetch = useCallback((caseNumber, firstChoice, secondChoice) => {
+    // Save the branching choice to storyCampaign
+    saveBranchingChoice(caseNumber, firstChoice, secondChoice);
+
+    // Get current state for prefetching
+    const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
+    const pathKey = resolveStoryPathKey(caseNumber, currentCampaign);
+    const choiceHistory = currentCampaign.choiceHistory || [];
+
+    // Build the updated branchingChoices including the one we just saved
+    const newChoice = {
+      caseNumber,
+      firstChoice,
+      secondChoice,
+      completedAt: new Date().toISOString(),
+    };
+    const branchingChoices = [...(currentCampaign.branchingChoices || []), newChoice];
+
+    // Trigger prefetch for next subchapter with the updated branchingChoices
+    if (isLLMConfigured) {
+      console.log(`[StoryContext] Triggering prefetch after branching complete for ${caseNumber}`);
+      triggerPrefetchAfterBranchingComplete(caseNumber, pathKey, choiceHistory, branchingChoices);
+    }
+  }, [saveBranchingChoice, progress.storyCampaign, isLLMConfigured, triggerPrefetchAfterBranchingComplete]);
+
   const dispatchValue = useMemo(() => ({
     activateStoryCase,
     selectStoryDecision,
+    saveBranchingChoice: saveBranchingChoiceAndPrefetch, // TRUE INFINITE BRANCHING: Save + prefetch
     ensureStoryContent,
     handleBackgroundGeneration, // Exposed for GameContext
     prefetchNextChapterBranchesAfterC, // Exposed for early Chapter 2 prefetch
@@ -425,6 +457,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
   }), [
     activateStoryCase,
     selectStoryDecision,
+    saveBranchingChoiceAndPrefetch,
     ensureStoryContent,
     handleBackgroundGeneration,
     prefetchNextChapterBranchesAfterC,

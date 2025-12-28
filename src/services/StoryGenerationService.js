@@ -19,7 +19,7 @@ import {
   getStoryContext,
   saveStoryContext,
 } from '../storage/generatedStoryStorage';
-import { getStoryEntry, formatCaseNumber } from '../data/storyContent';
+import { getStoryEntry, formatCaseNumber, buildRealizedNarrative } from '../data/storyContent';
 import { CHARACTER_REFERENCE } from '../data/characterReference';
 import {
   TIMELINE,
@@ -1078,25 +1078,25 @@ Choice 2  Choice 2  Choice 2  (3 options each)
 4. Second choice should be about Jack's FOCUS (what he prioritizes)
 5. Endings conclude this subchapter's path but leave threads for next
 
-**CRITICAL: PLOT CONVERGENCE REQUIREMENT**
-All 9 paths MUST converge to the same narrative state. This means:
-- SAME CLUES DISCOVERED: All paths reveal the same key information (just framed differently)
-- SAME REVELATIONS: The plot-critical discoveries happen in every path
-- SAME ENDING STATE: Jack ends up at the same location, with the same characters present
-- SAME FACTS LEARNED: What Jack "knows" at the end is identical across all paths
+**CRITICAL: TRUE INFINITE BRANCHING**
+Each of the 9 paths can lead to DIFFERENT narrative states. This means:
+- DIFFERENT CLUES: Different paths can reveal different information
+- DIFFERENT REVELATIONS: Some paths may discover things others miss
+- DIFFERENT OUTCOMES: Each ending can set up different scenarios for the next subchapter
+- MEANINGFUL CONSEQUENCES: Player choices have real impact on the story
 
-What DIFFERS between paths:
-- HOW Jack gets the information (aggressive questioning vs careful observation)
-- The FLAVOR of interactions (confrontational vs diplomatic dialogue)
-- Jack's EMOTIONAL STATE and internal monologue
-- The PACING and tension of the scene
+IMPORTANT: The system tracks which exact path the player took. The next subchapter will:
+1. Receive ONLY the narrative text from the player's actual path (not all 9)
+2. Continue the story from THAT specific ending
+3. React to the specific discoveries, encounters, and emotional beats of THAT path
 
-This convergence is CRITICAL because:
-1. The next subchapter continues from a single "canonical" state
-2. Prefetching generates future content before the player finishes choosing
-3. Story consistency requires the plot to remain the same across all player experiences
+Because of this:
+- Make each path GENUINELY different - not just cosmetically reworded
+- Endings can set up unique situations (different locations, different characters encountered, different knowledge gained)
+- Use the Story Bible and established facts as guardrails, but don't force convergence
+- The LLM will receive full context of the player's actual journey when generating subsequent content
 
-Think of it like a Telltale game: choices affect the EXPERIENCE but the STORY beats are fixed.
+Think of it as true RPG branching: your choices genuinely shape the story.
 
 **CHOICE DESIGN:**
 - Labels: 2-5 words, imperative mood ("Press him harder", "Change the subject", "Wait and observe")
@@ -1109,9 +1109,11 @@ Each segment can have 0-2 "details" - phrases the player can tap for Jack's obse
 - note: Jack's noir-voice internal thought (15-25 words)
 - evidenceCard: If this becomes evidence, a short label (2-4 words), otherwise empty
 
-IMPORTANT: Any PLOT-CRITICAL evidence must appear as a tappable detail in ALL 9 paths (in appropriate segments).
-The opening's details are shared by everyone. For path-specific segments, ensure key evidence appears in every branch.
-Atmospheric details (non-evidence) can be unique to specific paths.
+With TRUE INFINITE BRANCHING, different paths can discover different evidence:
+- The opening's details are shared by everyone (establishing scene)
+- Path-specific segments can have UNIQUE evidence discoveries
+- Some evidence may only be available on certain paths (creates meaningful choice)
+- Include evidence relevant to THAT path's narrative thread
 
 **Example detail:**
 \`\`\`json
@@ -1183,10 +1185,10 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   * Jack's emotional and physical state
   * Last sentence for continuation point
   IMPORTANT: This must match the corresponding segments from branchingNarrative exactly - just concatenate them.
-- "chapterSummary": Summarize PLOT POINTS that are true across ALL 9 paths (2-3 sentences). Since all paths converge to the same facts, this summary should capture what EVERYONE learns, regardless of which path they took.
+- "chapterSummary": Summarize the CANONICAL path (opening + 1A + 1A-2A) in 2-3 sentences. This is used for fallback context only.
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
-- "consistencyFacts": Array of 3-5 specific facts that must remain consistent in future chapters. These must be PATH-AGNOSTIC facts (true regardless of which branching path the player took). Focus on plot discoveries, not dialogue or approach.
+- "consistencyFacts": Array of 3-5 facts from the Story Bible that should remain consistent. Focus on established character traits, locations, and timeline events.
 - "narrativeThreads": Array of active story threads from YOUR narrative. Include:
   * type: "appointment" | "revelation" | "investigation" | "relationship" | "physical_state" | "promise" | "threat"
   * description: What happened (e.g., "Jack agreed to meet Sarah at the docks at midnight")
@@ -4181,8 +4183,14 @@ Generate realistic, specific consequences based on the actual narrative content.
    * Build comprehensive story context with FULL story history
    * With 1M token context window, we include ALL previous content without truncation
    * Ensures proper continuation from exactly where the previous subchapter ended
+   *
+   * @param {number} targetChapter - Chapter to generate
+   * @param {number} targetSubchapter - Subchapter to generate
+   * @param {string} pathKey - Path key for branching
+   * @param {Array} choiceHistory - Chapter-level decision history
+   * @param {Array} branchingChoices - Intra-subchapter branching choices for true infinite branching
    */
-  async buildStoryContext(targetChapter, targetSubchapter, pathKey, choiceHistory = []) {
+  async buildStoryContext(targetChapter, targetSubchapter, pathKey, choiceHistory = [], branchingChoices = []) {
     // Ensure service is initialized and has loaded story from storage
     if (!this.generatedStory) {
       console.log('[StoryGenerationService] Service not initialized, loading story from storage...');
@@ -4231,23 +4239,41 @@ Generate realistic, specific consequences based on the actual narrative content.
 
     // Add ALL generated chapters 2 onwards - FULL TEXT, NO TRUNCATION
     // Use async method to ensure we load from storage if not in memory
+    // IMPORTANT: Use realized narrative (player's actual path) when branching choices exist
     for (let ch = 2; ch < targetChapter; ch++) {
       const chapterPathKey = this._getPathKeyForChapter(ch, choiceHistory);
       for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
         const caseNum = formatCaseNumber(ch, sub);
         // Use async method to ensure entries are loaded from storage
         const entry = await this.getGeneratedEntryAsync(caseNum, chapterPathKey);
-        if (entry?.narrative) {
-          context.previousChapters.push({
-            chapter: ch,
-            subchapter: sub,
-            pathKey: chapterPathKey,
-            title: entry.title || `Chapter ${ch}.${sub}`,
-            narrative: entry.narrative, // FULL narrative, no truncation
-            chapterSummary: entry.chapterSummary || null,
-            decision: entry.decision || null,
-            isRecent: true, // Mark all as recent to include full text
-          });
+        if (entry) {
+          // Check if we have branching choices for this case - use REALIZED narrative
+          const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNum);
+          let narrativeText = entry.narrative; // Default to canonical
+
+          if (branchingChoice && entry.branchingNarrative) {
+            // Build the ACTUAL narrative the player experienced
+            narrativeText = buildRealizedNarrative(
+              entry.branchingNarrative,
+              branchingChoice.firstChoice,
+              branchingChoice.secondChoice
+            );
+            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${branchingChoice.firstChoice}-${branchingChoice.secondChoice}`);
+          }
+
+          if (narrativeText) {
+            context.previousChapters.push({
+              chapter: ch,
+              subchapter: sub,
+              pathKey: chapterPathKey,
+              title: entry.title || `Chapter ${ch}.${sub}`,
+              narrative: narrativeText, // REALIZED narrative from player's actual path
+              chapterSummary: entry.chapterSummary || null,
+              decision: entry.decision || null,
+              branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
+              isRecent: true, // Mark all as recent to include full text
+            });
+          }
         } else {
           console.warn(`[StoryGenerationService] Missing chapter ${ch}.${sub} (${caseNum}) for path ${chapterPathKey}`);
         }
@@ -4255,21 +4281,39 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     // Add current chapter's previous subchapters - FULL TEXT
+    // IMPORTANT: Use realized narrative for player's actual experience
     if (targetSubchapter > 1) {
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
         const entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
-        if (entry?.narrative) {
-          context.previousChapters.push({
-            chapter: targetChapter,
-            subchapter: sub,
-            pathKey,
-            title: entry.title || `Chapter ${targetChapter}.${sub}`,
-            narrative: entry.narrative, // FULL narrative, no truncation
-            chapterSummary: entry.chapterSummary || null,
-            decision: entry.decision || null,
-            isRecent: true, // Current chapter always recent
-          });
+        if (entry) {
+          // Check if we have branching choices for this case - use REALIZED narrative
+          const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNum);
+          let narrativeText = entry.narrative; // Default to canonical
+
+          if (branchingChoice && entry.branchingNarrative) {
+            // Build the ACTUAL narrative the player experienced
+            narrativeText = buildRealizedNarrative(
+              entry.branchingNarrative,
+              branchingChoice.firstChoice,
+              branchingChoice.secondChoice
+            );
+            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${branchingChoice.firstChoice}-${branchingChoice.secondChoice}`);
+          }
+
+          if (narrativeText) {
+            context.previousChapters.push({
+              chapter: targetChapter,
+              subchapter: sub,
+              pathKey,
+              title: entry.title || `Chapter ${targetChapter}.${sub}`,
+              narrative: narrativeText, // REALIZED narrative from player's actual path
+              chapterSummary: entry.chapterSummary || null,
+              decision: entry.decision || null,
+              branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
+              isRecent: true, // Current chapter always recent
+            });
+          }
         } else {
           console.warn(`[StoryGenerationService] Missing current chapter ${targetChapter}.${sub} (${caseNum})`);
         }
@@ -6467,6 +6511,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // If user-facing, we NEVER show fallback - we throw errors and let UI handle retry
     const isUserFacing = options?.isUserFacing || false;
 
+    // TRUE INFINITE BRANCHING: Get player's actual choices within subchapters
+    // This tracks which path the player took through branching narratives (e.g., "1B" -> "1B-2C")
+    // Used to build the "realized narrative" for context - what the player actually experienced
+    const branchingChoices = options?.branchingChoices || [];
+
     // Deduplication: Return existing promise if generation is already in flight for this exact content
     // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
     const MAX_PENDING_AGE_MS = 3 * 60 * 1000; // 3 minutes
@@ -6537,7 +6586,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
 
       // Build comprehensive context (now includes story arc and chapter outline)
-      const context = await this.buildStoryContext(chapter, subchapter, effectivePathKey, choiceHistory);
+      // TRUE INFINITE BRANCHING: Pass branchingChoices to build realized narrative from player's actual path
+      const context = await this.buildStoryContext(chapter, subchapter, effectivePathKey, choiceHistory, branchingChoices);
 
       // Apply thread normalization, capping, and archival to prevent state explosion
       if (context.narrativeThreads) {
