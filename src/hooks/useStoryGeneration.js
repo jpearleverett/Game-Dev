@@ -705,8 +705,15 @@ export function useStoryGeneration(storyCampaign) {
       return;
     }
 
-    // Only trigger for subchapters A and B (subchapter C is decision-based, not branching)
-    if (subchapter >= 3) {
+    // SUBCHAPTER C FLOW: For C, prefetch next chapter instead of siblings
+    // The puzzle happens AFTER the narrative, giving the LLM time to generate
+    if (subchapter === 3) {
+      if (chapter < 12) {
+        console.log(`[useStoryGeneration] Subchapter C complete - prefetching next chapter with player's realized path`);
+        // Prefetch BOTH decision paths (A and B) for next chapter
+        // Now we have the player's complete branching path through C for context
+        prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'triggerPrefetchAfterBranchingComplete:C-narrative-complete', branchingChoices);
+      }
       return;
     }
 

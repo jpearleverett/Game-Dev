@@ -58,6 +58,7 @@ export default function CaseFileScreen({
   onSelectDecision,
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
   onFirstChoicePrefetch, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths when first choice is made
+  onProceedToPuzzle, // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -247,6 +248,20 @@ export default function CaseFileScreen({
   const [branchingProgress, setBranchingProgress] = useState(null);
   const [collectedEvidence, setCollectedEvidence] = useState([]);
 
+  // SUBCHAPTER C FLOW: Track if we're in C and narrative is complete (ready for puzzle)
+  const [cNarrativeComplete, setCNarrativeComplete] = useState(false);
+
+  // Check if this is subchapter C
+  const subchapterLetter = activeCase?.caseNumber?.slice(3, 4);
+  const isSubchapterC = subchapterLetter === 'C';
+
+  // Check if we already have a branching choice for this C (came back after puzzle)
+  const existingBranchingChoice = useMemo(() => {
+    if (!isSubchapterC || !activeCase?.caseNumber) return null;
+    const branchingChoices = storyCampaign?.branchingChoices || [];
+    return branchingChoices.find(bc => bc.caseNumber === activeCase.caseNumber);
+  }, [isSubchapterC, activeCase?.caseNumber, storyCampaign?.branchingChoices]);
+
   const handleBranchingComplete = useCallback((result) => {
     setBranchingProgress(result);
     console.log('[CaseFileScreen] Branching narrative complete:', result);
@@ -265,7 +280,14 @@ export default function CaseFileScreen({
         console.log(`[CaseFileScreen] Saved branching choice for ${activeCase.caseNumber}: ${firstChoice} -> ${secondChoice}`);
       }
     }
-  }, [onSaveBranchingChoice, activeCase?.caseNumber]);
+
+    // SUBCHAPTER C FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
+    // Note: Prefetch is already triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
+    if (isSubchapterC) {
+      console.log('[CaseFileScreen] Subchapter C narrative complete - ready for puzzle');
+      setCNarrativeComplete(true);
+    }
+  }, [onSaveBranchingChoice, activeCase?.caseNumber, isSubchapterC]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);
@@ -461,6 +483,20 @@ export default function CaseFileScreen({
 
   const storyPromptConfig = useMemo(() => {
     if (!isStoryMode) return null;
+
+    // SUBCHAPTER C FLOW: After narrative complete, show "Proceed to Evidence Board"
+    // This gives the LLM time to generate next chapter while player solves the puzzle
+    if (isSubchapterC && (cNarrativeComplete || existingBranchingChoice) && !isCaseSolved && typeof onProceedToPuzzle === "function") {
+      return {
+        title: "Evidence Board Ready",
+        body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
+        hint: "Solve the puzzle to reveal your chapter decision.",
+        actionLabel: "Solve Evidence Board",
+        actionIcon: "🔍",
+        onPress: onProceedToPuzzle,
+      };
+    }
+
     if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked) {
       return {
         title: "Next Chapter Ready",
@@ -482,7 +518,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, cNarrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option || !awaitingDecision) return;

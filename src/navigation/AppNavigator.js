@@ -176,6 +176,15 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="CaseFile">
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
+
+          // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
+          const handleProceedToPuzzle = () => {
+            if (activeCase?.id) {
+              game.resetBoardForCase(activeCase.id);
+            }
+            navigation.navigate('Board');
+          };
+
           return (
             <CaseFileScreen
               activeCase={activeCase}
@@ -185,6 +194,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onSelectDecision={selectStoryDecision}
               onSaveBranchingChoice={saveBranchingChoice}
               onFirstChoicePrefetch={speculativePrefetchForFirstChoice}
+              onProceedToPuzzle={handleProceedToPuzzle}
               isStoryMode={isStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

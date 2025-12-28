@@ -219,20 +219,20 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // Prefetching is now triggered by triggerPrefetchAfterBranchingComplete() which is called
     // when the player completes the branching narrative and saveBranchingChoice() is invoked.
 
-    // Logic for Subchapter C (decision point) -> Prefetch BOTH next chapter paths
-    // This is critical: while the player reads the decision, we prefetch both options
-    // so whichever path they choose, content is already ready.
-    // NOTE: Subchapter C has decisions but NOT branching narratives (player makes A/B choice),
-    // so we can still prefetch both paths speculatively.
-    if (chapter >= 1 && subchapter === 3 && chapter < 12) {
-      console.log(`[StoryContext] Entering decision subchapter ${caseNumber} - prefetching both next chapter paths`);
-      // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
-      prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'handleBackgroundGeneration:C-entered', branchingChoices);
-    }
+    // SUBCHAPTER C FLOW: Do NOT prefetch when entering C anymore
+    // With the new narrative-first flow for C:
+    // 1. Player reads branching narrative first
+    // 2. After branching complete, prefetch is triggered via triggerPrefetchAfterBranchingComplete()
+    // 3. Player solves puzzle (gives LLM time to generate)
+    // 4. Player makes chapter decision
+    //
+    // The prefetch now happens AFTER narrative complete, when we have the player's
+    // complete branching path through C for proper context.
+    // See: triggerPrefetchAfterBranchingComplete() in useStoryGeneration.js
 
     // NOTE: For chapters 2+, sibling prefetch now happens via triggerPrefetchAfterBranchingComplete()
     // This ensures the context includes the player's realized narrative from their branching choices.
-  }, [isLLMConfigured, parseCaseNumber, prefetchNextChapterBranchesAfterC]);
+  }, [isLLMConfigured, parseCaseNumber]);
 
   const selectStoryDecision = useCallback(async (optionKey) => {
     const traceId = createTraceId(`decision_${storyCampaign?.pendingDecisionCase || 'unknown'}`);
