@@ -19,6 +19,10 @@ const RATE_WINDOW_MS = 60 * 1000;
 // More aggressive than 15s to handle flaky mobile networks
 const HEARTBEAT_INTERVAL_MS = 10000;
 
+// Timeout for the Gemini API call itself (separate from Vercel function timeout)
+// Set to 120s to allow for Gemini's "thinking" phase while failing fast on network issues
+const GEMINI_FETCH_TIMEOUT_MS = 120000;
+
 function isRateLimited(ip) {
   const now = Date.now();
   const record = rateLimitStore.get(ip);
@@ -107,24 +111,37 @@ export default async function handler(req, res) {
 
       const geminiUrl = `https://generativelanguage.googleapis.com/v1alpha/cachedContents?key=${process.env.GEMINI_API_KEY}`;
 
-      const cacheResponse = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: `models/${model}`,
-          system_instruction: {
-            parts: [{ text: systemInstruction }],
-          },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: content }],
+      // Create abort controller for cache creation timeout
+      const cacheController = new AbortController();
+      const cacheTimeout = setTimeout(() => {
+        console.error(`[${requestId}] Cache creation timeout after ${GEMINI_FETCH_TIMEOUT_MS/1000}s`);
+        cacheController.abort();
+      }, GEMINI_FETCH_TIMEOUT_MS);
+
+      let cacheResponse;
+      try {
+        cacheResponse = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: `models/${model}`,
+            system_instruction: {
+              parts: [{ text: systemInstruction }],
             },
-          ],
-          ttl: ttl || '3600s',
-          display_name: cacheKey,
-        }),
-      });
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: content }],
+              },
+            ],
+            ttl: ttl || '3600s',
+            display_name: cacheKey,
+          }),
+          signal: cacheController.signal,
+        });
+      } finally {
+        clearTimeout(cacheTimeout);
+      }
 
       if (!cacheResponse.ok) {
         const errorText = await cacheResponse.text();
@@ -249,15 +266,28 @@ export default async function handler(req, res) {
       const heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
 
       try {
-        // Call Gemini with timing
+        // Call Gemini with timing and explicit timeout
         const geminiStartTime = Date.now();
-        console.log(`[${requestId}] Calling Gemini API (with heartbeats)...`);
+        console.log(`[${requestId}] Calling Gemini API (with heartbeats, ${GEMINI_FETCH_TIMEOUT_MS/1000}s timeout)...`);
 
-        const geminiResponse = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiBody),
-        });
+        // Create abort controller for Gemini fetch timeout
+        const geminiController = new AbortController();
+        const geminiTimeout = setTimeout(() => {
+          console.error(`[${requestId}] Gemini API timeout after ${GEMINI_FETCH_TIMEOUT_MS/1000}s`);
+          geminiController.abort();
+        }, GEMINI_FETCH_TIMEOUT_MS);
+
+        let geminiResponse;
+        try {
+          geminiResponse = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geminiBody),
+            signal: geminiController.signal,
+          });
+        } finally {
+          clearTimeout(geminiTimeout);
+        }
 
         const geminiDuration = Date.now() - geminiStartTime;
 
@@ -344,13 +374,21 @@ export default async function handler(req, res) {
       } catch (error) {
         clearInterval(heartbeatTimer);
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] Proxy error after ${totalDuration}ms:`, error.message, error.stack);
+
+        // Check if this is a timeout/abort error
+        const isTimeout = error.name === 'AbortError' || error.message?.includes('aborted');
+        const errorMessage = isTimeout
+          ? `Gemini API timed out after ${GEMINI_FETCH_TIMEOUT_MS/1000}s. The model may be overloaded.`
+          : 'Internal server error';
+
+        console.error(`[${requestId}] Proxy error after ${totalDuration}ms (timeout=${isTimeout}):`, error.message);
 
         const errorResponse = JSON.stringify({
           type: 'error',
-          error: 'Internal server error',
+          error: errorMessage,
           requestId,
           details: error.message,
+          isTimeout,
         }) + '\n';
         res.write(errorResponse);
         return res.end();
@@ -359,13 +397,26 @@ export default async function handler(req, res) {
 
     // Non-streaming fallback (original behavior)
     const geminiStartTime = Date.now();
-    console.log(`[${requestId}] Calling Gemini API (non-streaming)...`);
+    console.log(`[${requestId}] Calling Gemini API (non-streaming, ${GEMINI_FETCH_TIMEOUT_MS/1000}s timeout)...`);
 
-    const geminiResponse = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiBody),
-    });
+    // Create abort controller for Gemini fetch timeout
+    const geminiController = new AbortController();
+    const geminiTimeout = setTimeout(() => {
+      console.error(`[${requestId}] Gemini API timeout after ${GEMINI_FETCH_TIMEOUT_MS/1000}s`);
+      geminiController.abort();
+    }, GEMINI_FETCH_TIMEOUT_MS);
+
+    let geminiResponse;
+    try {
+      geminiResponse = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geminiBody),
+        signal: geminiController.signal,
+      });
+    } finally {
+      clearTimeout(geminiTimeout);
+    }
 
     const geminiDuration = Date.now() - geminiStartTime;
 

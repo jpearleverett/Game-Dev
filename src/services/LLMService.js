@@ -760,32 +760,124 @@ class LLMService {
           }, 'info');
         }
 
+        // Build request body for logging
+        const requestBody = {
+          messages: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+          model,
+          temperature,
+          maxTokens,
+          systemPrompt,
+          responseSchema,
+          cachedContent, // Optional: cached content reference for context caching
+          stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
+          clientTraceId: traceId || null,
+          clientRequestContext: requestContext || null,
+        };
+
+        // Log request details for debugging
+        const requestBodyStr = JSON.stringify(requestBody);
+        console.log(`[LLMService] [${localRequestId}] Request size: ${requestBodyStr.length} bytes, hasSchema: ${!!responseSchema}, hasCachedContent: ${!!cachedContent}`);
+
         const response = await fetch(this.config.proxyUrl, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            messages: messages.map(m => ({
-              role: m.role,
-              content: m.content,
-            })),
-            model,
-            temperature,
-            maxTokens,
-            systemPrompt,
-            responseSchema,
-            cachedContent, // Optional: cached content reference for context caching
-            stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
-            clientTraceId: traceId || null,
-            clientRequestContext: requestContext || null,
-          }),
+          body: requestBodyStr,
           signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
 
-        // For streaming responses, we need to read the full body as text and parse NDJSON
-        const responseText = await response.text();
+        // Log response details immediately after fetch returns
+        console.log(`[LLMService] [${localRequestId}] Response received: status=${response.status}, ok=${response.ok}, headers received in ${Date.now() - attemptStart}ms`);
+
+        // For streaming responses, we need to read the body and process heartbeats
+        // The issue: response.text() blocks until ALL data is received
+        // If the server dies mid-stream, we hang forever waiting for data
+        const bodyReadStart = Date.now();
+        console.log(`[LLMService] [${localRequestId}] Starting body read (headers received in ${Date.now() - attemptStart}ms)`);
+
+        let responseText;
+
+        // Try to use streaming reader if available (React Native may not support this)
+        const reader = response.body?.getReader?.();
+
+        if (reader) {
+          // Streaming approach - process data as it arrives
+          console.log(`[LLMService] [${localRequestId}] Using streaming reader`);
+          const chunks = [];
+          const decoder = new TextDecoder();
+          const chunkTimeout = 30000; // 30s without data = timeout
+
+          try {
+            while (true) {
+              // Race between reading next chunk and timeout (with proper cleanup)
+              let timeoutId;
+              const readPromise = reader.read();
+              const timeoutPromise = new Promise((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error('No data received for 30 seconds')), chunkTimeout);
+              });
+
+              let result;
+              try {
+                result = await Promise.race([readPromise, timeoutPromise]);
+              } finally {
+                clearTimeout(timeoutId);
+              }
+
+              const { done, value } = result;
+              if (done) break;
+
+              const text = decoder.decode(value, { stream: true });
+              chunks.push(text);
+
+              // Log heartbeats as they arrive
+              if (text.includes('"type":"heartbeat"')) {
+                const elapsed = Date.now() - bodyReadStart;
+                console.log(`[LLMService] [${localRequestId}] Heartbeat received at ${elapsed}ms`);
+              }
+            }
+            responseText = chunks.join('');
+          } catch (streamError) {
+            reader.cancel().catch(() => {}); // Best effort cancel
+            const bodyReadTime = Date.now() - bodyReadStart;
+            console.error(`[LLMService] [${localRequestId}] Stream read failed after ${bodyReadTime}ms: ${streamError.message}`);
+            throw streamError;
+          }
+        } else {
+          // Fallback: response.text() with timeout
+          // This is less ideal because we can't process heartbeats in real-time
+          console.log(`[LLMService] [${localRequestId}] Using response.text() fallback (no streaming support)`);
+          const bodyReadTimeout = 180000; // 3 minutes for body read
+
+          // Set up periodic progress logging since we can't see actual progress
+          let progressLogCount = 0;
+          const progressInterval = setInterval(() => {
+            progressLogCount++;
+            console.log(`[LLMService] [${localRequestId}] Still waiting for body... (${progressLogCount * 30}s elapsed)`);
+          }, 30000); // Log every 30 seconds
+
+          try {
+            responseText = await Promise.race([
+              response.text(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Response body read timeout (no data for 3 minutes)')), bodyReadTimeout)
+              )
+            ]);
+          } catch (bodyError) {
+            const bodyReadTime = Date.now() - bodyReadStart;
+            console.error(`[LLMService] [${localRequestId}] Body read failed after ${bodyReadTime}ms: ${bodyError.message}`);
+            console.error(`[LLMService] [${localRequestId}] No partial data available (response.text() is all-or-nothing)`);
+            throw bodyError;
+          } finally {
+            clearInterval(progressInterval);
+          }
+        }
+
         const networkTime = Date.now() - attemptStart;
+        console.log(`[LLMService] [${localRequestId}] Body read complete: ${responseText.length} bytes in ${networkTime}ms`);
 
         // Parse NDJSON - split by newlines and parse each line
         const lines = responseText.split('\n').filter(line => line.trim());
