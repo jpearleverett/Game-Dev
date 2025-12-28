@@ -1078,6 +1078,26 @@ Choice 2  Choice 2  Choice 2  (3 options each)
 4. Second choice should be about Jack's FOCUS (what he prioritizes)
 5. Endings conclude this subchapter's path but leave threads for next
 
+**CRITICAL: PLOT CONVERGENCE REQUIREMENT**
+All 9 paths MUST converge to the same narrative state. This means:
+- SAME CLUES DISCOVERED: All paths reveal the same key information (just framed differently)
+- SAME REVELATIONS: The plot-critical discoveries happen in every path
+- SAME ENDING STATE: Jack ends up at the same location, with the same characters present
+- SAME FACTS LEARNED: What Jack "knows" at the end is identical across all paths
+
+What DIFFERS between paths:
+- HOW Jack gets the information (aggressive questioning vs careful observation)
+- The FLAVOR of interactions (confrontational vs diplomatic dialogue)
+- Jack's EMOTIONAL STATE and internal monologue
+- The PACING and tension of the scene
+
+This convergence is CRITICAL because:
+1. The next subchapter continues from a single "canonical" state
+2. Prefetching generates future content before the player finishes choosing
+3. Story consistency requires the plot to remain the same across all player experiences
+
+Think of it like a Telltale game: choices affect the EXPERIENCE but the STORY beats are fixed.
+
 **CHOICE DESIGN:**
 - Labels: 2-5 words, imperative mood ("Press him harder", "Change the subject", "Wait and observe")
 - Prompts: 5-15 words setting context ("How does Jack respond?", "What does Jack focus on?")
@@ -1088,6 +1108,10 @@ Each segment can have 0-2 "details" - phrases the player can tap for Jack's obse
 - phrase: Exact text from the segment (must appear verbatim)
 - note: Jack's noir-voice internal thought (15-25 words)
 - evidenceCard: If this becomes evidence, a short label (2-4 words), otherwise empty
+
+IMPORTANT: Any PLOT-CRITICAL evidence must appear as a tappable detail in ALL 9 paths (in appropriate segments).
+The opening's details are shared by everyone. For path-specific segments, ensure key evidence appears in every branch.
+Atmospheric details (non-evidence) can be unique to specific paths.
 
 **Example detail:**
 \`\`\`json
@@ -1159,10 +1183,10 @@ Your response will be structured as JSON (enforced by schema). Focus on:
   * Jack's emotional and physical state
   * Last sentence for continuation point
   IMPORTANT: This must match the corresponding segments from branchingNarrative exactly - just concatenate them.
-- "chapterSummary": Summarize the CANONICAL PATH (opening → 1A → 1A-2A) for future memory (2-3 sentences)
+- "chapterSummary": Summarize PLOT POINTS that are true across ALL 9 paths (2-3 sentences). Since all paths converge to the same facts, this summary should capture what EVERYONE learns, regardless of which path they took.
 - "puzzleCandidates": Extract 6-12 single words (nouns/verbs) from YOUR narrative that are best for a word puzzle
 - "briefing": Mission briefing with "summary" (one sentence objective) and "objectives" (2-3 specific directives)
-- "consistencyFacts": Array of 3-5 specific facts that must remain consistent in future chapters
+- "consistencyFacts": Array of 3-5 specific facts that must remain consistent in future chapters. These must be PATH-AGNOSTIC facts (true regardless of which branching path the player took). Focus on plot discoveries, not dialogue or approach.
 - "narrativeThreads": Array of active story threads from YOUR narrative. Include:
   * type: "appointment" | "revelation" | "investigation" | "relationship" | "physical_state" | "promise" | "threat"
   * description: What happened (e.g., "Jack agreed to meet Sarah at the docks at midnight")
