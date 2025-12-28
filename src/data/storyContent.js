@@ -133,13 +133,35 @@ export function formatCaseNumber(chapter, subchapter) {
 // Cache for generated content loaded in memory (moved up for sync access)
 let generatedCache = {};
 
-export function getStoryEntry(caseNumber, pathKey) {
+/**
+ * Get story entry from cache or static content.
+ *
+ * TRUE INFINITE BRANCHING: When previousBranchingPath is provided, first checks
+ * for speculatively cached content that was generated based on a specific
+ * branching path from the previous subchapter (e.g., "1B-2C").
+ *
+ * @param {string} caseNumber - The case to retrieve (e.g., "002B")
+ * @param {string} pathKey - The chapter-level path key (e.g., "ROOT", "A", "BA")
+ * @param {string} previousBranchingPath - Optional: The previous subchapter's branching path (e.g., "1B-2C")
+ */
+export function getStoryEntry(caseNumber, pathKey, previousBranchingPath = null) {
   if (!caseNumber) return null;
 
   const normalizedKey = normalizeStoryPathKey(pathKey);
 
   // For dynamic chapters, check generated cache first
   if (isDynamicChapter(caseNumber)) {
+    // TRUE INFINITE BRANCHING: First try speculative cache key if branchingPath provided
+    if (previousBranchingPath) {
+      const speculativeCacheKey = `${caseNumber}_${normalizedKey}_${previousBranchingPath}`;
+      const speculativeCached = generatedCache[speculativeCacheKey];
+      if (speculativeCached) {
+        console.log(`[storyContent] Using speculatively cached content for ${caseNumber} (path: ${previousBranchingPath})`);
+        return speculativeCached;
+      }
+    }
+
+    // Standard cache key (no branching path)
     const cacheKey = `${caseNumber}_${normalizedKey}`;
     const cached = generatedCache[cacheKey];
     if (cached) return cached;
@@ -175,8 +197,14 @@ export function getStoryNarrative(caseNumber, pathKey) {
   return Array.isArray(entry.narrative) ? entry.narrative : [entry.narrative];
 }
 
-export function getStoryMeta(caseNumber, pathKey) {
-  const entry = getStoryEntry(caseNumber, pathKey);
+/**
+ * Get story metadata for a case.
+ *
+ * TRUE INFINITE BRANCHING: When previousBranchingPath is provided, checks for
+ * speculatively cached content generated for that specific branching path.
+ */
+export function getStoryMeta(caseNumber, pathKey, previousBranchingPath = null) {
+  const entry = getStoryEntry(caseNumber, pathKey, previousBranchingPath);
   if (!entry) return null;
   return {
     chapter: entry.chapter,
@@ -184,6 +212,10 @@ export function getStoryMeta(caseNumber, pathKey) {
     title: entry.title,
     bridgeText: entry.bridgeText,
     decision: entry.decision || null,
+    // Include branchingNarrative if present (new interactive format)
+    branchingNarrative: entry.branchingNarrative || null,
+    // Legacy narrative for backwards compatibility
+    narrative: entry.narrative || null,
   };
 }
 
@@ -195,8 +227,21 @@ export function getStoryMeta(caseNumber, pathKey) {
 
 /**
  * Load generated story entry into cache
+ *
+ * TRUE INFINITE BRANCHING: When previousBranchingPath is provided, first checks
+ * for speculatively cached content before loading from storage.
  */
-async function loadToCache(caseNumber, pathKey) {
+async function loadToCache(caseNumber, pathKey, previousBranchingPath = null) {
+  // TRUE INFINITE BRANCHING: First check for speculative cache entry
+  if (previousBranchingPath) {
+    const speculativeKey = `${caseNumber}_${pathKey}_${previousBranchingPath}`;
+    if (generatedCache[speculativeKey]) {
+      console.log(`[storyContent] Found speculatively cached content for ${caseNumber} (path: ${previousBranchingPath})`);
+      return generatedCache[speculativeKey];
+    }
+  }
+
+  // Standard cache loading
   const key = `${caseNumber}_${pathKey}`;
   if (!generatedCache[key]) {
     const entry = await loadGeneratedEntry(caseNumber, pathKey);
@@ -218,18 +263,25 @@ export function clearGeneratedCache() {
  * Async version of getStoryEntry that handles dynamic content
  * For Chapter 1: Returns static content
  * For Chapters 2-12: Returns generated content if available, null if needs generation
+ *
+ * TRUE INFINITE BRANCHING: When previousBranchingPath is provided, first checks
+ * for speculatively cached content that was generated for a specific branching path.
+ *
+ * @param {string} caseNumber - The case to retrieve
+ * @param {string} pathKey - The chapter-level path key
+ * @param {string} previousBranchingPath - Optional: Previous subchapter's branching path (e.g., "1B-2C")
  */
-export async function getStoryEntryAsync(caseNumber, pathKey) {
+export async function getStoryEntryAsync(caseNumber, pathKey, previousBranchingPath = null) {
   if (!caseNumber) return null;
 
   // For Chapter 1 (static), use existing function
   if (!isDynamicChapter(caseNumber)) {
-    return getStoryEntry(caseNumber, pathKey);
+    return getStoryEntry(caseNumber, pathKey, previousBranchingPath);
   }
 
-  // For dynamic chapters, try to load from generated storage
+  // For dynamic chapters, try to load from generated storage (with speculative check)
   const normalizedKey = normalizeStoryPathKey(pathKey);
-  const generated = await loadToCache(caseNumber, normalizedKey);
+  const generated = await loadToCache(caseNumber, normalizedKey, previousBranchingPath);
 
   return generated || null;
 }
@@ -280,9 +332,10 @@ export async function getStoryBridgeTextAsync(caseNumber, pathKey) {
 
 /**
  * Async version of getStoryMeta
+ * TRUE INFINITE BRANCHING: Supports speculative cache lookup via previousBranchingPath.
  */
-export async function getStoryMetaAsync(caseNumber, pathKey) {
-  const entry = await getStoryEntryAsync(caseNumber, pathKey);
+export async function getStoryMetaAsync(caseNumber, pathKey, previousBranchingPath = null) {
+  const entry = await getStoryEntryAsync(caseNumber, pathKey, previousBranchingPath);
   if (!entry) return null;
   return {
     chapter: entry.chapter,
@@ -290,13 +343,141 @@ export async function getStoryMetaAsync(caseNumber, pathKey) {
     title: entry.title,
     bridgeText: entry.bridgeText,
     decision: entry.decision || null,
+    // Include branchingNarrative if present (new interactive format)
+    branchingNarrative: entry.branchingNarrative || null,
+    // Legacy narrative for backwards compatibility
+    narrative: entry.narrative || null,
   };
 }
 
 /**
- * Update cache with newly generated content
+ * Get branching narrative specifically
  */
-export function updateGeneratedCache(caseNumber, pathKey, entry) {
-  const key = `${caseNumber}_${normalizeStoryPathKey(pathKey)}`;
+export function getStoryBranchingNarrative(caseNumber, pathKey) {
+  const entry = getStoryEntry(caseNumber, pathKey);
+  return entry?.branchingNarrative || null;
+}
+
+/**
+ * Async version of getStoryBranchingNarrative
+ */
+export async function getStoryBranchingNarrativeAsync(caseNumber, pathKey) {
+  const entry = await getStoryEntryAsync(caseNumber, pathKey);
+  return entry?.branchingNarrative || null;
+}
+
+/**
+ * Update cache with newly generated content
+ *
+ * TRUE INFINITE BRANCHING: When speculativeBranchingPath is provided, the cache
+ * key includes the branching path for speculative content lookup.
+ *
+ * @param {string} caseNumber - The case number (e.g., "002B")
+ * @param {string} pathKey - The chapter-level path key (e.g., "ROOT")
+ * @param {Object} entry - The story entry to cache
+ * @param {string} speculativeBranchingPath - Optional: For speculative caching (e.g., "1B-2C")
+ */
+export function updateGeneratedCache(caseNumber, pathKey, entry, speculativeBranchingPath = null) {
+  const normalizedKey = normalizeStoryPathKey(pathKey);
+  const key = speculativeBranchingPath
+    ? `${caseNumber}_${normalizedKey}_${speculativeBranchingPath}`
+    : `${caseNumber}_${normalizedKey}`;
   generatedCache[key] = entry;
+  if (speculativeBranchingPath) {
+    console.log(`[storyContent] Speculatively cached ${caseNumber} for branching path ${speculativeBranchingPath}`);
+  }
+}
+
+/**
+ * Build the "realized narrative" from a branchingNarrative based on player's actual choices.
+ * This is the text the player actually experienced, NOT the canonical path.
+ *
+ * @param {Object} branchingNarrative - The full branching structure
+ * @param {string} firstChoiceKey - The key of the first choice made (e.g., "1A", "1B", "1C")
+ * @param {string} secondChoiceKey - The key of the second choice made (e.g., "1A-2A", "1B-2C")
+ * @returns {string} The concatenated narrative text for the player's actual path
+ */
+export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secondChoiceKey) {
+  if (!branchingNarrative) return '';
+
+  const parts = [];
+
+  // Opening (shared by all paths)
+  if (branchingNarrative.opening?.text) {
+    parts.push(branchingNarrative.opening.text);
+  }
+
+  // First choice response
+  if (branchingNarrative.firstChoice?.options && firstChoiceKey) {
+    const firstOption = branchingNarrative.firstChoice.options.find(o => o.key === firstChoiceKey);
+    if (firstOption?.response) {
+      parts.push(firstOption.response);
+    }
+  }
+
+  // Second choice response (ending)
+  if (branchingNarrative.secondChoices && firstChoiceKey && secondChoiceKey) {
+    // Find the secondChoice group that corresponds to the first choice
+    const secondChoiceGroup = branchingNarrative.secondChoices.find(sc => sc.afterChoice === firstChoiceKey);
+    if (secondChoiceGroup?.options) {
+      const secondOption = secondChoiceGroup.options.find(o => o.key === secondChoiceKey);
+      if (secondOption?.response) {
+        parts.push(secondOption.response);
+      }
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+/**
+ * Get the realized narrative for a specific case number based on stored branching choices.
+ * Falls back to canonical narrative if no branching choices are stored.
+ *
+ * @param {string} caseNumber - The case number (e.g., "002A")
+ * @param {string} pathKey - The path key for this case
+ * @param {Array} branchingChoices - The player's stored branching choices
+ * @returns {string} The narrative text the player actually experienced
+ */
+export function getRealizedNarrativeForCase(caseNumber, pathKey, branchingChoices = []) {
+  const entry = getStoryEntry(caseNumber, pathKey);
+  if (!entry) return '';
+
+  // Check if we have branching choices for this case
+  const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNumber);
+
+  if (branchingChoice && entry.branchingNarrative) {
+    // Build from player's actual path
+    return buildRealizedNarrative(
+      entry.branchingNarrative,
+      branchingChoice.firstChoice,
+      branchingChoice.secondChoice
+    );
+  }
+
+  // Fall back to canonical narrative
+  return entry.narrative || '';
+}
+
+/**
+ * Async version of getRealizedNarrativeForCase
+ */
+export async function getRealizedNarrativeForCaseAsync(caseNumber, pathKey, branchingChoices = []) {
+  const entry = await getStoryEntryAsync(caseNumber, pathKey);
+  if (!entry) return '';
+
+  // Check if we have branching choices for this case
+  const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNumber);
+
+  if (branchingChoice && entry.branchingNarrative) {
+    // Build from player's actual path
+    return buildRealizedNarrative(
+      entry.branchingNarrative,
+      branchingChoice.firstChoice,
+      branchingChoice.secondChoice
+    );
+  }
+
+  // Fall back to canonical narrative
+  return entry.narrative || '';
 }

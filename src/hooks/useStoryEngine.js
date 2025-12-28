@@ -107,6 +107,60 @@ export function useStoryEngine(progress, updateProgress) {
 
   }, [storyCampaign, updateProgress, progress]);
 
+  /**
+   * Save player's branching choice within a subchapter (for true infinite branching).
+   * This tracks which path the player took through the interactive narrative,
+   * allowing future content to continue from their ACTUAL experience.
+   *
+   * @param {string} caseNumber - The case where the choice was made (e.g., "002A")
+   * @param {string} firstChoice - The first choice key (e.g., "1A", "1B", "1C")
+   * @param {string} secondChoice - The second choice key (e.g., "1A-2A", "1B-2C")
+   */
+  const saveBranchingChoice = useCallback((caseNumber, firstChoice, secondChoice) => {
+    if (!caseNumber || !firstChoice || !secondChoice) {
+      console.warn('[useStoryEngine] saveBranchingChoice called with missing params:', { caseNumber, firstChoice, secondChoice });
+      return;
+    }
+
+    const existingChoices = storyCampaign.branchingChoices || [];
+
+    // Check if we already have a choice for this case (shouldn't happen, but be safe)
+    const alreadyExists = existingChoices.some(bc => bc.caseNumber === caseNumber);
+    if (alreadyExists) {
+      console.log(`[useStoryEngine] Branching choice for ${caseNumber} already exists, skipping`);
+      return;
+    }
+
+    const newChoice = {
+      caseNumber,
+      firstChoice,
+      secondChoice,
+      completedAt: new Date().toISOString(),
+    };
+
+    const updatedChoices = [...existingChoices, newChoice];
+
+    const updatedStory = {
+      ...storyCampaign,
+      branchingChoices: updatedChoices,
+    };
+
+    console.log(`[useStoryEngine] Saving branching choice for ${caseNumber}: ${firstChoice} -> ${secondChoice}`);
+
+    updateProgress({
+      storyCampaign: updatedStory,
+    });
+
+    // Force persistent save immediately
+    saveStoredProgress({
+      ...progress,
+      storyCampaign: updatedStory,
+    }).catch((err) => {
+      console.error('[useStoryEngine] Failed to persist branching choice:', err);
+    });
+
+  }, [storyCampaign, updateProgress, progress]);
+
   // This logic was previously in 'activateStoryCase'
   const activateStoryCase = useCallback(({ skipLock = false } = {}) => {
       const caseNumber = storyCampaign.activeCaseNumber;
@@ -137,5 +191,6 @@ export function useStoryEngine(progress, updateProgress) {
       enterStoryCampaign,
       selectDecision,
       activateStoryCase,
+      saveBranchingChoice,
   };
 }

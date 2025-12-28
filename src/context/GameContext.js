@@ -153,8 +153,8 @@ export function GameProvider({
               note: 'Chapter 1 is pre-written, starting Chapter 2 generation now',
             }, 'info');
             // Prefetch both A and B paths for Chapter 2 with empty choice history
-            // (player hasn't made any decisions yet)
-            story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch');
+            // (player hasn't made any decisions yet, no branching choices from Chapter 1)
+            story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch', []);
           }
 
           return { ok: true, caseId: targetCase.id };
@@ -674,6 +674,8 @@ export function GameProvider({
     exitStoryCampaign,
     ensureDailyStoryCase,
     selectStoryDecision: story.selectStoryDecision,
+    saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
+    // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
     // Ideally consumers use useAudio(), but GameContext was the facade.
     // We removed setAudioController from here.

@@ -55,12 +55,21 @@ export function useStoryGeneration(storyCampaign) {
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
   const subchapterPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate within-chapter subchapter prefetch
+  const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
+
+  // Keep branchingChoicesRef in sync to avoid stale closures
+  useEffect(() => {
+    branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
+  }, [storyCampaign?.branchingChoices]);
 
   /**
    * Prefetch next chapter (Subchapter A) for BOTH possible decision branches.
    * Triggered as soon as Subchapter C is generated so the eventual player choice is seamless.
+   *
+   * TRUE INFINITE BRANCHING: Now accepts branchingChoices to pass the player's actual
+   * path through previous subchapters' branching narratives for proper context.
    */
-  const prefetchNextChapterBranchesAfterC = useCallback(async (currentChapter, choiceHistory = [], source = 'unknown') => {
+  const prefetchNextChapterBranchesAfterC = useCallback(async (currentChapter, choiceHistory = [], source = 'unknown', branchingChoices = []) => {
     if (!isConfigured) return;
     if (!currentChapter || currentChapter >= 12) return;
 
@@ -151,9 +160,11 @@ export function useStoryGeneration(storyCampaign) {
       }, 'info');
 
       try {
+        // TRUE INFINITE BRANCHING: Pass branchingChoices so context includes realized narratives
         const entry = await storyGenerationService.generateSubchapter(nextChapter, 1, nextPathKey, optimisticHistory, {
           traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
           reason: `prefetch-next-chapter-branches:${source}`,
+          branchingChoices, // Player's actual path through previous subchapters
         });
 
         if (entry && isMountedRef.current) {
@@ -324,7 +335,8 @@ export function useStoryGeneration(storyCampaign) {
    * The StoryGenerationService always returns fallback content on failure,
    * so we should always have something to return.
    */
-  const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = []) => {
+  // TRUE INFINITE BRANCHING: Added branchingChoices for realized narrative context
+  const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = null) => {
     const genId = `gen_${Date.now().toString(36)}`;
     const startTime = Date.now();
 
@@ -371,7 +383,8 @@ export function useStoryGeneration(storyCampaign) {
           // EARLY PREFETCH: When accessing subchapter B (even from cache), start prefetching
           // both next-chapter paths so content is ready when player reaches the decision.
           if (subchapter === 2 && chapter < 12) {
-            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'cache-hit:B-early');
+            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
+            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'cache-hit:B-early', branchingChoicesRef.current);
           }
         }
       } catch (e) {
@@ -413,6 +426,8 @@ export function useStoryGeneration(storyCampaign) {
       // CRITICAL: This is user-facing generation (player actively waiting)
       // We pass isUserFacing=true to ensure NO fallback is shown
       // If generation fails, an error will be thrown and caught below
+      // TRUE INFINITE BRANCHING: Use provided branchingChoices or fall back to ref
+      const effectiveBranchingChoices = branchingChoices || branchingChoicesRef.current;
       const entry = await storyGenerationService.generateSubchapter(
         chapter,
         subchapter,
@@ -422,6 +437,7 @@ export function useStoryGeneration(storyCampaign) {
           traceId,
           reason: 'immediate-generateForCase',
           isUserFacing: true, // Never show fallback to player
+          branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
         }
       );
 
@@ -468,7 +484,8 @@ export function useStoryGeneration(storyCampaign) {
           // subchapter C and makes a decision, content for both options is likely ready.
           if (subchapter === 2 && chapter < 12) {
             console.log(`[useStoryGeneration] [${genId}] Subchapter B complete - starting early next-chapter prefetch`);
-            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:B-complete-early');
+            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
+            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:B-complete-early', effectiveBranchingChoices);
           }
         }
       } catch (e) {
@@ -495,7 +512,9 @@ export function useStoryGeneration(storyCampaign) {
       // This guarantees seamless "Continue Investigation" after the eventual player choice.
       try {
         if (chapter && subchapter === 3) {
-          prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:C-complete');
+          // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
+          const finalBranchingChoices = branchingChoices || branchingChoicesRef.current;
+          prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:C-complete', finalBranchingChoices);
         }
       } catch (e) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.branches.trigger.error', { error: e?.message }, 'warn');
@@ -651,7 +670,8 @@ export function useStoryGeneration(storyCampaign) {
 
           // If we just finished generating Subchapter C, immediately prefetch BOTH next branches.
           if (subIndex === 3) {
-            prefetchNextChapterBranchesAfterC(targetChapter, history, 'pregenerateCurrentChapterSiblings:C-complete');
+            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
+            prefetchNextChapterBranchesAfterC(targetChapter, history, 'pregenerateCurrentChapterSiblings:C-complete', branchingChoicesRef.current);
           }
         } catch (err) {
           console.warn(`[useStoryGeneration] Background generation failed for ${caseNumber}:`, err.message);
@@ -660,6 +680,199 @@ export function useStoryGeneration(storyCampaign) {
       }
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
+
+  /**
+   * TRUE INFINITE BRANCHING: Trigger sibling prefetch AFTER player completes branching narrative.
+   *
+   * This is called when saveBranchingChoice() completes. At this point, we have the player's
+   * actual path through the branching narrative, so we can prefetch the next subchapter with
+   * proper context (realized narrative instead of canonical).
+   *
+   * @param {string} caseNumber - The case that was just completed (e.g., "002A")
+   * @param {string} pathKey - The path key for this case
+   * @param {Array} choiceHistory - Chapter-level decision history
+   * @param {Array} branchingChoices - Intra-subchapter branching choices
+   */
+  const triggerPrefetchAfterBranchingComplete = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = []) => {
+    if (!isConfigured) {
+      return;
+    }
+
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+
+    // Only trigger for chapters 2+ (Chapter 1 is static)
+    if (chapter < 2) {
+      return;
+    }
+
+    // SUBCHAPTER C FLOW: For C, prefetch next chapter instead of siblings
+    // The puzzle happens AFTER the narrative, giving the LLM time to generate
+    if (subchapter === 3) {
+      if (chapter < 12) {
+        console.log(`[useStoryGeneration] Subchapter C complete - prefetching next chapter with player's realized path`);
+        // Prefetch BOTH decision paths (A and B) for next chapter
+        // Now we have the player's complete branching path through C for context
+        prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'triggerPrefetchAfterBranchingComplete:C-narrative-complete', branchingChoices);
+      }
+      return;
+    }
+
+    // NARRATIVE-FIRST FLOW: Generate only the NEXT subchapter
+    // Player will solve puzzle while this generates, then read the next narrative
+    // This is more efficient than generating all remaining siblings
+    const nextSubLetter = subchapter === 1 ? 'B' : 'C';
+    const nextSubIndex = subchapter === 1 ? 2 : 3;
+    const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
+
+    console.log(`[useStoryGeneration] Generating next subchapter ${nextCaseNumber} after branching complete`);
+
+    // Flush storage to ensure current content is available for context
+    try {
+      const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
+      await flushPendingWrites();
+    } catch (err) {
+      console.warn('[useStoryGeneration] Failed to flush before generation:', err);
+    }
+
+    const needsGen = await needsGeneration(nextCaseNumber, pathKey);
+
+    if (needsGen && isMountedRef.current) {
+      try {
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
+
+        // IMPORTANT: Pass branchingChoices so the context includes realized narrative
+        const entry = await storyGenerationService.generateSubchapter(
+          chapter,
+          nextSubIndex,
+          pathKey,
+          choiceHistory,
+          { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete:narrative-first' }
+        );
+
+        if (entry && isMountedRef.current) {
+          updateGeneratedCache(nextCaseNumber, pathKey, entry);
+          console.log(`[useStoryGeneration] Successfully generated ${nextCaseNumber}`);
+        }
+      } catch (err) {
+        console.warn(`[useStoryGeneration] Generation failed for ${nextCaseNumber}:`, err.message);
+      }
+    } else {
+      console.log(`[useStoryGeneration] ${nextCaseNumber} already exists, skipping generation`);
+    }
+  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
+
+  /**
+   * TRUE INFINITE BRANCHING: Speculative prefetch after first choice is made.
+   *
+   * When the player makes their first choice in a subchapter (e.g., "1B"), we know
+   * they'll end up on one of 3 possible second-choice endings (1B-2A, 1B-2B, 1B-2C).
+   *
+   * This function generates 3 versions of the NEXT subchapter, one for each possible
+   * second choice the player might make. This happens while the player is still reading
+   * their first choice response and making their second choice - typically 30-60+ seconds.
+   *
+   * Result: By the time the player completes the subchapter, the next subchapter
+   * is already generated and ready, creating a seamless experience.
+   *
+   * @param {string} caseNumber - Current case (e.g., "002A")
+   * @param {string} firstChoiceKey - The first choice made (e.g., "1B")
+   * @param {string} pathKey - The path key for this case
+   * @param {Array} choiceHistory - Chapter-level decision history
+   * @param {Array} existingBranchingChoices - Previously made branching choices
+   */
+  const speculativePrefetchForFirstChoice = useCallback(async (
+    caseNumber,
+    firstChoiceKey,
+    pathKey,
+    choiceHistory = [],
+    existingBranchingChoices = []
+  ) => {
+    if (!isConfigured) {
+      return;
+    }
+
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+
+    // Only trigger for chapters 2+ (Chapter 1 is static)
+    if (chapter < 2) {
+      return;
+    }
+
+    // Only for subchapters A (1) and B (2) - subchapter C is the decision point
+    if (subchapter >= 3) {
+      return;
+    }
+
+    console.log(`[useStoryGeneration] Speculative prefetch: player chose ${firstChoiceKey} in ${caseNumber}`);
+    console.log(`[useStoryGeneration] Generating 3 versions of next subchapter for possible second choices`);
+
+    // Determine the next subchapter
+    const nextSubchapter = subchapter + 1;
+    const nextSubLetter = { 2: 'B', 3: 'C' }[nextSubchapter];
+    const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
+
+    // The 3 possible second choices based on first choice
+    // If firstChoiceKey is "1B", second choices are "1B-2A", "1B-2B", "1B-2C"
+    const secondChoiceOptions = ['2A', '2B', '2C'];
+
+    // Flush storage first
+    try {
+      const { flushPendingWrites } = await import('../storage/generatedStoryStorage');
+      await flushPendingWrites();
+    } catch (err) {
+      console.warn('[useStoryGeneration] Failed to flush before speculative prefetch:', err);
+    }
+
+    // Generate 3 versions SEQUENTIALLY (avoid timeout issues on mobile)
+    for (const secondSuffix of secondChoiceOptions) {
+      const speculativeSecondChoice = `${firstChoiceKey}-${secondSuffix}`;
+
+      // Build the speculative branchingChoices as if player made this second choice
+      const speculativeBranchingChoices = [
+        ...existingBranchingChoices,
+        {
+          caseNumber,
+          firstChoice: firstChoiceKey,
+          secondChoice: speculativeSecondChoice,
+          completedAt: new Date().toISOString(),
+          isSpeculative: true, // Mark as speculative for debugging
+        },
+      ];
+
+      console.log(`[useStoryGeneration] Generating ${nextCaseNumber} for path ${speculativeSecondChoice}...`);
+
+      try {
+        setStatus(GENERATION_STATUS.GENERATING);
+        setGenerationType(GENERATION_TYPE.PRELOAD);
+
+        // Generate with the speculative branching choices context
+        const entry = await storyGenerationService.generateSubchapter(
+          chapter,
+          nextSubchapter,
+          pathKey,
+          choiceHistory,
+          {
+            branchingChoices: speculativeBranchingChoices,
+            reason: 'speculativePrefetchForFirstChoice',
+            speculativeSecondChoice, // Pass this for potential cache keying
+          }
+        );
+
+        if (entry && isMountedRef.current) {
+          // Store with the speculative branching path so we can retrieve it later
+          // The cache key will be: ${nextCaseNumber}_${pathKey}_${speculativeSecondChoice}
+          updateGeneratedCache(nextCaseNumber, pathKey, entry, speculativeSecondChoice);
+          console.log(`[useStoryGeneration] ✅ Cached ${nextCaseNumber} for ${speculativeSecondChoice}`);
+        }
+      } catch (err) {
+        console.warn(`[useStoryGeneration] Speculative prefetch failed for ${speculativeSecondChoice}:`, err.message);
+        // Continue with other branches even if one fails
+      }
+    }
+
+    console.log(`[useStoryGeneration] Speculative prefetch complete: 3 versions of ${nextCaseNumber} ready`);
+  }, [isConfigured]);
 
   /**
    * Analyze choice history to predict most likely next path
@@ -994,6 +1207,8 @@ export function useStoryGeneration(storyCampaign) {
     pregenerate,
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC, // Prefetch both decision paths when entering subchapter C
+    triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch siblings after branching choice is made
+    speculativePrefetchForFirstChoice, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths after first choice
     cancelGeneration,
     clearError,
   };

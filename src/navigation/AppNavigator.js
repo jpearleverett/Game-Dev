@@ -40,6 +40,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     toggleWordSelection,
     markCaseBriefingSeen,
     selectStoryDecision,
+    saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
     unlockNextCaseIfReady,
     mode,
     purchaseBribe,
@@ -174,6 +175,15 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="CaseFile">
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
+
+          // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
+          const handleProceedToPuzzle = () => {
+            if (activeCase?.id) {
+              game.resetBoardForCase(activeCase.id);
+            }
+            navigation.navigate('Board');
+          };
+
           return (
             <CaseFileScreen
               activeCase={activeCase}
@@ -181,6 +191,8 @@ export default function AppNavigator({ fontsReady, audio }) {
               storyCampaign={progress.storyCampaign}
               solvedCaseIds={progress.solvedCaseIds}
               onSelectDecision={selectStoryDecision}
+              onSaveBranchingChoice={saveBranchingChoice}
+              onProceedToPuzzle={handleProceedToPuzzle}
               isStoryMode={isStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

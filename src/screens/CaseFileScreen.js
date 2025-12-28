@@ -24,6 +24,7 @@ import ScreenSurface from "../components/ScreenSurface";
 import SecondaryButton from "../components/SecondaryButton";
 import PrimaryButton from "../components/PrimaryButton";
 import NarrativePager from "../components/NarrativePager";
+import BranchingNarrativeReader from "../components/BranchingNarrativeReader";
 import CaseHero from "../components/case-file/CaseHero";
 import CaseSummary from "../components/case-file/CaseSummary";
 import DecisionPanel from "../components/case-file/DecisionPanel";
@@ -55,6 +56,8 @@ export default function CaseFileScreen({
   storyCampaign,
   solvedCaseIds = [],
   onSelectDecision,
+  onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
+  onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -159,14 +162,33 @@ export default function CaseFileScreen({
     if (activeCase?.storyMeta) return activeCase.storyMeta;
     const caseNumber = typeof activeCase?.caseNumber === "string" ? activeCase.caseNumber : null;
     if (!caseNumber) return null;
-    
+
     const chapterSlice = caseNumber.slice(0, 3);
     const chapterNumber = Number(chapterSlice);
     const chapterKey = Number.isNaN(chapterNumber) ? null : chapterNumber;
     const pathKey = (chapterKey && storyCampaign?.pathHistory && storyCampaign.pathHistory[chapterKey]) ||
       storyCampaign?.currentPathKey || ROOT_PATH_KEY;
-      
-    return getStoryEntry(caseNumber, pathKey) || null;
+
+    // TRUE INFINITE BRANCHING: Check if we have a branching choice from the previous subchapter
+    // If so, use it to look up speculatively cached content
+    const subchapterLetter = caseNumber.slice(3, 4);
+    let previousBranchingPath = null;
+
+    if (subchapterLetter === 'B' || subchapterLetter === 'C') {
+      // Find the previous subchapter's case number
+      const prevLetter = subchapterLetter === 'B' ? 'A' : 'B';
+      const prevCaseNumber = `${chapterSlice}${prevLetter}`;
+
+      // Look for the branching choice from that case
+      const branchingChoices = storyCampaign?.branchingChoices || [];
+      const prevChoice = branchingChoices.find(bc => bc.caseNumber === prevCaseNumber);
+      if (prevChoice?.secondChoice) {
+        previousBranchingPath = prevChoice.secondChoice;
+        console.log(`[CaseFileScreen] Looking for speculative cache with path: ${previousBranchingPath}`);
+      }
+    }
+
+    return getStoryEntry(caseNumber, pathKey, previousBranchingPath) || null;
   }, [activeCase?.caseNumber, activeCase?.storyMeta, storyCampaign]);
 
   const storySummary = useMemo(() => {
@@ -214,22 +236,98 @@ export default function CaseFileScreen({
     return null;
   }, [caseSummary, dailyIntro, storySummary]);
 
+  // Check if we have branching narrative (new interactive format)
+  const branchingNarrative = useMemo(() => {
+    return storyMeta?.branchingNarrative || activeCase?.branchingNarrative || null;
+  }, [storyMeta?.branchingNarrative, activeCase?.branchingNarrative]);
+
+  const hasBranchingNarrative = Boolean(branchingNarrative?.opening?.text);
+
+  // State for tracking branching narrative progress and evidence
+  const [branchingProgress, setBranchingProgress] = useState(null);
+  const [collectedEvidence, setCollectedEvidence] = useState([]);
+
+  // NARRATIVE-FIRST FLOW: Track if narrative is complete (ready for puzzle)
+  // Applies to ALL subchapters in chapters 2+ (not just C)
+  const [narrativeComplete, setNarrativeComplete] = useState(false);
+
+  // Check chapter and subchapter info
+  const caseNumber = activeCase?.caseNumber;
+  const chapterStr = caseNumber?.slice(0, 3);
+  const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
+  const subchapterLetter = caseNumber?.slice(3, 4);
+  const isSubchapterC = subchapterLetter === 'C';
+  const isDynamicChapter = chapter >= 2;
+
+  // Check if we already have a branching choice for this case (came back after puzzle)
+  const existingBranchingChoice = useMemo(() => {
+    if (!isDynamicChapter || !caseNumber) return null;
+    const branchingChoices = storyCampaign?.branchingChoices || [];
+    return branchingChoices.find(bc => bc.caseNumber === caseNumber);
+  }, [isDynamicChapter, caseNumber, storyCampaign?.branchingChoices]);
+
+  const handleBranchingComplete = useCallback((result) => {
+    setBranchingProgress(result);
+    console.log('[CaseFileScreen] Branching narrative complete:', result);
+
+    // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
+    // This enables future content to continue from their actual experience, not the canonical path
+    if (onSaveBranchingChoice && caseNumber && result?.path) {
+      // Parse the path string to extract first and second choices
+      // Path format: "1A-2B" means first choice was "1A", second was "1A-2B"
+      // We need to extract: firstChoice = "1A", secondChoice = "1A-2B"
+      const parts = result.path.split('-');
+      if (parts.length >= 2) {
+        const firstChoice = parts[0]; // e.g., "1A"
+        const secondChoice = result.path; // e.g., "1A-2B" (full path is the second choice key)
+        onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
+        console.log(`[CaseFileScreen] Saved branching choice for ${caseNumber}: ${firstChoice} -> ${secondChoice}`);
+      }
+    }
+
+    // NARRATIVE-FIRST FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
+    // Applies to ALL dynamic chapters (2+), not just C
+    // Note: Prefetch is triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
+    if (isDynamicChapter) {
+      console.log('[CaseFileScreen] Narrative complete - ready for puzzle');
+      setNarrativeComplete(true);
+    }
+  }, [onSaveBranchingChoice, caseNumber, isDynamicChapter]);
+
+  const handleEvidenceCollected = useCallback((evidence) => {
+    setCollectedEvidence(prev => [...prev, evidence]);
+    console.log('[CaseFileScreen] Evidence collected:', evidence);
+  }, []);
+
+  // NARRATIVE-FIRST FLOW: First choice is now just for tracking, no speculative prefetch
+  // With narrative-first, we wait until branching is COMPLETE to generate next content
+  // This means we only generate 1 version (the exact path player took), not 3 speculative versions
+  const handleFirstChoice = useCallback((firstChoiceKey) => {
+    console.log('[CaseFileScreen] First choice made:', firstChoiceKey);
+    // Note: No speculative prefetch needed - generation happens after second choice
+    // via onSaveBranchingChoice -> triggerPrefetchAfterBranchingComplete
+  }, []);
+
+  // Legacy linear narrative (for Chapter 1 or fallback)
   const narrative = useMemo(() => {
+    // If we have branching narrative, skip legacy processing
+    if (hasBranchingNarrative) return [];
+
     const metaNarrative = storyMeta?.narrative;
     if (Array.isArray(metaNarrative)) return metaNarrative.filter(Boolean);
     if (typeof metaNarrative === "string" && metaNarrative.trim()) return [metaNarrative];
     if (Array.isArray(activeCase?.narrative)) {
       const original = activeCase.narrative.filter(Boolean);
-      
+
       if (original.length > 0 && activeCase.board?.outlierWords?.length > 0) {
         const outliers = activeCase.board.outlierWords.slice(0, 4).join(". ");
-        
+
         // Check for {puzzle_callback} placeholder
         if (original[0].includes("{puzzle_callback}")) {
            const updatedFirstPage = original[0].replace("{puzzle_callback}", outliers);
            return [updatedFirstPage, ...original.slice(1)];
         }
-        
+
         // Fallback: Prepend if no placeholder found
         const intro = `INTEL LOG: ${outliers}. The pattern was undeniable.\n\n`;
         return [intro + original[0], ...original.slice(1)];
@@ -238,7 +336,7 @@ export default function CaseFileScreen({
     }
     if (typeof activeCase?.narrative === "string" && activeCase.narrative.trim()) return [activeCase.narrative];
     return [];
-  }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords]);
+  }, [storyMeta, activeCase?.narrative, activeCase?.board?.outlierWords, hasBranchingNarrative]);
 
   // Calculate pagination parameters based on actual page dimensions and typography.
   // This uses line-based pagination to prevent text cutoff at the bottom of pages.
@@ -388,6 +486,24 @@ export default function CaseFileScreen({
 
   const storyPromptConfig = useMemo(() => {
     if (!isStoryMode) return null;
+
+    // NARRATIVE-FIRST FLOW: After narrative complete, show "Proceed to Evidence Board"
+    // This gives the LLM time to generate next content while player solves the puzzle
+    // Applies to ALL dynamic chapters (2+), not just subchapter C
+    if (isDynamicChapter && (narrativeComplete || existingBranchingChoice) && !isCaseSolved && typeof onProceedToPuzzle === "function") {
+      const hint = isSubchapterC
+        ? "Solve the puzzle to reveal your chapter decision."
+        : "Solve the puzzle to continue the investigation.";
+      return {
+        title: "Evidence Board Ready",
+        body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
+        hint,
+        actionLabel: "Solve Evidence Board",
+        actionIcon: "🔍",
+        onPress: onProceedToPuzzle,
+      };
+    }
+
     if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked) {
       return {
         title: "Next Chapter Ready",
@@ -409,7 +525,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isDynamicChapter, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option || !awaitingDecision) return;
@@ -576,8 +692,18 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
-                {/* Narrative Pager */}
-                {narrativePages.length > 0 && (
+                {/* Narrative Section - Branching or Linear */}
+                {hasBranchingNarrative ? (
+                  <View style={styles.narrativeSection}>
+                    <BranchingNarrativeReader
+                      branchingNarrative={branchingNarrative}
+                      palette={palette}
+                      onComplete={handleBranchingComplete}
+                      onFirstChoice={handleFirstChoice}
+                      onEvidenceCollected={handleEvidenceCollected}
+                    />
+                  </View>
+                ) : narrativePages.length > 0 && (
                   <View style={styles.narrativeSection}>
                     <NarrativePager
                       pages={narrativePages}
