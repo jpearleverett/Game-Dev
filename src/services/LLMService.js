@@ -38,7 +38,7 @@ const DEFAULT_CONFIG = {
   proxyUrl: ENV_PROXY_URL, // Cloudflare Worker URL (production)
   appToken: ENV_APP_TOKEN, // Optional auth token for proxy
   baseUrl: null, // For custom endpoints (direct mode only)
-  maxRetries: 3, // 3 retries for network issues (root cause fixes reduce need for more)
+  maxRetries: 4, // 4 retries for mobile network resilience
   timeout: 300000, // 300 seconds (5 min) - matches Vercel maxDuration for long generations
 };
 
@@ -686,9 +686,9 @@ class LLMService {
         }
         // Increment attempt counter for actual failures (not rate limits)
         attempt++;
-        // Exponential backoff before next retry
+        // Exponential backoff before next retry - longer for mobile resilience: 2s, 4s, 8s, 16s
         if (attempt < this.config.maxRetries) {
-          await this._sleep(Math.pow(2, attempt - 1) * 1000);
+          await this._sleep(Math.pow(2, attempt - 1) * 2000);
         }
       }
     }
@@ -738,6 +738,7 @@ class LLMService {
         // Build request headers
         const headers = {
           'Content-Type': 'application/json',
+          'Connection': 'keep-alive',
         };
 
         // Add app token for extra security if configured
@@ -786,6 +787,8 @@ class LLMService {
           headers,
           body: requestBodyStr,
           signal: controller.signal,
+          // Keep connection alive for long-running requests on mobile
+          keepalive: true,
         });
 
         clearTimeout(timeoutId);
@@ -1036,7 +1039,8 @@ class LLMService {
 
         attempt++;
         if (attempt < this.config.maxRetries) {
-          const backoffDelay = Math.pow(2, attempt - 1) * 1000;
+          // Longer backoff for mobile network resilience: 2s, 4s, 8s, 16s
+          const backoffDelay = Math.pow(2, attempt - 1) * 2000;
           console.warn(`[LLMService] [${localRequestId}] Attempt ${attempt} failed after ${attemptTime}ms: ${error.message}. Retrying in ${backoffDelay/1000}s...`);
           if (traceId) {
             llmTrace('LLMService', traceId, 'llm.proxy.retry', {
@@ -1048,6 +1052,13 @@ class LLMService {
             }, 'warn');
           }
           await this._sleep(backoffDelay);
+
+          // Re-check network connectivity before retry
+          const isOnline = await this.checkOnline();
+          if (!isOnline) {
+            console.warn(`[LLMService] [${localRequestId}] Device offline before retry, waiting additional 5s...`);
+            await this._sleep(5000);
+          }
         } else {
           console.error(`[LLMService] [${localRequestId}] All ${this.config.maxRetries} attempts failed. Last error: ${error.message}`);
           if (traceId) {
