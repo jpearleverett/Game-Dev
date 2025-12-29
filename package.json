@@ -7,7 +7,8 @@
     "test": "jest",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo-google-fonts/courier-prime": "^0.4.1",
@@ -48,6 +49,7 @@
     "jest": "~29.7.0",
     "jest-expo": "~54.0.16",
     "lamejs": "^1.2.1",
+    "patch-package": "^8.0.1",
     "pngjs": "^7.0.0",
     "react-test-renderer": "^19.1.0"
   },
