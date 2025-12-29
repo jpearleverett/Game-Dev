@@ -20,8 +20,9 @@ const RATE_WINDOW_MS = 60 * 1000;
 const HEARTBEAT_INTERVAL_MS = 10000;
 
 // Timeout for the Gemini API call itself (separate from Vercel function timeout)
-// Set to 120s to allow for Gemini's "thinking" phase while failing fast on network issues
-const GEMINI_FETCH_TIMEOUT_MS = 120000;
+// Set to 270s (4.5 min) to allow for Gemini's "thinking" phase
+// This is slightly under the 300s Vercel maxDuration to allow for cleanup
+const GEMINI_FETCH_TIMEOUT_MS = 270000;
 
 function isRateLimited(ip) {
   const now = Date.now();
