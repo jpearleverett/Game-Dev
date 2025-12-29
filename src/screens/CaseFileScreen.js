@@ -379,13 +379,25 @@ export default function CaseFileScreen({
     ? `Chapter ${storyCampaign.chapter}.${storyCampaign.subchapter}` 
     : "the next chapter";
     
-  const decisionChoice = Array.isArray(storyCampaign?.choiceHistory) 
-    ? storyCampaign.choiceHistory.find((entry) => entry.caseNumber === caseNumber) 
+  const decisionChoice = Array.isArray(storyCampaign?.choiceHistory)
+    ? storyCampaign.choiceHistory.find((entry) => entry.caseNumber === caseNumber)
     : null;
   const lastDecision = storyCampaign?.lastDecision;
   const showDecision = Boolean(storyDecision);
   const selectedOptionKey = decisionChoice?.optionKey || (lastDecision?.caseNumber === caseNumber ? lastDecision.optionKey : null);
-  const decisionOptions = useMemo(() => (Array.isArray(storyDecision?.options) ? storyDecision.options : []), [storyDecision?.options]);
+
+  // Handle both new schema (optionA/optionB objects) and old schema (options array)
+  const decisionOptions = useMemo(() => {
+    if (storyDecision?.optionA && storyDecision?.optionB) {
+      // New schema: convert optionA/optionB to array format
+      return [
+        { key: 'A', ...storyDecision.optionA },
+        { key: 'B', ...storyDecision.optionB },
+      ];
+    }
+    // Old schema: use options array directly
+    return Array.isArray(storyDecision?.options) ? storyDecision.options : [];
+  }, [storyDecision?.optionA, storyDecision?.optionB, storyDecision?.options]);
 
   const subchapterIndex = Number(storyMeta?.subchapter);
   const isThirdSubchapter = subchapterIndex === 3;
