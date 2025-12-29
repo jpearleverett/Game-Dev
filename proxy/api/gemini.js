@@ -248,11 +248,12 @@ export default async function handler(request) {
 
       const sendHeartbeat = async () => {
         heartbeatCount++;
-        const heartbeat = JSON.stringify({
+        // SSE format: "data: {...}\n\n"
+        const heartbeat = `data: ${JSON.stringify({
           type: 'heartbeat',
           seq: heartbeatCount,
           elapsed: Date.now() - startTime
-        }) + '\n';
+        })}\n\n`;
         try {
           await writer.write(encoder.encode(heartbeat));
           console.log(`[${requestId}] Heartbeat ${heartbeatCount} sent`);
@@ -309,14 +310,15 @@ export default async function handler(request) {
             const errorText = await geminiResponse.text();
             console.error(`[${requestId}] Gemini error after ${geminiDuration}ms: ${geminiResponse.status}`);
 
-            const errorResponse = JSON.stringify({
+            // SSE format: "data: {...}\n\n"
+            const errorResponse = `data: ${JSON.stringify({
               type: 'error',
               error: geminiResponse.status === 429 ? 'API rate limit exceeded' :
                      geminiResponse.status === 403 ? 'API quota exceeded' : 'Failed to generate content',
               requestId,
               geminiStatus: geminiResponse.status,
               details: errorText.substring(0, 200),
-            }) + '\n';
+            })}\n\n`;
             await writer.write(encoder.encode(errorResponse));
             await writer.close();
             return;
@@ -329,12 +331,13 @@ export default async function handler(request) {
 
           if (finishReason === 'SAFETY') {
             console.error(`[${requestId}] Content blocked by safety filters`);
-            const safetyError = JSON.stringify({
+            // SSE format: "data: {...}\n\n"
+            const safetyError = `data: ${JSON.stringify({
               type: 'error',
               error: 'Content blocked by safety filters',
               requestId,
               finishReason,
-            }) + '\n';
+            })}\n\n`;
             await writer.write(encoder.encode(safetyError));
             await writer.close();
             return;
@@ -344,8 +347,8 @@ export default async function handler(request) {
           const cachedTokens = usage.cachedContentTokenCount || 0;
           console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${content.length} chars, ${heartbeatCount} heartbeats${cachedTokens > 0 ? ` (${cachedTokens} cached)` : ''}`);
 
-          // Send the final response
-          const finalResponse = JSON.stringify({
+          // Send the final response in SSE format: "data: {...}\n\n"
+          const finalResponse = `data: ${JSON.stringify({
             type: 'response',
             success: true,
             content,
@@ -358,7 +361,7 @@ export default async function handler(request) {
             finishReason,
             requestId,
             timing: { total: totalDuration, gemini: geminiDuration },
-          }) + '\n';
+          })}\n\n`;
           await writer.write(encoder.encode(finalResponse));
           await writer.close();
 
@@ -373,13 +376,14 @@ export default async function handler(request) {
           console.error(`[${requestId}] Error after ${totalDuration}ms: ${error.message}`);
 
           try {
-            const errorResponse = JSON.stringify({
+            // SSE format: "data: {...}\n\n"
+            const errorResponse = `data: ${JSON.stringify({
               type: 'error',
               error: errorMessage,
               requestId,
               details: error.message,
               isTimeout,
-            }) + '\n';
+            })}\n\n`;
             await writer.write(encoder.encode(errorResponse));
             await writer.close();
           } catch (writeError) {
@@ -390,10 +394,11 @@ export default async function handler(request) {
       })();
 
       // Return the readable stream immediately - client will receive heartbeats in real-time
+      // Using SSE format (text/event-stream) for better mobile streaming support
       return new Response(readable, {
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/x-ndjson',
+          'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
         },
