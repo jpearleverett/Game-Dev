@@ -144,18 +144,9 @@ export function GameProvider({
             story.handleBackgroundGeneration(caseNumber, pathKey);
           }
 
-          // Early prefetch: When in Chapter 1 (pre-written), start generating Chapter 2 immediately
-          // This ensures content is ready by the time player reaches the first decision in 001C
-          if (chapter === 1 && story.generation?.isConfigured) {
-            console.log(`[GameContext] Chapter 1 detected - prefetching Chapter 2 paths early`);
-            llmTrace('GameContext', traceId, 'activateStoryCase.earlyPrefetch.chapter2', {
-              caseNumber,
-              note: 'Chapter 1 is pre-written, starting Chapter 2 generation now',
-            }, 'info');
-            // Prefetch both A and B paths for Chapter 2 with empty choice history
-            // (player hasn't made any decisions yet, no branching choices from Chapter 1)
-            story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch', []);
-          }
+          // NOTE: No early Chapter 2 prefetch. Generation now happens when player makes
+          // their choice at end of Chapter 1C, and puzzle-solving time masks the ~45s generation.
+          // This saves an LLM call (no longer generating both A and B paths speculatively).
 
           // Return caseNumber to avoid stale closure issues in navigation
           return { ok: true, caseId: targetCase.id, caseNumber };
