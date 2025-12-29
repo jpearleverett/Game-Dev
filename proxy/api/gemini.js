@@ -11,11 +11,12 @@
  * Heartbeats keep mobile connections alive during Gemini's "thinking" phase.
  */
 
-// Edge Runtime configuration - enables true streaming without buffering
+// Edge Runtime - use BOTH syntaxes for maximum compatibility
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
 export const config = {
   runtime: 'edge',
-  // Edge functions have 30s default, but we can extend for long-running LLM calls
-  // Note: Edge has max 30s on Hobby, 5 min on Pro (vs 5 min for serverless)
+  supportsResponseStreaming: true,
 };
 
 // Heartbeat interval - send every 10 seconds to prevent mobile timeout
