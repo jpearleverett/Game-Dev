@@ -1,8 +1,9 @@
 {
   "name": "dead-letters-api-proxy",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
-  "description": "Cloudflare Worker proxy for Dead Letters Gemini API",
+  "description": "Vercel Edge Functions proxy for Dead Letters Gemini API",
   "main": "index.js",
   "scripts": {
     "dev": "wrangler dev",
