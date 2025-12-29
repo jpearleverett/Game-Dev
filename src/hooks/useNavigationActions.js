@@ -99,7 +99,12 @@ export function useNavigationActions(navigation, game, audio) {
       }
     }
 
-    if (!isStoryMode) {
+    // Check if there's story campaign progress - if so, use narrative-first flow
+    // This handles the case where user clicks from desk and has story progress
+    const hasStoryProgress = storyCampaign?.chapter != null && storyCampaign?.activeCaseNumber;
+    const effectivelyStoryMode = isStoryMode || hasStoryProgress;
+
+    if (!effectivelyStoryMode) {
       const ensureResult = await ensureDailyStoryCase?.();
       if (!ensureResult || !ensureResult.ok) {
         navigation.navigate('CaseFile');
@@ -113,7 +118,7 @@ export function useNavigationActions(navigation, game, audio) {
       navigation.navigate('Board');
     } else {
       // NARRATIVE-FIRST FLOW: In story mode, check if we need to show narrative first
-      const targetCaseNumber = activeCase?.caseNumber;
+      const targetCaseNumber = storyCampaign?.activeCaseNumber || activeCase?.caseNumber;
       if (needsNarrativeFirst(targetCaseNumber)) {
         console.log('[Navigation] Story mode narrative-first - showing CaseFile before puzzle');
         navigation.navigate('CaseFile');
@@ -129,6 +134,7 @@ export function useNavigationActions(navigation, game, audio) {
     pendingDailyStoryAdvance,
     status,
     isStoryMode,
+    storyCampaign,
     ensureDailyStoryCase,
     activeCase,
     resetBoardForCase,
