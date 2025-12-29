@@ -443,7 +443,6 @@ export default function CaseFileScreen({
   // Show decision options when:
   // 1. Normal flow: awaitingDecision is true (after puzzle solved), OR
   // 2. Narrative-first C subchapter: before puzzle is solved
-  const isSubchapterC = caseNumber?.endsWith('C');
   const showDecisionOptions = showDecision && (
     awaitingDecision ||
     (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision)
