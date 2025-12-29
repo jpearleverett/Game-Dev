@@ -379,13 +379,7 @@ export function useStoryGeneration(storyCampaign) {
       try {
         if (chapter && subchapter && subchapter < 3) {
           prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `cache-hit:${caseNumber}`);
-
-          // EARLY PREFETCH: When accessing subchapter B (even from cache), start prefetching
-          // both next-chapter paths so content is ready when player reaches the decision.
-          if (subchapter === 2 && chapter < 12) {
-            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
-            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'cache-hit:B-early', branchingChoicesRef.current);
-          }
+          // NOTE: No early next-chapter prefetch - wait for player decision
         }
       } catch (e) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.cacheHit.error', { error: e?.message }, 'warn');
@@ -479,14 +473,11 @@ export function useStoryGeneration(storyCampaign) {
         if (chapter && subchapter && subchapter < 3) {
           prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `generateForCase:${caseNumber}`);
 
-          // EARLY PREFETCH: When subchapter B finishes, also start prefetching BOTH
-          // next-chapter paths immediately. This way, by the time the player reaches
-          // subchapter C and makes a decision, content for both options is likely ready.
-          if (subchapter === 2 && chapter < 12) {
-            console.log(`[useStoryGeneration] [${genId}] Subchapter B complete - starting early next-chapter prefetch`);
-            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
-            prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:B-complete-early', effectiveBranchingChoices);
-          }
+          // NOTE: We do NOT prefetch next chapter when B completes.
+          // With sequential generation, we must wait for:
+          // 1. Subchapter C (decision point) to be generated
+          // 2. Player to make their decision
+          // Only then do we have proper context for the next chapter.
         }
       } catch (e) {
         llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.trigger.error', { error: e?.message }, 'warn');
@@ -508,17 +499,10 @@ export function useStoryGeneration(storyCampaign) {
       return null; // UI will check for null and show error/retry screen
     } finally {
       generationRef.current = false;
-      // If we just generated Subchapter C, immediately prefetch next chapter for BOTH branches.
-      // This guarantees seamless "Continue Investigation" after the eventual player choice.
-      try {
-        if (chapter && subchapter === 3) {
-          // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
-          const finalBranchingChoices = branchingChoices || branchingChoicesRef.current;
-          prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'generateForCase:C-complete', finalBranchingChoices);
-        }
-      } catch (e) {
-        llmTrace('useStoryGeneration', traceId, 'prefetch.branches.trigger.error', { error: e?.message }, 'warn');
-      }
+      // NOTE: We do NOT prefetch next chapter when C completes.
+      // With sequential generation, we wait for the player to make their decision,
+      // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
+      // This ensures proper context: 002C must exist before 003A can be generated.
     }
   }, [isConfigured, prefetchNextChapterBranchesAfterC, prefetchRemainingSubchapters]);
 
@@ -668,11 +652,8 @@ export function useStoryGeneration(storyCampaign) {
             updateGeneratedCache(caseNumber, targetPath, entry);
           }
 
-          // If we just finished generating Subchapter C, immediately prefetch BOTH next branches.
-          if (subIndex === 3) {
-            // TRUE INFINITE BRANCHING: Pass branchingChoices for realized narrative context
-            prefetchNextChapterBranchesAfterC(targetChapter, history, 'pregenerateCurrentChapterSiblings:C-complete', branchingChoicesRef.current);
-          }
+          // NOTE: We do NOT prefetch next chapter when C completes.
+          // Wait for player to make their decision, then generate the chosen path.
         } catch (err) {
           console.warn(`[useStoryGeneration] Background generation failed for ${caseNumber}:`, err.message);
           // Continue to next subchapter even if this one fails
@@ -705,15 +686,12 @@ export function useStoryGeneration(storyCampaign) {
       return;
     }
 
-    // SUBCHAPTER C FLOW: For C, prefetch next chapter instead of siblings
-    // The puzzle happens AFTER the narrative, giving the LLM time to generate
+    // SUBCHAPTER C FLOW: Do NOT prefetch next chapter here.
+    // With sequential generation, we wait for the player to make their decision,
+    // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
+    // Prefetching both paths wastes resources and causes network issues.
     if (subchapter === 3) {
-      if (chapter < 12) {
-        console.log(`[useStoryGeneration] Subchapter C complete - prefetching next chapter with player's realized path`);
-        // Prefetch BOTH decision paths (A and B) for next chapter
-        // Now we have the player's complete branching path through C for context
-        prefetchNextChapterBranchesAfterC(chapter, choiceHistory, 'triggerPrefetchAfterBranchingComplete:C-narrative-complete', branchingChoices);
-      }
+      console.log(`[useStoryGeneration] Subchapter C branching complete - waiting for player decision before generating next chapter`);
       return;
     }
 
