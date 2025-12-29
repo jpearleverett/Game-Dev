@@ -728,8 +728,9 @@ export default function CaseFileScreen({
                       showDecisionPrompt={showDecisionPrompt}
                       onRevealDecision={handleRevealDecisionPanel}
                       onComplete={() => {
-                        // NARRATIVE-FIRST FLOW: Mark linear narrative as complete for Chapter 1
-                        if (!isDynamicChapter && isStoryMode) {
+                        // NARRATIVE-FIRST FLOW: Mark linear narrative as complete
+                        // Applies to Chapter 1 and any fallback scenarios for dynamic chapters
+                        if (isStoryMode) {
                           console.log('[CaseFileScreen] Linear narrative complete - ready for puzzle');
                           setNarrativeComplete(true);
                         }
