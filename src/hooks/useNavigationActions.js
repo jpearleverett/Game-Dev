@@ -109,10 +109,22 @@ export function useNavigationActions(navigation, game, audio) {
       if (targetCaseId) {
         resetBoardForCase(targetCaseId);
       }
-    } else if (activeCase?.id) {
-      resetBoardForCase(activeCase.id);
+      // Daily mode always goes to Board
+      navigation.navigate('Board');
+    } else {
+      // NARRATIVE-FIRST FLOW: In story mode, check if we need to show narrative first
+      const targetCaseNumber = activeCase?.caseNumber;
+      if (needsNarrativeFirst(targetCaseNumber)) {
+        console.log('[Navigation] Story mode narrative-first - showing CaseFile before puzzle');
+        navigation.navigate('CaseFile');
+      } else {
+        // Narrative already read, go to puzzle
+        if (activeCase?.id) {
+          resetBoardForCase(activeCase.id);
+        }
+        navigation.navigate('Board');
+      }
     }
-    navigation.navigate('Board');
   }, [
     pendingDailyStoryAdvance,
     status,
@@ -121,6 +133,7 @@ export function useNavigationActions(navigation, game, audio) {
     activeCase,
     resetBoardForCase,
     navigation,
+    needsNarrativeFirst,
   ]);
 
   const handleSelectArchiveCase = useCallback((caseId) => {

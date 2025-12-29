@@ -108,6 +108,133 @@ export function useStoryEngine(progress, updateProgress) {
   }, [storyCampaign, updateProgress, progress]);
 
   /**
+   * NARRATIVE-FIRST FLOW: Select a decision BEFORE solving the puzzle.
+   * This stores the decision as pending - it will be applied after the puzzle is solved.
+   * Used in C subchapters where we show the decision options before the puzzle.
+   *
+   * @param {string} optionKey - The selected option ('A' or 'B')
+   * @param {object} optionDetails - Details about the selected option (title, focus, etc.)
+   */
+  const selectDecisionBeforePuzzle = useCallback((optionKey, optionDetails = {}) => {
+    if (!optionKey) return;
+
+    const caseNumber = storyCampaign.activeCaseNumber;
+    if (!caseNumber) return;
+
+    // Check if this is actually a C subchapter
+    const subchapterLetter = caseNumber.slice(-1);
+    if (subchapterLetter !== 'C') {
+      console.warn('[useStoryEngine] selectDecisionBeforePuzzle called on non-C subchapter:', caseNumber);
+      return;
+    }
+
+    const updatedStory = {
+      ...storyCampaign,
+      preDecision: {
+        caseNumber,
+        optionKey,
+        optionTitle: optionDetails.title || null,
+        optionFocus: optionDetails.focus || null,
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    console.log(`[useStoryEngine] Pre-puzzle decision stored for ${caseNumber}: Option ${optionKey}`);
+
+    updateProgress({ storyCampaign: updatedStory });
+
+    // Force persistent save immediately
+    saveStoredProgress({
+      ...progress,
+      storyCampaign: updatedStory,
+    }).catch((err) => {
+      console.error('[useStoryEngine] Failed to persist pre-decision:', err);
+    });
+
+  }, [storyCampaign, updateProgress, progress]);
+
+  /**
+   * Apply a pre-made decision after solving the puzzle.
+   * This is called by submitGuess when a C subchapter puzzle is solved
+   * and a preDecision exists for that case.
+   */
+  const applyPreDecision = useCallback(() => {
+    const preDecision = storyCampaign.preDecision;
+    if (!preDecision) return false;
+
+    // Verify the pre-decision is for the current case
+    if (preDecision.caseNumber !== storyCampaign.activeCaseNumber) {
+      console.warn('[useStoryEngine] Pre-decision case mismatch:', preDecision.caseNumber, 'vs', storyCampaign.activeCaseNumber);
+      return false;
+    }
+
+    const optionKey = preDecision.optionKey;
+    const decisionCase = preDecision.caseNumber;
+    const decisionTime = preDecision.timestamp;
+    const nextChapter = storyCampaign.chapter + 1;
+    const nextSubchapter = 1;
+    const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
+
+    const nextChoiceHistory = [
+      ...storyCampaign.choiceHistory,
+      {
+        caseNumber: decisionCase,
+        optionKey: optionKey,
+        optionTitle: preDecision.optionTitle || null,
+        optionFocus: preDecision.optionFocus || null,
+        timestamp: decisionTime,
+      },
+    ];
+    const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
+
+    const updatedStory = {
+      ...storyCampaign,
+      preDecision: null, // Clear the pre-decision
+      awaitingDecision: false,
+      pendingDecisionCase: null,
+      lastDecision: {
+        caseNumber: decisionCase,
+        selectedAt: decisionTime,
+        optionKey: optionKey,
+        nextChapter: nextChapter,
+        nextPathKey,
+      },
+      choiceHistory: nextChoiceHistory.map((entry) => ({
+        ...entry,
+        nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
+      })),
+      pathHistory: {
+        ...storyCampaign.pathHistory,
+        [nextChapter]: nextPathKey,
+      },
+      currentPathKey: nextPathKey,
+      chapter: nextChapter,
+      subchapter: nextSubchapter,
+      activeCaseNumber: nextCaseNumber,
+      nextStoryUnlockAt: nextChapter > 3
+        ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
+        : null
+    };
+
+    console.log(`[useStoryEngine] Applied pre-decision for ${decisionCase}: advancing to Chapter ${nextChapter}`);
+
+    updateProgress({
+      storyCampaign: updatedStory,
+      nextUnlockAt: updatedStory.nextStoryUnlockAt
+    });
+
+    saveStoredProgress({
+      ...progress,
+      storyCampaign: updatedStory,
+      nextUnlockAt: updatedStory.nextStoryUnlockAt
+    }).catch((err) => {
+      console.error('[useStoryEngine] Failed to persist applied pre-decision:', err);
+    });
+
+    return true;
+  }, [storyCampaign, updateProgress, progress]);
+
+  /**
    * Save player's branching choice within a subchapter (for true infinite branching).
    * This tracks which path the player took through the interactive narrative,
    * allowing future content to continue from their ACTUAL experience.
@@ -190,6 +317,8 @@ export function useStoryEngine(progress, updateProgress) {
       storyCampaign,
       enterStoryCampaign,
       selectDecision,
+      selectDecisionBeforePuzzle,
+      applyPreDecision,
       activateStoryCase,
       saveBranchingChoice,
   };

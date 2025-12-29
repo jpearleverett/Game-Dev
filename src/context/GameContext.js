@@ -375,6 +375,19 @@ export function GameProvider({
               };
 
               if (isFinalSubchapter) {
+                  // NARRATIVE-FIRST FLOW: Check if a pre-puzzle decision was made
+                  // If so, apply it now and advance to the next chapter
+                  const preDecision = currentStory.preDecision;
+                  if (preDecision && preDecision.caseNumber === activeCase.caseNumber) {
+                    console.log(`[GameContext] C subchapter solved with pre-decision: applying Option ${preDecision.optionKey}`);
+                    // Apply the pre-decision - this will update storyCampaign and advance
+                    // We need to merge our completedCaseNumbers update with the apply
+                    story.applyPreDecision();
+                    // Don't set awaitingDecision - the applyPreDecision handles advancement
+                    return;
+                  }
+
+                  // No pre-decision: fall back to original flow (show decision after puzzle)
                   // Store the decision options so we can include title/focus in choice history
                   // This enables the LLM to know WHAT the player chose, not just "A" or "B"
                   const pendingDecisionOptions = {};
@@ -675,6 +688,7 @@ export function GameProvider({
     exitStoryCampaign,
     ensureDailyStoryCase,
     selectStoryDecision: story.selectStoryDecision,
+    selectDecisionBeforePuzzle: story.selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
     saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
     // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
