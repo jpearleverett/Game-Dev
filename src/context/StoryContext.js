@@ -26,6 +26,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
   const {
     storyCampaign,
     selectDecision: storySelectDecisionCore,
+    selectDecisionBeforePuzzle,
+    applyPreDecision,
     activateStoryCase,
     saveBranchingChoice,
   } = useStoryEngine(progress, updateProgress);
@@ -461,6 +463,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
   const dispatchValue = useMemo(() => ({
     activateStoryCase,
     selectStoryDecision,
+    selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
+    applyPreDecision, // NARRATIVE-FIRST: Apply pre-made decision after puzzle
     saveBranchingChoice: saveBranchingChoiceAndPrefetch, // TRUE INFINITE BRANCHING: Save + prefetch
     ensureStoryContent,
     handleBackgroundGeneration, // Exposed for GameContext
@@ -476,6 +480,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
   }), [
     activateStoryCase,
     selectStoryDecision,
+    selectDecisionBeforePuzzle,
+    applyPreDecision,
     saveBranchingChoiceAndPrefetch,
     ensureStoryContent,
     handleBackgroundGeneration,

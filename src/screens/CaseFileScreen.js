@@ -56,6 +56,7 @@ export default function CaseFileScreen({
   storyCampaign,
   solvedCaseIds = [],
   onSelectDecision,
+  onSelectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onBack,
@@ -426,14 +427,32 @@ export default function CaseFileScreen({
     if (Haptics?.selectionAsync) Haptics.selectionAsync().catch(() => {});
   }, [decisionPanelRevealed, showDecision]);
 
-  const hasLockedDecision = Boolean(!awaitingDecision && selectedOptionKey && lastDecision?.caseNumber === caseNumber);
+  // NARRATIVE-FIRST FLOW: For C subchapters, show decision options BEFORE the puzzle
+  // Check if a pre-decision has already been made for this case
+  const preDecision = storyCampaign?.preDecision;
+  const hasPreDecision = preDecision && preDecision.caseNumber === caseNumber;
+
+  // Include pre-decision as a "locked" decision for display purposes
+  const hasLockedDecision = Boolean(
+    (!awaitingDecision && selectedOptionKey && lastDecision?.caseNumber === caseNumber) ||
+    hasPreDecision
+  );
   const showDecisionPrompt = showDecision && shouldGateDecisionPanel && !decisionPanelRevealed;
   const showDecisionPanel = decisionPanelRevealed && (showDecision || hasLockedDecision);
-  const showDecisionOptions = showDecision && awaitingDecision;
+
+  // Show decision options when:
+  // 1. Normal flow: awaitingDecision is true (after puzzle solved), OR
+  // 2. Narrative-first C subchapter: before puzzle is solved
+  const isSubchapterC = caseNumber?.endsWith('C');
+  const showDecisionOptions = showDecision && (
+    awaitingDecision ||
+    (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision)
+  );
 
   const [localSelection, setLocalSelection] = useState(selectedOptionKey);
   useEffect(() => { setLocalSelection(selectedOptionKey); }, [selectedOptionKey]);
-  const resolvedSelectionKey = localSelection || selectedOptionKey || null;
+  // Include pre-decision in resolved selection
+  const resolvedSelectionKey = localSelection || selectedOptionKey || (hasPreDecision ? preDecision.optionKey : null);
   
   const selectedOptionDetails = useMemo(() => decisionOptions.find((o) => o.key === resolvedSelectionKey) || null, [decisionOptions, resolvedSelectionKey]);
   const [lockedOptionSnapshot, setLockedOptionSnapshot] = useState(null);
@@ -507,18 +526,34 @@ export default function CaseFileScreen({
     // This gives the LLM time to generate next content while player solves the puzzle
     // Applies to ALL chapters (including Chapter 1 static content)
     const narrativeReadyForPuzzle = narrativeComplete || existingBranchingChoice;
-    if (narrativeReadyForPuzzle && !isCaseSolved && typeof onProceedToPuzzle === "function") {
-      const hint = isSubchapterC
-        ? "Solve the puzzle to reveal your chapter decision."
-        : "Solve the puzzle to continue the investigation.";
-      return {
-        title: "Evidence Board Ready",
-        body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
-        hint,
-        actionLabel: "Solve Evidence Board",
-        actionIcon: "🔍",
-        onPress: onProceedToPuzzle,
-      };
+
+    // For C subchapters: Only show "Solve Puzzle" AFTER decision is made (hasPreDecision)
+    // For A/B subchapters: Show "Solve Puzzle" after narrative is complete
+    if (!isCaseSolved && typeof onProceedToPuzzle === "function") {
+      if (isSubchapterC) {
+        // C subchapter: Must make decision before puzzle
+        if (hasPreDecision) {
+          return {
+            title: "Path Chosen",
+            body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
+            hint: "The puzzle awaits to complete this chapter.",
+            actionLabel: "Solve Evidence Board",
+            actionIcon: "🔍",
+            onPress: onProceedToPuzzle,
+          };
+        }
+        // Decision not yet made - don't show puzzle button (let them decide first)
+      } else if (narrativeReadyForPuzzle) {
+        // A/B subchapter: Show puzzle after narrative
+        return {
+          title: "Evidence Board Ready",
+          body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
+          hint: "Solve the puzzle to continue the investigation.",
+          actionLabel: "Solve Evidence Board",
+          actionIcon: "🔍",
+          onPress: onProceedToPuzzle,
+        };
+      }
     }
 
     if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked) {
@@ -542,20 +577,38 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision]);
 
   const handleSelectOption = useCallback((option) => {
-    if (!option || !awaitingDecision) return;
+    if (!option) return;
+    // Allow selection for both normal flow (awaitingDecision) and pre-puzzle C subchapter flow
+    const canSelect = awaitingDecision || (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision);
+    if (!canSelect) return;
     setLocalSelection(option.key);
     if (Haptics?.selectionAsync) Haptics.selectionAsync();
-  }, [awaitingDecision]);
+  }, [awaitingDecision, isStoryMode, isSubchapterC, isCaseSolved, hasPreDecision]);
 
   const handleConfirmOption = useCallback((optionKey) => {
-    if (!optionKey || !awaitingDecision || !onSelectDecision || !caseNumber) return;
+    if (!optionKey || !caseNumber) return;
+
+    // Get the selected option details for the pre-decision
+    const selectedOption = decisionOptions.find(opt => opt.key === optionKey);
+
+    // NARRATIVE-FIRST FLOW: For C subchapters before puzzle, use pre-puzzle decision
+    if (!awaitingDecision && isStoryMode && isSubchapterC && !isCaseSolved && onSelectDecisionBeforePuzzle) {
+      console.log(`[CaseFileScreen] Pre-puzzle decision for ${caseNumber}: Option ${optionKey}`);
+      onSelectDecisionBeforePuzzle(optionKey, selectedOption || {});
+      setCelebrationActive(true);
+      if (Haptics?.notificationAsync) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return;
+    }
+
+    // Normal flow: after puzzle solved
+    if (!awaitingDecision || !onSelectDecision) return;
     onSelectDecision(optionKey);
     setCelebrationActive(true);
     if (Haptics?.notificationAsync) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [awaitingDecision, caseNumber, onSelectDecision]);
+  }, [awaitingDecision, caseNumber, onSelectDecision, onSelectDecisionBeforePuzzle, isStoryMode, isSubchapterC, isCaseSolved, decisionOptions]);
 
   const lockedDecisionMeta = useMemo(() => {
     if (!hasLockedDecision || !lastDecision) return null;
