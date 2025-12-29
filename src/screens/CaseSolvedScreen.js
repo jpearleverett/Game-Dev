@@ -151,7 +151,6 @@ export default function CaseSolvedScreen({
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
   const solved = status === GAME_STATUS.SOLVED;
   const caseNumber = activeCase?.caseNumber;
-  const isSubchapter1 = Number(activeCase?.storyMeta?.subchapter) === 1;
   const hasStoryCampaign = Boolean(storyCampaign);
   const awaitingDecision = Boolean(
     hasStoryCampaign &&
@@ -201,16 +200,6 @@ export default function CaseSolvedScreen({
         outlierThemeListLabel || "the pattern you were chasing"
       }. Take a breath and come back fresh.`;
 
-  let storyActionLabel = solved ? "Continue Story" : "Retry Case";
-  if (awaitingDecision) {
-    storyActionLabel = "Make Your Branch Choice";
-  } else if (storyLocked) {
-    storyActionLabel = "Chapter Locked";
-  }
-  const storyActionIcon = solved 
-    ? <MaterialCommunityIcons name="play" size={20} color={COLORS.textSecondary} />
-    : <MaterialCommunityIcons name="replay" size={20} color={COLORS.textSecondary} />;
-  const storyActionDisabled = awaitingDecision || storyLocked;
 
   const { sizeClass, isLandscape, moderateScale, scaleSpacing, scaleRadius } =
     useResponsiveLayout();
@@ -996,29 +985,26 @@ export default function CaseSolvedScreen({
               },
             ]}
           >
-            {isStoryMode && isSubchapter1 ? (
+            {isStoryMode ? (
               <>
+                {/* NARRATIVE-FIRST FLOW: Primary action is to continue to next subchapter */}
                 <PrimaryButton
-                  label="Read Case File"
-                  onPress={() => onReadCaseFile?.()}
-                  icon={<MaterialCommunityIcons name="folder-text" size={20} color={COLORS.textSecondary} />}
-                />
-                <SecondaryButton
-                  label={storyActionLabel}
-                  icon={storyActionIcon}
-                  disabled={storyActionDisabled}
+                  label={solved ? "Continue Investigation" : "Retry Case"}
                   onPress={() => {
-                    if (!storyActionDisabled) {
+                    if (solved) {
                       onAdvanceStory?.();
+                    } else {
+                      // For failed cases, go back to board to retry
+                      onReadCaseFile?.();
                     }
                   }}
+                  icon={solved
+                    ? <MaterialCommunityIcons name="arrow-right-bold" size={20} color={COLORS.textSecondary} />
+                    : <MaterialCommunityIcons name="replay" size={20} color={COLORS.textSecondary} />
+                  }
+                  disabled={storyLocked && solved}
                 />
-                {awaitingDecision ? (
-                  <Text style={styles.storyStatusText}>
-                    Open the case file to choose your next path.
-                  </Text>
-                ) : null}
-                {storyLocked && !awaitingDecision ? (
+                {storyLocked && solved ? (
                   <Text style={styles.storyStatusText}>
                     Next chapter unlocks after the current lock expires.
                   </Text>
@@ -1029,9 +1015,9 @@ export default function CaseSolvedScreen({
                   icon={<MaterialCommunityIcons name="share-variant" size={20} color={COLORS.textSecondary} />}
                 />
                 <SecondaryButton
-                  label="Return to Story Hub"
+                  label="Return Home"
                   onPress={onReturnHome}
-                  icon={<MaterialCommunityIcons name="folder-table" size={20} color={COLORS.textSecondary} />}
+                  icon={<MaterialCommunityIcons name="home" size={20} color={COLORS.textSecondary} />}
                 />
               </>
             ) : (
