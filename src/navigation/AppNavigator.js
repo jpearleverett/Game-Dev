@@ -156,6 +156,9 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Solved">
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
+          // NARRATIVE-FIRST FIX: Check if user has story progress even if not in explicit story mode
+          const hasStoryProgress = progress.storyCampaign?.chapter != null && progress.storyCampaign?.activeCaseNumber;
+          const effectivelyStoryMode = isStoryMode || hasStoryProgress;
           return (
             <CaseSolvedScreen
               activeCase={activeCase}
@@ -165,7 +168,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onReadCaseFile={() => navigation.navigate('CaseFile')}
               onShare={actions.handleShareResults}
               onReturnHome={actions.handleReturnHome}
-              isStoryMode={isStoryMode}
+              isStoryMode={effectivelyStoryMode}
               storyCampaign={progress.storyCampaign}
               onAdvanceStory={actions.handleStoryContinue}
             />
@@ -185,6 +188,11 @@ export default function AppNavigator({ fontsReady, audio }) {
             navigation.navigate('Board');
           };
 
+          // NARRATIVE-FIRST FIX: Check if user has story progress even if not in explicit story mode
+          // This ensures the "Solve Puzzle" button appears correctly for all story chapters
+          const hasStoryProgress = progress.storyCampaign?.chapter != null && progress.storyCampaign?.activeCaseNumber;
+          const effectivelyStoryMode = isStoryMode || hasStoryProgress;
+
           return (
             <CaseFileScreen
               activeCase={activeCase}
@@ -195,7 +203,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onSelectDecisionBeforePuzzle={selectDecisionBeforePuzzle}
               onSaveBranchingChoice={saveBranchingChoice}
               onProceedToPuzzle={handleProceedToPuzzle}
-              isStoryMode={isStoryMode}
+              isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}
               isGenerating={game.story?.generation?.isGenerating || false}
