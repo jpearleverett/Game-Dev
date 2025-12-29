@@ -779,12 +779,12 @@ class LLMService {
 
     const bodyStr = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
 
-    // Convert headers object to array of [key, value] pairs for expo/fetch Android compatibility
-    const headersArray = Object.entries(headers);
+    // Use Headers object for cross-platform compatibility (Android and iOS)
+    const headersObj = new Headers(headers);
 
     const response = await expoFetch(url, {
       method: 'POST',
-      headers: headersArray,
+      headers: headersObj,
       body: bodyStr,
       signal,
     });
@@ -943,8 +943,8 @@ class LLMService {
         // ========== TIERED STREAMING APPROACH ==========
         // Proxy sends SSE format (text/event-stream) for better mobile streaming support.
         // Try multiple streaming methods in order of preference:
-        // 1. fetchSSE (react-native-fetch-sse) - purpose-built for SSE streaming
-        // 2. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
+        // 1. expo/fetch with ReadableStream - Expo SDK 52+ native streaming (most reliable)
+        // 2. fetchSSE (react-native-fetch-sse) - purpose-built for SSE but has issues in Expo Go
         // 3. global fetch with response.text() - fallback (no real-time heartbeats)
         const bodyReadStart = Date.now();
         let responseText;
@@ -952,9 +952,9 @@ class LLMService {
         let streamingMethod = 'unknown';
         let response = null;
 
-        // Method 1: Try fetchSSE first (purpose-built for SSE streaming)
+        // Method 1: Try expo/fetch streaming first (Expo SDK 52+ native streaming)
         try {
-          const result = await this._tryFetchSSE(
+          const result = await this._tryExpoFetchStreaming(
             this.config.proxyUrl,
             requestBody,
             headers,
@@ -965,13 +965,14 @@ class LLMService {
           responseText = result.responseText;
           heartbeatCount = result.heartbeatCount;
           streamingMethod = result.streamingMethod;
+          response = result.response;
           clearTimeout(timeoutId);
-        } catch (sseError) {
-          console.warn(`[LLMService] [${localRequestId}] fetchSSE failed: ${sseError.message}, trying expo/fetch...`);
+        } catch (expoError) {
+          console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, trying fetchSSE...`);
 
-          // Method 2: Try expo/fetch streaming (Expo SDK 52+ native streaming)
+          // Method 2: Try fetchSSE (may work in some environments)
           try {
-            const result = await this._tryExpoFetchStreaming(
+            const result = await this._tryFetchSSE(
               this.config.proxyUrl,
               requestBody,
               headers,
@@ -982,10 +983,9 @@ class LLMService {
             responseText = result.responseText;
             heartbeatCount = result.heartbeatCount;
             streamingMethod = result.streamingMethod;
-            response = result.response;
             clearTimeout(timeoutId);
-          } catch (expoError) {
-            console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, using global fetch fallback...`);
+          } catch (sseError) {
+            console.warn(`[LLMService] [${localRequestId}] fetchSSE failed: ${sseError.message}, using global fetch fallback...`);
 
             // Method 3: Fallback to global fetch with response.text()
             streamingMethod = 'globalFetch';
