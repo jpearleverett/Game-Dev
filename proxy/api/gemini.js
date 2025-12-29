@@ -1,28 +1,33 @@
 /**
- * Dead Letters - Gemini API Proxy (Vercel Serverless Function)
+ * Dead Letters - Gemini API Proxy (Vercel Edge Function)
  *
  * Securely proxies requests to Google Gemini API.
  * The API key is stored in Vercel's environment variables.
  *
- * Uses streaming with heartbeats to prevent mobile network timeouts.
- * Mobile networks often kill idle connections after 30-40 seconds,
- * but Gemini's "thinking" phase can take 20-60 seconds.
- * Heartbeats keep the connection alive during generation.
+ * Uses Edge Runtime for TRUE streaming support - responses are not buffered.
+ * This prevents the 60-second "time to first byte" timeout that occurs
+ * with Node.js serverless functions.
+ *
+ * Heartbeats keep mobile connections alive during Gemini's "thinking" phase.
  */
 
-// Simple in-memory rate limiting (resets on cold start, which is fine)
+// Edge Runtime configuration - enables true streaming without buffering
+export const config = {
+  runtime: 'edge',
+  // Edge functions have 30s default, but we can extend for long-running LLM calls
+  // Note: Edge has max 30s on Hobby, 5 min on Pro (vs 5 min for serverless)
+};
+
+// Heartbeat interval - send every 10 seconds to prevent mobile timeout
+const HEARTBEAT_INTERVAL_MS = 10000;
+
+// Timeout for the Gemini API call
+const GEMINI_FETCH_TIMEOUT_MS = 270000;
+
+// Simple in-memory rate limiting (resets on cold start)
 const rateLimitStore = new Map();
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60 * 1000;
-
-// Heartbeat interval - send every 10 seconds to prevent mobile timeout
-// More aggressive than 15s to handle flaky mobile networks
-const HEARTBEAT_INTERVAL_MS = 10000;
-
-// Timeout for the Gemini API call itself (separate from Vercel function timeout)
-// Set to 270s (4.5 min) to allow for Gemini's "thinking" phase
-// This is slightly under the 300s Vercel maxDuration to allow for cleanup
-const GEMINI_FETCH_TIMEOUT_MS = 270000;
 
 function isRateLimited(ip) {
   const now = Date.now();
@@ -41,61 +46,68 @@ function isRateLimited(ip) {
   return false;
 }
 
-// Generate a simple request ID for tracing
 function generateRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 6)}`;
 }
 
-export default async function handler(req, res) {
+export default async function handler(request) {
   const requestId = generateRequestId();
   const startTime = Date.now();
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-App-Token');
+  // CORS headers for all responses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-App-Token',
+  };
 
   // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   // Only allow POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed', requestId });
+  if (request.method !== 'POST') {
+    return Response.json(
+      { error: 'Method not allowed', requestId },
+      { status: 405, headers: corsHeaders }
+    );
   }
 
   // Rate limiting
-  const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
+  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
   if (isRateLimited(clientIP)) {
     console.warn(`[${requestId}] Rate limited: ${clientIP}`);
-    return res.status(429).json({
-      error: 'Rate limit exceeded. Please wait before making more requests.',
-      retryAfter: 60,
-      requestId,
-    });
+    return Response.json(
+      { error: 'Rate limit exceeded. Please wait before making more requests.', retryAfter: 60, requestId },
+      { status: 429, headers: corsHeaders }
+    );
   }
 
   // Optional app token auth
-  if (process.env.APP_TOKEN) {
-    const appToken = req.headers['x-app-token'];
-    if (appToken !== process.env.APP_TOKEN) {
+  const appToken = process.env.APP_TOKEN;
+  if (appToken) {
+    const providedToken = request.headers.get('x-app-token');
+    if (providedToken !== appToken) {
       console.warn(`[${requestId}] Unauthorized request`);
-      return res.status(401).json({ error: 'Unauthorized', requestId });
+      return Response.json(
+        { error: 'Unauthorized', requestId },
+        { status: 401, headers: corsHeaders }
+      );
     }
   }
 
   // Check for API key
   if (!process.env.GEMINI_API_KEY) {
     console.error(`[${requestId}] GEMINI_API_KEY not configured`);
-    return res.status(500).json({ error: 'Server configuration error', requestId });
+    return Response.json(
+      { error: 'Server configuration error', requestId },
+      { status: 500, headers: corsHeaders }
+    );
   }
 
-  // Check if client wants streaming (to prevent mobile timeouts)
-  const useStreaming = req.body?.stream !== false; // Default to streaming
-
   try {
-    const body = req.body;
+    const body = await request.json();
 
     // ========== CACHE CREATION REQUEST ==========
     if (body.operation === 'createCache') {
@@ -104,89 +116,86 @@ export default async function handler(req, res) {
       const { cacheKey, model, systemInstruction, content, ttl } = body;
 
       if (!model || !systemInstruction || !content) {
-        return res.status(400).json({
-          error: 'Missing required cache parameters (model, systemInstruction, content)',
-          requestId
-        });
+        return Response.json(
+          { error: 'Missing required cache parameters (model, systemInstruction, content)', requestId },
+          { status: 400, headers: corsHeaders }
+        );
       }
 
       const geminiUrl = `https://generativelanguage.googleapis.com/v1alpha/cachedContents?key=${process.env.GEMINI_API_KEY}`;
 
-      // Create abort controller for cache creation timeout
-      const cacheController = new AbortController();
-      const cacheTimeout = setTimeout(() => {
-        console.error(`[${requestId}] Cache creation timeout after ${GEMINI_FETCH_TIMEOUT_MS/1000}s`);
-        cacheController.abort();
-      }, GEMINI_FETCH_TIMEOUT_MS);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
 
-      let cacheResponse;
       try {
-        cacheResponse = await fetch(geminiUrl, {
+        const cacheResponse = await fetch(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: `models/${model}`,
-            system_instruction: {
-              parts: [{ text: systemInstruction }],
-            },
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: content }],
-              },
-            ],
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents: [{ role: 'user', parts: [{ text: content }] }],
             ttl: ttl || '3600s',
             display_name: cacheKey,
           }),
-          signal: cacheController.signal,
+          signal: controller.signal,
         });
-      } finally {
-        clearTimeout(cacheTimeout);
-      }
 
-      if (!cacheResponse.ok) {
-        const errorText = await cacheResponse.text();
-        console.error(`[${requestId}] Cache creation failed: ${cacheResponse.status} - ${errorText.substring(0, 200)}`);
-        return res.status(cacheResponse.status).json({
-          error: 'Cache creation failed',
+        clearTimeout(timeoutId);
+
+        if (!cacheResponse.ok) {
+          const errorText = await cacheResponse.text();
+          console.error(`[${requestId}] Cache creation failed: ${cacheResponse.status} - ${errorText.substring(0, 200)}`);
+          return Response.json(
+            { error: 'Cache creation failed', requestId, details: errorText.substring(0, 200) },
+            { status: cacheResponse.status, headers: corsHeaders }
+          );
+        }
+
+        const cache = await cacheResponse.json();
+        console.log(`[${requestId}] Cache created: ${cache.name}, tokens: ${cache.usageMetadata?.totalTokenCount || 'unknown'}`);
+
+        return Response.json({
+          success: true,
+          cache: {
+            name: cache.name,
+            expireTime: cache.expireTime,
+            createTime: cache.createTime,
+            updateTime: cache.updateTime,
+            usageMetadata: cache.usageMetadata,
+          },
           requestId,
-          details: errorText.substring(0, 200),
-        });
+        }, { headers: corsHeaders });
+
+      } catch (error) {
+        clearTimeout(timeoutId);
+        const isTimeout = error.name === 'AbortError';
+        console.error(`[${requestId}] Cache creation error: ${error.message}`);
+        return Response.json(
+          { error: isTimeout ? 'Cache creation timed out' : 'Cache creation failed', requestId, details: error.message },
+          { status: 500, headers: corsHeaders }
+        );
       }
-
-      const cache = await cacheResponse.json();
-      console.log(`[${requestId}] Cache created: ${cache.name}, tokens: ${cache.usageMetadata?.totalTokenCount || 'unknown'}`);
-
-      return res.status(200).json({
-        success: true,
-        cache: {
-          name: cache.name,
-          expireTime: cache.expireTime,
-          createTime: cache.createTime,
-          updateTime: cache.updateTime,
-          usageMetadata: cache.usageMetadata,
-        },
-        requestId,
-      });
     }
 
     // ========== GENERATION REQUEST ==========
-    // Validate request
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       console.warn(`[${requestId}] Invalid request: missing messages`);
-      return res.status(400).json({ error: 'Missing or invalid messages array', requestId });
+      return Response.json(
+        { error: 'Missing or invalid messages array', requestId },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const model = body.model || 'gemini-3-flash-preview';
     const isGemini3 = model.includes('gemini-3');
     const hasSchema = !!body.responseSchema;
-    const cachedContent = body.cachedContent; // Optional cache reference
+    const cachedContent = body.cachedContent;
+    const useStreaming = body.stream !== false;
 
-    // Log incoming request details
-    console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, isGemini3=${isGemini3}, streaming=${useStreaming}, cached=${!!cachedContent}`);
+    console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, streaming=${useStreaming}, cached=${!!cachedContent}`);
 
     // Build Gemini request
-    // Use v1alpha for caching support, v1beta for regular requests
     const apiVersion = cachedContent ? 'v1alpha' : 'v1beta';
     const geminiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
@@ -196,10 +205,7 @@ export default async function handler(req, res) {
         parts: [{ text: msg.content }],
       })),
       generationConfig: {
-        // Gemini 3 requires temperature=1.0, others use provided value
         temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
-        // Only set maxOutputTokens if explicitly provided (not null/undefined)
-        // Otherwise let Gemini use its default (8192) based on prompt word count targets
         ...(body.maxTokens && { maxOutputTokens: body.maxTokens }),
         ...((!isGemini3 && body.topP) && { topP: body.topP }),
       },
@@ -209,305 +215,276 @@ export default async function handler(req, res) {
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
       ],
-      // Add cached content reference if provided (must be snake_case for Gemini API)
       ...(cachedContent && { cached_content: cachedContent }),
     };
 
-    // Add thinking config for Gemini 3 models - produces better quality output
-    // Medium level balances quality with speed/cost
     if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
         thinkingLevel: body.thinkingLevel ?? 'medium',
       };
     }
 
-    // Add system instruction
     if (body.systemPrompt) {
-      geminiBody.systemInstruction = {
-        parts: [{ text: body.systemPrompt }],
-      };
+      geminiBody.systemInstruction = { parts: [{ text: body.systemPrompt }] };
     }
 
-    // Add response schema for structured output
     if (body.responseSchema) {
       geminiBody.generationConfig.responseMimeType = 'application/json';
       geminiBody.generationConfig.responseSchema = body.responseSchema;
     }
 
-    // If streaming is enabled, set up NDJSON streaming with heartbeats
+    // ========== STREAMING RESPONSE WITH TRUE EDGE STREAMING ==========
     if (useStreaming) {
-      // Set headers for newline-delimited JSON streaming
-      res.setHeader('Content-Type', 'application/x-ndjson');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering if present
+      // Create a TransformStream for writing heartbeats and response
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const encoder = new TextEncoder();
 
-      // Force headers to be sent immediately to establish the stream
-      res.flushHeaders();
-
-      // Start heartbeat timer to keep mobile connection alive
       let heartbeatCount = 0;
+      let heartbeatTimer = null;
+      let geminiController = null;
+      let geminiTimeoutId = null;
 
-      // Send initial heartbeat immediately to confirm stream is working
-      const sendHeartbeat = () => {
+      const sendHeartbeat = async () => {
         heartbeatCount++;
         const heartbeat = JSON.stringify({
           type: 'heartbeat',
           seq: heartbeatCount,
           elapsed: Date.now() - startTime
         }) + '\n';
-        res.write(heartbeat);
+        try {
+          await writer.write(encoder.encode(heartbeat));
+          console.log(`[${requestId}] Heartbeat ${heartbeatCount} sent`);
+        } catch (e) {
+          console.warn(`[${requestId}] Failed to send heartbeat: ${e.message}`);
+        }
       };
 
-      // Send first heartbeat immediately
-      sendHeartbeat();
-      console.log(`[${requestId}] Heartbeat streaming active`);
+      const cleanup = () => {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
+        if (geminiTimeoutId) {
+          clearTimeout(geminiTimeoutId);
+          geminiTimeoutId = null;
+        }
+      };
 
-      // Then send heartbeats every 10 seconds
-      const heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
-
-      try {
-        // Call Gemini with timing and explicit timeout
-        const geminiStartTime = Date.now();
-        console.log(`[${requestId}] Calling Gemini API (with heartbeats, ${GEMINI_FETCH_TIMEOUT_MS/1000}s timeout)...`);
-
-        // Create abort controller for Gemini fetch timeout
-        const geminiController = new AbortController();
-        const geminiTimeout = setTimeout(() => {
-          console.error(`[${requestId}] Gemini API timeout after ${GEMINI_FETCH_TIMEOUT_MS/1000}s`);
-          geminiController.abort();
-        }, GEMINI_FETCH_TIMEOUT_MS);
-
-        let geminiResponse;
+      // Start async operation (don't await - let it run in background)
+      (async () => {
         try {
-          geminiResponse = await fetch(geminiUrl, {
+          // Send first heartbeat immediately - THIS WILL REACH CLIENT IMMEDIATELY (Edge Runtime!)
+          await sendHeartbeat();
+          console.log(`[${requestId}] Heartbeat streaming active (Edge Runtime - no buffering)`);
+
+          // Then send heartbeats every 10 seconds
+          heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+
+          // Call Gemini
+          const geminiStartTime = Date.now();
+          console.log(`[${requestId}] Calling Gemini API...`);
+
+          geminiController = new AbortController();
+          geminiTimeoutId = setTimeout(() => {
+            console.error(`[${requestId}] Gemini API timeout after ${GEMINI_FETCH_TIMEOUT_MS / 1000}s`);
+            geminiController.abort();
+          }, GEMINI_FETCH_TIMEOUT_MS);
+
+          const geminiResponse = await fetch(geminiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(geminiBody),
             signal: geminiController.signal,
           });
-        } finally {
-          clearTimeout(geminiTimeout);
-        }
 
-        const geminiDuration = Date.now() - geminiStartTime;
+          clearTimeout(geminiTimeoutId);
+          geminiTimeoutId = null;
 
-        // Stop heartbeats - we have a response
-        clearInterval(heartbeatTimer);
+          const geminiDuration = Date.now() - geminiStartTime;
+          cleanup();
 
-        if (!geminiResponse.ok) {
-          const errorText = await geminiResponse.text();
-          console.error(`[${requestId}] Gemini error after ${geminiDuration}ms: status=${geminiResponse.status}, body=${errorText.substring(0, 500)}`);
+          if (!geminiResponse.ok) {
+            const errorText = await geminiResponse.text();
+            console.error(`[${requestId}] Gemini error after ${geminiDuration}ms: ${geminiResponse.status}`);
 
-          const errorResponse = JSON.stringify({
-            type: 'error',
-            error: geminiResponse.status === 429 ? 'API rate limit exceeded' :
-                   geminiResponse.status === 403 ? 'API quota exceeded' :
-                   'Failed to generate content',
-            requestId,
-            geminiStatus: geminiResponse.status,
-            details: errorText.substring(0, 200),
-          }) + '\n';
-          res.write(errorResponse);
-          return res.end();
-        }
+            const errorResponse = JSON.stringify({
+              type: 'error',
+              error: geminiResponse.status === 429 ? 'API rate limit exceeded' :
+                     geminiResponse.status === 403 ? 'API quota exceeded' : 'Failed to generate content',
+              requestId,
+              geminiStatus: geminiResponse.status,
+              details: errorText.substring(0, 200),
+            }) + '\n';
+            await writer.write(encoder.encode(errorResponse));
+            await writer.close();
+            return;
+          }
 
-        const geminiData = await geminiResponse.json();
-        const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
-        const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const contentLength = content.length;
+          const geminiData = await geminiResponse.json();
+          const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
+          const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const usage = geminiData.usageMetadata || {};
 
-        const usage = geminiData.usageMetadata || {};
+          if (finishReason === 'SAFETY') {
+            console.error(`[${requestId}] Content blocked by safety filters`);
+            const safetyError = JSON.stringify({
+              type: 'error',
+              error: 'Content blocked by safety filters',
+              requestId,
+              finishReason,
+            }) + '\n';
+            await writer.write(encoder.encode(safetyError));
+            await writer.close();
+            return;
+          }
 
-        // Only warn on problematic finish reasons
-        if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-          console.warn(`[${requestId}] Response truncated (${finishReason})`);
-        }
+          const totalDuration = Date.now() - startTime;
+          const cachedTokens = usage.cachedContentTokenCount || 0;
+          console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${content.length} chars, ${heartbeatCount} heartbeats${cachedTokens > 0 ? ` (${cachedTokens} cached)` : ''}`);
 
-        if (finishReason === 'SAFETY') {
-          console.error(`[${requestId}] Content blocked by safety filters`);
-          const safetyError = JSON.stringify({
-            type: 'error',
-            error: 'Content blocked by safety filters',
-            requestId,
+          // Send the final response
+          const finalResponse = JSON.stringify({
+            type: 'response',
+            success: true,
+            content,
+            usage: {
+              promptTokens: usage.promptTokenCount || 0,
+              cachedTokens: cachedTokens,
+              completionTokens: usage.candidatesTokenCount || 0,
+              totalTokens: usage.totalTokenCount || 0,
+            },
             finishReason,
+            requestId,
+            timing: { total: totalDuration, gemini: geminiDuration },
           }) + '\n';
-          res.write(safetyError);
-          return res.end();
-        }
+          await writer.write(encoder.encode(finalResponse));
+          await writer.close();
 
-        // Validate content for schema responses
-        let jsonValid = true;
-        if (hasSchema && contentLength > 0) {
+        } catch (error) {
+          cleanup();
+          const totalDuration = Date.now() - startTime;
+          const isTimeout = error.name === 'AbortError';
+          const errorMessage = isTimeout
+            ? `Gemini API timed out after ${GEMINI_FETCH_TIMEOUT_MS / 1000}s`
+            : 'Internal server error';
+
+          console.error(`[${requestId}] Error after ${totalDuration}ms: ${error.message}`);
+
           try {
-            JSON.parse(content);
-          } catch (parseErr) {
-            jsonValid = false;
-            console.warn(`[${requestId}] JSON parse failed - client will repair: ${parseErr.message}`);
+            const errorResponse = JSON.stringify({
+              type: 'error',
+              error: errorMessage,
+              requestId,
+              details: error.message,
+              isTimeout,
+            }) + '\n';
+            await writer.write(encoder.encode(errorResponse));
+            await writer.close();
+          } catch (writeError) {
+            console.error(`[${requestId}] Failed to write error: ${writeError.message}`);
+            try { await writer.close(); } catch (e) { /* ignore */ }
           }
         }
+      })();
 
-        const totalDuration = Date.now() - startTime;
-        const cachedTokens = usage.cachedContentTokenCount || 0;
-        console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars, ${heartbeatCount} heartbeats${cachedTokens > 0 ? ` (${cachedTokens} cached tokens)` : ''}${!jsonValid ? ' (JSON needs repair)' : ''}`);
-
-        // Send the final response
-        const finalResponse = JSON.stringify({
-          type: 'response',
-          success: true,
-          content,
-          usage: {
-            promptTokens: usage.promptTokenCount || 0,
-            cachedTokens: cachedTokens,
-            completionTokens: usage.candidatesTokenCount || 0,
-            totalTokens: usage.totalTokenCount || 0,
-          },
-          finishReason,
-          requestId,
-          timing: {
-            total: totalDuration,
-            gemini: geminiDuration,
-          },
-        }) + '\n';
-        res.write(finalResponse);
-        return res.end();
-
-      } catch (error) {
-        clearInterval(heartbeatTimer);
-        const totalDuration = Date.now() - startTime;
-
-        // Check if this is a timeout/abort error
-        const isTimeout = error.name === 'AbortError' || error.message?.includes('aborted');
-        const errorMessage = isTimeout
-          ? `Gemini API timed out after ${GEMINI_FETCH_TIMEOUT_MS/1000}s. The model may be overloaded.`
-          : 'Internal server error';
-
-        console.error(`[${requestId}] Proxy error after ${totalDuration}ms (timeout=${isTimeout}):`, error.message);
-
-        const errorResponse = JSON.stringify({
-          type: 'error',
-          error: errorMessage,
-          requestId,
-          details: error.message,
-          isTimeout,
-        }) + '\n';
-        res.write(errorResponse);
-        return res.end();
-      }
+      // Return the readable stream immediately - client will receive heartbeats in real-time
+      return new Response(readable, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/x-ndjson',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
     }
 
-    // Non-streaming fallback (original behavior)
+    // ========== NON-STREAMING RESPONSE ==========
     const geminiStartTime = Date.now();
-    console.log(`[${requestId}] Calling Gemini API (non-streaming, ${GEMINI_FETCH_TIMEOUT_MS/1000}s timeout)...`);
+    console.log(`[${requestId}] Calling Gemini API (non-streaming)...`);
 
-    // Create abort controller for Gemini fetch timeout
-    const geminiController = new AbortController();
-    const geminiTimeout = setTimeout(() => {
-      console.error(`[${requestId}] Gemini API timeout after ${GEMINI_FETCH_TIMEOUT_MS/1000}s`);
-      geminiController.abort();
-    }, GEMINI_FETCH_TIMEOUT_MS);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
 
-    let geminiResponse;
     try {
-      geminiResponse = await fetch(geminiUrl, {
+      const geminiResponse = await fetch(geminiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(geminiBody),
-        signal: geminiController.signal,
+        signal: controller.signal,
       });
-    } finally {
-      clearTimeout(geminiTimeout);
-    }
 
-    const geminiDuration = Date.now() - geminiStartTime;
+      clearTimeout(timeoutId);
+      const geminiDuration = Date.now() - geminiStartTime;
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error(`[${requestId}] Gemini error after ${geminiDuration}ms: status=${geminiResponse.status}, body=${errorText.substring(0, 500)}`);
+      if (!geminiResponse.ok) {
+        const errorText = await geminiResponse.text();
+        console.error(`[${requestId}] Gemini error: ${geminiResponse.status}`);
 
-      if (geminiResponse.status === 429) {
-        return res.status(429).json({
-          error: 'API rate limit exceeded',
-          retryAfter: 60,
-          requestId,
-          geminiStatus: 429,
-        });
+        if (geminiResponse.status === 429) {
+          return Response.json(
+            { error: 'API rate limit exceeded', retryAfter: 60, requestId, geminiStatus: 429 },
+            { status: 429, headers: corsHeaders }
+          );
+        }
+        if (geminiResponse.status === 403) {
+          return Response.json(
+            { error: 'API quota exceeded', requestId, geminiStatus: 403 },
+            { status: 503, headers: corsHeaders }
+          );
+        }
+        return Response.json(
+          { error: 'Failed to generate content', requestId, geminiStatus: geminiResponse.status, details: errorText.substring(0, 200) },
+          { status: 502, headers: corsHeaders }
+        );
       }
-      if (geminiResponse.status === 403) {
-        return res.status(503).json({
-          error: 'API quota exceeded',
-          requestId,
-          geminiStatus: 403,
-        });
+
+      const geminiData = await geminiResponse.json();
+      const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
+      const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const usage = geminiData.usageMetadata || {};
+
+      if (finishReason === 'SAFETY') {
+        return Response.json(
+          { error: 'Content blocked by safety filters', requestId, finishReason },
+          { status: 400, headers: corsHeaders }
+        );
       }
-      return res.status(502).json({
-        error: 'Failed to generate content',
-        requestId,
-        geminiStatus: geminiResponse.status,
-        details: errorText.substring(0, 200),
-      });
-    }
 
-    const geminiData = await geminiResponse.json();
-    const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
-    const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const contentLength = content.length;
+      const totalDuration = Date.now() - startTime;
+      const cachedTokens = usage.cachedContentTokenCount || 0;
+      console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${content.length} chars${cachedTokens > 0 ? ` (${cachedTokens} cached)` : ''}`);
 
-    const usage = geminiData.usageMetadata || {};
-
-    // Only warn on problematic finish reasons
-    if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-      console.warn(`[${requestId}] Response truncated (${finishReason})`);
-    }
-
-    if (finishReason === 'SAFETY') {
-      console.error(`[${requestId}] Content blocked by safety filters`);
-      return res.status(400).json({
-        error: 'Content blocked by safety filters',
-        requestId,
+      return Response.json({
+        success: true,
+        content,
+        usage: {
+          promptTokens: usage.promptTokenCount || 0,
+          cachedTokens: cachedTokens,
+          completionTokens: usage.candidatesTokenCount || 0,
+          totalTokens: usage.totalTokenCount || 0,
+        },
         finishReason,
-      });
+        requestId,
+        timing: { total: totalDuration, gemini: geminiDuration },
+      }, { headers: corsHeaders });
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      const isTimeout = error.name === 'AbortError';
+      console.error(`[${requestId}] Error: ${error.message}`);
+      return Response.json(
+        { error: isTimeout ? 'Request timed out' : 'Internal server error', requestId, details: error.message },
+        { status: 500, headers: corsHeaders }
+      );
     }
-
-    // Validate content for schema responses
-    let jsonValid = true;
-    if (hasSchema && contentLength > 0) {
-      try {
-        JSON.parse(content);
-      } catch (parseErr) {
-        jsonValid = false;
-        console.warn(`[${requestId}] JSON parse failed - client will repair: ${parseErr.message}`);
-      }
-    }
-
-    const totalDuration = Date.now() - startTime;
-    const cachedTokens = usage.cachedContentTokenCount || 0;
-    console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${contentLength} chars${cachedTokens > 0 ? ` (${cachedTokens} cached tokens)` : ''}${!jsonValid ? ' (JSON needs repair)' : ''}`);
-
-    return res.status(200).json({
-      success: true,
-      content,
-      usage: {
-        promptTokens: usage.promptTokenCount || 0,
-        cachedTokens: cachedTokens,
-        completionTokens: usage.candidatesTokenCount || 0,
-        totalTokens: usage.totalTokenCount || 0,
-      },
-      finishReason,
-      requestId,
-      timing: {
-        total: totalDuration,
-        gemini: geminiDuration,
-      },
-    });
 
   } catch (error) {
     const totalDuration = Date.now() - startTime;
-    console.error(`[${requestId}] Proxy error after ${totalDuration}ms:`, error.message, error.stack);
-    return res.status(500).json({
-      error: 'Internal server error',
-      requestId,
-      details: error.message,
-    });
+    console.error(`[${requestId}] Proxy error after ${totalDuration}ms:`, error.message);
+    return Response.json(
+      { error: 'Internal server error', requestId, details: error.message },
+      { status: 500, headers: corsHeaders }
+    );
   }
 }
