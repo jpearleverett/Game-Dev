@@ -157,7 +157,8 @@ export function GameProvider({
             story.prefetchNextChapterBranchesAfterC(1, [], 'activateStoryCase:chapter1-early-prefetch', []);
           }
 
-          return { ok: true, caseId: targetCase.id };
+          // Return caseNumber to avoid stale closure issues in navigation
+          return { ok: true, caseId: targetCase.id, caseNumber };
       }
 
       // Daily Mode Logic

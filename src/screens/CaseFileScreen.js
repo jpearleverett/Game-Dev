@@ -401,7 +401,12 @@ export default function CaseFileScreen({
 
   const subchapterIndex = Number(storyMeta?.subchapter);
   const isThirdSubchapter = subchapterIndex === 3;
-  const shouldGateDecisionPanel = awaitingDecision && isThirdSubchapter;
+
+  // NARRATIVE-FIRST FLOW: Skip gating if player already read the narrative before the puzzle
+  // For dynamic chapters: existingBranchingChoice means narrative was completed
+  // For all chapters: isCaseSolved means they've returned after solving the puzzle
+  const narrativeAlreadyRead = Boolean(existingBranchingChoice) || isCaseSolved;
+  const shouldGateDecisionPanel = awaitingDecision && isThirdSubchapter && !narrativeAlreadyRead;
   const [decisionPanelRevealed, setDecisionPanelRevealed] = useState(!shouldGateDecisionPanel);
 
   useEffect(() => {
@@ -500,8 +505,9 @@ export default function CaseFileScreen({
 
     // NARRATIVE-FIRST FLOW: After narrative complete, show "Proceed to Evidence Board"
     // This gives the LLM time to generate next content while player solves the puzzle
-    // Applies to ALL dynamic chapters (2+), not just subchapter C
-    if (isDynamicChapter && (narrativeComplete || existingBranchingChoice) && !isCaseSolved && typeof onProceedToPuzzle === "function") {
+    // Applies to ALL chapters (including Chapter 1 static content)
+    const narrativeReadyForPuzzle = narrativeComplete || existingBranchingChoice;
+    if (narrativeReadyForPuzzle && !isCaseSolved && typeof onProceedToPuzzle === "function") {
       const hint = isSubchapterC
         ? "Solve the puzzle to reveal your chapter decision."
         : "Solve the puzzle to continue the investigation.";
@@ -536,7 +542,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isDynamicChapter, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option || !awaitingDecision) return;
@@ -721,6 +727,14 @@ export default function CaseFileScreen({
                       palette={palette}
                       showDecisionPrompt={showDecisionPrompt}
                       onRevealDecision={handleRevealDecisionPanel}
+                      onComplete={() => {
+                        // NARRATIVE-FIRST FLOW: Mark linear narrative as complete
+                        // Applies to Chapter 1 and any fallback scenarios for dynamic chapters
+                        if (isStoryMode) {
+                          console.log('[CaseFileScreen] Linear narrative complete - ready for puzzle');
+                          setNarrativeComplete(true);
+                        }
+                      }}
                     />
                   </View>
                 )}
