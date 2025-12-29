@@ -135,6 +135,9 @@ export default function NarrativePager({
     return w > 0 ? w : 0;
   }, [narrativeWidth, sectionPaddingH]);
 
+  // Track if onComplete has been called to avoid duplicate calls
+  const onCompleteCalledRef = useRef(false);
+
   const handleViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems?.length) {
       const nextIndex = viewableItems[0]?.index ?? 0;
@@ -231,6 +234,7 @@ export default function NarrativePager({
   // Reset when pages change
   useEffect(() => {
       setActivePage(0);
+      onCompleteCalledRef.current = false;
       if (listRef.current) {
           // Try/catch for safety on re-mounts
           try {
@@ -238,6 +242,21 @@ export default function NarrativePager({
           } catch(e) {}
       }
   }, [pages]);
+
+  // NARRATIVE-FIRST FLOW: Call onComplete when user has read through the narrative
+  // Triggered when user reaches and views the last page
+  useEffect(() => {
+    if (
+      onComplete &&
+      !onCompleteCalledRef.current &&
+      pages.length > 0 &&
+      activePage === pages.length - 1
+    ) {
+      onCompleteCalledRef.current = true;
+      console.log('[NarrativePager] Narrative complete - reached last page');
+      onComplete();
+    }
+  }, [activePage, pages.length, onComplete]);
 
   if (!pages.length) return null;
 
