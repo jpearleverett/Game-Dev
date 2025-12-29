@@ -779,9 +779,12 @@ class LLMService {
 
     const bodyStr = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
 
+    // Convert headers object to array of [key, value] pairs for expo/fetch Android compatibility
+    const headersArray = Object.entries(headers);
+
     const response = await expoFetch(url, {
       method: 'POST',
-      headers,
+      headers: headersArray,
       body: bodyStr,
       signal,
     });
@@ -848,14 +851,16 @@ class LLMService {
    * Call Gemini API via secure Cloudflare Worker proxy
    * Used in production to keep API key secure
    *
-   * Uses NDJSON streaming with heartbeats to prevent mobile network timeouts.
+   * Uses SSE (Server-Sent Events) streaming with heartbeats to prevent mobile network timeouts.
    * Mobile networks often kill idle connections after 30-40 seconds,
    * but Gemini's "thinking" phase can take 20-60 seconds.
    *
    * Streaming priority:
-   * 1. fetchSSE (react-native-fetch-sse) - purpose-built for LLM streaming
-   * 2. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
+   * 1. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
+   * 2. fetchSSE (react-native-fetch-sse) - purpose-built for SSE streaming
    * 3. global fetch with response.text() - fallback (no real-time heartbeats)
+   *
+   * Supports both SSE format (data: {...}\n\n) and legacy NDJSON ({...}\n) for backwards compatibility.
    */
   async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent }) {
     let lastError = null;
@@ -936,9 +941,10 @@ class LLMService {
         console.log(`[LLMService] [${localRequestId}] Request size: ${requestBodyStr.length} bytes, hasSchema: ${!!responseSchema}, hasCachedContent: ${!!cachedContent}`);
 
         // ========== TIERED STREAMING APPROACH ==========
+        // Proxy sends SSE format (text/event-stream) for better mobile streaming support.
         // Try multiple streaming methods in order of preference:
-        // 1. fetchSSE (react-native-fetch-sse) - purpose-built for LLM streaming
-        // 2. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
+        // 1. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
+        // 2. fetchSSE (react-native-fetch-sse) - purpose-built for SSE
         // 3. global fetch with response.text() - fallback (no real-time heartbeats)
         const bodyReadStart = Date.now();
         let responseText;
@@ -946,9 +952,9 @@ class LLMService {
         let streamingMethod = 'unknown';
         let response = null;
 
-        // Method 1: Try fetchSSE first (purpose-built for LLM streaming)
+        // Method 1: Try expo/fetch streaming first (native Expo SDK 52+ streaming)
         try {
-          const result = await this._tryFetchSSE(
+          const result = await this._tryExpoFetchStreaming(
             this.config.proxyUrl,
             requestBody,
             headers,
@@ -959,13 +965,14 @@ class LLMService {
           responseText = result.responseText;
           heartbeatCount = result.heartbeatCount;
           streamingMethod = result.streamingMethod;
+          response = result.response;
           clearTimeout(timeoutId);
-        } catch (sseError) {
-          console.warn(`[LLMService] [${localRequestId}] fetchSSE failed: ${sseError.message}, trying expo/fetch...`);
+        } catch (expoError) {
+          console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, trying fetchSSE...`);
 
-          // Method 2: Try expo/fetch streaming
+          // Method 2: Try fetchSSE (may work with some streaming formats)
           try {
-            const result = await this._tryExpoFetchStreaming(
+            const result = await this._tryFetchSSE(
               this.config.proxyUrl,
               requestBody,
               headers,
@@ -976,10 +983,9 @@ class LLMService {
             responseText = result.responseText;
             heartbeatCount = result.heartbeatCount;
             streamingMethod = result.streamingMethod;
-            response = result.response;
             clearTimeout(timeoutId);
-          } catch (expoError) {
-            console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, using global fetch fallback...`);
+          } catch (sseError) {
+            console.warn(`[LLMService] [${localRequestId}] fetchSSE failed: ${sseError.message}, using global fetch fallback...`);
 
             // Method 3: Fallback to global fetch with response.text()
             streamingMethod = 'globalFetch';
@@ -1017,33 +1023,66 @@ class LLMService {
         const networkTime = Date.now() - attemptStart;
         console.log(`[LLMService] [${localRequestId}] Body read complete via ${streamingMethod}: ${responseText.length} bytes in ${networkTime}ms`);
 
-        // Parse NDJSON - split by newlines and parse each line
-        const lines = responseText.split('\n').filter(line => line.trim());
+        // Parse response - supports both SSE format (data: {...}\n\n) and NDJSON ({...}\n)
         let data = null;
-        let parsedHeartbeatCount = 0; // Count from parsing (fetchSSE already counted in real-time)
+        let parsedHeartbeatCount = 0;
 
-        for (const line of lines) {
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.type === 'heartbeat') {
-              parsedHeartbeatCount++;
-              // Heartbeats just keep connection alive, ignore them
-              continue;
-            } else if (parsed.type === 'error') {
-              // Error response from proxy
-              console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}`);
-              throw new Error(parsed.error || 'Proxy returned error in stream');
-            } else if (parsed.type === 'response') {
-              // This is the actual response
-              data = parsed;
-              break;
-            } else if (parsed.success !== undefined) {
-              // Non-streaming fallback format (backwards compatibility)
-              data = parsed;
-              break;
+        // Detect format: SSE has "data: " prefix, NDJSON doesn't
+        const isSSE = responseText.includes('data: ');
+
+        if (isSSE) {
+          // SSE format: split by double newlines, strip "data: " prefix
+          const messages = responseText.split('\n\n').filter(msg => msg.trim());
+          for (const msg of messages) {
+            // Each SSE message may have multiple lines, find the data line
+            const lines = msg.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const jsonStr = line.substring(6); // Remove "data: " prefix
+                try {
+                  const parsed = JSON.parse(jsonStr);
+                  if (parsed.type === 'heartbeat') {
+                    parsedHeartbeatCount++;
+                    continue;
+                  } else if (parsed.type === 'error') {
+                    console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}`);
+                    throw new Error(parsed.error || 'Proxy returned error in stream');
+                  } else if (parsed.type === 'response') {
+                    data = parsed;
+                    break;
+                  } else if (parsed.success !== undefined) {
+                    data = parsed;
+                    break;
+                  }
+                } catch (parseErr) {
+                  console.warn(`[LLMService] [${localRequestId}] Failed to parse SSE data: ${jsonStr.substring(0, 100)}`);
+                }
+              }
             }
-          } catch (parseErr) {
-            console.warn(`[LLMService] [${localRequestId}] Failed to parse NDJSON line: ${line.substring(0, 100)}`);
+            if (data) break;
+          }
+        } else {
+          // NDJSON format (backwards compatibility): split by single newlines
+          const lines = responseText.split('\n').filter(line => line.trim());
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.type === 'heartbeat') {
+                parsedHeartbeatCount++;
+                continue;
+              } else if (parsed.type === 'error') {
+                console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}`);
+                throw new Error(parsed.error || 'Proxy returned error in stream');
+              } else if (parsed.type === 'response') {
+                data = parsed;
+                break;
+              } else if (parsed.success !== undefined) {
+                data = parsed;
+                break;
+              }
+            } catch (parseErr) {
+              console.warn(`[LLMService] [${localRequestId}] Failed to parse NDJSON line: ${line.substring(0, 100)}`);
+            }
           }
         }
 
