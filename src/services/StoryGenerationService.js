@@ -1711,8 +1711,10 @@ class StoryGenerationService {
     this.maxGenerationAttempts = 3; // Max attempts before using fallback
 
     // ========== Generation Concurrency Limiter ==========
-    // Prevents memory pressure and API overload when parallel preloading kicks in
-    this.maxConcurrentGenerations = 3; // Max simultaneous LLM generation calls
+    // Sequential only - no concurrent LLM requests
+    // Concurrent requests cause network issues on mobile (connections killed after ~4 min)
+    // and React Native doesn't support streaming so heartbeats don't help
+    this.maxConcurrentGenerations = 1; // Sequential LLM calls only
     this.activeGenerationCount = 0; // Current in-flight generations
     this.generationWaitQueue = []; // Queue of { resolve, reject, key } for waiting generations
 
@@ -6445,7 +6447,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       return;
     }
 
-    // At capacity - wait for a slot
+    // At capacity - wait for a slot (sequential mode means waiting for current to finish)
     await this._waitForGenerationSlot(generationKey);
     this.activeGenerationCount++;
     console.log(`[StoryGenerationService] Acquired slot after wait for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
