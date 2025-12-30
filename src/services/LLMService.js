@@ -707,7 +707,6 @@ class LLMService {
       const chunks = [];
       let heartbeatCount = 0;
       let hasCompleted = false;
-      let responseData = null;
       let lastDataTime = Date.now();
 
       console.log(`[LLMService] [${localRequestId}] Starting SSE stream (react-native-sse)...`);
@@ -768,10 +767,21 @@ class LLMService {
             const elapsed = Date.now() - bodyReadStart;
             console.log(`[LLMService] [${localRequestId}] Heartbeat via SSE at ${elapsed}ms`);
           } else if (parsed.type === 'response' || parsed.success !== undefined) {
-            // This is the actual response
-            responseData = parsed;
+            // This is the actual response - resolve immediately!
             const elapsed = Date.now() - bodyReadStart;
-            console.log(`[LLMService] [${localRequestId}] SSE response received at ${elapsed}ms`);
+            console.log(`[LLMService] [${localRequestId}] SSE response received at ${elapsed}ms, completing stream`);
+
+            cleanup();
+
+            // Build response text from all chunks including this one
+            const responseText = chunks.join('\n');
+
+            resolve({
+              responseText,
+              heartbeatCount,
+              streamingMethod: 'sse',
+              response: null,
+            });
           } else if (parsed.type === 'error') {
             console.error(`[LLMService] [${localRequestId}] SSE error event: ${parsed.error}`);
             cleanup();
