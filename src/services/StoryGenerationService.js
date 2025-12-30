@@ -1052,24 +1052,38 @@ const PATHDECISIONS_ONLY_SCHEMA = {
 };
 
 // Prompt template for the second call to generate path-specific decisions
-const PATHDECISIONS_PROMPT_TEMPLATE = `You previously generated a decision subchapter with a simple decision structure. Now generate 9 PATH-SPECIFIC decision variants, one for each unique path the player could have taken through the branching narrative.
+const PATHDECISIONS_PROMPT_TEMPLATE = `You previously generated a decision subchapter with branching narrative paths. Now generate 9 PATH-SPECIFIC decision variants, one for each unique path the player could have taken through the branching narrative.
 
-IMPORTANT: Each path should have a decision that reflects HOW THE PLAYER GOT TO THIS MOMENT. The same story beat should be framed differently based on the player's journey.
+IMPORTANT: Each path should have a decision that reflects HOW THE PLAYER GOT TO THIS MOMENT. The same story beat should be framed differently based on the player's journey through the narrative.
 
 The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
 
-For each path, provide:
-- pathKey: The path identifier (e.g., "1A-2A")
-- intro: A 2-3 sentence setup that reflects this specific path's journey
-- optionA and optionB: Each with key, title (5-10 words), focus (what this choice emphasizes), and personalityAlignment (methodical/aggressive/balanced)
+## BRANCHING NARRATIVE STRUCTURE (What the player experienced)
 
-Context from the generated content:
-- Chapter summary: {{chapterSummary}}
-- Simple decision intro: {{decisionIntro}}
-- Option A title: {{optionATitle}}
-- Option B title: {{optionBTitle}}
+### Opening (All players see this):
+{{opening}}
 
-Generate the 9 path-specific decisions that maintain the core choice but frame it appropriately for each path.`;
+### First Choice Options:
+- 1A: "{{firstChoice1ALabel}}" → {{firstChoice1AResponse}}
+- 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BResponse}}
+- 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CResponse}}
+
+### Second Choice Endings (9 unique paths):
+{{secondChoiceEndings}}
+
+## SIMPLE DECISION (Base structure to adapt for each path):
+- Intro: {{decisionIntro}}
+- Option A: {{optionATitle}} ({{optionAFocus}})
+- Option B: {{optionBTitle}} ({{optionBFocus}})
+
+## YOUR TASK
+For each of the 9 paths, generate a decision that:
+1. References what THAT SPECIFIC player experienced (their first choice, their ending)
+2. Frames the decision intro to reflect their journey
+3. Keeps optionA and optionB titles similar but adjusts focus/framing based on path context
+4. Sets personalityAlignment based on what kind of player would take that path
+
+Generate pathDecisions array with 9 objects, each having: pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment}.`;
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
@@ -6872,12 +6886,43 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }, 'debug');
 
           try {
-            // Build prompt using context from first call
+            // Build prompt using FULL context from first call, including branchingNarrative
+            const bn = generatedContent.branchingNarrative || {};
+            const firstChoiceOpts = bn.firstChoice?.options || [];
+            const secondChoices = bn.secondChoices || [];
+
+            // Build second choice endings summary for all 9 paths
+            const secondChoiceEndings = secondChoices.map((sc, scIdx) => {
+              const afterChoice = sc.afterChoice || `1${String.fromCharCode(65 + scIdx)}`;
+              const opts = sc.options || [];
+              return opts.map((opt, optIdx) => {
+                const pathKey = `${afterChoice}-2${String.fromCharCode(65 + optIdx)}`;
+                // Truncate response to ~200 chars to keep prompt size reasonable
+                const truncatedResponse = (opt.response || '').slice(0, 200) + (opt.response?.length > 200 ? '...' : '');
+                return `- ${pathKey}: "${opt.label || 'Choice'}" → ${truncatedResponse}`;
+              }).join('\n');
+            }).join('\n\n');
+
             const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
-              .replace('{{chapterSummary}}', generatedContent.chapterSummary || 'Not available')
+              // Opening section
+              .replace('{{opening}}', bn.opening?.text || 'Not available')
+              // First choice options
+              .replace('{{firstChoice1ALabel}}', firstChoiceOpts[0]?.label || 'Option 1A')
+              .replace('{{firstChoice1AResponse}}', (firstChoiceOpts[0]?.response || '').slice(0, 150) + '...')
+              .replace('{{firstChoice1BLabel}}', firstChoiceOpts[1]?.label || 'Option 1B')
+              .replace('{{firstChoice1BResponse}}', (firstChoiceOpts[1]?.response || '').slice(0, 150) + '...')
+              .replace('{{firstChoice1CLabel}}', firstChoiceOpts[2]?.label || 'Option 1C')
+              .replace('{{firstChoice1CResponse}}', (firstChoiceOpts[2]?.response || '').slice(0, 150) + '...')
+              // Second choice endings (all 9 paths)
+              .replace('{{secondChoiceEndings}}', secondChoiceEndings || 'Not available')
+              // Simple decision base
               .replace('{{decisionIntro}}', generatedContent.decision?.intro || 'Not available')
               .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
-              .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B');
+              .replace('{{optionAFocus}}', generatedContent.decision?.optionA?.focus || 'Not specified')
+              .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B')
+              .replace('{{optionBFocus}}', generatedContent.decision?.optionB?.focus || 'Not specified');
+
+            console.log(`[StoryGenerationService] pathDecisions prompt built with ${secondChoices.length} secondChoice groups, ${firstChoiceOpts.length} firstChoice options`);
 
             const pathDecisionsResponse = await llmService.complete(
               [{ role: 'user', content: pathDecisionsPrompt }],
