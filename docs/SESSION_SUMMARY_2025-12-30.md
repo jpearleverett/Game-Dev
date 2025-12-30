@@ -251,11 +251,10 @@ In a scene where Jack finds Claire in her office:
 ---
 
 ### 9. Chapter 1C Decision Panel Fix
-
-**Problem:** After adding the `existingBranchingChoice` requirement for showing decision options (to ensure branching choices are complete before showing decisions), Chapter 1C stopped showing its decision panel. Chapter 1 uses the legacy linear narrative format and doesn't have `branchingNarrative`.
+ 
+**Problem:** After adding the `existingBranchingChoice` requirement for showing decision options (to ensure branching choices are complete before showing decisions), Chapter 1C stopped showing its decision panel. Chapter 1 uses the legacy linear narrative format and doesn't have `branchingNarrative`. 
 
 **Solution:** Only require `existingBranchingChoice` when `hasBranchingNarrative` is true:
-
 ```javascript
 const showDecisionOptions = showDecision && (
   awaitingDecision ||
@@ -263,7 +262,8 @@ const showDecisionOptions = showDecision && (
     hasBranchingNarrative ? existingBranchingChoice : true
   ))
 );
-```
+
+``` 
 
 **File:** `src/screens/CaseFileScreen.js`
 
