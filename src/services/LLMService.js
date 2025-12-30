@@ -13,7 +13,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
 import { fetch as expoFetch } from 'expo/fetch';
-import { fetchSSE } from 'react-native-fetch-sse';
 import { llmTrace } from '../utils/llmTrace';
 
 const LLM_CONFIG_KEY = 'dead_letters_llm_config';
@@ -699,78 +698,6 @@ class LLMService {
   }
 
   /**
-   * Try to read response body using fetchSSE (react-native-fetch-sse)
-   * This is purpose-built for LLM streaming and works better on mobile
-   */
-  async _tryFetchSSE(url, requestBody, headers, signal, localRequestId, bodyReadStart) {
-    return new Promise((resolve, reject) => {
-      const chunks = [];
-      let heartbeatCount = 0;
-      let hasStarted = false;
-      let hasEnded = false;
-
-      console.log(`[LLMService] [${localRequestId}] Trying fetchSSE streaming...`);
-
-      // fetchSSE expects the body as a string
-      const bodyStr = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
-
-      fetchSSE(url, {
-        method: 'POST',
-        headers,
-        body: bodyStr,
-        signal,
-      }, {
-        onStart: () => {
-          hasStarted = true;
-          console.log(`[LLMService] [${localRequestId}] fetchSSE stream started`);
-        },
-        onMessage: (data) => {
-          // Each message is a chunk of the response (could be heartbeat, response, etc.)
-          const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-
-          // Check for heartbeats and log them
-          if (dataStr.includes('"type":"heartbeat"') || dataStr.includes('"type": "heartbeat"')) {
-            heartbeatCount++;
-            const elapsed = Date.now() - bodyReadStart;
-            console.log(`[LLMService] [${localRequestId}] Heartbeat via fetchSSE at ${elapsed}ms`);
-          }
-
-          chunks.push(dataStr);
-        },
-        onError: (error, { status, statusText } = {}) => {
-          if (!hasEnded) {
-            hasEnded = true;
-            console.error(`[LLMService] [${localRequestId}] fetchSSE error: ${error}, status: ${status || 'unknown'}`);
-            reject(new Error(error || `HTTP ${status}: ${statusText}`));
-          }
-        },
-        onEnd: () => {
-          if (!hasEnded) {
-            hasEnded = true;
-            const elapsed = Date.now() - bodyReadStart;
-            console.log(`[LLMService] [${localRequestId}] fetchSSE complete: ${chunks.length} chunks, ${heartbeatCount} heartbeats in ${elapsed}ms`);
-            resolve({
-              responseText: chunks.join('\n'),
-              heartbeatCount,
-              streamingMethod: 'fetchSSE',
-            });
-          }
-        },
-        // Don't auto-parse JSON - we handle NDJSON ourselves
-        shouldParseJsonWhenOnMsg: false,
-      });
-
-      // Safety timeout in case onEnd/onError never fire
-      setTimeout(() => {
-        if (!hasEnded && !hasStarted) {
-          hasEnded = true;
-          reject(new Error('fetchSSE did not start within 30 seconds'));
-        }
-      }, 30000);
-    });
-  }
-
-  /**
    * Try to read response body using expo/fetch streaming
    * Expo SDK 52+ has native streaming support
    */
@@ -855,10 +782,9 @@ class LLMService {
    * Mobile networks often kill idle connections after 30-40 seconds,
    * but Gemini's "thinking" phase can take 20-60 seconds.
    *
-   * Streaming priority:
-   * 1. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
-   * 2. fetchSSE (react-native-fetch-sse) - purpose-built for SSE streaming
-   * 3. global fetch with response.text() - fallback (no real-time heartbeats)
+   * Streaming approach:
+   * 1. expo/fetch with ReadableStream - Expo SDK 52+ native streaming (primary)
+   * 2. expo/fetch with response.text() - fallback when streaming unavailable
    *
    * Supports both SSE format (data: {...}\n\n) and legacy NDJSON ({...}\n) for backwards compatibility.
    */
@@ -942,19 +868,17 @@ class LLMService {
 
         // ========== STREAMING WITH HEARTBEATS ==========
         // Server sends SSE format with heartbeats every 10s to keep mobile connections alive.
-        // Streaming priority:
-        // 1. fetchSSE (react-native-fetch-sse) - purpose-built for SSE, patched for stream lock bug
-        // 2. expo/fetch streaming - Expo SDK 52+ native streaming
-        // 3. response.text() fallback - server heartbeats still keep connection alive
+        // Uses expo/fetch streaming (Expo SDK 52+ native streaming).
+        // Falls back to response.text() if streaming unavailable.
         const bodyReadStart = Date.now();
         let responseText;
         let heartbeatCount = 0;
         let streamingMethod = 'unknown';
         let response = null;
 
-        // Method 1: Try fetchSSE first (purpose-built for SSE streaming)
+        // Try expo/fetch streaming first (native to Expo SDK 52+)
         try {
-          const result = await this._tryFetchSSE(
+          const result = await this._tryExpoFetchStreaming(
             this.config.proxyUrl,
             requestBody,
             headers,
@@ -965,61 +889,43 @@ class LLMService {
           responseText = result.responseText;
           heartbeatCount = result.heartbeatCount;
           streamingMethod = result.streamingMethod;
+          response = result.response;
           clearTimeout(timeoutId);
-        } catch (sseError) {
-          console.warn(`[LLMService] [${localRequestId}] fetchSSE failed: ${sseError.message}, trying expo/fetch streaming...`);
+        } catch (expoError) {
+          console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, using response.text() fallback...`);
 
-          // Method 2: Try expo/fetch streaming (Expo SDK 52+ native streaming)
+          // Fallback to expoFetch with response.text()
+          // Server's heartbeat data flow keeps the TCP connection alive even without streaming
+          streamingMethod = 'expoFetch-text';
+
+          const headersObj = new Headers(headers);
+          response = await expoFetch(this.config.proxyUrl, {
+            method: 'POST',
+            headers: headersObj,
+            body: requestBodyStr,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          console.log(`[LLMService] [${localRequestId}] Response received (status=${response.status}), waiting for body...`);
+
+          // Log progress while waiting for the full response
+          let progressLogCount = 0;
+          const progressInterval = setInterval(() => {
+            progressLogCount++;
+            const elapsed = Date.now() - bodyReadStart;
+            console.log(`[LLMService] [${localRequestId}] Still waiting for response body... (${Math.round(elapsed/1000)}s elapsed)`);
+          }, 10000); // Log every 10s to match heartbeat interval
+
           try {
-            const result = await this._tryExpoFetchStreaming(
-              this.config.proxyUrl,
-              requestBody,
-              headers,
-              controller.signal,
-              localRequestId,
-              bodyReadStart
-            );
-            responseText = result.responseText;
-            heartbeatCount = result.heartbeatCount;
-            streamingMethod = result.streamingMethod;
-            response = result.response;
-            clearTimeout(timeoutId);
-          } catch (expoError) {
-            console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, using response.text() fallback...`);
-
-            // Method 3: Fallback to expoFetch with response.text()
-            // Server's heartbeat data flow keeps the TCP connection alive even without streaming
-            streamingMethod = 'expoFetch-text';
-
-            const headersObj = new Headers(headers);
-            response = await expoFetch(this.config.proxyUrl, {
-              method: 'POST',
-              headers: headersObj,
-              body: requestBodyStr,
-              signal: controller.signal,
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            console.log(`[LLMService] [${localRequestId}] Response received (status=${response.status}), waiting for body...`);
-
-            // Log progress while waiting for the full response
-            let progressLogCount = 0;
-            const progressInterval = setInterval(() => {
-              progressLogCount++;
-              const elapsed = Date.now() - bodyReadStart;
-              console.log(`[LLMService] [${localRequestId}] Still waiting for response body... (${Math.round(elapsed/1000)}s elapsed)`);
-            }, 10000); // Log every 10s to match heartbeat interval
-
-            try {
-              responseText = await response.text();
-            } finally {
-              clearInterval(progressInterval);
-            }
+            responseText = await response.text();
+          } finally {
+            clearInterval(progressInterval);
           }
         }
 
