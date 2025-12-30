@@ -1078,6 +1078,28 @@ Choice 2  Choice 2  Choice 2  (3 options each)
 4. Second choice should be about Jack's FOCUS (what he prioritizes)
 5. Endings conclude this subchapter's path but leave threads for next
 
+**CRITICAL: LOGICAL CONSISTENCY BETWEEN SEGMENTS**
+Each choice response MUST logically flow from BOTH:
+- The opening's established state (what situation exists, what obstacles are present)
+- The specific choice the player made (how they chose to act)
+
+If the opening establishes a BARRIER (e.g., "Claire refuses to hand over the ledger"), the choice response must:
+- Show HOW Jack overcomes that barrier based on his chosen approach, OR
+- Show Jack failing to overcome it and adapting, OR
+- Show the consequences of that barrier still being in place
+
+NEVER have a response assume access to something the opening denied without showing HOW access was gained.
+
+BAD EXAMPLE:
+- Opening: "Claire pulled the folder close. 'The Ledger is not for sale.'"
+- Choice: "Examine the recent entries"
+- Response: "Jack flipped through the pages..." ← WRONG! Claire didn't give it to him!
+
+GOOD EXAMPLE:
+- Opening: "Claire pulled the folder close. 'The Ledger is not for sale.'"
+- Choice: "Examine the recent entries"
+- Response: "Jack held her gaze, unblinking. 'I'm not buying. I'm borrowing.' His hand was already on the folder before she could object. Claire's grip loosened—something in his eyes told her this wasn't negotiable. He flipped to the most recent pages..." ← Shows the transition!
+
 **CRITICAL: TRUE INFINITE BRANCHING**
 Each of the 9 paths can lead to DIFFERENT narrative states. This means:
 - DIFFERENT CLUES: Different paths can reveal different information
