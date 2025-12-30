@@ -543,13 +543,8 @@ export default function CaseFileScreen({
   const storyPromptConfig = useMemo(() => {
     if (!isStoryMode) return null;
 
-    // NARRATIVE-FIRST FLOW: After narrative complete, show "Proceed to Evidence Board"
-    // This gives the LLM time to generate next content while player solves the puzzle
-    // Applies to ALL chapters (including Chapter 1 static content)
-    const narrativeReadyForPuzzle = narrativeComplete || existingBranchingChoice;
-
     // For C subchapters: Only show "Solve Puzzle" AFTER decision is made (hasPreDecision)
-    // For A/B subchapters: Show "Solve Puzzle" after narrative is complete
+    // For A/B subchapters: Always show puzzle button (player can solve anytime while reading)
     if (!isCaseSolved && typeof onProceedToPuzzle === "function") {
       if (isSubchapterC) {
         // C subchapter: Must make decision before puzzle
@@ -564,12 +559,12 @@ export default function CaseFileScreen({
           };
         }
         // Decision not yet made - don't show puzzle button (let them decide first)
-      } else if (narrativeReadyForPuzzle) {
-        // A/B subchapter: Show puzzle after narrative
+      } else {
+        // A/B subchapter: Always show puzzle button (player can solve anytime while reading)
         return {
           title: "Evidence Board Ready",
-          body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
-          hint: "Solve the puzzle to continue the investigation.",
+          body: "The evidence board awaits. Solve it whenever you're ready.",
+          hint: "You can continue reading or solve the puzzle now.",
           actionLabel: "Solve Evidence Board",
           actionIcon: "🔍",
           onPress: onProceedToPuzzle,
@@ -598,7 +593,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, isCaseSolved, onProceedToPuzzle, hasPreDecision]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option) return;
