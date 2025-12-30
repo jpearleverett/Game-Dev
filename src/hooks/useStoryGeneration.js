@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { storyGenerationService } from '../services/StoryGenerationService';
 import { llmService } from '../services/LLMService';
 import { createTraceId, llmTrace } from '../utils/llmTrace';
@@ -57,10 +58,51 @@ export function useStoryGeneration(storyCampaign) {
   const subchapterPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate within-chapter subchapter prefetch
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
 
+  // Background resilience: Track app state to handle generation during backgrounding
+  const appStateRef = useRef(AppState.currentState);
+  const wasBackgroundedDuringGenerationRef = useRef(false);
+  const generationStartTimeRef = useRef(null);
+
   // Keep branchingChoicesRef in sync to avoid stale closures
   useEffect(() => {
     branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
   }, [storyCampaign?.branchingChoices]);
+
+  // AppState listener for background resilience
+  // Tracks when app goes to background during generation to handle gracefully on return
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      const wasActive = appStateRef.current === 'active';
+      const isNowBackground = nextAppState.match(/inactive|background/);
+      const isNowActive = nextAppState === 'active';
+
+      // Went to background while generating
+      if (wasActive && isNowBackground && status === GENERATION_STATUS.GENERATING) {
+        console.log('[useStoryGeneration] App backgrounded during generation - tracking for resilience');
+        wasBackgroundedDuringGenerationRef.current = true;
+      }
+
+      // Returned to foreground
+      if (!wasActive && isNowActive) {
+        if (wasBackgroundedDuringGenerationRef.current) {
+          const elapsed = generationStartTimeRef.current
+            ? Math.round((Date.now() - generationStartTimeRef.current) / 1000)
+            : 0;
+          console.log(`[useStoryGeneration] App returned to foreground after ${elapsed}s - status: ${status}`);
+
+          // If still generating after returning, that's fine - SSE keeps connection alive
+          // If there was an error while backgrounded, the error state is already set
+          // If completed while backgrounded, the complete state is already set
+          wasBackgroundedDuringGenerationRef.current = false;
+        }
+      }
+
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [status]);
 
   /**
    * Prefetch next chapter (Subchapter A) for BOTH possible decision branches.
@@ -411,6 +453,7 @@ export function useStoryGeneration(storyCampaign) {
     setIsCacheMiss(wasCacheMiss);
     setError(null);
     setProgress({ current: 0, total: 1 });
+    generationStartTimeRef.current = Date.now(); // Track for background resilience
 
     console.log(`[useStoryGeneration] [${genId}] Starting generation for Chapter ${chapter}.${subchapter} (path ${pathKey})...`);
 
