@@ -698,91 +698,17 @@ class LLMService {
   }
 
   /**
-   * Read response body using expo/fetch streaming
-   * Expo SDK 52+ has native streaming support with proper heartbeat handling
-   */
-  async _tryExpoFetchStreaming(url, requestBody, headers, signal, localRequestId, bodyReadStart) {
-    console.log(`[LLMService] [${localRequestId}] Starting expo/fetch streaming...`);
-
-    const bodyStr = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
-
-    // Use Headers object for cross-platform compatibility (Android and iOS)
-    const headersObj = new Headers(headers);
-
-    const response = await expoFetch(url, {
-      method: 'POST',
-      headers: headersObj,
-      body: bodyStr,
-      signal,
-    });
-
-    // Check if streaming is available
-    const reader = response.body?.getReader?.();
-    if (!reader) {
-      throw new Error('expo/fetch does not support streaming on this platform');
-    }
-
-    console.log(`[LLMService] [${localRequestId}] expo/fetch streaming available, reading...`);
-
-    const chunks = [];
-    const decoder = new TextDecoder();
-    let heartbeatCount = 0;
-    const chunkTimeout = 30000; // 30s without data = timeout
-
-    try {
-      while (true) {
-        // Race between reading next chunk and timeout
-        let timeoutHandle;
-        const readPromise = reader.read();
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error('No data received for 30 seconds')), chunkTimeout);
-        });
-
-        let result;
-        try {
-          result = await Promise.race([readPromise, timeoutPromise]);
-        } finally {
-          clearTimeout(timeoutHandle);
-        }
-
-        const { done, value } = result;
-        if (done) break;
-
-        const text = decoder.decode(value, { stream: true });
-        chunks.push(text);
-
-        // Log heartbeats as they arrive
-        if (text.includes('"type":"heartbeat"')) {
-          heartbeatCount++;
-          const elapsed = Date.now() - bodyReadStart;
-          console.log(`[LLMService] [${localRequestId}] Heartbeat via expo/fetch at ${elapsed}ms`);
-        }
-      }
-
-      const elapsed = Date.now() - bodyReadStart;
-      console.log(`[LLMService] [${localRequestId}] expo/fetch streaming complete: ${chunks.length} chunks, ${heartbeatCount} heartbeats in ${elapsed}ms`);
-
-      return {
-        responseText: chunks.join(''),
-        heartbeatCount,
-        streamingMethod: 'expoFetch',
-        response,
-      };
-    } catch (streamError) {
-      reader.cancel().catch(() => {});
-      throw streamError;
-    }
-  }
-
-  /**
    * Call Gemini API via secure Vercel proxy
    * Used in production to keep API key secure
    *
-   * Uses SSE (Server-Sent Events) streaming with heartbeats to prevent mobile network timeouts.
+   * The proxy sends heartbeats every 10 seconds to prevent mobile network timeouts.
    * Mobile networks often kill idle connections after 30-40 seconds,
    * but Gemini's "thinking" phase can take 20-60 seconds.
    *
-   * Streaming: expo/fetch (Expo SDK 52+) with global fetch fallback.
+   * We use expoFetch with response.text() (non-streaming) because Android aggressively
+   * kills streaming connections even with heartbeats. The server's heartbeat data flow
+   * keeps the TCP connection alive while we wait for the complete response.
+   *
    * Supports both SSE format (data: {...}\n\n) and legacy NDJSON ({...}\n) for backwards compatibility.
    */
   async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent }) {
@@ -863,64 +789,58 @@ class LLMService {
         const requestBodyStr = JSON.stringify(requestBody);
         console.log(`[LLMService] [${localRequestId}] Request size: ${requestBodyStr.length} bytes, hasSchema: ${!!responseSchema}, hasCachedContent: ${!!cachedContent}`);
 
-        // ========== STREAMING APPROACH ==========
-        // Proxy sends SSE format (text/event-stream) with heartbeats to prevent mobile network timeouts.
-        // expo/fetch (Expo SDK 52+) provides native streaming support that handles heartbeats properly.
-        // Falls back to global fetch with response.text() if streaming isn't available.
+        // ========== NON-STREAMING APPROACH ==========
+        // The server sends SSE format with heartbeats every 10 seconds to keep the connection alive.
+        // We use expoFetch with response.text() to wait for the complete response.
+        // This avoids Android's aggressive connection killing of streaming readers.
+        //
+        // Note: We don't read heartbeats in real-time, but the server's heartbeat data flow
+        // keeps the TCP connection alive, preventing mobile network timeouts.
         const bodyReadStart = Date.now();
         let responseText;
         let heartbeatCount = 0;
-        let streamingMethod = 'unknown';
+        const streamingMethod = 'expoFetch';
         let response = null;
 
-        // Primary: expo/fetch streaming (Expo SDK 52+ native streaming)
+        console.log(`[LLMService] [${localRequestId}] Starting request with expoFetch...`);
+
+        // Use Headers object for cross-platform compatibility (Android and iOS)
+        const headersObj = new Headers(headers);
+
+        response = await expoFetch(this.config.proxyUrl, {
+          method: 'POST',
+          headers: headersObj,
+          body: requestBodyStr,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.error(`[LLMService] [${localRequestId}] Request failed with status ${response.status}`);
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        console.log(`[LLMService] [${localRequestId}] Response received, reading body...`);
+
+        // Read the complete response body
+        // The server sends heartbeats which keep the connection alive while we wait
+        const bodyReadTimeout = 180000; // 3 minutes for body read
+        let progressLogCount = 0;
+        const progressInterval = setInterval(() => {
+          progressLogCount++;
+          console.log(`[LLMService] [${localRequestId}] Still reading response... (${progressLogCount * 30}s elapsed)`);
+        }, 30000);
+
         try {
-          const result = await this._tryExpoFetchStreaming(
-            this.config.proxyUrl,
-            requestBody,
-            headers,
-            controller.signal,
-            localRequestId,
-            bodyReadStart
-          );
-          responseText = result.responseText;
-          heartbeatCount = result.heartbeatCount;
-          streamingMethod = result.streamingMethod;
-          response = result.response;
-          clearTimeout(timeoutId);
-        } catch (expoError) {
-          console.warn(`[LLMService] [${localRequestId}] expo/fetch streaming failed: ${expoError.message}, using global fetch fallback...`);
-
-          // Fallback: global fetch with response.text() (no real-time heartbeat logging)
-          streamingMethod = 'globalFetch';
-          response = await fetch(this.config.proxyUrl, {
-            method: 'POST',
-            headers,
-            body: requestBodyStr,
-            signal: controller.signal,
-            keepalive: true,
-          });
-
-          clearTimeout(timeoutId);
-          console.log(`[LLMService] [${localRequestId}] Global fetch response: status=${response.status}, using response.text() fallback`);
-
-          const bodyReadTimeout = 180000; // 3 minutes for body read
-          let progressLogCount = 0;
-          const progressInterval = setInterval(() => {
-            progressLogCount++;
-            console.log(`[LLMService] [${localRequestId}] Still waiting for body... (${progressLogCount * 30}s elapsed)`);
-          }, 30000);
-
-          try {
-            responseText = await Promise.race([
-              response.text(),
-              new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Response body read timeout (no data for 3 minutes)')), bodyReadTimeout)
-              )
-            ]);
-          } finally {
-            clearInterval(progressInterval);
-          }
+          responseText = await Promise.race([
+            response.text(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Response body read timeout (no data for 3 minutes)')), bodyReadTimeout)
+            )
+          ]);
+        } finally {
+          clearInterval(progressInterval);
         }
 
         const networkTime = Date.now() - attemptStart;
