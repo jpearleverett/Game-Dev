@@ -733,22 +733,15 @@ const DECISION_CONTENT_SCHEMA = {
       minimum: 1,
       maximum: 12,
     },
-    // PATH-SPECIFIC DECISIONS - TEMPORARY MINIMAL VERSION
-    // Testing if Gemini rejects complex pathDecisions structure
-    // This generates 9 decisions as a simple array instead of keyed object
-    pathDecisions: {
-      type: 'array',
-      description: 'Array of 9 decision objects for paths in order: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C. Each has pathKey, intro, optionA{key,title,focus,personalityAlignment}, optionB{...}.',
-      minItems: 9,
-      maxItems: 9,
-      items: {
-        type: 'object',
-        properties: {
-          pathKey: { type: 'string' },
-          intro: { type: 'string' },
-          optionA: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
-          optionB: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
-        },
+    // TEMPORARY: Simple single decision instead of 9-path pathDecisions
+    // Testing if pathDecisions complexity is causing Gemini schema rejection
+    decision: {
+      type: 'object',
+      description: 'Single decision point with intro and two options (A and B). Each option has key, title, focus, and personalityAlignment.',
+      properties: {
+        intro: { type: 'string' },
+        optionA: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
+        optionB: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
       },
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
@@ -992,7 +985,8 @@ const DECISION_CONTENT_SCHEMA = {
     // NOTE: pathDecisions field moved BEFORE narrative in schema to ensure all 9 are generated first
     // This prevents truncation from cutting off decision structure
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'pathDecisions', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  // TEMPORARY: Using 'decision' instead of 'pathDecisions' to test schema complexity
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 // ============================================================================
@@ -6990,7 +6984,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           previously: generatedContent.previously || '', // Recap of previous events
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
-          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.pathDecisions, generatedContent.puzzleCandidates, chapter),
+          decision: isDecisionPoint ? generatedContent.decision : null, // Simple single-decision fallback
+          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision, generatedContent.puzzleCandidates, chapter),
           consistencyFacts: generatedContent.consistencyFacts || [],
           chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
           // Persist structured continuity/personality fields for future context + validation.
@@ -7232,48 +7227,54 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         pathDecisions: null,
       };
 
-      // Convert path-specific decisions format if present
-      if (isDecisionPoint && parsed.pathDecisions) {
-        // Support both array format (new) and object format (legacy)
-        let pathDecisionsObj;
-        if (Array.isArray(parsed.pathDecisions)) {
-          // New array format: convert to object keyed by pathKey
-          console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${parsed.pathDecisions.length} paths (array format)`);
-          pathDecisionsObj = {};
-          for (const decision of parsed.pathDecisions) {
-            if (decision.pathKey) {
-              pathDecisionsObj[decision.pathKey] = decision;
+      // Convert decision format if present
+      if (isDecisionPoint) {
+        if (parsed.pathDecisions) {
+          // Support both array format (new) and object format (legacy)
+          let pathDecisionsObj;
+          if (Array.isArray(parsed.pathDecisions)) {
+            // New array format: convert to object keyed by pathKey
+            console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${parsed.pathDecisions.length} paths (array format)`);
+            pathDecisionsObj = {};
+            for (const decision of parsed.pathDecisions) {
+              if (decision.pathKey) {
+                pathDecisionsObj[decision.pathKey] = decision;
+              }
+            }
+          } else {
+            // Legacy object format
+            pathDecisionsObj = parsed.pathDecisions;
+            console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${Object.keys(pathDecisionsObj).length} paths (object format)`);
+          }
+
+          // Convert each of the 9 path-specific decisions to internal format
+          result.pathDecisions = {};
+          for (const pathKey of Object.keys(pathDecisionsObj)) {
+            const rawDecision = pathDecisionsObj[pathKey];
+            if (rawDecision) {
+              result.pathDecisions[pathKey] = this._convertDecisionFormat(rawDecision);
             }
           }
-        } else {
-          // Legacy object format
-          pathDecisionsObj = parsed.pathDecisions;
-          console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${Object.keys(pathDecisionsObj).length} paths (object format)`);
-        }
 
-        // Convert each of the 9 path-specific decisions to internal format
-        result.pathDecisions = {};
-        for (const pathKey of Object.keys(pathDecisionsObj)) {
-          const rawDecision = pathDecisionsObj[pathKey];
-          if (rawDecision) {
-            result.pathDecisions[pathKey] = this._convertDecisionFormat(rawDecision);
+          // Validate that we got all 9 paths
+          const expectedPaths = ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'];
+          const missingPaths = expectedPaths.filter(p => !result.pathDecisions[p]);
+          if (missingPaths.length > 0) {
+            console.warn(`[StoryGenerationService] PATH DECISIONS INCOMPLETE - missing paths: ${missingPaths.join(', ')}`);
           }
-        }
 
-        // Validate that we got all 9 paths
-        const expectedPaths = ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'];
-        const missingPaths = expectedPaths.filter(p => !result.pathDecisions[p]);
-        if (missingPaths.length > 0) {
-          console.warn(`[StoryGenerationService] PATH DECISIONS INCOMPLETE - missing paths: ${missingPaths.join(', ')}`);
-        }
-
-        // Validate sample decision has proper structure
-        const sampleDecision = result.pathDecisions['1A-2A'];
-        if (!sampleDecision?.options?.[0]?.title || !sampleDecision?.options?.[1]?.title) {
-          console.error('[StoryGenerationService] PATH DECISION PARSING FAILED - sample (1A-2A) missing titles:', {
-            rawSample: pathDecisionsObj['1A-2A'],
-            convertedSample: sampleDecision,
-          });
+          // Validate sample decision has proper structure
+          const sampleDecision = result.pathDecisions['1A-2A'];
+          if (!sampleDecision?.options?.[0]?.title || !sampleDecision?.options?.[1]?.title) {
+            console.error('[StoryGenerationService] PATH DECISION PARSING FAILED - sample (1A-2A) missing titles:', {
+              rawSample: pathDecisionsObj['1A-2A'],
+              convertedSample: sampleDecision,
+            });
+          }
+        } else if (parsed.decision) {
+          // Simple single decision format (TEMPORARY for testing)
+          console.log(`[StoryGenerationService] Using simple decision format (single decision)`);
+          result.decision = this._convertDecisionFormat(parsed.decision);
         }
       }
 
