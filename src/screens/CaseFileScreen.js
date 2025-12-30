@@ -465,9 +465,12 @@ export default function CaseFileScreen({
   // 1. Normal flow: awaitingDecision is true (after puzzle solved), OR
   // 2. Narrative-first C subchapter: before puzzle, but ONLY after branching narrative is complete
   //    (existingBranchingChoice means player has made both sets of branching choices)
+  // 3. For Chapter 1 (no branching narrative): show when in story mode C subchapter before puzzle
   const showDecisionOptions = showDecision && (
     awaitingDecision ||
-    (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision && existingBranchingChoice)
+    (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision && (
+      hasBranchingNarrative ? existingBranchingChoice : true
+    ))
   );
 
   const [localSelection, setLocalSelection] = useState(selectedOptionKey);
