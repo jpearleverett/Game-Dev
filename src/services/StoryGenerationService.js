@@ -736,39 +736,40 @@ const DECISION_CONTENT_SCHEMA = {
     // PATH-SPECIFIC DECISIONS - Each of the 9 ending paths gets its own unique decision options
     // The player's branching choices within this subchapter determine which decision they see
     // This creates meaningful consequences for player choices: different paths lead to different strategic options
-    // COMPACT SCHEMA: Uses additionalProperties to define structure once instead of repeating 9 times
+    // EXPLICIT SCHEMA: Defines all 9 paths explicitly - Gemini doesn't support additionalProperties well
     pathDecisions: {
       type: 'object',
-      description: 'Nine unique decision options, one for each ending path (1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C). Each decision has intro (1-2 sentences framing choice for that path), optionA and optionB. Generate ALL 9 BEFORE writing narrative.',
-      additionalProperties: {
-        type: 'object',
-        description: 'Decision for a specific branching path',
-        properties: {
-          intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting this path\'s context' },
-          optionA: {
-            type: 'object',
-            properties: {
-              key: { type: 'string', description: 'Always "A"' },
-              title: { type: 'string', description: 'Action statement in imperative mood' },
-              focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
-              personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+      description: 'Nine unique decision options, one for each ending path. Each has intro (1-2 sentences), optionA and optionB with key/title/focus/personalityAlignment. Generate ALL 9 BEFORE writing narrative.',
+      properties: Object.fromEntries(['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'].map(pathKey => [
+        pathKey,
+        {
+          type: 'object',
+          properties: {
+            intro: { type: 'string' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string' },
+                title: { type: 'string' },
+                focus: { type: 'string' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
             },
-            required: ['key', 'title', 'focus', 'personalityAlignment'],
-          },
-          optionB: {
-            type: 'object',
-            properties: {
-              key: { type: 'string', description: 'Always "B"' },
-              title: { type: 'string', description: 'Action statement in imperative mood' },
-              focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
-              personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string' },
+                title: { type: 'string' },
+                focus: { type: 'string' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
             },
-            required: ['key', 'title', 'focus', 'personalityAlignment'],
           },
+          required: ['intro', 'optionA', 'optionB'],
         },
-        required: ['intro', 'optionA', 'optionB'],
-      },
-      // Explicitly require all 9 path keys
+      ])),
       required: ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'],
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
