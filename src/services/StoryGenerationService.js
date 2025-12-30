@@ -136,7 +136,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label shown to player (2-5 words, imperative mood). E.g., "Press him harder", "Change the subject"',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Mention Tom\'s name"',
     },
     response: {
       type: 'string',
@@ -363,7 +363,7 @@ const STORY_CONTENT_SCHEMA = {
                 type: 'object',
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
-                  label: { type: 'string', description: 'Action label (2-5 words, imperative)' },
+                  label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity.' },
                   response: { type: 'string', description: 'Narrative response (~165 words)' },
                   details: {
                     type: 'array',
@@ -402,7 +402,7 @@ const STORY_CONTENT_SCHEMA = {
                   type: 'object',
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
-                    label: { type: 'string', description: 'Action label (2-5 words)' },
+                    label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options.' },
                     response: { type: 'string', description: 'Ending segment (~170 words). Conclude this path.' },
                     details: {
                       type: 'array',
@@ -733,46 +733,267 @@ const DECISION_CONTENT_SCHEMA = {
       minimum: 1,
       maximum: 12,
     },
-    // DECISION MOVED BEFORE NARRATIVE - ensures decision is fully generated before long narrative
-    // This enables single-pass generation (no two-pass needed) since truncation affects narrative, not decision
-    decision: {
+    // PATH-SPECIFIC DECISIONS - Each of the 9 ending paths gets its own unique decision options
+    // The player's branching choices within this subchapter determine which decision they see
+    // This creates meaningful consequences for player choices: different paths lead to different strategic options
+    pathDecisions: {
       type: 'object',
-      description: 'The binary choice presented to the player. Generate this COMPLETELY before writing the narrative.',
+      description: 'Nine unique decision options, one for each ending path. The decision shown depends on which branching choices the player made within this subchapter. Generate ALL 9 COMPLETELY before writing the narrative.',
       properties: {
-        intro: {
-          type: 'string',
-          description: '1-2 sentences framing the impossible choice Jack faces',
-        },
-        optionA: {
+        '1A-2A': {
           type: 'object',
+          description: 'Decision for players who chose option 1A then 2A',
           properties: {
-            key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
-            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes. Second, what it explicitly risks.' },
-            personalityAlignment: {
-              type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
-              description: 'Which player personality type would naturally choose this option',
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1A→2A path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
             },
           },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
+          required: ['intro', 'optionA', 'optionB'],
         },
-        optionB: {
+        '1A-2B': {
           type: 'object',
+          description: 'Decision for players who chose option 1A then 2B',
           properties: {
-            key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
-            focus: { type: 'string', description: 'Two sentences: First, what this path prioritizes. Second, what it explicitly risks.' },
-            personalityAlignment: {
-              type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
-              description: 'Which player personality type would naturally choose this option',
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1A→2B path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
             },
           },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1A-2C': {
+          type: 'object',
+          description: 'Decision for players who chose option 1A then 2C',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1A→2C path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1B-2A': {
+          type: 'object',
+          description: 'Decision for players who chose option 1B then 2A',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1B→2A path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1B-2B': {
+          type: 'object',
+          description: 'Decision for players who chose option 1B then 2B',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1B→2B path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1B-2C': {
+          type: 'object',
+          description: 'Decision for players who chose option 1B then 2C',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1B→2C path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1C-2A': {
+          type: 'object',
+          description: 'Decision for players who chose option 1C then 2A',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1C→2A path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1C-2B': {
+          type: 'object',
+          description: 'Decision for players who chose option 1C then 2B',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1C→2B path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
+        },
+        '1C-2C': {
+          type: 'object',
+          description: 'Decision for players who chose option 1C then 2C',
+          properties: {
+            intro: { type: 'string', description: '1-2 sentences framing the choice, reflecting the 1C→2C path context' },
+            optionA: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "A"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+            optionB: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', description: 'Always "B"' },
+                title: { type: 'string', description: 'Action statement in imperative mood' },
+                focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
+                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
+              },
+              required: ['key', 'title', 'focus', 'personalityAlignment'],
+            },
+          },
+          required: ['intro', 'optionA', 'optionB'],
         },
       },
-      required: ['intro', 'optionA', 'optionB'],
+      required: ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'],
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
     branchingNarrative: {
@@ -1012,10 +1233,10 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (~500 words). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
     },
-    // NOTE: decision field moved BEFORE narrative in schema to ensure it's generated first
+    // NOTE: pathDecisions field moved BEFORE narrative in schema to ensure all 9 are generated first
     // This prevents truncation from cutting off decision structure
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'pathDecisions', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 // ============================================================================
@@ -1078,6 +1299,28 @@ Choice 2  Choice 2  Choice 2  (3 options each)
 4. Second choice should be about Jack's FOCUS (what he prioritizes)
 5. Endings conclude this subchapter's path but leave threads for next
 
+**CRITICAL: LOGICAL CONSISTENCY BETWEEN SEGMENTS**
+Each choice response MUST logically flow from BOTH:
+- The opening's established state (what situation exists, what obstacles are present)
+- The specific choice the player made (how they chose to act)
+
+If the opening establishes a BARRIER (e.g., "Claire refuses to hand over the ledger"), the choice response must:
+- Show HOW Jack overcomes that barrier based on his chosen approach, OR
+- Show Jack failing to overcome it and adapting, OR
+- Show the consequences of that barrier still being in place
+
+NEVER have a response assume access to something the opening denied without showing HOW access was gained.
+
+BAD EXAMPLE:
+- Opening: "Claire pulled the folder close. 'The Ledger is not for sale.'"
+- Choice: "Examine the recent entries"
+- Response: "Jack flipped through the pages..." ← WRONG! Claire didn't give it to him!
+
+GOOD EXAMPLE:
+- Opening: "Claire pulled the folder close. 'The Ledger is not for sale.'"
+- Choice: "Examine the recent entries"
+- Response: "Jack held her gaze, unblinking. 'I'm not buying. I'm borrowing.' His hand was already on the folder before she could object. Claire's grip loosened—something in his eyes told her this wasn't negotiable. He flipped to the most recent pages..." ← Shows the transition!
+
 **CRITICAL: TRUE INFINITE BRANCHING**
 Each of the 9 paths can lead to DIFFERENT narrative states. This means:
 - DIFFERENT CLUES: Different paths can reveal different information
@@ -1098,10 +1341,33 @@ Because of this:
 
 Think of it as true RPG branching: your choices genuinely shape the story.
 
-**CHOICE DESIGN:**
-- Labels: 2-5 words, imperative mood ("Press him harder", "Change the subject", "Wait and observe")
-- Prompts: 5-15 words setting context ("How does Jack respond?", "What does Jack focus on?")
-- Branches should feel MEANINGFULLY DIFFERENT, not just reworded
+**CHOICE DESIGN - SITUATIONAL, NOT PERSONALITY-BASED:**
+The 3 branching options should be THREE DIFFERENT ACTIONS Jack could take in the situation - NOT variations of aggression/caution.
+
+**WRONG (personality-aligned):**
+- "Confront him directly" (aggressive)
+- "Ask diplomatically" (neutral)
+- "Observe silently" (cautious)
+These are the SAME action (questioning someone) with different intensity levels. Boring!
+
+**RIGHT (situationally different):**
+In a scene where Jack finds Claire alone in her office:
+- "Ask about the missing file" (pursue one lead)
+- "Mention Tom's name" (pursue a different lead)
+- "Examine the photographs on her desk" (investigate the environment instead of talking)
+
+In a scene where Jack confronts a suspect at the docks:
+- "Show him the forged signature" (use evidence)
+- "Ask about the night of the fire" (probe timeline)
+- "Follow him when he walks away" (change the scene entirely)
+
+**KEY PRINCIPLES:**
+- Each option should lead to DIFFERENT INFORMATION or DISCOVERIES
+- Options can be: talk to different people, investigate different objects, go to different places, ask about different topics
+- The player is choosing WHAT to focus on, not HOW aggressively to do it
+- All three should feel like valid, reasonable responses to the situation
+- Labels: 2-5 words, imperative mood
+- Prompts: 5-15 words setting context ("What does Jack focus on?", "Where does Jack look?")
 
 **TAPPABLE DETAILS:**
 Each segment can have 0-2 "details" - phrases the player can tap for Jack's observation.
@@ -3163,7 +3429,10 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       const chapter = this._extractChapterFromCase(choice.caseNumber);
       const decisionPathKey = this._getPathKeyForChapter(chapter, history);
       const decisionEntry = this.getGeneratedEntry(choice.caseNumber, decisionPathKey) || getStoryEntry(choice.caseNumber, 'ROOT');
-      const chosen = decisionEntry?.decision?.options?.find((o) => o.key === choice.optionKey) || null;
+      // Handle both legacy (decision) and new (pathDecisions) formats
+      // For pathDecisions, use canonical path 1A-2A since Option A/B are consistent across paths
+      const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
+      const chosen = decisionData?.options?.find((o) => o.key === choice.optionKey) || null;
 
       const title = chosen?.title || `Option ${choice.optionKey}`;
       const focus = chosen?.focus || '';
@@ -3252,18 +3521,21 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     // Try to get context from the decision itself if available
     const decisionPathKey = this._getPathKeyForChapter(chapter, fullChoiceHistory);
     const decisionEntry = this.getGeneratedEntry(choice.caseNumber, decisionPathKey);
-    const decisionContext = decisionEntry?.decision?.options?.find(o => o.key === choice.optionKey);
-    const otherOption = decisionEntry?.decision?.options?.find(o => o.key !== choice.optionKey);
+    // Handle both legacy (decision) and new (pathDecisions) formats
+    // Use canonical path 1A-2A for consequence generation since Option A/B are consistent across paths
+    const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
+    const decisionContext = decisionData?.options?.find(o => o.key === choice.optionKey);
+    const otherOption = decisionData?.options?.find(o => o.key !== choice.optionKey);
 
     // Extract narrative context for richer consequence generation
     const narrativeContext = decisionEntry?.narrative ? decisionEntry.narrative.slice(-2000) : '';
-    const decisionIntro = decisionEntry?.decision?.intro?.[0] || '';
+    const decisionIntro = decisionData?.intro?.[0] || '';
     const activeThreads = (
       decisionEntry?.consistencyFacts ||
       this._getRelevantPersistedConsistencyFacts(decisionPathKey) ||
       []
     ).slice(0, 5);
-    const charactersInvolved = decisionEntry?.decision?.options?.flatMap(o => o.characters || []) || [];
+    const charactersInvolved = decisionData?.options?.flatMap(o => o.characters || []) || [];
 
     const consequencePrompt = `Generate narrative consequences for a player decision in a noir detective story.
 
@@ -3582,9 +3854,11 @@ Generate realistic, specific consequences based on the actual narrative content.
             this.getGeneratedEntry(choice.caseNumber, decisionPathKey) ||
             getStoryEntry(choice.caseNumber, 'ROOT');
 
+          // Handle both legacy (decision) and new (pathDecisions) formats
+          const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
           const opt =
-            decisionEntry?.decision?.options?.find((o) => o?.key === choice.optionKey) ||
-            (choice.optionKey === 'A' ? decisionEntry?.decision?.optionA : decisionEntry?.decision?.optionB) ||
+            decisionData?.options?.find((o) => o?.key === choice.optionKey) ||
+            (choice.optionKey === 'A' ? decisionData?.optionA : decisionData?.optionB) ||
             null;
 
           alignment = opt?.personalityAlignment || null;
@@ -4352,8 +4626,10 @@ Generate realistic, specific consequences based on the actual narrative content.
       const decisionChapter = this._extractChapterFromCase(last.caseNumber);
       const decisionPathKey = this._getPathKeyForChapter(decisionChapter, choiceHistory);
       const decisionEntry = this.getGeneratedEntry(last.caseNumber, decisionPathKey) || getStoryEntry(last.caseNumber, 'ROOT');
-      const chosenOption = decisionEntry?.decision?.options?.find((o) => o.key === last.optionKey) || null;
-      const otherOption = decisionEntry?.decision?.options?.find((o) => o.key !== last.optionKey) || null;
+      // Handle both legacy (decision) and new (pathDecisions) formats
+      const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
+      const chosenOption = decisionData?.options?.find((o) => o.key === last.optionKey) || null;
+      const otherOption = decisionData?.options?.find((o) => o.key !== last.optionKey) || null;
 
       // Prefer stored title/focus from choice history (always available after decision),
       // fall back to looking it up from the decision entry
@@ -5253,9 +5529,11 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
         }
 
         // Also show the decision options that were presented
-        if (ch.decision?.options) {
+        // Handle both legacy (decision) and new (pathDecisions) formats
+        const decisionData = ch.pathDecisions?.['1A-2A'] || ch.decision;
+        if (decisionData?.options) {
           summary += `\n[Decision options were:\n`;
-          ch.decision.options.forEach(opt => {
+          decisionData.options.forEach(opt => {
             const chosen = choice?.optionKey === opt.key ? ' ← CHOSEN' : '';
             summary += `   ${opt.key}: "${opt.title}" - ${opt.focus}${chosen}\n`;
           });
@@ -5613,21 +5891,36 @@ Example of CORRECT approach: "The salt wind cut through Jack's coat as he steppe
     if (isDecisionPoint) {
       task += `
 
-### DECISION POINT REQUIREMENTS
-This subchapter MUST end with a meaningful binary choice (included in the "decision" field).
+### DECISION POINT REQUIREMENTS - PATH-SPECIFIC DECISIONS
+This subchapter ends with a binary choice. The player will see different decision options depending on which branching path they took within this subchapter.
 
-The decision should:
-1. Present TWO distinct paths (Option A and Option B)
+**CRITICAL: Generate 9 UNIQUE decisions in the "pathDecisions" object** - one for each ending path:
+- 1A-2A, 1A-2B, 1A-2C (paths starting with choice 1A)
+- 1B-2A, 1B-2B, 1B-2C (paths starting with choice 1B)
+- 1C-2A, 1C-2B, 1C-2C (paths starting with choice 1C)
+
+**WHY THIS MATTERS:**
+A player who took the aggressive path (e.g., 1A→1A-2A) should face decisions that reflect THEIR journey.
+A player who took the cautious path (e.g., 1C→1C-2C) should face decisions suited to THEIR situation.
+The narrative context differs by path, so the strategic options should differ too.
+
+**DECISION DESIGN REQUIREMENTS:**
+1. Each of the 9 pathDecisions must present TWO distinct paths (Option A and Option B)
 2. Both options must be morally complex - NO obvious "right" answer
 3. Each choice should have CLEAR but DIFFERENT consequences
-4. The choice must feel EARNED by the narrative, not forced
+4. The decision must feel EARNED by the specific path the player took
 5. Connect to the themes of wrongful conviction, certainty vs truth
+6. The intro should reference elements unique to that branching path
 
-For the decision object:
-- intro: 1-2 sentences framing the impossible choice Jack faces
-- optionA.title: Action statement in imperative mood (e.g., "Confront Wade directly")
+**EXAMPLE of path-specific variation:**
+- Path 1A-2A (aggressive throughout): "After forcing Claire's hand, Jack now faces a riskier choice..."
+- Path 1C-2C (cautious throughout): "Having gathered the evidence methodically, Jack now sees two clear paths..."
+
+**For EACH decision in pathDecisions (all 9):**
+- intro: 1-2 sentences framing the choice, reflecting that specific path's context
+- optionA.title: Action statement in imperative mood
 - optionA.focus: What this path prioritizes and what it risks
-- optionB.title: Action statement in imperative mood (e.g., "Gather more evidence first")
+- optionB.title: Action statement in imperative mood
 - optionB.focus: What this path prioritizes and what it risks`;
     }
 
@@ -6728,24 +7021,25 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           hasTitle: !!generatedContent?.title,
           narrativeLength: generatedContent?.narrative?.length || 0,
           hasBranchingNarrative: !!generatedContent?.branchingNarrative?.opening?.text,
-          hasDecision: !!generatedContent?.decision,
+          hasPathDecisions: !!generatedContent?.pathDecisions,
           hasBridgeText: !!generatedContent?.bridgeText,
           hasPreviously: !!generatedContent?.previously,
           hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
         }, 'debug');
 
-        // Validate decision structure for decision points
-        if (isDecisionPoint && generatedContent.decision) {
-          console.log(`[StoryGenerationService] Decision generated: "${generatedContent.decision.optionA?.title}" vs "${generatedContent.decision.optionB?.title}"`);
-          llmTrace('StoryGenerationService', traceId, 'decision.generated', {
-            optionA: {
-              key: generatedContent?.decision?.optionA?.key,
-              title: generatedContent?.decision?.optionA?.title,
-            },
-            optionB: {
-              key: generatedContent?.decision?.optionB?.key,
-              title: generatedContent?.decision?.optionB?.title,
-            },
+        // Validate decision structure for decision points (path-specific decisions)
+        if (isDecisionPoint && generatedContent.pathDecisions) {
+          const pathKeys = Object.keys(generatedContent.pathDecisions);
+          const sampleDecision = generatedContent.pathDecisions['1A-2A'] || generatedContent.pathDecisions[pathKeys[0]];
+          console.log(`[StoryGenerationService] Path-specific decisions generated: ${pathKeys.length} paths, sample: "${sampleDecision?.optionA?.title}" vs "${sampleDecision?.optionB?.title}"`);
+          llmTrace('StoryGenerationService', traceId, 'pathDecisions.generated', {
+            pathCount: pathKeys.length,
+            paths: pathKeys,
+            samplePath: '1A-2A',
+            sampleDecision: sampleDecision ? {
+              optionA: { key: sampleDecision.optionA?.key, title: sampleDecision.optionA?.title },
+              optionB: { key: sampleDecision.optionB?.key, title: sampleDecision.optionB?.title },
+            } : null,
           }, 'debug');
         }
 
@@ -6939,8 +7233,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           bridgeText: generatedContent.bridgeText,
           previously: generatedContent.previously || '', // Recap of previous events
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
-          decision: isDecisionPoint ? generatedContent.decision : null,
-          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.decision, generatedContent.puzzleCandidates, chapter),
+          pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
+          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.pathDecisions, generatedContent.puzzleCandidates, chapter),
           consistencyFacts: generatedContent.consistencyFacts || [],
           chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
           // Persist structured continuity/personality fields for future context + validation.
@@ -6962,7 +7256,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           wordCount: storyEntry.wordCount,
           hasBranchingNarrative: !!storyEntry.branchingNarrative?.opening?.text,
           generatedAt: storyEntry.generatedAt,
-          hasDecision: !!storyEntry.decision,
+          hasPathDecisions: !!storyEntry.pathDecisions,
         }, 'debug');
 
         // Update local cache
@@ -7179,20 +7473,37 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         jackBehaviorDeclaration: parsed.jackBehaviorDeclaration,
         narrativeThreads: Array.isArray(parsed.narrativeThreads) ? parsed.narrativeThreads : [],
         previousThreadsAddressed: Array.isArray(parsed.previousThreadsAddressed) ? parsed.previousThreadsAddressed : [],
-        decision: null,
+        pathDecisions: null,
       };
 
-      // Convert decision format if present
-      if (isDecisionPoint && parsed.decision) {
-        // DEBUG: Log raw decision from LLM to diagnose parsing issues
-        console.log('[StoryGenerationService] Raw decision from LLM:', JSON.stringify(parsed.decision, null, 2));
-        result.decision = this._convertDecisionFormat(parsed.decision);
-        // DEBUG: Log converted decision
-        if (!result.decision?.options?.[0]?.title || !result.decision?.options?.[1]?.title) {
-          console.error('[StoryGenerationService] DECISION PARSING FAILED - options missing titles:', {
-            rawOptionA: parsed.decision.optionA,
-            rawOptionB: parsed.decision.optionB,
-            convertedOptions: result.decision?.options,
+      // Convert path-specific decisions format if present
+      if (isDecisionPoint && parsed.pathDecisions) {
+        // DEBUG: Log raw pathDecisions from LLM
+        const pathKeys = Object.keys(parsed.pathDecisions);
+        console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${pathKeys.length} paths`);
+
+        // Convert each of the 9 path-specific decisions to internal format
+        result.pathDecisions = {};
+        for (const pathKey of pathKeys) {
+          const rawDecision = parsed.pathDecisions[pathKey];
+          if (rawDecision) {
+            result.pathDecisions[pathKey] = this._convertDecisionFormat(rawDecision);
+          }
+        }
+
+        // Validate that we got all 9 paths
+        const expectedPaths = ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'];
+        const missingPaths = expectedPaths.filter(p => !result.pathDecisions[p]);
+        if (missingPaths.length > 0) {
+          console.warn(`[StoryGenerationService] PATH DECISIONS INCOMPLETE - missing paths: ${missingPaths.join(', ')}`);
+        }
+
+        // Validate sample decision has proper structure
+        const sampleDecision = result.pathDecisions['1A-2A'];
+        if (!sampleDecision?.options?.[0]?.title || !sampleDecision?.options?.[1]?.title) {
+          console.error('[StoryGenerationService] PATH DECISION PARSING FAILED - sample (1A-2A) missing titles:', {
+            rawSample: parsed.pathDecisions['1A-2A'],
+            convertedSample: sampleDecision,
           });
         }
       }
@@ -7240,7 +7551,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       puzzleCandidates: [],
       briefing: { summary: '', objectives: [] },
       consistencyFacts: [],
-      decision: null,
+      pathDecisions: null, // Path-specific decisions for C subchapters
     };
 
     if (typeof content !== 'string') {
