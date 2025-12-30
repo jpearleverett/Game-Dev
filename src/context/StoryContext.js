@@ -40,6 +40,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
     isGenerating,
     generationType,
     isPreloading,
+    // Background resilience: auto-retry when returning from background after network failure
+    shouldAutoRetry,
+    getPendingGeneration,
+    clearAutoRetry,
     configureLLM,
     needsGeneration,
     generateForCase,
@@ -422,9 +426,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
       isGenerating,
       generationType,
       isPreloading,
+      // Background resilience: auto-retry when returning from background after network failure
+      shouldAutoRetry,
+      getPendingGeneration,
     },
     getCurrentPathKey,
-  }), [storyCampaign, generationStatus, generationProgress, generationError, backgroundGenerationError, isLLMConfigured, isGenerating, generationType, isPreloading, getCurrentPathKey]);
+  }), [storyCampaign, generationStatus, generationProgress, generationError, backgroundGenerationError, isLLMConfigured, isGenerating, generationType, isPreloading, shouldAutoRetry, getPendingGeneration, getCurrentPathKey]);
 
   /**
    * TRUE INFINITE BRANCHING: Wrapper that saves branching choice AND triggers prefetch.
@@ -477,6 +484,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     cancelGeneration,
     clearGenerationError,
     clearBackgroundGenerationError,
+    clearAutoRetry, // Clear auto-retry flag after handling
   }), [
     activateStoryCase,
     selectStoryDecision,
@@ -494,6 +502,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     cancelGeneration,
     clearGenerationError,
     clearBackgroundGenerationError,
+    clearAutoRetry,
   ]);
 
   return (

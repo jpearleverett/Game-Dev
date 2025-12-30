@@ -66,6 +66,10 @@ export default function CaseFileScreen({
   isGenerating = false,
   generationStatus,
   generationError,
+  // Background resilience: auto-retry after returning from background
+  shouldAutoRetry = false,
+  getPendingGeneration,
+  onAutoRetry,
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
@@ -120,6 +124,23 @@ export default function CaseFileScreen({
     const timer = setInterval(tick, 5000);
     return () => clearInterval(timer);
   }, [unlockTarget]);
+
+  // Background resilience: auto-retry when returning from background after network failure
+  const autoRetryTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (shouldAutoRetry && !autoRetryTriggeredRef.current && onAutoRetry) {
+      autoRetryTriggeredRef.current = true;
+      console.log('[CaseFileScreen] Auto-retry triggered after background return');
+      // Brief delay so user sees "Reconnecting..." message
+      const timer = setTimeout(() => {
+        onAutoRetry();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    if (!shouldAutoRetry) {
+      autoRetryTriggeredRef.current = false;
+    }
+  }, [shouldAutoRetry, onAutoRetry]);
 
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
 

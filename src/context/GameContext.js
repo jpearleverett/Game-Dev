@@ -694,6 +694,7 @@ export function GameProvider({
     generateChapter: story.generateChapter,
     cancelGeneration: story.cancelGeneration,
     clearGenerationError: story.clearGenerationError,
+    clearAutoRetry: story.clearAutoRetry, // Clear auto-retry flag after handling
     // Endings & Achievements
     unlockEnding,
     unlockAchievement,

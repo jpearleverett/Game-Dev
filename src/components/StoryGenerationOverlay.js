@@ -122,11 +122,30 @@ export default function StoryGenerationOverlay({
   retryAttempt = 0, // Current retry attempt number (0 = first attempt)
   maxRetries = 3, // Maximum retries before fallback
   isFallback = false, // True when using fallback content
+  shouldAutoRetry = false, // True when returning from background with failed generation
   onCancel,
   onRetry,
+  onAutoRetry, // Called when auto-retry should happen (after returning from background)
   onGoToSettings,
   onBackToHub,
 }) {
+  // Auto-retry when returning from background after network failure
+  const autoRetryTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (shouldAutoRetry && !autoRetryTriggeredRef.current && onAutoRetry) {
+      autoRetryTriggeredRef.current = true;
+      console.log('[StoryGenerationOverlay] Auto-retry triggered after background return');
+      // Brief delay so user sees "Reconnecting..." message
+      const timer = setTimeout(() => {
+        onAutoRetry();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    if (!shouldAutoRetry) {
+      autoRetryTriggeredRef.current = false;
+    }
+  }, [shouldAutoRetry, onAutoRetry]);
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const quoteIndex = useRef(Math.floor(Math.random() * QUOTES.length)).current;
@@ -321,31 +340,44 @@ export default function StoryGenerationOverlay({
 
             {hasError && (
               <>
-                <Text style={styles.errorText}>
-                  {noirErrorRef.current || "The trail went cold."}
-                </Text>
-                <Text style={styles.technicalError}>
-                  {error || 'Unknown error'}
-                </Text>
-                <Text style={styles.blockingText}>
-                  The story cannot continue until this is resolved.
-                </Text>
-                <View style={styles.buttonRow}>
-                  {onRetry && (
-                    <Pressable style={styles.button} onPress={onRetry}>
-                      <Text style={styles.buttonText}>Try Again</Text>
-                    </Pressable>
-                  )}
-                  {onGoToSettings && (
-                    <Pressable style={[styles.button, styles.secondaryButton]} onPress={onGoToSettings}>
-                      <Text style={styles.buttonText}>Settings</Text>
-                    </Pressable>
-                  )}
-                </View>
-                {onBackToHub && (
-                  <Pressable style={styles.backButton} onPress={onBackToHub}>
-                    <Text style={styles.backText}>Return to Case Files</Text>
-                  </Pressable>
+                {shouldAutoRetry ? (
+                  // Auto-retry in progress after returning from background
+                  <>
+                    <Text style={styles.progressText}>Reconnecting...</Text>
+                    <Text style={styles.hintText}>
+                      Connection was interrupted. Resuming where we left off...
+                    </Text>
+                  </>
+                ) : (
+                  // Normal error state
+                  <>
+                    <Text style={styles.errorText}>
+                      {noirErrorRef.current || "The trail went cold."}
+                    </Text>
+                    <Text style={styles.technicalError}>
+                      {error || 'Unknown error'}
+                    </Text>
+                    <Text style={styles.blockingText}>
+                      The story cannot continue until this is resolved.
+                    </Text>
+                    <View style={styles.buttonRow}>
+                      {onRetry && (
+                        <Pressable style={styles.button} onPress={onRetry}>
+                          <Text style={styles.buttonText}>Try Again</Text>
+                        </Pressable>
+                      )}
+                      {onGoToSettings && (
+                        <Pressable style={[styles.button, styles.secondaryButton]} onPress={onGoToSettings}>
+                          <Text style={styles.buttonText}>Settings</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                    {onBackToHub && (
+                      <Pressable style={styles.backButton} onPress={onBackToHub}>
+                        <Text style={styles.backText}>Return to Case Files</Text>
+                      </Pressable>
+                    )}
+                  </>
                 )}
               </>
             )}
