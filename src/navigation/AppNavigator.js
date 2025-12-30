@@ -49,6 +49,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     // LLM configuration
     storyGeneration,
     configureLLM,
+    clearAutoRetry, // Background resilience: clear auto-retry flag
   } = game;
 
   if (!fontsReady) {
@@ -209,6 +210,14 @@ export default function AppNavigator({ fontsReady, audio }) {
               isGenerating={game.story?.generation?.isGenerating || false}
               generationStatus={game.story?.generation?.status}
               generationError={game.story?.generation?.error}
+              shouldAutoRetry={game.story?.generation?.shouldAutoRetry || false}
+              getPendingGeneration={game.story?.generation?.getPendingGeneration}
+              onAutoRetry={() => {
+                // Handle auto-retry after returning from background
+                console.log('[AppNavigator] Auto-retry triggered');
+                clearAutoRetry?.();
+                actions.handleStoryContinue();
+              }}
               onBack={() => {
                  if (status === GAME_STATUS.SOLVED || status === GAME_STATUS.FAILED) {
                      navigation.navigate('Solved');

@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { storyGenerationService } from '../services/StoryGenerationService';
 import { llmService } from '../services/LLMService';
 import { createTraceId, llmTrace } from '../utils/llmTrace';
@@ -57,10 +58,65 @@ export function useStoryGeneration(storyCampaign) {
   const subchapterPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate within-chapter subchapter prefetch
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
 
+  // Background resilience: Track app state to handle generation during backgrounding
+  const appStateRef = useRef(AppState.currentState);
+  const wasBackgroundedDuringGenerationRef = useRef(false);
+  const generationStartTimeRef = useRef(null);
+  const pendingGenerationRef = useRef(null); // Store params for auto-retry on foreground return
+  const [shouldAutoRetry, setShouldAutoRetry] = useState(false); // Signal UI to auto-retry
+
   // Keep branchingChoicesRef in sync to avoid stale closures
   useEffect(() => {
     branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
   }, [storyCampaign?.branchingChoices]);
+
+  // AppState listener for background resilience
+  // Tracks when app goes to background during generation to handle gracefully on return
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      const wasActive = appStateRef.current === 'active';
+      const isNowBackground = nextAppState.match(/inactive|background/);
+      const isNowActive = nextAppState === 'active';
+
+      // Went to background while generating
+      if (wasActive && isNowBackground && status === GENERATION_STATUS.GENERATING) {
+        console.log('[useStoryGeneration] App backgrounded during generation - tracking for resilience');
+        wasBackgroundedDuringGenerationRef.current = true;
+      }
+
+      // Returned to foreground
+      if (!wasActive && isNowActive) {
+        if (wasBackgroundedDuringGenerationRef.current) {
+          const elapsed = generationStartTimeRef.current
+            ? Math.round((Date.now() - generationStartTimeRef.current) / 1000)
+            : 0;
+          console.log(`[useStoryGeneration] App returned to foreground after ${elapsed}s - status: ${status}`);
+
+          // If we have an error and pending generation params, signal auto-retry
+          // This handles the case where Android killed the network when we switched apps
+          if (status === GENERATION_STATUS.ERROR && pendingGenerationRef.current) {
+            console.log('[useStoryGeneration] Error detected after backgrounding - will auto-retry');
+            setShouldAutoRetry(true);
+          }
+
+          wasBackgroundedDuringGenerationRef.current = false;
+        }
+      }
+
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [status]);
+
+  // Auto-retry helper: get pending generation params for UI to use
+  const getPendingGeneration = useCallback(() => pendingGenerationRef.current, []);
+
+  // Clear auto-retry flag (call after handling the retry)
+  const clearAutoRetry = useCallback(() => {
+    setShouldAutoRetry(false);
+  }, []);
 
   /**
    * Prefetch next chapter (Subchapter A) for BOTH possible decision branches.
@@ -411,6 +467,10 @@ export function useStoryGeneration(storyCampaign) {
     setIsCacheMiss(wasCacheMiss);
     setError(null);
     setProgress({ current: 0, total: 1 });
+    generationStartTimeRef.current = Date.now(); // Track for background resilience
+
+    // Store params for auto-retry if app is backgrounded and connection is killed
+    pendingGenerationRef.current = { chapter, subchapter, pathKey, choiceHistory, branchingChoices };
 
     console.log(`[useStoryGeneration] [${genId}] Starting generation for Chapter ${chapter}.${subchapter} (path ${pathKey})...`);
 
@@ -458,6 +518,7 @@ export function useStoryGeneration(storyCampaign) {
       setProgress({ current: 1, total: 1 });
 
       // Log result details
+      pendingGenerationRef.current = null; // Clear pending on success
       if (entry?.isFallback || entry?.isEmergencyFallback) {
         console.warn(`[useStoryGeneration] [${genId}] Completed with FALLBACK in ${duration}ms: ${entry.fallbackReason || 'unknown reason'}`);
         setStatus(GENERATION_STATUS.COMPLETE);
@@ -1176,6 +1237,11 @@ export function useStoryGeneration(storyCampaign) {
     generationType,
     isPreloading: status === GENERATION_STATUS.GENERATING && generationType === GENERATION_TYPE.PRELOAD,
     isCacheMiss, // True when player chose an unexpected path and content wasn't pre-loaded
+
+    // Background resilience: auto-retry when returning from background after network failure
+    shouldAutoRetry, // True when app returned from background with failed generation
+    getPendingGeneration, // Get { chapter, subchapter, pathKey, choiceHistory, branchingChoices } for retry
+    clearAutoRetry, // Clear the auto-retry flag after handling
 
     // Actions
     configureLLM,

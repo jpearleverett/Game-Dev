@@ -7637,12 +7637,21 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // =========================================================================
     // CATEGORY 2: TIMELINE CONSISTENCY
     // =========================================================================
+    // NOTE: These patterns must be VERY specific to avoid false positives.
+    // The previous patterns used greedy `.*` which matched across the entire narrative,
+    // triggering false positives like "five years ago, [unrelated text], Silas walked in".
+    // Now we only match within the same sentence (no periods between) and limit to 60 chars.
     const timelineChecks = [
-      { pattern: /(?:twenty|20)\s*years.*(?:tom\s*wade|wade.*friend)/i, issue: 'Tom Wade friendship is 30 years, not 20' },
-      { pattern: /(?:ten|10)\s*years.*(?:sarah|reeves.*partner)/i, issue: 'Sarah partnership is 13 years, not 10' },
-      { pattern: /(?:five|5)\s*years.*(?:silas|reed.*partner)/i, issue: 'Silas partnership is 8 years, not 5' },
-      { pattern: /(?:five|5|ten|10)\s*years.*(?:emily.*dead|closed.*emily)/i, issue: 'Emily case was closed 7 years ago exactly' },
-      { pattern: /(?:five|5|ten|10)\s*years.*(?:eleanor.*prison|imprisoned)/i, issue: 'Eleanor has been imprisoned for 8 years exactly' },
+      // Match "twenty/20 years" + up to 60 chars (no period) + "tom wade/wade friend"
+      { pattern: /(?:twenty|20)\s*years[^.]{0,60}(?:tom\s*wade|wade[^.]{0,20}friend)/i, issue: 'Tom Wade friendship is 30 years, not 20' },
+      // Match "ten/10 years" + up to 60 chars (no period) + "sarah/reeves partner"
+      { pattern: /(?:ten|10)\s*years[^.]{0,60}(?:sarah[^.]{0,20}partner|reeves[^.]{0,20}partner)/i, issue: 'Sarah partnership is 13 years, not 10' },
+      // Match "five/5 years" + up to 60 chars (no period) + "silas partner/reed partner"
+      { pattern: /(?:five|5)\s*years[^.]{0,60}(?:silas[^.]{0,20}partner|reed[^.]{0,20}partner)/i, issue: 'Silas partnership is 8 years, not 5' },
+      // Match wrong year + up to 60 chars (no period) + emily case context
+      { pattern: /(?:five|5|ten|10)\s*years[^.]{0,60}(?:emily[^.]{0,30}(?:dead|case|closed)|closed[^.]{0,30}emily)/i, issue: 'Emily case was closed 7 years ago exactly' },
+      // Match wrong year + up to 60 chars (no period) + eleanor prison context
+      { pattern: /(?:five|5|ten|10)\s*years[^.]{0,60}(?:eleanor[^.]{0,30}prison|imprisoned[^.]{0,30}eleanor)/i, issue: 'Eleanor has been imprisoned for 8 years exactly' },
     ];
 
     timelineChecks.forEach(({ pattern, issue }) => {
