@@ -463,6 +463,66 @@ export function StoryProvider({ children, progress, updateProgress }) {
     }
   }, [saveBranchingChoice, progress.storyCampaign, isLLMConfigured, triggerPrefetchAfterBranchingComplete]);
 
+  /**
+   * NARRATIVE-FIRST FLOW: Wrapper that stores pre-puzzle decision AND triggers next chapter generation.
+   * When player makes their decision at C subchapter (before solving puzzle), we immediately
+   * start generating the next chapter in the background. This way, when the puzzle is solved,
+   * the next chapter is already ready or nearly ready.
+   */
+  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}) => {
+    if (!optionKey) return;
+
+    // Store the decision
+    selectDecisionBeforePuzzle(optionKey, optionDetails);
+
+    // Get current state for generation
+    const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
+    const caseNumber = currentCampaign.activeCaseNumber;
+
+    if (!caseNumber) return;
+
+    // Calculate next chapter info
+    const chapter = currentCampaign.chapter;
+    const nextChapter = chapter + 1;
+    const nextCaseNumber = formatCaseNumber(nextChapter, 1); // Next chapter, subchapter A
+
+    // Build the choice history including this new decision
+    const nextChoiceHistory = [
+      ...(currentCampaign.choiceHistory || []),
+      {
+        caseNumber,
+        optionKey,
+        optionTitle: optionDetails.title || null,
+        optionFocus: optionDetails.focus || null,
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    // Calculate the path key for the next chapter
+    const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
+
+    // Get current branching choices for context
+    const branchingChoices = currentCampaign.branchingChoices || [];
+
+    // Trigger generation for next chapter immediately
+    if (isLLMConfigured && nextChapter <= 12) {
+      console.log(`[StoryContext] Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}`);
+      console.log(`[StoryContext] Immediately triggering generation for ${nextCaseNumber} (path: ${nextPathKey})`);
+
+      // Generate in background - don't await
+      generateForCase(nextCaseNumber, nextPathKey, nextChoiceHistory, branchingChoices)
+        .then((result) => {
+          if (result) {
+            console.log(`[StoryContext] Pre-puzzle generation complete for ${nextCaseNumber}`);
+          }
+        })
+        .catch((err) => {
+          console.warn(`[StoryContext] Pre-puzzle generation failed for ${nextCaseNumber}:`, err.message);
+          // Don't set error state - player can still solve puzzle and retry after
+        });
+    }
+  }, [selectDecisionBeforePuzzle, progress.storyCampaign, isLLMConfigured, generateForCase]);
+
   // NOTE: speculativePrefetchForFirstChoice has been removed
   // With NARRATIVE-FIRST FLOW, we no longer need speculative prefetch after first choice
   // Generation now happens after branching complete (second choice), giving exact path
@@ -470,7 +530,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
   const dispatchValue = useMemo(() => ({
     activateStoryCase,
     selectStoryDecision,
-    selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
+    selectDecisionBeforePuzzle: selectDecisionBeforePuzzleAndGenerate, // NARRATIVE-FIRST: Pre-puzzle decision + immediate generation
     applyPreDecision, // NARRATIVE-FIRST: Apply pre-made decision after puzzle
     saveBranchingChoice: saveBranchingChoiceAndPrefetch, // TRUE INFINITE BRANCHING: Save + prefetch
     ensureStoryContent,
@@ -488,7 +548,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
   }), [
     activateStoryCase,
     selectStoryDecision,
-    selectDecisionBeforePuzzle,
+    selectDecisionBeforePuzzleAndGenerate,
     applyPreDecision,
     saveBranchingChoiceAndPrefetch,
     ensureStoryContent,
