@@ -250,6 +250,25 @@ In a scene where Jack finds Claire in her office:
 
 ---
 
+### 9. Chapter 1C Decision Panel Fix
+ 
+**Problem:** After adding the `existingBranchingChoice` requirement for showing decision options (to ensure branching choices are complete before showing decisions), Chapter 1C stopped showing its decision panel. Chapter 1 uses the legacy linear narrative format and doesn't have `branchingNarrative`. 
+
+**Solution:** Only require `existingBranchingChoice` when `hasBranchingNarrative` is true:
+```javascript
+const showDecisionOptions = showDecision && (
+  awaitingDecision ||
+  (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision && (
+    hasBranchingNarrative ? existingBranchingChoice : true
+  ))
+);
+
+``` 
+
+**File:** `src/screens/CaseFileScreen.js`
+
+---
+
 ## Complete Flow: How Path-Specific Decisions Work
 
 ```
@@ -290,7 +309,7 @@ In a scene where Jack finds Claire in her office:
 | `src/utils/caseMerger.js` | Path-specific decision extraction from branchingChoices |
 | `src/hooks/useStoryGeneration.js` | getOptionDetails handles pathDecisions, auto-retry |
 | `src/context/StoryContext.js` | selectDecisionBeforePuzzleAndGenerate |
-| `src/screens/CaseFileScreen.js` | Decision panel timing (existingBranchingChoice check) |
+| `src/screens/CaseFileScreen.js` | Decision panel timing (existingBranchingChoice check), Chapter 1C fix |
 | `src/components/StoryGenerationOverlay.js` | Auto-retry UI |
 | `src/navigation/AppNavigator.js` | Auto-retry callback wiring |
 
@@ -305,6 +324,7 @@ In a scene where Jack finds Claire in her office:
 5. `bda81fe6` - Implement path-specific decisions for C subchapters
 6. `5876e252` - Update useStoryGeneration to extract decision details from pathDecisions
 7. `3e997bd2` - Make branching choices situationally different, not personality-aligned
+8. `48c3d991` - Fix Chapter 1C decision panel not showing options
 
 ---
 
