@@ -100,7 +100,7 @@ const DECISION_CONSEQUENCES = {
 // ============================================================================
 // Structure: Opening -> Choice1 (3 options) -> Middle branches (3) -> Choice2 (3 each) -> Endings (9 total)
 // Total paths: 9 unique experiences per subchapter
-// Word budget: ~165 words per segment, ~2200 words total per subchapter
+// Word budget: ~300 words per segment, ~3900 words total per subchapter
 
 /**
  * Schema for a single tappable detail within narrative text
@@ -140,7 +140,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     response: {
       type: 'string',
-      description: 'The narrative response when player selects this option (~165 words). Continue the scene based on this choice.',
+      description: 'The narrative response when player selects this option (~300 words). Continue the scene based on this choice.',
     },
     details: {
       type: 'array',
@@ -201,7 +201,7 @@ const SECOND_CHOICE_SCHEMA = {
           },
           response: {
             type: 'string',
-            description: 'The ending narrative segment (~170 words). Conclude this path of the subchapter.',
+            description: 'The ending narrative segment (~300 words). Conclude this path of the subchapter.',
           },
           details: {
             type: 'array',
@@ -226,11 +226,11 @@ const BRANCHING_NARRATIVE_SCHEMA = {
   properties: {
     opening: {
       type: 'object',
-      description: 'The opening segment, shared by all paths (~165 words)',
+      description: 'The opening segment, shared by all paths (~300 words)',
       properties: {
         text: {
           type: 'string',
-          description: 'Opening narrative that sets the scene and leads to the first choice (~165 words)',
+          description: 'Opening narrative that sets the scene and leads to the first choice (~300 words)',
         },
         details: {
           type: 'array',
@@ -323,8 +323,8 @@ const STORY_CONTENT_SCHEMA = {
       maximum: 12,
     },
     // BRANCHING NARRATIVE - Interactive story with player choices
-    // Structure: Opening (~165w) -> Choice1 (3 opts) -> Middles (3x ~165w) -> Choice2 (3 each) -> Endings (9x ~170w)
-    // Total: ~2200 words generated, player experiences ~500 words per path
+    // Structure: Opening (~300w) -> Choice1 (3 opts) -> Middles (3x ~300w) -> Choice2 (3 each) -> Endings (9x ~300w)
+    // Total: ~3900 words generated, player experiences ~900 words per path
     branchingNarrative: {
       type: 'object',
       description: 'Interactive branching narrative with 2 choice points and 9 possible paths',
@@ -334,7 +334,7 @@ const STORY_CONTENT_SCHEMA = {
           properties: {
             text: {
               type: 'string',
-              description: 'Opening scene shared by all paths (~165 words). Set the scene, build to first choice.',
+              description: 'Opening scene shared by all paths (~300 words). Set the scene, build to first choice.',
             },
             details: {
               type: 'array',
@@ -364,7 +364,7 @@ const STORY_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
                   label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity.' },
-                  response: { type: 'string', description: 'Narrative response (~165 words)' },
+                  response: { type: 'string', description: 'Narrative response (~300 words)' },
                   details: {
                     type: 'array',
                     items: {
@@ -403,7 +403,7 @@ const STORY_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
                     label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options.' },
-                    response: { type: 'string', description: 'Ending segment (~170 words). Conclude this path.' },
+                    response: { type: 'string', description: 'Ending segment (~300 words). Conclude this path.' },
                     details: {
                       type: 'array',
                       items: {
@@ -752,7 +752,7 @@ const DECISION_CONTENT_SCHEMA = {
         opening: {
           type: 'object',
           properties: {
-            text: { type: 'string', description: 'Opening scene (~165 words). Build tension toward the decision.' },
+            text: { type: 'string', description: 'Opening scene (~300 words). Build tension toward the decision.' },
             details: {
               type: 'array',
               items: {
@@ -781,7 +781,7 @@ const DECISION_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string' },
                   label: { type: 'string' },
-                  response: { type: 'string', description: 'Narrative response (~165 words)' },
+                  response: { type: 'string', description: 'Narrative response (~300 words)' },
                   details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                 },
                 required: ['key', 'label', 'response'],
@@ -808,7 +808,7 @@ const DECISION_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string' },
                     label: { type: 'string' },
-                    response: { type: 'string', description: 'Ending segment (~170 words). Conclude at the decision moment.' },
+                    response: { type: 'string', description: 'Ending segment (~300 words). Conclude at the decision moment.' },
                     details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                   },
                   required: ['key', 'label', 'response'],
@@ -990,6 +990,105 @@ const DECISION_CONTENT_SCHEMA = {
 };
 
 // ============================================================================
+// PATHDECISIONS SCHEMA - Minimal schema for 9 path-specific decisions (second call)
+// This is called AFTER main content generation to add path-specific decision options
+// ============================================================================
+const PATH_DECISION_OPTION_SCHEMA = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    title: { type: 'string' },
+    focus: { type: 'string' },
+    personalityAlignment: { type: 'string' },
+  },
+};
+
+const SINGLE_PATH_DECISION_SCHEMA = {
+  type: 'object',
+  properties: {
+    intro: { type: 'string' },
+    optionA: PATH_DECISION_OPTION_SCHEMA,
+    optionB: PATH_DECISION_OPTION_SCHEMA,
+  },
+};
+
+// Array format for pathDecisions - 9 items, one per unique path
+const PATHDECISIONS_ONLY_SCHEMA = {
+  type: 'object',
+  properties: {
+    pathDecisions: {
+      type: 'array',
+      description: '9 path-specific decision points, one for each unique path through this subchapter',
+      items: {
+        type: 'object',
+        properties: {
+          pathKey: { type: 'string', description: 'Path identifier: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C' },
+          intro: { type: 'string', description: 'Path-specific intro text for the decision' },
+          optionA: {
+            type: 'object',
+            properties: {
+              key: { type: 'string' },
+              title: { type: 'string' },
+              focus: { type: 'string' },
+              personalityAlignment: { type: 'string' },
+            },
+          },
+          optionB: {
+            type: 'object',
+            properties: {
+              key: { type: 'string' },
+              title: { type: 'string' },
+              focus: { type: 'string' },
+              personalityAlignment: { type: 'string' },
+            },
+          },
+        },
+      },
+      minItems: 9,
+      maxItems: 9,
+    },
+  },
+  required: ['pathDecisions'],
+};
+
+// Prompt template for the second call to generate path-specific decisions
+const PATHDECISIONS_PROMPT_TEMPLATE = `You previously generated a decision subchapter with branching narrative paths. Now generate 9 PATH-SPECIFIC decision variants, one for each unique path the player could have taken through the branching narrative.
+
+IMPORTANT: Each path should have a decision that reflects HOW THE PLAYER GOT TO THIS MOMENT. The same story beat should be framed differently based on the player's journey through the narrative.
+
+## PATH KEY FORMAT
+Path keys follow the format: [FirstChoice]-[SecondChoice]
+- "1A-2B" means: Player chose option 1A at the first branch, then option 2B at the second branch
+- The 9 possible paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
+
+## BRANCHING NARRATIVE STRUCTURE (What the player experienced)
+
+### Opening (All players see this):
+{{opening}}
+
+### First Choice Options (Player picks ONE of these):
+- 1A: "{{firstChoice1ALabel}}" → {{firstChoice1AResponse}}
+- 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BResponse}}
+- 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CResponse}}
+
+### Second Choice Endings (Each path leads to a unique ending):
+{{secondChoiceEndings}}
+
+## SIMPLE DECISION (Base structure to adapt for each path):
+- Intro: {{decisionIntro}}
+- Option A: {{optionATitle}} ({{optionAFocus}})
+- Option B: {{optionBTitle}} ({{optionBFocus}})
+
+## YOUR TASK
+For each of the 9 paths, generate a decision that:
+1. References what THAT SPECIFIC player experienced (their first choice, their ending)
+2. Frames the decision intro to reflect their journey
+3. Keeps optionA and optionB titles similar but adjusts focus/framing based on path context
+4. Sets personalityAlignment based on what kind of player would take that path
+
+Generate pathDecisions array with 9 objects, each having: pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment}.`;
+
+// ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
 // ============================================================================
 const MASTER_SYSTEM_PROMPT = `You are writing "Dead Letters," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
@@ -1023,24 +1122,25 @@ If the player made a decision at the end of the previous chapter (subchapter C),
 3. You NEVER break character or acknowledge being an AI
 4. You maintain EXACT consistency with names, dates, relationships, and events
 5. You write a FULL narrative (see word count section below)
+6. **DIALOGUE FORMATTING:** Use SINGLE QUOTES for all dialogue (e.g., 'Like this,' Jack said). This is a stylistic choice for the noir aesthetic.
 
 ## BRANCHING NARRATIVE STRUCTURE - INTERACTIVE STORY FORMAT
 You generate an INTERACTIVE narrative with 2 choice points and 9 possible paths.
 
 **STRUCTURE:**
 \`\`\`
-Opening (~165 words) - Shared by all players
+Opening (~300 words) - Shared by all players
         ↓
     Choice 1 (3 options: 1A, 1B, 1C)
    /       |       \\
-Response  Response  Response  (~165 words each)
+Response  Response  Response  (~300 words each)
    |       |       |
 Choice 2  Choice 2  Choice 2  (3 options each)
   /|\\      /|\\      /|\\
- 9 unique ending segments (~170 words each)
+ 9 unique ending segments (~300 words each)
 \`\`\`
 
-**TOTAL OUTPUT:** ~2,200 words (but player experiences only ~500 words per path)
+**TOTAL OUTPUT:** ~3,900 words (but player experiences only ~900 words per path)
 
 **BRANCHING RULES:**
 1. Opening sets the scene and builds to a natural choice point
@@ -1188,7 +1288,7 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words), third-person past tense
 - "storyDay": The day number (1-12) this scene takes place. Chapter number = Day number. The story spans exactly 12 days.
 - "branchingNarrative": Your interactive story structure (see BRANCHING NARRATIVE STRUCTURE above). Contains:
-  * "opening": { text, details[] } - The shared opening segment (~165 words)
+  * "opening": { text, details[] } - The shared opening segment (~300 words)
   * "firstChoice": { prompt, options[] } - First branch point with 3 options (1A, 1B, 1C)
   * "secondChoices": Array of 3 second-choice points, each with 3 options leading to 9 endings
 - "narrative": CANONICAL NARRATIVE for context continuity. This is a ~500 word STRING that represents ONE complete path through your branchingNarrative.
@@ -6772,10 +6872,145 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           narrativeLength: generatedContent?.narrative?.length || 0,
           hasBranchingNarrative: !!generatedContent?.branchingNarrative?.opening?.text,
           hasPathDecisions: !!generatedContent?.pathDecisions,
+          hasSimpleDecision: !!generatedContent?.decision,
           hasBridgeText: !!generatedContent?.bridgeText,
           hasPreviously: !!generatedContent?.previously,
           hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
         }, 'debug');
+
+        // ========== SECOND CALL: Generate path-specific decisions ==========
+        // If this is a decision point and we only have a simple decision (not full pathDecisions),
+        // make a second API call with minimal schema to generate all 9 path-specific decisions
+        if (isDecisionPoint && generatedContent.decision && !generatedContent.pathDecisions) {
+          console.log(`[StoryGenerationService] 🔄 Making second API call for pathDecisions...`);
+          llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.starting', {
+            simpleDecisionIntro: generatedContent.decision?.intro?.slice(0, 100),
+            optionATitle: generatedContent.decision?.optionA?.title,
+            optionBTitle: generatedContent.decision?.optionB?.title,
+          }, 'debug');
+
+          try {
+            // Build prompt using FULL context from first call, including branchingNarrative
+            const bn = generatedContent.branchingNarrative || {};
+            const firstChoiceOpts = bn.firstChoice?.options || [];
+            const secondChoices = bn.secondChoices || [];
+
+            // Build second choice endings summary for all 9 paths
+            const secondChoiceEndings = secondChoices.map((sc, scIdx) => {
+              const afterChoice = sc.afterChoice || `1${String.fromCharCode(65 + scIdx)}`;
+              const opts = sc.options || [];
+              return opts.map((opt, optIdx) => {
+                const pathKey = `${afterChoice}-2${String.fromCharCode(65 + optIdx)}`;
+                // Truncate response to ~200 chars to keep prompt size reasonable
+                const truncatedResponse = (opt.response || '').slice(0, 200) + (opt.response?.length > 200 ? '...' : '');
+                return `- ${pathKey}: "${opt.label || 'Choice'}" → ${truncatedResponse}`;
+              }).join('\n');
+            }).join('\n\n');
+
+            const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
+              // Opening section
+              .replace('{{opening}}', bn.opening?.text || 'Not available')
+              // First choice options
+              .replace('{{firstChoice1ALabel}}', firstChoiceOpts[0]?.label || 'Option 1A')
+              .replace('{{firstChoice1AResponse}}', (firstChoiceOpts[0]?.response || '').slice(0, 150) + '...')
+              .replace('{{firstChoice1BLabel}}', firstChoiceOpts[1]?.label || 'Option 1B')
+              .replace('{{firstChoice1BResponse}}', (firstChoiceOpts[1]?.response || '').slice(0, 150) + '...')
+              .replace('{{firstChoice1CLabel}}', firstChoiceOpts[2]?.label || 'Option 1C')
+              .replace('{{firstChoice1CResponse}}', (firstChoiceOpts[2]?.response || '').slice(0, 150) + '...')
+              // Second choice endings (all 9 paths)
+              .replace('{{secondChoiceEndings}}', secondChoiceEndings || 'Not available')
+              // Simple decision base
+              .replace('{{decisionIntro}}', generatedContent.decision?.intro || 'Not available')
+              .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
+              .replace('{{optionAFocus}}', generatedContent.decision?.optionA?.focus || 'Not specified')
+              .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B')
+              .replace('{{optionBFocus}}', generatedContent.decision?.optionB?.focus || 'Not specified');
+
+            // Log what context we're sending
+            console.log(`[StoryGenerationService] 📋 pathDecisions second call context:`);
+            console.log(`  - Opening: ${(bn.opening?.text || '').slice(0, 80)}...`);
+            console.log(`  - First choices: ${firstChoiceOpts.map(o => o?.label || '?').join(', ')}`);
+            console.log(`  - Second choice groups: ${secondChoices.length} (should be 3)`);
+            console.log(`  - Total paths in prompt: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
+            console.log(`  - Simple decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
+            console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars`);
+
+            const pathDecisionsStartTime = Date.now();
+            const pathDecisionsResponse = await llmService.complete(
+              [{ role: 'user', content: pathDecisionsPrompt }],
+              {
+                systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
+                maxTokens: 4000,
+                responseSchema: PATHDECISIONS_ONLY_SCHEMA,
+                traceId: traceId + '-pathDecisions',
+                requestContext: {
+                  caseNumber,
+                  chapter,
+                  subchapter,
+                  pathKey,
+                  secondCallFor: 'pathDecisions',
+                },
+              }
+            );
+
+            const pathDecisionsElapsed = Date.now() - pathDecisionsStartTime;
+            console.log(`[StoryGenerationService] ⏱️ pathDecisions second call completed in ${(pathDecisionsElapsed / 1000).toFixed(1)}s`);
+
+            llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.received', {
+              contentLength: pathDecisionsResponse?.content?.length || 0,
+              finishReason: pathDecisionsResponse?.finishReason,
+              elapsedMs: pathDecisionsElapsed,
+            }, 'debug');
+
+            // Parse the pathDecisions response
+            let pathDecisionsParsed;
+            try {
+              const rawContent = pathDecisionsResponse.content;
+              pathDecisionsParsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+            } catch (parseErr) {
+              console.warn(`[StoryGenerationService] ⚠️ Failed to parse pathDecisions JSON:`, parseErr.message);
+              pathDecisionsParsed = null;
+            }
+
+            if (pathDecisionsParsed?.pathDecisions && Array.isArray(pathDecisionsParsed.pathDecisions)) {
+              // Convert array format to object format for compatibility
+              const pathDecisionsObj = {};
+              for (const pd of pathDecisionsParsed.pathDecisions) {
+                if (pd.pathKey) {
+                  pathDecisionsObj[pd.pathKey] = {
+                    intro: pd.intro,
+                    optionA: pd.optionA,
+                    optionB: pd.optionB,
+                  };
+                }
+              }
+              generatedContent.pathDecisions = pathDecisionsObj;
+
+              // Detailed logging of all 9 pathDecisions
+              console.log(`[StoryGenerationService] ✅ pathDecisions merged: ${Object.keys(pathDecisionsObj).length} paths`);
+              console.log(`[StoryGenerationService] 📊 Path-specific decisions received:`);
+              for (const [pathKey, decision] of Object.entries(pathDecisionsObj)) {
+                console.log(`  - ${pathKey}: A="${decision.optionA?.title || '?'}" | B="${decision.optionB?.title || '?'}"`);
+              }
+
+              llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
+                pathCount: Object.keys(pathDecisionsObj).length,
+                paths: Object.keys(pathDecisionsObj),
+                decisions: Object.fromEntries(
+                  Object.entries(pathDecisionsObj).map(([k, v]) => [k, { optionA: v.optionA?.title, optionB: v.optionB?.title }])
+                ),
+              }, 'debug');
+            } else {
+              console.warn(`[StoryGenerationService] ⚠️ Second call didn't return valid pathDecisions, using simple decision fallback`);
+            }
+          } catch (secondCallError) {
+            console.warn(`[StoryGenerationService] ⚠️ Second call for pathDecisions failed:`, secondCallError.message);
+            llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.failed', {
+              error: secondCallError.message,
+            }, 'error');
+            // Continue with simple decision - it's a valid fallback
+          }
+        }
 
         // Validate decision structure for decision points (path-specific decisions)
         if (isDecisionPoint && generatedContent.pathDecisions) {
