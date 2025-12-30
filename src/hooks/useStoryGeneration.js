@@ -158,7 +158,21 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     const getOptionDetails = (optionKey) => {
-      const d = decisionEntry?.decision;
+      // PATH-SPECIFIC DECISIONS: Look up the player's branching path to get their specific decision
+      let d = null;
+      if (decisionEntry?.pathDecisions) {
+        // Find player's branching choice for this case
+        const branchingChoice = storyCampaign?.branchingChoices?.find(
+          bc => bc.caseNumber === decisionCaseNumber
+        );
+        // Use their path (e.g., "1B-2C") or fall back to canonical path
+        const pathKey = branchingChoice?.secondChoice || '1A-2A';
+        d = decisionEntry.pathDecisions[pathKey] || decisionEntry.pathDecisions['1A-2A'];
+      } else {
+        // Legacy single-decision format
+        d = decisionEntry?.decision;
+      }
+
       if (!d) return { optionTitle: null, optionFocus: null };
 
       // Current schema: decision.optionA / decision.optionB
