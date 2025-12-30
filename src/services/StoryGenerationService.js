@@ -734,11 +734,11 @@ const DECISION_CONTENT_SCHEMA = {
       maximum: 12,
     },
     // PATH-SPECIFIC DECISIONS - Each of the 9 ending paths gets its own unique decision options
-    // SIMPLIFIED SCHEMA: Reduced nesting depth and constraints to avoid Gemini complexity limits
-    // Structure: pathDecisions.{pathKey}.{intro, optionA, optionB} where options have key/title/focus/personalityAlignment
+    // Uses explicit properties with required arrays (valid JSON Schema per Gemini docs)
+    // Keeps nested optionA/optionB structure simple to stay under complexity limits
     pathDecisions: {
       type: 'object',
-      description: 'Nine unique decisions for paths 1A-2A,1A-2B,1A-2C,1B-2A,1B-2B,1B-2C,1C-2A,1C-2B,1C-2C. Each: intro(string), optionA/optionB with key(A or B),title,focus,personalityAlignment(aggressive/methodical/neutral).',
+      description: 'Nine unique decisions. Each has intro(1-2 sentences), optionA and optionB with key/title/focus/personalityAlignment(aggressive/methodical/neutral).',
       properties: Object.fromEntries(['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'].map(pathKey => [
         pathKey,
         {
@@ -748,8 +748,10 @@ const DECISION_CONTENT_SCHEMA = {
             optionA: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
             optionB: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
           },
+          required: ['intro', 'optionA', 'optionB'],
         },
       ])),
+      required: ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'],
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
     branchingNarrative: {
