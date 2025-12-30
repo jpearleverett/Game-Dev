@@ -990,6 +990,88 @@ const DECISION_CONTENT_SCHEMA = {
 };
 
 // ============================================================================
+// PATHDECISIONS SCHEMA - Minimal schema for 9 path-specific decisions (second call)
+// This is called AFTER main content generation to add path-specific decision options
+// ============================================================================
+const PATH_DECISION_OPTION_SCHEMA = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    title: { type: 'string' },
+    focus: { type: 'string' },
+    personalityAlignment: { type: 'string' },
+  },
+};
+
+const SINGLE_PATH_DECISION_SCHEMA = {
+  type: 'object',
+  properties: {
+    intro: { type: 'string' },
+    optionA: PATH_DECISION_OPTION_SCHEMA,
+    optionB: PATH_DECISION_OPTION_SCHEMA,
+  },
+};
+
+// Array format for pathDecisions - 9 items, one per unique path
+const PATHDECISIONS_ONLY_SCHEMA = {
+  type: 'object',
+  properties: {
+    pathDecisions: {
+      type: 'array',
+      description: '9 path-specific decision points, one for each unique path through this subchapter',
+      items: {
+        type: 'object',
+        properties: {
+          pathKey: { type: 'string', description: 'Path identifier: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C' },
+          intro: { type: 'string', description: 'Path-specific intro text for the decision' },
+          optionA: {
+            type: 'object',
+            properties: {
+              key: { type: 'string' },
+              title: { type: 'string' },
+              focus: { type: 'string' },
+              personalityAlignment: { type: 'string' },
+            },
+          },
+          optionB: {
+            type: 'object',
+            properties: {
+              key: { type: 'string' },
+              title: { type: 'string' },
+              focus: { type: 'string' },
+              personalityAlignment: { type: 'string' },
+            },
+          },
+        },
+      },
+      minItems: 9,
+      maxItems: 9,
+    },
+  },
+  required: ['pathDecisions'],
+};
+
+// Prompt template for the second call to generate path-specific decisions
+const PATHDECISIONS_PROMPT_TEMPLATE = `You previously generated a decision subchapter with a simple decision structure. Now generate 9 PATH-SPECIFIC decision variants, one for each unique path the player could have taken through the branching narrative.
+
+IMPORTANT: Each path should have a decision that reflects HOW THE PLAYER GOT TO THIS MOMENT. The same story beat should be framed differently based on the player's journey.
+
+The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
+
+For each path, provide:
+- pathKey: The path identifier (e.g., "1A-2A")
+- intro: A 2-3 sentence setup that reflects this specific path's journey
+- optionA and optionB: Each with key, title (5-10 words), focus (what this choice emphasizes), and personalityAlignment (methodical/aggressive/balanced)
+
+Context from the generated content:
+- Chapter summary: {{chapterSummary}}
+- Simple decision intro: {{decisionIntro}}
+- Option A title: {{optionATitle}}
+- Option B title: {{optionBTitle}}
+
+Generate the 9 path-specific decisions that maintain the core choice but frame it appropriately for each path.`;
+
+// ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
 // ============================================================================
 const MASTER_SYSTEM_PROMPT = `You are writing "Dead Letters," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
@@ -6772,10 +6854,92 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           narrativeLength: generatedContent?.narrative?.length || 0,
           hasBranchingNarrative: !!generatedContent?.branchingNarrative?.opening?.text,
           hasPathDecisions: !!generatedContent?.pathDecisions,
+          hasSimpleDecision: !!generatedContent?.decision,
           hasBridgeText: !!generatedContent?.bridgeText,
           hasPreviously: !!generatedContent?.previously,
           hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
         }, 'debug');
+
+        // ========== SECOND CALL: Generate path-specific decisions ==========
+        // If this is a decision point and we only have a simple decision (not full pathDecisions),
+        // make a second API call with minimal schema to generate all 9 path-specific decisions
+        if (isDecisionPoint && generatedContent.decision && !generatedContent.pathDecisions) {
+          console.log(`[StoryGenerationService] 🔄 Making second API call for pathDecisions...`);
+          llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.starting', {
+            simpleDecisionIntro: generatedContent.decision?.intro?.slice(0, 100),
+            optionATitle: generatedContent.decision?.optionA?.title,
+            optionBTitle: generatedContent.decision?.optionB?.title,
+          }, 'debug');
+
+          try {
+            // Build prompt using context from first call
+            const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
+              .replace('{{chapterSummary}}', generatedContent.chapterSummary || 'Not available')
+              .replace('{{decisionIntro}}', generatedContent.decision?.intro || 'Not available')
+              .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
+              .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B');
+
+            const pathDecisionsResponse = await llmService.complete(
+              [{ role: 'user', content: pathDecisionsPrompt }],
+              {
+                systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
+                maxTokens: 4000,
+                responseSchema: PATHDECISIONS_ONLY_SCHEMA,
+                traceId: traceId + '-pathDecisions',
+                requestContext: {
+                  caseNumber,
+                  chapter,
+                  subchapter,
+                  pathKey,
+                  secondCallFor: 'pathDecisions',
+                },
+              }
+            );
+
+            llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.received', {
+              contentLength: pathDecisionsResponse?.content?.length || 0,
+              finishReason: pathDecisionsResponse?.finishReason,
+            }, 'debug');
+
+            // Parse the pathDecisions response
+            let pathDecisionsParsed;
+            try {
+              const rawContent = pathDecisionsResponse.content;
+              pathDecisionsParsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+            } catch (parseErr) {
+              console.warn(`[StoryGenerationService] ⚠️ Failed to parse pathDecisions JSON:`, parseErr.message);
+              pathDecisionsParsed = null;
+            }
+
+            if (pathDecisionsParsed?.pathDecisions && Array.isArray(pathDecisionsParsed.pathDecisions)) {
+              // Convert array format to object format for compatibility
+              const pathDecisionsObj = {};
+              for (const pd of pathDecisionsParsed.pathDecisions) {
+                if (pd.pathKey) {
+                  pathDecisionsObj[pd.pathKey] = {
+                    intro: pd.intro,
+                    optionA: pd.optionA,
+                    optionB: pd.optionB,
+                  };
+                }
+              }
+              generatedContent.pathDecisions = pathDecisionsObj;
+              console.log(`[StoryGenerationService] ✅ pathDecisions merged: ${Object.keys(pathDecisionsObj).length} paths`);
+              llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
+                pathCount: Object.keys(pathDecisionsObj).length,
+                paths: Object.keys(pathDecisionsObj),
+              }, 'debug');
+            } else {
+              console.warn(`[StoryGenerationService] ⚠️ Second call didn't return valid pathDecisions, using simple decision fallback`);
+            }
+          } catch (secondCallError) {
+            console.warn(`[StoryGenerationService] ⚠️ Second call for pathDecisions failed:`, secondCallError.message);
+            llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.failed', {
+              error: secondCallError.message,
+            }, 'error');
+            // Continue with simple decision - it's a valid fallback
+          }
+        }
 
         // Validate decision structure for decision points (path-specific decisions)
         if (isDecisionPoint && generatedContent.pathDecisions) {
