@@ -779,12 +779,12 @@ class LLMService {
 
     const bodyStr = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
 
-    // Convert headers object to array of [key, value] pairs for expo/fetch Android compatibility
-    const headersArray = Object.entries(headers);
+    // Use Headers object for cross-platform compatibility (Android and iOS)
+    const headersObj = new Headers(headers);
 
     const response = await expoFetch(url, {
       method: 'POST',
-      headers: headersArray,
+      headers: headersObj,
       body: bodyStr,
       signal,
     });
@@ -943,16 +943,16 @@ class LLMService {
         // ========== TIERED STREAMING APPROACH ==========
         // Proxy sends SSE format (text/event-stream) for better mobile streaming support.
         // Try multiple streaming methods in order of preference:
-        // 1. fetchSSE (react-native-fetch-sse) - purpose-built for SSE streaming
-        // 2. expo/fetch with ReadableStream - Expo SDK 52+ native streaming
-        // 3. global fetch with response.text() - fallback (no real-time heartbeats)
+        // 1. fetchSSE (react-native-fetch-sse) - purpose-built for LLM SSE streaming
+        // 2. expo/fetch with ReadableStream - Expo SDK 52+ native streaming fallback
+        // 3. global fetch with response.text() - last resort (no real-time heartbeats)
         const bodyReadStart = Date.now();
         let responseText;
         let heartbeatCount = 0;
         let streamingMethod = 'unknown';
         let response = null;
 
-        // Method 1: Try fetchSSE first (purpose-built for SSE streaming)
+        // Method 1: Try fetchSSE first (purpose-built for LLM SSE streaming)
         try {
           const result = await this._tryFetchSSE(
             this.config.proxyUrl,
