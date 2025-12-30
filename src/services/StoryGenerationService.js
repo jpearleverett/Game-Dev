@@ -733,25 +733,23 @@ const DECISION_CONTENT_SCHEMA = {
       minimum: 1,
       maximum: 12,
     },
-    // PATH-SPECIFIC DECISIONS - Each of the 9 ending paths gets its own unique decision options
-    // Uses explicit properties with required arrays (valid JSON Schema per Gemini docs)
-    // Keeps nested optionA/optionB structure simple to stay under complexity limits
+    // PATH-SPECIFIC DECISIONS - TEMPORARY MINIMAL VERSION
+    // Testing if Gemini rejects complex pathDecisions structure
+    // This generates 9 decisions as a simple array instead of keyed object
     pathDecisions: {
-      type: 'object',
-      description: 'Nine unique decisions. Each has intro(1-2 sentences), optionA and optionB with key/title/focus/personalityAlignment(aggressive/methodical/neutral).',
-      properties: Object.fromEntries(['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'].map(pathKey => [
-        pathKey,
-        {
-          type: 'object',
-          properties: {
-            intro: { type: 'string' },
-            optionA: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
-            optionB: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
-          },
-          required: ['intro', 'optionA', 'optionB'],
+      type: 'array',
+      description: 'Array of 9 decision objects for paths in order: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C. Each has pathKey, intro, optionA{key,title,focus,personalityAlignment}, optionB{...}.',
+      minItems: 9,
+      maxItems: 9,
+      items: {
+        type: 'object',
+        properties: {
+          pathKey: { type: 'string' },
+          intro: { type: 'string' },
+          optionA: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
+          optionB: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
         },
-      ])),
-      required: ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'],
+      },
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
     branchingNarrative: {
@@ -7236,14 +7234,27 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
       // Convert path-specific decisions format if present
       if (isDecisionPoint && parsed.pathDecisions) {
-        // DEBUG: Log raw pathDecisions from LLM
-        const pathKeys = Object.keys(parsed.pathDecisions);
-        console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${pathKeys.length} paths`);
+        // Support both array format (new) and object format (legacy)
+        let pathDecisionsObj;
+        if (Array.isArray(parsed.pathDecisions)) {
+          // New array format: convert to object keyed by pathKey
+          console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${parsed.pathDecisions.length} paths (array format)`);
+          pathDecisionsObj = {};
+          for (const decision of parsed.pathDecisions) {
+            if (decision.pathKey) {
+              pathDecisionsObj[decision.pathKey] = decision;
+            }
+          }
+        } else {
+          // Legacy object format
+          pathDecisionsObj = parsed.pathDecisions;
+          console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${Object.keys(pathDecisionsObj).length} paths (object format)`);
+        }
 
         // Convert each of the 9 path-specific decisions to internal format
         result.pathDecisions = {};
-        for (const pathKey of pathKeys) {
-          const rawDecision = parsed.pathDecisions[pathKey];
+        for (const pathKey of Object.keys(pathDecisionsObj)) {
+          const rawDecision = pathDecisionsObj[pathKey];
           if (rawDecision) {
             result.pathDecisions[pathKey] = this._convertDecisionFormat(rawDecision);
           }
@@ -7260,7 +7271,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         const sampleDecision = result.pathDecisions['1A-2A'];
         if (!sampleDecision?.options?.[0]?.title || !sampleDecision?.options?.[1]?.title) {
           console.error('[StoryGenerationService] PATH DECISION PARSING FAILED - sample (1A-2A) missing titles:', {
-            rawSample: parsed.pathDecisions['1A-2A'],
+            rawSample: pathDecisionsObj['1A-2A'],
             convertedSample: sampleDecision,
           });
         }

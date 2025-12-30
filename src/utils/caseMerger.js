@@ -109,7 +109,18 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
             // Use the player's ending path key (e.g., "1B-2C") to get their specific decision
             // Fall back to "1A-2A" if no branching choice recorded yet (decision won't show until choices made)
             const pathKey = branchingChoice?.secondChoice || '1A-2A';
-            merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+
+            // Support both array format (new) and object format (legacy)
+            if (Array.isArray(storyMeta.pathDecisions)) {
+                // New array format: find by pathKey property
+                merged.storyDecision = storyMeta.pathDecisions.find(d => d.pathKey === pathKey)
+                    || storyMeta.pathDecisions.find(d => d.pathKey === '1A-2A')
+                    || storyMeta.pathDecisions[0]
+                    || null;
+            } else {
+                // Legacy object format: lookup by key
+                merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+            }
         } else {
             // Fallback for legacy single-decision format
             merged.storyDecision = storyMeta.decision || null;
@@ -242,7 +253,18 @@ export async function mergeCaseWithStoryAsync(baseCase, storyCampaign, getStoryE
             // Use the player's ending path key (e.g., "1B-2C") to get their specific decision
             // Fall back to "1A-2A" if no branching choice recorded yet (decision won't show until choices made)
             const pathKey = branchingChoice?.secondChoice || '1A-2A';
-            merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+
+            // Support both array format (new) and object format (legacy)
+            if (Array.isArray(storyMeta.pathDecisions)) {
+                // New array format: find by pathKey property
+                merged.storyDecision = storyMeta.pathDecisions.find(d => d.pathKey === pathKey)
+                    || storyMeta.pathDecisions.find(d => d.pathKey === '1A-2A')
+                    || storyMeta.pathDecisions[0]
+                    || null;
+            } else {
+                // Legacy object format: lookup by key
+                merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+            }
         } else {
             // Fallback for legacy single-decision format
             merged.storyDecision = storyMeta.decision || null;
