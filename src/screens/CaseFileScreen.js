@@ -567,8 +567,9 @@ export default function CaseFileScreen({
           };
         }
         // Decision not yet made - don't show puzzle button (let them decide first)
-      } else if (narrativeReadyForPuzzle) {
+      } else if (narrativeReadyForPuzzle || chapter === 1) {
         // A/B subchapter: Show puzzle after narrative
+        // Exception: Chapter 1 A/B always shows puzzle button (skip narrative gating for replay flow)
         return {
           title: "Evidence Board Ready",
           body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
