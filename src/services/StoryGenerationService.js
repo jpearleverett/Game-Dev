@@ -993,38 +993,7 @@ const DECISION_CONTENT_SCHEMA = {
           required: ['intro', 'optionA', 'optionB'],
         },
       },
-      // NOTE: All 9 paths are optional - Gemini may fail to generate all of them due to schema complexity
-      // If pathDecisions is missing or incomplete, consumers fall back to the single 'decision' object
-    },
-    // FALLBACK: Single decision object for when pathDecisions fails or for simpler generation
-    // This was the original format before path-specific decisions were added
-    decision: {
-      type: 'object',
-      description: 'FALLBACK: Single decision shown to all players regardless of branching path. Use this if pathDecisions is too complex.',
-      properties: {
-        intro: { type: 'string', description: '1-2 sentences framing the choice' },
-        optionA: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood' },
-            focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
-            personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
-          },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
-        },
-        optionB: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'Action statement in imperative mood' },
-            focus: { type: 'string', description: 'Two sentences: What this path prioritizes, what it risks.' },
-            personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
-          },
-          required: ['key', 'title', 'focus', 'personalityAlignment'],
-        },
-      },
-      required: ['intro', 'optionA', 'optionB'],
+      required: ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'],
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
     branchingNarrative: {
@@ -1267,8 +1236,7 @@ const DECISION_CONTENT_SCHEMA = {
     // NOTE: pathDecisions field moved BEFORE narrative in schema to ensure all 9 are generated first
     // This prevents truncation from cutting off decision structure
   },
-  // NOTE: 'decision' is required as fallback, 'pathDecisions' is optional (may cause Gemini failures if required)
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'pathDecisions', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
 };
 
 // ============================================================================
@@ -5923,23 +5891,37 @@ Example of CORRECT approach: "The salt wind cut through Jack's coat as he steppe
     if (isDecisionPoint) {
       task += `
 
-### DECISION POINT REQUIREMENTS
-This subchapter ends with a binary choice (Option A vs Option B).
+### DECISION POINT REQUIREMENTS - PATH-SPECIFIC DECISIONS
+This subchapter ends with a binary choice. The player will see different decision options depending on which branching path they took within this subchapter.
 
-**REQUIRED: Generate the "decision" object** with a single decision that works for all players:
-- intro: 1-2 sentences framing the choice
-- optionA: { key: "A", title: "Action statement", focus: "What this prioritizes/risks", personalityAlignment: "aggressive"/"methodical"/"neutral" }
-- optionB: { key: "B", title: "Action statement", focus: "What this prioritizes/risks", personalityAlignment: "aggressive"/"methodical"/"neutral" }
+**CRITICAL: Generate 9 UNIQUE decisions in the "pathDecisions" object** - one for each ending path:
+- 1A-2A, 1A-2B, 1A-2C (paths starting with choice 1A)
+- 1B-2A, 1B-2B, 1B-2C (paths starting with choice 1B)
+- 1C-2A, 1C-2B, 1C-2C (paths starting with choice 1C)
+
+**WHY THIS MATTERS:**
+A player who took the aggressive path (e.g., 1A→1A-2A) should face decisions that reflect THEIR journey.
+A player who took the cautious path (e.g., 1C→1C-2C) should face decisions suited to THEIR situation.
+The narrative context differs by path, so the strategic options should differ too.
 
 **DECISION DESIGN REQUIREMENTS:**
-1. Present TWO distinct paths (Option A and Option B)
+1. Each of the 9 pathDecisions must present TWO distinct paths (Option A and Option B)
 2. Both options must be morally complex - NO obvious "right" answer
 3. Each choice should have CLEAR but DIFFERENT consequences
-4. Connect to the themes of wrongful conviction, certainty vs truth
+4. The decision must feel EARNED by the specific path the player took
+5. Connect to the themes of wrongful conviction, certainty vs truth
+6. The intro should reference elements unique to that branching path
 
-**OPTIONAL: Path-specific decisions (pathDecisions)**
-If you can handle the complexity, also generate "pathDecisions" with 9 unique decisions for each ending path (1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C).
-This is a bonus feature - the "decision" object is the required fallback.`;
+**EXAMPLE of path-specific variation:**
+- Path 1A-2A (aggressive throughout): "After forcing Claire's hand, Jack now faces a riskier choice..."
+- Path 1C-2C (cautious throughout): "Having gathered the evidence methodically, Jack now sees two clear paths..."
+
+**For EACH decision in pathDecisions (all 9):**
+- intro: 1-2 sentences framing the choice, reflecting that specific path's context
+- optionA.title: Action statement in imperative mood
+- optionA.focus: What this path prioritizes and what it risks
+- optionB.title: Action statement in imperative mood
+- optionB.focus: What this path prioritizes and what it risks`;
     }
 
     return task;
@@ -7040,7 +7022,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           narrativeLength: generatedContent?.narrative?.length || 0,
           hasBranchingNarrative: !!generatedContent?.branchingNarrative?.opening?.text,
           hasPathDecisions: !!generatedContent?.pathDecisions,
-          hasDecision: !!generatedContent?.decision, // Simple decision fallback
           hasBridgeText: !!generatedContent?.bridgeText,
           hasPreviously: !!generatedContent?.previously,
           hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
@@ -7253,7 +7234,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           previously: generatedContent.previously || '', // Recap of previous events
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
-          decision: isDecisionPoint ? generatedContent.decision : null, // Simple decision fallback
           board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.pathDecisions, generatedContent.puzzleCandidates, chapter),
           consistencyFacts: generatedContent.consistencyFacts || [],
           chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
@@ -7277,7 +7257,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           hasBranchingNarrative: !!storyEntry.branchingNarrative?.opening?.text,
           generatedAt: storyEntry.generatedAt,
           hasPathDecisions: !!storyEntry.pathDecisions,
-          hasDecision: !!storyEntry.decision, // Simple decision fallback
         }, 'debug');
 
         // Update local cache
@@ -7495,52 +7474,37 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         narrativeThreads: Array.isArray(parsed.narrativeThreads) ? parsed.narrativeThreads : [],
         previousThreadsAddressed: Array.isArray(parsed.previousThreadsAddressed) ? parsed.previousThreadsAddressed : [],
         pathDecisions: null,
-        decision: null, // Simple single-decision fallback
       };
 
-      // Process decisions for decision points (C subchapters)
-      if (isDecisionPoint) {
-        // First, try path-specific decisions (optional, may not be generated due to complexity)
-        if (parsed.pathDecisions && Object.keys(parsed.pathDecisions).length > 0) {
-          const pathKeys = Object.keys(parsed.pathDecisions);
-          console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${pathKeys.length} paths`);
+      // Convert path-specific decisions format if present
+      if (isDecisionPoint && parsed.pathDecisions) {
+        // DEBUG: Log raw pathDecisions from LLM
+        const pathKeys = Object.keys(parsed.pathDecisions);
+        console.log(`[StoryGenerationService] Raw pathDecisions from LLM: ${pathKeys.length} paths`);
 
-          // Convert each path-specific decision to internal format
-          result.pathDecisions = {};
-          for (const pathKey of pathKeys) {
-            const rawDecision = parsed.pathDecisions[pathKey];
-            if (rawDecision) {
-              result.pathDecisions[pathKey] = this._convertDecisionFormat(rawDecision);
-            }
-          }
-
-          // Log missing paths (not an error since pathDecisions is optional)
-          const expectedPaths = ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'];
-          const missingPaths = expectedPaths.filter(p => !result.pathDecisions[p]);
-          if (missingPaths.length > 0) {
-            console.log(`[StoryGenerationService] PathDecisions incomplete (${9 - missingPaths.length}/9 paths) - will use 'decision' fallback for missing`);
+        // Convert each of the 9 path-specific decisions to internal format
+        result.pathDecisions = {};
+        for (const pathKey of pathKeys) {
+          const rawDecision = parsed.pathDecisions[pathKey];
+          if (rawDecision) {
+            result.pathDecisions[pathKey] = this._convertDecisionFormat(rawDecision);
           }
         }
 
-        // Always process the simple 'decision' object as fallback
-        if (parsed.decision) {
-          console.log(`[StoryGenerationService] Simple 'decision' object found - converting to internal format`);
-          result.decision = this._convertDecisionFormat(parsed.decision);
-
-          // Validate the decision has proper structure
-          if (!result.decision?.options?.[0]?.title || !result.decision?.options?.[1]?.title) {
-            console.warn('[StoryGenerationService] Decision parsing issue - missing option titles:', {
-              raw: parsed.decision,
-              converted: result.decision,
-            });
-          }
+        // Validate that we got all 9 paths
+        const expectedPaths = ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'];
+        const missingPaths = expectedPaths.filter(p => !result.pathDecisions[p]);
+        if (missingPaths.length > 0) {
+          console.warn(`[StoryGenerationService] PATH DECISIONS INCOMPLETE - missing paths: ${missingPaths.join(', ')}`);
         }
 
-        // If we have neither pathDecisions nor decision, log an error
-        if (!result.pathDecisions && !result.decision) {
-          console.error('[StoryGenerationService] NO DECISIONS GENERATED - both pathDecisions and decision are missing');
-        } else if (!result.pathDecisions && result.decision) {
-          console.log('[StoryGenerationService] Using simple decision fallback (pathDecisions not generated)');
+        // Validate sample decision has proper structure
+        const sampleDecision = result.pathDecisions['1A-2A'];
+        if (!sampleDecision?.options?.[0]?.title || !sampleDecision?.options?.[1]?.title) {
+          console.error('[StoryGenerationService] PATH DECISION PARSING FAILED - sample (1A-2A) missing titles:', {
+            rawSample: parsed.pathDecisions['1A-2A'],
+            convertedSample: sampleDecision,
+          });
         }
       }
 
