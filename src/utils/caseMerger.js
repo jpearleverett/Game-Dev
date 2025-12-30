@@ -98,7 +98,23 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
     // 6. Merge Story Metadata (Narrative, Polaroids, Briefing)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
-        merged.storyDecision = storyMeta.decision || null;
+
+        // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
+        if (storyMeta.pathDecisions) {
+            // Find the player's branching choice for this case
+            const branchingChoice = storyCampaign?.branchingChoices?.find(
+                bc => bc.caseNumber === caseNumber
+            );
+
+            // Use the player's ending path key (e.g., "1B-2C") to get their specific decision
+            // Fall back to "1A-2A" if no branching choice recorded yet (decision won't show until choices made)
+            const pathKey = branchingChoice?.secondChoice || '1A-2A';
+            merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+        } else {
+            // Fallback for legacy single-decision format
+            merged.storyDecision = storyMeta.decision || null;
+        }
+
         merged.narrative = storyMeta.narrative ? [storyMeta.narrative] : merged.narrative;
         merged.bridgeText = storyMeta.bridgeText ? [storyMeta.bridgeText] : merged.bridgeText;
 
@@ -215,7 +231,23 @@ export async function mergeCaseWithStoryAsync(baseCase, storyCampaign, getStoryE
     // 6. Merge Story Metadata (Narrative, Polaroids, Briefing)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
-        merged.storyDecision = storyMeta.decision || null;
+
+        // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
+        if (storyMeta.pathDecisions) {
+            // Find the player's branching choice for this case
+            const branchingChoice = storyCampaign?.branchingChoices?.find(
+                bc => bc.caseNumber === caseNumber
+            );
+
+            // Use the player's ending path key (e.g., "1B-2C") to get their specific decision
+            // Fall back to "1A-2A" if no branching choice recorded yet (decision won't show until choices made)
+            const pathKey = branchingChoice?.secondChoice || '1A-2A';
+            merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+        } else {
+            // Fallback for legacy single-decision format
+            merged.storyDecision = storyMeta.decision || null;
+        }
+
         merged.narrative = storyMeta.narrative ? [storyMeta.narrative] : merged.narrative;
         merged.bridgeText = storyMeta.bridgeText ? [storyMeta.bridgeText] : merged.bridgeText;
 
