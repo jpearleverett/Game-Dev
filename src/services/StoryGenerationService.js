@@ -1056,19 +1056,22 @@ const PATHDECISIONS_PROMPT_TEMPLATE = `You previously generated a decision subch
 
 IMPORTANT: Each path should have a decision that reflects HOW THE PLAYER GOT TO THIS MOMENT. The same story beat should be framed differently based on the player's journey through the narrative.
 
-The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
+## PATH KEY FORMAT
+Path keys follow the format: [FirstChoice]-[SecondChoice]
+- "1A-2B" means: Player chose option 1A at the first branch, then option 2B at the second branch
+- The 9 possible paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
 
 ## BRANCHING NARRATIVE STRUCTURE (What the player experienced)
 
 ### Opening (All players see this):
 {{opening}}
 
-### First Choice Options:
+### First Choice Options (Player picks ONE of these):
 - 1A: "{{firstChoice1ALabel}}" → {{firstChoice1AResponse}}
 - 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BResponse}}
 - 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CResponse}}
 
-### Second Choice Endings (9 unique paths):
+### Second Choice Endings (Each path leads to a unique ending):
 {{secondChoiceEndings}}
 
 ## SIMPLE DECISION (Base structure to adapt for each path):
@@ -6922,8 +6925,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B')
               .replace('{{optionBFocus}}', generatedContent.decision?.optionB?.focus || 'Not specified');
 
-            console.log(`[StoryGenerationService] pathDecisions prompt built with ${secondChoices.length} secondChoice groups, ${firstChoiceOpts.length} firstChoice options`);
+            // Log what context we're sending
+            console.log(`[StoryGenerationService] 📋 pathDecisions second call context:`);
+            console.log(`  - Opening: ${(bn.opening?.text || '').slice(0, 80)}...`);
+            console.log(`  - First choices: ${firstChoiceOpts.map(o => o?.label || '?').join(', ')}`);
+            console.log(`  - Second choice groups: ${secondChoices.length} (should be 3)`);
+            console.log(`  - Total paths in prompt: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
+            console.log(`  - Simple decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
+            console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars`);
 
+            const pathDecisionsStartTime = Date.now();
             const pathDecisionsResponse = await llmService.complete(
               [{ role: 'user', content: pathDecisionsPrompt }],
               {
@@ -6941,9 +6952,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               }
             );
 
+            const pathDecisionsElapsed = Date.now() - pathDecisionsStartTime;
+            console.log(`[StoryGenerationService] ⏱️ pathDecisions second call completed in ${(pathDecisionsElapsed / 1000).toFixed(1)}s`);
+
             llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.received', {
               contentLength: pathDecisionsResponse?.content?.length || 0,
               finishReason: pathDecisionsResponse?.finishReason,
+              elapsedMs: pathDecisionsElapsed,
             }, 'debug');
 
             // Parse the pathDecisions response
@@ -6969,10 +6984,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 }
               }
               generatedContent.pathDecisions = pathDecisionsObj;
+
+              // Detailed logging of all 9 pathDecisions
               console.log(`[StoryGenerationService] ✅ pathDecisions merged: ${Object.keys(pathDecisionsObj).length} paths`);
+              console.log(`[StoryGenerationService] 📊 Path-specific decisions received:`);
+              for (const [pathKey, decision] of Object.entries(pathDecisionsObj)) {
+                console.log(`  - ${pathKey}: A="${decision.optionA?.title || '?'}" | B="${decision.optionB?.title || '?'}"`);
+              }
+
               llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
                 pathCount: Object.keys(pathDecisionsObj).length,
                 paths: Object.keys(pathDecisionsObj),
+                decisions: Object.fromEntries(
+                  Object.entries(pathDecisionsObj).map(([k, v]) => [k, { optionA: v.optionA?.title, optionB: v.optionB?.title }])
+                ),
               }, 'debug');
             } else {
               console.warn(`[StoryGenerationService] ⚠️ Second call didn't return valid pathDecisions, using simple decision fallback`);
