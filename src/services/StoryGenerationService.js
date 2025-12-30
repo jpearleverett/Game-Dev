@@ -734,43 +734,22 @@ const DECISION_CONTENT_SCHEMA = {
       maximum: 12,
     },
     // PATH-SPECIFIC DECISIONS - Each of the 9 ending paths gets its own unique decision options
-    // The player's branching choices within this subchapter determine which decision they see
-    // This creates meaningful consequences for player choices: different paths lead to different strategic options
-    // EXPLICIT SCHEMA: Defines all 9 paths explicitly - Gemini doesn't support additionalProperties well
+    // SIMPLIFIED SCHEMA: Reduced nesting depth and constraints to avoid Gemini complexity limits
+    // Structure: pathDecisions.{pathKey}.{intro, optionA, optionB} where options have key/title/focus/personalityAlignment
     pathDecisions: {
       type: 'object',
-      description: 'Nine unique decision options, one for each ending path. Each has intro (1-2 sentences), optionA and optionB with key/title/focus/personalityAlignment. Generate ALL 9 BEFORE writing narrative.',
+      description: 'Nine unique decisions for paths 1A-2A,1A-2B,1A-2C,1B-2A,1B-2B,1B-2C,1C-2A,1C-2B,1C-2C. Each: intro(string), optionA/optionB with key(A or B),title,focus,personalityAlignment(aggressive/methodical/neutral).',
       properties: Object.fromEntries(['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'].map(pathKey => [
         pathKey,
         {
           type: 'object',
           properties: {
             intro: { type: 'string' },
-            optionA: {
-              type: 'object',
-              properties: {
-                key: { type: 'string' },
-                title: { type: 'string' },
-                focus: { type: 'string' },
-                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
-              },
-              required: ['key', 'title', 'focus', 'personalityAlignment'],
-            },
-            optionB: {
-              type: 'object',
-              properties: {
-                key: { type: 'string' },
-                title: { type: 'string' },
-                focus: { type: 'string' },
-                personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'neutral'] },
-              },
-              required: ['key', 'title', 'focus', 'personalityAlignment'],
-            },
+            optionA: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
+            optionB: { type: 'object', properties: { key: { type: 'string' }, title: { type: 'string' }, focus: { type: 'string' }, personalityAlignment: { type: 'string' } } },
           },
-          required: ['intro', 'optionA', 'optionB'],
         },
       ])),
-      required: ['1A-2A', '1A-2B', '1A-2C', '1B-2A', '1B-2B', '1B-2C', '1C-2A', '1C-2B', '1C-2C'],
     },
     // BRANCHING NARRATIVE for decision subchapters - same structure as regular, but builds to the decision
     branchingNarrative: {
