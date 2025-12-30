@@ -136,7 +136,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label shown to player (2-5 words, imperative mood). E.g., "Press him harder", "Change the subject"',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Mention Tom\'s name"',
     },
     response: {
       type: 'string',
@@ -363,7 +363,7 @@ const STORY_CONTENT_SCHEMA = {
                 type: 'object',
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
-                  label: { type: 'string', description: 'Action label (2-5 words, imperative)' },
+                  label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity.' },
                   response: { type: 'string', description: 'Narrative response (~165 words)' },
                   details: {
                     type: 'array',
@@ -402,7 +402,7 @@ const STORY_CONTENT_SCHEMA = {
                   type: 'object',
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
-                    label: { type: 'string', description: 'Action label (2-5 words)' },
+                    label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options.' },
                     response: { type: 'string', description: 'Ending segment (~170 words). Conclude this path.' },
                     details: {
                       type: 'array',
@@ -1341,10 +1341,33 @@ Because of this:
 
 Think of it as true RPG branching: your choices genuinely shape the story.
 
-**CHOICE DESIGN:**
-- Labels: 2-5 words, imperative mood ("Press him harder", "Change the subject", "Wait and observe")
-- Prompts: 5-15 words setting context ("How does Jack respond?", "What does Jack focus on?")
-- Branches should feel MEANINGFULLY DIFFERENT, not just reworded
+**CHOICE DESIGN - SITUATIONAL, NOT PERSONALITY-BASED:**
+The 3 branching options should be THREE DIFFERENT ACTIONS Jack could take in the situation - NOT variations of aggression/caution.
+
+**WRONG (personality-aligned):**
+- "Confront him directly" (aggressive)
+- "Ask diplomatically" (neutral)
+- "Observe silently" (cautious)
+These are the SAME action (questioning someone) with different intensity levels. Boring!
+
+**RIGHT (situationally different):**
+In a scene where Jack finds Claire alone in her office:
+- "Ask about the missing file" (pursue one lead)
+- "Mention Tom's name" (pursue a different lead)
+- "Examine the photographs on her desk" (investigate the environment instead of talking)
+
+In a scene where Jack confronts a suspect at the docks:
+- "Show him the forged signature" (use evidence)
+- "Ask about the night of the fire" (probe timeline)
+- "Follow him when he walks away" (change the scene entirely)
+
+**KEY PRINCIPLES:**
+- Each option should lead to DIFFERENT INFORMATION or DISCOVERIES
+- Options can be: talk to different people, investigate different objects, go to different places, ask about different topics
+- The player is choosing WHAT to focus on, not HOW aggressively to do it
+- All three should feel like valid, reasonable responses to the situation
+- Labels: 2-5 words, imperative mood
+- Prompts: 5-15 words setting context ("What does Jack focus on?", "Where does Jack look?")
 
 **TAPPABLE DETAILS:**
 Each segment can have 0-2 "details" - phrases the player can tap for Jack's observation.
