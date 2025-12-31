@@ -1810,6 +1810,14 @@ class StoryGenerationService {
       sessionStart: Date.now(),
     };
 
+    // ========== Dynamic Personality Classification ==========
+    // LLM-based player personality analysis (cached by choice history hash)
+    this.dynamicPersonalityCache = {
+      choiceHistoryHash: null,
+      personality: null,
+      timestamp: null,
+    };
+
     // ========== NEW: Story Arc Planning System ==========
     this.storyArc = null; // Global story arc generated at start for consistency
     this.chapterOutlines = new Map(); // Pre-generated chapter outlines for seamless flow
@@ -1922,6 +1930,146 @@ class StoryGenerationService {
         : 0,
       sessionDurationMinutes: sessionMinutes,
     };
+  }
+
+  // ==========================================================================
+  // DYNAMIC PERSONALITY CLASSIFICATION - LLM-based player behavior analysis
+  // ==========================================================================
+
+  /**
+   * Generate a hash of choice history for cache invalidation
+   * @param {Array} choiceHistory - Player's choice history
+   * @returns {string} Hash string
+   */
+  _hashChoiceHistory(choiceHistory) {
+    if (!choiceHistory || choiceHistory.length === 0) return 'empty';
+    return choiceHistory.map(c => `${c.caseNumber}:${c.optionKey}`).join('|');
+  }
+
+  /**
+   * Dynamically classify player personality using LLM
+   * Uses Gemini to analyze actual choice patterns and provide richer personality assessment
+   * Falls back to keyword-based analysis if LLM fails
+   * @param {Array} choiceHistory - Player's choice history
+   * @returns {Promise<Object>} Personality classification with narrativeStyle, dialogueTone, riskTolerance
+   */
+  async _classifyPersonalityDynamic(choiceHistory) {
+    // If no choices yet, return balanced default
+    if (!choiceHistory || choiceHistory.length === 0) {
+      return {
+        ...PATH_PERSONALITY_TRAITS.BALANCED,
+        source: 'default',
+      };
+    }
+
+    // Check cache - if choice history hasn't changed, use cached result
+    const currentHash = this._hashChoiceHistory(choiceHistory);
+    if (this.dynamicPersonalityCache.choiceHistoryHash === currentHash &&
+        this.dynamicPersonalityCache.personality) {
+      console.log(`[StoryGen] 🧠 Using cached personality classification`);
+      return this.dynamicPersonalityCache.personality;
+    }
+
+    console.log(`[StoryGen] 🧠 Classifying player personality dynamically (${choiceHistory.length} choices)...`);
+
+    try {
+      // Build choice summary for LLM
+      const choiceSummary = choiceHistory.map(choice => {
+        const chapter = this._extractChapterFromCase(choice.caseNumber);
+        const consequence = DECISION_CONSEQUENCES[choice.caseNumber]?.[choice.optionKey];
+        return {
+          chapter,
+          choice: choice.optionKey,
+          description: consequence?.immediate || `Chose option ${choice.optionKey}`,
+        };
+      });
+
+      const classificationPrompt = `Analyze this player's decision pattern in a noir detective mystery game and classify their play style.
+
+PLAYER'S CHOICES:
+${choiceSummary.map(c => `- Chapter ${c.chapter}: ${c.description}`).join('\n')}
+
+Based on these choices, classify the player's approach. Consider:
+- Do they prefer direct confrontation or careful investigation?
+- Are they impulsive or methodical?
+- Do they prioritize speed or thoroughness?
+- What's their relationship-building style (trust quickly vs. verify)?
+
+Respond with a JSON object containing:
+- "dominantStyle": one of "AGGRESSIVE", "METHODICAL", or "BALANCED"
+- "narrativeStyle": a sentence describing how Jack (the protagonist) acts based on this play style
+- "dialogueTone": how Jack's dialogue should sound (e.g., "direct and confrontational", "measured and analytical", "adaptable")
+- "riskTolerance": "high", "moderate", or "low"
+- "characterInsight": a brief observation about this player's detective persona (1 sentence)`;
+
+      const response = await llmService.complete(
+        [{ role: 'user', content: classificationPrompt }],
+        {
+          systemPrompt: 'You are an expert at analyzing player behavior in narrative games. Provide concise, insightful classifications.',
+          maxTokens: 500,
+          responseSchema: {
+            type: 'object',
+            properties: {
+              dominantStyle: { type: 'string', enum: ['AGGRESSIVE', 'METHODICAL', 'BALANCED'] },
+              narrativeStyle: { type: 'string' },
+              dialogueTone: { type: 'string' },
+              riskTolerance: { type: 'string', enum: ['high', 'moderate', 'low'] },
+              characterInsight: { type: 'string' },
+            },
+            required: ['dominantStyle', 'narrativeStyle', 'dialogueTone', 'riskTolerance'],
+          },
+          traceId: `personality-${Date.now()}`,
+          thinkingLevel: 'low', // Quick classification, don't need deep reasoning
+        }
+      );
+
+      // Track token usage
+      this._trackTokenUsage(response?.usage, 'Personality classification');
+
+      // Parse response
+      let classification;
+      try {
+        classification = typeof response.content === 'string'
+          ? JSON.parse(response.content)
+          : response.content;
+      } catch (parseErr) {
+        console.warn(`[StoryGen] ⚠️ Failed to parse personality classification, using fallback`);
+        const fallback = this._analyzePathPersonality(choiceHistory);
+        return { ...fallback, source: 'keyword-fallback' };
+      }
+
+      // Build personality object
+      const personality = {
+        narrativeStyle: classification.narrativeStyle || PATH_PERSONALITY_TRAITS.BALANCED.narrativeStyle,
+        dialogueTone: classification.dialogueTone || PATH_PERSONALITY_TRAITS.BALANCED.dialogueTone || 'adapts to the situation',
+        riskTolerance: classification.riskTolerance || 'moderate',
+        dominantStyle: classification.dominantStyle || 'BALANCED',
+        characterInsight: classification.characterInsight || null,
+        source: 'llm-dynamic',
+      };
+
+      // Cache the result
+      this.dynamicPersonalityCache = {
+        choiceHistoryHash: currentHash,
+        personality,
+        timestamp: Date.now(),
+      };
+
+      console.log(`[StoryGen] 🧠 Personality classified: ${personality.dominantStyle} - "${personality.narrativeStyle}"`);
+      if (personality.characterInsight) {
+        console.log(`[StoryGen] 💡 Insight: ${personality.characterInsight}`);
+      }
+
+      return personality;
+
+    } catch (error) {
+      console.warn(`[StoryGen] ⚠️ Dynamic personality classification failed:`, error.message);
+      console.warn(`[StoryGen] Falling back to keyword-based analysis`);
+
+      // Fall back to keyword-based analysis
+      const fallback = this._analyzePathPersonality(choiceHistory);
+      return { ...fallback, source: 'keyword-fallback' };
+    }
   }
 
   // ==========================================================================
@@ -4091,6 +4239,8 @@ Generate realistic, specific consequences based on the actual narrative content.
       this.threadAcknowledgmentCounts.clear();
       this.generationAttempts.clear();
       this.pathPersonality = null;
+      this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+      this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
       this.consistencyLog = [];
       this.narrativeThreads = [];
 
@@ -4298,6 +4448,8 @@ Generate realistic, specific consequences based on the actual narrative content.
     this.consistencyLog = [];
     this.narrativeThreads = [];
     this.pathPersonality = null;
+    this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+    this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
     this.isGenerating = false;
 
     // Clear dynamic clusters
@@ -4405,7 +4557,15 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     // Analyze player's path personality for narrative consistency
-    const pathPersonality = this._analyzePathPersonality(choiceHistory);
+    // Use dynamic LLM-based classification for richer personality insights
+    // Falls back to keyword-based analysis if LLM fails
+    let pathPersonality;
+    try {
+      pathPersonality = await this._classifyPersonalityDynamic(choiceHistory);
+    } catch (error) {
+      console.warn('[StoryGenerationService] Dynamic personality classification failed, using keyword fallback');
+      pathPersonality = this._analyzePathPersonality(choiceHistory);
+    }
     this.pathPersonality = pathPersonality;
 
     // Build cumulative decision consequences
