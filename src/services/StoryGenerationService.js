@@ -1799,6 +1799,17 @@ class StoryGenerationService {
     this.characterStates = new Map(); // Tracks character relationship/trust states
     this.narrativeThreads = []; // Active story threads that must be maintained
 
+    // ========== Token Usage Tracking ==========
+    // Track cumulative token usage across session for cost visibility
+    this.tokenUsage = {
+      totalPromptTokens: 0,
+      totalCachedTokens: 0,
+      totalCompletionTokens: 0,
+      totalTokens: 0,
+      callCount: 0,
+      sessionStart: Date.now(),
+    };
+
     // ========== NEW: Story Arc Planning System ==========
     this.storyArc = null; // Global story arc generated at start for consistency
     this.chapterOutlines = new Map(); // Pre-generated chapter outlines for seamless flow
@@ -1841,6 +1852,76 @@ class StoryGenerationService {
     // Cache for static prompt content (Story Bible, Character Reference, etc.)
     this.staticCacheKey = null; // Key for the static content cache
     this.staticCacheVersion = 2; // Increment when static content changes
+  }
+
+  // ==========================================================================
+  // TOKEN USAGE TRACKING - Monitor costs and efficiency
+  // ==========================================================================
+
+  /**
+   * Log and track token usage from an LLM response
+   * Provides prominent console logging and cumulative tracking for cost visibility
+   * @param {Object} usage - Token usage object from LLM response
+   * @param {string} context - Context string for the log (e.g., "Chapter 2.A")
+   */
+  _trackTokenUsage(usage, context) {
+    if (!usage) return;
+
+    const promptTokens = usage.promptTokens || 0;
+    const cachedTokens = usage.cachedTokens || 0;
+    const completionTokens = usage.completionTokens || 0;
+    const totalTokens = usage.totalTokens || (promptTokens + completionTokens);
+
+    // Update cumulative totals
+    this.tokenUsage.totalPromptTokens += promptTokens;
+    this.tokenUsage.totalCachedTokens += cachedTokens;
+    this.tokenUsage.totalCompletionTokens += completionTokens;
+    this.tokenUsage.totalTokens += totalTokens;
+    this.tokenUsage.callCount += 1;
+
+    // Calculate cache efficiency (percentage of prompt tokens that were cached)
+    const cacheEfficiency = promptTokens > 0 ? Math.round((cachedTokens / promptTokens) * 100) : 0;
+
+    // Estimate cost (Gemini 3 Flash pricing: $0.10/1M input, $0.40/1M output, 50% discount on cached)
+    // Source: https://ai.google.dev/pricing
+    const inputCost = ((promptTokens - cachedTokens) * 0.10 / 1000000) + (cachedTokens * 0.05 / 1000000);
+    const outputCost = completionTokens * 0.40 / 1000000;
+    const callCost = inputCost + outputCost;
+
+    // Cumulative cost
+    const cumulativeInputCost = ((this.tokenUsage.totalPromptTokens - this.tokenUsage.totalCachedTokens) * 0.10 / 1000000) +
+                                (this.tokenUsage.totalCachedTokens * 0.05 / 1000000);
+    const cumulativeOutputCost = this.tokenUsage.totalCompletionTokens * 0.40 / 1000000;
+    const cumulativeCost = cumulativeInputCost + cumulativeOutputCost;
+
+    // Session duration
+    const sessionMinutes = Math.round((Date.now() - this.tokenUsage.sessionStart) / 60000);
+
+    // Prominent console logging
+    console.log(`[StoryGen] 📊 Token Usage for ${context}:`);
+    console.log(`  Input: ${promptTokens.toLocaleString()} tokens (${cachedTokens.toLocaleString()} cached = ${cacheEfficiency}% cache hit)`);
+    console.log(`  Output: ${completionTokens.toLocaleString()} tokens`);
+    console.log(`  Cost: $${callCost.toFixed(4)} (session total: $${cumulativeCost.toFixed(4)} across ${this.tokenUsage.callCount} calls, ${sessionMinutes}min)`);
+  }
+
+  /**
+   * Get current token usage statistics
+   * @returns {Object} Token usage stats with cost estimates
+   */
+  getTokenUsageStats() {
+    const cumulativeInputCost = ((this.tokenUsage.totalPromptTokens - this.tokenUsage.totalCachedTokens) * 0.10 / 1000000) +
+                                (this.tokenUsage.totalCachedTokens * 0.05 / 1000000);
+    const cumulativeOutputCost = this.tokenUsage.totalCompletionTokens * 0.40 / 1000000;
+    const sessionMinutes = Math.round((Date.now() - this.tokenUsage.sessionStart) / 60000);
+
+    return {
+      ...this.tokenUsage,
+      estimatedCost: cumulativeInputCost + cumulativeOutputCost,
+      cacheEfficiency: this.tokenUsage.totalPromptTokens > 0
+        ? Math.round((this.tokenUsage.totalCachedTokens / this.tokenUsage.totalPromptTokens) * 100)
+        : 0,
+      sessionDurationMinutes: sessionMinutes,
+    };
   }
 
   // ==========================================================================
@@ -6805,7 +6886,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             options: {
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
               responseSchema: schema,
-              thinkingLevel: 'medium',
+              thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
             },
           });
         } catch (cacheError) {
@@ -6858,13 +6939,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           );
         }
 
+        // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+        const firstCallThoughtSignature = response?.thoughtSignature || null;
+
         llmTrace('StoryGenerationService', traceId, 'llm.response.received', {
           model: response?.model,
           finishReason: response?.finishReason,
           isTruncated: response?.isTruncated,
           contentLength: response?.content?.length || 0,
           usage: response?.usage || null,
+          hasThoughtSignature: !!firstCallThoughtSignature,
         }, 'debug');
+
+        // Track token usage for first call
+        this._trackTokenUsage(response?.usage, `Chapter ${chapter}.${subchapter} (main content)`);
 
         generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
         llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
@@ -6934,10 +7022,25 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             console.log(`  - Total paths in prompt: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
             console.log(`  - Simple decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
             console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars`);
+            console.log(`  - Has thought signature from first call: ${!!firstCallThoughtSignature}`);
+
+            // Build messages array for multi-turn reasoning continuity (Gemini 3)
+            // If we have a thought signature from the first call, include it to maintain reasoning context
+            const messages = [];
+            if (firstCallThoughtSignature) {
+              // Include first response summary with thought signature for reasoning continuity
+              // Per Gemini 3 docs: "If one is returned, you should send it back to maintain best performance"
+              messages.push({
+                role: 'assistant',
+                content: `I generated a branching narrative with opening, choices, and a base decision: Option A "${generatedContent.decision?.optionA?.title}" vs Option B "${generatedContent.decision?.optionB?.title}"`,
+                thoughtSignature: firstCallThoughtSignature,
+              });
+            }
+            messages.push({ role: 'user', content: pathDecisionsPrompt });
 
             const pathDecisionsStartTime = Date.now();
             const pathDecisionsResponse = await llmService.complete(
-              [{ role: 'user', content: pathDecisionsPrompt }],
+              messages,
               {
                 systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
                 maxTokens: 4000,
@@ -6949,6 +7052,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                   subchapter,
                   pathKey,
                   secondCallFor: 'pathDecisions',
+                  hasThoughtSignature: !!firstCallThoughtSignature,
                 },
               }
             );
@@ -6960,7 +7064,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               contentLength: pathDecisionsResponse?.content?.length || 0,
               finishReason: pathDecisionsResponse?.finishReason,
               elapsedMs: pathDecisionsElapsed,
+              usage: pathDecisionsResponse?.usage || null,
             }, 'debug');
+
+            // Track token usage for second call (pathDecisions)
+            this._trackTokenUsage(pathDecisionsResponse?.usage, `Chapter ${chapter}.${subchapter} (pathDecisions)`);
 
             // Parse the pathDecisions response
             let pathDecisionsParsed;

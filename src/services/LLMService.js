@@ -499,9 +499,10 @@ class LLMService {
     };
 
     // Add thinking configuration for Gemini 3
+    // Using 'high' for story generation - latency-tolerant, quality-critical
     if (isGemini3) {
       generationConfig.thinkingConfig = {
-        thinkingLevel: 'medium', // Balance quality with speed
+        thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
       };
     }
 
@@ -633,7 +634,10 @@ class LLMService {
                            finishReason === 'LENGTH' ||
                            finishReason === 'RECITATION';
 
-        let content = candidate.content?.parts?.[0]?.text || '';
+        const contentPart = candidate.content?.parts?.[0] || {};
+        let content = contentPart.text || '';
+        // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+        const thoughtSignature = contentPart.thoughtSignature || null;
 
         // If response was truncated and we expect JSON, try to repair it
         if (isTruncated && responseSchema) {
@@ -647,6 +651,7 @@ class LLMService {
             finishReason,
             isTruncated,
             contentLength: content?.length || 0,
+            hasThoughtSignature: !!thoughtSignature,
             usage: {
               promptTokens: data.usageMetadata?.promptTokenCount,
               completionTokens: data.usageMetadata?.candidatesTokenCount,
@@ -666,6 +671,8 @@ class LLMService {
           model,
           finishReason,
           isTruncated,
+          // Include thought signature for multi-call reasoning continuity (Gemini 3)
+          thoughtSignature,
         };
       } catch (error) {
         // Always clean up timeout to prevent accumulation
@@ -1210,8 +1217,10 @@ class LLMService {
         }
 
         const totalTime = Date.now() - operationStart;
+        // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+        const thoughtSignature = data.thoughtSignature || null;
         // Single consolidated success log with streaming method info
-        console.log(`[LLMService] [${localRequestId}] Complete via ${streamingMethod}: ${totalTime}ms, ${contentLength} chars${heartbeatCount > 0 ? `, ${heartbeatCount} heartbeats` : ''}${!jsonValid ? ' (needs repair)' : ''}`);
+        console.log(`[LLMService] [${localRequestId}] Complete via ${streamingMethod}: ${totalTime}ms, ${contentLength} chars${heartbeatCount > 0 ? `, ${heartbeatCount} heartbeats` : ''}${!jsonValid ? ' (needs repair)' : ''}${thoughtSignature ? ' (has thought signature)' : ''}`);
 
         if (traceId) {
           llmTrace('LLMService', traceId, 'llm.proxy.response.ok', {
@@ -1226,6 +1235,7 @@ class LLMService {
             localRequestId,
             heartbeatCount,
             streamingMethod,
+            hasThoughtSignature: !!thoughtSignature,
             requestContext,
           }, 'debug');
         }
@@ -1238,6 +1248,8 @@ class LLMService {
           isTruncated,
           requestId: data.requestId,
           timing: data.timing,
+          // Include thought signature for multi-call reasoning continuity (Gemini 3)
+          thoughtSignature,
         };
 
       } catch (error) {
@@ -1344,9 +1356,15 @@ class LLMService {
         text = `${systemInstruction}\n\n---\n\n${text}`;
       }
 
+      // Build part with optional thought signature for reasoning continuity (Gemini 3)
+      const part = { text };
+      if (msg.thoughtSignature) {
+        part.thoughtSignature = msg.thoughtSignature;
+      }
+
       contents.push({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text }],
+        parts: [part],
       });
     }
 
@@ -1925,9 +1943,10 @@ class LLMService {
     };
 
     // Add thinking configuration for Gemini 3
+    // Using 'high' for story generation - latency-tolerant, quality-critical
     if (isGemini3) {
       generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || 'medium',
+        thinkingLevel: options.thinkingLevel || 'high', // Maximize reasoning depth
       };
     }
 
@@ -1997,7 +2016,10 @@ class LLMService {
         throw new Error('No candidate in response');
       }
 
-      const content = candidate.content?.parts?.[0]?.text || '';
+      const contentPart = candidate.content?.parts?.[0] || {};
+      const content = contentPart.text || '';
+      // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+      const thoughtSignature = contentPart.thoughtSignature || null;
       const usage = data.usageMetadata || {};
 
       // Log token usage with cache metrics
@@ -2014,6 +2036,8 @@ class LLMService {
           completionTokens: usage.candidatesTokenCount || 0,
           totalTokens: usage.totalTokenCount || 0,
         },
+        // Include thought signature for multi-call reasoning continuity (Gemini 3)
+        thoughtSignature,
       };
     } catch (error) {
       console.error('[LLMService] Cached generation failed:', error);
