@@ -5074,9 +5074,20 @@ Generate realistic, specific consequences based on the actual narrative content.
    */
   _buildExtendedStyleExamplesForCache() {
     try {
-      return buildExtendedStyleExamples();
+      const examples = buildExtendedStyleExamples();
+      // Verify content was actually built
+      if (!examples || examples.length < 1000) {
+        console.error('[StoryGenerationService] ⚠️ Extended style examples suspiciously short or empty!', {
+          length: examples?.length || 0,
+          expected: '5000+ chars',
+        });
+      } else {
+        console.log(`[StoryGenerationService] ✅ Extended examples built: ${examples.length} chars`);
+      }
+      return examples;
     } catch (e) {
-      console.warn('[StoryGenerationService] Failed to build extended style examples:', e);
+      console.error('[StoryGenerationService] ❌ FAILED to build extended style examples:', e.message);
+      console.error('[StoryGenerationService] Stack:', e.stack);
       return '';
     }
   }
@@ -6026,8 +6037,11 @@ The narrative context differs by path, so the strategic options should differ to
     let extendedExamples = '';
     try {
       extendedExamples = buildExtendedStyleExamples();
+      if (!extendedExamples || extendedExamples.length < 1000) {
+        console.error('[StoryGen] ⚠️ Extended examples missing/short in _buildStyleSection!', extendedExamples?.length);
+      }
     } catch (e) {
-      // Fallback if extended examples fail to load
+      console.error('[StoryGen] ❌ Extended examples FAILED:', e.message);
       extendedExamples = '';
     }
 
@@ -6035,8 +6049,11 @@ The narrative context differs by path, so the strategic options should differ to
     let voiceDNA = '';
     try {
       voiceDNA = buildVoiceDNASection(charactersInScene);
+      if (!voiceDNA || voiceDNA.length < 100) {
+        console.warn('[StoryGen] ⚠️ Voice DNA short/empty. Characters:', charactersInScene);
+      }
     } catch (e) {
-      // Fallback if voice DNA fails to load
+      console.error('[StoryGen] ❌ Voice DNA FAILED:', e.message);
       voiceDNA = '';
     }
 
@@ -6044,8 +6061,11 @@ The narrative context differs by path, so the strategic options should differ to
     let dramaticIrony = '';
     try {
       dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
+      if (!dramaticIrony || dramaticIrony.length < 50) {
+        console.warn('[StoryGen] ⚠️ Dramatic irony empty for chapter', chapter);
+      }
     } catch (e) {
-      // Fallback if dramatic irony fails to load
+      console.error('[StoryGen] ❌ Dramatic irony FAILED:', e.message);
       dramaticIrony = '';
     }
 
@@ -7387,6 +7407,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
         if (arcClosure.issues.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.issues.map(i => `[Arc] ${i}`)];
+        }
+
+        // ========== LLM-BASED VALIDATION (Semantic Understanding) ==========
+        // This catches violations that regex can't detect (wrong years, subtle contradictions)
+        // Only run if regex validation passed (to avoid wasting tokens on obviously broken content)
+        if (validationResult.issues.length === 0) {
+          try {
+            const llmValidation = await this._validateWithLLM(generatedContent, context);
+            if (llmValidation.validated && llmValidation.issues.length > 0) {
+              // LLM found issues that regex missed - these are blocking issues
+              validationResult.issues = [...validationResult.issues, ...llmValidation.issues.map(i => `[LLM] ${i}`)];
+              console.log(`[StoryGen] LLM validation found ${llmValidation.issues.length} issues that regex missed`);
+            }
+          } catch (llmValError) {
+            console.warn(`[StoryGen] LLM validation skipped due to error:`, llmValError.message);
+            // Don't fail generation if LLM validation fails - regex validation already passed
+          }
         }
 
         // Log all warnings for debugging without blocking generation
@@ -9404,6 +9441,263 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     return { issues, warnings };
+  }
+
+  // ==========================================================================
+  // PROMPT DIAGNOSTICS - Verify all components are being included
+  // ==========================================================================
+
+  /**
+   * Diagnose prompt building to verify all components are included correctly
+   * Call this to debug issues with missing prompt content
+   * @returns {Object} Diagnostic report
+   */
+  diagnosePromptContent() {
+    const report = {
+      timestamp: new Date().toISOString(),
+      components: {},
+      issues: [],
+      summary: '',
+    };
+
+    // Check extended examples
+    try {
+      const extended = buildExtendedStyleExamples();
+      report.components.extendedExamples = {
+        length: extended?.length || 0,
+        hasContent: !!extended && extended.length > 1000,
+        preview: extended?.slice(0, 200) || 'EMPTY',
+      };
+      if (!extended || extended.length < 1000) {
+        report.issues.push('Extended examples missing or too short');
+      }
+    } catch (e) {
+      report.components.extendedExamples = { error: e.message };
+      report.issues.push(`Extended examples FAILED: ${e.message}`);
+    }
+
+    // Check EXAMPLE_PASSAGES
+    try {
+      const passageCount = Object.keys(EXAMPLE_PASSAGES).length;
+      report.components.examplePassages = {
+        count: passageCount,
+        keys: Object.keys(EXAMPLE_PASSAGES),
+        hasContent: passageCount > 5,
+      };
+      if (passageCount < 5) {
+        report.issues.push('EXAMPLE_PASSAGES has fewer than expected entries');
+      }
+    } catch (e) {
+      report.components.examplePassages = { error: e.message };
+      report.issues.push(`EXAMPLE_PASSAGES check failed: ${e.message}`);
+    }
+
+    // Check STYLE_EXAMPLES
+    try {
+      report.components.styleExamples = {
+        length: STYLE_EXAMPLES?.length || 0,
+        hasContent: !!STYLE_EXAMPLES && STYLE_EXAMPLES.length > 500,
+        preview: STYLE_EXAMPLES?.slice(0, 200) || 'EMPTY',
+      };
+      if (!STYLE_EXAMPLES || STYLE_EXAMPLES.length < 500) {
+        report.issues.push('STYLE_EXAMPLES missing or too short');
+      }
+    } catch (e) {
+      report.components.styleExamples = { error: e.message };
+      report.issues.push(`STYLE_EXAMPLES check failed: ${e.message}`);
+    }
+
+    // Check dramatic irony builder
+    try {
+      const irony = buildDramaticIronySection(3, 'ROOT', []);
+      report.components.dramaticIrony = {
+        length: irony?.length || 0,
+        hasContent: !!irony && irony.length > 100,
+        preview: irony?.slice(0, 200) || 'EMPTY',
+      };
+      if (!irony || irony.length < 100) {
+        report.issues.push('Dramatic irony section empty for test chapter');
+      }
+    } catch (e) {
+      report.components.dramaticIrony = { error: e.message };
+      report.issues.push(`Dramatic irony FAILED: ${e.message}`);
+    }
+
+    // Check voice DNA builder
+    try {
+      const voiceDNA = buildVoiceDNASection(['victoria', 'sarah']);
+      report.components.voiceDNA = {
+        length: voiceDNA?.length || 0,
+        hasContent: !!voiceDNA && voiceDNA.length > 200,
+        preview: voiceDNA?.slice(0, 200) || 'EMPTY',
+      };
+      if (!voiceDNA || voiceDNA.length < 200) {
+        report.issues.push('Voice DNA section empty for test characters');
+      }
+    } catch (e) {
+      report.components.voiceDNA = { error: e.message };
+      report.issues.push(`Voice DNA FAILED: ${e.message}`);
+    }
+
+    // Check WRITING_STYLE
+    try {
+      report.components.writingStyle = {
+        hasVoice: !!WRITING_STYLE?.voice,
+        hasInfluences: Array.isArray(WRITING_STYLE?.influences),
+        hasForbidden: Array.isArray(WRITING_STYLE?.absolutelyForbidden),
+        hasMustInclude: Array.isArray(WRITING_STYLE?.mustInclude),
+      };
+      if (!WRITING_STYLE?.voice || !WRITING_STYLE?.influences) {
+        report.issues.push('WRITING_STYLE missing key properties');
+      }
+    } catch (e) {
+      report.components.writingStyle = { error: e.message };
+      report.issues.push(`WRITING_STYLE check failed: ${e.message}`);
+    }
+
+    // Check CONSISTENCY_RULES
+    try {
+      report.components.consistencyRules = {
+        count: CONSISTENCY_RULES?.length || 0,
+        hasContent: CONSISTENCY_RULES?.length > 5,
+      };
+      if (!CONSISTENCY_RULES || CONSISTENCY_RULES.length < 5) {
+        report.issues.push('CONSISTENCY_RULES missing or too few');
+      }
+    } catch (e) {
+      report.components.consistencyRules = { error: e.message };
+      report.issues.push(`CONSISTENCY_RULES check failed: ${e.message}`);
+    }
+
+    // Summary
+    const totalIssues = report.issues.length;
+    if (totalIssues === 0) {
+      report.summary = '✅ All prompt components verified successfully';
+    } else {
+      report.summary = `❌ ${totalIssues} issue(s) found with prompt components`;
+    }
+
+    console.log('[StoryGen] Prompt Diagnostic Report:');
+    console.log(JSON.stringify(report, null, 2));
+
+    return report;
+  }
+
+  // ==========================================================================
+  // LLM-BASED VALIDATION - Semantic understanding of rule violations
+  // ==========================================================================
+
+  /**
+   * Validate content using LLM for semantic understanding
+   * This catches violations that regex can't detect (e.g., wrong years, contradictions)
+   * Uses a fast, cheap LLM call with minimal thinking
+   * @param {Object} content - Generated content to validate
+   * @param {Object} context - Story context
+   * @returns {Promise<Object>} Validation result with issues and suggestions
+   */
+  async _validateWithLLM(content, context) {
+    const narrative = content.narrative || '';
+
+    // Skip for very short content
+    if (narrative.length < 200) {
+      return { issues: [], suggestions: [], validated: false, reason: 'content too short' };
+    }
+
+    console.log(`[StoryGen] 🔍 Running LLM validation on ${narrative.length} chars...`);
+
+    try {
+      const validationPrompt = `You are a strict continuity editor for a noir detective story. Check this narrative excerpt for FACTUAL ERRORS against the story bible facts below.
+
+## ABSOLUTE FACTS (Cannot be contradicted):
+- Jack Halloway: Late 50s-60s, former Ashport PD detective, 30-year career, forcibly retired
+- Tom Wade: Jack's best friend for 30 YEARS (met in college), secretly manufactured evidence for 20 years
+- Sarah Reeves: Jack's former partner for 13 YEARS
+- Silas Reed: Jack's partner for 8 YEARS (most recent)
+- Emily Cross: Now known as Victoria Blackwell / The Midnight Confessor
+  - Was 22 when abducted by Deputy Chief Grange (7 years ago)
+  - Attempted suicide with 30 Oxycodone pills
+  - Jack declared her case closed while she was still in captivity
+- Eleanor Bellamy: Wrongfully convicted, imprisoned for 8 YEARS
+- Marcus Thornhill: Framed for embezzlement, committed suicide 8 years ago
+- Setting: Ashport (rain-soaked, neon-lit, perpetually overcast)
+- Story spans EXACTLY 12 DAYS (one chapter per day)
+
+## NARRATIVE TO CHECK:
+${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
+
+## INSTRUCTIONS:
+1. Look for ANY factual contradictions (wrong years, wrong relationships, wrong names)
+2. Check timeline references ("X years ago" must match the facts above)
+3. Check character relationships (who knows who, how long)
+4. Check setting details (city name, locations)
+
+Respond with JSON:
+{
+  "hasIssues": true/false,
+  "issues": ["specific issue 1", "specific issue 2"],
+  "suggestions": ["how to fix issue 1", "how to fix issue 2"],
+  "confidence": "high"/"medium"/"low"
+}
+
+If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [], "confidence": "high" }`;
+
+      const response = await llmService.complete(
+        [{ role: 'user', content: validationPrompt }],
+        {
+          systemPrompt: 'You are a meticulous continuity editor. Find factual errors. Be specific. No false positives.',
+          maxTokens: 800,
+          responseSchema: {
+            type: 'object',
+            properties: {
+              hasIssues: { type: 'boolean' },
+              issues: { type: 'array', items: { type: 'string' } },
+              suggestions: { type: 'array', items: { type: 'string' } },
+              confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+            },
+            required: ['hasIssues', 'issues', 'suggestions', 'confidence'],
+          },
+          traceId: `validation-${Date.now()}`,
+          thinkingLevel: 'low', // Fast validation, don't need deep reasoning
+        }
+      );
+
+      // Track token usage
+      this._trackTokenUsage(response?.usage, 'LLM Validation');
+
+      // Parse response
+      let result;
+      try {
+        result = typeof response.content === 'string'
+          ? JSON.parse(response.content)
+          : response.content;
+      } catch (parseErr) {
+        console.warn('[StoryGen] ⚠️ Failed to parse LLM validation response');
+        return { issues: [], suggestions: [], validated: false, reason: 'parse error' };
+      }
+
+      if (result.hasIssues && result.issues.length > 0) {
+        console.log(`[StoryGen] ❌ LLM validation found ${result.issues.length} issues:`);
+        result.issues.forEach((issue, i) => {
+          console.log(`  ${i + 1}. ${issue}`);
+          if (result.suggestions[i]) {
+            console.log(`     → Fix: ${result.suggestions[i]}`);
+          }
+        });
+      } else {
+        console.log(`[StoryGen] ✅ LLM validation passed (confidence: ${result.confidence})`);
+      }
+
+      return {
+        issues: result.issues || [],
+        suggestions: result.suggestions || [],
+        confidence: result.confidence || 'medium',
+        validated: true,
+      };
+
+    } catch (error) {
+      console.warn(`[StoryGen] ⚠️ LLM validation failed:`, error.message);
+      return { issues: [], suggestions: [], validated: false, reason: error.message };
+    }
   }
 
   /**
