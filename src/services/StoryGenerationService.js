@@ -1799,6 +1799,25 @@ class StoryGenerationService {
     this.characterStates = new Map(); // Tracks character relationship/trust states
     this.narrativeThreads = []; // Active story threads that must be maintained
 
+    // ========== Token Usage Tracking ==========
+    // Track cumulative token usage across session for cost visibility
+    this.tokenUsage = {
+      totalPromptTokens: 0,
+      totalCachedTokens: 0,
+      totalCompletionTokens: 0,
+      totalTokens: 0,
+      callCount: 0,
+      sessionStart: Date.now(),
+    };
+
+    // ========== Dynamic Personality Classification ==========
+    // LLM-based player personality analysis (cached by choice history hash)
+    this.dynamicPersonalityCache = {
+      choiceHistoryHash: null,
+      personality: null,
+      timestamp: null,
+    };
+
     // ========== NEW: Story Arc Planning System ==========
     this.storyArc = null; // Global story arc generated at start for consistency
     this.chapterOutlines = new Map(); // Pre-generated chapter outlines for seamless flow
@@ -1841,6 +1860,216 @@ class StoryGenerationService {
     // Cache for static prompt content (Story Bible, Character Reference, etc.)
     this.staticCacheKey = null; // Key for the static content cache
     this.staticCacheVersion = 2; // Increment when static content changes
+  }
+
+  // ==========================================================================
+  // TOKEN USAGE TRACKING - Monitor costs and efficiency
+  // ==========================================================================
+
+  /**
+   * Log and track token usage from an LLM response
+   * Provides prominent console logging and cumulative tracking for cost visibility
+   * @param {Object} usage - Token usage object from LLM response
+   * @param {string} context - Context string for the log (e.g., "Chapter 2.A")
+   */
+  _trackTokenUsage(usage, context) {
+    if (!usage) return;
+
+    const promptTokens = usage.promptTokens || 0;
+    const cachedTokens = usage.cachedTokens || 0;
+    const completionTokens = usage.completionTokens || 0;
+    const totalTokens = usage.totalTokens || (promptTokens + completionTokens);
+
+    // Update cumulative totals
+    this.tokenUsage.totalPromptTokens += promptTokens;
+    this.tokenUsage.totalCachedTokens += cachedTokens;
+    this.tokenUsage.totalCompletionTokens += completionTokens;
+    this.tokenUsage.totalTokens += totalTokens;
+    this.tokenUsage.callCount += 1;
+
+    // Calculate cache efficiency (percentage of prompt tokens that were cached)
+    const cacheEfficiency = promptTokens > 0 ? Math.round((cachedTokens / promptTokens) * 100) : 0;
+
+    // Estimate cost (Gemini 3 Flash pricing: $0.10/1M input, $0.40/1M output, 50% discount on cached)
+    // Source: https://ai.google.dev/pricing
+    const inputCost = ((promptTokens - cachedTokens) * 0.10 / 1000000) + (cachedTokens * 0.05 / 1000000);
+    const outputCost = completionTokens * 0.40 / 1000000;
+    const callCost = inputCost + outputCost;
+
+    // Cumulative cost
+    const cumulativeInputCost = ((this.tokenUsage.totalPromptTokens - this.tokenUsage.totalCachedTokens) * 0.10 / 1000000) +
+                                (this.tokenUsage.totalCachedTokens * 0.05 / 1000000);
+    const cumulativeOutputCost = this.tokenUsage.totalCompletionTokens * 0.40 / 1000000;
+    const cumulativeCost = cumulativeInputCost + cumulativeOutputCost;
+
+    // Session duration
+    const sessionMinutes = Math.round((Date.now() - this.tokenUsage.sessionStart) / 60000);
+
+    // Prominent console logging
+    console.log(`[StoryGen] 📊 Token Usage for ${context}:`);
+    console.log(`  Input: ${promptTokens.toLocaleString()} tokens (${cachedTokens.toLocaleString()} cached = ${cacheEfficiency}% cache hit)`);
+    console.log(`  Output: ${completionTokens.toLocaleString()} tokens`);
+    console.log(`  Cost: $${callCost.toFixed(4)} (session total: $${cumulativeCost.toFixed(4)} across ${this.tokenUsage.callCount} calls, ${sessionMinutes}min)`);
+  }
+
+  /**
+   * Get current token usage statistics
+   * @returns {Object} Token usage stats with cost estimates
+   */
+  getTokenUsageStats() {
+    const cumulativeInputCost = ((this.tokenUsage.totalPromptTokens - this.tokenUsage.totalCachedTokens) * 0.10 / 1000000) +
+                                (this.tokenUsage.totalCachedTokens * 0.05 / 1000000);
+    const cumulativeOutputCost = this.tokenUsage.totalCompletionTokens * 0.40 / 1000000;
+    const sessionMinutes = Math.round((Date.now() - this.tokenUsage.sessionStart) / 60000);
+
+    return {
+      ...this.tokenUsage,
+      estimatedCost: cumulativeInputCost + cumulativeOutputCost,
+      cacheEfficiency: this.tokenUsage.totalPromptTokens > 0
+        ? Math.round((this.tokenUsage.totalCachedTokens / this.tokenUsage.totalPromptTokens) * 100)
+        : 0,
+      sessionDurationMinutes: sessionMinutes,
+    };
+  }
+
+  // ==========================================================================
+  // DYNAMIC PERSONALITY CLASSIFICATION - LLM-based player behavior analysis
+  // ==========================================================================
+
+  /**
+   * Generate a hash of choice history for cache invalidation
+   * @param {Array} choiceHistory - Player's choice history
+   * @returns {string} Hash string
+   */
+  _hashChoiceHistory(choiceHistory) {
+    if (!choiceHistory || choiceHistory.length === 0) return 'empty';
+    return choiceHistory.map(c => `${c.caseNumber}:${c.optionKey}`).join('|');
+  }
+
+  /**
+   * Dynamically classify player personality using LLM
+   * Uses Gemini to analyze actual choice patterns and provide richer personality assessment
+   * Falls back to keyword-based analysis if LLM fails
+   * @param {Array} choiceHistory - Player's choice history
+   * @returns {Promise<Object>} Personality classification with narrativeStyle, dialogueTone, riskTolerance
+   */
+  async _classifyPersonalityDynamic(choiceHistory) {
+    // If no choices yet, return balanced default
+    if (!choiceHistory || choiceHistory.length === 0) {
+      return {
+        ...PATH_PERSONALITY_TRAITS.BALANCED,
+        source: 'default',
+      };
+    }
+
+    // Check cache - if choice history hasn't changed, use cached result
+    const currentHash = this._hashChoiceHistory(choiceHistory);
+    if (this.dynamicPersonalityCache.choiceHistoryHash === currentHash &&
+        this.dynamicPersonalityCache.personality) {
+      console.log(`[StoryGen] 🧠 Using cached personality classification`);
+      return this.dynamicPersonalityCache.personality;
+    }
+
+    console.log(`[StoryGen] 🧠 Classifying player personality dynamically (${choiceHistory.length} choices)...`);
+
+    try {
+      // Build choice summary for LLM
+      const choiceSummary = choiceHistory.map(choice => {
+        const chapter = this._extractChapterFromCase(choice.caseNumber);
+        const consequence = DECISION_CONSEQUENCES[choice.caseNumber]?.[choice.optionKey];
+        return {
+          chapter,
+          choice: choice.optionKey,
+          description: consequence?.immediate || `Chose option ${choice.optionKey}`,
+        };
+      });
+
+      const classificationPrompt = `Analyze this player's decision pattern in a noir detective mystery game and classify their play style.
+
+PLAYER'S CHOICES:
+${choiceSummary.map(c => `- Chapter ${c.chapter}: ${c.description}`).join('\n')}
+
+Based on these choices, classify the player's approach. Consider:
+- Do they prefer direct confrontation or careful investigation?
+- Are they impulsive or methodical?
+- Do they prioritize speed or thoroughness?
+- What's their relationship-building style (trust quickly vs. verify)?
+
+Respond with a JSON object containing:
+- "dominantStyle": one of "AGGRESSIVE", "METHODICAL", or "BALANCED"
+- "narrativeStyle": a sentence describing how Jack (the protagonist) acts based on this play style
+- "dialogueTone": how Jack's dialogue should sound (e.g., "direct and confrontational", "measured and analytical", "adaptable")
+- "riskTolerance": "high", "moderate", or "low"
+- "characterInsight": a brief observation about this player's detective persona (1 sentence)`;
+
+      const response = await llmService.complete(
+        [{ role: 'user', content: classificationPrompt }],
+        {
+          systemPrompt: 'You are an expert at analyzing player behavior in narrative games. Provide concise, insightful classifications.',
+          maxTokens: 500,
+          responseSchema: {
+            type: 'object',
+            properties: {
+              dominantStyle: { type: 'string', enum: ['AGGRESSIVE', 'METHODICAL', 'BALANCED'] },
+              narrativeStyle: { type: 'string' },
+              dialogueTone: { type: 'string' },
+              riskTolerance: { type: 'string', enum: ['high', 'moderate', 'low'] },
+              characterInsight: { type: 'string' },
+            },
+            required: ['dominantStyle', 'narrativeStyle', 'dialogueTone', 'riskTolerance'],
+          },
+          traceId: `personality-${Date.now()}`,
+          thinkingLevel: 'low', // Quick classification, don't need deep reasoning
+        }
+      );
+
+      // Track token usage
+      this._trackTokenUsage(response?.usage, 'Personality classification');
+
+      // Parse response
+      let classification;
+      try {
+        classification = typeof response.content === 'string'
+          ? JSON.parse(response.content)
+          : response.content;
+      } catch (parseErr) {
+        console.warn(`[StoryGen] ⚠️ Failed to parse personality classification, using fallback`);
+        const fallback = this._analyzePathPersonality(choiceHistory);
+        return { ...fallback, source: 'keyword-fallback' };
+      }
+
+      // Build personality object
+      const personality = {
+        narrativeStyle: classification.narrativeStyle || PATH_PERSONALITY_TRAITS.BALANCED.narrativeStyle,
+        dialogueTone: classification.dialogueTone || PATH_PERSONALITY_TRAITS.BALANCED.dialogueTone || 'adapts to the situation',
+        riskTolerance: classification.riskTolerance || 'moderate',
+        dominantStyle: classification.dominantStyle || 'BALANCED',
+        characterInsight: classification.characterInsight || null,
+        source: 'llm-dynamic',
+      };
+
+      // Cache the result
+      this.dynamicPersonalityCache = {
+        choiceHistoryHash: currentHash,
+        personality,
+        timestamp: Date.now(),
+      };
+
+      console.log(`[StoryGen] 🧠 Personality classified: ${personality.dominantStyle} - "${personality.narrativeStyle}"`);
+      if (personality.characterInsight) {
+        console.log(`[StoryGen] 💡 Insight: ${personality.characterInsight}`);
+      }
+
+      return personality;
+
+    } catch (error) {
+      console.warn(`[StoryGen] ⚠️ Dynamic personality classification failed:`, error.message);
+      console.warn(`[StoryGen] Falling back to keyword-based analysis`);
+
+      // Fall back to keyword-based analysis
+      const fallback = this._analyzePathPersonality(choiceHistory);
+      return { ...fallback, source: 'keyword-fallback' };
+    }
   }
 
   // ==========================================================================
@@ -4010,6 +4239,8 @@ Generate realistic, specific consequences based on the actual narrative content.
       this.threadAcknowledgmentCounts.clear();
       this.generationAttempts.clear();
       this.pathPersonality = null;
+      this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+      this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
       this.consistencyLog = [];
       this.narrativeThreads = [];
 
@@ -4217,6 +4448,8 @@ Generate realistic, specific consequences based on the actual narrative content.
     this.consistencyLog = [];
     this.narrativeThreads = [];
     this.pathPersonality = null;
+    this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+    this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
     this.isGenerating = false;
 
     // Clear dynamic clusters
@@ -4324,7 +4557,15 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     // Analyze player's path personality for narrative consistency
-    const pathPersonality = this._analyzePathPersonality(choiceHistory);
+    // Use dynamic LLM-based classification for richer personality insights
+    // Falls back to keyword-based analysis if LLM fails
+    let pathPersonality;
+    try {
+      pathPersonality = await this._classifyPersonalityDynamic(choiceHistory);
+    } catch (error) {
+      console.warn('[StoryGenerationService] Dynamic personality classification failed, using keyword fallback');
+      pathPersonality = this._analyzePathPersonality(choiceHistory);
+    }
     this.pathPersonality = pathPersonality;
 
     // Build cumulative decision consequences
@@ -4833,9 +5074,20 @@ Generate realistic, specific consequences based on the actual narrative content.
    */
   _buildExtendedStyleExamplesForCache() {
     try {
-      return buildExtendedStyleExamples();
+      const examples = buildExtendedStyleExamples();
+      // Verify content was actually built
+      if (!examples || examples.length < 1000) {
+        console.error('[StoryGenerationService] ⚠️ Extended style examples suspiciously short or empty!', {
+          length: examples?.length || 0,
+          expected: '5000+ chars',
+        });
+      } else {
+        console.log(`[StoryGenerationService] ✅ Extended examples built: ${examples.length} chars`);
+      }
+      return examples;
     } catch (e) {
-      console.warn('[StoryGenerationService] Failed to build extended style examples:', e);
+      console.error('[StoryGenerationService] ❌ FAILED to build extended style examples:', e.message);
+      console.error('[StoryGenerationService] Stack:', e.stack);
       return '';
     }
   }
@@ -5785,8 +6037,11 @@ The narrative context differs by path, so the strategic options should differ to
     let extendedExamples = '';
     try {
       extendedExamples = buildExtendedStyleExamples();
+      if (!extendedExamples || extendedExamples.length < 1000) {
+        console.error('[StoryGen] ⚠️ Extended examples missing/short in _buildStyleSection!', extendedExamples?.length);
+      }
     } catch (e) {
-      // Fallback if extended examples fail to load
+      console.error('[StoryGen] ❌ Extended examples FAILED:', e.message);
       extendedExamples = '';
     }
 
@@ -5794,8 +6049,11 @@ The narrative context differs by path, so the strategic options should differ to
     let voiceDNA = '';
     try {
       voiceDNA = buildVoiceDNASection(charactersInScene);
+      if (!voiceDNA || voiceDNA.length < 100) {
+        console.warn('[StoryGen] ⚠️ Voice DNA short/empty. Characters:', charactersInScene);
+      }
     } catch (e) {
-      // Fallback if voice DNA fails to load
+      console.error('[StoryGen] ❌ Voice DNA FAILED:', e.message);
       voiceDNA = '';
     }
 
@@ -5803,8 +6061,11 @@ The narrative context differs by path, so the strategic options should differ to
     let dramaticIrony = '';
     try {
       dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
+      if (!dramaticIrony || dramaticIrony.length < 50) {
+        console.warn('[StoryGen] ⚠️ Dramatic irony empty for chapter', chapter);
+      }
     } catch (e) {
-      // Fallback if dramatic irony fails to load
+      console.error('[StoryGen] ❌ Dramatic irony FAILED:', e.message);
       dramaticIrony = '';
     }
 
@@ -6805,7 +7066,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             options: {
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
               responseSchema: schema,
-              thinkingLevel: 'medium',
+              thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
             },
           });
         } catch (cacheError) {
@@ -6858,13 +7119,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           );
         }
 
+        // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+        const firstCallThoughtSignature = response?.thoughtSignature || null;
+
         llmTrace('StoryGenerationService', traceId, 'llm.response.received', {
           model: response?.model,
           finishReason: response?.finishReason,
           isTruncated: response?.isTruncated,
           contentLength: response?.content?.length || 0,
           usage: response?.usage || null,
+          hasThoughtSignature: !!firstCallThoughtSignature,
         }, 'debug');
+
+        // Track token usage for first call
+        this._trackTokenUsage(response?.usage, `Chapter ${chapter}.${subchapter} (main content)`);
 
         generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
         llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
@@ -6934,10 +7202,25 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             console.log(`  - Total paths in prompt: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
             console.log(`  - Simple decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
             console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars`);
+            console.log(`  - Has thought signature from first call: ${!!firstCallThoughtSignature}`);
+
+            // Build messages array for multi-turn reasoning continuity (Gemini 3)
+            // If we have a thought signature from the first call, include it to maintain reasoning context
+            const messages = [];
+            if (firstCallThoughtSignature) {
+              // Include first response summary with thought signature for reasoning continuity
+              // Per Gemini 3 docs: "If one is returned, you should send it back to maintain best performance"
+              messages.push({
+                role: 'assistant',
+                content: `I generated a branching narrative with opening, choices, and a base decision: Option A "${generatedContent.decision?.optionA?.title}" vs Option B "${generatedContent.decision?.optionB?.title}"`,
+                thoughtSignature: firstCallThoughtSignature,
+              });
+            }
+            messages.push({ role: 'user', content: pathDecisionsPrompt });
 
             const pathDecisionsStartTime = Date.now();
             const pathDecisionsResponse = await llmService.complete(
-              [{ role: 'user', content: pathDecisionsPrompt }],
+              messages,
               {
                 systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
                 maxTokens: 4000,
@@ -6949,6 +7232,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                   subchapter,
                   pathKey,
                   secondCallFor: 'pathDecisions',
+                  hasThoughtSignature: !!firstCallThoughtSignature,
                 },
               }
             );
@@ -6960,7 +7244,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               contentLength: pathDecisionsResponse?.content?.length || 0,
               finishReason: pathDecisionsResponse?.finishReason,
               elapsedMs: pathDecisionsElapsed,
+              usage: pathDecisionsResponse?.usage || null,
             }, 'debug');
+
+            // Track token usage for second call (pathDecisions)
+            this._trackTokenUsage(pathDecisionsResponse?.usage, `Chapter ${chapter}.${subchapter} (pathDecisions)`);
 
             // Parse the pathDecisions response
             let pathDecisionsParsed;
@@ -7119,6 +7407,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
         if (arcClosure.issues.length > 0) {
           validationResult.warnings = [...(validationResult.warnings || []), ...arcClosure.issues.map(i => `[Arc] ${i}`)];
+        }
+
+        // ========== LLM-BASED VALIDATION (Semantic Understanding) ==========
+        // This catches violations that regex can't detect (wrong years, subtle contradictions)
+        // Only run if regex validation passed (to avoid wasting tokens on obviously broken content)
+        if (validationResult.issues.length === 0) {
+          try {
+            const llmValidation = await this._validateWithLLM(generatedContent, context);
+            if (llmValidation.validated && llmValidation.issues.length > 0) {
+              // LLM found issues that regex missed - these are blocking issues
+              validationResult.issues = [...validationResult.issues, ...llmValidation.issues.map(i => `[LLM] ${i}`)];
+              console.log(`[StoryGen] LLM validation found ${llmValidation.issues.length} issues that regex missed`);
+            }
+          } catch (llmValError) {
+            console.warn(`[StoryGen] LLM validation skipped due to error:`, llmValError.message);
+            // Don't fail generation if LLM validation fails - regex validation already passed
+          }
         }
 
         // Log all warnings for debugging without blocking generation
@@ -9136,6 +9441,263 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     return { issues, warnings };
+  }
+
+  // ==========================================================================
+  // PROMPT DIAGNOSTICS - Verify all components are being included
+  // ==========================================================================
+
+  /**
+   * Diagnose prompt building to verify all components are included correctly
+   * Call this to debug issues with missing prompt content
+   * @returns {Object} Diagnostic report
+   */
+  diagnosePromptContent() {
+    const report = {
+      timestamp: new Date().toISOString(),
+      components: {},
+      issues: [],
+      summary: '',
+    };
+
+    // Check extended examples
+    try {
+      const extended = buildExtendedStyleExamples();
+      report.components.extendedExamples = {
+        length: extended?.length || 0,
+        hasContent: !!extended && extended.length > 1000,
+        preview: extended?.slice(0, 200) || 'EMPTY',
+      };
+      if (!extended || extended.length < 1000) {
+        report.issues.push('Extended examples missing or too short');
+      }
+    } catch (e) {
+      report.components.extendedExamples = { error: e.message };
+      report.issues.push(`Extended examples FAILED: ${e.message}`);
+    }
+
+    // Check EXAMPLE_PASSAGES
+    try {
+      const passageCount = Object.keys(EXAMPLE_PASSAGES).length;
+      report.components.examplePassages = {
+        count: passageCount,
+        keys: Object.keys(EXAMPLE_PASSAGES),
+        hasContent: passageCount > 5,
+      };
+      if (passageCount < 5) {
+        report.issues.push('EXAMPLE_PASSAGES has fewer than expected entries');
+      }
+    } catch (e) {
+      report.components.examplePassages = { error: e.message };
+      report.issues.push(`EXAMPLE_PASSAGES check failed: ${e.message}`);
+    }
+
+    // Check STYLE_EXAMPLES
+    try {
+      report.components.styleExamples = {
+        length: STYLE_EXAMPLES?.length || 0,
+        hasContent: !!STYLE_EXAMPLES && STYLE_EXAMPLES.length > 500,
+        preview: STYLE_EXAMPLES?.slice(0, 200) || 'EMPTY',
+      };
+      if (!STYLE_EXAMPLES || STYLE_EXAMPLES.length < 500) {
+        report.issues.push('STYLE_EXAMPLES missing or too short');
+      }
+    } catch (e) {
+      report.components.styleExamples = { error: e.message };
+      report.issues.push(`STYLE_EXAMPLES check failed: ${e.message}`);
+    }
+
+    // Check dramatic irony builder
+    try {
+      const irony = buildDramaticIronySection(3, 'ROOT', []);
+      report.components.dramaticIrony = {
+        length: irony?.length || 0,
+        hasContent: !!irony && irony.length > 100,
+        preview: irony?.slice(0, 200) || 'EMPTY',
+      };
+      if (!irony || irony.length < 100) {
+        report.issues.push('Dramatic irony section empty for test chapter');
+      }
+    } catch (e) {
+      report.components.dramaticIrony = { error: e.message };
+      report.issues.push(`Dramatic irony FAILED: ${e.message}`);
+    }
+
+    // Check voice DNA builder
+    try {
+      const voiceDNA = buildVoiceDNASection(['victoria', 'sarah']);
+      report.components.voiceDNA = {
+        length: voiceDNA?.length || 0,
+        hasContent: !!voiceDNA && voiceDNA.length > 200,
+        preview: voiceDNA?.slice(0, 200) || 'EMPTY',
+      };
+      if (!voiceDNA || voiceDNA.length < 200) {
+        report.issues.push('Voice DNA section empty for test characters');
+      }
+    } catch (e) {
+      report.components.voiceDNA = { error: e.message };
+      report.issues.push(`Voice DNA FAILED: ${e.message}`);
+    }
+
+    // Check WRITING_STYLE
+    try {
+      report.components.writingStyle = {
+        hasVoice: !!WRITING_STYLE?.voice,
+        hasInfluences: Array.isArray(WRITING_STYLE?.influences),
+        hasForbidden: Array.isArray(WRITING_STYLE?.absolutelyForbidden),
+        hasMustInclude: Array.isArray(WRITING_STYLE?.mustInclude),
+      };
+      if (!WRITING_STYLE?.voice || !WRITING_STYLE?.influences) {
+        report.issues.push('WRITING_STYLE missing key properties');
+      }
+    } catch (e) {
+      report.components.writingStyle = { error: e.message };
+      report.issues.push(`WRITING_STYLE check failed: ${e.message}`);
+    }
+
+    // Check CONSISTENCY_RULES
+    try {
+      report.components.consistencyRules = {
+        count: CONSISTENCY_RULES?.length || 0,
+        hasContent: CONSISTENCY_RULES?.length > 5,
+      };
+      if (!CONSISTENCY_RULES || CONSISTENCY_RULES.length < 5) {
+        report.issues.push('CONSISTENCY_RULES missing or too few');
+      }
+    } catch (e) {
+      report.components.consistencyRules = { error: e.message };
+      report.issues.push(`CONSISTENCY_RULES check failed: ${e.message}`);
+    }
+
+    // Summary
+    const totalIssues = report.issues.length;
+    if (totalIssues === 0) {
+      report.summary = '✅ All prompt components verified successfully';
+    } else {
+      report.summary = `❌ ${totalIssues} issue(s) found with prompt components`;
+    }
+
+    console.log('[StoryGen] Prompt Diagnostic Report:');
+    console.log(JSON.stringify(report, null, 2));
+
+    return report;
+  }
+
+  // ==========================================================================
+  // LLM-BASED VALIDATION - Semantic understanding of rule violations
+  // ==========================================================================
+
+  /**
+   * Validate content using LLM for semantic understanding
+   * This catches violations that regex can't detect (e.g., wrong years, contradictions)
+   * Uses a fast, cheap LLM call with minimal thinking
+   * @param {Object} content - Generated content to validate
+   * @param {Object} context - Story context
+   * @returns {Promise<Object>} Validation result with issues and suggestions
+   */
+  async _validateWithLLM(content, context) {
+    const narrative = content.narrative || '';
+
+    // Skip for very short content
+    if (narrative.length < 200) {
+      return { issues: [], suggestions: [], validated: false, reason: 'content too short' };
+    }
+
+    console.log(`[StoryGen] 🔍 Running LLM validation on ${narrative.length} chars...`);
+
+    try {
+      const validationPrompt = `You are a strict continuity editor for a noir detective story. Check this narrative excerpt for FACTUAL ERRORS against the story bible facts below.
+
+## ABSOLUTE FACTS (Cannot be contradicted):
+- Jack Halloway: Late 50s-60s, former Ashport PD detective, 30-year career, forcibly retired
+- Tom Wade: Jack's best friend for 30 YEARS (met in college), secretly manufactured evidence for 20 years
+- Sarah Reeves: Jack's former partner for 13 YEARS
+- Silas Reed: Jack's partner for 8 YEARS (most recent)
+- Emily Cross: Now known as Victoria Blackwell / The Midnight Confessor
+  - Was 22 when abducted by Deputy Chief Grange (7 years ago)
+  - Attempted suicide with 30 Oxycodone pills
+  - Jack declared her case closed while she was still in captivity
+- Eleanor Bellamy: Wrongfully convicted, imprisoned for 8 YEARS
+- Marcus Thornhill: Framed for embezzlement, committed suicide 8 years ago
+- Setting: Ashport (rain-soaked, neon-lit, perpetually overcast)
+- Story spans EXACTLY 12 DAYS (one chapter per day)
+
+## NARRATIVE TO CHECK:
+${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
+
+## INSTRUCTIONS:
+1. Look for ANY factual contradictions (wrong years, wrong relationships, wrong names)
+2. Check timeline references ("X years ago" must match the facts above)
+3. Check character relationships (who knows who, how long)
+4. Check setting details (city name, locations)
+
+Respond with JSON:
+{
+  "hasIssues": true/false,
+  "issues": ["specific issue 1", "specific issue 2"],
+  "suggestions": ["how to fix issue 1", "how to fix issue 2"],
+  "confidence": "high"/"medium"/"low"
+}
+
+If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [], "confidence": "high" }`;
+
+      const response = await llmService.complete(
+        [{ role: 'user', content: validationPrompt }],
+        {
+          systemPrompt: 'You are a meticulous continuity editor. Find factual errors. Be specific. No false positives.',
+          maxTokens: 800,
+          responseSchema: {
+            type: 'object',
+            properties: {
+              hasIssues: { type: 'boolean' },
+              issues: { type: 'array', items: { type: 'string' } },
+              suggestions: { type: 'array', items: { type: 'string' } },
+              confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+            },
+            required: ['hasIssues', 'issues', 'suggestions', 'confidence'],
+          },
+          traceId: `validation-${Date.now()}`,
+          thinkingLevel: 'low', // Fast validation, don't need deep reasoning
+        }
+      );
+
+      // Track token usage
+      this._trackTokenUsage(response?.usage, 'LLM Validation');
+
+      // Parse response
+      let result;
+      try {
+        result = typeof response.content === 'string'
+          ? JSON.parse(response.content)
+          : response.content;
+      } catch (parseErr) {
+        console.warn('[StoryGen] ⚠️ Failed to parse LLM validation response');
+        return { issues: [], suggestions: [], validated: false, reason: 'parse error' };
+      }
+
+      if (result.hasIssues && result.issues.length > 0) {
+        console.log(`[StoryGen] ❌ LLM validation found ${result.issues.length} issues:`);
+        result.issues.forEach((issue, i) => {
+          console.log(`  ${i + 1}. ${issue}`);
+          if (result.suggestions[i]) {
+            console.log(`     → Fix: ${result.suggestions[i]}`);
+          }
+        });
+      } else {
+        console.log(`[StoryGen] ✅ LLM validation passed (confidence: ${result.confidence})`);
+      }
+
+      return {
+        issues: result.issues || [],
+        suggestions: result.suggestions || [],
+        confidence: result.confidence || 'medium',
+        validated: true,
+      };
+
+    } catch (error) {
+      console.warn(`[StoryGen] ⚠️ LLM validation failed:`, error.message);
+      return { issues: [], suggestions: [], validated: false, reason: error.message };
+    }
   }
 
   /**

@@ -201,10 +201,17 @@ export default async function handler(request) {
     const geminiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const geminiBody = {
-      contents: body.messages.map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      })),
+      contents: body.messages.map(msg => {
+        // Build part with optional thought signature for reasoning continuity (Gemini 3)
+        const part = { text: msg.content };
+        if (msg.thoughtSignature) {
+          part.thoughtSignature = msg.thoughtSignature;
+        }
+        return {
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [part],
+        };
+      }),
       generationConfig: {
         temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
         ...(body.maxTokens && { maxOutputTokens: body.maxTokens }),
@@ -221,7 +228,9 @@ export default async function handler(request) {
 
     if (isGemini3) {
       geminiBody.generationConfig.thinkingConfig = {
-        thinkingLevel: body.thinkingLevel ?? 'medium',
+        // Default to 'high' for story generation - latency-tolerant, quality-critical
+        // Client can override with body.thinkingLevel if needed
+        thinkingLevel: body.thinkingLevel ?? 'high',
       };
     }
 
@@ -326,7 +335,10 @@ export default async function handler(request) {
 
           const geminiData = await geminiResponse.json();
           const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
-          const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const contentPart = geminiData.candidates?.[0]?.content?.parts?.[0] || {};
+          const content = contentPart.text || '';
+          // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+          const thoughtSignature = contentPart.thoughtSignature || null;
           const usage = geminiData.usageMetadata || {};
 
           if (finishReason === 'SAFETY') {
@@ -352,6 +364,8 @@ export default async function handler(request) {
             type: 'response',
             success: true,
             content,
+            // Include thought signature for multi-call reasoning continuity (Gemini 3)
+            ...(thoughtSignature && { thoughtSignature }),
             usage: {
               promptTokens: usage.promptTokenCount || 0,
               cachedTokens: cachedTokens,
@@ -447,7 +461,10 @@ export default async function handler(request) {
 
       const geminiData = await geminiResponse.json();
       const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
-      const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const contentPart = geminiData.candidates?.[0]?.content?.parts?.[0] || {};
+      const content = contentPart.text || '';
+      // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+      const thoughtSignature = contentPart.thoughtSignature || null;
       const usage = geminiData.usageMetadata || {};
 
       if (finishReason === 'SAFETY') {
@@ -459,11 +476,13 @@ export default async function handler(request) {
 
       const totalDuration = Date.now() - startTime;
       const cachedTokens = usage.cachedContentTokenCount || 0;
-      console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${content.length} chars${cachedTokens > 0 ? ` (${cachedTokens} cached)` : ''}`);
+      console.log(`[${requestId}] Complete: ${geminiDuration}ms, ${content.length} chars${cachedTokens > 0 ? ` (${cachedTokens} cached)` : ''}${thoughtSignature ? ' (has signature)' : ''}`);
 
       return Response.json({
         success: true,
         content,
+        // Include thought signature for multi-call reasoning continuity (Gemini 3)
+        ...(thoughtSignature && { thoughtSignature }),
         usage: {
           promptTokens: usage.promptTokenCount || 0,
           cachedTokens: cachedTokens,
