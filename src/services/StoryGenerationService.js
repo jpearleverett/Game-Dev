@@ -1052,41 +1052,34 @@ const PATHDECISIONS_ONLY_SCHEMA = {
 };
 
 // Prompt template for the second call to generate path-specific decisions
-const PATHDECISIONS_PROMPT_TEMPLATE = `You previously generated a decision subchapter with branching narrative paths. Now generate 9 PATH-SPECIFIC decision variants, one for each unique path the player could have taken through the branching narrative.
-
-IMPORTANT: Each path should have a decision that reflects HOW THE PLAYER GOT TO THIS MOMENT. The same story beat should be framed differently based on the player's journey through the narrative.
+// IMPORTANT: This template uses LABELS ONLY, not echoed narrative content.
+// Echoing generated content triggers Gemini's RECITATION safety filter.
+const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 path-specific decision variants for a noir detective branching narrative.
 
 ## PATH KEY FORMAT
-Path keys follow the format: [FirstChoice]-[SecondChoice]
-- "1A-2B" means: Player chose option 1A at the first branch, then option 2B at the second branch
-- The 9 possible paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
+The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
+- First letter = first choice (1A, 1B, 1C)
+- Second pair = second choice within that branch (2A, 2B, 2C)
 
-## BRANCHING NARRATIVE STRUCTURE (What the player experienced)
+## FIRST CHOICE OPTIONS (Player tone):
+- 1A: "{{firstChoice1ALabel}}" - {{firstChoice1ATone}}
+- 1B: "{{firstChoice1BLabel}}" - {{firstChoice1BTone}}
+- 1C: "{{firstChoice1CLabel}}" - {{firstChoice1CTone}}
 
-### Opening (All players see this):
-{{opening}}
+## SECOND CHOICE OPTIONS (Path endings):
+{{secondChoiceLabels}}
 
-### First Choice Options (Player picks ONE of these):
-- 1A: "{{firstChoice1ALabel}}" → {{firstChoice1AResponse}}
-- 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BResponse}}
-- 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CResponse}}
-
-### Second Choice Endings (Each path leads to a unique ending):
-{{secondChoiceEndings}}
-
-## SIMPLE DECISION (Base structure to adapt for each path):
-- Intro: {{decisionIntro}}
-- Option A: {{optionATitle}} ({{optionAFocus}})
-- Option B: {{optionBTitle}} ({{optionBFocus}})
+## BASE DECISION (Adapt for each path):
+- Option A: "{{optionATitle}}" ({{optionAFocus}})
+- Option B: "{{optionBTitle}}" ({{optionBFocus}})
 
 ## YOUR TASK
-For each of the 9 paths, generate a decision that:
-1. References what THAT SPECIFIC player experienced (their first choice, their ending)
-2. Frames the decision intro to reflect their journey
-3. Keeps optionA and optionB titles similar but adjusts focus/framing based on path context
-4. Sets personalityAlignment based on what kind of player would take that path
+For each of the 9 paths, generate a unique decision variant that:
+1. Frames the intro to reflect how that player reached this moment
+2. Adjusts focus based on the tone of their choices (aggressive vs cautious vs balanced)
+3. Sets personalityAlignment: "aggressive" for direct/confrontational paths, "cautious" for careful paths, "balanced" otherwise
 
-Generate pathDecisions array with 9 objects, each having: pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment}.`;
+Generate pathDecisions array with 9 objects: { pathKey, intro (1-2 sentences), optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment} }`;
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
@@ -2006,7 +1999,7 @@ Respond with a JSON object containing:
         [{ role: 'user', content: classificationPrompt }],
         {
           systemPrompt: 'You are an expert at analyzing player behavior in narrative games. Provide concise, insightful classifications.',
-          maxTokens: 500,
+          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget even at 'low' level
           responseSchema: {
             type: 'object',
             properties: {
@@ -3679,7 +3672,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         [{ role: 'user', content: consequencePrompt }],
         {
           systemPrompt: 'You are generating narrative consequences for player choices in a noir detective mystery.',
-          maxTokens: 500,
+          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
           responseSchema: consequenceSchema,
         }
       );
@@ -7158,37 +7151,41 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }, 'debug');
 
           try {
-            // Build prompt using FULL context from first call, including branchingNarrative
+            // Build prompt using LABELS ONLY to avoid RECITATION safety filter
+            // IMPORTANT: Do NOT echo back generated narrative content - this triggers RECITATION
             const bn = generatedContent.branchingNarrative || {};
             const firstChoiceOpts = bn.firstChoice?.options || [];
             const secondChoices = bn.secondChoices || [];
 
-            // Build second choice endings summary for all 9 paths
-            const secondChoiceEndings = secondChoices.map((sc, scIdx) => {
+            // Helper to infer tone from choice label
+            const inferTone = (label) => {
+              const lower = (label || '').toLowerCase();
+              if (lower.includes('confront') || lower.includes('demand') || lower.includes('force') || lower.includes('direct')) return 'aggressive/direct approach';
+              if (lower.includes('investigate') || lower.includes('gather') || lower.includes('wait') || lower.includes('careful')) return 'cautious/methodical approach';
+              return 'balanced approach';
+            };
+
+            // Build second choice LABELS only (no narrative excerpts)
+            const secondChoiceLabels = secondChoices.map((sc, scIdx) => {
               const afterChoice = sc.afterChoice || `1${String.fromCharCode(65 + scIdx)}`;
               const opts = sc.options || [];
-              return opts.map((opt, optIdx) => {
+              return `After ${afterChoice}:\n` + opts.map((opt, optIdx) => {
                 const pathKey = `${afterChoice}-2${String.fromCharCode(65 + optIdx)}`;
-                // Truncate response to ~200 chars to keep prompt size reasonable
-                const truncatedResponse = (opt.response || '').slice(0, 200) + (opt.response?.length > 200 ? '...' : '');
-                return `- ${pathKey}: "${opt.label || 'Choice'}" → ${truncatedResponse}`;
+                return `  - ${pathKey}: "${opt.label || 'Choice'}"`;
               }).join('\n');
-            }).join('\n\n');
+            }).join('\n');
 
             const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
-              // Opening section
-              .replace('{{opening}}', bn.opening?.text || 'Not available')
-              // First choice options
+              // First choice options with labels and inferred tones
               .replace('{{firstChoice1ALabel}}', firstChoiceOpts[0]?.label || 'Option 1A')
-              .replace('{{firstChoice1AResponse}}', (firstChoiceOpts[0]?.response || '').slice(0, 150) + '...')
+              .replace('{{firstChoice1ATone}}', inferTone(firstChoiceOpts[0]?.label))
               .replace('{{firstChoice1BLabel}}', firstChoiceOpts[1]?.label || 'Option 1B')
-              .replace('{{firstChoice1BResponse}}', (firstChoiceOpts[1]?.response || '').slice(0, 150) + '...')
+              .replace('{{firstChoice1BTone}}', inferTone(firstChoiceOpts[1]?.label))
               .replace('{{firstChoice1CLabel}}', firstChoiceOpts[2]?.label || 'Option 1C')
-              .replace('{{firstChoice1CResponse}}', (firstChoiceOpts[2]?.response || '').slice(0, 150) + '...')
-              // Second choice endings (all 9 paths)
-              .replace('{{secondChoiceEndings}}', secondChoiceEndings || 'Not available')
+              .replace('{{firstChoice1CTone}}', inferTone(firstChoiceOpts[2]?.label))
+              // Second choice labels only (no narrative content)
+              .replace('{{secondChoiceLabels}}', secondChoiceLabels || 'Not available')
               // Simple decision base
-              .replace('{{decisionIntro}}', generatedContent.decision?.intro || 'Not available')
               .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
               .replace('{{optionAFocus}}', generatedContent.decision?.optionA?.focus || 'Not specified')
               .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B')
@@ -7196,55 +7193,75 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
             // Log what context we're sending
             console.log(`[StoryGenerationService] 📋 pathDecisions second call context:`);
-            console.log(`  - Opening: ${(bn.opening?.text || '').slice(0, 80)}...`);
             console.log(`  - First choices: ${firstChoiceOpts.map(o => o?.label || '?').join(', ')}`);
             console.log(`  - Second choice groups: ${secondChoices.length} (should be 3)`);
-            console.log(`  - Total paths in prompt: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
-            console.log(`  - Simple decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
-            console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars`);
-            console.log(`  - Has thought signature from first call: ${!!firstCallThoughtSignature}`);
+            console.log(`  - Total paths: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
+            console.log(`  - Base decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
+            console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (reduced - no narrative echoing)`);
 
-            // Build messages array for multi-turn reasoning continuity (Gemini 3)
-            // If we have a thought signature from the first call, include it to maintain reasoning context
-            const messages = [];
-            if (firstCallThoughtSignature) {
-              // Include first response summary with thought signature for reasoning continuity
-              // Per Gemini 3 docs: "If one is returned, you should send it back to maintain best performance"
-              messages.push({
-                role: 'assistant',
-                content: `I generated a branching narrative with opening, choices, and a base decision: Option A "${generatedContent.decision?.optionA?.title}" vs Option B "${generatedContent.decision?.optionB?.title}"`,
-                thoughtSignature: firstCallThoughtSignature,
-              });
-            }
-            messages.push({ role: 'user', content: pathDecisionsPrompt });
+            // Single user message - start fresh conversation for pathDecisions
+            //
+            // Why we don't use the thoughtSignature from the first call:
+            // Per Gemini docs, thought signatures should be returned with the EXACT content
+            // that generated them. Including the full 33k+ char first response just to use
+            // the signature would be expensive and hit context limits. Since signatures are
+            // optional for non-function-call responses (only recommended, not required),
+            // we start a fresh request with a minimal prompt instead.
+            //
+            // The RECITATION issue was caused by echoing large chunks of LLM-generated
+            // narrative content back to the model, which triggered the anti-memorization
+            // safety filter. Using labels-only in the prompt avoids this.
+            const messages = [{ role: 'user', content: pathDecisionsPrompt }];
 
             const pathDecisionsStartTime = Date.now();
-            const pathDecisionsResponse = await llmService.complete(
-              messages,
-              {
-                systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
-                maxTokens: 4000,
-                responseSchema: PATHDECISIONS_ONLY_SCHEMA,
-                traceId: traceId + '-pathDecisions',
-                requestContext: {
-                  caseNumber,
-                  chapter,
-                  subchapter,
-                  pathKey,
-                  secondCallFor: 'pathDecisions',
-                  hasThoughtSignature: !!firstCallThoughtSignature,
-                },
+
+            // Retry logic for RECITATION - this can happen if content still triggers safety filter
+            let pathDecisionsResponse = null;
+            let retryAttempt = 0;
+            const MAX_PATHDECISIONS_RETRIES = 2;
+
+            while (retryAttempt < MAX_PATHDECISIONS_RETRIES) {
+              pathDecisionsResponse = await llmService.complete(
+                messages,
+                {
+                  systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
+                  maxTokens: 4000,
+                  responseSchema: PATHDECISIONS_ONLY_SCHEMA,
+                  traceId: traceId + '-pathDecisions' + (retryAttempt > 0 ? `-retry${retryAttempt}` : ''),
+                  requestContext: {
+                    caseNumber,
+                    chapter,
+                    subchapter,
+                    pathKey,
+                    secondCallFor: 'pathDecisions',
+                    attempt: retryAttempt + 1,
+                  },
+                }
+              );
+
+              // Check for RECITATION - if so, retry with slightly modified prompt
+              if (pathDecisionsResponse?.finishReason === 'RECITATION') {
+                retryAttempt++;
+                console.warn(`[StoryGenerationService] ⚠️ RECITATION detected on pathDecisions (attempt ${retryAttempt}/${MAX_PATHDECISIONS_RETRIES})`);
+                if (retryAttempt < MAX_PATHDECISIONS_RETRIES) {
+                  // Add uniqueness hint to prompt for retry
+                  messages[0].content = pathDecisionsPrompt + `\n\nIMPORTANT: Generate ORIGINAL decision variants. Each path should have unique framing. Attempt ${retryAttempt + 1}.`;
+                  await new Promise(r => setTimeout(r, 1000)); // Brief delay before retry
+                }
+              } else {
+                break; // Success or other failure - exit retry loop
               }
-            );
+            }
 
             const pathDecisionsElapsed = Date.now() - pathDecisionsStartTime;
-            console.log(`[StoryGenerationService] ⏱️ pathDecisions second call completed in ${(pathDecisionsElapsed / 1000).toFixed(1)}s`);
+            console.log(`[StoryGenerationService] ⏱️ pathDecisions second call completed in ${(pathDecisionsElapsed / 1000).toFixed(1)}s${retryAttempt > 0 ? ` (${retryAttempt} retries)` : ''}`);
 
             llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.received', {
               contentLength: pathDecisionsResponse?.content?.length || 0,
               finishReason: pathDecisionsResponse?.finishReason,
               elapsedMs: pathDecisionsElapsed,
               usage: pathDecisionsResponse?.usage || null,
+              retryAttempts: retryAttempt,
             }, 'debug');
 
             // Track token usage for second call (pathDecisions)
@@ -7253,8 +7270,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Parse the pathDecisions response
             let pathDecisionsParsed;
             try {
-              const rawContent = pathDecisionsResponse.content;
-              pathDecisionsParsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+              const rawContent = pathDecisionsResponse?.content;
+              pathDecisionsParsed = rawContent ? (typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent) : null;
             } catch (parseErr) {
               console.warn(`[StoryGenerationService] ⚠️ Failed to parse pathDecisions JSON:`, parseErr.message);
               pathDecisionsParsed = null;
@@ -11130,7 +11147,7 @@ If no conflicts, return: {"conflicts": []}`;
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          maxTokens: 500,
+          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
           responseSchema: {
             type: 'object',
             properties: {

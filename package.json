@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "reencode-audio": "bash scripts/reencode-audio.sh"
   },
   "dependencies": {
     "@expo-google-fonts/courier-prime": "^0.4.1",
