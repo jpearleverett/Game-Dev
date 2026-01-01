@@ -18,6 +18,7 @@ import {
   parseCaseNumber,
   formatCaseNumber,
   computeBranchPathKey,
+  invalidateCacheEntry,
 } from '../data/storyContent';
 
 // Generation states
@@ -744,6 +745,10 @@ export function useStoryGeneration(storyCampaign) {
    * actual path through the branching narrative, so we can prefetch the next subchapter with
    * proper context (realized narrative instead of canonical).
    *
+   * IMPORTANT: This function ALWAYS regenerates the next subchapter with proper branching context,
+   * even if content was already prefetched. Prefetched content was generated BEFORE the player
+   * made their branching choices, so it doesn't include the realized narrative context.
+   *
    * @param {string} caseNumber - The case that was just completed (e.g., "002A")
    * @param {string} pathKey - The path key for this case
    * @param {Array} choiceHistory - Chapter-level decision history
@@ -777,7 +782,7 @@ export function useStoryGeneration(storyCampaign) {
     const nextSubIndex = subchapter === 1 ? 2 : 3;
     const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
 
-    console.log(`[useStoryGeneration] Generating next subchapter ${nextCaseNumber} after branching complete`);
+    console.log(`[useStoryGeneration] Regenerating ${nextCaseNumber} with branching context after player completed ${caseNumber}`);
 
     // Flush storage to ensure current content is available for context
     try {
@@ -787,6 +792,20 @@ export function useStoryGeneration(storyCampaign) {
       console.warn('[useStoryGeneration] Failed to flush before generation:', err);
     }
 
+    // CRITICAL FIX: Invalidate any previously prefetched content for the next subchapter.
+    // Content prefetched BEFORE branching choices were made doesn't include the realized
+    // narrative context, causing story discontinuity ("references things that didn't happen").
+    // By invalidating, we force regeneration with proper branchingChoices context.
+    try {
+      const wasInvalidated = await invalidateCacheEntry(nextCaseNumber, pathKey);
+      if (wasInvalidated) {
+        console.log(`[useStoryGeneration] Invalidated stale prefetched content for ${nextCaseNumber} - will regenerate with branching context`);
+      }
+    } catch (err) {
+      console.warn(`[useStoryGeneration] Failed to invalidate cache for ${nextCaseNumber}:`, err.message);
+    }
+
+    // Now check if generation is needed (should be true after invalidation)
     const needsGen = await needsGeneration(nextCaseNumber, pathKey);
 
     if (needsGen && isMountedRef.current) {
@@ -800,18 +819,19 @@ export function useStoryGeneration(storyCampaign) {
           nextSubIndex,
           pathKey,
           choiceHistory,
-          { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete:narrative-first' }
+          { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context' }
         );
 
         if (entry && isMountedRef.current) {
           updateGeneratedCache(nextCaseNumber, pathKey, entry);
-          console.log(`[useStoryGeneration] Successfully generated ${nextCaseNumber}`);
+          console.log(`[useStoryGeneration] Successfully regenerated ${nextCaseNumber} with branching context`);
         }
       } catch (err) {
         console.warn(`[useStoryGeneration] Generation failed for ${nextCaseNumber}:`, err.message);
       }
-    } else {
-      console.log(`[useStoryGeneration] ${nextCaseNumber} already exists, skipping generation`);
+    } else if (!needsGen) {
+      // This shouldn't happen after invalidation, but log if it does
+      console.warn(`[useStoryGeneration] ${nextCaseNumber} still exists after invalidation attempt - using existing content`);
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 

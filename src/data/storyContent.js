@@ -1,5 +1,5 @@
 import storyNarrative from './storyNarrative.json';
-import { getGeneratedEntry as loadGeneratedEntry } from '../storage/generatedStoryStorage';
+import { getGeneratedEntry as loadGeneratedEntry, deleteGeneratedEntry } from '../storage/generatedStoryStorage';
 
 const CASE_CONTENT = storyNarrative?.caseContent || {};
 
@@ -386,6 +386,42 @@ export function updateGeneratedCache(caseNumber, pathKey, entry, speculativeBran
   if (speculativeBranchingPath) {
     console.log(`[storyContent] Speculatively cached ${caseNumber} for branching path ${speculativeBranchingPath}`);
   }
+}
+
+/**
+ * Invalidate (delete) a specific cache entry, forcing regeneration on next access.
+ * Used when we need to regenerate content with updated context (e.g., after branching choices are made).
+ * Deletes from both in-memory cache and persistent storage.
+ *
+ * @param {string} caseNumber - The case number (e.g., "002B")
+ * @param {string} pathKey - The chapter-level path key (e.g., "ROOT")
+ * @returns {Promise<boolean>} True if an entry was deleted, false if no entry existed
+ */
+export async function invalidateCacheEntry(caseNumber, pathKey) {
+  const normalizedKey = normalizeStoryPathKey(pathKey);
+  const key = `${caseNumber}_${normalizedKey}`;
+
+  let deleted = false;
+
+  // Delete from in-memory cache
+  if (generatedCache[key]) {
+    delete generatedCache[key];
+    deleted = true;
+    console.log(`[storyContent] Invalidated in-memory cache for ${caseNumber} (path: ${normalizedKey})`);
+  }
+
+  // Delete from persistent storage
+  try {
+    const storageDeleted = await deleteGeneratedEntry(caseNumber, normalizedKey);
+    if (storageDeleted) {
+      deleted = true;
+      console.log(`[storyContent] Invalidated persistent storage for ${caseNumber} (path: ${normalizedKey})`);
+    }
+  } catch (err) {
+    console.warn(`[storyContent] Failed to delete from persistent storage: ${err.message}`);
+  }
+
+  return deleted;
 }
 
 /**
