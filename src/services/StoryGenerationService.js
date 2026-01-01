@@ -7356,7 +7356,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 messages,
                 {
                   systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
-                  maxTokens: 4000,
+                  maxTokens: GENERATION_CONFIG.maxTokens.pathDecisions, // 16k tokens for complex branching + thinking
                   responseSchema: PATHDECISIONS_ONLY_SCHEMA,
                   traceId: traceId + '-pathDecisions' + (retryAttempt > 0 ? `-retry${retryAttempt}` : ''),
                   requestContext: {
