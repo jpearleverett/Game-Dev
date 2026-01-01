@@ -330,6 +330,40 @@ export async function clearGeneratedStory() {
 }
 
 /**
+ * Delete a specific generated entry (forces regeneration on next access)
+ * Used when content needs to be regenerated with updated context (e.g., after branching choices)
+ */
+export async function deleteGeneratedEntry(caseNumber, pathKey) {
+  return storyWriteLock.withLock(async () => {
+    try {
+      // Load into cache if not already there
+      if (!storyCache) {
+        await loadGeneratedStory();
+      }
+
+      const key = `${caseNumber}_${pathKey}`;
+
+      if (storyCache.chapters[key]) {
+        delete storyCache.chapters[key];
+        storyCache.lastUpdated = new Date().toISOString();
+        storyCache.totalGenerated = Object.keys(storyCache.chapters).length;
+        isDirty = true;
+
+        // Immediate flush to ensure deletion persists
+        await flushCacheToStorage();
+        console.log(`[GeneratedStoryStorage] Deleted entry for ${key}`);
+        return true;
+      }
+
+      return false; // Entry didn't exist
+    } catch (error) {
+      console.warn('[GeneratedStoryStorage] Failed to delete entry:', error);
+      return false;
+    }
+  });
+}
+
+/**
  * Load story context (character tracking, plot points, etc.)
  */
 export async function getStoryContext() {
