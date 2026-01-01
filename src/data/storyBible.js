@@ -30,6 +30,7 @@ export const TIMELINE = {
     1: 'Jack forced into retirement',
   },
   storyStart: {
+    anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
     day1: 'Jack receives first black envelope from The Midnight Confessor',
     structure: '12 days, 12 cases from Jack\'s career being revisited',
   },
@@ -352,6 +353,8 @@ export const WRITING_STYLE = {
     'Overwrought or purple prose',
     'Breaking the fourth wall',
     'Summarizing instead of showing',
+    'Summarizing dialogue (if conversation changes plot, write it in full direct dialogue - never "They talked for hours")',
+    'Explaining character emotions directly (show through action and physical response, not narration)',
   ],
 };
 
@@ -638,13 +641,13 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - match our word count targets for efficiency
-  // 500 words ≈ 700 tokens + 200 for JSON structure + 300 buffer = 1200 total
-  // This prevents Gemini from rambling beyond our target and keeps generation fast
+  // Token limits - Gemini 3 Flash Preview supports up to 65,536 tokens output (64k)
+  // 500-1000 words ≈ 700-1400 tokens + JSON structure overhead
+  // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
   maxTokens: {
-    subchapter: 60000,     // Matches 500-word target, completes in ~15-20s
-    expansion: 3000,      // For fallback expansion (rarely needed)
-    validation: 500,
+    subchapter: 65536,    // Gemini 3 Flash Preview max output (64k tokens)
+    expansion: 8000,      // For expansion requests
+    validation: 1000,     // For validation passes
   },
 
   // Context windowing - controls how much prior story text is sent to the LLM.

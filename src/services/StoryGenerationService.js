@@ -1115,11 +1115,34 @@ Generate pathDecisions array with 9 objects: { pathKey, intro, optionA {key, tit
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
+// Structured per Gemini 3 best practices (XML tags, explicit planning, persona)
 // ============================================================================
-const MASTER_SYSTEM_PROMPT = `You are writing "Dead Letters," an interactive noir detective story. You are the sole author responsible for maintaining perfect narrative consistency.
+const MASTER_SYSTEM_PROMPT = `<identity>
+You are the author of "Dead Letters," a Lehane/French-style interactive noir mystery.
+You are NOT an AI assistant helping with writing - you ARE the writer.
+Your prose rivals Dennis Lehane's "Mystic River" and Tana French's "In the Woods."
+You are precise, atmospheric, and psychologically rich.
+</identity>
 
-## YOUR ROLE
-You continue the story of Jack Halloway, a retired detective confronting the wrongful convictions built on his career. The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
+<core_mandate>
+You continue the story of Jack Halloway with perfect narrative consistency.
+The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
+Every word you write maintains the noir atmosphere and advances the mystery.
+</core_mandate>
+
+## PLANNING BEFORE WRITING (MANDATORY)
+
+Before generating ANY narrative content, you MUST internally plan:
+
+<planning_steps>
+1. **Parse Beat Requirements**: What MUST happen in this subchapter's beat type?
+2. **Identify Critical Threads**: Which CRITICAL threads are overdue and must be addressed?
+3. **Select Emotional Anchor**: What gut-punch moment will this contain?
+4. **Verify Timeline**: Check all durations against ABSOLUTE_FACTS (exact years, not approximate)
+5. **Outline Narrative Arc**: Opening hook → escalation → final line hook
+</planning_steps>
+
+This planning ensures coherent, purposeful prose rather than wandering narrative.
 
 ## CONTINUATION MANDATE - THIS IS YOUR PRIMARY DIRECTIVE
 **You are continuing an ongoing story. You are NOT summarizing or starting fresh.**
@@ -1519,7 +1542,8 @@ Before outputting your JSON response, verify:
 5. **FORBIDDEN PATTERNS**: Scan your narrative for forbidden words/phrases from the list above
 6. **THIRD PERSON LIMITED**: Entire narrative is third-person past tense, close on Jack. Never use "I/me/my/we/our".
 7. **TIMELINE FACTS**: Any durations mentioned use EXACT numbers from ABSOLUTE_FACTS (30 years Tom, 8 years Eleanor, etc.)
-8. **DECISION ALIGNMENT**: If decision point, both options have personalityAlignment field filled
+8. **TEMPORAL ANCHORING**: Story begins on November 14, 2025. All flashbacks calculated from this anchor date.
+9. **DECISION ALIGNMENT**: If decision point, both options have personalityAlignment field filled
 
 ## ENGAGEMENT SELF-CHECK (The "What If They Stop Here" Test)
 Before outputting, imagine the reader puts down their phone at this exact moment.
@@ -5125,21 +5149,24 @@ Generate realistic, specific consequences based on the actual narrative content.
     const parts = [];
 
     // Part 1: Story Bible Grounding (STATIC)
-    // Use the existing method to ensure exact same format
     const groundingSection = this._buildGroundingSection(null);
+    parts.push('<story_bible>');
     parts.push(groundingSection);
+    parts.push('</story_bible>');
     console.log(`[Cache] Grounding section: ${groundingSection.length} chars`);
 
     // Part 2: Character Reference (STATIC)
-    // Use the existing method to ensure exact same format
     const characterSection = this._buildCharacterSection();
+    parts.push('<character_reference>');
     parts.push(characterSection);
+    parts.push('</character_reference>');
     console.log(`[Cache] Character section: ${characterSection.length} chars`);
 
     // Part 3: Craft Techniques (STATIC)
-    // Use the existing method to ensure exact same format
     const craftSection = this._buildCraftTechniquesSection();
+    parts.push('<craft_techniques>');
     parts.push(craftSection);
+    parts.push('</craft_techniques>');
     console.log(`[Cache] Craft techniques: ${craftSection.length} chars`);
 
     // Part 4: Writing Style Examples (STATIC)
@@ -5172,7 +5199,9 @@ ${STYLE_EXAMPLES}
 
 ${extendedExamples}
 `;
+    parts.push('<style_examples>');
     parts.push(styleSection);
+    parts.push('</style_examples>');
     console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
     // Part 5: Consistency Rules (STATIC)
@@ -5182,10 +5211,12 @@ Before generating, verify these facts are never contradicted:
 
 ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
 `;
+    parts.push('<consistency_rules>');
     parts.push(rulesSection);
+    parts.push('</consistency_rules>');
     console.log(`[Cache] Consistency rules: ${rulesSection.length} chars`);
 
-    const fullContent = parts.join('\n\n---\n\n');
+    const fullContent = parts.join('\n\n');
     console.log(`[Cache] TOTAL static content: ${fullContent.length} chars (~${Math.round(fullContent.length / 4)} tokens est.)`);
 
     return fullContent;
@@ -5236,20 +5267,26 @@ ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
   _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint) {
     const parts = [];
 
-    // Per Gemini 3 docs: "place your specific instructions or questions at the
-    // end of the prompt, after the data context"
+    // Per Gemini 3 docs: Use XML tags for structure clarity
+    // "place your specific instructions or questions at the end of the prompt, after the data context"
 
     // Dynamic Part 1: Complete Story So Far
+    parts.push('<story_context>');
     parts.push(this._buildStorySummarySection(context));
+    parts.push('</story_context>');
 
     // Dynamic Part 2: Character Knowledge State (who knows what)
+    parts.push('<character_knowledge>');
     parts.push(this._buildKnowledgeSection(context));
+    parts.push('</character_knowledge>');
 
     // Dynamic Part 3: Voice DNA (character-specific dialogue patterns for this scene)
     const charactersInScene = this._extractCharactersFromContext(context, chapter);
     const voiceDNA = buildVoiceDNASection(charactersInScene);
     if (voiceDNA) {
+      parts.push('<voice_dna>');
       parts.push(voiceDNA);
+      parts.push('</voice_dna>');
     }
 
     // Dynamic Part 4: Dramatic Irony (chapter-specific ironies)
@@ -5257,29 +5294,62 @@ ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
     const choiceHistory = context.playerChoices || [];
     const dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
     if (dramaticIrony) {
+      parts.push('<dramatic_irony>');
       parts.push(dramaticIrony);
+      parts.push('</dramatic_irony>');
     }
 
     // Dynamic Part 5: Consistency Checklist (established facts + active threads)
+    parts.push('<active_threads>');
     parts.push(this._buildConsistencySection(context));
+    parts.push('</active_threads>');
 
     // Dynamic Part 6: Current Scene State (exact continuation point)
     const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
     if (sceneState) {
+      parts.push('<scene_state>');
       parts.push(sceneState);
+      parts.push('</scene_state>');
     }
 
     // Dynamic Part 7: Personal Stakes & Engagement Guidance
     const engagementGuidance = this._buildEngagementGuidanceSection(context, chapter, subchapter);
     if (engagementGuidance) {
+      parts.push('<engagement_guidance>');
       parts.push(engagementGuidance);
+      parts.push('</engagement_guidance>');
     }
 
     // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
-    parts.push('\n\n**Based on all the information above, here is your task:**\n\n');
-    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
+    const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
+    const beatType = this._getBeatType(chapter, subchapter);
 
-    return parts.join('\n\n---\n\n');
+    parts.push(`
+<task>
+Write subchapter ${chapter}.${subchapter} (${beatType}).
+
+Before writing, plan:
+1. What narrative threads from ACTIVE_THREADS must be addressed?
+2. What is the emotional anchor for this subchapter?
+3. How does this advance the chapter beat (${beatType})?
+
+${taskSpec}
+</task>
+
+<self_critique>
+After generating your narrative, review it against these quality gates:
+
+1. **Intent Alignment**: Did I answer the beat requirements, not just write prose?
+2. **Thread Continuity**: Did I address at least 2 CRITICAL threads explicitly?
+3. **Emotional Authenticity**: Is there a genuine gut-punch moment, not just plot?
+4. **Timeline Precision**: Are all durations EXACT per ABSOLUTE_FACTS (never approximate)?
+5. **Hook Quality**: Does the final line create unbearable forward momentum?
+6. **Forbidden Patterns**: Did I avoid all forbidden phrases and constructions?
+
+If any check fails, revise before returning your response.
+</self_critique>`);
+
+    return parts.join('\n\n');
   }
 
   /**
@@ -6190,6 +6260,15 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
   /**
    * Get pacing guidance based on chapter
    */
+  _getBeatType(chapter, subchapter) {
+    // Return a simple beat type description for the task prompt
+    const subchapterLabel = ['A', 'B', 'C'][subchapter - 1] || 'A';
+    if (subchapter === 1) return `Opening/Hook (${subchapterLabel})`;
+    if (subchapter === 2) return `Development/Conflict (${subchapterLabel})`;
+    if (subchapter === 3) return `Resolution/Decision (${subchapterLabel})`;
+    return `Subchapter ${subchapterLabel}`;
+  }
+
   _getPacingGuidance(chapter) {
     if (chapter <= 4) {
       return {
@@ -7091,7 +7170,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             options: {
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
               responseSchema: schema,
-              thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
+              thinkingConfig: {
+                includeThoughts: process.env.INCLUDE_THOUGHTS === 'true', // Enable in dev to debug mystery logic
+                thinkingLevel: 'high' // Maximize reasoning depth for complex narrative generation
+              }
             },
           });
         } catch (cacheError) {
@@ -7146,6 +7228,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         // Capture thought signature for multi-call reasoning continuity (Gemini 3)
         const firstCallThoughtSignature = response?.thoughtSignature || null;
+
+        // Log model thoughts if includeThoughts is enabled (debug mode)
+        if (response?.candidates?.[0]?.content?.parts) {
+          response.candidates[0].content.parts.forEach(part => {
+            if (part.thought) {
+              llmTrace('StoryGenerationService', traceId, 'model.reasoning', {
+                thought: part.text,
+                chapter,
+                subchapter,
+                thoughtType: 'narrative_planning'
+              }, 'debug');
+            }
+          });
+        }
 
         llmTrace('StoryGenerationService', traceId, 'llm.response.received', {
           model: response?.model,
