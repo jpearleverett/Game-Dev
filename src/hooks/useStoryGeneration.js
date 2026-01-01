@@ -18,7 +18,6 @@ import {
   parseCaseNumber,
   formatCaseNumber,
   computeBranchPathKey,
-  invalidateCacheEntry,
 } from '../data/storyContent';
 
 // Generation states
@@ -56,7 +55,6 @@ export function useStoryGeneration(storyCampaign) {
   const generationRef = useRef(null);
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
-  const subchapterPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate within-chapter subchapter prefetch
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
 
   // Background resilience: Track app state to handle generation during backgrounding
@@ -276,66 +274,6 @@ export function useStoryGeneration(storyCampaign) {
     }
   }, [isConfigured]);
 
-  /**
-   * Prefetch remaining subchapters (B/C) within the same chapter for the CURRENT path.
-   * Triggered after an A/B subchapter is generated so the next "Continue" feels instant.
-   * SEQUENTIAL: Each subchapter waits for the previous to complete for proper context.
-   */
-  const prefetchRemainingSubchapters = useCallback(async (chapter, fromSubchapter, pathKey, choiceHistory = [], source = 'unknown') => {
-    if (!isConfigured) return;
-    if (!chapter || chapter < 2 || chapter > 12) return;
-    if (!fromSubchapter || fromSubchapter >= 3) return;
-
-    const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
-    const traceId = createTraceId(`prefetch_subs_${String(chapter).padStart(3, '0')}${['A', 'B', 'C'][fromSubchapter - 1]}`);
-
-    // Generate remaining subchapters SEQUENTIALLY.
-    // Each subchapter depends on the previous one for proper context.
-    for (let sub = fromSubchapter + 1; sub <= 3; sub++) {
-      const caseNumber = formatCaseNumber(chapter, sub);
-      const key = `${caseNumber}_${canonicalPathKey}`;
-
-      if (subchapterPrefetchInFlightRef.current.has(key)) continue;
-
-      const already = await hasStoryContent(caseNumber, canonicalPathKey);
-      if (already) continue;
-
-      subchapterPrefetchInFlightRef.current.add(key);
-      llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.start', {
-        source,
-        chapter,
-        sub,
-        caseNumber,
-        pathKey: canonicalPathKey,
-      }, 'debug');
-
-      try {
-        // SEQUENTIAL: Await each subchapter before starting the next.
-        const entry = await storyGenerationService.generateSubchapter(chapter, sub, canonicalPathKey, choiceHistory, {
-          traceId: createTraceId(`sg_${caseNumber}_${canonicalPathKey}`),
-          reason: `prefetch-within-chapter:${source}`,
-        });
-
-        if (entry && isMountedRef.current) {
-          updateGeneratedCache(caseNumber, entry.pathKey || canonicalPathKey, entry);
-        }
-        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.complete', {
-          caseNumber,
-          ok: !!entry,
-          isFallback: !!(entry?.isFallback || entry?.isEmergencyFallback),
-        }, 'debug');
-      } catch (err) {
-        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapter.error', {
-          caseNumber,
-          error: err?.message,
-        }, 'warn');
-        // Continue to next subchapter even if this one fails
-      } finally {
-        subchapterPrefetchInFlightRef.current.delete(key);
-      }
-    }
-  }, [isConfigured]);
-
   // Track mounted state to prevent state updates on unmounted component
   const isMountedRef = useRef(true);
   // Track pending timeouts for cleanup
@@ -445,16 +383,11 @@ export function useStoryGeneration(storyCampaign) {
         pathKey,
         canonicalPathKey,
       }, 'debug');
-      // Even on a cache hit, proactively prefetch the remaining subchapters for this chapter
-      // so the player never sees a mid-chapter generation stall.
-      try {
-        if (chapter && subchapter && subchapter < 3) {
-          prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `cache-hit:${caseNumber}`);
-          // NOTE: No early next-chapter prefetch - wait for player decision
-        }
-      } catch (e) {
-        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.cacheHit.error', { error: e?.message }, 'warn');
-      }
+      // NOTE: We do NOT prefetch remaining subchapters here anymore.
+      // Generation of B/C only happens when the player completes their branching choices
+      // in the current subchapter (via triggerPrefetchAfterBranchingComplete).
+      // This avoids wasteful generation without proper branching context.
+
       // IMPORTANT: Return the cached entry so callers (ensureStoryContent) don't treat this as a failure.
       // hasStoryContent() loads the entry into the storyContent cache; retrieve it explicitly.
       return await getStoryEntryAsync(caseNumber, canonicalPathKey);
@@ -543,21 +476,10 @@ export function useStoryGeneration(storyCampaign) {
         setStatus(GENERATION_STATUS.COMPLETE);
       }
 
-      // Prefetch remaining subchapters within this chapter for the current path.
-      // This makes "Continue" transitions feel instant.
-      try {
-        if (chapter && subchapter && subchapter < 3) {
-          prefetchRemainingSubchapters(chapter, subchapter, canonicalPathKey, choiceHistory, `generateForCase:${caseNumber}`);
-
-          // NOTE: We do NOT prefetch next chapter when B completes.
-          // With sequential generation, we must wait for:
-          // 1. Subchapter C (decision point) to be generated
-          // 2. Player to make their decision
-          // Only then do we have proper context for the next chapter.
-        }
-      } catch (e) {
-        llmTrace('useStoryGeneration', traceId, 'prefetch.subchapters.trigger.error', { error: e?.message }, 'warn');
-      }
+      // NOTE: We do NOT prefetch remaining subchapters here anymore.
+      // Generation of B/C only happens when the player completes their branching choices
+      // in the current subchapter (via triggerPrefetchAfterBranchingComplete).
+      // This avoids wasteful generation without proper branching context.
 
       return entry;
     } catch (err) {
@@ -580,7 +502,7 @@ export function useStoryGeneration(storyCampaign) {
       // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
       // This ensures proper context: 002C must exist before 003A can be generated.
     }
-  }, [isConfigured, prefetchNextChapterBranchesAfterC, prefetchRemainingSubchapters]);
+  }, [isConfigured, prefetchNextChapterBranchesAfterC]);
 
   /**
    * Generate all subchapters for a chapter
@@ -739,15 +661,15 @@ export function useStoryGeneration(storyCampaign) {
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
   /**
-   * TRUE INFINITE BRANCHING: Trigger sibling prefetch AFTER player completes branching narrative.
+   * TRUE INFINITE BRANCHING: Generate next subchapter AFTER player completes branching narrative.
    *
-   * This is called when saveBranchingChoice() completes. At this point, we have the player's
-   * actual path through the branching narrative, so we can prefetch the next subchapter with
-   * proper context (realized narrative instead of canonical).
+   * This is called when saveBranchingChoice() completes (player made their second choice).
+   * At this point, we have the player's actual path through the branching narrative,
+   * so we generate the next subchapter with proper context (realized narrative).
    *
-   * IMPORTANT: This function ALWAYS regenerates the next subchapter with proper branching context,
-   * even if content was already prefetched. Prefetched content was generated BEFORE the player
-   * made their branching choices, so it doesn't include the realized narrative context.
+   * This is the ONLY place where next subchapter generation is triggered - we no longer
+   * prefetch eagerly after subchapter generation because that would generate content
+   * without the player's branching choices, which is wasteful.
    *
    * @param {string} caseNumber - The case that was just completed (e.g., "002A")
    * @param {string} pathKey - The path key for this case
@@ -766,23 +688,20 @@ export function useStoryGeneration(storyCampaign) {
       return;
     }
 
-    // SUBCHAPTER C FLOW: Do NOT prefetch next chapter here.
-    // With sequential generation, we wait for the player to make their decision,
+    // SUBCHAPTER C FLOW: Do NOT generate next chapter here.
+    // Wait for the player to make their chapter-level decision,
     // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
-    // Prefetching both paths wastes resources and causes network issues.
     if (subchapter === 3) {
       console.log(`[useStoryGeneration] Subchapter C branching complete - waiting for player decision before generating next chapter`);
       return;
     }
 
-    // NARRATIVE-FIRST FLOW: Generate only the NEXT subchapter
-    // Player will solve puzzle while this generates, then read the next narrative
-    // This is more efficient than generating all remaining siblings
+    // Generate the NEXT subchapter now that we have branching context
     const nextSubLetter = subchapter === 1 ? 'B' : 'C';
     const nextSubIndex = subchapter === 1 ? 2 : 3;
     const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
 
-    console.log(`[useStoryGeneration] Regenerating ${nextCaseNumber} with branching context after player completed ${caseNumber}`);
+    console.log(`[useStoryGeneration] Generating ${nextCaseNumber} with branching context after player completed ${caseNumber}`);
 
     // Flush storage to ensure current content is available for context
     try {
@@ -792,20 +711,7 @@ export function useStoryGeneration(storyCampaign) {
       console.warn('[useStoryGeneration] Failed to flush before generation:', err);
     }
 
-    // CRITICAL FIX: Invalidate any previously prefetched content for the next subchapter.
-    // Content prefetched BEFORE branching choices were made doesn't include the realized
-    // narrative context, causing story discontinuity ("references things that didn't happen").
-    // By invalidating, we force regeneration with proper branchingChoices context.
-    try {
-      const wasInvalidated = await invalidateCacheEntry(nextCaseNumber, pathKey);
-      if (wasInvalidated) {
-        console.log(`[useStoryGeneration] Invalidated stale prefetched content for ${nextCaseNumber} - will regenerate with branching context`);
-      }
-    } catch (err) {
-      console.warn(`[useStoryGeneration] Failed to invalidate cache for ${nextCaseNumber}:`, err.message);
-    }
-
-    // Now check if generation is needed (should be true after invalidation)
+    // Check if generation is needed (should be true since we don't prefetch anymore)
     const needsGen = await needsGeneration(nextCaseNumber, pathKey);
 
     if (needsGen && isMountedRef.current) {
@@ -813,7 +719,7 @@ export function useStoryGeneration(storyCampaign) {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
 
-        // IMPORTANT: Pass branchingChoices so the context includes realized narrative
+        // Pass branchingChoices so the context includes realized narrative
         const entry = await storyGenerationService.generateSubchapter(
           chapter,
           nextSubIndex,
@@ -824,14 +730,13 @@ export function useStoryGeneration(storyCampaign) {
 
         if (entry && isMountedRef.current) {
           updateGeneratedCache(nextCaseNumber, pathKey, entry);
-          console.log(`[useStoryGeneration] Successfully regenerated ${nextCaseNumber} with branching context`);
+          console.log(`[useStoryGeneration] Successfully generated ${nextCaseNumber} with branching context`);
         }
       } catch (err) {
         console.warn(`[useStoryGeneration] Generation failed for ${nextCaseNumber}:`, err.message);
       }
     } else if (!needsGen) {
-      // This shouldn't happen after invalidation, but log if it does
-      console.warn(`[useStoryGeneration] ${nextCaseNumber} still exists after invalidation attempt - using existing content`);
+      console.log(`[useStoryGeneration] ${nextCaseNumber} already exists, skipping generation`);
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
