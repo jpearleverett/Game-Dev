@@ -648,6 +648,7 @@ export const GENERATION_CONFIG = {
     subchapter: 65536,    // Gemini 3 Flash Preview max output (64k tokens)
     expansion: 8000,      // For expansion requests
     validation: 1000,     // For validation passes
+    pathDecisions: 16000, // For branching decision generation (9 path variants + thinking tokens)
   },
 
   // Context windowing - controls how much prior story text is sent to the LLM.
