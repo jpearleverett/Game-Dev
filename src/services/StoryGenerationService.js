@@ -5149,21 +5149,24 @@ Generate realistic, specific consequences based on the actual narrative content.
     const parts = [];
 
     // Part 1: Story Bible Grounding (STATIC)
-    // Use the existing method to ensure exact same format
     const groundingSection = this._buildGroundingSection(null);
+    parts.push('<story_bible>');
     parts.push(groundingSection);
+    parts.push('</story_bible>');
     console.log(`[Cache] Grounding section: ${groundingSection.length} chars`);
 
     // Part 2: Character Reference (STATIC)
-    // Use the existing method to ensure exact same format
     const characterSection = this._buildCharacterSection();
+    parts.push('<character_reference>');
     parts.push(characterSection);
+    parts.push('</character_reference>');
     console.log(`[Cache] Character section: ${characterSection.length} chars`);
 
     // Part 3: Craft Techniques (STATIC)
-    // Use the existing method to ensure exact same format
     const craftSection = this._buildCraftTechniquesSection();
+    parts.push('<craft_techniques>');
     parts.push(craftSection);
+    parts.push('</craft_techniques>');
     console.log(`[Cache] Craft techniques: ${craftSection.length} chars`);
 
     // Part 4: Writing Style Examples (STATIC)
@@ -5196,7 +5199,9 @@ ${STYLE_EXAMPLES}
 
 ${extendedExamples}
 `;
+    parts.push('<style_examples>');
     parts.push(styleSection);
+    parts.push('</style_examples>');
     console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
     // Part 5: Consistency Rules (STATIC)
@@ -5206,10 +5211,12 @@ Before generating, verify these facts are never contradicted:
 
 ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
 `;
+    parts.push('<consistency_rules>');
     parts.push(rulesSection);
+    parts.push('</consistency_rules>');
     console.log(`[Cache] Consistency rules: ${rulesSection.length} chars`);
 
-    const fullContent = parts.join('\n\n---\n\n');
+    const fullContent = parts.join('\n\n');
     console.log(`[Cache] TOTAL static content: ${fullContent.length} chars (~${Math.round(fullContent.length / 4)} tokens est.)`);
 
     return fullContent;
