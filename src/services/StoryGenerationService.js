@@ -142,13 +142,17 @@ const CHOICE_OPTION_SCHEMA = {
       type: 'string',
       description: 'The narrative response when player selects this option (~300 words). Continue the scene based on this choice.',
     },
+    summary: {
+      type: 'string',
+      description: 'One-sentence summary of what happens when player takes this path (15-25 words). Used for decision context. E.g., "Jack takes a direct approach, confronting the witness and pressuring them for information."',
+    },
     details: {
       type: 'array',
       items: DETAIL_SCHEMA,
       description: '0-2 tappable details within this response segment',
     },
   },
-  required: ['key', 'label', 'response'],
+  required: ['key', 'label', 'response', 'summary'],
 };
 
 /**
@@ -203,13 +207,17 @@ const SECOND_CHOICE_SCHEMA = {
             type: 'string',
             description: 'The ending narrative segment (~300 words). Conclude this path of the subchapter.',
           },
+          summary: {
+            type: 'string',
+            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g., "Jack confronts the suspect directly, learning the truth but alerting their accomplices."',
+          },
           details: {
             type: 'array',
             items: DETAIL_SCHEMA,
             description: '0-2 tappable details within this ending segment',
           },
         },
-        required: ['key', 'label', 'response'],
+        required: ['key', 'label', 'response', 'summary'],
       },
       minItems: 3,
       maxItems: 3,
@@ -1052,22 +1060,22 @@ const PATHDECISIONS_ONLY_SCHEMA = {
 };
 
 // Prompt template for the second call to generate path-specific decisions
-// IMPORTANT: This template uses LABELS ONLY, not echoed narrative content.
-// Echoing generated content triggers Gemini's RECITATION safety filter.
+// IMPORTANT: Uses SUMMARIES (15-25 words each) instead of full narrative content.
+// Full narrative excerpts trigger Gemini's RECITATION safety filter.
 const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 path-specific decision variants for a noir detective branching narrative.
 
 ## PATH KEY FORMAT
 The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
-- First letter = first choice (1A, 1B, 1C)
-- Second pair = second choice within that branch (2A, 2B, 2C)
+- First part = first choice (1A, 1B, 1C)
+- Second part = ending within that branch (2A, 2B, 2C)
 
-## FIRST CHOICE OPTIONS (Player tone):
-- 1A: "{{firstChoice1ALabel}}" - {{firstChoice1ATone}}
-- 1B: "{{firstChoice1BLabel}}" - {{firstChoice1BTone}}
-- 1C: "{{firstChoice1CLabel}}" - {{firstChoice1CTone}}
+## FIRST CHOICE (How the player approached the scene):
+- 1A: "{{firstChoice1ALabel}}" → {{firstChoice1ASummary}}
+- 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BSummary}}
+- 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CSummary}}
 
-## SECOND CHOICE OPTIONS (Path endings):
-{{secondChoiceLabels}}
+## PATH ENDINGS (What happened for each of the 9 paths):
+{{pathSummaries}}
 
 ## BASE DECISION (Adapt for each path):
 - Option A: "{{optionATitle}}" ({{optionAFocus}})
@@ -1075,11 +1083,11 @@ The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
 
 ## YOUR TASK
 For each of the 9 paths, generate a unique decision variant that:
-1. Frames the intro to reflect how that player reached this moment
-2. Adjusts focus based on the tone of their choices (aggressive vs cautious vs balanced)
-3. Sets personalityAlignment: "aggressive" for direct/confrontational paths, "cautious" for careful paths, "balanced" otherwise
+1. Frames the intro (1-2 sentences) to reflect WHAT HAPPENED in that specific path
+2. Adjusts the focus/framing of options based on the path's context and player's approach style
+3. Sets personalityAlignment based on path tone: "aggressive" for direct/confrontational, "cautious" for methodical/careful, "balanced" otherwise
 
-Generate pathDecisions array with 9 objects: { pathKey, intro (1-2 sentences), optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment} }`;
+Generate pathDecisions array with 9 objects: { pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment} }`;
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
@@ -7165,26 +7173,28 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               return 'balanced approach';
             };
 
-            // Build second choice LABELS only (no narrative excerpts)
-            const secondChoiceLabels = secondChoices.map((sc, scIdx) => {
+            // Build path summaries from the generated branching narrative
+            // Uses the new 'summary' field (15-25 words each) instead of full narrative excerpts
+            const pathSummaries = secondChoices.map((sc, scIdx) => {
               const afterChoice = sc.afterChoice || `1${String.fromCharCode(65 + scIdx)}`;
               const opts = sc.options || [];
-              return `After ${afterChoice}:\n` + opts.map((opt, optIdx) => {
+              return opts.map((opt, optIdx) => {
                 const pathKey = `${afterChoice}-2${String.fromCharCode(65 + optIdx)}`;
-                return `  - ${pathKey}: "${opt.label || 'Choice'}"`;
+                const summary = opt.summary || `Player chose "${opt.label || 'an option'}"`;
+                return `- ${pathKey}: ${summary}`;
               }).join('\n');
             }).join('\n');
 
             const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
-              // First choice options with labels and inferred tones
+              // First choice options with labels and summaries (not full narrative)
               .replace('{{firstChoice1ALabel}}', firstChoiceOpts[0]?.label || 'Option 1A')
-              .replace('{{firstChoice1ATone}}', inferTone(firstChoiceOpts[0]?.label))
+              .replace('{{firstChoice1ASummary}}', firstChoiceOpts[0]?.summary || inferTone(firstChoiceOpts[0]?.label))
               .replace('{{firstChoice1BLabel}}', firstChoiceOpts[1]?.label || 'Option 1B')
-              .replace('{{firstChoice1BTone}}', inferTone(firstChoiceOpts[1]?.label))
+              .replace('{{firstChoice1BSummary}}', firstChoiceOpts[1]?.summary || inferTone(firstChoiceOpts[1]?.label))
               .replace('{{firstChoice1CLabel}}', firstChoiceOpts[2]?.label || 'Option 1C')
-              .replace('{{firstChoice1CTone}}', inferTone(firstChoiceOpts[2]?.label))
-              // Second choice labels only (no narrative content)
-              .replace('{{secondChoiceLabels}}', secondChoiceLabels || 'Not available')
+              .replace('{{firstChoice1CSummary}}', firstChoiceOpts[2]?.summary || inferTone(firstChoiceOpts[2]?.label))
+              // Path summaries (15-25 words each, not full narrative content)
+              .replace('{{pathSummaries}}', pathSummaries || 'Not available')
               // Simple decision base
               .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
               .replace('{{optionAFocus}}', generatedContent.decision?.optionA?.focus || 'Not specified')
@@ -7193,11 +7203,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
             // Log what context we're sending
             console.log(`[StoryGenerationService] 📋 pathDecisions second call context:`);
-            console.log(`  - First choices: ${firstChoiceOpts.map(o => o?.label || '?').join(', ')}`);
-            console.log(`  - Second choice groups: ${secondChoices.length} (should be 3)`);
-            console.log(`  - Total paths: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.length || 0), 0)} (should be 9)`);
+            console.log(`  - First choices: ${firstChoiceOpts.map(o => `"${o?.label || '?'}" (${o?.summary ? 'has summary' : 'no summary'})`).join(', ')}`);
+            console.log(`  - Path summaries: ${secondChoices.reduce((sum, sc) => sum + (sc.options?.filter(o => o?.summary)?.length || 0), 0)}/9 have summaries`);
             console.log(`  - Base decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
-            console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (reduced - no narrative echoing)`);
+            console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (uses summaries, not full narrative)`);
 
             // Single user message - start fresh conversation for pathDecisions
             //
@@ -7210,7 +7219,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             //
             // The RECITATION issue was caused by echoing large chunks of LLM-generated
             // narrative content back to the model, which triggered the anti-memorization
-            // safety filter. Using labels-only in the prompt avoids this.
+            // safety filter. Using short summaries (15-25 words each) instead of full
+            // narrative excerpts (~300 words each) provides necessary context without
+            // triggering the safety filter.
             const messages = [{ role: 'user', content: pathDecisionsPrompt }];
 
             const pathDecisionsStartTime = Date.now();
