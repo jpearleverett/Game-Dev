@@ -8878,6 +8878,69 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // =========================================================================
+    // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION
+    // Each player path should meet the target word count (~900 words)
+    // Structure: opening (~300) + firstChoice response (~300) + secondChoice response (~300)
+    // =========================================================================
+    const bn = content.branchingNarrative;
+    if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
+      const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
+      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (~300 target, allow some flexibility)
+      const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
+
+      // Validate opening
+      const openingWords = countWords(bn.opening.text);
+      if (openingWords < MIN_SEGMENT_WORDS) {
+        issues.push(`Branching narrative opening too short: ${openingWords} words (minimum ${MIN_SEGMENT_WORDS})`);
+      }
+
+      // Validate first choice options (3 branches)
+      const firstChoiceOptions = bn.firstChoice?.options || [];
+      firstChoiceOptions.forEach((opt, idx) => {
+        const optWords = countWords(opt.response);
+        if (optWords < MIN_SEGMENT_WORDS) {
+          issues.push(`First choice "${opt.key || idx}" response too short: ${optWords} words (minimum ${MIN_SEGMENT_WORDS})`);
+        }
+      });
+
+      // Validate second choice options (9 branches) and complete paths
+      const secondChoices = bn.secondChoices || [];
+      secondChoices.forEach((sc, scIdx) => {
+        const parentOpt = firstChoiceOptions[scIdx];
+        const parentWords = countWords(parentOpt?.response);
+
+        (sc.options || []).forEach((opt, optIdx) => {
+          const optWords = countWords(opt.response);
+          if (optWords < MIN_SEGMENT_WORDS) {
+            issues.push(`Second choice "${opt.key || `${scIdx}-${optIdx}`}" response too short: ${optWords} words (minimum ${MIN_SEGMENT_WORDS})`);
+          }
+
+          // Validate complete path word count (opening + first choice + second choice)
+          const pathWords = openingWords + parentWords + optWords;
+          if (pathWords < MIN_PATH_WORDS) {
+            const pathKey = opt.key || `${scIdx + 1}${String.fromCharCode(65 + optIdx)}`;
+            issues.push(`Path "${pathKey}" total too short: ${pathWords} words (minimum ${MIN_PATH_WORDS})`);
+          } else if (pathWords < TARGET_WORDS * 0.85) {
+            const pathKey = opt.key || `${scIdx + 1}${String.fromCharCode(65 + optIdx)}`;
+            warnings.push(`Path "${pathKey}" below target: ${pathWords} words (target ${TARGET_WORDS})`);
+          }
+        });
+      });
+
+      // Summary stats for logging
+      const totalBranchingWords = openingWords +
+        firstChoiceOptions.reduce((sum, opt) => sum + countWords(opt.response), 0) +
+        secondChoices.reduce((sum, sc) => sum + (sc.options || []).reduce((s, opt) => s + countWords(opt.response), 0), 0);
+
+      if (totalBranchingWords < 3500) {
+        warnings.push(`Total branching narrative content is thin: ${totalBranchingWords} words (expected ~4000+ for full coverage)`);
+      }
+    } else if (content.branchingNarrative) {
+      // branchingNarrative exists but is malformed
+      warnings.push('Branching narrative structure incomplete: missing opening, firstChoice, or secondChoices');
+    }
+
+    // =========================================================================
     // CATEGORY 8.5: STRUCTURED FIELDS QUALITY (Bridge/Previously/Summary/Puzzle words)
     // =========================================================================
     // Bridge: hook sentence should be short.
@@ -9294,6 +9357,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // The mystery has a carefully designed revelation gradient.
     // Revealing major twists too early ruins the entire experience.
     if (s.startsWith('PREMATURE REVELATION:')) return true;
+
+    // --- TIER 7: BRANCHING NARRATIVE WORD COUNT ---
+    // Each player path must meet minimum word count for adequate experience.
+    // Thin branches mean some players get a degraded experience.
+    if (s.includes('response too short:')) return true;
+    if (s.includes('opening too short:')) return true;
+    if (s.includes('total too short:')) return true;
 
     // =======================================================================
     // SOFT FAILURES - Convert to warnings, don't block generation
