@@ -835,110 +835,99 @@ Victoria's smile widened. "Then we'll see what you're really made of."`,
 // ANNOTATED EXAMPLES - Teaching WHY techniques work
 // ============================================================================
 export const ANNOTATED_EXAMPLES = {
-  physicalEmotionExample: {
-    passage: `The photograph shook in Jack's hands. Not from age—from recognition.`,
+  sensoryWorldBuildingExample: {
+    passage: `When Sean Devine and Jimmy Marcus were kids, their fathers worked together at the Coleman Candy plant and carried the stench of warm chocolate back home with them. It became a permanent character of their clothes, the beds they slept in, the vinyl backs of their car seats. Sean's kitchen smelled like a Fudgsicle, his bathroom like a Coleman Chew-Chew bar. By the time they were eleven, Sean and Jimmy had developed a hatred of sweets so total that they took their coffee black for the rest of their lives and never ate dessert.`,
     annotations: [
-      'Opens with PHYSICAL ACTION revealing emotion (hands shaking) - never say "Jack felt shocked"',
-      'The dash creates a beat, a moment of realization the reader experiences WITH Jack',
-      'The word "recognition" is more specific than "shock" - tells us this is about seeing something known',
-      'Two short sentences create staccato rhythm that mirrors sudden realization',
+      'Opens with SENSORY DETAIL (chocolate smell) that establishes working-class world without stating it',
+      'The word "stench" instead of "scent" shows how environment becomes burden, not comfort',
+      '"Permanent character" personifies the smell, makes it a presence in their lives',
+      'Specific brand names (Fudgsicle, Coleman Chew-Chew) make the world concrete and real',
+      'Final sentence shows CONSEQUENCE of sensory experience - shaped them for life',
+      'Entire childhood and class position established through one smell in one paragraph',
     ],
   },
 
-  dialogueSubtextExample: {
-    passage: `"Coffee?" Sarah asked.
+  characterThroughActionExample: {
+    passage: `Jimmy kept his head down, peering into the darkness under the platform for the ball. He found it. He wiped some black grime off it with his shirtsleeve and ignored the people kneeling on the yellow line, extending their hands down toward the track.
 
-"I'm good."
+Dave nudged Sean and said, "Whew, huh?" too loud.
 
-She poured two cups anyway.`,
+Jimmy walked along the center of the track toward the stairs at the far end of the platform, where the tunnel opened gaping and dark, and a heavier rumble shook the station, and people were jumping now, banging fists into their hips. Jimmy took his time, strolling really, then he looked back over his shoulder, caught Sean's eyes, and grinned.`,
     annotations: [
-      'Surface: Offering and declining coffee. Subtext: Testing if he\'ll accept care',
-      '"I\'m good" is a deflection, not an answer—Jack pushes away comfort',
-      'Sarah ignoring his refusal shows: she knows him, she won\'t let him retreat',
-      'Action (pouring anyway) speaks louder than any dialogue could',
-      'Three lines accomplish what a paragraph of internal monologue would do worse',
+      'Character revealed entirely through ACTION - no internal thoughts needed',
+      '"Ignored the people" shows Jimmy\'s defiance, his separation from normal fear',
+      'Dave\'s nervous reaction ("Whew, huh?" too loud) contrasts with Jimmy\'s calm',
+      '"Strolling really" - the adverb "really" shows even narrator is impressed/appalled',
+      'The backward glance and grin - Jimmy KNOWS what he\'s doing, courts danger deliberately',
+      'We understand Jimmy\'s psychology without a single line of internal monologue',
     ],
   },
 
-  tensionBuildingExample: {
-    passage: `The warehouse door was open three inches. It hadn't been open when Jack left.
-
-Someone had been here.
-
-Someone might still be here.
-
-His hand found his gun. The weight was familiar. What waited inside was not.`,
+  crowdAsCharacterExample: {
+    passage: `People on the platform went nuts. They screamed at Jimmy. One woman turned the color of cigar ash as she bent at the knees and yelled, Get back up here, get back up here now, goddamnit! Sean heard a thick rumble that could have been a train entering the tunnel up at Washington Street or could have been trucks rolling along the street above, and the people on the platform heard it, too. They waved their arms, whipped their heads around to look for the subway police. One guy placed a forearm across his daughter's eyes.`,
     annotations: [
-      'Establishes threat through ABSENCE of expected state (door position changed)',
-      'Two short paragraphs that could be one—but separation creates mounting dread',
-      '"Might still be" leaves threat unresolved, maintains tension',
-      'Final paragraph contrasts familiar (gun) with unfamiliar (unknown threat)',
-      'Note: No adverbs. No "suddenly." No telling us to be scared. Pure showing.',
+      'Crowd reaction SHOWS the danger Jimmy is in - we feel it through others\' fear',
+      '"Color of cigar ash" - specific, unexpected color comparison creates visual',
+      'Dialogue rendered without quotes ("Get back up here") merges into the chaos',
+      'Ambiguous rumble ("could have been...could have been") puts reader in uncertainty WITH Sean',
+      'Father covering daughter\'s eyes - visceral detail implying expected violence',
+      'Scene tension comes from WITNESSES, not narrator telling us it\'s tense',
     ],
   },
 
-  revealPacingExample: {
-    passage: `The signature on the document was familiar.
+  dialogueRevealingClassExample: {
+    passage: `"You remember what we talked about," his father said, and patted Sean's shoulder in dismissal.
 
-Too familiar.
-
-Tom's handwriting. Tom's pen. Tom's distinctive loop on the letter "T" that Jack had seen on birthday cards and case files and the note Tom left when he borrowed Jack's car in '98.
-
-Thirty years of friendship, catalogued in that one letter.
-
-Thirty years of lies, proven in the line beneath it.`,
+Sean left the tool room and walked through the cool basement wondering if what made him enjoy Jimmy's company was the same thing that made his father enjoy hanging out with Mr. Marcus, drinking Saturday into Sunday, laughing too hard and too suddenly, and if that was what his mother was afraid of.`,
     annotations: [
-      'Delays the reveal across multiple lines—builds anticipation',
-      'Uses the mundane (birthday cards, borrowed car) to establish intimacy before betrayal',
-      'Specific detail ("loop on the letter T") makes recognition visceral and undeniable',
-      'Parallel structure in final lines (Thirty years of X / Thirty years of Y) creates impact',
-      'The reveal isn\'t just WHO—it\'s the weight of the relationship destroyed',
+      'Father\'s brevity ("You remember what we talked about") shows working-class restraint',
+      'The pat is "dismissal" - physical gesture carries emotional weight without explanation',
+      'Sean\'s wondering is INDIRECT - he doesn\'t ask, he observes and infers',
+      '"Drinking Saturday into Sunday" - the preposition makes time blur like the drinking does',
+      '"Laughing too hard and too suddenly" - the excess signals something OFF about the friendship',
+      'Mother\'s unspoken fear becomes the real subject - what ISN\'T said matters most',
     ],
   },
 
-  chapterHookExample: {
-    passage: `Victoria Blackwell smiled. "Hello, Jack. It's time we talked about endgames."
+  threatThroughNormalityExample: {
+    passage: `It was a dark brown car, square and long like the kind police detectives drove, a Plymouth or something, and its bumper stopped by their legs and the two cops looked out through the windshield at them, their faces watery in the reflected trees that swam across the glass.
 
-The jukebox skipped. The rain fell. And Jack realized, with the cold clarity of a man seeing his own grave, that he'd never been the detective in this story.
-
-He'd always been the evidence.`,
+Sean felt a sudden lurch in the morning, a shifting in the softness of it.`,
     annotations: [
-      'Character entrance at chapter end = irresistible hook',
-      '"Endgames" promises confrontation and finality—reader MUST continue',
-      'Jukebox skipping = tiny detail that creates unease, wrongness',
-      'Final revelation reframes EVERYTHING reader thought they knew',
-      'Last line is a conceptual gut-punch: Jack as evidence, not investigator',
-      'This ending makes putting down the book feel physically difficult',
+      'Car described in mundane terms first - "Plymouth or something" - normalizing the threat',
+      '"Bumper stopped by their legs" - physical proximity creates implicit menace',
+      '"Faces watery in the reflected trees" - distortion suggests unreality, wrongness',
+      '"Sudden lurch in the morning" - not in his stomach, but in TIME ITSELF',
+      '"Shifting in the softness" - the day had been soft; now it hardens into danger',
+      'Threat announced not by what the men DO but by how the world FEELS different',
     ],
   },
 
-  sensoryAnchoringExample: {
-    passage: `The storage unit smelled of dust and old paper and something else—something chemical that reminded Jack of the forensics lab. Of Tom, hunched over a microscope, whistling off-key while he manufactured another conviction.
+  complexEmotionThroughObjectExample: {
+    passage: `Jimmy took the glove and he felt bad about it. Sean would miss it. Jimmy took the glove and he felt good about it. Sean would miss it.
 
-The smell was evidence. The smell was memory. The smell was thirty years of friendship rotting in cardboard boxes.`,
+Jimmy watched his father stumble ahead of him, the old fuck looking like he'd crumple and turn into a puddle of himself any second, and he hated Sean.
+
+He hated Sean and he'd been dumb to think they could have been friends, and he knew he'd hold on to this glove for the rest of his life, take care of it, never show it to anyone, and he'd never, not once, use the goddamn thing.`,
     annotations: [
-      'Opens with specific, layered smells—not generic "musty"',
-      '"Something chemical" creates mystery before explanation',
-      'Connects physical sensation to memory and emotion',
-      'Repetition of "the smell was" creates rhythm and escalation',
-      'Synesthetic metaphor: "friendship rotting" makes abstract concrete',
+      'Contradictory feelings stated back-to-back - "felt bad...felt good" - shows emotional complexity',
+      'Repeated "Sean would miss it" - same fact means different things depending on emotion',
+      'Hatred transferred to Sean when it belongs to the father - psychological displacement',
+      '"Hold on to this glove for the rest of his life" - the object becomes symbol of wound',
+      '"Never show it...never use it" - possession without use = pure pain, pure memory',
+      'A stolen glove carries the weight of class, friendship, family, shame, and defiance',
     ],
   },
 
-  microTensionExample: {
-    passage: `Sarah\'s text was short. "Murphy's. Now. Come alone."
-
-Jack read it twice. Sarah never texted in commands.
-
-He grabbed his coat. Didn't check if it was raining. It was always raining.
-
-Murphy's was six blocks away. He made it in four minutes. Would have made it in three, but his knee was acting up again—souvenir from a case he'd closed wrong, like all the others.`,
+  waitingAsCharacterExample: {
+    passage: `Sean looked at the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
     annotations: [
-      'Opens with unusual behavior—Sarah texting differently creates micro-tension',
-      '"Read it twice" shows Jack registering wrongness without stating it',
-      'Weather detail with resignation ("always raining") = character in single phrase',
-      'Physical limitation (knee) does triple duty: realism, vulnerability, thematic guilt',
-      'Every sentence adds tension or character—no filler, no pause in engagement',
+      '"Hollow spaces formed as adrenaline left" - physical sensation of emotional aftermath',
+      'Repetition of "waited" four times - the rhythm ENACTS the waiting, makes reader feel it',
+      '"The plan to re-form and make sense" - Sean believes in order, in things working out',
+      'Street has a "hum" - the ordinary world continues, indifferent to his trauma',
+      'No resolution comes - the waiting ends not with answer but with going back inside',
+      'Character revealed through what he HOPES FOR, not what he does',
     ],
   },
 };
