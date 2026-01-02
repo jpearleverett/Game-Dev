@@ -362,13 +362,9 @@ export const WRITING_STYLE = {
 // EXAMPLE PASSAGES - For Few-Shot Learning
 // ============================================================================
 export const EXAMPLE_PASSAGES = {
-  atmosphericOpening: `Rain fell on Ashport the way memory falls on the guilty, soft at first, then relentless. Jack stood at the window of what used to be his office, watching neon bleed into the wet streets below. Murphy's jukebox bled through the floorboards, some torch song about a woman who left. They all left eventually. That was the first lesson the city taught, and it never got tired of repeating itself.
+  atmosphericOpening: `When Sean Devine and Jimmy Marcus were kids, their fathers worked together at the Coleman Candy plant and carried the stench of warm chocolate back home with them. It became a permanent character of their clothes, the beds they slept in, the vinyl backs of their car seats. Sean's kitchen smelled like a Fudgsicle, his bathroom like a Coleman Chew-Chew bar. By the time they were eleven, Sean and Jimmy had developed a hatred of sweets so total that they took their coffee black for the rest of their lives and never ate dessert.
 
-The envelope sat on his desk where he’d dropped it twenty minutes ago. Black paper, expensive. A red wax seal he didn’t recognize. Inside, silver ink that caught what little light filtered through the blinds.
-
-"Twelve days. Twelve cases. One you closed without certainty."
-
-No signature. No return address. Just that, and a photograph Jack had spent seven years trying to forget.`,
+On Saturdays, Jimmy's father would drop by the Devines' to have a beer with Sean's father. He'd bring Jimmy with him, and as one beer turned into six, plus two or three shots of Dewar's, Jimmy and Sean would play in the backyard, sometimes with Dave Boyle, a kid with girl's wrists and weak eyes who was always telling jokes he'd learned from his uncles. From the other side of the kitchen window screen, they could hear the hiss of the beer can pull-tabs, bursts of hard, sudden laughter, and the heavy snap of Zippos as Mr. Devine and Mr. Marcus lit their Luckys.`,
 
   dialogueExample: `"Sean sat on the back porch with Annabeth Marcus as she took tiny
 sips from a glass of white wine and smoked her cigarettes no more than
@@ -488,95 +484,145 @@ because that's what growing older is."
 She turned her head to him, her eyes closed, a dreamy smile on her face.
 "All the time."`,
 
-  internalMonologue: `Jack should have seen it. The thought kept circling like a vulture waiting for something to die. Twenty years of perfect evidence, pristine chains of custody, confessions that fit the proof like a key in a lock. And not once, not a single time, had he asked why his cases were the only ones that wrapped up so clean.
+  internalMonologue: `Jimmy walked back to the Flats behind the old man. The old man weaved slightly and smoked his cigarettes down to pinched ends and talked to himself under his breath. When they got home, his father might give him a beating, might not, it was too close to tell. After he'd lost his job, he'd told Jimmy never to go to the Devines' house again, and Jimmy figured he'd have to pay up for breaking that rule. But maybe not today. His father had that sleepy drunkenness about him, the kind that usually meant he would sit at the kitchen table when they got home and drink until he fell asleep with his head on his arms.
 
-Because he didn’t want to know. Because clearance rates meant promotions, and promotions meant a man could look in the mirror and call himself one of the good guys. Jack had built his reputation on a foundation of lies, and the only person more surprised than he was the woman standing in his doorway.
+Jimmy kept a few steps behind him, just in case, though, and tossed the ball up into the air, caught it in the baseball glove he'd stolen from Sean's house while the cops had been saying their good-byes to the Devines and nobody had even said a word to Jimmy and his father as they'd headed down the hallway toward the front door. Sean's bedroom door had been open, and Jimmy'd seen the glove lying on the floor, ball wrapped inside, and he'd reached in and picked it up, and then he and his father were through the front door. He had no idea why he'd stolen the glove. It wasn't for the wink of surprised pride he'd seen in the old man's eyes when he'd picked it up. Fuck that. Fuck him.
 
-"Hello, Jack." Victoria Blackwell smiled like she knew every thought he'd ever had. "We need to talk about certainty."`,
+It had something to do with Sean hitting Dave Boyle and pussying out on stealing the car and some other things over the year they'd been friends, that feeling Jimmy got that whatever Sean gave him, baseball cards, half a candy bar, whatever, came in the form of a handout.`,
 
-  tenseMoment: `The gun felt wrong in Jack's hand. Not the weight of it—that was familiar as breathing—but the direction it pointed. Silas Reed, his partner for eight years, the man who'd covered his back through three shootings and one divorce. Now Silas sat across from him in a penthouse paid for with blood money, bourbon trembling in a crystal glass.
+  tenseMoment: `The beefy one crooked a finger at them, then wiggled it toward his chest until they stood in front of him. "Let me ask you something, okay?" He bent at his big belly and his huge head filled Sean's vision. "You guys think it's okay to fight in the middle of the street?"
 
-"She got to you too." Silas’s voice had gone hollow. "Victoria."
+Sean noticed a gold badge clipped to the belt buckle beside the big man's right hip.
 
-"She showed me the Thornhill documents. Your signature, Silas. Your handwriting."
+"What's that?" The cop cupped a hand behind his ear.
 
-"I can explain."
+"No, sir."
 
-"Don't." Jack lowered the gun but didn’t holster it. "Just tell me who else. Who else did you help bury?"`,
+"No, sir."
 
-  decisionSetup: `Two doors. That was what it came down to, after everything. Behind the first, Helen Price sat with a folder that could bring down half the prosecutors in the state. Behind the second, Grange was making a call that would send his next victim into a grave no one would ever find.
+"No, sir."
 
-Jack had minutes. Maybe less.
+"A pack of punks, huh? That what you are?" He jerked his big thumb back at the man in the passenger seat. "Me and my partner, we've had our fill of you East Bucky punks scaring decent people off the street. You know?"
 
-Sarah's voice crackled through his earpiece. "Jack, we can't be in two places. You have to choose."
+Sean and Jimmy didn't say anything.
 
-Choice. Victoria's favorite word. The whole game was built on them, each one a brick in the wall Jack had built around the innocent people he'd helped bury. Now she wanted him to understand what that felt like from the other side.
+"We're sorry," Dave Boyle said, and looked like he was about to cry.
 
-The floor creaked under his boots. Both paths led somewhere dark. The only question was which darkness he could live with.`,
+"You kids from this street?" the big cop asked. His eyes scanned the homes on the left side of the street like he knew every occupant, would bag them if they lied.
+
+"Yup," Jimmy said, and looked back over his shoulder at Sean's house.
+
+"Yes, sir," Sean said.
+
+Dave didn't say anything.
+
+The cop looked down at him. "Huh? You say something, kid?"
+
+"What?" Dave looked at Jimmy.
+
+"Don't look at him. Look at me." The big cop breathed loudly through his nostrils. "You live here, kid?"
+
+"Huh? No."
+
+"No?" The cop bent over Dave. "Where you live, son?"
+
+"Rester Street." Still looking at Jimmy.
+
+"Flats trash in the Point?" The cop's cherry-red lips swiveled as if he were sucking a lollipop. "That can't be good for business, can it?"`,
+
+  decisionSetup: `Sean almost said this to Jimmy, but Jimmy was already moving up the street, looking in car windows, Dave running alongside him.
+
+"How about this one?" Jimmy put his hand on Mr. Carlton's Bel Air, and his voice was loud in the dry breeze.
+
+"Hey, Jimmy?" Sean walked toward him. "Maybe some other time. Right?"
+
+Jimmy's face went all saggy and narrow. "What do you mean? We'll do it. It'll be fun. Fucking cool. Remember?"
+
+"Fucking cool," Dave said.
+
+"We can't even see over the dashboard."
+
+"Phone books." Jimmy smiled in the sunlight. "We'll get 'em from your house."
+
+"Phone books," Dave said. "Yeah!"
+
+Sean held out his arms. "No. Come on."
+
+Jimmy's smile died. He looked at Sean's arms as if he wanted to cut them off at the elbows. "Why won't you just do something for fun. Huh?" He tugged on the handle of the Bel Air, but it was locked. For a second, Jimmy's cheeks jiggled and his lower lip trembled, and then he looked in Sean's face with a wild loneliness that Sean pitied.`,
 
   // ========== NEW A+ QUALITY EXAMPLES ==========
 
-  characterConfrontation: `Victoria's penthouse smelled of old money and new secrets. Floor-to-ceiling windows gave her a god's-eye view of Ashport, the city spread out like a game board beneath her heels. She didn't turn when Jack entered. She didn't need to.
+  characterConfrontation: `Dave looked at Jimmy and then at Sean. His arm shot out awkwardly and hit Sean's shoulder. "Yeah, how come you don't want to do fun things?"
 
-"Seven years." Her voice carried the weight of every one of them. "That's how long I waited. Planned. Watched you collect your commendations while I learned to walk again."
+Sean couldn't believe Dave had just hit him. Dave.
 
-"Emily." The name felt like broken glass in Jack’s mouth. "I closed your case because the evidence—"
+He punched Dave in the chest, and Dave sat down.
 
-"The evidence said I was dead." She turned then, and Jack saw what Grange had done to her. The scars traced a map of suffering across her throat, her wrists. "I heard you, Jack. Through the floor of that basement. 'Case closed. Moving on.' Those were your words while he was still deciding whether to let me live."
+Jimmy pushed Sean. "What the hell you doing?"
 
-Her eyes held something worse than hatred. Understanding. She knew exactly what he was, because she'd built herself into something stronger.`,
+"He hit me," Sean said.
 
-  emotionalRevelation: `The photograph shook in Jack's hands. Not from age, not from the rain that had soaked through the folder. From recognition.
+"He didn't hit you," Jimmy said.
 
-That was Tom's handwriting. Thirty years of friendship, and Jack knew his chicken scratch better than his own signature. But this wasn't case notes or lab reports. This was a ledger. Names, dates, evidence reference numbers. A catalog of lies stretching back two decades.
+Sean's eyes widened in disbelief and Jimmy's mimicked them.
 
-Marcus Thornhill's case was on page three. The fiber analysis that put him at the scene. Tom's notation: "Sample sourced externally. Match achieved 11/4."
+"He hit me."
 
-Sourced externally. That meant fabricated. That meant Tom had watched Marcus hang himself in a cell for a crime built on nothing but manufactured threads.
+"He hit me," Jimmy said in a girl's voice, and pushed Sean again. "He's my fucking friend."
 
-Jack had stood at that man's funeral. Told his daughter Claire that justice had been served. Let her spend four years thinking the system worked, when the system was just another word for his best friend's lies.
+"So am I," Sean said.
 
-The folder fell from Jack's fingers. He barely heard it hit the floor. All he could hear was thirty years of certainty crumbling into dust.`,
+"So am I," Jimmy said. "So am I, so am I, so am I."
 
-  chaseSequence: `The warehouse door splintered behind Jack. No time to look. No time to think.
+Dave Boyle stood up and laughed.
 
-Left. Through the shipping containers. Rain hammered the metal above, masking his footsteps but theirs too. Three of them, maybe four. Grange's cleanup crew.
+Sean said, "Cut it out."
 
-Jack’s lungs burned. Two decades of Jameson and too many cigarettes catching up at the worst possible moment. A bullet sparked off steel six inches from his head. Close. Getting closer.
+"Cut it out, cut it out, cut it out." Jimmy pushed Sean again, the heels of his hands digging into Sean's ribs. "Make me. You wanna make me?"
 
-Corner. Right. Another row of crates. The dock had to be nearby. Had to be.
+"You wanna make him?" And now Dave shoved Sean.
 
-Voices behind him, coordinating. Professional. The kind of men who made problems disappear for Deputy Chief Grange. Twenty-three victims. Jack wasn't planning to be number twenty-four.
+Sean had no idea how this had happened. He couldn't even remember what had made Jimmy mad anymore or why Dave had been stupid enough to hit him in the first place. One second they were standing by the car. Now they were in the middle of the street and Jimmy was pushing him, his face screwed up and stunted, his eyes black and small, Dave starting to join in.`,
 
-The container ahead was open. Dark inside. A choice made in heartbeats: hide and hope, or keep running and pray.
+  emotionalRevelation: `When Jimmy reached the first step in the cement stairs, several hands thrust down and yanked him up. Sean watched his feet swing out and to the left and his head curl and dip to the right, Jimmy looking so small and light in a big man's grasp, like he was filled with straw, but tucking that ball tight against his chest even as people grabbed at his elbow and his shin banged off the edge of the platform. Sean felt Dave jittering beside him, lost. Sean looked at the faces of the people pulling Jimmy up and he didn't see worry or fear anymore, none of the helplessness he'd seen just a minute ago. He saw rage, monsters' faces, the features gnarled and savage, like they were going to lean in and bite a chunk out of Jimmy, then beat him to death.
 
-Jack dove into the darkness. Held his breath. Listened to their boots thunder past, hunting a ghost in the rain.`,
+They got Jimmy up onto the platform and held him, fingers squeezed into his shoulders as they looked around for someone to tell them what to do. The train broke through the tunnel, and someone screamed, but then someone laughed, a shrieking cackle that made Sean think of witches around a cauldron, because the train burst through on the other side of the station, moving north, and Jimmy looked up into the faces of the people holding him as if to say, See?
 
-  investigationScene: `The Thornhill file told a story if a man knew how to read it. Most people didn't. Most people saw evidence and assumed it meant truth. Thirty years on the job had taught Jack better. Now those lessons tasted like ash.
+Beside Sean, Dave let out this high-pitched giggle and threw up in his own hands.
 
-Claire had gathered everything. Bank records showing the shell company was created three days before Marcus was fired. Emails her father never wrote, sent from a computer he never owned. The forensic timeline that proved the money moved while Marcus was in surgery getting his appendix removed.
+Sean looked away, wondered where he fit in all this.`,
 
-"Your partner signed the arrest warrant." Claire's voice held no accusation. She was past that. This was simple recitation of fact. "Silas Reed. He took the forgeries and stamped them real."
+  chaseSequence: `They were at South Station once, tossing an orange street hockey ball back and forth on the platform, and Jimmy missed Sean's throw and the ball bounced down onto the tracks. Before it occurred to Sean that Jimmy could even be thinking about it, Jimmy jumped off the platform and down onto the track, down there with the mice and the rats and the third rail.
 
-Jack spread the documents across his desk. The rain on the window caught the light, made the papers glow like accusation. Every page was a nail in a coffin he'd helped build.
+People on the platform went nuts. They screamed at Jimmy. One woman turned the color of cigar ash as she bent at the knees and yelled, Get back up here, get back up here now, goddamnit! Sean heard a thick rumble that could have been a train entering the tunnel up at Washington Street or could have been trucks rolling along the street above, and the people on the platform heard it, too. They waved their arms, whipped their heads around to look for the subway police. One guy placed a forearm across his daughter's eyes.
 
-"Why are you showing me this?" Jack asked, though he already knew.
+Jimmy kept his head down, peering into the darkness under the platform for the ball. He found it. He wiped some black grime off it with his shirtsleeve and ignored the people kneeling on the yellow line, extending their hands down toward the track.
 
-"Because you're the only cop who might actually care." She leaned forward, four years of grief compressed into certainty. "And because Victoria Blackwell told me you'd want to see what you helped bury."`,
+Dave nudged Sean and said, "Whew, huh?" too loud.
 
-  quietMoment: `Murphy's was empty at 3 AM. Just Jack, the jukebox, and a glass of Jameson that wasn't helping.
+Jimmy walked along the center of the track toward the stairs at the far end of the platform, where the tunnel opened gaping and dark, and a heavier rumble shook the station, and people were jumping now, banging fists into their hips. Jimmy took his time, strolling really, then he looked back over his shoulder, caught Sean's eyes, and grinned.
 
-The stool next to him creaked. Sarah sat down without asking, ordered a coffee she wouldn't drink. They watched the rain together for a while. Some things didn't need words. Thirteen years of partnership bought that much silence.
+Dave said, "He's smiling. He's just nuts. You know?"`,
 
-"I filed the Conviction Integrity request today." She said it to the mirror behind the bar, not to him. "Eleanor Bellamy's case. If even half of what we've found is true..."
+  investigationScene: `That night Sean's father sat him down in the basement tool room.
 
-"It's true." The whiskey burned going down. "All of it."
+The tool room was a tight place of black vises and coffee cans filled with nails and screws, piles of wood stacked neatly beneath the scarred counter that split the room in half, hammers hung in carpenter belts like guns in holsters, a band saw blade dangling from a hook. Sean's father, who often worked as a handyman around the neighborhood, came down here to build his birdhouses and the shelves he placed on the windows for his wife's flowers. He'd planned the back porch here, something he and his friends threw up one blistering summer when Sean was five, and he came down here when he wanted peace and quiet, and sometimes when he was angry, Sean knew, angry at Sean or Sean's mother or his job. The birdhouses, baby Tudors and colonials and Victorians and Swiss chalets, ended up stacked in a corner of the cellar, so many of them they'd have had to live in the Amazon to find enough birds who could get use out of them.
 
-"Then you know what happens next." She finally looked at him. Her eyes held something Jack couldn't name. Disappointment, maybe. Or worse, pity. "Internal Affairs. Grand jury. Everything you built, Jack. Gone."
+Sean sat up on the old red bar stool and fingered the inside of the thick black vise, felt the oil and sawdust mixed in there, until his father said, "Sean, how many times I have to tell you about that?"
 
-Jack poured another glass. "It was never his to build."
+Sean pulled his finger back out, wiped the grease on his palm.
 
-She left her coffee untouched and walked back into the rain. The jukebox played something about roads not taken. Jack drank until the song ended, then drank some more.`,
+His father picked some stray nails up off the counter and placed them in a yellow coffee can. "I know you like Jimmy Marcus, but if you two want to play together from now on, you'll do it in view of the house. Yours, not his."
+
+Sean nodded. Arguing with his father was pointless when he spoke as quietly and slowly as he was doing now, every word coming out of his mouth as if it had a small stone attached to it.`,
+
+  quietMoment: `He sat out on the porch and his father told him he hadn't done anything wrong, that he and Jimmy were smart not to have gotten in that car. His father patted his knee and said things would turn out fine. Dave will be home tonight. You'll see.
+
+His father shut up then. He sipped his beer and sat with Sean, but Sean could feel he'd drifted away on him, was maybe in the back bedroom with Sean's mother, or down in the cellar building his birdhouses.
+
+Sean looked up the street at the rows of cars, the shiny glint of them. He told himself that this, all of this, was part of some plan that made sense. He just couldn't see it yet. He would someday, though. The adrenaline that had been rushing through his body since Dave had been driven away and he and Jimmy had rolled on the street fighting finally flushed out through his pores like waste.
+
+He saw the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
 };
 
 // ============================================================================
@@ -693,142 +739,158 @@ export const GENERATION_CONFIG = {
 // ============================================================================
 export const EXTENDED_STYLE_GROUNDING = {
   // A complete scene with rising tension (shows pacing, dialogue interleaved with action)
-  tensionScene: `The Blueline Diner smelled like coffee that had been sitting too long and secrets that had been kept even longer. Jack slid into the booth across from Claire Thornhill and watched her not look at him.
+  tensionScene: `It was a dark brown car, square and long like the kind police detectives drove, a Plymouth or something, and its bumper stopped by their legs and the two cops looked out through the windshield at them, their faces watery in the reflected trees that swam across the glass.
 
-She was younger than he expected. Mid-twenties, maybe, with hair pulled back tight and a uniform worn thin from too many washes. But her eyes were older. They carried the kind of weight that came from watching a father hang himself in a jail cell.
+Sean felt a sudden lurch in the morning, a shifting in the softness of it.
 
-"You're Halloway." Not a question.
+The driver got out. He looked like a cop, blond crew cut, red face, white shirt, black-and-gold nylon tie, the heft of his gut dropping over his belt buckle like a stack of pancakes. The other one looked sick. He was skinny and tired-looking and stayed in his seat, one hand gripping his skull through greasy black hair, staring into the side-view mirror as the three boys came around near the driver's door.
 
-"I'm Halloway."
+The beefy one crooked a finger at them, then wiggled it toward his chest until they stood in front of him. "Let me ask you something, okay?" He bent at his big belly and his huge head filled Sean's vision. "You guys think it's okay to fight in the middle of the street?"
 
-The waitress appeared, refilled Claire's coffee without being asked, and vanished with the practiced invisibility of someone who'd learned not to hear things. Claire wrapped both hands around her cup but didn't drink.
+Sean noticed a gold badge clipped to the belt buckle beside the big man's right hip.
 
-"Victoria said you'd come. She said you were starting to understand."
+"What's that?" The cop cupped a hand behind his ear.
 
-Jack's coffee sat untouched. "What I understand is that your father was framed. What I understand is that my partner signed the documents that made it happen." He paused. "What I don't understand is why you're willing to talk to the detective who could have stopped it."
+"No, sir."
+"No, sir."
+"No, sir."
 
-Claire laughed. It was not a pleasant sound. "Could have? You think that makes it better? 'Could have' means you saw something wrong and decided it wasn't your problem. 'Could have' means my father begged you to look at the evidence again, and you told him the case was closed."
+"A pack of punks, huh? That what you are?" He jerked his big thumb back at the man in the passenger seat. "Me and my partner, we've had our fill of you East Bucky punks scaring decent people off the street. You know?"
 
-The coffee in Jack's cup had gone cold. He drank it anyway. Cold coffee was still better than the taste of truth.
+Sean and Jimmy didn't say anything.
 
-"Four years." Claire's voice dropped to something between a whisper and a weapon. "I've spent four years building the case you should have built in a weekend. Bank records. Shell company filings. Emails that were spoofed from accounts created days before the 'embezzlement' was discovered." She reached into her bag and pulled out a manila folder worn soft at the edges. "This is the Thornhill Ledger. Every lie, documented. Every signature, traced. Every person who looked the other way, named."
+"We're sorry," Dave Boyle said, and looked like he was about to cry.
 
-She slid it across the table.
+"You kids from this street?" the big cop asked. His eyes scanned the homes on the left side of the street like he knew every occupant, would bag them if they lied.
 
-"My father used to say the truth was the only thing that mattered. He believed in the system. Believed in people like you." She stood, dropped a five on the table. "He was wrong about all of it. But maybe, if you're half the detective you used to pretend to be, you can prove that he was right about one thing."
+"Yup," Jimmy said, and looked back over his shoulder at Sean's house.
 
-"What's that?"
+"Yes, sir," Sean said.
 
-Claire Thornhill looked at him the way a surgeon looks at a tumor. "That the truth comes out eventually. Even when good men fail to find it."
+Dave didn't say anything.
 
-She walked out into the rain. Jack sat with the folder and the cold coffee and thirty years of certainty dissolving like sugar in water.`,
+The cop looked down at him. "Huh? You say something, kid?"
+
+"What?" Dave looked at Jimmy.
+
+"Don't look at him. Look at me." The big cop breathed loudly through his nostrils. "You live here, kid?"
+
+"Huh? No."
+
+"No?" The cop bent over Dave. "Where you live, son?"
+
+"Rester Street." Still looking at Jimmy.
+
+"Flats trash in the Point?" The cop's cherry-red lips swiveled as if he were sucking a lollipop. "That can't be good for business, can it?"
+
+"Sir?"
+
+"Your mother home?"
+
+"Yes, sir." A tear fell down Dave's cheek and Sean and Jimmy looked away.
+
+"Well, we're going to have a talk with her, tell her what her punk kid's been up to."
+
+"I don't...I don't..." Dave blubbered.
+
+"Get in." The cop opened up the back door and Sean caught a whiff of apples, a sharp, October scent.
+
+Dave looked at Jimmy.
+
+"Get in," the cop said. "Or you want I should throw the cuffs on you?"
+
+"I..."
+
+"What?" The cop sounded pissed now. He slapped the top of the open door. "Get the fuck inside."
+
+Dave climbed into the backseat, bawling.
+
+The cop pointed a stubby finger at Jimmy and Sean. "Go tell your mothers what you been up to. And don't let me catch you shits fighting on my streets again."
+
+Jimmy and Sean stepped back, and the cop hopped in his car and drove off. They watched it reach the corner and then turn right, Dave's head, darkened by distance and shadows, looking back at them. And then the street was empty again, seemed to have gone mute with the slam of the car door. Jimmy and Sean stood where the car had been, looked at their feet, up and down the street, anywhere but at each other.
+
+Sean got that lurching sensation again, this time accompanied by the taste of dirty pennies in his mouth. His stomach felt as if a spoon had hollowed it out.
+
+Then Jimmy said it:
+
+"You started it."
+
+"He started it."
+
+"You did. Now he's screwed. His mother's soft in the head. No telling what she'll do two cops bring him home."
+
+"I didn't start it."
+
+Jimmy pushed him, and Sean pushed back this time, and then they were on the ground, rolling around, punching each other.`,
 
   // A revelation moment (shows how to deliver information that recontextualizes everything)
-  revelationScene: `The storage unit was supposed to be empty. Tom had told him that, years ago, when he'd helped move Tom's ex-wife's things after the divorce. "Cleaned out completely," Tom had said. "Nothing left but dust and regret."
+  revelationScene: `Jimmy walked back to the Flats behind the old man. The old man weaved slightly and smoked his cigarettes down to pinched ends and talked to himself under his breath. When they got home, his father might give him a beating, might not, it was too close to tell. After he'd lost his job, he'd told Jimmy never to go to the Devines' house again, and Jimmy figured he'd have to pay up for breaking that rule. But maybe not today. His father had that sleepy drunkenness about him, the kind that usually meant he would sit at the kitchen table when they got home and drink until he fell asleep with his head on his arms.
 
-Tom had lied.
+Jimmy kept a few steps behind him, just in case, though, and tossed the ball up into the air, caught it in the baseball glove he'd stolen from Sean's house while the cops had been saying their good-byes to the Devines and nobody had even said a word to Jimmy and his father as they'd headed down the hallway toward the front door. Sean's bedroom door had been open, and Jimmy'd seen the glove lying on the floor, ball wrapped inside, and he'd reached in and picked it up, and then he and his father were through the front door. He had no idea why he'd stolen the glove. It wasn't for the wink of surprised pride he'd seen in the old man's eyes when he'd picked it up. Fuck that. Fuck him.
 
-The boxes filled every available inch, stacked floor to ceiling with the kind of meticulous organization that spoke to decades of habit. Jack pulled down the nearest one, already knowing he wouldn't like what he found.
+It had something to do with Sean hitting Dave Boyle and pussying out on stealing the car and some other things over the year they'd been friends, that feeling Jimmy got that whatever Sean gave him, baseball cards, half a candy bar, whatever, came in the form of a handout.
 
-Case files. Hundreds of them. But not the official versions—these were annotated, marked up in Tom's distinctive handwriting. Jack recognized the first case: Morrison, 2019. Open-and-shut murder conviction. The forensic evidence had been airtight.
+When Jimmy had first picked up the glove and walked away with it, he'd felt elated. He'd felt great. A little later, as they were crossing Buckingham Avenue, he'd felt that familiar shame and embarrassment that came whenever he stole something, an anger at whatever or whoever made him do these things. Then a little later, as they walked down Crescent and into the Flats, he felt a stab of pride as he looked at the shitty three-deckers and then the glove in his hand.
 
-Except here, in Tom's private notes, was a different story. "Hair sample from secondary source—cleaning brush from barber." "Fingerprint lifted from subject's gym membership card, transferred via silicone." "Blood typing matched to donor sample from Red Cross drive."
+Jimmy took the glove and he felt bad about it. Sean would miss it. Jimmy took the glove and he felt good about it. Sean would miss it.
 
-Each annotation was a confession. Each page was a grave.
+Jimmy watched his father stumble ahead of him, the old fuck looking like he'd crumple and turn into a puddle of himself any second, and he hated Sean.
 
-Jack's hands moved on their own, pulling box after box. Names he recognized. Cases he'd closed. Convictions he'd celebrated over drinks at Murphy's while Tom smiled and ordered another round.
+He hated Sean and he'd been dumb to think they could have been friends, and he knew he'd hold on to this glove for the rest of his life, take care of it, never show it to anyone, and he'd never, not once, use the goddamn thing.
 
-Eleanor Bellamy. The sapphire necklace that proved she'd hidden assets. Tom's note: "Necklace purchased at estate sale, receipt destroyed. Deposit box key copied from locksmith records."
+He'd die before that happened.
 
-Marcus Thornhill. The forged financial documents. Tom's note: "Silas provided signatures under duress. Original blackmail materials in safety deposit box 447."
-
-Dr. Lisa Chen. The lab tech who'd tried to blow the whistle. Tom's note: "Transfer paperwork expedited. Husband's immigration status flagged for leverage. Problem contained."
-
-Twenty years. Twenty years of manufactured justice, and Jack had swallowed every piece of it because the evidence was too perfect to question.
-
-He sat down on a box that couldn't hold his weight. Didn't care when it collapsed. Didn't care about anything except the sound of his own breathing and the weight of the paper scattered around him like fallen leaves.
-
-His phone buzzed. A text from an unknown number.
-
-"Now you see. Now you understand. The question is: what will you do about it? — V.B."
-
-Jack looked at the message for a long time. Then he started photographing every page.`,
+Jimmy looked at the Flats spread out before him as he and the old man walked under the deep shade of the el tracks and neared the place where Crescent bottomed out and the freight trains rumbled past the old, ratty drive-in and the Penitentiary Channel beyond, and he knew, deep, deep in his chest, that they'd never see Dave Boyle again. Where Jimmy lived, on Rester, they stole things all the time. Jimmy had had his Big Wheel stolen when he was four.`,
 
   // A chapter ending (shows how to create that "one more chapter" compulsion)
-  chapterEnding: `Sarah found him at Murphy's. She always did.
+  chapterEnding: `An hour later, in Sean's kitchen, two other cops asked Sean and Jimmy a bunch of questions, and then a third guy showed up and drew sketches of the men in the brown car based on what Jimmy and Sean told them. The big blond cop looked meaner on the sketch pad, his face even bigger, but otherwise it was him. The second guy, the one who'd kept his eyes on the side-view, didn't look much like anything at all, a blur with black hair really, because Sean and Jimmy couldn't remember him too well.
 
-"You look like hell." She didn't sit down.
+Jimmy's father showed up and stood in the corner of the kitchen looking mad and distracted, his eyes watery, weaving a bit as if the wall kept moving behind him. He didn't speak to Sean's father, and no one spoke to him. With his usual capacity for sudden movement muted, he seemed smaller to Sean, less real somehow, like if Sean looked away he'd look back to find him dissolved into the wallpaper.
 
-"Feel like it too." Jack poured two fingers of Jameson. Then two more. "I figured it out. All of it. Tom, Silas, the whole machine."
+After they'd gone over it four or five times, everyone left, the cops, the guy who'd drawn on the pad, Jimmy and his father. Sean's mother went into her bedroom and shut the door, and Sean could hear muffled crying a few minutes later.
 
-"I know. I've been working the same case from the inside." She finally took the stool next to him. "Internal Affairs has a file three inches thick. We just needed someone who was there. Someone who could connect the dots."
+He sat out on the porch and his father told him he hadn't done anything wrong, that he and Jimmy were smart not to have gotten in that car. His father patted his knee and said things would turn out fine. Dave will be home tonight. You'll see.
 
-"You need me to testify."
+His father shut up then. He sipped his beer and sat with Sean, but Sean could feel he'd drifted away on him, was maybe in the back bedroom with Sean's mother, or down in the cellar building his birdhouses.
 
-"I need you to do what you should have done twenty years ago. I need you to tell the truth."
+Sean looked up the street at the rows of cars, the shiny glint of them. He told himself that this, all of this, was part of some plan that made sense. He just couldn't see it yet. He would someday, though. The adrenaline that had been rushing through his body since Dave had been driven away and he and Jimmy had rolled on the street fighting finally flushed out through his pores like waste.
 
-The jukebox in the corner played something sad. It always played something sad. Jack had stopped hearing the specific songs years ago; they all blurred into the same melody of regret.
-
-"If I do this, I lose everything. My pension. My reputation. Whatever's left of my name."
-
-"If you don't do this, we lose the case. Tom walks. Silas walks. Everyone walks except the five people rotting in cells for crimes they didn't commit."
-
-Jack drained his glass. The whiskey didn't burn anymore. Nothing did.
-
-"There's something else." Sarah's voice dropped. "Victoria Blackwell. We've been tracking her movements. She's not just exposing corruption, Jack. She's dismantling something bigger. Something that goes beyond Tom, beyond the department. And she's doing it on a schedule."
-
-"What kind of schedule?"
-
-Sarah pulled out her phone. Showed him a photograph of a wall covered in photographs, connected by red string. In the center, circled in black marker: a date. Three days from now.
-
-"We don't know what happens then. But every piece she's moved, every person she's exposed—it's all building to that moment." She put the phone away. "Whatever she's planning, Jack, you're part of it. She's been positioning you since the first envelope."
-
-The door to Murphy's opened. A woman stepped inside, rain dripping from a red coat, eyes finding Jack's across the bar with the precision of a scope finding a target.
-
-Victoria Blackwell smiled. "Hello, Jack. It's time we talked about endgames."
-
-The jukebox skipped. The rain fell. And Jack realized, with the cold clarity of a man seeing his own grave, that he'd never been the detective in this story.
-
-He'd always been the evidence.`,
+He saw the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
 
   // Dialogue under tension (shows subtext, what's unsaid, power dynamics)
-  dialogueUnderTension: `"You came alone." Victoria circled the desk, trailing one finger along its mahogany edge. "Either you're brave, or you're still underestimating me. I'm curious which."
+  dialogueUnderTension: `That night Sean's father sat him down in the basement tool room.
 
-"I came because you asked." Jack stayed near the door. Not afraid to enter. Just aware of exits. Old habit. "Your letter said you had information about Grange."
+The tool room was a tight place of black vises and coffee cans filled with nails and screws, piles of wood stacked neatly beneath the scarred counter that split the room in half, hammers hung in carpenter belts like guns in holsters, a band saw blade dangling from a hook. Sean's father, who often worked as a handyman around the neighborhood, came down here to build his birdhouses and the shelves he placed on the windows for his wife's flowers. He'd planned the back porch here, something he and his friends threw up one blistering summer when Sean was five, and he came down here when he wanted peace and quiet, and sometimes when he was angry, Sean knew, angry at Sean or Sean's mother or his job. The birdhouses, baby Tudors and colonials and Victorians and Swiss chalets, ended up stacked in a corner of the cellar, so many of them they'd have had to live in the Amazon to find enough birds who could get use out of them.
 
-"I have information about everything." She sat, crossing her legs with the practiced ease of someone who'd learned to make every movement a statement. "But we're not here to talk about Grange. We're here to talk about you."
+Sean sat up on the old red bar stool and fingered the inside of the thick black vise, felt the oil and sawdust mixed in there, until his father said, "Sean, how many times I have to tell you about that?"
 
-"I don't need to understand myself. I need to understand why you're doing this."
+Sean pulled his finger back out, wiped the grease on his palm.
 
-"No. You need to understand why you're letting me." She smiled, and it reached her eyes the way a scalpel reaches a wound—precisely, surgically. "You could have gone to the FBI the moment you found Tom's storage unit. You could have handed everything to Sarah and walked away. Instead, you're here. In my office. Playing my game."
+His father picked some stray nails up off the counter and placed them in a yellow coffee can. "I know you like Jimmy Marcus, but if you two want to play together from now on, you'll do it in view of the house. Yours, not his."
 
-Jack didn't answer. The silence stretched, filled only by the rain against the windows and the distant sound of traffic twenty stories below.
+Sean nodded. Arguing with his father was pointless when he spoke as quietly and slowly as he was doing now, every word coming out of his mouth as if it had a small stone attached to it.
 
-"You feel guilty." Victoria said it like a diagnosis. "Not about the convictions—not yet. You feel guilty because some part of you knew. Some part of you looked at the evidence Tom provided and thought 'this is too clean.' But that part was quieter than the part that wanted to close cases. That wanted the win."
+"We understand each other?" His father pushed the coffee can to his right, looked down at Sean.
 
-"Is that why you chose me? For the guilt?"
+Sean nodded. He watched his father's thick fingers rub sawdust off the tips.
 
-"I chose you because you're capable of change. Most of them aren't." She stood, walked to the window. The city spread beneath her like a circuit board, all lights and hidden connections. "Tom Wade knows what he did. He simply doesn't care. Silas Reed knows, and it's eating him alive, but not enough to act. Helen Price knows, and she's already written her suicide note—she just hasn't decided on the date."
+"For how long?"
 
-"And me?"
+His father reached up and pulled a wisp of dust off a hook embedded in the ceiling. He kneaded it between his fingers, then tossed it in the wastebasket under the counter. "Oh, a good while, I'd say. And Sean?"
 
-Victoria turned. In the rain-streaked light, the scars on her wrists were visible for just a moment before her sleeves fell back into place.
+"Yes, sir?"
 
-"You're the one who closed my case, Jack. You're the one who told the world I was dead while I was still screaming in that basement." Her voice never wavered. "And you're the one who can undo it. Not the conviction—that's already done. But the system. The machine that made me and Tom and Grange and all of it possible."
+"Don't be thinking about going to your mother on this one. She never wants you to see Jimmy again after that stunt today."
 
-She walked toward him, stopped close enough that he could smell her perfume. French. Expensive. The same scent that had been on the envelopes.
+"He's not that bad. He's..."
 
-"I'm offering you a choice. The same kind of choice you've been making your whole career, except this time you'll know the stakes. You can walk out that door, take what you know to the FBI, and spend the rest of your life testifying in courtrooms. They'll call you a hero. They'll say you did the right thing."
+"Didn't say he was. He's just wild, and your mother's had her fill of wild in her life."
 
-"Or?"
+Sean saw something glint in his father's face when he said "wild," and he knew it was the other Billy Devine he was seeing for a moment, the one he'd had to build out of scraps of conversation he'd overheard from aunts and uncles. The Old Billy they called him, the "scrapper," his uncle Colm said once with a smile, the Billy Devine who'd disappeared sometime before Sean was born to be replaced by this quiet, careful man with thick, nimble fingers who built too many birdhouses.
 
-"Or you can stay. Play the game through to the end. Help me dismantle not just the corrupt cops, but the thing that makes cops corrupt. The thing that let a man like Grange operate in plain sight for twenty years." She smiled again, but this time it was almost sad. "The thing that made you possible, Jack. The thing that made both of us."
+"You remember what we talked about," his father said, and patted Sean's shoulder in dismissal.
 
-The rain fell. The city glittered. And Jack Halloway stood at the crossroads of everything he'd ever believed about justice.
-
-"What happens if I stay?"
-
-Victoria's smile widened. "Then we'll see what you're really made of."`,
+Sean left the tool room and walked through the cool basement wondering if what made him enjoy Jimmy's company was the same thing that made his father enjoy hanging out with Mr. Marcus, drinking Saturday into Sunday, laughing too hard and too suddenly, and if that was what his mother was afraid of.`,
 };
 
 // ============================================================================
