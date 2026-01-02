@@ -484,11 +484,15 @@ because that's what growing older is."
 She turned her head to him, her eyes closed, a dreamy smile on her face.
 "All the time."`,
 
-  internalMonologue: `Jimmy walked back to the Flats behind the old man. The old man weaved slightly and smoked his cigarettes down to pinched ends and talked to himself under his breath. When they got home, his father might give him a beating, might not, it was too close to tell. After he'd lost his job, he'd told Jimmy never to go to the Devines' house again, and Jimmy figured he'd have to pay up for breaking that rule. But maybe not today. His father had that sleepy drunkenness about him, the kind that usually meant he would sit at the kitchen table when they got home and drink until he fell asleep with his head on his arms.
+  internalMonologue: `The first night Jimmy spent at Deer Island Correctional, he'd sat up all night, from nine to six, wondering if his cellmate would come for him. The guy had been a New Hampshire biker named Woodrell Daniels who'd crossed into Massachusetts one night on a methamphetamine deal, stopped in a bar for several whiskey nightcaps, and ended up blinding a guy with a pool stick. Woodrell Daniels was a big meat slab of a man covered in tattoos and knife scars, and he'd looked at Jimmy and let loose this dry whisper of a chuckle that went through Jimmy's heart like a length of pipe.
 
-Jimmy kept a few steps behind him, just in case, though, and tossed the ball up into the air, caught it in the baseball glove he'd stolen from Sean's house while the cops had been saying their good-byes to the Devines and nobody had even said a word to Jimmy and his father as they'd headed down the hallway toward the front door. Sean's bedroom door had been open, and Jimmy'd seen the glove lying on the floor, ball wrapped inside, and he'd reached in and picked it up, and then he and his father were through the front door. He had no idea why he'd stolen the glove. It wasn't for the wink of surprised pride he'd seen in the old man's eyes when he'd picked it up. Fuck that. Fuck him.
+"We'll see you later," Woodrell said at lights-out. "We'll see you later," he repeated, and let loose another of those whispery chuckles.
 
-It had something to do with Sean hitting Dave Boyle and pussying out on stealing the car and some other things over the year they'd been friends, that feeling Jimmy got that whatever Sean gave him, baseball cards, half a candy bar, whatever, came in the form of a handout.`,
+So Jimmy stayed up all night, listening for sudden creaks in the bunk above him, knowing he'd have to go for Woodrell's trachea if it came down to it, and wondering if he'd be capable of getting one good punch through Woodrell's massive arms. Hit the throat, he told himself. Hit the throat, hit the throat, hit the throat, oh Jesus, here he comes...
+
+But it was just Woodrell rolling over in his sleep, creaking those springs, the weight of his body bulging down through the mattress until it hung over Jimmy like the belly of an elephant.
+
+Jimmy heard the prison as a living creature that night. A breathing engine. He heard rats fighting and chewing and screeching with a mad, high-pitched desperation. He heard whispers and moans and the seesaw creak of bedsprings going up and down, up and down. Water dripped and men talked in their sleep and a guard's shoes echoed from a distant hall. At four, he heard a scream, just one, that died so fast it lived longer in echo and memory than it ever had in reality, and Jimmy, at that moment, considered taking the pillow from under his head and pressing it to his own face.`,
 
   tenseMoment: `The beefy one crooked a finger at them, then wiggled it toward his chest until they stood in front of him. "Let me ask you something, okay?" He bent at his big belly and his huge head filled Sean's vision. "You guys think it's okay to fight in the middle of the street?"
 
@@ -572,13 +576,15 @@ Sean said, "Cut it out."
 
 Sean had no idea how this had happened. He couldn't even remember what had made Jimmy mad anymore or why Dave had been stupid enough to hit him in the first place. One second they were standing by the car. Now they were in the middle of the street and Jimmy was pushing him, his face screwed up and stunted, his eyes black and small, Dave starting to join in.`,
 
-  emotionalRevelation: `When Jimmy reached the first step in the cement stairs, several hands thrust down and yanked him up. Sean watched his feet swing out and to the left and his head curl and dip to the right, Jimmy looking so small and light in a big man's grasp, like he was filled with straw, but tucking that ball tight against his chest even as people grabbed at his elbow and his shin banged off the edge of the platform. Sean felt Dave jittering beside him, lost. Sean looked at the faces of the people pulling Jimmy up and he didn't see worry or fear anymore, none of the helplessness he'd seen just a minute ago. He saw rage, monsters' faces, the features gnarled and savage, like they were going to lean in and bite a chunk out of Jimmy, then beat him to death.
+  emotionalRevelation: `"You find her? Is it her?" Jimmy yelled. "Is it?"
 
-They got Jimmy up onto the platform and held him, fingers squeezed into his shoulders as they looked around for someone to tell them what to do. The train broke through the tunnel, and someone screamed, but then someone laughed, a shrieking cackle that made Sean think of witches around a cauldron, because the train burst through on the other side of the station, moving north, and Jimmy looked up into the faces of the people holding him as if to say, See?
+Sean stayed motionless, holding Jimmy's eyes with his own, locking them until Jimmy's surging stare saw what Sean had just seen, saw that it was over now, the worst fear had been realized.
 
-Beside Sean, Dave let out this high-pitched giggle and threw up in his own hands.
+Jimmy began to scream and ropes of spit shot from his mouth. Another cop came down the slope to help the one on top of Jimmy, and Sean turned away. Jimmy's scream blew out into the air as a low, guttural thing, nothing sharp or high-pitched to it, an animal's first stage of reckoning with grief.
 
-Sean looked away, wondered where he fit in all this.`,
+Sean had heard the screams of a lot of victims' parents over the years. Always there was a plaintive character to them, a beseechment for God or reason to return, tell them it was all a dream. But Jimmy's scream had none of that, only love and rage, in equal quantity, shredding the birds from the trees and echoing into the Channel.
+
+Sean went back over and looked down at Katie Marcus. Connolly, the newest member of the unit, came up beside him, and they looked down for a while without saying anything, and Jimmy Marcus's scream continued to echo behind them, growing hoarse now but no less anguished.`,
 
   chaseSequence: `They were at South Station once, tossing an orange street hockey ball back and forth on the platform, and Jimmy missed Sean's throw and the ball bounced down onto the tracks. Before it occurred to Sean that Jimmy could even be thinking about it, Jimmy jumped off the platform and down onto the track, down there with the mice and the rats and the third rail.
 
@@ -778,90 +784,62 @@ export const GENERATION_CONFIG = {
 // EXTENDED STYLE GROUNDING - Longer examples for deep pattern learning
 // ============================================================================
 export const EXTENDED_STYLE_GROUNDING = {
-  // A complete scene with rising tension (shows pacing, dialogue interleaved with action)
-  tensionScene: `It was a dark brown car, square and long like the kind police detectives drove, a Plymouth or something, and its bumper stopped by their legs and the two cops looked out through the windshield at them, their faces watery in the reflected trees that swam across the glass.
+  // A complete scene with rising tension (shows pacing, dialogue interleaved with action, psychological complicity)
+  tensionScene: `She found some plastic gloves under the sink, ones she used when cleaning the toilet, and she put them on and checked for any tears in the rubber. When she was satisfied there were none, she took his shirt from the sink and his jeans off the floor. The jeans were dark with blood, too, and left a smear on the white tile.
 
-Sean felt a sudden lurch in the morning, a shifting in the softness of it.
+"How'd you get it on your jeans?"
 
-The driver got out. He looked like a cop, blond crew cut, red face, white shirt, black-and-gold nylon tie, the heft of his gut dropping over his belt buckle like a stack of pancakes. The other one looked sick. He was skinny and tired-looking and stayed in his seat, one hand gripping his skull through greasy black hair, staring into the side-view mirror as the three boys came around near the driver's door.
+"What?"
 
-The beefy one crooked a finger at them, then wiggled it toward his chest until they stood in front of him. "Let me ask you something, okay?" He bent at his big belly and his huge head filled Sean's vision. "You guys think it's okay to fight in the middle of the street?"
+"The blood."
 
-Sean noticed a gold badge clipped to the belt buckle beside the big man's right hip.
+He looked at them hanging from her hand. He looked at the floor. "I was kneeling over him." He shrugged. "I dunno. I guess it splashed up, like on the shirt."
 
-"What's that?" The cop cupped a hand behind his ear.
+"Oh."
 
-"No, sir."
-"No, sir."
-"No, sir."
+He met her eyes. "Yeah. Oh."
 
-"A pack of punks, huh? That what you are?" He jerked his big thumb back at the man in the passenger seat. "Me and my partner, we've had our fill of you East Bucky punks scaring decent people off the street. You know?"
+"So," she said.
 
-Sean and Jimmy didn't say anything.
+"So."
 
-"We're sorry," Dave Boyle said, and looked like he was about to cry.
+"So, I'll wash these in the kitchen sink."
 
-"You kids from this street?" the big cop asked. His eyes scanned the homes on the left side of the street like he knew every occupant, would bag them if they lied.
+"Okay."
 
-"Yup," Jimmy said, and looked back over his shoulder at Sean's house.
+"Okay," she said, and backed out of the bathroom, left him standing there, one hand fluttering under the water, waiting for it to get hot.
 
-"Yes, sir," Sean said.
+In the kitchen, she dumped the clothes in the sink and ran the water, watched the blood and filmy chips of flesh and, oh Christ, pieces of brain, she was pretty sure, wash down the drain. It amazed her how much the human body could bleed. They said you had six pints in you, but to Celeste it always seemed like so much more.
 
-Dave didn't say anything.
+She held her gloved hands under the water and checked them again for holes. None. She poured dishwashing liquid all over the T-shirt and scoured it with steel wool, then squeezed it out and went through the whole process again until the water that dripped from the shirt when she squeezed was no longer pink but clear. She did the same with the jeans, and by that time Dave was out of the shower and sitting at the kitchen table with a towel wrapped around his waist, smoking one of the long white cigarettes her mother had left behind in the cupboard and drinking a beer, watching her.
 
-The cop looked down at him. "Huh? You say something, kid?"
+"Fucked up," he said softly.
 
-"What?" Dave looked at Jimmy.
+She nodded.
 
-"Don't look at him. Look at me." The big cop breathed loudly through his nostrils. "You live here, kid?"
+"I mean, you know?" he whispered. "You go out, expecting one thing, a Saturday night, nice weather, and then..." He stood and came over by her, leaned against the oven, and watched her wring out the left leg of his jeans.
 
-"Huh? No."
+"Why aren't you using the washing machine in the pantry?"
 
-"No?" The cop bent over Dave. "Where you live, son?"
+She looked over at him. "Evidence, sweetie."
 
-"Rester Street." Still looking at Jimmy.
+"Evidence?"
 
-"Flats trash in the Point?" The cop's cherry-red lips swiveled as if he were sucking a lollipop. "That can't be good for business, can it?"
+"Well, I dunno for sure, but I figure blood and...other stuff have a better chance of sticking to the insides of a washing machine than to a sink drain."
 
-"Sir?"
+He let out a low whistle. "Evidence."
 
-"Your mother home?"
+"Evidence," she said, giving in to a grin now, feeling conspiratorial, dangerous, part of something big and worthwhile.
 
-"Yes, sir." A tear fell down Dave's cheek and Sean and Jimmy looked away.
+"Damn, babe," he said. "You're a genius."
 
-"Well, we're going to have a talk with her, tell her what her punk kid's been up to."
+She finished wringing out the jeans and shut off the water, took a small bow.
 
-"I don't...I don't..." Dave blubbered.
+Four in the morning, and she was more awake than she'd been in years. She was Christmas-morning-when-you're-eight kind of awake. Her blood was caffeine.
 
-"Get in." The cop opened up the back door and Sean caught a whiff of apples, a sharp, October scent.
+Your whole life, you wished for something like this. You told yourself you didn't, but you did. To be involved in a drama. And not the drama of unpaid bills and minor, shrieking marital squabbles. No. This was real life, but bigger than real life. This was hyper-real. Her husband may have killed a bad man. And if that bad man really was dead, the police would want to find out who did it. And if the trail actually led here, to Dave, they'd need evidence.
 
-Dave looked at Jimmy.
-
-"Get in," the cop said. "Or you want I should throw the cuffs on you?"
-
-"I..."
-
-"What?" The cop sounded pissed now. He slapped the top of the open door. "Get the fuck inside."
-
-Dave climbed into the backseat, bawling.
-
-The cop pointed a stubby finger at Jimmy and Sean. "Go tell your mothers what you been up to. And don't let me catch you shits fighting on my streets again."
-
-Jimmy and Sean stepped back, and the cop hopped in his car and drove off. They watched it reach the corner and then turn right, Dave's head, darkened by distance and shadows, looking back at them. And then the street was empty again, seemed to have gone mute with the slam of the car door. Jimmy and Sean stood where the car had been, looked at their feet, up and down the street, anywhere but at each other.
-
-Sean got that lurching sensation again, this time accompanied by the taste of dirty pennies in his mouth. His stomach felt as if a spoon had hollowed it out.
-
-Then Jimmy said it:
-
-"You started it."
-
-"He started it."
-
-"You did. Now he's screwed. His mother's soft in the head. No telling what she'll do two cops bring him home."
-
-"I didn't start it."
-
-Jimmy pushed him, and Sean pushed back this time, and then they were on the ground, rolling around, punching each other.`,
+Because it all came down to evidence. And she'd just washed the evidence down the kitchen sink drain and out into the dark sewers.`,
 
   // A revelation moment (shows how to deliver information that recontextualizes everything)
   revelationScene: `Jimmy walked back to the Flats behind the old man. The old man weaved slightly and smoked his cigarettes down to pinched ends and talked to himself under his breath. When they got home, his father might give him a beating, might not, it was too close to tell. After he'd lost his job, he'd told Jimmy never to go to the Devines' house again, and Jimmy figured he'd have to pay up for breaking that rule. But maybe not today. His father had that sleepy drunkenness about him, the kind that usually meant he would sit at the kitchen table when they got home and drink until he fell asleep with his head on his arms.
@@ -1030,6 +1008,23 @@ He hated Sean and he'd been dumb to think they could have been friends, and he k
       'Street has a "hum" - the ordinary world continues, indifferent to his trauma',
       'No resolution comes - the waiting ends not with answer but with going back inside',
       'Character revealed through what he HOPES FOR, not what he does',
+    ],
+  },
+
+  psychologicalComplicityExample: {
+    passage: `Four in the morning, and she was more awake than she'd been in years. She was Christmas-morning-when-you're-eight kind of awake. Her blood was caffeine.
+
+Your whole life, you wished for something like this. You told yourself you didn't, but you did. To be involved in a drama. And not the drama of unpaid bills and minor, shrieking marital squabbles. No. This was real life, but bigger than real life. This was hyper-real. Her husband may have killed a bad man. And if that bad man really was dead, the police would want to find out who did it.
+
+Because it all came down to evidence. And she'd just washed the evidence down the kitchen sink drain and out into the dark sewers.`,
+    annotations: [
+      '"Christmas-morning-when-you're-eight kind of awake" - disturbing simile makes complicity feel childlike, innocent',
+      'Shift to second person ("Your whole life") - implicates the READER in the dark fantasy',
+      '"You told yourself you didn\'t, but you did" - the brutal honesty about human nature',
+      '"Hyper-real" - she\'s experiencing her accessory-to-murder moment as heightened living',
+      'The mundane details (sink, sewers) ground the horror in domestic reality',
+      'No moral judgment from narrator - we watch her become complicit without authorial comment',
+      'Shows how ordinary people slide into darkness through small, practical steps',
     ],
   },
 };
