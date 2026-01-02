@@ -744,7 +744,7 @@ export const GENERATION_CONFIG = {
   // Full story context = maximum continuity and coherence.
   contextWindowing: {
     // Older chapters: include full summaries for all
-    maxOlderChapterEntries: 30,  // All chapters (12 chapters × 3 subchapters = 36 max)
+    maxOlderChapterEntries: 36,  // All chapters (12 chapters × 3 subchapters = 36 max)
     // Recent chapters: FULL TEXT, no truncation
     maxRecentChapterEntries: 9,  // Last 3 full chapters at full detail
     maxRecentNarrativeCharsPerEntry: 12000,  // Full chapter text (~3000 words max)
@@ -759,9 +759,9 @@ export const GENERATION_CONFIG = {
 
   // Word count requirements - optimized for fast background generation
   wordCount: {
-    minimum: 450,         // ~1.5 pages, enough for immersion
-    target: 500,          // Lean but quality-focused - faster generation
-    maximum: 1000,        // Cap to ensure fast generation
+    minimum: 850,         // ~1.5 pages, enough for immersion
+    target: 900,          // Lean but quality-focused - faster generation
+    maximum: 1200,        // Cap to ensure fast generation
   },
 
   // Quality assurance settings
