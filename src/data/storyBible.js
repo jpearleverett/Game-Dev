@@ -530,25 +530,13 @@ The cop looked down at him. "Huh? You say something, kid?"
 
 "Flats trash in the Point?" The cop's cherry-red lips swiveled as if he were sucking a lollipop. "That can't be good for business, can it?"`,
 
-  decisionSetup: `Sean almost said this to Jimmy, but Jimmy was already moving up the street, looking in car windows, Dave running alongside him.
+  decisionSetup: `Jimmy looked up the street. "You know anyone on this street who leaves their keys in their car?"
 
-"How about this one?" Jimmy put his hand on Mr. Carlton's Bel Air, and his voice was loud in the dry breeze.
+Sean did. Mr. Griffin left them under the seat, and Dottie Fiore left them in her glove compartment, and Old Man Makowski, the drunk who listened to Sinatra records too loud all hours of the day and night, left them in the ignition most times.
 
-"Hey, Jimmy?" Sean walked toward him. "Maybe some other time. Right?"
+But as he followed Jimmy's gaze and picked out the cars that he knew held keys, Sean felt a dull ache grow behind his eyes, and in the hard sunlight bouncing off the trunks and hoods, he could feel the weight of the street, its homes, the entire Point and its expectations for him. He was not a kid who stole cars. He was a kid who'd go to college someday, make something of himself that was bigger and better than a foreman or a truck loader. That was the plan, and Sean believed that plans worked out if you were careful, if you were cautious. It was like sitting through a movie, no matter how boring or confusing, until the end. Because at the end, sometimes things were explained or the ending itself was cool enough that you felt like sitting through all the boring stuff had been worth it.
 
-Jimmy's face went all saggy and narrow. "What do you mean? We'll do it. It'll be fun. Fucking cool. Remember?"
-
-"Fucking cool," Dave said.
-
-"We can't even see over the dashboard."
-
-"Phone books." Jimmy smiled in the sunlight. "We'll get 'em from your house."
-
-"Phone books," Dave said. "Yeah!"
-
-Sean held out his arms. "No. Come on."
-
-Jimmy's smile died. He looked at Sean's arms as if he wanted to cut them off at the elbows. "Why won't you just do something for fun. Huh?" He tugged on the handle of the Bel Air, but it was locked. For a second, Jimmy's cheeks jiggled and his lower lip trembled, and then he looked in Sean's face with a wild loneliness that Sean pitied.`,
+He almost said this to Jimmy, but Jimmy was already moving up the street, looking in car windows, Dave running alongside him.`,
 
   // ========== NEW A+ QUALITY EXAMPLES ==========
 
@@ -604,17 +592,69 @@ Jimmy walked along the center of the track toward the stairs at the far end of t
 
 Dave said, "He's smiling. He's just nuts. You know?"`,
 
-  investigationScene: `That night Sean's father sat him down in the basement tool room.
+  investigationScene: `Sean rolled off Jimmy and they both stood up, expecting to see the two cops again but seeing Mr. Devine instead, coming down the front steps toward them.
 
-The tool room was a tight place of black vises and coffee cans filled with nails and screws, piles of wood stacked neatly beneath the scarred counter that split the room in half, hammers hung in carpenter belts like guns in holsters, a band saw blade dangling from a hook. Sean's father, who often worked as a handyman around the neighborhood, came down here to build his birdhouses and the shelves he placed on the windows for his wife's flowers. He'd planned the back porch here, something he and his friends threw up one blistering summer when Sean was five, and he came down here when he wanted peace and quiet, and sometimes when he was angry, Sean knew, angry at Sean or Sean's mother or his job. The birdhouses, baby Tudors and colonials and Victorians and Swiss chalets, ended up stacked in a corner of the cellar, so many of them they'd have had to live in the Amazon to find enough birds who could get use out of them.
+"The hell you two doing?"
 
-Sean sat up on the old red bar stool and fingered the inside of the thick black vise, felt the oil and sawdust mixed in there, until his father said, "Sean, how many times I have to tell you about that?"
+"Nothing."
 
-Sean pulled his finger back out, wiped the grease on his palm.
+"Nothing." Sean's father frowned as he reached the sidewalk. "Get out of the middle of the street."
 
-His father picked some stray nails up off the counter and placed them in a yellow coffee can. "I know you like Jimmy Marcus, but if you two want to play together from now on, you'll do it in view of the house. Yours, not his."
+They reached the sidewalk beside him.
 
-Sean nodded. Arguing with his father was pointless when he spoke as quietly and slowly as he was doing now, every word coming out of his mouth as if it had a small stone attached to it.`,
+"Weren't there three of you?" Mr. Devine looked up the street. "Where's Dave?"
+
+"What?"
+
+"Dave." Sean's father looked at Sean and Jimmy. "Wasn't Dave with you?"
+
+"We were fighting in the street."
+
+"What?"
+
+"We were fighting in the street and the cops came."
+
+"When was this?"
+
+"Like five minutes ago."
+
+"Okay. So, the cops came."
+
+"And they picked Dave up."
+
+Sean's father looked up and down the street again. "They what? They picked him up?"
+
+"To take him home. I lied. I said I lived here. Dave said he lived in the Flats, and they—"
+
+"What are you talking about? Sean, what'd the cops look like?"
+
+"Huh?"
+
+"Were they wearing uniforms?"
+
+"No. No, they—"
+
+"Then how'd you know they were cops?"
+
+"I didn't. They..."
+
+"They what?"
+
+"He had a badge," Jimmy said. "On his belt."
+
+"What kind of badge?"
+
+"Gold?"
+
+"Okay. But what'd it say on it?"
+
+"Say?"
+
+"The words. Were there words you could read?"
+
+"No. I don't know."
+
+Sean looked at his father. He didn't seem to know where to put his hands. He put them in his pockets, then he pulled them out, wiped them on his pants. He said, "I'll be damned," very softly, and he looked down to the end of the street as if Dave hovered at the corner, a dancing mirage just beyond Sean's field of vision.`,
 
   quietMoment: `He sat out on the porch and his father told him he hadn't done anything wrong, that he and Jimmy were smart not to have gotten in that car. His father patted his knee and said things would turn out fine. Dave will be home tonight. You'll see.
 
