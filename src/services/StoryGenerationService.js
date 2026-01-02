@@ -9358,6 +9358,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // Revealing major twists too early ruins the entire experience.
     if (s.startsWith('PREMATURE REVELATION:')) return true;
 
+    // --- TIER 7: BRANCHING NARRATIVE WORD COUNT ---
+    // Each player path must meet minimum word count for adequate experience.
+    // Thin branches mean some players get a degraded experience.
+    if (s.includes('response too short:')) return true;
+    if (s.includes('opening too short:')) return true;
+    if (s.includes('total too short:')) return true;
+
     // =======================================================================
     // SOFT FAILURES - Convert to warnings, don't block generation
     // These matter for quality but players are forgiving of minor issues
