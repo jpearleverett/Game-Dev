@@ -662,13 +662,9 @@ Sean's father looked up and down the street again. "They what? They picked him u
 
 Sean looked at his father. He didn't seem to know where to put his hands. He put them in his pockets, then he pulled them out, wiped them on his pants. He said, "I'll be damned," very softly, and he looked down to the end of the street as if Dave hovered at the corner, a dancing mirage just beyond Sean's field of vision.`,
 
-  quietMoment: `He sat out on the porch and his father told him he hadn't done anything wrong, that he and Jimmy were smart not to have gotten in that car. His father patted his knee and said things would turn out fine. Dave will be home tonight. You'll see.
+  quietMoment: `Even after all the crying she'd done with Annabeth and Nadine and Sara. Even after she'd held Annabeth on the living room floor as her cousin shook for five violent minutes of heaving spasms. Even after she'd found Jimmy standing in the dark of Katie's bedroom, his daughter's pillow held up to his face. He hadn't been weeping or talking to himself or making any noise whatsoever. He merely stood with that pillow pressed to his face and breathed in the smell of his daughter's hair and cheeks, over and over. Inhale, exhale. Inhale, exhale...
 
-His father shut up then. He sipped his beer and sat with Sean, but Sean could feel he'd drifted away on him, was maybe in the back bedroom with Sean's mother, or down in the cellar building his birdhouses.
-
-Sean looked up the street at the rows of cars, the shiny glint of them. He told himself that this, all of this, was part of some plan that made sense. He just couldn't see it yet. He would someday, though. The adrenaline that had been rushing through his body since Dave had been driven away and he and Jimmy had rolled on the street fighting finally flushed out through his pores like waste.
-
-He saw the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
+Even after all that, it still hadn't sunk in entirely. Katie, she felt, would walk through that door any minute now, bounce into the kitchen and steal a piece of bacon from the plate on the stove. Katie couldn't be dead. She couldn't.`,
 };
 
 // ============================================================================
@@ -842,23 +838,27 @@ Your whole life, you wished for something like this. You told yourself you didn'
 Because it all came down to evidence. And she'd just washed the evidence down the kitchen sink drain and out into the dark sewers.`,
 
   // A revelation moment (shows how to deliver information that recontextualizes everything)
-  revelationScene: `Jimmy walked back to the Flats behind the old man. The old man weaved slightly and smoked his cigarettes down to pinched ends and talked to himself under his breath. When they got home, his father might give him a beating, might not, it was too close to tell. After he'd lost his job, he'd told Jimmy never to go to the Devines' house again, and Jimmy figured he'd have to pay up for breaking that rule. But maybe not today. His father had that sleepy drunkenness about him, the kind that usually meant he would sit at the kitchen table when they got home and drink until he fell asleep with his head on his arms.
+  revelationScene: `Jimmy could hear them through the small speaker, whispering, giggling, and it horrified him to picture them and think of his sins at the same time.
 
-Jimmy kept a few steps behind him, just in case, though, and tossed the ball up into the air, caught it in the baseball glove he'd stolen from Sean's house while the cops had been saying their good-byes to the Devines and nobody had even said a word to Jimmy and his father as they'd headed down the hallway toward the front door. Sean's bedroom door had been open, and Jimmy'd seen the glove lying on the floor, ball wrapped inside, and he'd reached in and picked it up, and then he and his father were through the front door. He had no idea why he'd stolen the glove. It wasn't for the wink of surprised pride he'd seen in the old man's eyes when he'd picked it up. Fuck that. Fuck him.
+I killed a man. The wrong man.
 
-It had something to do with Sean hitting Dave Boyle and pussying out on stealing the car and some other things over the year they'd been friends, that feeling Jimmy got that whatever Sean gave him, baseball cards, half a candy bar, whatever, came in the form of a handout.
+It burned in him, that knowledge, that shame.
 
-When Jimmy had first picked up the glove and walked away with it, he'd felt elated. He'd felt great. A little later, as they were crossing Buckingham Avenue, he'd felt that familiar shame and embarrassment that came whenever he stole something, an anger at whatever or whoever made him do these things. Then a little later, as they walked down Crescent and into the Flats, he felt a stab of pride as he looked at the shitty three-deckers and then the glove in his hand.
+I killed Dave Boyle.
 
-Jimmy took the glove and he felt bad about it. Sean would miss it. Jimmy took the glove and he felt good about it. Sean would miss it.
+It dripped, still burning, down into his belly. It drizzled through him.
 
-Jimmy watched his father stumble ahead of him, the old fuck looking like he'd crumple and turn into a puddle of himself any second, and he hated Sean.
+I murdered. I murdered an innocent man.
 
-He hated Sean and he'd been dumb to think they could have been friends, and he knew he'd hold on to this glove for the rest of his life, take care of it, never show it to anyone, and he'd never, not once, use the goddamn thing.
+"Oh, honey," Annabeth said, searching his face. "Oh, baby, what's wrong? Is it Katie? Baby, you look like you're dying."
 
-He'd die before that happened.
+She came around the table, a fearsome mix of worry and love in her eyes. She straddled Jimmy and took his face in her hands and made him look in her eyes.
 
-Jimmy looked at the Flats spread out before him as he and the old man walked under the deep shade of the el tracks and neared the place where Crescent bottomed out and the freight trains rumbled past the old, ratty drive-in and the Penitentiary Channel beyond, and he knew, deep, deep in his chest, that they'd never see Dave Boyle again. Where Jimmy lived, on Rester, they stole things all the time. Jimmy had had his Big Wheel stolen when he was four.`,
+"Tell me. Tell me what's wrong."
+
+Jimmy wanted to hide from her. Her love hurt too much right now. He wanted to dissolve from her warm hands and find someplace dark and cavelike where no love or light could reach and he could curl into a ball and moan his grief and self-hatred into the black.
+
+"Jimmy," she whispered. She kissed his eyelids. "Jimmy, talk to me. Please."`,
 
   // A chapter ending (shows how to create that "one more chapter" compulsion)
   chapterEnding: `An hour later, in Sean's kitchen, two other cops asked Sean and Jimmy a bunch of questions, and then a third guy showed up and drew sketches of the men in the brown car based on what Jimmy and Sean told them. The big blond cop looked meaner on the sketch pad, his face even bigger, but otherwise it was him. The second guy, the one who'd kept his eyes on the side-view, didn't look much like anything at all, a blur with black hair really, because Sean and Jimmy couldn't remember him too well.
@@ -876,39 +876,29 @@ Sean looked up the street at the rows of cars, the shiny glint of them. He told 
 He saw the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
 
   // Dialogue under tension (shows subtext, what's unsaid, power dynamics)
-  dialogueUnderTension: `That night Sean's father sat him down in the basement tool room.
+  dialogueUnderTension: `Sean could see what Jimmy had done, and Jimmy could see that knowledge appear in Sean.
 
-The tool room was a tight place of black vises and coffee cans filled with nails and screws, piles of wood stacked neatly beneath the scarred counter that split the room in half, hammers hung in carpenter belts like guns in holsters, a band saw blade dangling from a hook. Sean's father, who often worked as a handyman around the neighborhood, came down here to build his birdhouses and the shelves he placed on the windows for his wife's flowers. He'd planned the back porch here, something he and his friends threw up one blistering summer when Sean was five, and he came down here when he wanted peace and quiet, and sometimes when he was angry, Sean knew, angry at Sean or Sean's mother or his job. The birdhouses, baby Tudors and colonials and Victorians and Swiss chalets, ended up stacked in a corner of the cellar, so many of them they'd have had to live in the Amazon to find enough birds who could get use out of them.
+"You fucking did it, didn't you?" Sean said. "You killed him."
 
-Sean sat up on the old red bar stool and fingered the inside of the thick black vise, felt the oil and sawdust mixed in there, until his father said, "Sean, how many times I have to tell you about that?"
+Jimmy stood up, holding on to the banister. "Don't know what you're talking about."
 
-Sean pulled his finger back out, wiped the grease on his palm.
+"You killed both of them—Ray Harris and Dave Boyle. Jesus, Jimmy, I came down here thinking the whole idea was nuts, but I can see it in your face, man. You crazy, lunatic, fucking psycho piece of shit. You did it. You killed Dave. You killed Dave Boyle. Our friend, Jimmy."
 
-His father picked some stray nails up off the counter and placed them in a yellow coffee can. "I know you like Jimmy Marcus, but if you two want to play together from now on, you'll do it in view of the house. Yours, not his."
+Jimmy snorted. "Our friend. Yeah, okay, Point Boy, he was your good buddy. Hung with him all the time, right?"
 
-Sean nodded. Arguing with his father was pointless when he spoke as quietly and slowly as he was doing now, every word coming out of his mouth as if it had a small stone attached to it.
+Sean stepped into his face. "He was our friend, Jimmy. Remember?"
 
-"We understand each other?" His father pushed the coffee can to his right, looked down at Sean.
+Jimmy looked into Sean's eyes, wondered if he was going to take a swing at him.
 
-Sean nodded. He watched his father's thick fingers rub sawdust off the tips.
+"Last time I saw Dave," he said, "was at my house last night." He pushed Sean aside and crossed the street onto Gannon. "That's the last time I saw Dave."
 
-"For how long?"
+"You're full of shit."
 
-His father reached up and pulled a wisp of dust off a hook embedded in the ceiling. He kneaded it between his fingers, then tossed it in the wastebasket under the counter. "Oh, a good while, I'd say. And Sean?"
+He turned, arms wide as he looked back at Sean. "Then arrest me, you're so sure."
 
-"Yes, sir?"
+"I'll get the evidence," Sean said. "You know I will."
 
-"Don't be thinking about going to your mother on this one. She never wants you to see Jimmy again after that stunt today."
-
-"He's not that bad. He's..."
-
-"Didn't say he was. He's just wild, and your mother's had her fill of wild in her life."
-
-Sean saw something glint in his father's face when he said "wild," and he knew it was the other Billy Devine he was seeing for a moment, the one he'd had to build out of scraps of conversation he'd overheard from aunts and uncles. The Old Billy they called him, the "scrapper," his uncle Colm said once with a smile, the Billy Devine who'd disappeared sometime before Sean was born to be replaced by this quiet, careful man with thick, nimble fingers who built too many birdhouses.
-
-"You remember what we talked about," his father said, and patted Sean's shoulder in dismissal.
-
-Sean left the tool room and walked through the cool basement wondering if what made him enjoy Jimmy's company was the same thing that made his father enjoy hanging out with Mr. Marcus, drinking Saturday into Sunday, laughing too hard and too suddenly, and if that was what his mother was afraid of.`,
+"You'll get shit," Jimmy said. "Thanks for busting my daughter's killers, Sean. Really. Maybe if you'd been a little faster, though?" Jimmy shrugged and turned his back on him, started walking down Gannon Street.`,
 };
 
 // ============================================================================
@@ -1025,6 +1015,64 @@ Because it all came down to evidence. And she'd just washed the evidence down th
       'The mundane details (sink, sewers) ground the horror in domestic reality',
       'No moral judgment from narrator - we watch her become complicit without authorial comment',
       'Shows how ordinary people slide into darkness through small, practical steps',
+    ],
+  },
+
+  acceptingDarknessExample: {
+    passage: `And it occurred to him as he began to shave that he was evil. No big thing, really, no earth-shattering clang of bells erupting in his heart. Just that—an occurrence, a momentary realization that fell like gently grasping fingers through his chest.
+
+So I am then.
+
+He looked in the mirror and felt very little of anything at all. He loved his daughters and he loved his wife. And they loved him. He found certainty in them, complete certainty. Few men—few people—had that.
+
+He'd killed a man for a crime the man had probably not committed. If that weren't bad enough, he felt very little regret.
+
+He was evil? So be it. He could live with it because he had love in his heart and he had certainty. As trade-offs went, it wasn't half bad.`,
+    annotations: [
+      '"No big thing, really" - the casualness of self-damning realization is MORE chilling than drama',
+      '"Gently grasping fingers through his chest" - the evil arrives tenderly, not violently',
+      '"So I am then" - three words, isolated, accepting. No fight, no denial.',
+      'He weighs evil against love and certainty as if balancing a ledger - moral calculus',
+      '"Very little regret" - the absence of expected emotion reveals character depth',
+      '"As trade-offs went, it wasn\'t half bad" - the banality of accepted evil is the horror',
+      'Shows how monsters justify themselves through what they STILL possess, not what they\'ve lost',
+    ],
+  },
+
+  silentReconnectionExample: {
+    passage: `He said, "I'm sorry."
+
+And Lauren spoke. "For what?"
+
+"For putting it all on you."
+
+"Okay..."
+
+"Hey—"
+
+"Hey—"
+
+"You go ahead," he said.
+
+"I...hell, Sean, I'm sorry, too. I didn't mean to—"
+
+"It's okay," he said. "Really." He took a deep breath, sucking in the soiled, stale-sweat stench of his cruiser. "I want to see you. I want to see my daughter."
+
+And Lauren answered, "How do you know she's yours?"
+
+"She's mine."
+
+"But the blood test—"
+
+"She's mine," he said. "I don't need a blood test. Will you come home, Lauren? Will you?"`,
+    annotations: [
+      'After a year of silent phone calls, "I\'m sorry" breaks everything open - power of withheld words',
+      'Overlapping "Hey—" shows both trying to reconnect at once - rhythm of reconciliation',
+      '"Stale-sweat stench of his cruiser" - even transcendent moments grounded in sensory reality',
+      'Paternity question deflected by emotional certainty: "She\'s mine" - faith over fact',
+      'Repeated "She\'s mine" and "Will you?" - the desperation under the calm surface',
+      'The mundane setting (car, phone) makes the emotional stakes feel MORE real, not less',
+      'Resolution comes through vulnerability, not grand gesture',
     ],
   },
 };
