@@ -76,7 +76,7 @@ export const ABSOLUTE_FACTS = {
   setting: {
     city: 'Ashport',
     atmosphere: 'Rain-soaked, neon-lit, perpetually overcast',
-    tone: 'Modern noir with classic aesthetics',
+    tone: 'Modern detective thriller with classic aesthetics',
     corruption: 'Systemic, reaches highest levels of police and courts',
     keyLocations: {
       murphysBar: 'Bar beneath Jack\'s office',
@@ -688,7 +688,7 @@ export const CONSISTENCY_RULES = [
   // SETTING & ATMOSPHERE
   'Ashport is ALWAYS rainy, overcast, or recently rained - NEVER sunny or clear',
   'Murphy\'s Bar is directly below Jack\'s office (Jack can hear the jukebox through the floorboards)',
-  'Ashport is neon-lit, morally gray, modern day with noir aesthetics',
+  'Ashport is neon-lit, morally gray, modern day with classic aesthetics',
 
   // CHARACTER TRAITS (Immutable)
   'Jack drinks Jameson whiskey exclusively - never bourbon, scotch, vodka, or beer',
@@ -1374,10 +1374,10 @@ export const MICRO_TENSION_TECHNIQUES = {
 };
 
 // ============================================================================
-// SENTENCE RHYTHM PATTERNS - Noir cadence
+// SENTENCE RHYTHM PATTERNS
 // ============================================================================
 export const SENTENCE_RHYTHM = {
-  description: 'Vary sentence length deliberately for noir cadence',
+  description: 'Vary sentence length deliberately for better cadence',
   pattern: `
 SHORT. For impact.
 Medium sentences carry the narrative forward, building momentum.
