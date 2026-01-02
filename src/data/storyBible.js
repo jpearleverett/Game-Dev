@@ -1075,6 +1075,81 @@ And Lauren answered, "How do you know she's yours?"
       'Resolution comes through vulnerability, not grand gesture',
     ],
   },
+
+  burnoutMonologueExample: {
+    passage: `Lately, though, he'd just been tired in general. Tired of people. Tired of books and TV and the nightly news and songs on the radio that sounded exactly like other songs on the radio he'd heard years before and hadn't liked much in the first place. He was tired of his clothes and tired of his hair and tired of other people's clothes and other people's hair. He was tired of wishing things made sense. Tired of office politics and who was screwing who, both figuratively and otherwise. He'd gotten to a point where he was pretty sure he'd heard everything anyone had to say on any given subject and so it seemed he spent his days listening to old recordings of things that hadn't seemed fresh the first time he'd heard them.
+
+Maybe he was simply tired of life, of the absolute effort it took to get up every goddamned morning and walk out into the same fucking day with only slight variations in the weather and the food.`,
+    annotations: [
+      'Anaphora ("Tired of...tired of...tired of") creates crushing rhythm of exhaustion',
+      'Exhaustion expands from specific (books, TV) to universal (life itself) - escalating despair',
+      '"Tired of his hair and tired of other people\'s hair" - the absurdist specificity makes it real',
+      '"Old recordings of things that hadn\'t seemed fresh the first time" - perception of repetition',
+      '"Same fucking day with only slight variations" - depression rendered as sameness, not sadness',
+      'No emotional words like "depressed" or "hopeless" - state shown through perception, not label',
+      'Shows burnout through what the character NOTICES, not what they feel',
+    ],
+  },
+
+  memoryErasureExample: {
+    passage: `They had never been friends. They had never played stickball and kick-the-can and 76 on Rester Street. They had never spent a year of Saturdays hanging with Sean Devine, playing war in the gravel pits off Harvest, jumping roof to roof from the industrial garages near Pope Park, watching Jaws together at the Charles, huddled down in their seats and screaming. They had never practiced skids on their bikes together or argued over who would be Starsky, who would be Hutch, and who would get stuck being Kolchak from The Night Stalker.`,
+    annotations: [
+      'Negation structure ("never...never...never") erases shared history line by line',
+      'Specific childhood memories (Starsky/Hutch, Jaws, kick-the-can) make the erasure painful',
+      'The more vivid the denied memory, the more we feel what\'s being lost',
+      'Psychological defense mechanism rendered as narrative technique',
+      'Reader knows these things DID happen - dramatic irony creates tension',
+      'Shows trauma response: rewriting history to survive the present',
+      'Each "never" is a small violence against the past',
+    ],
+  },
+
+  darkEmpowermentExample: {
+    passage: `He'd heard somewhere of ancient cultures that used to eat the hearts of the people they murdered. They ate the hearts, and the dead were subsumed into them. It gave them power, the power of two, the spirit of two. Dave felt that way. No, he hadn't eaten anyone's heart. He wasn't that fucked in the head. But he had felt the glory of the predator. He had murdered. And he had done right. And he had stilled the monster inside of him, the freak who longed to touch a young boy's hand and melt into his embrace.
+
+That freak was fucking gone now, man. Gone down to hell with Dave's victim.`,
+    annotations: [
+      '"Ancient cultures" reference gives murder a mythic, almost sacred justification',
+      '"Glory of the predator" - the word "glory" is chilling in this context',
+      '"He wasn\'t that fucked in the head" - the partial denial makes it worse, not better',
+      'Murder as therapy: he killed to silence his own inner monster',
+      '"Done right" - moral certainty after murder is more disturbing than guilt',
+      'The colloquial "fucking gone now, man" - casual tone about murder',
+      'Shows how perpetrators justify violence as self-improvement or purification',
+    ],
+  },
+
+  physicalDecayAsTraumaExample: {
+    passage: `Her skin was pale and her hair was speckled with dandruff and she kept pulling on her fingers as if trying to pop them from the sockets.
+
+She blinked at Sean. She said, "Hey, Trooper Devine."
+
+Sean held out his hand because she looked like she needed contact or she'd float away. "Hi, Celeste. Call me Sean. It's okay."
+
+She shook his hand. Her palm was clammy, her fingers hot, and she let go almost as soon as they'd touched.`,
+    annotations: [
+      'Physical deterioration (pale, dandruff) shows psychological collapse without stating it',
+      '"Pulling on her fingers as if trying to pop them from sockets" - self-harm impulse as tic',
+      '"Float away" - others can SEE her dissociation; it\'s visible, not internal',
+      'Contradictory sensations (clammy palm, hot fingers) show dysregulation',
+      'Immediate release of handshake - she can\'t sustain human contact',
+      'Her trauma shown entirely through physical description and brief action',
+      'The body keeps the score: grief manifests as decay',
+    ],
+  },
+
+  victimHumanizationExample: {
+    passage: `Underneath the blood on the body and pooled beneath it and the mildew clinging to the concrete around it, Sean could smell her perfume, just a hint of it, slightly sweet, slightly sensual, the lightest scent, which made him think of high school dates and dark cars, the panicky fumbling through fabric and the electric grazing of flesh.`,
+    annotations: [
+      'Perfume persists through blood and mildew - life asserting itself against death',
+      '"Slightly sweet, slightly sensual" - the victim was a person with desires, not just a body',
+      'Detective\'s memory triggered by scent - universal human experience',
+      '"High school dates and dark cars" - perfume connects to innocence, youth, first love',
+      '"Panicky fumbling...electric grazing" - sensory language resurrects the victim\'s aliveness',
+      'The paragraph moves from death (blood, mildew) to life (perfume, desire) - structural humanization',
+      'Shows how to honor the victim while describing crime scene - they were SOMEONE',
+    ],
+  },
 };
 
 // ============================================================================
