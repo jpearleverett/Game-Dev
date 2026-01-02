@@ -1132,6 +1132,78 @@ She shook his hand. Her palm was clammy, her fingers hot, and she let go almost 
       'Shows how to honor the victim while describing crime scene - they were SOMEONE',
     ],
   },
+
+  // ========== REQUIRED BY StoryGenerationService.js ==========
+
+  physicalEmotionExample: {
+    passage: `Jimmy began to scream and ropes of spit shot from his mouth. Another cop came down the slope to help the one on top of Jimmy, and Sean turned away. Jimmy's scream blew out into the air as a low, guttural thing, nothing sharp or high-pitched to it, an animal's first stage of reckoning with grief.
+
+Sean had heard the screams of a lot of victims' parents over the years. Always there was a plaintive character to them, a beseechment for God or reason to return, tell them it was all a dream. But Jimmy's scream had none of that, only love and rage, in equal quantity, shredding the birds from the trees and echoing into the Channel.`,
+    annotations: [
+      '"Ropes of spit" - grief rendered through visceral, undignified physical detail',
+      '"Low, guttural thing" - sound described as object, as if grief has mass and shape',
+      '"Animal\'s first stage of reckoning" - dehumanization shows depth of loss',
+      'Comparison to other screams establishes narrator\'s experience, then subverts expectation',
+      '"No plaintive character...no beseechment" - defining by what\'s ABSENT',
+      '"Love and rage, in equal quantity" - the duality of grief made explicit',
+      '"Shredding the birds from the trees" - hyperbole that FEELS true, not exaggerated',
+      'Emotion externalized through physical effects on the world, not internal description',
+    ],
+  },
+
+  dialogueSubtextExample: {
+    passage: `"You still love her, though."
+"Sure. Hell, I think she still loves me." He stubbed out his cigarette. "She calls me all the time. Calls me and doesn't talk."
+"Wait, she— "
+"I know," he said.
+"— calls you up and doesn't say a word?"
+"Yup. Been going on for about eight months now."
+Annabeth laughed. "No offense, but that's the weirdest thing I've heard in a while."
+"No argument." He watched a fly dart in and away from the bare lightbulb. "One of these days, I figure, she's gotta talk. That's what I'm holding out for."
+He heard his half-assed chuckle die in the night and the echo of it embarrassed him.`,
+    annotations: [
+      'Surface conversation about phone calls; actual subject is devotion and hope',
+      '"Calls me and doesn\'t talk" - the absurd detail reveals depth of connection',
+      'Annabeth\'s interruption ("Wait, she—") shows genuine surprise, makes it real',
+      '"Eight months" - specific duration adds weight, shows this is an ongoing wound',
+      '"What I\'m holding out for" - vulnerability disguised as casual observation',
+      '"Half-assed chuckle died...embarrassed him" - self-awareness about exposing too much',
+      'Domestic detail (fly, lightbulb) grounds emotional revelation in mundane reality',
+      'He reveals his heart while pretending to share an amusing anecdote',
+    ],
+  },
+
+  tensionBuildingExample: {
+    passage: `It was a dark brown car, square and long like the kind police detectives drove, a Plymouth or something, and its bumper stopped by their legs and the two cops looked out through the windshield at them, their faces watery in the reflected trees that swam across the glass.
+
+Sean felt a sudden lurch in the morning, a shifting in the softness of it.
+
+The driver got out. He looked like a cop— blond crew cut, red face, white shirt, black-and-gold nylon tie, the heft of his gut dropping over his belt buckle like a stack of pancakes. The other one looked sick. He was skinny and tired-looking and stayed in his seat, one hand gripping his skull through greasy black hair, staring into the side-view mirror as the three boys came around near the driver's door.`,
+    annotations: [
+      '"Dark brown car" - mundane description normalizes the approaching threat',
+      '"Bumper stopped by their legs" - physical proximity creates implicit danger',
+      '"Faces watery in reflected trees" - distortion suggests something wrong, unreal',
+      '"Sudden lurch in the morning, shifting in softness" - threat changes TIME, not just mood',
+      'Cop described through cop-like details first, normalizing - then "looked sick" disrupts',
+      'Second man staying in car, gripping skull, staring at mirror - wrongness through behavior',
+      'Boys "came around" to the door - they approach the threat, not flee it',
+      'Tension built through accumulating wrong details, not through telling reader to be scared',
+    ],
+  },
+
+  chapterHookExample: {
+    passage: `Jimmy looked at the Flats spread out before him as he and the old man walked under the deep shade of the el tracks and neared the place where Crescent bottomed out and the freight trains rumbled past the old, ratty drive-in and the Penitentiary Channel beyond, and he knew— deep, deep in his chest— that they'd never see Dave Boyle again.`,
+    annotations: [
+      'Long sentence mimics walking, creates rhythm of approaching dread',
+      'Geographic specificity (Crescent, el tracks, Channel) grounds the revelation in place',
+      '"Penitentiary Channel" - the word "penitentiary" foreshadows imprisonment, punishment',
+      '"Deep, deep in his chest" - repetition emphasizes the physical weight of knowing',
+      '"They\'d never see Dave Boyle again" - declarative finality, no hedging',
+      'The certainty is FELT, not reasoned - makes it prophetic, inevitable',
+      'Chapter ends on loss becoming permanent - reader MUST continue to know what happened',
+      'The hook works because it confirms the reader\'s worst fear without explaining it',
+    ],
+  },
 };
 
 // ============================================================================

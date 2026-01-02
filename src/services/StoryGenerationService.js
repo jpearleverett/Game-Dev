@@ -1596,6 +1596,9 @@ const STYLE_EXAMPLES = `
 ## EXAMPLE: QUIET CHARACTER MOMENT (EXCELLENT)
 "${EXAMPLE_PASSAGES.quietMoment}"
 
+## EXAMPLE: DECISION SETUP (EXCELLENT)
+"${EXAMPLE_PASSAGES.decisionSetup}"
+
 ---
 Study these examples carefully. Note the:
 - Varied sentence lengths (punchy shorts mixed with longer flowing ones)
@@ -1667,6 +1670,96 @@ ${ANNOTATED_EXAMPLES.tensionBuildingExample.annotations.map(a => `- ${a}`).join(
 
 WHY THIS WORKS:
 ${ANNOTATED_EXAMPLES.chapterHookExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Sensory World-Building
+"${ANNOTATED_EXAMPLES.sensoryWorldBuildingExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.sensoryWorldBuildingExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Character Through Action
+"${ANNOTATED_EXAMPLES.characterThroughActionExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.characterThroughActionExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Crowd As Character
+"${ANNOTATED_EXAMPLES.crowdAsCharacterExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.crowdAsCharacterExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Dialogue Revealing Class
+"${ANNOTATED_EXAMPLES.dialogueRevealingClassExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.dialogueRevealingClassExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Threat Through Normality
+"${ANNOTATED_EXAMPLES.threatThroughNormalityExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.threatThroughNormalityExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Complex Emotion Through Object
+"${ANNOTATED_EXAMPLES.complexEmotionThroughObjectExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.complexEmotionThroughObjectExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Waiting As Character
+"${ANNOTATED_EXAMPLES.waitingAsCharacterExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.waitingAsCharacterExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Psychological Complicity
+"${ANNOTATED_EXAMPLES.psychologicalComplicityExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.psychologicalComplicityExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Accepting Darkness
+"${ANNOTATED_EXAMPLES.acceptingDarknessExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.acceptingDarknessExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Silent Reconnection
+"${ANNOTATED_EXAMPLES.silentReconnectionExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.silentReconnectionExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Burnout Monologue
+"${ANNOTATED_EXAMPLES.burnoutMonologueExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.burnoutMonologueExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Memory Erasure
+"${ANNOTATED_EXAMPLES.memoryErasureExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.memoryErasureExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Dark Empowerment
+"${ANNOTATED_EXAMPLES.darkEmpowermentExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.darkEmpowermentExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Physical Decay As Trauma
+"${ANNOTATED_EXAMPLES.physicalDecayAsTraumaExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.physicalDecayAsTraumaExample.annotations.map(a => `- ${a}`).join('\n')}
+
+## ANNOTATED EXAMPLE: Victim Humanization
+"${ANNOTATED_EXAMPLES.victimHumanizationExample.passage}"
+
+WHY THIS WORKS:
+${ANNOTATED_EXAMPLES.victimHumanizationExample.annotations.map(a => `- ${a}`).join('\n')}
 
 ---
 
