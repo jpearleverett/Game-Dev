@@ -990,7 +990,7 @@ Your whole life, you wished for something like this. You told yourself you didn'
 
 Because it all came down to evidence. And she'd just washed the evidence down the kitchen sink drain and out into the dark sewers.`,
     annotations: [
-      '"Christmas-morning-when-you're-eight kind of awake" - disturbing simile makes complicity feel childlike, innocent',
+      '"Christmas-morning-when-you\'re-eight kind of awake" - disturbing simile makes complicity feel childlike, innocent',
       'Shift to second person ("Your whole life") - implicates the READER in the dark fantasy',
       '"You told yourself you didn\'t, but you did" - the brutal honesty about human nature',
       '"Hyper-real" - she\'s experiencing her accessory-to-murder moment as heightened living',
