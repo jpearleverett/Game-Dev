@@ -8878,9 +8878,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // =========================================================================
-    // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION
+    // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION (WARNINGS ONLY)
     // Each player path should meet the target word count (850-950 words)
     // Structure: opening (280-320) + firstChoice response (280-320) + secondChoice response (280-320)
+    // NOTE: These are warnings, not errors - schema instructs correct lengths, retries are wasteful
     // =========================================================================
     const bn = content.branchingNarrative;
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
@@ -8891,7 +8892,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // Validate opening
       const openingWords = countWords(bn.opening.text);
       if (openingWords < MIN_SEGMENT_WORDS) {
-        issues.push(`Branching narrative opening too short: ${openingWords} words (minimum ${MIN_SEGMENT_WORDS})`);
+        warnings.push(`Branching narrative opening too short: ${openingWords} words (minimum ${MIN_SEGMENT_WORDS})`);
       }
 
       // Validate first choice options (3 branches)
@@ -8899,7 +8900,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       firstChoiceOptions.forEach((opt, idx) => {
         const optWords = countWords(opt.response);
         if (optWords < MIN_SEGMENT_WORDS) {
-          issues.push(`First choice "${opt.key || idx}" response too short: ${optWords} words (minimum ${MIN_SEGMENT_WORDS})`);
+          warnings.push(`First choice "${opt.key || idx}" response too short: ${optWords} words (minimum ${MIN_SEGMENT_WORDS})`);
         }
       });
 
@@ -8912,14 +8913,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         (sc.options || []).forEach((opt, optIdx) => {
           const optWords = countWords(opt.response);
           if (optWords < MIN_SEGMENT_WORDS) {
-            issues.push(`Second choice "${opt.key || `${scIdx}-${optIdx}`}" response too short: ${optWords} words (minimum ${MIN_SEGMENT_WORDS})`);
+            warnings.push(`Second choice "${opt.key || `${scIdx}-${optIdx}`}" response too short: ${optWords} words (minimum ${MIN_SEGMENT_WORDS})`);
           }
 
           // Validate complete path word count (opening + first choice + second choice)
           const pathWords = openingWords + parentWords + optWords;
           if (pathWords < MIN_PATH_WORDS) {
             const pathKey = opt.key || `${scIdx + 1}${String.fromCharCode(65 + optIdx)}`;
-            issues.push(`Path "${pathKey}" total too short: ${pathWords} words (minimum ${MIN_PATH_WORDS})`);
+            warnings.push(`Path "${pathKey}" total too short: ${pathWords} words (minimum ${MIN_PATH_WORDS})`);
           } else if (pathWords < TARGET_WORDS * 0.85) {
             const pathKey = opt.key || `${scIdx + 1}${String.fromCharCode(65 + optIdx)}`;
             warnings.push(`Path "${pathKey}" below target: ${pathWords} words (target ${TARGET_WORDS})`);
@@ -9358,17 +9359,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // Revealing major twists too early ruins the entire experience.
     if (s.startsWith('PREMATURE REVELATION:')) return true;
 
-    // --- TIER 7: BRANCHING NARRATIVE WORD COUNT ---
-    // Each player path must meet minimum word count for adequate experience.
-    // Thin branches mean some players get a degraded experience.
-    if (s.includes('response too short:')) return true;
-    if (s.includes('opening too short:')) return true;
-    if (s.includes('total too short:')) return true;
-
     // =======================================================================
     // SOFT FAILURES - Convert to warnings, don't block generation
     // These matter for quality but players are forgiving of minor issues
     // =======================================================================
+
+    // Branching narrative word count - validation still runs, but as warning only
+    // Schema now instructs LLM to generate correct lengths, so retries are wasteful
+    // if (s.includes('response too short:')) return true;  // DISABLED - warning only
+    // if (s.includes('opening too short:')) return true;   // DISABLED - warning only
+    // if (s.includes('total too short:')) return true;     // DISABLED - warning only
 
     // Thread continuity - important but not worth failing over
     // if (s.startsWith('THREAD CONTINUITY VIOLATION:')) return true;  // DISABLED
