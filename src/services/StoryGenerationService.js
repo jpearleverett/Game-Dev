@@ -1086,30 +1086,48 @@ const PATHDECISIONS_ONLY_SCHEMA = {
 // Prompt template for the second call to generate path-specific decisions
 // IMPORTANT: Uses SUMMARIES (15-25 words each) instead of full narrative content.
 // Full narrative excerpts trigger Gemini's RECITATION safety filter.
-const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 path-specific decision variants for a noir detective branching narrative.
+const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 UNIQUE path-specific decision variants for a noir detective branching narrative.
+
+## CRITICAL REQUIREMENT
+Each path MUST have DIFFERENT option titles based on what the player discovered/experienced in that path.
+DO NOT use identical titles across all 9 paths - that defeats the purpose of branching narratives.
+The decisions should feel like natural consequences of the player's specific journey.
 
 ## PATH KEY FORMAT
 The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
-- First part = first choice (1A, 1B, 1C)
-- Second part = ending within that branch (2A, 2B, 2C)
+- First part = first choice (1A, 1B, 1C) - determines player's APPROACH
+- Second part = ending within that branch (2A, 2B, 2C) - determines what they DISCOVERED
 
 ## FIRST CHOICE (How the player approached the scene):
 - 1A: "{{firstChoice1ALabel}}" → {{firstChoice1ASummary}}
 - 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BSummary}}
 - 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CSummary}}
 
-## PATH ENDINGS (What happened for each of the 9 paths):
+## PATH ENDINGS (What the player discovered/experienced):
 {{pathSummaries}}
 
-## BASE DECISION (Adapt for each path):
-- Option A: "{{optionATitle}}" ({{optionAFocus}})
-- Option B: "{{optionBTitle}}" ({{optionBFocus}})
+## BASE DECISION THEME (Use as inspiration, NOT as exact titles):
+- Theme A: "{{optionATitle}}" ({{optionAFocus}})
+- Theme B: "{{optionBTitle}}" ({{optionBFocus}})
 
 ## YOUR TASK
-For each of the 9 paths, generate a unique decision variant that:
-1. Frames the intro (1-2 sentences) to reflect WHAT HAPPENED in that specific path
-2. Adjusts the focus/framing of options based on the path's context and player's approach style
-3. Sets personalityAlignment based on path tone: "aggressive" for direct/confrontational, "cautious" for methodical/careful, "balanced" otherwise
+For each of the 9 paths, generate a UNIQUE decision variant:
+
+1. **UNIQUE TITLES**: Create path-specific option titles that reflect what THIS player discovered
+   - If path 1A-2A discovered evidence X, the options should reference X
+   - If path 1C-2B had a different revelation, options should reflect THAT
+   - Avoid generic titles that could apply to any path
+
+2. **PATH-SPECIFIC INTRO**: Frame the decision (1-2 sentences) based on what happened in that specific path
+
+3. **TAILORED FOCUS**: The "focus" should explain why this option makes sense given what the player experienced
+
+4. **PERSONALITY**: Set personalityAlignment based on path tone: "aggressive", "cautious", or "balanced"
+
+EXAMPLE of good variation:
+- 1A-2A (found financial records): "Confront Silas with the ledger" vs "Copy the records and investigate further"
+- 1B-2C (witnessed emotional breakdown): "Press for a confession now" vs "Give them space and follow up later"
+- 1C-2A (discovered hidden connection): "Expose the connection publicly" vs "Use it as leverage privately"
 
 Generate pathDecisions array with 9 objects: { pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment} }`;
 
