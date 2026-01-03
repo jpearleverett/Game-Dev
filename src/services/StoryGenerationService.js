@@ -100,7 +100,7 @@ const DECISION_CONSEQUENCES = {
 // ============================================================================
 // Structure: Opening -> Choice1 (3 options) -> Middle branches (3) -> Choice2 (3 each) -> Endings (9 total)
 // Total paths: 9 unique experiences per subchapter
-// Word budget: ~300 words per segment, ~3900 words total per subchapter
+// Word budget: 280-320 words per segment, ~4000+ words total per subchapter
 
 /**
  * Schema for a single tappable detail within narrative text
@@ -140,7 +140,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     response: {
       type: 'string',
-      description: 'The narrative response when player selects this option (~300 words). Continue the scene based on this choice.',
+      description: 'The narrative response when player selects this option (280-320 words minimum). Continue the scene based on this choice.',
     },
     summary: {
       type: 'string',
@@ -205,7 +205,7 @@ const SECOND_CHOICE_SCHEMA = {
           },
           response: {
             type: 'string',
-            description: 'The ending narrative segment (~300 words). Conclude this path of the subchapter.',
+            description: 'The ending narrative segment (280-320 words minimum). Conclude this path of the subchapter.',
           },
           summary: {
             type: 'string',
@@ -234,11 +234,11 @@ const BRANCHING_NARRATIVE_SCHEMA = {
   properties: {
     opening: {
       type: 'object',
-      description: 'The opening segment, shared by all paths (~300 words)',
+      description: 'The opening segment, shared by all paths (280-320 words minimum)',
       properties: {
         text: {
           type: 'string',
-          description: 'Opening narrative that sets the scene and leads to the first choice (~300 words)',
+          description: 'Opening narrative that sets the scene and leads to the first choice (280-320 words minimum)',
         },
         details: {
           type: 'array',
@@ -331,8 +331,8 @@ const STORY_CONTENT_SCHEMA = {
       maximum: 12,
     },
     // BRANCHING NARRATIVE - Interactive story with player choices
-    // Structure: Opening (~300w) -> Choice1 (3 opts) -> Middles (3x ~300w) -> Choice2 (3 each) -> Endings (9x ~300w)
-    // Total: ~3900 words generated, player experiences ~900 words per path
+    // Structure: Opening (280-320w) -> Choice1 (3 opts) -> Middles (3x 280-320w) -> Choice2 (3 each) -> Endings (9x 280-320w)
+    // Total: ~4000+ words generated, player experiences 850-950 words per path
     branchingNarrative: {
       type: 'object',
       description: 'Interactive branching narrative with 2 choice points and 9 possible paths',
@@ -342,7 +342,7 @@ const STORY_CONTENT_SCHEMA = {
           properties: {
             text: {
               type: 'string',
-              description: 'Opening scene shared by all paths (~300 words). Set the scene, build to first choice.',
+              description: 'Opening scene shared by all paths (280-320 words minimum). Set the scene, build to first choice.',
             },
             details: {
               type: 'array',
@@ -372,7 +372,7 @@ const STORY_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
                   label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity.' },
-                  response: { type: 'string', description: 'Narrative response (~300 words)' },
+                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
                   details: {
                     type: 'array',
                     items: {
@@ -411,7 +411,7 @@ const STORY_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
                     label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options.' },
-                    response: { type: 'string', description: 'Ending segment (~300 words). Conclude this path.' },
+                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude this path.' },
                     details: {
                       type: 'array',
                       items: {
@@ -594,7 +594,7 @@ const STORY_CONTENT_SCHEMA = {
     // Used by context building, scene state extraction, and narrative thread analysis
     narrative: {
       type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (~500 words). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
     },
   },
   required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
@@ -779,7 +779,7 @@ const DECISION_CONTENT_SCHEMA = {
         opening: {
           type: 'object',
           properties: {
-            text: { type: 'string', description: 'Opening scene (~300 words). Build tension toward the decision.' },
+            text: { type: 'string', description: 'Opening scene (280-320 words minimum). Build tension toward the decision.' },
             details: {
               type: 'array',
               items: {
@@ -808,7 +808,7 @@ const DECISION_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string' },
                   label: { type: 'string' },
-                  response: { type: 'string', description: 'Narrative response (~300 words)' },
+                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
                   summary: { type: 'string', description: 'One-sentence summary of what happens (15-25 words). Used for decision context.' },
                   details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                 },
@@ -836,7 +836,7 @@ const DECISION_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string' },
                     label: { type: 'string' },
-                    response: { type: 'string', description: 'Ending segment (~300 words). Conclude at the decision moment.' },
+                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude at the decision moment.' },
                     summary: { type: 'string', description: 'One-sentence summary of this path ending (15-25 words). Used for decision context.' },
                     details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                   },
@@ -1009,7 +1009,7 @@ const DECISION_CONTENT_SCHEMA = {
     // Used by context building, scene state extraction, and narrative thread analysis
     narrative: {
       type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (~500 words). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
     },
     // NOTE: pathDecisions field moved BEFORE narrative in schema to ensure all 9 are generated first
     // This prevents truncation from cutting off decision structure
@@ -1177,18 +1177,18 @@ You generate an INTERACTIVE narrative with 2 choice points and 9 possible paths.
 
 **STRUCTURE:**
 \`\`\`
-Opening (~300 words) - Shared by all players
+Opening (280-320 words) - Shared by all players
         ↓
     Choice 1 (3 options: 1A, 1B, 1C)
    /       |       \\
-Response  Response  Response  (~300 words each)
+Response  Response  Response  (280-320 words each)
    |       |       |
 Choice 2  Choice 2  Choice 2  (3 options each)
   /|\\      /|\\      /|\\
- 9 unique ending segments (~300 words each)
+ 9 unique ending segments (280-320 words each)
 \`\`\`
 
-**TOTAL OUTPUT:** ~3,900 words (but player experiences only ~900 words per path)
+**TOTAL OUTPUT:** ~4,000+ words (player experiences 850-950 words per path)
 
 **BRANCHING RULES:**
 1. Opening sets the scene and builds to a natural choice point
@@ -1336,10 +1336,10 @@ Your response will be structured as JSON (enforced by schema). Focus on:
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words), third-person past tense
 - "storyDay": The day number (1-12) this scene takes place. Chapter number = Day number. The story spans exactly 12 days.
 - "branchingNarrative": Your interactive story structure (see BRANCHING NARRATIVE STRUCTURE above). Contains:
-  * "opening": { text, details[] } - The shared opening segment (~300 words)
+  * "opening": { text, details[] } - The shared opening segment (280-320 words)
   * "firstChoice": { prompt, options[] } - First branch point with 3 options (1A, 1B, 1C)
   * "secondChoices": Array of 3 second-choice points, each with 3 options leading to 9 endings
-- "narrative": CANONICAL NARRATIVE for context continuity. This is a ~500 word STRING that represents ONE complete path through your branchingNarrative.
+- "narrative": CANONICAL NARRATIVE for context continuity. This is a 850-950 word STRING that represents ONE complete path through your branchingNarrative.
   Concatenate: opening.text + [blank line] + firstChoice.options[0].response (the 1A path) + [blank line] + secondChoices[0].options[0].response (the 1A-2A ending).
   This creates a single continuous narrative that the context building system reads to understand scene state, character presence, location, and emotional state.
   Write it naturally - smooth transitions between the segments. The context system needs this string to extract:
@@ -8879,13 +8879,13 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION
-    // Each player path should meet the target word count (~900 words)
-    // Structure: opening (~300) + firstChoice response (~300) + secondChoice response (~300)
+    // Each player path should meet the target word count (850-950 words)
+    // Structure: opening (280-320) + firstChoice response (280-320) + secondChoice response (280-320)
     // =========================================================================
     const bn = content.branchingNarrative;
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
-      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (~300 target, allow some flexibility)
+      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (280-320 target, allow some flexibility)
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
 
       // Validate opening
