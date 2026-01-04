@@ -3,36 +3,45 @@
  *
  * This document contains ABSOLUTE FACTS that must never be contradicted.
  * The LLM must treat these as immutable ground truth when generating content.
- * Any deviation from these facts breaks story consistency.
+ *
+ * NEW DIRECTION (Jan 2026):
+ * - Mysterious fantasy mystery-thriller (NOT Tolkien-style fantasy).
+ * - Jack is in his 20s/30s and does NOT know the fantasy world exists.
+ * - The first undeniable "things aren't as they seem" reveal happens at the END of Chapter 2A.
+ * - The fantasy world is driven by unsettling symbols Jack must decipher (an ongoing thriller puzzle).
  */
+
+// ============================================================================
+// STORY META
+// ============================================================================
+export const STORY_META = {
+  title: 'Veilmarked',
+  logline:
+    'A young investigator follows a chain of impossible symbols until one of them opens, and the world he trusted turns out to be a draft over something older.',
+  genre: 'Mysterious fantasy mystery-thriller',
+  antiTolkien: {
+    rule:
+      'Avoid Tolkien-coded fantasy (elves, dwarves, orcs, Dark Lord, medieval quest kingdoms, faux-Old-English diction).',
+    allowed:
+      'Weird systems, uncanny cultures, unfamiliar creatures, rule-bound magic expressed through symbols and constraints rather than spells and prophecy.',
+  },
+};
 
 // ============================================================================
 // TIMELINE - Events in chronological order (BEFORE the story begins)
 // ============================================================================
 export const TIMELINE = {
   yearsAgo: {
-    30: 'Jack and Tom Wade meet in college, begin lifelong friendship',
-    25: 'Jack joins Ashport PD as a detective',
-    20: 'Tom Wade begins manufacturing evidence (Jack unaware)',
-    15: 'Marcus Webb and Richard Bellamy begin their secret affair',
-    13: 'Jack and Sarah Reeves become partners',
-    10: 'Eleanor Bellamy wrongfully convicted of murdering Richard (8 years in prison by story start)',
-    8: 'Marcus Thornhill framed for embezzlement by Silas Reed, commits suicide in lockup',
-    7: [
-      'Emily Cross (age 22) having affair with Richard Bellamy (age 48)',
-      'Emily attempts suicide (Oxycodone overdose, 30 pills)',
-      'Emily kidnapped by Deputy Chief Grange',
-      'Jack closes Emily Cross case, declares her dead while she is still being tortured',
-      'Emily hears Jack say "Case closed" while in captivity',
-    ],
-    5: 'Jack and Silas Reed become partners (8 years total by story)',
-    3: 'Emily escapes/released, begins transformation into Victoria Blackwell',
-    1: 'Jack forced into retirement',
+    12: 'A pattern of "Veilmarks" first appears in municipal records, dismissed as printer error',
+    7: 'A sealed folio of unknown script vanishes from the city archives with no sign of forced entry',
+    3: 'Jack Halloway leaves formal policing after a case where the evidence behaved impossibly (officially "inconclusive")',
+    2: 'Jack becomes a private investigator specializing in missing-persons and fraud, taking low-paying work to stay afloat',
+    1: 'Jack receives his first anonymous lead consisting only of a hand-drawn Veilmark and a time',
   },
   storyStart: {
-    anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
-    day1: 'Jack receives first black envelope from The Midnight Confessor',
-    structure: '12 days, 12 cases from Jack\'s career being revisited',
+    anchorDate: 'January 4, 2026',
+    day1: 'Jack receives an anonymous message containing a Veilmark and coordinates',
+    structure: '12 days, 12 "marks" (each day reveals a new symbol, rule, or threshold)',
   },
 };
 
@@ -42,166 +51,175 @@ export const TIMELINE = {
 export const ABSOLUTE_FACTS = {
   protagonist: {
     fullName: 'Jack Halloway',
-    age: 'Late 50s to early 60s',
-    formerTitle: 'Detective, Ashport Police Department',
-    currentStatus: 'Forcibly retired',
-    residence: 'Run-down office above Murphy\'s Bar',
-    careerLength: '30 years',
-    clearanceRate: 'Best in Ashport history (built on manufactured evidence)',
-    vices: ['Jameson whiskey', 'Chain smoking (occasional)'],
-    physicalState: 'Weathered, rumpled trench coat (charcoal gray), heavy stubble, tired eyes',
+    age: 'Late 20s to early 30s',
+    formerTitle: 'Detective (former), now private investigator',
+    currentStatus: 'Working cases alone, underpaid and stubborn',
+    residence: 'A cramped office above a bar, rent overdue',
+    careerLength: '8 years',
+    clearanceRate: 'Respectable, but he left before he could become a legend',
+    vices: ['Coffee (too much)', 'Insomnia'],
+    physicalState: 'Young but worn at the edges, restless hands, a habit of counting steps without noticing',
+    coreBlindSpot: 'He assumes the world is rational, even when it is not',
   },
 
   antagonist: {
-    trueName: 'Emily Cross',
-    aliasUsed: 'Victoria Blackwell',
-    titleUsed: 'The Midnight Confessor',
-    signatures: ['M.C.', 'V.A.', 'E.C.'],
-    ageAtAbduction: 22,
-    currentAge: 'Late 20s to early 30s (7 years since "death")',
-    occupation: 'Art student (former), wealthy information broker (current)',
-    abuser: 'Richard Bellamy (affair began when she was 19, he was 48)',
-    torturer: 'Deputy Chief William Grange (held her for months)',
-    suicideAttempt: 'Oxycodone overdose, 30 pills, age 23',
+    // Keep these fields stable for the generator, but the entity is fantasy-forward.
+    trueName: 'Nera Vale',
+    aliasUsed: 'The Sable Cartographer',
+    titleUsed: 'The Sable Cartographer',
+    signatures: ['SV', '⊡', '⟡'],
+    ageAtAbduction: 0, // Not applicable; kept for schema stability. Never mention as "abduction."
+    currentAge: 'Unknown',
+    occupation: 'Unclear; appears as an information broker who trades in paths, not facts',
+    abuser: 'None',
+    torturer: 'None',
+    suicideAttempt: 'None',
     communication: {
-      method: 'Black envelopes with red wax seal',
-      ink: 'Silver ink',
-      markers: 'Obsidian chess pieces marking each day',
-      perfume: 'French floral with patchouli',
+      method: 'Folded vellum slips that smell faintly of cold metal, each stamped with a Veilmark',
+      ink: 'Matte-black ink that dries like soot',
+      markers: 'Small tokens of translucent stone etched with the same mark',
+      perfume: 'None (instead: a clean mineral scent, like struck flint)',
     },
-    motivation: 'Force Jack to understand what his arrogant certainty cost innocent people',
-    philosophy: '"Truth without power is just noise."',
+    motivation:
+      'Pull Jack across the Veil so he can solve a pattern that is killing people in both worlds',
+    philosophy: '"A map is a promise. Break it, and you fall."',
   },
 
   setting: {
-    city: 'Ashport',
-    atmosphere: 'Rain-soaked, neon-lit, perpetually overcast',
-    tone: 'Modern detective thriller with classic aesthetics',
-    corruption: 'Systemic, reaches highest levels of police and courts',
+    city: 'Latchford',
+    atmosphere: 'Winter-dim, sodium streetlights, quiet streets that feel watched',
+    tone: 'Mystery thriller that becomes uncanny fantasy',
+    corruption: 'Institutional denial: the city suppresses anything that cannot be explained',
     keyLocations: {
-      murphysBar: 'Bar beneath Jack\'s office',
-      greystoneCorrectional: 'Prison where Eleanor Bellamy is held',
-      bellamyEstate: 'Victorian mansion, now abandoned',
-      bluelineDiner: 'Where Claire Thornhill works',
-      victoriaPenthouse: 'Glass and steel, commanding city view',
-      fbiFieldOffice: 'Morrison Street',
+      murphysBar: 'A ground-floor bar beneath Jack\'s office (warm, loud, ordinary)',
+      archives: 'Municipal records building where Veilmarks appear in old ledgers',
+      riverUnderpass: 'A place where symbols repeat on concrete like a language learning to speak',
+      theGlassStair: 'A rumor until it is real: the first threshold into the fantasy world',
     },
   },
 
+  /**
+   * The "five innocents" slot is retained for engine compatibility, but reimagined:
+   * these are five "Veil-touched" people whose lives were damaged by the marks and then erased from record.
+   */
   fiveInnocents: [
     {
-      name: 'Eleanor Bellamy',
-      conviction: 'Murder of husband Richard Bellamy (arsenic poisoning)',
-      plantedEvidence: 'Sapphire necklace in deposit box, arsenic in tea set',
-      sentence: '8 years in Greystone Correctional',
-      truth: 'Richard was being blackmailed, killed by someone else',
-      daughter: 'Maya Bellamy',
+      name: 'Ilya Morn',
+      conviction: 'Declared delusional and institutionalized after reporting a door that moved when unobserved',
+      plantedEvidence: 'Medical notes that contradict timestamps and witness statements',
+      sentence: 'Two years in a psychiatric ward (involuntary)',
+      truth: 'He saw the first stable Veilmark and tried to warn people',
+      daughter: 'Rin Morn',
     },
     {
-      name: 'Marcus Thornhill',
-      conviction: 'Financial crimes (embezzlement)',
-      plantedEvidence: 'Shell company documents forged by Silas Reed',
-      fate: 'Committed suicide in lockup, 3 days after conviction',
-      truth: 'Completely innocent, framed by real embezzlers',
-      daughter: 'Claire Thornhill',
+      name: 'Rin Morn',
+      conviction: 'Charged with fraud for selling "counterfeit maps" that later proved physically accurate',
+      plantedEvidence: 'Forged purchase records and a falsified signature',
+      fate: 'Disappeared after release, no official trace',
+      truth: 'Her maps were translated Veilmarks',
+      daughter: null,
     },
     {
-      name: 'Dr. Lisa Chen',
-      role: 'Lab technician',
-      crime: 'Reported Tom Wade\'s evidence tampering',
-      fate: 'Transferred, silenced, career destroyed',
+      name: 'Sister Calyx',
+      role: 'Clinic night-shift nurse',
+      crime: 'Reported a patient whose skin showed a symbol that was not tattooed',
+      fate: 'Fired, license challenged, reputation destroyed',
     },
     {
-      name: 'James Sullivan',
+      name: 'Orin Pell',
       details: 'Revealed progressively through story',
     },
     {
-      name: 'Teresa Wade',
-      relation: 'Tom Wade\'s own daughter',
-      irony: 'Convicted using her father\'s evidence manufacturing methods',
+      name: 'The Unnamed Fifth',
+      relation: 'A person removed from every ledger, photo, and memory trail',
+      irony: 'The more Jack learns their story, the more the world tries to forget them',
     },
   ],
 
+  /**
+   * These slots are retained for engine compatibility but reframed.
+   * Use them as "powers and pressures" rather than cops-and-courts noir.
+   */
   corruptOfficials: {
     tomWade: {
-      title: 'Chief Forensic Examiner',
-      relationship: 'Jack\'s best friend for 30 years (college, academy, career)',
-      crime: 'Manufactured "perfect evidence" for 20 years',
-      impact: 'Every case he touched is now suspect',
-      daughter: 'Teresa Wade (one of the five innocents)',
+      title: 'Records Auditor',
+      relationship: 'A helpful city employee who "fixes" paperwork too well',
+      crime: 'Alters public records to erase Veilmarks and the people they touch',
+      impact: 'If the paper says you never existed, the world begins to agree',
+      daughter: 'None',
     },
     silasReed: {
-      title: 'Detective (Jack\'s former partner)',
-      partnershipLength: '8 years with Jack',
-      crime: 'Signed documents that framed Marcus Thornhill',
-      motivation: 'Blackmailed 7 years ago over a secret',
-      currentState: 'Broken, alcoholic, living in expensive penthouse (blood money)',
+      title: 'Private security contractor',
+      partnershipLength: 'Occasional collaborator (not a partner)',
+      crime: 'Takes contracts to retrieve marked objects and silence witnesses',
+      motivation: 'Paid in access: doors that open for him, if he does the work',
+      currentState: 'Coiled, watchful, trying to stay on the safe side of the pattern',
     },
     helenPrice: {
-      title: 'Assistant District Attorney',
-      nickname: '"Queen of Convictions"',
-      record: '53 cases, 53 wins, never lost a trial (6 years)',
-      taintedCases: '21 involved manufactured evidence',
-      fate: 'Receives Victoria\'s dossier, may confess publicly or commit suicide',
+      title: 'City solicitor',
+      nickname: '"The Closer"',
+      record: 'Wins by turning uncertainty into paperwork',
+      taintedCases: 'A trail of sealed filings where Veilmarks were mentioned and then deleted',
+      fate: 'Will be forced to admit the city has been lying, or become part of the lie',
     },
     deputyChiefGrange: {
-      title: 'Deputy Chief, Ashport PD',
-      crimes: '23 kidnapping victims over years, 8 confirmed dead',
-      method: 'Used badge and authority to operate openly',
-      victim: 'Emily Cross (held and tortured for months)',
-      downfall: 'Sarah Reeves brings him down using witnesses Jack dismissed',
+      title: 'Deputy Chief (former)',
+      crimes: 'Not a serial predator here; he is a cautionary figure who tried to weaponize the marks',
+      method: 'Collected marked objects, disappeared witnesses, vanished from the record',
+      victim: 'His own name, eventually',
+      downfall: 'He crosses the Veil and becomes something that cannot come back',
     },
     theOverseer: {
-      role: 'Shadowy mastermind controlling systemic corruption',
-      method: 'Operates through proxies',
-      symbolism: 'Represents how deep the corruption goes',
+      role: 'The Veil\'s maintenance instinct (not a person)',
+      method: 'Corrects anomalies by rewriting memory, paper, and perception',
+      symbolism: 'A presence felt when symbols repeat and reality "smooths over"',
     },
   },
 
   supportingCharacters: {
     sarahReeves: {
-      role: 'Jack\'s former partner',
-      partnershipLength: '13 years',
-      currentJob: 'Still on the force',
-      arc: 'Loses faith in Jack, starts Conviction Integrity Project',
-      achievement: 'Brings down Grange in 72 hours by following leads Jack dismissed',
+      role: 'Investigative journalist (Jack\'s closest ally)',
+      partnershipLength: 'Friends for 9 years',
+      currentJob: 'Runs a small investigative newsletter, hates official narratives',
+      arc: 'Becomes the anchor to the ordinary world as Jack slips toward the Veil',
+      achievement: 'Finds the first ledger page that refuses to stay photographed',
     },
     mayaBellamy: {
-      relation: 'Eleanor\'s daughter',
-      age: 'Mid 20s',
-      mission: 'Prove mother\'s innocence',
-      discovery: 'Found documents proving Richard was being blackmailed',
+      relation: 'Not used in this story bible (legacy slot retained)',
+      age: 'N/A',
+      mission: 'N/A',
+      discovery: 'N/A',
     },
     claireThornhill: {
-      relation: 'Marcus Thornhill\'s daughter',
-      job: 'Waitress at Blueline Diner',
-      formerLife: 'Had scholarship, promising future',
-      mission: 'Spent 4 years building case proving father was framed',
-      evidence: 'Has "Thornhill Ledger" documenting the frame-up',
+      relation: 'Not used in this story bible (legacy slot retained)',
+      job: 'N/A',
+      formerLife: 'N/A',
+      mission: 'N/A',
+      evidence: 'N/A',
     },
     marcusWebb: {
-      role: 'Antique dealer, information broker',
-      age: 'Mid 60s',
-      secret: 'Loved Richard Bellamy for 15 years (secret affair)',
-      guilt: 'Knew Eleanor was innocent, stayed silent',
-      inherited: 'Money from Richard',
+      role: 'Antique dealer who buys impossible objects, sells plausible stories',
+      age: 'Mid 50s',
+      secret: 'Owns a drawer that is deeper inside than outside',
+      guilt: 'Knows what the symbols cost and sells them anyway',
+      inherited: 'A map that changes when you blink',
     },
     rebeccaMoss: {
-      role: 'Defense attorney',
-      clients: 'Represents the innocents, including Eleanor and Jack',
+      role: 'Attorney who specializes in expungements and sealed records',
+      clients: 'Represents Veil-touched people who were made "administratively guilty"',
     },
     agentMartinez: {
-      fullName: 'Agent Luis Martinez',
-      agency: 'FBI',
-      mission: 'Investigating Ashport corruption',
+      fullName: 'Luis Martinez',
+      agency: 'Not FBI here; an internal investigator for the city',
+      mission: 'Tries to keep the lid on the Veilmarks, until the lid starts to move',
     },
     luciaMartinez: {
-      role: 'One of Grange\'s victims',
-      age: '24 at death',
-      occupation: 'Nursing student, engaged',
-      abduction: 'Three months after Jack closed Emily\'s case',
-      fate: 'Held 11 months, died in captivity',
-      significance: 'Died because Jack stopped looking',
+      role: 'A name that appears in a ledger and then vanishes the next day',
+      age: 'Unknown',
+      occupation: 'Unknown',
+      abduction: 'N/A',
+      fate: 'Becomes proof the record is lying',
+      significance: 'The first time Jack realizes memory can be edited',
     },
   },
 };
@@ -245,16 +263,25 @@ export const STORY_STRUCTURE = {
   // Each chapter has a required beat type that overrides default pacing
   chapterBeatTypes: {
     2: {
-      type: 'INVESTIGATION',
-      description: 'Methodical evidence gathering, interview-heavy, building the case',
+      type: 'INVESTIGATION → REALITY BREAK',
+      description: 'Grounded investigation that ends with the first undeniable break in reality (end of 2A)',
       wordCountModifier: 1.0, // Standard length
-      requirements: ['At least one witness interview', 'Discovery of key evidence', 'End with a lead to follow'],
+      requirements: [
+        'At least one witness interview or confrontation about the symbol',
+        'Discovery of a repeatable Veilmark pattern (it behaves consistently, like a rule)',
+        'CRITICAL (Chapter 2A ending): The Veilmark does something impossible in front of Jack and the reader',
+        'End with a lead that forces pursuit into the unknown (a threshold, a door, a map that changes)',
+      ],
     },
     3: {
       type: 'REVELATION',
-      description: 'Major discovery that recontextualizes previous events',
+      description: 'Major discovery that recontextualizes the Veilmarks and what they do to people',
       wordCountModifier: 1.0,
-      requirements: ['Shocking reveal about a trusted character', 'Jack questions his assumptions', 'Stakes raised significantly'],
+      requirements: [
+        'A rule about the symbols becomes clear (what they unlock, erase, or rewrite)',
+        'Jack questions his assumptions about memory and evidence',
+        'Stakes raised significantly: the pattern can harm or rewrite lives',
+      ],
     },
     4: {
       type: 'RELATIONSHIP',
@@ -320,23 +347,23 @@ export const WRITING_STYLE = {
   voice: {
     perspective: 'Third person limited (close on Jack Halloway)',
     tense: 'Past tense',
-    tone: 'Literary crime fiction, psychologically rich, elegiac',
+    tone: 'Literary mystery-thriller with uncanny fantasy bleed-through; tense, intimate, precise',
   },
 
   influences: [
-    'Dennis Lehane (trauma echoing through time, working-class authenticity, grief as undercurrent)',
-    'Tana French (atmospheric dread, psychological interiority, the past haunting the present)',
-    'Kate Atkinson (structural complexity, dark wit beneath sorrow)',
-    'Richard Price (dialogue that reveals class and character, institutional rot)',
+    'Susanna Clarke (quiet dread, the uncanny inside the mundane)',
+    'China Miéville (strange-city logic, unfamiliar beings, no Tolkien comfort)',
+    'Jeff VanderMeer (ecological/ontological unease, reality behaving wrong)',
+    'Tana French (investigative tension, psychological precision)',
   ],
 
   mustInclude: [
-    'Atmospheric descriptions rooted in place and weather',
-    'Deep psychological interiority revealing Jack\'s guilt and fractured self-perception',
-    'Sensory details that trigger memory and emotion (sounds, smells, textures)',
+    'Atmospheric descriptions rooted in place, texture, and constraint (how reality feels when it is almost wrong)',
+    'Deep psychological interiority as Jack tries to reason his way through impossibility',
+    'Sensory details that make symbols feel physical (ink, grit, vibration, cold, pressure)',
     'Dialogue that reveals character, class, and unspoken history',
-    'The weight of the past pressing on present moments',
-    'Trauma expressed through behavior rather than explanation',
+    'A puzzle-forward investigative throughline (Jack notices, tests, records, cross-checks)',
+    'A slow escalation from plausible oddness to undeniable impossibility (reveal at end of 2A)',
   ],
 
   absolutelyForbidden: [
@@ -671,47 +698,29 @@ Even after all that, it still hadn't sunk in entirely. Katie, she felt, would wa
 // CONSISTENCY RULES - Organized by category for comprehensive coverage
 // ============================================================================
 export const CONSISTENCY_RULES = [
-  // CHARACTER NAMES & IDENTITIES
-  'Jack ALWAYS refers to Victoria as "Victoria" or "the Confessor" until her true identity as Emily is revealed',
-  'Victoria Blackwell is the alias; Emily Cross is the true identity',
-  'The Midnight Confessor signs as "M.C." or "V.A." or "E.C."',
+  // GENRE LOCK (NO TOLKIEN)
+  'DO NOT use Tolkien-style fantasy elements (elves/dwarves/orcs/dark lords/medieval kingdoms/quests). The fantasy must feel unfamiliar and new.',
+  'No faux-archaic diction. Keep language modern, precise, and tense.',
 
-  // TIMELINE FACTS (EXACT NUMBERS - Never approximate)
-  'Emily Cross case was closed 7 years ago exactly (not approximately)',
-  'Eleanor has been in prison for 8 years exactly',
-  'Tom Wade and Jack have been friends for 30 years exactly (met in college)',
-  'Jack and Sarah were partners for 13 years exactly',
-  'Jack and Silas were partners for 8 years exactly',
-  'Jack had a 30-year career as detective before forced retirement',
-  'Emily was 22 when abducted, making her late 20s to early 30s now',
+  // PROTAGONIST STATE
+  'Jack Halloway is in his late 20s to early 30s and does NOT know the fantasy world exists at story start.',
+  'Jack behaves like an investigator: he observes, tests, documents, and follows patterns.',
 
-  // SETTING & ATMOSPHERE
-  'Ashport is ALWAYS rainy, overcast, or recently rained - NEVER sunny or clear',
-  'Murphy\'s Bar is directly below Jack\'s office (Jack can hear the jukebox through the floorboards)',
-  'Ashport is neon-lit, morally gray, modern day with classic aesthetics',
+  // VEILMARKS (THE ONGOING MYSTERY ENGINE)
+  'Veilmarks are NOT "runes." They are a repeating symbolic system with rules (like a language + lock).',
+  'A Veilmark may do ONE specific thing reliably when conditions are met (repeatability matters).',
+  'Symbols should be visually distinct and non-generic (avoid common pentagrams/sigils).',
+  'The symbol puzzle is ongoing: each chapter advances Jack\'s understanding by at least one actionable inference.',
 
-  // CHARACTER TRAITS (Immutable)
-  'Jack drinks Jameson whiskey exclusively - never bourbon, scotch, vodka, or beer',
-  'Jack wears a rumpled charcoal gray trench coat',
-  'Victoria wears red, has expensive French perfume with floral and patchouli notes',
-  'The Confessor communicates via black envelopes with red wax seals and silver ink',
-  'Victoria leaves obsidian chess pieces as markers',
+  // REVEAL TIMING (CRITICAL)
+  'The first undeniable supernatural/fantasy reveal MUST occur at the END of Chapter 2A (002A) for BOTH Jack and the reader.',
+  'Before the end of 2A: only plausible oddities, contradictions in records, unsettling coincidences. No overt magic or named fantasy world.',
+  'After the end of 2A: Jack is pulled across a threshold into the fantasy world, and the thriller puzzle becomes physical and urgent.',
 
-  // CASE FACTS (Plot-critical)
-  'There are exactly 5 innocents wrongfully convicted using manufactured evidence',
-  'Marcus Thornhill committed suicide in lockup (before trial) - he never went to prison',
-  'Richard Bellamy was an art dealer being blackmailed for embezzlement',
-  'Grange had exactly 23 kidnapping victims total, 8 confirmed dead',
-  'Helen Price had exactly 53 consecutive wins in court, 21 involved manufactured evidence',
-  'Tom Wade manufactured evidence for 20 years (Jack was unaware)',
-  'Eleanor was convicted of murdering Richard with arsenic poisoning (she was framed)',
-
-  // RELATIONSHIP STATES
-  'Sarah eventually loses faith in Jack and starts the Conviction Integrity Project',
-  'Tom Wade is Jack\'s best friend but betrayed him by manufacturing evidence',
-  'Silas Reed was blackmailed 7 years ago into framing Marcus Thornhill',
-  'Victoria was a victim of Richard Bellamy (affair started when she was 19, he was 48)',
-  'Deputy Chief Grange tortured Emily/Victoria for months after Jack closed her case',
+  // FANTASY WORLD FEEL
+  'The fantasy world is a mystery-thriller, not an epic war: threats are hidden, clues are encoded, and trust is dangerous.',
+  'Fantasy characters must feel unprecedented: avoid standard races and standard monster catalog.',
+  'Magic is constraint-based and symbol-driven; it behaves like a system, not a wish.',
 ];
 
 // ============================================================================
