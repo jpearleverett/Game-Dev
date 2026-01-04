@@ -5259,7 +5259,8 @@ Generate realistic, specific consequences based on the actual narrative content.
     const parts = [];
 
     // Part 1: Story Bible Grounding (STATIC)
-    const groundingSection = this._buildGroundingSection(null);
+    // Avoid duplicating writing-style rules in cache: style lives in <style_examples>.
+    const groundingSection = this._buildGroundingSection(null, { includeStyle: false });
     parts.push('<story_bible>');
     parts.push(groundingSection);
     parts.push('</story_bible>');
@@ -5688,7 +5689,7 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
   /**
    * Build grounding section with absolute facts
    */
-  _buildGroundingSection(context) {
+  _buildGroundingSection(context, { includeStyle = true } = {}) {
     const safe = (v) => (v === undefined || v === null ? '' : String(v));
 
     const timelineLines = [];
@@ -5711,7 +5712,7 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
       .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
       .join('\n');
 
-    return `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
+    let section = `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
 
 ### PROTAGONIST
 - Name: ${safe(ABSOLUTE_FACTS.protagonist.fullName)}
@@ -5742,7 +5743,11 @@ ${missing}
 
 ### TIMELINE (Use exact numbers; never approximate)
 ${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
+`;
 
+    // Writing style is large and repeated elsewhere; include only when needed.
+    if (includeStyle) {
+      section += `
 ### WRITING STYLE REQUIREMENTS
 **Voice:** ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
 **Tone:** ${WRITING_STYLE.voice.tone}
@@ -5753,6 +5758,9 @@ ${WRITING_STYLE.mustInclude.map(item => `- ${item}`).join('\n')}
 
 **ABSOLUTELY FORBIDDEN (Never use these):**
 ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
+    }
+
+    return section;
   }
 
   /**
