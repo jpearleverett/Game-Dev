@@ -2020,6 +2020,11 @@ class StoryGenerationService {
     // Cache for static prompt content (Story Bible, Character Reference, etc.)
     this.staticCacheKey = null; // Key for the static content cache
     this.staticCacheVersion = 2; // Increment when static content changes
+
+    // Cache for "chapter start" prefixes (static + story up to previous chapter).
+    // This lets subchapters within a chapter send only the delta (current chapter so far).
+    this.chapterStartCacheVersion = 1; // Increment when chapter cache format changes
+    this.chapterStartCacheKeys = new Map(); // logicalKey -> cacheKey
   }
 
   // ==========================================================================
@@ -5372,18 +5377,114 @@ ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
   }
 
   /**
+   * Get or create a chapter-start cache.
+   * Includes the full static cache content PLUS the story-so-far up to the end of the previous chapter.
+   *
+   * This reduces per-subchapter prompt size by moving the large shared prefix into an explicit cache.
+   */
+  async _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory, context) {
+    // Hash only choices that occurred BEFORE this chapter; the chapter-start prefix should not depend
+    // on decisions made inside the current chapter.
+    const priorChoices = Array.isArray(choiceHistory)
+      ? choiceHistory.filter((c) => {
+          const ch = this._extractChapterFromCase(c?.caseNumber);
+          return Number.isFinite(ch) ? ch < chapter : true;
+        })
+      : [];
+    const priorChoicesHash = this._hashChoiceHistory(priorChoices);
+
+    // Use a logical key to avoid collisions; store the actual cache key separately.
+    const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
+    const existingKey = this.chapterStartCacheKeys.get(logicalKey);
+    if (existingKey) {
+      const existing = await llmService.getCache(existingKey);
+      if (existing) return existingKey;
+      this.chapterStartCacheKeys.delete(logicalKey);
+    }
+
+    const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
+    const cacheKey = `story_chStart_c${chapter}_${safePath}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash.slice(0, 64)}`;
+
+    const existing = await llmService.getCache(cacheKey);
+    if (existing) {
+      this.chapterStartCacheKeys.set(logicalKey, cacheKey);
+      return cacheKey;
+    }
+
+    console.log(`[StoryGenerationService] 🔧 Creating chapter-start cache for Chapter ${chapter}...`);
+
+    // Build static content (same payload as the normal static cache)
+    const staticContent = this._buildStaticCacheContent();
+
+    // Build story history up to end of previous chapter.
+    const storyUpToPrevChapter = this._buildStorySummarySection(context, { maxChapter: chapter - 1 });
+
+    // Chapter arc + outline are stable across A/B/C and help reduce repeated tokens.
+    const chapterArc = context?.storyArc?.chapterArcs?.find((c) => c.chapter === chapter) || null;
+    const chapterOutline = context?.chapterOutline || null;
+    const arcAndOutline = `## CHAPTER GUIDANCE (Cached for this chapter)
+${chapterArc ? `### Story Arc (Chapter ${chapter})
+- Phase: ${chapterArc.phase || 'UNKNOWN'}
+- Focus: ${chapterArc.primaryFocus || 'Unknown'}
+${chapterArc.keyRevelation ? `- Key revelation: ${chapterArc.keyRevelation}` : ''}
+${chapterArc.endingHook ? `- Ending hook: ${chapterArc.endingHook}` : ''}` : '### Story Arc\n- (Not available)'}
+
+${chapterOutline ? `### Chapter Outline
+Opening mood: ${chapterOutline.openingMood || 'Unknown'}
+${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.length ? `Must reference:\n${chapterOutline.mustReference.slice(0, 8).map((x) => `- ${x}`).join('\n')}` : ''}` : '### Chapter Outline\n- (Not available)'}
+`;
+
+    const chapterCacheContent = [
+      staticContent,
+      '<chapter_start_story_context>',
+      storyUpToPrevChapter,
+      '</chapter_start_story_context>',
+      '<chapter_guidance>',
+      arcAndOutline,
+      '</chapter_guidance>',
+    ].join('\n\n');
+
+    await llmService.createCache({
+      key: cacheKey,
+      model: 'gemini-3-flash-preview',
+      systemInstruction: MASTER_SYSTEM_PROMPT,
+      content: chapterCacheContent,
+      ttl: '7200s',
+      metadata: {
+        version: this.chapterStartCacheVersion,
+        staticVersion: this.staticCacheVersion,
+        chapter,
+        pathKey: effectivePathKey,
+        priorChoicesHash,
+        created: new Date().toISOString(),
+        type: 'story_generation_chapter_start',
+      },
+    });
+
+    this.chapterStartCacheKeys.set(logicalKey, cacheKey);
+    console.log(`[StoryGenerationService] ✅ Chapter-start cache created: ${cacheKey}`);
+    return cacheKey;
+  }
+
+  /**
    * Build dynamic prompt content (changes per request)
    * This is sent alongside the cached static content
    */
-  _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint) {
+  _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { cachedHistoryMaxChapter = null } = {}) {
     const parts = [];
 
     // Per Gemini 3 docs: Use XML tags for structure clarity
     // "place your specific instructions or questions at the end of the prompt, after the data context"
 
-    // Dynamic Part 1: Complete Story So Far
+    // Dynamic Part 1: Story context
+    // If we're using a chapter-start cache, the story up to previous chapter is already cached.
     parts.push('<story_context>');
-    parts.push(this._buildStorySummarySection(context));
+    if (Number.isFinite(cachedHistoryMaxChapter)) {
+      const minChapter = Math.max(1, cachedHistoryMaxChapter + 1);
+      parts.push(this._buildStorySummarySection(context, { minChapter, maxChapter: chapter }));
+    } else {
+      parts.push(this._buildStorySummarySection(context));
+    }
     parts.push('</story_context>');
 
     // Dynamic Part 2: Character Knowledge State (who knows what)
@@ -5769,8 +5870,16 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
    * With 1M token context window, we include the ENTIRE story text.
    * This ensures the LLM has full context for proper continuation.
    */
-  _buildStorySummarySection(context) {
-    let summary = '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
+  _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infinity } = {}) {
+    const clampMin = Number.isFinite(minChapter) ? minChapter : 1;
+    const clampMax = Number.isFinite(maxChapter) ? maxChapter : Infinity;
+
+    const isFiltered = clampMin !== 1 || clampMax !== Infinity;
+    const header = isFiltered
+      ? `## STORY CONTEXT (FULL TEXT)\n\n**Included chapters:** ${clampMin} to ${clampMax === Infinity ? 'latest' : clampMax}\n\n`
+      : '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
+
+    let summary = header;
     summary += '**CRITICAL: You are continuing an ongoing story. Read ALL of this carefully.**\n';
     summary += '**Your new subchapter MUST continue EXACTLY from where the previous subchapter ended.**\n';
     summary += '**DO NOT summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.**\n\n';
@@ -5783,17 +5892,17 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
       });
     }
 
-    // Sort all chapters chronologically
+    // Sort all chapters chronologically, then filter by requested range.
     const allChapters = [...context.previousChapters].sort((a, b) => {
       if (a.chapter !== b.chapter) return a.chapter - b.chapter;
       return a.subchapter - b.subchapter;
-    });
+    }).filter((ch) => ch.chapter >= clampMin && ch.chapter <= clampMax);
 
     // Track the immediately preceding subchapter for emphasis
     const currentChapter = context.currentPosition?.chapter;
     const currentSubchapter = context.currentPosition?.subchapter;
 
-    // Find the immediately previous subchapter
+    // Find the immediately previous subchapter (within the filtered window)
     let immediatelyPrevious = null;
     if (currentSubchapter > 1) {
       // Previous subchapter in same chapter
@@ -7260,11 +7369,26 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
         // Try cached generation first (works in both proxy and direct mode)
         try {
-          // Ensure static cache exists (creates on first call, reuses thereafter)
-          const cacheKey = await this._ensureStaticCache();
+          // Prefer a chapter-start cache (static + story up to previous chapter) to reduce prompt size.
+          // Falls back to the static-only cache if chapter-start caching fails for any reason.
+          let cacheKey;
+          try {
+            cacheKey = await this._ensureChapterStartCache(chapter, effectivePathKey, choiceHistory, context);
+          } catch (e) {
+            console.warn('[StoryGenerationService] ⚠️ Chapter-start cache unavailable, falling back to static cache:', e?.message);
+            cacheKey = await this._ensureStaticCache();
+          }
 
-          // Build only dynamic prompt (story history, current state, task)
-          const dynamicPrompt = this._buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint);
+          // Build only dynamic prompt (delta context + current state + task).
+          // If cacheKey is a chapter-start cache, omit story history up to previous chapter.
+          const usingChapterStartCache = typeof cacheKey === 'string' && cacheKey.startsWith(`story_chStart_c${chapter}_`);
+          const dynamicPrompt = this._buildDynamicPrompt(
+            context,
+            chapter,
+            subchapter,
+            isDecisionPoint,
+            usingChapterStartCache ? { cachedHistoryMaxChapter: chapter - 1 } : {}
+          );
 
           console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
           llmTrace('StoryGenerationService', traceId, 'prompt.built', {
