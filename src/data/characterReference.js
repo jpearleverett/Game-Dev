@@ -1,907 +1,373 @@
 /**
  * Character Reference Guide
  *
- * A comprehensive reference of all key characters in "Dead Letters" story.
- * This document is designed to help the LLM maintain character consistency
- * when generating dynamic story content for chapters 2-12.
- *
- * Use this reference to ensure:
- * - Character personalities remain consistent
- * - Relationships are portrayed accurately
- * - Character motivations align with their backstories
- * - Physical descriptions match established canon
+ * A comprehensive reference of key characters in "Dead Letters".
+ * This is used to keep the LLM consistent during generation.
  */
 
 export const CHARACTER_REFERENCE = {
-  // =============================================================================
-  // PROTAGONIST
-  // =============================================================================
   protagonist: {
     name: 'Jack Halloway',
-    role: 'Retired Detective (formerly Ashport PD)',
-    age: 'Late 50s to early 60s',
-
+    role: 'Contract investigator / former city-records clerk',
+    age: 'Late 20s to early 30s',
     physicalDescription: {
-      appearance: 'Rumpled trench coat (charcoal gray), heavy stubble, tired eyes',
-      build: 'Weathered, worn down by decades on the job',
-      distinctiveFeatures: 'The look of a man who has seen too much and slept too little',
+      appearance: 'Younger, worn down; ink-stained fingers; tired eyes; coat that never quite dries',
+      build: 'Lean, restless energy',
+      distinctiveFeatures: 'Carries a battered notebook; always scanning for patterns',
     },
-
     personality: {
       coreTraits: [
-        'World-weary and cynical',
-        'Guilt-ridden about past mistakes',
-        'Determined to uncover the truth',
-        'Haunted by cases he closed wrong',
-        'Struggles with alcoholism (Jameson whiskey)',
-        'Capable of deep introspection when forced',
+        'Pattern-obsessed, skeptical, stubbornly rational (until reality forces a rewrite)',
+        'Empathetic but guarded',
+        'Feels watched even when nothing is there',
+        'Compulsively documents details',
       ],
       flaws: [
-        'Arrogant certainty in his detective work',
-        'Dismissed witnesses he deemed "unreliable"',
-        'Prioritized clearance rate over truth',
-        'Trusted perfect evidence without questioning its source',
-        'Cut corners when tired or under pressure',
+        'Overcorrects into cynicism when afraid',
+        'Fixates on “solving” instead of resting',
+        'Trust issues (especially with institutions)',
       ],
       strengths: [
-        'Eventually willing to face his failures',
-        'Capable of genuine remorse and atonement',
-        'Still has strong investigative instincts',
-        'Will sacrifice himself for justice when pushed',
+        'Notices repeating structures others dismiss',
+        'Follows a thread without glamorizing it',
+        'Can change his mind when the evidence truly changes',
       ],
     },
-
     backstory: {
-      career: 'Thirty years as a detective with the best clearance rate in Ashport history',
-      reputation: 'Known as a legendary detective, now revealed to be built on manufactured evidence',
-      keyMistakes: [
-        'Closed Emily Cross case prematurely, declaring her dead while she was still alive',
-        'Convicted Eleanor Bellamy on planted evidence',
-        'Ignored witnesses he deemed "unreliable" (homeless, sex workers, addicts)',
-        'Never questioned where "perfect evidence" came from',
-      ],
-      retirement: 'Forced retirement, living in a run-down office above Murphy\'s Bar',
+      career: 'Worked records and small investigative jobs; knows how cities hide facts in paperwork',
+      currentLife: 'Underemployed; living above Murphy\'s Bar; chasing odd jobs and stranger patterns',
     },
-
     relationships: {
-      sarahReeves: 'Former partner for 13 years. She eventually loses faith in him and starts her own Conviction Integrity Project.',
-      tomWade: 'Best friend for 30 years, Chief Forensic Examiner. Betrayed Jack by manufacturing evidence.',
-      silasReed: 'Former partner for 8 years. Was blackmailed into framing Marcus Thornhill.',
-      victoriaBlackwell: 'Antagonist who orchestrates his downfall to teach him about certainty\'s cost.',
+      tomWade: 'Longtime friend (met ~12 years ago). Tom has access to maps/archives and a habit of withholding.',
+      sarahReeves: 'A pragmatic ally; refuses melodrama; pushes Jack to verify before escalating.',
+      victoriaBlackwell: 'The sender of dead letters. A guide, a trap, and a question in human form.',
+      deputyChiefGrange: 'Official pressure that makes witnesses disappear and sites “close for maintenance”.',
     },
-
     voiceAndStyle: {
-      narrative: 'First-person, noir detective voice',
-      internalMonologue: 'Self-deprecating, philosophical, prone to metaphors about rain and shadows',
-      dialogue: 'Terse, direct, occasionally poetic when drunk or exhausted',
+      narrative: 'Third-person limited, past tense; tight to Jack; no omniscience',
+      internalMonologue: 'Observational; pattern language; uneasy humor under stress',
+      dialogue: 'Direct, not flowery; becomes clipped when startled',
       examplePhrases: [
-        '"Rain fell on Ashport the way memory falls on the guilty."',
-        '"The difference between certainty and arrogance is just perspective and consequences."',
-        '"Thirty years of wins suddenly felt like thirty years of lies."',
+        '"It looked like graffiti until the third time it repeated."',
+        '"A city can lie without opening its mouth."',
+        '"The map was correct. The street was the part that changed."',
       ],
     },
   },
 
-  // =============================================================================
-  // ANTAGONIST
-  // =============================================================================
   antagonist: {
     name: 'Victoria Blackwell',
-    aliases: ['Emily Cross', 'The Midnight Confessor', 'The Woman in Red', 'E.C.'],
-    role: 'Primary antagonist, orchestrator of Jack\'s "education"',
-    age: 'Late 20s to early 30s (seven years since "death")',
-
+    aliases: ['The Midnight Cartographer', 'V.A.', 'Cartographer'],
+    role: 'Primary antagonist/guide; architect of Jack’s route through the mystery',
+    age: '30s',
     physicalDescription: {
-      appearance: 'Elegant, beautiful in a dangerous way, often wears red',
-      style: 'Expensive taste - designer clothes, French perfume (floral with patchouli)',
-      presence: 'Commanding, regal, moves with calculated precision',
-      scars: 'Physical scars from torture by Deputy Chief Grange (revealed later)',
+      appearance: 'Controlled elegance; difficult to read; never looks rushed',
+      style: 'Minimal, precise, expensive without logos',
+      presence: 'Stillness that feels like a decision',
     },
-
     personality: {
       coreTraits: [
-        'Brilliant strategist, always three moves ahead',
-        'Patient - waited seven years to execute her plan',
-        'Methodical and precise in everything',
-        'Cold and calculating on the surface',
-        'Deeply traumatized beneath the veneer',
-        'Believes power is the only way to ensure justice',
+        'Strategic, patient, rules-minded',
+        'Speaks in constraints and consequences',
+        'Protective of the Under-Map’s “grammar” while exploiting it',
       ],
       flaws: [
-        'Can become consumed by revenge',
-        'Manipulates others, even those she claims to help',
-        'Views people as chess pieces',
-        'Struggles to trust anyone completely',
+        'Treats people like routes',
+        'Believes pressure is education',
       ],
       strengths: [
-        'Vast financial resources and intelligence network',
-        'Exceptional at gathering and leveraging information',
-        'Genuinely wants to free the innocent',
-        'Capable of sacrifice for her goals',
+        'Always two steps ahead',
+        'Never wastes a gesture',
       ],
     },
-
     backstory: {
-      originalIdentity: 'Emily Cross, art student at 22, rising star in Ashport\'s art scene',
-      trauma: [
-        'Had affair with Richard Bellamy (not entirely consensual, started at 19)',
-        'Richard was 48, married, powerful - used his position to control her',
-        'Attempted suicide at 23 (overdose on Oxycodone, 30 pills)',
-        'Kidnapped by Deputy Chief Grange, tortured for months',
-        'Jack declared her dead while she was still being tortured',
-        'Heard Jack say "Case closed" on a phone call while in captivity',
-      ],
-      transformation: 'Escaped/was released, spent seven years building wealth and network as Victoria Blackwell',
-      motivation: 'Force Jack to understand what his arrogant certainty cost innocent people',
+      origin: 'Connected to Ashport’s semiotics/urban-mapping underground',
+      motive: 'Force Jack to see the pattern, then decide what kind of person follows it',
     },
-
     methods: {
-      communication: 'Black envelopes with red wax seal, silver ink, signed as "M.C." or "V.A."',
-      calling: 'Leaves obsidian chess pieces marking each day',
-      leverage: 'Uses blackmail, information, and financial power to achieve goals',
-      philosophy: '"Truth without power is just noise."',
+      communication: 'Dead letters with silver ink, river-glass tokens, and rule-like phrasing',
+      philosophy: '"If you name it too early, you lose it."',
     },
-
     relationships: {
-      jackHalloway: 'Target of her "curriculum" - she wants to destroy and potentially redeem him',
-      richardBellamy: 'Former abuser, dead before the story begins',
-      deputyChiefGrange: 'Her torturer, she orchestrates his downfall',
-      eleanorBellamy: 'Framed for murder Eleanor didn\'t commit; Victoria wants to free her',
+      jackHalloway: 'Subject of her “curriculum”',
+      deputyChiefGrange: 'An obstacle and competitor in control of information',
+      tomWade: 'A pressure point she can exploit',
     },
-
     voiceAndStyle: {
-      speaking: 'Elegant, educated, precise diction',
-      written: 'Formal, literary, occasionally sardonic',
+      speaking: 'Calm, precise, minimal contractions, uses questions as locks',
+      written: 'Instructional but elegant; rules disguised as poetry',
       examplePhrases: [
-        '"Twelve days. Twelve cases. One you closed without certainty."',
-        '"I don\'t need to prove it. I just need people to believe it."',
-        '"Innocence doesn\'t matter as much as certainty."',
-        '"You\'re doing well. Better than I expected."',
+        '"Two maps. Choose which one you will pretend is real."',
+        '"Do not name it yet."',
+        '"Follow the line once. Never twice."',
       ],
     },
   },
 
-  // =============================================================================
-  // MAJOR SUPPORTING CHARACTERS
-  // =============================================================================
   allies: {
     sarahReeves: {
       name: 'Sarah Reeves',
-      role: 'Jack\'s former partner, still on the force',
-      age: 'Early to mid 40s',
-
+      role: 'Pragmatic ally; investigator-type (not a noir cop stereotype)',
+      age: '30s-40s',
       physicalDescription: {
-        appearance: 'Professional, practical, wears a black leather jacket',
-        demeanor: 'Direct gaze, no-nonsense posture',
+        appearance: 'Practical clothes, sharp posture, always moving with purpose',
+        demeanor: 'Direct gaze; no patience for theatrics',
       },
-
       personality: {
         coreTraits: [
-          'Competent and thorough detective',
-          'Morally grounded',
-          'Direct and confrontational',
-          'Eventually loses faith in Jack',
-          'Builds something better from the ashes',
+          'Skeptical but fair',
+          'Protective of people over theories',
+          'Keeps Jack honest about what he actually knows',
         ],
-        arc: 'Transitions from loyal partner to independent force for justice',
+        arc: 'From “this is nothing” to “this is real and dangerous”',
       },
-
-      backstory: {
-        partnership: 'Worked with Jack for 13 years',
-        growth: 'Realizes she was always better than she thought, held back by Jack\'s shadow',
-        achievement: 'Brings down Grange\'s operation in 72 hours by following up leads Jack dismissed',
-        future: 'Founds the Conviction Integrity Project',
-      },
-
-      relationships: {
-        jackHalloway: 'Complicated - respects him but ultimately walks away from his corruption',
-      },
-
       voiceAndStyle: {
-        speaking: 'Direct, no pleasantries, gets to the point',
+        speaking: 'Blunt, efficient, asks for specifics',
         examplePhrases: [
-          '"Tell me you\'re not involved."',
-          '"Everything\'s on you. That\'s your problem."',
-          '"I\'m done being your partner, your subordinate, your anything."',
+          '"Show me the photo. Not the story."',
+          '"If it repeats, it’s not random."',
+          '"Don’t go alone."',
         ],
       },
     },
 
     eleanorBellamy: {
       name: 'Eleanor Bellamy',
-      role: 'Wrongfully convicted widow, one of the five innocents',
-      age: 'Late 50s',
-
+      role: 'Anchor-linked survivor / pattern historian (not “wrongfully convicted” canon)',
+      age: '50s',
       physicalDescription: {
-        appearance: 'Gaunt, carved away by eight years in prison',
-        condition: 'Poisoned with ricin (survives but damaged)',
-        transformation: 'Society widow reduced to prisoner, but steel underneath',
+        appearance: 'Weathered, sharp-eyed, hands that don’t stop moving',
       },
-
       personality: {
-        coreTraits: [
-          'Bitter but resilient',
-          'Sharp intelligence despite circumstances',
-          'Righteous anger at the injustice',
-          'Ultimately capable of forgiveness',
-        ],
+        coreTraits: ['Suspicious', 'Precise', 'Hard to impress', 'Strangely calm around symbols'],
       },
-
-      backstory: {
-        conviction: 'Convicted of murdering husband Richard Bellamy with arsenic',
-        evidence: 'Sapphire necklace planted in her deposit box, arsenic found in her tea set',
-        truth: 'Richard was being blackmailed, killed by someone else, Eleanor framed',
-        prison: 'Eight years in Greystone Correctional',
-        daughter: 'Maya Bellamy, whom she missed watching grow up',
-      },
-
-      relationships: {
-        richardBellamy: 'Late husband, was being blackmailed and embezzling',
-        mayaBellamy: 'Daughter, loves deeply, missed her childhood',
-        jackHalloway: 'The detective who put her in prison',
-        victoriaBlackwell: 'Visited her in prison, promised Jack would understand',
-      },
-
       voiceAndStyle: {
-        speaking: 'Gravel and broken glass, bitter but precise',
+        speaking: 'Clipped, exact, allergic to exaggeration',
         examplePhrases: [
-          '"Mrs. died when you sent me here."',
-          '"Eight years for maybe."',
-          '"You trusted tea sets more than people."',
+          '"Don’t call it a sign. It’s a rule."',
+          '"If it’s there, it wants to be seen."',
         ],
       },
     },
 
     mayaBellamy: {
       name: 'Maya Bellamy',
-      role: 'Eleanor\'s daughter',
+      role: 'Eleanor’s daughter; amateur researcher',
       age: 'Mid 20s',
-
-      physicalDescription: {
-        appearance: 'Young, terrified when first introduced',
-      },
-
-      personality: {
-        coreTraits: [
-          'Determined to prove mother\'s innocence',
-          'Brave but vulnerable',
-          'Has been investigating on her own',
-        ],
-      },
-
-      backstory: {
-        childhood: 'Lost mother to prison at young age',
-        investigation: 'Found documents proving Richard was being blackmailed',
-        abduction: 'Taken by Victoria as leverage/demonstration of power (not harmed)',
-      },
-
-      relationships: {
-        eleanorBellamy: 'Mother - desperate to free her',
-        victoriaBlackwell: 'Abducted by her but treated well',
-      },
     },
 
     rebeccaMoss: {
       name: 'Rebecca Moss',
-      role: 'Defense attorney, represents Eleanor and Jack',
+      role: 'Counsel/advocate figure (legal/administrative pressure relief)',
       age: 'Middle-aged',
-
-      physicalDescription: {
-        appearance: 'Thick-rimmed glasses, professional demeanor',
-      },
-
-      personality: {
-        coreTraits: [
-          'Dedicated legal advocate',
-          'Tireless fighter for innocents',
-          'Pragmatic about the legal system',
-        ],
-      },
-
-      backstory: {
-        specialty: 'Defense attorney who takes on wrongful conviction cases',
-        role: 'Helps navigate legal battles for the innocents',
-      },
     },
   },
 
-  // =============================================================================
-  // CORRUPT OFFICIALS / VILLAINS
-  // =============================================================================
   villains: {
     tomWade: {
-      name: 'Dr. Thomas "Tom" Wade',
-      role: 'Chief Forensic Examiner, Jack\'s best friend and betrayer',
-      age: 'Similar to Jack (late 50s)',
-
+      name: 'Thomas "Tom" Wade',
+      role: 'Friend with access to archives/maps; knows more than he says',
+      age: 'Late 20s to 30s',
       personality: {
-        coreTraits: [
-          'Outwardly friendly and competent',
-          'Secretly manufactured evidence for decades',
-          'Cowardly - did it to protect himself',
-        ],
+        coreTraits: ['Friendly surface', 'Deflects with “practical” reasons', 'Avoids naming things'],
       },
-
       backstory: {
-        friendship: 'Known Jack for 30 years - college, academy, first cases',
-        betrayal: 'Manufactured "perfect evidence" for 20 years',
-        impact: 'Every case he touched is now suspect',
-        daughter: 'Teresa Wade, wrongfully convicted using his methods',
+        friendship: 'Met Jack ~12 years ago through city work/adjacent circles',
+        secret: 'Has collected symbol reports and “blank map” anomalies longer than he admits',
       },
-
-      relationships: {
-        jackHalloway: 'Best friend who he systematically betrayed',
-        teresaWade: 'Daughter, one of the five innocents',
+      voiceAndStyle: {
+        speaking: 'Warm, evasive when cornered; uses logistics as cover',
+        examplePhrases: [
+          '"It’s probably a maintenance thing."',
+          '"Let’s not make it bigger than it is."',
+          '"I can get you the file—tomorrow."',
+        ],
       },
     },
 
     silasReed: {
       name: 'Silas Reed',
-      role: 'Jack\'s former partner, blackmailed into corruption',
-      age: 'Mid 50s',
-
-      physicalDescription: {
-        appearance: 'Lives in an expensive penthouse (bought with blood money)',
-        condition: 'Broken, alcoholic, waiting for consequences',
-      },
-
-      personality: {
-        coreTraits: [
-          'Fundamentally weak',
-          'Cowardly - chose self-preservation over integrity',
-          'Genuinely remorseful',
-          'Self-destructive',
-        ],
-      },
-
-      backstory: {
-        partnership: 'Worked with Jack for 8 years',
-        blackmail: 'Blackmailed seven years ago over a secret',
-        crime: 'Signed documents that framed Marcus Thornhill',
-        consequence: 'Marcus committed suicide, his daughter Claire lost everything',
-      },
-
-      relationships: {
-        jackHalloway: 'Partner and friend he betrayed',
-        victoriaBlackwell: 'His blackmailer',
-        marcusThornhill: 'Man he helped frame',
-      },
-
+      role: 'Fixer / gatekeeper to permits, access, and quiet favors',
+      age: '40s-50s',
+      personality: { coreTraits: ['Smooth', 'Deflects with jokes', 'Scared of the wrong people'] },
       voiceAndStyle: {
-        speaking: 'Defeated, bourbon-soaked, confessional',
-        examplePhrases: [
-          '"I told myself Thornhill was probably guilty anyway."',
-          '"Victoria wins. She always wins."',
-        ],
+        speaking: 'Charm as armor; laughs too quickly',
+        examplePhrases: ['"You didn’t hear that from me."', '"Wrong door, Jack."', '"Some lines are expensive."'],
       },
     },
 
     helenPrice: {
       name: 'Helen Price',
-      title: 'Assistant District Attorney, "Queen of Convictions"',
-      role: 'Prosecutor who built career on Jack\'s fraudulent evidence',
-      age: 'Mid to late 30s',
-
-      physicalDescription: {
-        before: 'Polished, powerful, immaculate suits, wore success like a crown',
-        after: 'Aged overnight, disheveled, broken',
-      },
-
-      personality: {
-        coreTraits: [
-          'Ambitious and driven',
-          'Never questioned perfect evidence',
-          'Genuinely believes in justice (was corrupted by the system)',
-          'Capable of remorse and self-sacrifice',
-        ],
-      },
-
-      backstory: {
-        record: 'Six years, 53 cases, 53 wins - never lost a trial',
-        corruption: '21 of those cases involved manufactured evidence',
-        downfall: 'Receives Victoria\'s dossier, confesses publicly',
-        fate: 'Commits suicide (implied in some paths)',
-      },
-
-      relationships: {
-        jackHalloway: 'Built her career on his cases',
-        system: 'Benefited from not asking questions',
-      },
-
+      title: 'City counsel / development liaison',
+      role: 'Institutional pressure; makes places “disappear” via paperwork',
+      age: '30s-40s',
       voiceAndStyle: {
-        speaking: 'Formal, legal precision breaking into emotional rawness',
-        examplePhrases: [
-          '"Twenty-one innocent people. And I never questioned a single piece of evidence."',
-          '"Maybe we deserve everything Victoria\'s going to do to us."',
-        ],
+        speaking: 'Polite, legalistic, weaponized calm',
+        examplePhrases: ['"That’s not in the public record."', '"You’re mistaken."', '"This site is closed."'],
       },
     },
 
     deputyChiefGrange: {
       name: 'Deputy Chief William Grange',
-      role: 'Serial kidnapper, torturer, Emily\'s captor',
-
-      personality: {
-        coreTraits: [
-          'Sadistic and methodical',
-          'Hid crimes behind badge and authority',
-          'Serial predator targeting vulnerable women',
-        ],
-      },
-
-      backstory: {
-        crimes: '23 kidnapping victims over years, 8 confirmed dead',
-        method: 'Used badge and power to operate openly',
-        exposure: 'Sarah brings him down using witnesses Jack dismissed',
-        emily: 'Held and tortured Emily Cross for months after Jack closed the case',
-      },
-
-      relationships: {
-        jackHalloway: 'Jack\'s negligence enabled his crimes',
-        emilyVictoria: 'His victim who survived and orchestrated his downfall',
-        sarahReeves: 'The detective who actually caught him',
-      },
+      role: 'Containment/suppression operator around Under-Map incidents',
+      personality: { coreTraits: ['Quiet authority', 'Denial as policy', 'Removes witnesses'] },
     },
 
     theOverseer: {
       name: 'The Overseer',
-      role: 'Shadowy figure controlling corruption in Ashport',
-
-      description: 'The mastermind behind the systemic corruption, operates through proxies',
-
-      purpose: 'Represents how deep the corruption goes beyond any single individual',
+      role: 'Shadow influence behind containment decisions',
+      description: 'A mechanism more than a person; appears through proxies',
     },
   },
 
-  // =============================================================================
-  // VICTIMS / WRONGFULLY CONVICTED
-  // =============================================================================
   victims: {
     fiveInnocents: {
-      description: 'The five people wrongfully convicted using manufactured evidence',
+      description: 'Legacy key: treat as the five anchors / missing threads tied to the glyph pattern',
       members: [
-        {
-          name: 'Eleanor Bellamy',
-          conviction: 'Murder of husband Richard Bellamy',
-          evidence: 'Planted sapphire necklace, arsenic in tea set',
-          truth: 'Richard was being blackmailed, killed by someone else',
-        },
-        {
-          name: 'Marcus Thornhill',
-          conviction: 'Financial crimes (embezzlement)',
-          evidence: 'Shell company documents forged by Silas Reed',
-          truth: 'Completely innocent, framed by the real embezzlers',
-          fate: 'Committed suicide in lockup before trial',
-        },
-        {
-          name: 'Dr. Lisa Chen',
-          role: 'Lab technician',
-          conviction: 'Unknown charges',
-          truth: 'Reported Tom Wade\'s evidence tampering, was transferred and silenced',
-        },
-        {
-          name: 'James Sullivan',
-          conviction: 'Unknown charges',
-          truth: 'One of the five innocents Jack helped convict',
-        },
-        {
-          name: 'Teresa Wade',
-          relation: 'Tom Wade\'s daughter',
-          conviction: 'Unknown charges',
-          truth: 'Convicted using her own father\'s manufactured evidence',
-        },
+        { name: 'Eleanor Bellamy', role: 'anchor-linked survivor' },
+        { name: 'Maris Vell', role: 'missing linguist' },
+        { name: 'Niko Serrane', role: 'lost transit worker' },
+        { name: 'Saffron Pike', role: 'vanished street photographer' },
+        { name: 'Teresa Wade', role: 'missing relative / pressure point on Tom' },
       ],
-    },
-
-    marcusThornhill: {
-      name: 'Marcus Thornhill',
-      role: 'CFO, wrongfully accused of embezzlement',
-
-      backstory: {
-        career: 'Successful CFO at a major company',
-        framing: 'Documents were forged to make him look like an embezzler',
-        perpetrators: 'Silas Reed signed forged documents under blackmail',
-        fate: 'Hanged himself in lockup three days after conviction',
-        daughter: 'Claire Thornhill, who spent years gathering evidence',
-      },
     },
 
     claireThornhill: {
       name: 'Claire Thornhill',
-      role: 'Marcus Thornhill\'s daughter',
-      occupation: 'Waitress at Blueline Diner (formerly had scholarship)',
-      age: 'Late 20s',
-
-      physicalDescription: {
-        appearance: 'Hair pulled back tight, uniform worn thin from too many washes',
-        demeanor: 'Carries fifty years of exhaustion in a twenty-something body',
-      },
-
-      personality: {
-        coreTraits: [
-          'Bitter and angry',
-          'Determined investigator',
-          'Has spent four years gathering evidence',
-          'Righteous fury at the system',
-        ],
-      },
-
-      backstory: {
-        before: 'Had a scholarship, promising future',
-        after: 'Lost everything when father was convicted',
-        investigation: 'Spent four years building a case proving her father was framed',
-        evidence: 'Has the "Thornhill Ledger" proving the frame-up',
-      },
-
-      relationships: {
-        marcusThornhill: 'Father, loved him and was destroyed by his death',
-        jackHalloway: 'The detective who refused to listen, dismissed her father\'s claims',
-        silasReed: 'The man who signed the documents that killed her father',
-      },
-
+      role: 'A witness who notices patterns; keeps a private log',
+      age: '20s-30s',
       voiceAndStyle: {
-        speaking: 'Cold, precise, weaponized facts',
-        examplePhrases: [
-          '"That\'s what you said when he tried to tell you about Silas Reed."',
-          '"I\'m not helping you. I\'m helping the next Marcus Thornhill."',
-        ],
-      },
-    },
-
-    luciaMartinez: {
-      name: 'Lucia Martinez',
-      role: 'One of Grange\'s victims',
-      age: '24 at death',
-
-      backstory: {
-        profession: 'Nursing student, engaged',
-        abduction: 'Kidnapped three months after Jack closed Emily\'s case',
-        duration: 'Held eleven months, died in captivity',
-        significance: 'Died because Jack stopped looking',
-        mother: 'Mrs. Martinez, appears at the gallery exhibit',
+        speaking: 'Fast, nervous precision; dates, times, receipts',
+        examplePhrases: ['"It happened twice."', '"That’s not the same sign."', '"I wrote it down."'],
       },
     },
   },
 
-  // =============================================================================
-  // SECONDARY CHARACTERS
-  // =============================================================================
   secondary: {
-    richardBellamy: {
-      name: 'Richard Bellamy',
-      role: 'Eleanor\'s dead husband, art dealer',
-
-      backstory: {
-        profession: 'Wealthy art dealer with old money connections',
-        crimes: 'Was embezzling from art clients, underreporting values',
-        blackmail: 'Was being blackmailed for his crimes',
-        affair: 'Had affair with Emily Cross (not consensual)',
-        death: 'Poisoned with arsenic, Eleanor framed for it',
-      },
-
-      relationships: {
-        eleanorBellamy: 'Wife, framed for his murder',
-        emilyCross: 'Victim of his abuse',
-        marcusWebb: 'Had a secret romantic relationship',
-      },
-    },
-
     marcusWebb: {
       name: 'Marcus Webb',
-      role: 'Antique dealer, information broker',
-      age: 'Mid 60s',
-
-      physicalDescription: {
-        appearance: 'Gray beard trimmed to precision, expensive cardigan',
-        setting: 'Runs an antique shop full of secrets',
-      },
-
-      personality: {
-        coreTraits: [
-          'Deals in secrets and information',
-          'Former journalist',
-          'Knows where all the bodies are buried',
-          'Carries tremendous guilt',
-        ],
-      },
-
-      backstory: {
-        former: 'Former journalist before scandal ended his career',
-        current: 'Information broker dealing in rare objects and dangerous secrets',
-        secret: 'Loved Richard Bellamy for fifteen years',
-        guilt: 'Knew Eleanor was innocent, stayed silent',
-        inheritance: 'Inherited money from Richard',
-      },
-
-      relationships: {
-        richardBellamy: 'Secret lover for 15 years',
-        victoriaBlackwell: 'She blackmailed him into testifying',
-      },
-
+      role: 'Antique dealer / information broker for odd artifacts',
+      age: '60s',
       voiceAndStyle: {
-        speaking: 'Cultured, world-weary, knows too much',
-        examplePhrases: [
-          '"I keep everything. That\'s my curse."',
-          '"Plot thickens like blood in water."',
-        ],
+        speaking: 'Cultured, cautious, trades in hints',
+        examplePhrases: ['"Some objects remember."', '"You want a map? Define map."', '"Careful what you carry."'],
       },
     },
-
     agentMartinez: {
       name: 'Agent Luis Martinez',
-      role: 'FBI agent investigating the corruption',
-
-      personality: {
-        coreTraits: [
-          'Professional and by-the-book',
-          'Determined to bring down the corrupt system',
-          'Direct and efficient',
-        ],
-      },
-
-      role_in_story: 'Leads federal investigation into Ashport corruption',
+      role: 'External investigator who notices suppression patterns',
     },
-
     captainMorrison: {
       name: 'Captain Morrison',
-      role: 'Jack\'s former superior',
-
-      mention: 'Referred to Emily Cross case as "tying a bow on a corpse"',
+      role: 'Institutional voice; denies anomalies politely',
     },
   },
 
-  // =============================================================================
-  // LOCATIONS
-  // =============================================================================
   locations: {
     ashport: {
       name: 'Ashport',
-      description: 'Rain-soaked noir city, morally gray, modern day with noir aesthetics',
-      tone: 'Perpetually rainy, neon-lit, corrupt institutions',
+      description: 'Modern coastal city; damp reflections; hidden layer threaded through infrastructure',
       landmarks: [
         'Murphy\'s Bar (beneath Jack\'s office)',
-        'Greystone Correctional (prison where Eleanor is held)',
-        'Bellamy Estate (Victorian mansion, now abandoned)',
-        'Blueline Diner (where Claire Thornhill works)',
-        'Victoria\'s Penthouse (glass and steel, commanding view)',
-        'FBI Field Office on Morrison Street',
+        'Ashport Archive (records, maps, omissions)',
+        'Brineglass Viaduct (threshold-adjacent)',
+        'Sentinel Library (restricted stacks)',
       ],
     },
   },
 
-  // =============================================================================
-  // THEMES AND MOTIFS
-  // =============================================================================
   themes: {
     central: [
-      'Wrongful convictions and their devastating cost',
-      'The price of certainty over truth',
-      'Redemption versus revenge',
-      'Corruption in the justice system',
-      'The line between justice and vigilantism',
-      'Who gets to be a "credible" victim',
+      'Perception vs reality',
+      'The cost of naming (and the cost of refusing to)',
+      'Patterns as traps and as lifelines',
+      'Institutions that erase inconvenient truths',
     ],
     motifs: {
-      rain: 'Constant presence, represents guilt, memory, cleansing',
-      chess: 'Victoria leaves obsidian pieces, Jack is a pawn in her game',
-      red: 'Victoria\'s signature color, represents danger and passion',
-      twelve: 'Twelve days, twelve cases, twelve lessons',
-      perfectEvidence: 'The manufactured proof that destroyed lives',
+      silverInk: 'Instructions that behave like evidence',
+      riverGlass: 'A token that feels like proof',
+      thresholds: 'Places that behave like decisions',
+      maps: 'Records that lie without words',
     },
   },
 };
 
-// ============================================================================
-// VOICE DNA - Deep patterns for character voice consistency
-// ============================================================================
 export const VOICE_DNA = {
   jack: {
     name: 'Jack Halloway',
     sentencePatterns: [
-      'Short declaratives when thinking or in shock ("Tom. Just the name.")',
-      'Longer, self-interrupting sentences when rationalizing or avoiding',
-      'Fragments when emotional or exhausted ("Thirty years. All of it.")',
-      'Questions he doesn\'t expect answers to',
+      'Short declaratives when startled (“Again.”)',
+      'Careful accumulation when reasoning (list-like, observational)',
+      'Fragments when the world slips (“Not a trick. Not a prank.”)',
     ],
     vocabularyTendencies: [
-      'Uses cop jargon ("perp," "case closed," "evidence chain") when deflecting emotion',
-      'Gets more poetic/metaphorical when drunk or exhausted',
-      'Avoids emotional words—says "complicated" instead of "painful," "a lot" instead of "devastating"',
-      'Never uses modern slang—his language is timeless noir',
-      'Self-deprecating humor as defense mechanism',
+      'Pattern words: “repeat,” “align,” “rule,” “signal,” “noise”',
+      'Avoids fantasy labels early; uses practical nouns (sign, ink, tape, file)',
+      'Dry humor under stress, never quippy',
     ],
     physicalTells: [
-      'Reaches for Jameson when uncomfortable or overwhelmed',
-      'Checks his watch when lying or avoiding',
-      'Looks at his hands when guilty—they remind him of what he\'s done',
-      'Adjusts his coat collar when preparing for confrontation',
-      'Goes still, very still, when processing a revelation',
-    ],
-    internalMonologueStyle: [
-      'Self-questioning that expects no answers',
-      'Noir metaphors tied to rain, shadows, city decay',
-      'Counting things (years, cases, drinks) as way of processing',
-      'Past tense reflection on present events ("Should have seen it.")',
-      'Dark humor that\'s more bitter than funny',
+      'Checks his notes when anxious',
+      'Touches the river-glass token unconsciously',
+      'Stops moving to listen when a space feels wrong',
     ],
     dialogueRhythm: [
-      'Terse responses when cornered—one or two words',
-      'Longer when explaining or deflecting',
-      'Never monologues—if he talks more than three sentences, he\'s avoiding something',
-      'Uses other person\'s words against them ("Define involved.")',
+      'Asks for specifics, not feelings',
+      'Cuts off explanations with a direct question',
+      'Lets silence test the other person',
     ],
   },
 
   victoria: {
-    name: 'Victoria Blackwell / Emily Cross',
+    name: 'Victoria Blackwell / The Midnight Cartographer',
     sentencePatterns: [
-      'Complete, controlled sentences—NEVER fragments (control is everything to her)',
-      'Uses questions as weapons, not for information',
-      'Pauses before key words (shown with comma placement for emphasis)',
-      'Building rhythm: short, medium, long, then the killing stroke',
+      'Controlled sentences, no filler',
+      'Questions used as locks',
+      'Rules disguised as statements',
     ],
     vocabularyTendencies: [
-      'Formal register even when threatening—"I do not" not "I don\'t"',
-      'Never contractions in serious moments (contractions = vulnerability)',
-      'Uses Jack\'s own words against him, verbatim',
-      'Chess metaphors, game language ("endgame," "position," "move")',
-      'Academic precision—she was an art student, she notices aesthetics',
+      'Map language: “route,” “line,” “legend,” “scale,” “blank”',
+      'Constraint language: “don’t,” “never,” “once,” “until”',
     ],
     physicalTells: [
-      'Touches her wrist scars unconsciously when the mask slips',
-      'Perfect posture except when genuinely angry—then she leans forward',
-      'Always faces the door, the window—she learned to track exits',
-      'Smile reaches her eyes only when she\'s won something',
-      'Her perfume (French floral) is a deliberate weapon—makes her memorable',
-    ],
-    emotionalLeakage: [
-      'Voice drops when discussing Grange—the only time she can\'t control it fully',
-      'Uses "we" when she means "I"—distancing from trauma',
-      'Speaks about Emily Cross in third person—separation from victim self',
-      'The only time she\'s honest is when she talks about pain in abstract terms',
+      'Stillness as dominance',
+      'Touches nothing unless it’s deliberate',
     ],
     dialogueRhythm: [
-      'Always lets others speak first—she\'s gathering information',
-      'Rhetorical questions that corner the listener',
-      'Builds to her point rather than leading with it',
-      'Final statements land like gavels—declarative, absolute',
+      'Waits for Jack to speak first',
+      'Ends exchanges with a single clean instruction',
     ],
   },
 
   sarah: {
     name: 'Sarah Reeves',
-    sentencePatterns: [
-      'Direct and efficient—no wasted words',
-      'Commands when stressed ("Get in. Now.")',
-      'Questions that are actually accusations',
-      'Complete sentences—she says exactly what she means',
-    ],
-    vocabularyTendencies: [
-      'Professional cop language—reports, procedures, evidence',
-      'No metaphors—she\'s too practical',
-      'Occasional profanity when genuinely angry (rare, therefore impactful)',
-      'Uses "we" for the force, "you" to separate from Jack',
-    ],
-    physicalTells: [
-      'Doesn\'t sit when agitated—stands, paces, stays near exits',
-      'Orders coffee she doesn\'t drink—gives her hands something to hold',
-      'Direct eye contact when accusing, looks away when disappointed',
-      'Badge-check habit—touches it when reminding herself why she does this',
-    ],
-    emotionalLeakage: [
-      'Voice goes flat when she\'s hiding hurt',
-      'Uses professional distance to mask personal betrayal',
-      'The more she cares, the colder she sounds',
-      'Silence is her loudest condemnation',
-    ],
-    dialogueRhythm: [
-      'Short exchanges—she doesn\'t explain herself',
-      'Statements, not explanations ("I filed the papers.")',
-      'Walks away mid-conversation when she\'s done—doesn\'t wait for response',
-      'The more Jack tries to explain, the less she says',
-    ],
+    sentencePatterns: ['Direct, clipped', 'Specific questions', 'No metaphors unless mocking one'],
+    vocabularyTendencies: ['Verification language: “show me,” “prove,” “timeline,” “source”'],
+    physicalTells: ['Looks at the evidence, not the storyteller'],
+    dialogueRhythm: ['Quick back-and-forth; interrupts if Jack spirals'],
   },
 
   tomWade: {
-    name: 'Dr. Thomas "Tom" Wade',
-    sentencePatterns: [
-      'Friendly surface—inclusive language, buddy-buddy tone',
-      'Technical jargon as deflection when cornered',
-      'Incomplete thoughts when lying—trails off, changes subject',
-      'Justifications that sound reasonable until examined',
-    ],
-    vocabularyTendencies: [
-      'Forensic terminology to hide behind ("chain of custody," "fiber analysis")',
-      '"We" when talking about crimes—spreads responsibility',
-      'Diminishing language: "just," "a little," "only"',
-      'Reasonable-sounding hedges: "you have to understand," "it wasn\'t that simple"',
-    ],
-    physicalTells: [
-      'Smiles that don\'t reach his eyes—Jack never noticed until now',
-      'Hands busy (fidgeting, adjusting glasses) when lying',
-      'Too much eye contact when fabricating',
-      'Pours drinks for others as control mechanism',
-    ],
-    emotionalLeakage: [
-      'Gets technical/clinical when emotions run high',
-      'Voice pitches slightly higher when lying',
-      'Laughs at inappropriate moments—nervous habit',
-      'The more guilty, the more he calls Jack "buddy," "partner"',
-    ],
-    dialogueRhythm: [
-      'Over-explains when simple answer would do',
-      'Answers questions with questions',
-      'Friendly deflection: "Let\'s not talk about work, let\'s just—"',
-      'Long pauses before committing to a lie',
-    ],
+    name: 'Tom Wade',
+    sentencePatterns: ['Friendly openings, evasive endings', 'Answers with logistics', 'Hedges when cornered'],
+    vocabularyTendencies: ['Records language: “file,” “permit,” “archive,” “maintenance,” “routing”'],
+    physicalTells: ['Busy hands (phone, keys) when lying'],
+    dialogueRhythm: ['Over-explains safe details; skips dangerous nouns'],
   },
 
   eleanor: {
     name: 'Eleanor Bellamy',
-    sentencePatterns: [
-      'Clipped, economical—prison taught her not to waste words',
-      'Present tense for trauma that never ends ("Eight years. It\'s still happening.")',
-      'Short sentences that land like strikes',
-      'Bitter corrections of Jack\'s assumptions',
-    ],
-    vocabularyTendencies: [
-      'Prison language has seeped in—institutional terms',
-      'Refuses euphemisms: "you put me in a cage," not "convicted"',
-      'Uses Jack\'s name like a weapon—makes him accountable',
-      'Specific numbers—she\'s counted every day',
-    ],
-    physicalTells: [
-      'Still moves like a prisoner—checking corners, giving space',
-      'Doesn\'t take up space—makes herself small (habit)',
-      'Eyes track movement constantly—survival instinct',
-      'Hands scarred and aged from eight years of prison labor',
-    ],
-    emotionalLeakage: [
-      'Anger is controlled, cold—hot anger got beaten out of her',
-      'Voice cracks only when talking about Maya',
-      'Dark humor about prison as armor',
-      'Exhaustion under every word—she\'s so tired',
-    ],
-    dialogueRhythm: [
-      'Lets silence do the work',
-      'Single-word corrections that destroy Jack\'s rationalizations',
-      'Never raises voice—quiet is more devastating',
-      'Finishes conversations by simply stopping—no farewells',
-    ],
+    sentencePatterns: ['Short, exact', 'Corrects imprecision', 'Refuses exaggeration'],
+    vocabularyTendencies: ['Rule language: “always,” “never,” “if/then”'],
+    physicalTells: ['Watches exits and corners automatically'],
+    dialogueRhythm: ['Silence as pressure; answers only what was asked'],
   },
 
   claire: {
     name: 'Claire Thornhill',
-    sentencePatterns: [
-      'Building arguments—she\'s been preparing these words for four years',
-      'Rhetorical questions that demand accountability',
-      'Present tense for her father—he\'s still present for her',
-      'Escalating intensity—starts calm, builds to controlled fury',
-    ],
-    vocabularyTendencies: [
-      'Legal and financial terms—she\'s self-educated on the case',
-      'Never calls Jack "detective"—refuses the title',
-      'Uses "my father," never "Marcus"—keeps it personal',
-      'Evidence terminology—she\'s built her case meticulously',
-    ],
-    physicalTells: [
-      'The Thornhill Ledger is always with her—it\'s her proof',
-      'Waitress posture (tired feet, hands busy) even when confronting',
-      'Makes eye contact and holds it—dares Jack to look away',
-      'Older than her years in every movement',
-    ],
-    emotionalLeakage: [
-      'Voice catches when she talks about the day her father died',
-      'Anger at Jack is easier than grief—she uses it as shield',
-      'The scholarship she lost is a wound she never mentions directly',
-      'Hardest when she describes her father believing in the system',
-    ],
-    dialogueRhythm: [
-      'Prepared statements—she\'s rehearsed this confrontation',
-      'Quotes exactly—dates, names, details (she has it memorized)',
-      'Pauses for Jack to defend himself, then demolishes the defense',
-      'Ends conversations by walking away—she\'s said what she came to say',
-    ],
+    sentencePatterns: ['Fast, data-forward', 'Dates/times', 'Questions that are really panic checks'],
+    vocabularyTendencies: ['Receipt language: “timestamp,” “photo,” “log,” “again”'],
+    physicalTells: ['Keeps a notebook/phone log close'],
+    dialogueRhythm: ['Rushes, then apologizes; repeats key details'],
   },
 };
 
@@ -922,8 +388,8 @@ export function getVoiceDNA(name) {
   }
 
   // Check aliases
-  if (normalizedName.includes('victoria') || normalizedName.includes('emily') ||
-      normalizedName.includes('confessor') || normalizedName.includes('blackwell')) {
+  if (normalizedName.includes('victoria') ||
+      normalizedName.includes('cartographer') || normalizedName.includes('blackwell')) {
     return VOICE_DNA.victoria;
   }
 
@@ -962,8 +428,8 @@ export function getCharacter(name) {
   }
 
   // Check antagonist
-  if (normalizedName.includes('victoria') || normalizedName.includes('emily') ||
-      normalizedName.includes('confessor') || normalizedName.includes('blackwell')) {
+  if (normalizedName.includes('victoria') ||
+      normalizedName.includes('cartographer') || normalizedName.includes('blackwell')) {
     return CHARACTER_REFERENCE.antagonist;
   }
 
