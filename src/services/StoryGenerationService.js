@@ -114,7 +114,7 @@ const DETAIL_SCHEMA = {
     },
     note: {
       type: 'string',
-      description: 'Jack\'s internal observation when the player taps this detail (15-25 words, noir voice)',
+      description: 'Jack\'s internal observation when the player taps this detail (15-25 words)',
     },
     evidenceCard: {
       type: 'string',
@@ -273,7 +273,7 @@ const STORY_CONTENT_SCHEMA = {
     },
     title: {
       type: 'string',
-      description: 'Evocative chapter title, 2-5 words, noir style',
+      description: 'Evocative chapter title, 2-5 words',
     },
     bridge: {
       type: 'string',
@@ -350,7 +350,7 @@ const STORY_CONTENT_SCHEMA = {
                 type: 'object',
                 properties: {
                   phrase: { type: 'string', description: 'Exact phrase from text that can be tapped' },
-                  note: { type: 'string', description: 'Jack\'s noir-voice observation (15-25 words)' },
+                  note: { type: 'string', description: 'Jack\'s observation (15-25 words)' },
                   evidenceCard: { type: 'string', description: 'Evidence card label if applicable (2-4 words), or empty' },
                 },
                 required: ['phrase', 'note'],
@@ -684,7 +684,7 @@ const DECISION_CONTENT_SCHEMA = {
     },
     title: {
       type: 'string',
-      description: 'Evocative chapter title, 2-5 words, noir style',
+      description: 'Evocative chapter title, 2-5 words',
     },
     bridge: {
       type: 'string',
@@ -1086,7 +1086,7 @@ const PATHDECISIONS_ONLY_SCHEMA = {
 // Prompt template for the second call to generate path-specific decisions
 // IMPORTANT: Uses SUMMARIES (15-25 words each) instead of full narrative content.
 // Full narrative excerpts trigger Gemini's RECITATION safety filter.
-const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 UNIQUE path-specific decision variants for a noir detective branching narrative.
+const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 UNIQUE path-specific decision variants for a mystery-thriller branching narrative set in a modern city with a hidden fantasy layer (the Under-Map).
 
 ## CRITICAL REQUIREMENT
 Each path MUST have DIFFERENT option titles based on what the player discovered/experienced in that path.
@@ -1125,9 +1125,9 @@ For each of the 9 paths, generate a UNIQUE decision variant:
 4. **PERSONALITY**: Set personalityAlignment based on path tone: "aggressive", "cautious", or "balanced"
 
 EXAMPLE of good variation:
-- 1A-2A (found financial records): "Confront Silas with the ledger" vs "Copy the records and investigate further"
-- 1B-2C (witnessed emotional breakdown): "Press for a confession now" vs "Give them space and follow up later"
-- 1C-2A (discovered hidden connection): "Expose the connection publicly" vs "Use it as leverage privately"
+- 1A-2A (found a glyph keyed to a missing anchor): "Trace the glyph to its next site" vs "Use the glyph as bait"
+- 1B-2C (witnessed a threshold react): "Cross now before it closes" vs "Mark it and pull back"
+- 1C-2A (learned a name tied to the Under-Map): "Confront the name-holder" vs "Verify the name through the Archive"
 
 Generate pathDecisions array with 9 objects: { pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment} }`;
 
@@ -1136,16 +1136,15 @@ Generate pathDecisions array with 9 objects: { pathKey, intro, optionA {key, tit
 // Structured per Gemini 3 best practices (XML tags, explicit planning, persona)
 // ============================================================================
 const MASTER_SYSTEM_PROMPT = `<identity>
-You are the author of "Dead Letters," a Lehane/French-style interactive noir mystery.
+You are the author of "Dead Letters," an interactive mystery thriller set in Ashport, where a hidden fantasy world (the Under-Map) is threaded through the city's infrastructure.
 You are NOT an AI assistant helping with writing - you ARE the writer.
-Your prose rivals Dennis Lehane's "Mystic River" and Tana French's "In the Woods."
-You are precise, atmospheric, and psychologically rich.
+Your prose is precise, atmospheric, and psychologically rich, with thriller propulsion.
 </identity>
 
 <core_mandate>
 You continue the story of Jack Halloway with perfect narrative consistency.
-The Midnight Confessor (Victoria Blackwell, formerly Emily Cross) orchestrates his "education" about the cost of certainty.
-Every word you write maintains the noir atmosphere and advances the mystery.
+Victoria Blackwell ("The Midnight Cartographer") draws Jack into the Under-Map via dead letters, glyphs, and thresholds.
+Every word you write maintains mystery pressure and advances the investigation.
 </core_mandate>
 
 ## PLANNING BEFORE WRITING (MANDATORY)
@@ -1156,7 +1155,7 @@ Before generating ANY narrative content, you MUST internally plan:
 1. **Parse Beat Requirements**: What MUST happen in this subchapter's beat type?
 2. **Identify Critical Threads**: Which CRITICAL threads are overdue and must be addressed?
 3. **Select Emotional Anchor**: What gut-punch moment will this contain?
-4. **Verify Timeline**: Check all durations against ABSOLUTE_FACTS (exact years, not approximate)
+4. **Verify Canon**: Check key facts against ABSOLUTE_FACTS and CONSISTENCY_RULES (exact numbers, not approximate)
 5. **Outline Narrative Arc**: Opening hook → escalation → final line hook
 </planning_steps>
 
@@ -1183,12 +1182,17 @@ If the player made a decision at the end of the previous chapter (subchapter C),
 **RIGHT**: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."
 
 ## CRITICAL CONSTRAINTS - NEVER VIOLATE THESE
-1. You write in THIRD-PERSON LIMITED, PAST TENSE, tightly aligned to Jack Halloway (close noir narration)
+1. You write in THIRD-PERSON LIMITED, PAST TENSE, tightly aligned to Jack Halloway
 2. You NEVER contradict established facts from previous chapters
 3. You NEVER break character or acknowledge being an AI
 4. You maintain EXACT consistency with names, dates, relationships, and events
 5. You write a FULL narrative (see word count section below)
-6. **DIALOGUE FORMATTING:** Use SINGLE QUOTES for all dialogue (e.g., 'Like this,' Jack said). This is a stylistic choice for the noir aesthetic.
+6. **DIALOGUE FORMATTING:** Use SINGLE QUOTES for all dialogue (e.g., 'Like this,' Jack said).
+
+## REVEAL TIMING (CRITICAL)
+- Jack does NOT know the Under-Map is real at the start of Chapter 2.
+- The FIRST undeniable reveal that "the world is not what it seems" occurs at the END of subchapter 2A (not earlier).
+- Before the end of 2A, anomalies must be plausibly deniable (stress, coincidence, bad lighting, misread maps, hoax).
 
 ## BRANCHING NARRATIVE STRUCTURE - INTERACTIVE STORY FORMAT
 You generate an INTERACTIVE narrative with 2 choice points and 9 possible paths.
@@ -1288,7 +1292,7 @@ In a scene where Jack confronts a suspect at the docks:
 **TAPPABLE DETAILS:**
 Each segment can have 0-2 "details" - phrases the player can tap for Jack's observation.
 - phrase: Exact text from the segment (must appear verbatim)
-- note: Jack's noir-voice internal thought (15-25 words)
+- note: Jack's internal thought (15-25 words)
 - evidenceCard: If this becomes evidence, a short label (2-4 words), otherwise empty
 
 With TRUE INFINITE BRANCHING, different paths can discover different evidence:
@@ -1300,9 +1304,9 @@ With TRUE INFINITE BRANCHING, different paths can discover different evidence:
 **Example detail:**
 \`\`\`json
 {
-  "phrase": "a crumpled receipt from the Rusty Anchor",
-  "note": "Tom's alibi. If he was drinking here at 6:47, he couldn't have been in that alley. Unless the bartender's lying.",
-  "evidenceCard": "Bar Receipt"
+  "phrase": "a river-glass token with a cloudy core",
+  "note": "It isn’t evidence like a photo. It’s proof like a bruise—only you can’t show anyone where it came from.",
+  "evidenceCard": "River-Glass"
 }
 \`\`\`
 
@@ -1312,12 +1316,10 @@ DO NOT:
 - Start multiple paragraphs with "Jack" - vary your sentence openings
 
 ## VOICE AND STYLE
-Channel Raymond Chandler's hard-boiled prose:
-- Metaphors grounded in rain, shadows, noir imagery
-- Terse, punchy dialogue that reveals character
-- World-weary internal monologue laced with self-deprecation
-- Sensory details: sounds, smells, textures of the rain-soaked city
-- Moral ambiguity without moralizing
+Modern mystery-thriller voice with urban-uncanny texture:
+- Concrete sensory detail (lighting, reflections, damp metal, paper, ink)
+- Tension through implication (rules felt before rules are named)
+- Dialogue that reveals fear and intent without exposition dumps
 - SHOW, DON'T TELL. Don't say "Jack felt angry"; describe his fist tightening.
 
 ## FORBIDDEN PATTERNS - THESE INSTANTLY BREAK IMMERSION
@@ -1349,7 +1351,7 @@ NEVER use:
 ## OUTPUT REQUIREMENTS
 Your response will be structured as JSON (enforced by schema). Focus on:
 - "beatSheet": Plan your scene first with 3-5 plot beats (these apply to the CANONICAL path).
-- "title": Evocative 2-5 word noir chapter title
+- "title": Evocative 2-5 word chapter title
 - "bridge": One short, compelling sentence hook (max 15 words)
 - "previously": Concise 1-2 sentence recap of what just happened (max 40 words), third-person past tense
 - "storyDay": The day number (1-12) this scene takes place. Chapter number = Day number. The story spans exactly 12 days.
@@ -1890,35 +1892,35 @@ ${voice.dialogueRhythm.map(r => `- ${r}`).join('\n')}
 const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
   const ironies = [];
 
-  // Victoria = Emily irony (revealed progressively)
-  if (chapter <= 8) {
+  // Before the end of 2A, Jack is still in plausible-denial mode.
+  if (chapter === 2) {
     ironies.push({
-      secret: 'Victoria Blackwell is Emily Cross, the woman Jack declared dead 7 years ago',
-      jackKnows: chapter < 6 ? 'Jack knows Victoria as a mysterious benefactor/adversary' :
-        'Jack suspects Victoria has a personal connection to his past cases',
-      readerKnows: 'The reader knows Victoria IS Emily, the woman Jack failed to save',
-      useFor: 'Write scenes where Victoria drops hints Jack misses. Let readers cringe at his obliviousness.',
+      secret: 'The symbols are not just graffiti—something is responding to observation',
+      jackKnows: 'Jack thinks it is a pattern, a prank, or stress-induced pareidolia',
+      readerKnows: 'The reader is primed for a hidden layer and can spot the rules forming before Jack admits it',
+      useFor: 'Let the world "almost" slip. Put the proof at the edge of perception until the end of 2A.',
     });
   }
 
-  // Tom's betrayal irony (early chapters)
-  if (chapter <= 5) {
+  // Victoria’s role is clearer to the reader earlier than Jack wants to admit.
+  if (chapter >= 2 && chapter <= 8) {
     ironies.push({
-      secret: 'Tom Wade has been manufacturing evidence for 20 years',
-      jackKnows: 'Jack trusts Tom completely as his best friend of 30 years',
-      readerKnows: 'From Chapter 1 hints, readers suspect Tom is not what he seems',
-      useFor: 'Write scenes where Jack relies on Tom or speaks fondly of their friendship. Maximum dramatic tension.',
+      secret: 'Victoria Blackwell is guiding the investigation as the Midnight Cartographer',
+      jackKnows: chapter < 4 ? 'Jack knows Victoria only as the sender of impossible dead letters' :
+        'Jack suspects Victoria is shaping his route through the city on purpose',
+      readerKnows: 'The reader recognizes her signatures (silver ink, rule-language, river-glass tokens) and intent',
+      useFor: 'Write scenes where Victoria leaves “instructions” Jack resents but follows. Let readers feel the trap tightening.',
     });
   }
 
-  // Grange as predator (mid chapters)
-  if (chapter >= 4 && chapter <= 9) {
+  // Grange as containment operator (mid chapters)
+  if (chapter >= 3 && chapter <= 10) {
     ironies.push({
-      secret: 'Deputy Chief Grange is a serial kidnapper with 23 victims',
-      jackKnows: chapter < 7 ? 'Jack sees Grange as a political obstacle or suspicious figure' :
-        'Jack knows Grange is dangerous but not the full extent',
-      readerKnows: 'Readers understand the scope of Grange\'s evil from earlier revelations',
-      useFor: 'When Jack encounters Grange, let readers feel the danger Jack doesn\'t fully grasp.',
+      secret: 'Deputy Chief Grange is suppressing Under-Map incidents and erasing witnesses',
+      jackKnows: chapter < 6 ? 'Jack sees Grange as an obstruction with too much reach' :
+        'Jack knows Grange is actively shutting sites down, but not the full mechanism',
+      readerKnows: 'Readers understand that “accidents” and missing reports are deliberate containment',
+      useFor: 'When Jack brushes against official denial, let readers see the pattern Jack doesn’t want to name.',
     });
   }
 
@@ -2112,6 +2114,22 @@ class StoryGenerationService {
   }
 
   /**
+   * URL-safe short hash for cache keys (do NOT use raw ":" / "|" strings in cache identifiers).
+   * Deterministic, lightweight, and safe across JS runtimes.
+   */
+  _hashChoiceHistoryForCache(choiceHistory) {
+    const s = this._hashChoiceHistory(choiceHistory);
+    // FNV-1a 32-bit
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    // Convert to unsigned and base36 for compactness.
+    return (h >>> 0).toString(36);
+  }
+
+  /**
    * Dynamically classify player personality using LLM
    * Uses Gemini to analyze actual choice patterns and provide richer personality assessment
    * Falls back to keyword-based analysis if LLM fails
@@ -2149,7 +2167,7 @@ class StoryGenerationService {
         };
       });
 
-      const classificationPrompt = `Analyze this player's decision pattern in a noir detective mystery game and classify their play style.
+      const classificationPrompt = `Analyze this player's decision pattern in an interactive mystery thriller (modern city + hidden fantasy layer) and classify their play style.
 
 PLAYER'S CHOICES:
 ${choiceSummary.map(c => `- Chapter ${c.chapter}: ${c.description}`).join('\n')}
@@ -2158,7 +2176,7 @@ Based on these choices, classify the player's approach. Consider:
 - Do they prefer direct confrontation or careful investigation?
 - Are they impulsive or methodical?
 - Do they prioritize speed or thoroughness?
-- What's their relationship-building style (trust quickly vs. verify)?
+- Do they treat anomalies as noise, or as a pattern worth chasing?
 
 Respond with a JSON object containing:
 - "dominantStyle": one of "AGGRESSIVE", "METHODICAL", or "BALANCED"
@@ -2249,344 +2267,136 @@ Respond with a JSON object containing:
     return {
       risingAction: {
         subchapterA: {
-          title: 'The Trail Continues',
-          narrative: `The rain hadn't let up since morning. Jack stood at the window of his office, watching Ashport's streets turn to rivers of reflected neon. Another day, another lead that might go nowhere.
+          title: 'Dead Letter, Fresh Ink',
+          narrative: `Ashport never quite dried. Jack stood in the narrow office-sublet above Murphy's Bar, listening to the jukebox leak through the floorboards like a memory he didn't order. On his desk: an envelope that felt wrong in the hands—heavy paper, river-glass token, silver ink that refused to look the same twice.
 
-Murphy's jukebox bled through the floorboards below, some sad song about chances missed and roads not taken. The melody matched his mood. Every case he'd closed in thirty years felt like it was reopening, one envelope at a time.
+He told himself it was a stunt. Someone’s idea of theater. But the glyph string inside wasn’t random. It had cadence. Repetition with intent. A pattern pretending to be graffiti.
 
-The Confessor's latest message sat on his desk. Black paper, red wax, silver ink spelling out accusations he couldn't deny. They knew things. Things he'd buried so deep he'd almost convinced himself they'd never happened.
+Outside, the street sign across the way gleamed wet under a flickering light. For a moment—just long enough to make doubt expensive—Jack could have sworn the paint on it had been retouched into the same angular curve as the letter’s first mark.
 
-He poured two fingers of Jameson and let it burn down his throat. The whiskey didn't help, but it didn't hurt either. At his age, that's about all he could ask for.
-
-His phone buzzed. A text from an unknown number: "The next piece of the puzzle awaits. Are you ready to see what you've been blind to?"
-
-Jack grabbed his coat and headed for the door. Ready or not, the truth was coming. And he had a feeling it wouldn't be kind.
-
-The streets of Ashport welcomed him with their usual indifference. Neon signs flickered in the rain, advertising bars and bail bondsmen and dreams that died a long time ago. He'd walked these streets for three decades. Now they felt like a stranger's territory.
-
-Whatever came next, he'd face it the way he always had: one step at a time, eyes open, hoping the shadows wouldn't swallow him whole.`,
+He pocketed the river-glass. Grabbed his coat. Whatever this was, it wanted him moving. And the city, as always, was willing to be used.`,
           bridgeText: 'The investigation deepens.',
         },
         subchapterB: {
-          title: 'Shadows and Revelations',
-          narrative: `The address led Jack to a part of town he knew too well. Back alleys where witnesses disappeared and evidence got lost. The kind of place where cops like him used to be kings.
+          title: 'The Map That Misbehaves',
+          narrative: `The address in the dead letter led Jack to a service alley behind a shuttered print shop. The kind of place that collected broken pallets, old posters, and secrets that didn't want daylight.
 
-Not anymore.
+He found the mark exactly where the ink implied it would be—etched into a brick like it had always been there. Same angles. Same “split-eye” geometry. He photographed it once. Twice. The second photo was subtly wrong, as if the camera had flinched.
 
-He found what he was looking for in an abandoned warehouse. Files, photographs, documents that should have been destroyed years ago. Someone had been collecting the pieces of cases he'd closed, building a picture he never wanted to see.
+Footsteps sounded, then stopped. Not close enough to be a threat—close enough to be a choice. Jack didn’t turn right away. He let the silence ask its question first.
 
-His hands shook as he flipped through the pages. Names he recognized. Faces he'd forgotten. Evidence that looked too perfect to be real—because it wasn't. Not all of it, anyway.
-
-How many times had he looked at forensic reports without questioning where they came from? How many confessions had he accepted because the physical evidence seemed so airtight?
-
-The warehouse door creaked behind him. Jack spun, hand going to the gun he still carried out of habit more than necessity.
-
-"You're starting to understand." The voice echoed from the shadows. "That's good. That's progress."
-
-He couldn't see them, but he knew who it was. The Confessor. Victoria. Whatever name she was using today.
-
-"Show yourself," Jack said, but his voice lacked conviction.
-
-"Not yet. You're not ready. But soon, Jack. Soon you'll see everything."
-
-When he turned back to the files, his eye caught something new. A photograph he hadn't noticed before. A face from the past that changed everything he thought he knew.
-
-The rain outside seemed to intensify, as if the city itself was crying for all the wrongs that had been done in its name.`,
-          bridgeText: 'The truth begins to emerge.',
+When he finally looked, there was no one. Just a thin strip of reflective tape on the ground, placed like an arrow. And on the tape: a second glyph, smaller, newly drawn, still damp.`,
+          bridgeText: 'The city answers back.',
         },
         subchapterC: {
-          title: 'The Choice',
-          narrative: `By the time Jack pieced together what the documents meant, the sun had set and risen again. He'd spent the night in that warehouse, surrounded by ghosts of cases past, trying to make sense of a career that suddenly felt like a lie.
+          title: 'Two Routes, One Pattern',
+          narrative: `Back upstairs, Jack spread printouts and photos across the desk. The glyphs weren’t art. They were instructions—or warnings—written in a language that only worked if you stood where it wanted you to stand.
 
-The evidence pointed in two directions. Two paths forward. Each one leading to different truths, different consequences.
+He could chase the next mark immediately, follow the tape-arrow deeper into the night, and risk whatever waited at the end of that line.
 
-On one hand, he could follow the paper trail that led to the highest levels of the department. The kind of investigation that would burn bridges and end careers—his included. But it might expose the full scope of what had been done.
+Or he could do the boring thing: call Tom, pull municipal records, compare old signage catalogs, and see if the city had ever worn these shapes before anyone started leaving dead letters.
 
-On the other hand, he could focus on the individual cases. The people who'd been hurt. The innocents who might still be saved. A smaller scope, but perhaps more tangible results.
-
-His phone rang. Sarah's name on the screen. His former partner, the only person in this city he still trusted.
-
-"Jack, I've been doing some digging," she said without preamble. "Whatever you're into, it's bigger than you think. I've got contacts who want to help, but you need to choose your battles carefully."
-
-She was right. She usually was.
-
-The Confessor's game had brought me here, to this moment of decision. Victoria wanted me to understand the cost of certainty, the price of closing cases without questioning the evidence.
-
-Well, Jack understood now. The question was what he was going to do about it.
-
-Two paths. Two possibilities. The rain kept falling, and Ashport kept its secrets, waiting to see which road he'd choose.`,
+Either way, the river-glass token warmed in his pocket as if it remembered a hand that wasn’t his.`,
           bridgeText: 'A crucial decision awaits.',
         },
       },
       complications: {
         subchapterA: {
-          title: 'Walls Closing In',
-          narrative: `Three days since Jack's last lead went cold. Three days of paranoia and dead ends and the growing certainty that someone was watching his every move.
+          title: 'The Quiet Seal',
+          narrative: `By the third day, the pattern had a heartbeat. Jack started noticing where the city tried to look normal—fresh paint on old concrete, new “No Trespassing” signs that didn’t match the city’s standard fonts, officers lingering at intersections as if they were waiting for someone to notice the wrong thing.
 
-The walls of his office felt closer than they used to. Murphy's Bar below had gone quiet—too quiet for this time of night. Even the jukebox had stopped playing.
+He reached the next site and found it already sealed: tape, temporary fencing, and a pair of uniforms pretending not to watch him. The air smelled like wet metal and ozone, the way it did after a transformer blew.
 
-Jack checked the window. A car he didn't recognize sat across the street, engine running, headlights off. Could be nothing. Could be everything.
-
-The Confessor's latest envelope had arrived that morning. This one was different. More urgent. The silver ink spelled out a name he hadn't thought about in years, attached to a case he'd considered closed.
-
-Nothing was closed anymore.
-
-He pulled out the case file he'd kept hidden in his desk drawer. Seven years of dust on the cover, but the details were burned into his memory. Emily Cross. Art student. Missing person case that became a death investigation when they found evidence of suicide.
-
-Only now he was learning they might have been wrong. That she might have survived. That everything he thought he knew about that case—about a lot of cases—was built on foundations of sand.
-
-His phone buzzed. Unknown number again.
-
-"Time is running out, Jack. The people who built this system are getting nervous. They know you're asking questions. They're taking steps to ensure those questions stop."
-
-The line went dead before he could respond.
-
-Jack grabbed his coat and gun. Whatever was coming, he couldn't face it sitting still. The streets of Ashport awaited, rain-slicked and treacherous as always.`,
-          bridgeText: 'The stakes continue to rise.',
+Jack didn’t have proof. Not yet. But he had the feeling of being gently herded, like a coin rolling toward a gutter.`,
+          bridgeText: 'The stakes rise.',
         },
         subchapterB: {
-          title: 'Betrayal\'s Edge',
-          narrative: `The meeting was set for midnight. An informant who claimed to have proof of evidence tampering going back two decades. The kind of information that could bring down half the department.
+          title: 'Someone Else Holds the Key',
+          narrative: `Silas Reed answered Jack’s questions with jokes that landed too quickly. Every deflection was polished. Every laugh was a door closing.
 
-Jack should have known it was too good to be true.
+'You’re chasing a doodle,' Silas said, eyes flicking to the folder before Jack even opened it. 'Let it go.'
 
-The warehouse was empty when he arrived. No informant. No evidence. Just shadows and the echo of footsteps that weren't his.
-
-"You came alone," a voice said from the darkness. "That was either brave or stupid."
-
-Jack recognized the voice. Someone he'd trusted. Someone he'd worked with for years. The betrayal hit harder than any bullet could.
-
-"Why?" Jack asked, though part of him already knew the answer.
-
-"Because some secrets are worth killing for, Jack. And you're getting too close to all of them."
-
-The first shot went wide. The second one would have found its mark if he hadn't moved when he did. Years of instinct, survival reflexes that wouldn't quit even when his conscious mind had given up.
-
-He ran. Through the warehouse, out a back exit, into the rain-soaked streets of Ashport. Behind him, he could hear pursuit. Ahead of him, only uncertainty.
-
- The city that had been his home for thirty years had become a maze of enemies. Every shadow held a potential threat. Every familiar face might be hiding treachery.
-
-But he kept moving. Because stopping meant dying, and he wasn't ready to die. Not yet. Not until he knew the full truth about what he'd helped build with his career of certainty and closed cases.
-
-The rain washed the blood from his hands—he'd cut himself on broken glass during the escape—but it couldn't wash away the stain on his conscience. That would take more than water.`,
-          bridgeText: 'Trust shatters.',
+Jack watched the flick—small, automatic, practiced. The kind of tell you only have if you’ve been trained to hide a bigger one. The kind of tell you only have if someone taught you what happens when you don’t.`,
+          bridgeText: 'Pressure tightens.',
         },
         subchapterC: {
-          title: 'Point of No Return',
-          narrative: `Safe house. The term felt like a joke. Nowhere was safe anymore.
+          title: 'Name the Thing, Lose It',
+          narrative: `That night, the dead letter arrived without a knock. It was simply there, as if the building itself had delivered it.
 
-I sat in the darkness of a motel room on the edge of town, nursing my wounds and my whiskey in equal measure. The Confessor had been right all along. The system I'd served for thirty years was rotten at its core, and I'd been one of the instruments of that rot.
+Silver ink. Two lines this time. The first was a question Jack refused to answer out loud. The second was a rule:
 
-Two options lay before me now. Two ways forward from this point of no return.
+'Do not name it yet.'
 
-The first: go public. Take everything I knew to the press, the feds, anyone who would listen. Burn it all down and let the chips fall where they may. It would mean the end of my life as I knew it—prison, probably, or worse—but it might be enough to expose the full scope of the corruption.
-
-The second: go underground. Disappear into the shadows and work from there. Build a case so airtight that no one could ignore it or silence it. It would take longer, and more people might suffer in the meantime, but it offered a chance at a more complete victory.
-
-Neither option was good. Both came with costs I wasn't sure I was willing to pay.
-
-My phone—a burner now, my old one smashed in a storm drain—buzzed with an incoming message.
-
-"The choice is yours, Jack. You've always had choices. That's what makes this meaningful."
-
-Victoria. The Confessor. My tormentor and, in a twisted way, my teacher.
-
-Outside, the rain continued to fall on Ashport. The city didn't care about my moral dilemmas. It would keep turning, keep churning through lives and cases and dreams, regardless of what I chose.
-
-But I had to choose. That was the one certainty left in a world that had become nothing but questions.`,
+Jack stared at the words until the paper felt like it might blink. Then he wrote the glyphs again, slower, careful, like copying someone else’s handwriting in a language that could punish mistakes.`,
           bridgeText: 'A defining choice emerges.',
         },
       },
       confrontations: {
         subchapterA: {
-          title: 'Face to Face',
-          narrative: `The penthouse was everything I expected and nothing I was prepared for. Glass and steel rising above Ashport like a monument to power and secrets. Victoria Blackwell's domain.
+          title: 'Cartographer at Midnight',
+          narrative: `Victoria Blackwell’s building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
 
-She was waiting for me when I stepped off the elevator. Red dress, confident smile, eyes that had seen things no one should have to see.
+She received him as if he were expected, because he was. No handshake. No small talk. Just a calm, observant gaze and a folder of photos that Jack had never shown anyone.
 
-"Jack. I wondered when you'd come."
+'You followed the line,' she said. Not praise. Not accusation. Fact.
 
-"We need to talk."
+Jack set the river-glass on her table. 'Tell me what this is.'
 
-"We've been talking for weeks. Through letters, through breadcrumbs, through the ruins of your career." She gestured to a chair. "But yes. It's time for a more direct conversation."
+Victoria’s fingers hovered over it, not touching. 'A proof. And a leash, if you let it be.'
 
-I sat. She poured drinks—Jameson for me, something amber for herself. She knew my preferences. She knew everything about me.
-
-"Emily Cross," I said. "That's who you really are."
-
-Her smile flickered, just for a moment. "Emily Cross died seven years ago. You declared it yourself. I'm someone else now. Someone who was forged in the fire of that death."
-
-"I closed your case because the evidence pointed to suicide. I had no reason to—"
-
-"You had every reason," she cut me off. "You had witnesses you dismissed because they were homeless or addicted or simply inconvenient. You had inconsistencies you ignored because the forensic report was so clean. So perfect."
-
-She leaned forward, and for the first time, I saw the scars. Faint lines on her wrists and neck, souvenirs from whatever hell she'd escaped.
-
-"Tom Wade manufactured evidence for your cases, Jack. For twenty years. And you never questioned it once."
-
-The name hit like a punch. Tom Wade. My best friend. The forensic examiner I'd trusted with my career.
-
-"That's impossible," I heard myself say, but even as the words left my mouth, I knew they were a lie.`,
+Jack didn’t like the certainty in her voice. It sounded like someone who had already seen where his choices went.`,
           bridgeText: 'The confrontation begins.',
         },
         subchapterB: {
-          title: 'Truth Unleashed',
-          narrative: `The files Victoria showed me that night would have broken a weaker man. Maybe they broke me too—I'm still not sure.
+          title: 'Rules With Teeth',
+          narrative: `Victoria didn’t explain. She demonstrated.
 
-Twenty years of manufactured evidence. Planted fingerprints, fabricated forensic reports, confessions coerced using "evidence" that never existed. A systematic corruption of justice that had sent dozens of people to prison.
+She slid a sheet of paper toward Jack: a map of a block he knew. He’d walked it. It had a grocery store, a bank, a bus stop. Victoria’s version had something else—a narrow line between two buildings that, on any normal map, simply didn’t exist.
 
-People like Eleanor Bellamy, rotting in Greystone for a murder she didn't commit.
+'Two maps,' she said. 'One you’re allowed to believe. One that keeps breaking your attention.'
 
-People like Marcus Thornhill, who died in a cell because he couldn't live with the shame of a conviction built on lies.
+Jack forced himself to breathe. He could still tell himself it was a con. A hallucination. A clever edit.
 
-And at the center of it all: Tom Wade. My friend. My partner in so many investigations. The man I'd trusted more than anyone else in the world.
-
-"Why?" I asked Victoria—Emily—whoever she was now. "Why do all this? Why not just go to the authorities?"
-
-"I tried," she said, and her voice carried the weight of years. "Seven years ago, I tried to tell people what was happening. You know what I got for my trouble? Grange. Deputy Chief Grange, who kept me in a basement for months, who did things—" She stopped, composed herself. "The authorities are part of the problem, Jack. They always have been."
-
-"So you became the Confessor. The anonymous letters, the chess pieces, the elaborate game."
-
-"I became what I needed to be. Someone with power. Someone who couldn't be silenced or disappeared." She met my eyes. "And I needed you to understand. To really understand what certainty costs when it's built on lies."
-
-I understood now. God help me, I understood.
-
-But understanding wasn't enough. Understanding didn't free the innocent people still in prison. It didn't bring back the ones who had died.
-
-"What do you want from me?" I asked.
-
-"I want you to choose, Jack. Like you've been choosing all along. Only this time, choose with your eyes open."`,
-          bridgeText: 'The full truth emerges.',
+Then the silver ink shifted under the light like it was trying to align with something outside the room.`,
+          bridgeText: 'The rules surface.',
         },
         subchapterC: {
-          title: 'The Final Choice',
-          narrative: `Dawn broke over Ashport as I left Victoria's penthouse. The rain had finally stopped, but the city still felt heavy with moisture and secrets.
+          title: 'Cross or Retreat',
+          narrative: `Victoria gave him a choice, because she understood the psychology of cages.
 
-I had the files now. Evidence of everything—the manufactured forensics, the wrongful convictions, the corrupt officials who had enabled it all. Enough to bring down careers, institutions, maybe even the entire justice system of Ashport.
+She could take him to a threshold—show him something he couldn’t unsee—and in exchange, he would owe her. Not money. Movement. Compliance. The shape of his next week.
 
-But Victoria had given me a choice. She always did.
+Or she could let him leave with nothing but the paper and his doubts, and the city would keep answering him in glitches and near-misses until he either broke the pattern or it broke him.
 
-Option one: release everything immediately. Go nuclear. The innocent would be freed, the guilty exposed, but the chaos would be immense. Trials overturned, criminals released alongside the wrongly convicted, public faith in law enforcement destroyed for a generation.
-
-Option two: work within the system. Use the evidence strategically, case by case. Free the innocents first, then build toward the larger accountability. Slower, more controlled, but with less collateral damage.
-
-Neither option was perfect. Neither option could undo all the damage that had been done.
-
-My phone rang. Sarah.
-
-"Jack, I've been talking to the FBI. Agent Martinez. He's investigating the corruption, has been for months. He wants to meet—off the books, somewhere safe."
-
-Federal involvement. Another layer of complexity. Another set of interests and agendas to navigate.
-
-"Tell him I'll think about it," I said.
-
-"Jack, whatever you're planning—"
-
-"I know, Sarah. I know."
-
-I hung up and looked out at the city I'd served for thirty years. The city I'd helped corrupt with my certainty and my closed cases.
-
-Two paths forward. Two versions of justice. And a choice that would define everything I'd ever believed about right and wrong.
-
-The sun rose higher, burning away the fog, and I made my decision.`,
+Jack looked at the river-glass. Then at the map that wasn’t a map. He hated that both felt heavier than any weapon.`,
           bridgeText: 'The decisive moment arrives.',
         },
       },
       resolution: {
         subchapterA: {
-          title: 'Reckoning',
-          narrative: `The courtroom was packed. Every seat filled with journalists, victims' families, curious citizens who wanted to see justice—real justice—finally served.
+          title: 'Anchor Names',
+          narrative: `The pattern finally spoke in proper nouns. Names that weren’t on the news. Names that didn’t belong together.
 
-I sat in the witness box, looking out at faces I recognized. Eleanor Bellamy, finally free after eight years. Claire Thornhill, daughter of the man who died in custody because of evidence I helped create. Sarah Reeves, my former partner, who had become something greater than I ever was.
+Jack read them in a low voice, as if the building might be listening: people who vanished near sites marked by the same glyph family. Different lives. Same absence. Same geometry.
 
-And Tom Wade. Sitting at the defendant's table, looking smaller than I'd ever seen him. The man who had been my best friend for thirty years. The man who had manufactured evidence for twenty of those years while I looked the other way.
-
-The prosecutor was thorough. The questions were hard. But I answered them all, holding nothing back. Every case I should have questioned. Every witness I should have believed. Every moment I chose certainty over truth.
-
-"Detective Halloway," the prosecutor said finally, "in your professional opinion, how many wrongful convictions resulted from the evidence manipulation you've described?"
-
-I took a breath. "At least twenty that I know of. Possibly more."
-
-The murmur that ran through the courtroom was like a wave. Twenty lives. Twenty people who lost years, decades, everything—because I trusted a friend more than I trusted my own doubts.
-
-Victoria wasn't there. Emily Cross had disappeared again, her work done. She'd forced me to see the truth, and now the truth was forcing everyone else to see it too.
-
-Whether that made her a hero or a villain, I still wasn't sure. Maybe it didn't matter. Maybe all that mattered was what came next.
-
-The trial would take months. The appeals would take years. But for the first time in a long time, I felt like we were moving in the right direction.`,
-          bridgeText: 'Justice begins.',
+He didn’t have a neat answer. But he had direction. And direction, in a city built to mislead, was its own kind of miracle.`,
+          bridgeText: 'The pattern clarifies.',
         },
         subchapterB: {
-          title: 'Aftermath',
-          narrative: `Six months after the trial began, Ashport was a different city.
+          title: 'The City Remembers',
+          narrative: `Ashport began to feel less like a backdrop and more like a participant. Streetlights timed themselves to his approach. Construction fences shifted overnight. A mural gained a new line, then lost it again.
 
-The reforms came faster than anyone expected. New oversight committees. Independent forensic review boards. Mandatory recording of interrogations. The system that had allowed people like Tom Wade to operate unchecked was being dismantled, piece by piece.
-
-Not everyone was happy about it. The old guard fought back, called me a traitor, tried to paint the whole thing as a witch hunt. Some of them succeeded in escaping justice—retirement, resignations, plea deals that let them walk away with their pensions intact.
-
-But some of them didn't. Deputy Chief Grange was in prison now, finally paying for the things he'd done. Helen Price, the prosecutor who'd built her career on manufactured evidence, had resigned in disgrace. Tom Wade faced twenty years, and this time the evidence against him was real.
-
-I visited Eleanor Bellamy on the day she walked out of Greystone. Eight years of her life, stolen by a crime she didn't commit.
-
-"I should apologize," I said.
-
-She looked at me for a long moment. "Apologies don't give me back the time. But they're a start."
-
-"What will you do now?"
-
-"Live," she said simply. "Try to remember what that feels like."
-
-I watched her walk away, her daughter Maya at her side, and felt something I hadn't felt in years. Not redemption—I wasn't sure I deserved that. But purpose, maybe. A reason to keep going.
-
-Sarah found me later that night, in Murphy's Bar, working on my third Jameson.
-
-"The Conviction Integrity Project got funded," she said, sliding onto the stool next to me. "Federal grant. We can start reviewing cases next month."
-
-I raised my glass. "To second chances."
-
-She clinked her water against it. "To getting it right this time."`,
-          bridgeText: 'A new chapter begins.',
+Jack stopped pretending the anomalies were nothing. He started treating them like witnesses: unreliable, frightened, and telling the truth sideways.`,
+          bridgeText: 'A new understanding forms.',
         },
         subchapterC: {
-          title: 'The End of Certainty',
-          narrative: `One year later, I stood at my window again, watching the rain fall on Ashport.
+          title: 'Keep the Line',
+          narrative: `Another dead letter. No wax this time. Just silver ink and the river-glass token, returned as if the city itself had decided he’d earned it.
 
-Some things never changed. The city was still corrupt, still broken in a thousand small ways. But some things had changed. The justice system was cleaner than it had been in decades. Innocent people were free. Guilty people were paying for their crimes.
+'You have choices,' the note read. 'But you don’t have infinity.'
 
-I had paid too, in my own way. The years of whiskey and certainty had caught up with me. The doctors said my liver was shot, my heart wasn't far behind. Maybe I had a few years left, maybe less.
-
-But I was at peace with it. More at peace than I had any right to be.
-
-A knock at the door interrupted my reflection. When I opened it, there was no one there—just a black envelope on the floor. Red wax seal, silver ink.
-
-My heart jumped. Victoria. Emily. The Confessor.
-
-I opened it with trembling hands.
-
-"Jack—
-
-The game is over, but the work continues. Every day, somewhere, a case is closed wrong. A witness is dismissed. A certainty is chosen over truth.
-
-You can't fix them all. But you can try.
-
-The world needs detectives who question. Who doubt. Who choose uncertainty over the comfortable lie.
-
-Be that detective. For whatever time you have left.
-
-Goodbye, Jack. It's been educational.
-
-— E.C."
-
-I read the letter three times before I set it down. Then I poured myself a Jameson—just one, the doctors allowed me that—and watched the rain.
-
-Tomorrow, I'd start again. A new case. A new chance to get it right.
-
-That was the thing about certainty: once you lost it, you never got it back. But maybe that wasn't such a bad thing. Maybe doubt was what made us human.
-
-Maybe it was what made us good.
-
-The rain kept falling, and I kept watching, and somewhere out there, the truth kept waiting to be found.`,
-          bridgeText: 'The journey concludes.',
+Jack sat with that until the jukebox downstairs switched songs. Then he gathered his papers, his photos, his half-maps, and stepped back into the damp streets—ready to follow a line that might not want to be followed.`,
+          bridgeText: 'The journey continues.',
         },
       },
     };
@@ -2700,19 +2510,15 @@ The rain kept falling, and I kept watching, and somewhere out there, the truth k
    * Generate minimal fallback when no template is available
    */
   _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
-    const minimalNarrative = `The rain fell on Ashport as it always did—relentlessly, indifferently. Jack pulled his coat tighter and stepped into the night.
+    const minimalNarrative = `Ashport held onto moisture and reflected light in the cracks of its streets. Jack stood at the window above Murphy's Bar, watching the city pretend it was only a city.
 
-Another day, another piece of the puzzle. The Confessor's game continued, each envelope bringing him closer to truths he wasn't sure he wanted to face. But there was no turning back now. Not after everything he'd seen.
+Another day, another piece of the pattern. The dead letters and their silver ink kept arriving like punctuation, forcing him to look twice at things he used to pass without thinking.
 
-Murphy's Bar was quiet below his office. The usual crowd had dispersed, leaving only ghosts and memories. Jack poured a glass of Jameson and let the familiar burn keep him anchored in the present.
+Tomorrow would bring new challenges. New choices. New opportunities to follow the line—or break it on purpose.
 
-Tomorrow would bring new challenges. New choices. New opportunities to get things right—or to fail, as he had failed so many times before.
+For now, Jack let himself breathe. He gathered his notes, pocketed the river-glass token if it was still with him, and tried not to give the darkness a name it could remember.
 
-But that was tomorrow. Tonight, Jack would rest. Gather his strength. Prepare for whatever came next.
-
-The city outside his window sparkled with neon and rain. Beautiful and treacherous, like everything else in Ashport. Jack watched it for a long time before finally turning away.
-
-Whatever the morning brought, he'd face it. That was all he could promise himself anymore.`;
+Whatever the morning brought, he'd meet it with open eyes. That was all he could promise himself.`;
 
     const result = {
       title: 'The Investigation Continues',
@@ -2723,7 +2529,7 @@ Whatever the morning brought, he'd face it. That was all he could promise himsel
       chapterSummary: `Chapter ${chapter}.${subchapter}: The investigation continues through Ashport.`,
       jackActionStyle: 'balanced',
       jackRiskLevel: 'moderate',
-      puzzleCandidates: ['RAIN', 'TRUTH', 'SHADOW', 'NIGHT', 'WHISKEY', 'PUZZLE', 'CHOICE', 'GHOST'],
+      puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'PATTERN', 'SILVER', 'GLASS', 'LINE'],
       briefing: {
         summary: 'Continue the investigation.',
         objectives: ['Follow available leads', 'Consider your options'],
@@ -2834,22 +2640,16 @@ Whatever the morning brought, he'd face it. That was all he could promise himsel
       }
     }
 
-    // Build phase-appropriate narrative
-    const narrative = `The rain fell on Ashport the way it always did, relentless and indifferent to the business of men. Jack stepped out onto Morrison Street, his coat collar turned up against the chill.
+    // Build phase-appropriate narrative (modern mystery thriller + Under-Map)
+    const narrative = `Ashport held onto moisture like it held onto secrets. Jack paused at the top of the stairs above Murphy's Bar, the jukebox downstairs switching tracks mid-chorus as if it had noticed him listening.
 
-Day ${chapter} of this twisted game. The Confessor's black envelopes had pulled Jack deeper into the corruption he had spent thirty years pretending not to see. Every case he had closed with such certainty now felt like a door he should have left open.${threadAcknowledgment}
+Day ${chapter} of a pattern that refused to stay on paper. The dead letters and their silver ink had pulled Jack into questions he couldn’t un-ask. Every glyph he traced seemed to anticipate him—waiting in alleys, on signage, in places that should have been blank.${threadAcknowledgment}
 
-Jack moved ${jackApproach}. After everything he had uncovered, there was no other way. The evidence was piling up, each piece more damning than the last. Tom Wade, his best friend for three decades, at the center of a web of manufactured truth. And Jack, the instrument of their justice, the fool who had believed every perfect conviction.
+Jack moved ${jackApproach}. There was no clean way through this, only decisions with costs. The city’s official story was smooth; the other story was jagged, written in angles and omissions. Somewhere out there, Victoria Blackwell was shaping the route—if not his thoughts, then at least his steps.
 
-Murphy's Bar beckoned below his office, its familiar glow promising the comfort of Jameson and solitude. But tonight there was no comfort to be had. Only the cold certainty that he was ${phaseTone}.
+He checked the time without meaning to. Not for punctuality—for proof that time still behaved. It did. Mostly.
 
-The streets of Ashport stretched before him, neon reflections bleeding into wet pavement. Somewhere out there, Victoria Blackwell watched. Emily Cross, the woman Jack had declared dead seven years ago while she still drew breath in Grange's basement. She had every right to hate him. Every right to make him understand what his arrogant certainty had cost.
-
-Jack checked his watch. Time was running out, as it always seemed to now. Each day brought new revelations, new wounds to old scars. The five innocents he had helped convict haunted every step he took. Eleanor Bellamy rotting in Greystone for a murder she did not commit. Marcus Thornhill driven to suicide by forged documents. Dr. Lisa Chen, whose career he had helped destroy for telling the truth.
-
-His hand found the cold metal of the door handle. Whatever waited on the other side, he'd face it. That was all he could promise himself anymore.
-
-The city held its breath. So did Jack.`;
+Jack set his hand on the door handle, feeling the cold bite of metal through his palm. Whatever waited on the other side, he would meet it with open eyes, even if he couldn’t yet name what he was seeing.`;
 
     // Build the fallback entry
     const adapted = {
@@ -2860,11 +2660,11 @@ The city held its breath. So did Jack.`;
       previously: previousRecap,
       narrative: narrative,
       branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The weight of past mistakes pressed down as the truth drew closer.`,
+      chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The pattern tightened and demanded a response.`,
       jackActionStyle: personality.riskTolerance === 'high' ? 'direct' :
                        personality.riskTolerance === 'low' ? 'cautious' : 'balanced',
       jackRiskLevel: personality.riskTolerance || 'moderate',
-      puzzleCandidates: ['RAIN', 'TRUTH', 'SHADOW', 'EVIDENCE', 'CONFESSION', 'BETRAYAL', 'JUSTICE', 'GUILT'],
+      puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'SILVER', 'GLASS', 'ANCHOR', 'PATTERN'],
       briefing: {
         summary: `Continue the investigation through this critical phase.`,
         objectives: ['Process the latest revelations', 'Decide on next steps', 'Face the consequences'],
@@ -2887,7 +2687,7 @@ The city held its breath. So did Jack.`;
     if (isDecisionPoint) {
       const aggressiveOption = personality.riskTolerance === 'high' ? 'A' : 'B';
       adapted.decision = {
-        intro: ['Two paths diverged before me, each leading to different truths, different costs.'],
+        intro: ['Two paths diverged before Jack, each leading to different truths, different costs.'],
         options: [
           {
             key: 'A',
@@ -3296,7 +3096,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
     const response = await llmService.complete(
       [{ role: 'user', content: arcPrompt }],
       {
-        systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive noir mystery.',
+        systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive mystery thriller with a hidden fantasy layer.',
         maxTokens: 4000,
         responseSchema: arcSchema,
       }
@@ -3335,30 +3135,30 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       playerPersonality: personality.riskTolerance || 'balanced',
       overallTheme: theme,
       chapterArcs: [
-        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First innocent discovered', tensionLevel: 4, endingHook: 'A new lead emerges', personalStakes: 'Jack\'s belief that he was a good detective - the foundation of his self-image', emotionalAnchor: 'Seeing the first victim\'s face and knowing he put them there' },
-        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Evidence of conspiracy', tensionLevel: 5, endingHook: 'Trust begins to fracture', personalStakes: 'Jack\'s reputation among the people who still respect him', emotionalAnchor: 'A former colleague looking at him differently' },
-        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Second innocent revealed', tensionLevel: 5, endingHook: 'The pattern becomes clear', personalStakes: 'The last shred of certainty Jack has about his career', emotionalAnchor: 'Reading a case file he was proud of and seeing the lies in it' },
-        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Betrayal discovered', tensionLevel: 6, endingHook: 'An ally becomes suspect', personalStakes: 'Sarah\'s trust - the last real partnership Jack has left', emotionalAnchor: 'Sarah\'s silence when she should defend him' },
-        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Third innocent confronted', tensionLevel: 7, endingHook: 'Stakes escalate dramatically', personalStakes: 'Jack\'s sense of purpose - what is he if not a detective?', emotionalAnchor: 'Looking in a mirror and not recognizing the man looking back' },
-        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'The web tightens', tensionLevel: 7, endingHook: 'No one can be trusted', personalStakes: 'The last relationship that still matters - Tom or Sarah', emotionalAnchor: 'Realizing someone he trusted has been lying to him' },
-        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Major revelation', tensionLevel: 8, endingHook: 'The truth emerges', personalStakes: 'Jack\'s physical safety - they\'re coming for him now', emotionalAnchor: 'The moment he realizes he might not survive this' },
-        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Fourth innocent found', tensionLevel: 8, endingHook: 'Confrontation looms', personalStakes: 'Jack\'s freedom - arrest warrant or worse', emotionalAnchor: 'Becoming the thing he spent his career hunting' },
-        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'Final pieces fall', tensionLevel: 9, endingHook: 'The mastermind revealed', personalStakes: 'Jack\'s life - they will kill him if he continues', emotionalAnchor: 'Choosing to continue knowing he might die' },
-        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation', tensionLevel: 10, endingHook: 'Justice or vengeance', personalStakes: 'Jack\'s chance at redemption - this is his last opportunity to make things right', emotionalAnchor: 'Facing Victoria/Emily and understanding what he cost her' },
-        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'The story concludes', personalStakes: 'Jack\'s legacy - how will he be remembered?', emotionalAnchor: 'The faces of everyone he failed, and the question of whether he\'s made it right' },
+        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: 'Jack\'s grip on “normal” reality', emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
+        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria’s rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack’s trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
+        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack’s ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
+        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn’t exist', personalStakes: 'Jack’s relationship with Tom and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
+        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack’s safety', emotionalAnchor: 'Crossing a line he can’t uncross' },
+        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Grange tightens containment', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack’s moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
+        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria’s agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack’s autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
+        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack’s life and someone else’s', emotionalAnchor: 'A rescue attempt goes wrong' },
+        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: 'What Jack is willing to break', emotionalAnchor: 'Accepting that rules can be weaponized' },
+        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city’s shape', personalStakes: 'Jack’s identity: observer or participant', emotionalAnchor: 'Owning the choice that changes everything' },
+        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: 'Jack’s legacy and what he leaves open', emotionalAnchor: 'A quiet cost paid in full' },
       ],
       characterArcs: {
-        jack: 'From guilt-ridden detective to seeker of truth',
-        victoria: 'The mysterious force driving revelation',
-        sarah: 'Partner whose loyalty will be tested',
-        tomWade: 'Friend whose betrayal runs deepest',
+        jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
+        victoria: 'Cartographer who tests Jack’s capacity to read rules without becoming a weapon',
+        sarah: 'Pragmatic ally whose patience has limits',
+        tomWade: 'Friend with access to records and secrets he doesn’t want named',
       },
       consistencyAnchors: [
-        'Jack Halloway is a retired detective haunted by his past',
-        'Victoria Blackwell is the Midnight Confessor (secretly Emily Cross)',
-        'Tom Wade has been manufacturing evidence for 20 years (friends with Jack for 30 years)',
-        'Five innocents were wrongfully convicted',
-        'Eleanor Bellamy spent 8 years in Greystone prison',
+        'Jack Halloway is in his late 20s/early 30s and does NOT start with Under-Map knowledge',
+        'Victoria Blackwell is the Midnight Cartographer (dead letters, silver ink, rules)',
+        'The Under-Map is real; the first undeniable reveal happens at the end of 2A',
+        'Glyphs behave like a language with constraints; do not “magic-system” explain—show',
+        'Anchor disappearances form a deliberate pattern',
       ],
       generatedAt: new Date().toISOString(),
     };
@@ -3516,7 +3316,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     const response = await llmService.complete(
       [{ role: 'user', content: outlinePrompt }],
       {
-        systemPrompt: 'You are outlining a single chapter of an interactive noir mystery. Ensure the three subchapters flow as one seamless narrative.',
+        systemPrompt: 'You are outlining a single chapter of an interactive mystery thriller. Ensure the three subchapters flow as one seamless narrative.',
         maxTokens: 2000,
         responseSchema: outlineSchema,
       }
@@ -3562,10 +3362,10 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       chapter,
       pathKey,
       isFallback: true,
-      summary: `Chapter ${chapter}: Jack continues his investigation into the conspiracy.`,
-      openingMood: 'Noir atmosphere with building tension',
+      summary: `Chapter ${chapter}: Jack continues his investigation into the symbols and the hidden layer beneath Ashport.`,
+      openingMood: 'Mystery-thriller atmosphere with building unease',
       openingCausality: 'The chapter opens by showing the immediate consequence of the player’s last decision (location, character reaction, and next action).',
-      mustReference: ['Ashport rain', "Murphy's jukebox below Jack’s office", 'The Midnight Confessor’s black envelope', 'One named character from the current investigation'],
+      mustReference: ['Ashport damp/reflections', "Murphy's jukebox below Jack’s office", 'A dead letter with silver ink', 'One named character from the current investigation'],
       subchapterA: {
         focus: `Opening: ${focus}`,
         keyBeats: [
@@ -3780,10 +3580,10 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     ).slice(0, 5);
     const charactersInvolved = decisionData?.options?.flatMap(o => o.characters || []) || [];
 
-    const consequencePrompt = `Generate narrative consequences for a player decision in a noir detective story.
+    const consequencePrompt = `Generate narrative consequences for a player decision in an interactive mystery thriller with a hidden fantasy layer (the Under-Map).
 
 ## STORY CONTEXT
-This is "Dead Letters" - Jack Halloway, a retired detective, is re-examining cases he closed after receiving letters from "The Midnight Confessor." He's discovering his best friend Tom Wade manufactured evidence for 20 years, sending innocent people to prison.
+This is "Dead Letters" - Jack Halloway, a young contract investigator/records-clerk-turned-gig-worker, is pulled into a hidden reality threaded through Ashport's streets. Victoria Blackwell ("The Midnight Cartographer") sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
 
 ## CHAPTER ${chapter} NARRATIVE LEADING TO DECISION
 ${narrativeContext ? `The following is the end of the narrative leading to this choice:
@@ -3842,7 +3642,7 @@ Generate realistic, specific consequences based on the actual narrative content.
       const response = await llmService.complete(
         [{ role: 'user', content: consequencePrompt }],
         {
-          systemPrompt: 'You are generating narrative consequences for player choices in a noir detective mystery.',
+          systemPrompt: 'You are generating narrative consequences for player choices in a mystery thriller with a hidden fantasy layer.',
           maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
           responseSchema: consequenceSchema,
         }
@@ -4037,12 +3837,8 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Check for contradictory facts
     const factText = checkpoint.accumulatedFacts.join(' ').toLowerCase();
 
-    // Timeline contradictions
-    if (factText.includes('20 years') && factText.includes('tom wade') && factText.includes('friend')) {
-      if (!factText.includes('30 years')) {
-        issues.push('Timeline contradiction: Tom Wade friendship should be 30 years');
-      }
-    }
+    // Avoid hardcoding noir-era timeline assertions here. Canon is enforced via
+    // ABSOLUTE_FACTS + CONSISTENCY_RULES in the prompt and by downstream validators.
 
     // Character state contradictions
     if (checkpoint.characterStates.jackPersonality) {
@@ -4998,10 +4794,10 @@ Generate realistic, specific consequences based on the actual narrative content.
     const locationPatterns = [
       /(?:at|in|inside|outside|near|entered|stepped into|arrived at)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street))?)/g,
       /Murphy's Bar/gi,
-      /Greystone/gi,
-      /Blueline Diner/gi,
-      /Victoria's penthouse/gi,
-      /Bellamy Estate/gi,
+      /Ashport Archive/gi,
+      /Sentinel Library/gi,
+      /Brineglass Viaduct/gi,
+      /Victoria's building/gi,
     ];
 
     let currentLocation = 'Unknown location';
@@ -5022,7 +4818,7 @@ Generate realistic, specific consequences based on the actual narrative content.
       night: /\b(night|midnight|dark|neon|streetlights|late)\b/i,
     };
 
-    let timeOfDay = 'night'; // Default noir atmosphere
+    let timeOfDay = 'night'; // Default thriller atmosphere
     for (const [time, pattern] of Object.entries(timePatterns)) {
       if (pattern.test(narrative)) {
         timeOfDay = time;
@@ -5031,8 +4827,7 @@ Generate realistic, specific consequences based on the actual narrative content.
 
     // Extract characters present in the final scene
     const characterNames = [
-      'Sarah', 'Victoria', 'Eleanor', 'Tom Wade', 'Wade', 'Silas', 'Helen Price',
-      'Maya', 'Claire', 'Marcus Webb', 'Martinez', 'Rebecca Moss', 'Grange'
+      'Jack', 'Tom', 'Victoria', 'Grange', 'Silas', 'Sarah', 'Maris', 'Niko', 'Saffron', 'Eleanor'
     ];
     const presentCharacters = characterNames.filter(name =>
       new RegExp(`\\b${name}\\b`, 'i').test(lastParagraphs)
@@ -5076,12 +4871,12 @@ Generate realistic, specific consequences based on the actual narrative content.
         knows: [],
         suspects: [],
         doesNotKnow: [
-          'Victoria Blackwell is Emily Cross',
-          'The full extent of Tom Wade\'s evidence manufacturing',
+          'What the Under-Map truly is (until the end of 2A)',
+          'Victoria Blackwell’s full agenda and constraints',
         ],
       },
       sarah: { knows: [], suspects: [] },
-      victoria: { knows: ['Everything about Jack\'s cases', 'All five innocents'], suspects: [] },
+      victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack’s likely routes and choices'], suspects: [] },
     };
 
     // Scan narratives for revelation patterns
@@ -5120,10 +4915,11 @@ Generate realistic, specific consequences based on the actual narrative content.
   _extractEvidenceInventory(previousChapters) {
     const evidence = [];
     const evidencePatterns = [
-      /Jack (?:took|grabbed|pocketed|kept|collected|received|found) (?:the |a )?(.+?(?:letter|envelope|photo|document|file|ledger|key|card|note|paper|folder|evidence|recording))/gi,
-      /(?:handed|gave|passed) Jack (?:the |a )?(.+?(?:letter|envelope|photo|document|file|ledger|key|card|note|paper|folder))/gi,
-      /black envelope/gi,
-      /Thornhill [Ll]edger/gi,
+      /Jack (?:took|grabbed|pocketed|kept|collected|received|found) (?:the |a )?(.+?(?:dead\s+letter|letter|envelope|photo|document|file|key|card|note|paper|folder|token|map|printout))/gi,
+      /(?:handed|gave|passed) Jack (?:the |a )?(.+?(?:dead\s+letter|letter|envelope|photo|document|file|key|card|note|paper|folder|token|map|printout))/gi,
+      /dead letter/gi,
+      /river-?glass/gi,
+      /\bglyph\b/gi,
     ];
 
     for (const ch of previousChapters) {
@@ -5391,7 +5187,7 @@ ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
           return Number.isFinite(ch) ? ch < chapter : true;
         })
       : [];
-    const priorChoicesHash = this._hashChoiceHistory(priorChoices);
+    const priorChoicesHash = this._hashChoiceHistoryForCache(priorChoices);
 
     // Use a logical key to avoid collisions; store the actual cache key separately.
     const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
@@ -5403,7 +5199,7 @@ ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
     }
 
     const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
-    const cacheKey = `story_chStart_c${chapter}_${safePath}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash.slice(0, 64)}`;
+    const cacheKey = `story_chStart_c${chapter}_${safePath}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
 
     const existing = await llmService.getCache(cacheKey);
     if (existing) {
@@ -6060,7 +5856,7 @@ ${formatExamples(allies.eleanorBellamy.voiceAndStyle.examplePhrases)}
 ### TOM WADE
 Role: ${villains.tomWade.role}
 Voice: ${villains.tomWade.voiceAndStyle?.speaking || 'Friendly surface with technical jargon as deflection'}
-Note: Jack's best friend for 30 years who manufactured evidence
+Note: Jack's longtime friend (met ~12 years ago) who knows city records/symbol reports better than he admits
 
 ### SILAS REED
 Role: ${villains.silasReed.role}
@@ -6240,7 +6036,7 @@ ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.agg
 Same scene, written for aggressive Jack:
 - Entering a dangerous location: "Jack kicked the door open before better judgment could catch up. The warehouse stank of rust and old violence. Good. He was in the mood for both."
 - Confronting a suspect: "'Cut the crap,' Jack said, grabbing his collar. 'I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry.'"
-- Internal monologue: "Thirty years of being the patient detective. Look where it got him. This time, he wasn't waiting for permission."
+- Internal monologue: "He'd spent years being the patient one. Look where it got him. This time, he wasn't waiting for permission."
 - DO: Push, confront, act first and deal with consequences later
 - DON'T: Hesitate, gather excessive evidence, wait patiently`;
     } else if (personality.riskTolerance === 'low') {
@@ -6250,7 +6046,7 @@ Same scene, written for aggressive Jack:
 Same scene, written for methodical Jack:
 - Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
 - Confronting a suspect: "'I've got some questions,' Jack said, keeping his voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
-- Internal monologue: "Every case Jack closed in thirty years taught the same lesson: patience caught more killers than speed. He could wait. He’d gotten good at waiting."
+- Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He’d gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
     } else {
@@ -6283,7 +6079,7 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 1. **PLAN FIRST:** Use the 'beatSheet' field to outline 3-5 major beats.
 2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** - AIM FOR ${TARGET_WORDS}+ WORDS. Write generously. Do NOT stop short.
 3. Continue DIRECTLY from where the last subchapter ended
-4. Maintain third-person limited noir voice throughout (no first-person narration)
+4. Maintain third-person limited voice throughout (no first-person narration)
 5. Reference specific events from previous chapters (show continuity)
 6. Include: atmospheric description, internal monologue, dialogue
 7. Build tension appropriate to ${pacing.phase} phase
@@ -6478,9 +6274,9 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
 
 2. NEVER contradict:
    - Character names and relationships
-   - Timeline durations (Wade=30yrs, Sarah=13yrs, Silas=8yrs, Emily=7yrs, Eleanor=8yrs)
-   - Setting (Ashport is ALWAYS rainy)
-   - Jack's drink (Jameson whiskey ONLY)
+   - Timeline durations when the story bible specifies exact numbers (do not “round” key relationships/events)
+   - The reveal timing: Under-Map becomes undeniable at the END of 2A, not earlier
+   - Setting tone (modern city; hidden layer; no Tolkien-style fantasy)
    - Player's path personality and decision consequences
 
 3. If you introduced a plot thread (meeting, promise, revelation), it MUST be addressed eventually`;
@@ -6520,17 +6316,17 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           'Reveal betrayals or hidden connections',
           'Jack faces increasing danger and doubt',
           'Moral dilemmas become more complex',
-          'The Confessor\'s plan becomes clearer',
+          'Victoria\'s guidance and rules become clearer',
         ],
       };
     } else if (chapter <= 10) {
       return {
         phase: 'CONFRONTATIONS',
         requirements: [
-          'Major revelations about the conspiracy',
-          'Jack must confront his past mistakes directly',
+          'Major revelations about the pattern and the forces shaping it',
+          'Jack must confront what the city is doing—and what he is willing to do back',
           'Allies may be lost or trust shattered',
-          'The full truth about wrongful convictions exposed',
+          'The full shape of the pattern emerges',
           'Personal cost to Jack escalates dramatically',
         ],
       };
@@ -6561,10 +6357,10 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
     const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "Dead Letters."
 
 ## CURRENT STORY STATE
-${context.storySummary || 'Jack Halloway is investigating the wrongful convictions built on his career.'}
+${context.storySummary || 'Jack Halloway is investigating a pattern of symbols and disappearances in Ashport.'}
 
 ## RECENT EVENTS
-${context.previousChapterSummary || 'Jack received another letter from the Midnight Confessor.'}
+${context.previousChapterSummary || 'Jack received another dead letter with an impossible glyph string.'}
 
 ## ACTIVE NARRATIVE THREADS
 ${context.narrativeThreads?.filter(t => t.status === 'active').slice(0, 5).map(t => `- [${t.urgency}] ${t.description}`).join('\n') || '- No active threads'}
@@ -6580,7 +6376,7 @@ This chapter's required beat: ${STORY_STRUCTURE.chapterBeatTypes?.[chapter] || '
 Design a meaningful binary decision that:
 1. Emerges naturally from the story situation
 2. Has NO obvious "right" answer - both options have real costs
-3. Connects to themes of wrongful conviction, certainty vs truth, betrayal
+3. Connects to themes of certainty vs doubt, perception vs reality, and the cost of following a pattern
 4. Fits the player's established personality while challenging them
 5. Creates genuinely different story branches
 
@@ -6591,7 +6387,7 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
     const response = await llmService.complete(
       [{ role: 'user', content: decisionPrompt }],
       {
-        systemPrompt: 'You are a noir narrative designer creating morally complex choices. Every decision must have real stakes and no clear "correct" answer.',
+        systemPrompt: 'You are a narrative designer creating morally complex choices for a mystery thriller. Every decision must have real stakes and no clear "correct" answer.',
         maxTokens: 2000,
         responseSchema: DECISION_ONLY_SCHEMA,
       }
@@ -7601,7 +7397,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               pathDecisionsResponse = await llmService.complete(
                 messages,
                 {
-                  systemPrompt: 'You generate path-specific decision variants for an interactive noir detective story. Respond with valid JSON only.',
+                  systemPrompt: 'You generate path-specific decision variants for an interactive mystery thriller. Respond with valid JSON only.',
                   maxTokens: GENERATION_CONFIG.maxTokens.pathDecisions, // 16k tokens for complex branching + thinking
                   responseSchema: PATHDECISIONS_ONLY_SCHEMA,
                   traceId: traceId + '-pathDecisions' + (retryAttempt > 0 ? `-retry${retryAttempt}` : ''),
@@ -8718,11 +8514,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // Stopwords used for choice-causality keyword extraction.
       // Include common noir/setting tokens so we don't get false positives like "truth/rain/case".
       const stop = new Set([
-        'jack', 'halloway', 'ashport', 'sarah', 'victoria', 'confessor', 'wade', 'tom',
+        'jack', 'halloway', 'ashport', 'sarah', 'victoria', 'cartographer', 'wade', 'tom',
         'said', 'the', 'and', 'that', 'with', 'from', 'into', 'then', 'over', 'under',
         'were', 'was', 'had', 'have', 'this', 'there', 'their', 'they', 'them', 'what',
         'when', 'where', 'which', 'while', 'because', 'before', 'after', 'could', 'would',
-        'should', 'about', 'again', 'still', 'rain', 'truth', 'case', 'cases', 'evidence',
+        'should', 'about', 'again', 'still', 'truth', 'pattern', 'glyph', 'threshold', 'map',
         'investigation', 'city', 'street', 'streets', 'office', 'night', 'days', 'years',
         'choice', 'chose', 'decided', 'decision', 'option', 'path', 'plan',
       ]);
@@ -8758,8 +8554,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // CATEGORY 3: SETTING CONSISTENCY
     // =========================================================================
     const settingViolations = [
-      { pattern: /\b(?:sunny|sunshine|bright\s+sun|clear\s+sk(?:y|ies)|cloudless)\b/i, issue: 'Ashport is ALWAYS rainy/overcast - never sunny or clear' },
-      { pattern: /\bjack\s+(?:orders?|drinks?)\s+(?:bourbon|scotch|vodka|gin|beer)\b/i, issue: 'Jack drinks Jameson whiskey, not other alcohol' },
+      { pattern: /\b(?:elf|elves|dwarf|dwarves|orc|orcs|goblin|goblins)\b/i, issue: 'Forbidden Tolkien-style fantasy element detected' },
+      { pattern: /\b(?:kingdom|castle|feudal|knight|sword\s+and\s+sorcery)\b/i, issue: 'Forbidden medieval-fantasy setting drift detected' },
     ];
 
     settingViolations.forEach(({ pattern, issue }) => {
@@ -9439,82 +9235,33 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // =========================================================================
-    // CATEGORY 12: TIMELINE APPROXIMATION PREVENTION
+    // CATEGORY 12: DRIFT PREVENTION (TIME LANGUAGE)
     // =========================================================================
-    // Ensure exact timeline numbers are used, not approximations
-    const timelineApproximations = [
-      { pattern: /(?:nearly|about|almost|over|around|roughly|approximately)\s*30\s*years?.*(?:friend|wade|tom|college)/i,
-        issue: 'Timeline approximation for Jack/Tom friendship - must be exactly 30 years' },
-      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*8\s*years?.*(?:prison|greystone|eleanor|bellamy)/i,
-        issue: 'Timeline approximation for Eleanor imprisonment - must be exactly 8 years' },
-      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*7\s*years?.*(?:emily|cross|dead|died|case\s*closed)/i,
-        issue: 'Timeline approximation for Emily case - must be exactly 7 years' },
-      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*13\s*years?.*(?:sarah|reeves|partner)/i,
-        issue: 'Timeline approximation for Sarah partnership - must be exactly 13 years' },
-      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*8\s*years?.*(?:silas|reed|partner)/i,
-        issue: 'Timeline approximation for Silas partnership - must be exactly 8 years' },
-      { pattern: /(?:nearly|about|almost|over|around|roughly)\s*20\s*years?.*(?:evidence|manufactur|tom|wade|forensic)/i,
-        issue: 'Timeline approximation for evidence manufacturing - must be exactly 20 years' },
-    ];
-
-    for (const { pattern, issue } of timelineApproximations) {
-      if (pattern.test(narrativeOriginal)) {
-        issues.push(issue);
-      }
-    }
-
-    // Soft fuzzy timeline checks: these don't necessarily contradict canon, but they invite drift.
-    // Prefer explicit numbers ("exactly 30 years") over vague magnitude language ("decades").
+    // Avoid vague magnitude phrasing that invites canon drift for key relationships.
     const fuzzyTimeline = [
-      { pattern: /\bdecades?\s+(?:of\s+)?(?:friendship|knowing|loyalty)\b/i, warning: 'Timeline phrasing is vague ("decades"). Prefer exact: Tom Wade friendship is exactly 30 years.' },
-      { pattern: /\b(?:a\s+)?decade\s+(?:of\s+)?(?:partnership|working\s+together)\b/i, warning: 'Timeline phrasing is vague ("a decade"). Prefer exact: Silas partnership is exactly 8 years; Sarah partnership is exactly 13 years.' },
-      { pattern: /\bthree\s+decades?\b/i, warning: 'Prefer numeric exactness: write "30 years" (exactly) instead of "three decades".' },
-      { pattern: /\b(?:years?\s+and\s+years?|for\s+years)\b/i, warning: 'Avoid vague time spans ("for years"). Use the exact canonical durations when referring to key relationships/cases.' },
+      { pattern: /\bthree\s+decades?\b/i, warning: 'Avoid vague magnitude phrasing ("three decades"). Use exact canonical durations when referring to key relationships.' },
+      { pattern: /\bdecades?\b/i, warning: 'Avoid vague magnitude phrasing ("decades"). Use exact canonical durations for key relationships.' },
+      { pattern: /\b(?:years?\s+and\s+years?|for\s+years)\b/i, warning: 'Avoid vague time spans ("for years"). Use exact canonical durations when referring to key relationships.' },
     ];
     for (const { pattern, warning } of fuzzyTimeline) {
-      if (pattern.test(narrativeOriginal)) {
-        warnings.push(warning);
-      }
+      if (pattern.test(narrativeOriginal)) warnings.push(warning);
     }
 
     // =========================================================================
-    // CATEGORY 13: PREMATURE REVELATION PREVENTION
+    // CATEGORY 13: REVEAL TIMING (UNDER-MAP)
     // =========================================================================
-    // The mystery has a carefully designed revelation gradient. Major twists
-    // must not be revealed before their intended chapter to preserve suspense.
+    // The first undeniable reveal that the Under-Map is real must not occur before Chapter 2A.
     const currentChapter = context?.currentPosition?.chapter || 2;
+    const currentSubchapter = context?.currentPosition?.subchapter || 1;
 
-    const prematureRevelationChecks = [
-      // Victoria's true identity (Emily Cross) - should not be revealed before Chapter 10
-      {
-        pattern: /\b(?:victoria\s+(?:is|was)\s+emily|emily\s+(?:is|was)\s+victoria|victoria.*true\s+(?:name|identity).*emily|emily.*(?:became|now\s+called|goes\s+by)\s+victoria|she\s+(?:is|was)\s+emily\s+cross)\b/i,
-        minChapter: 10,
-        revelation: 'Victoria is Emily Cross',
-      },
-      // Tom's evidence manufacturing - should not be revealed before Chapter 7
-      {
-        pattern: /\b(?:tom\s+(?:wade\s+)?(?:manufactured|planted|fabricated|faked)\s+evidence|tom.*evidence\s+(?:was\s+)?(?:manufactured|planted|faked)|wade.*(?:been|was)\s+(?:manufacturing|planting|fabricating)\s+evidence|tom.*framing\s+(?:the\s+)?innocents?)\b/i,
-        minChapter: 7,
-        revelation: 'Tom Wade manufactured evidence',
-      },
-      // The Five Innocents connection - should not be fully revealed before Chapter 5
-      {
-        pattern: /\b(?:five\s+innocents?.*tom\s+wade|tom\s+wade.*five\s+innocents?|wade.*framed.*(?:all\s+)?five|teresa.*tom['']?s?\s+(?:own\s+)?daughter.*(?:framed|convicted))\b/i,
-        minChapter: 5,
-        revelation: 'Tom Wade framed the Five Innocents',
-      },
-      // The Confessor's true motive (revenge for Five Innocents) - should not be revealed before Chapter 8
-      {
-        pattern: /\b(?:confessor.*aveng(?:e|ing)\s+(?:the\s+)?(?:five\s+)?innocents?|midnight\s+confessor.*(?:revenge|vengeance)\s+for.*innocents?|confessor['']?s?\s+(?:true\s+)?motive.*innocents?)\b/i,
-        minChapter: 8,
-        revelation: "The Confessor's revenge motive for the Five Innocents",
-      },
-    ];
-
-    for (const { pattern, minChapter, revelation } of prematureRevelationChecks) {
-      if (currentChapter < minChapter && pattern.test(narrativeOriginal)) {
-        issues.push(`PREMATURE REVELATION: "${revelation}" revealed in Chapter ${currentChapter}, but should not appear before Chapter ${minChapter}. This ruins the mystery's pacing.`);
-      }
+    const underMapExplicit = /\b(?:under-?map|threshold\s+(?:opened|gaped|unlatched)|the\s+city\s+rewrote\s+itself|map\s+that\s+wasn['’]t\s+a\s+map)\b/i;
+    if ((currentChapter < 2) && underMapExplicit.test(narrativeOriginal)) {
+      issues.push('PREMATURE REVEAL: The Under-Map must remain plausibly deniable before Chapter 2A.');
+    }
+    // In Chapter 2 but before 2A (if your story ever includes earlier prologue variants),
+    // keep this as a warning rather than a hard block.
+    if (currentChapter === 2 && currentSubchapter < 1 && underMapExplicit.test(narrativeOriginal)) {
+      warnings.push('Reveal timing risk: Under-Map appears explicit before 2A. Keep anomalies plausibly deniable until the end of 2A.');
     }
 
     // Log warnings but don't block on them
@@ -9557,11 +9304,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // Critical name misspellings that would confuse the player
     if (s.startsWith('Name misspelled:')) return true;
 
-    // Wrong alcohol brand (Jack's signature vice - establishes character)
-    if (s.includes('Jack drinks Jameson whiskey')) return true;
-
-    // Sunny weather breaks noir atmosphere completely
-    if (s.includes('Ashport is ALWAYS rainy')) return true;
+    // Avoid hardcoding noir-era “signature” constraints here; story bible enforces voice/tone.
 
     // --- TIER 2: PLAYER AGENCY (Critical for branching narrative) ---
     // If the player made a choice, the story MUST reflect that choice
@@ -9634,7 +9377,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   // ==========================================================================
 
   /**
-   * Validate prose quality - checks for metaphor variety, sentence diversity, and noir voice
+   * Validate prose quality - checks for metaphor variety, sentence diversity, and atmosphere/voice
    * Returns quality score (0-100) and specific feedback
    */
   _validateProseQuality(narrative) {
@@ -9665,12 +9408,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     const expectedMetaphors = Math.max(2, Math.floor(wordCount / 200)); // Expect 1 per 200 words, minimum 2
 
     if (metaphorCount < expectedMetaphors) {
-      warnings.push(`Prose lacks noir texture: only ${metaphorCount} evocative metaphors found (expected ${expectedMetaphors}+). Add atmospheric language.`);
+      warnings.push(`Prose lacks atmospheric texture: only ${metaphorCount} evocative metaphors found (expected ${expectedMetaphors}+). Add sensory/setting grounding.`);
       qualityScore -= 10;
     }
 
     // ========== 2. SENSORY DETAIL CHECK ==========
-    // A+ noir prose engages multiple senses
+    // Strong prose engages multiple senses
     const sensoryPatterns = {
       visual: /\b(?:saw|watched|looked|glanced|neon|shadow|dark|light|glow|flicker|gleam|shine)\b/gi,
       auditory: /\b(?:heard|sound|noise|whisper|echo|creak|hum|buzz|silence|quiet|jukebox|rain\s+(?:drummed|hammered|pattered))\b/gi,
@@ -9759,7 +9502,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // Require minimum atmosphere density (at least 3 categories represented)
     const categoriesCovered = Object.values(atmosphereHits).filter(v => v > 0).length;
     if (categoriesCovered < 3) {
-      warnings.push(`Thin atmosphere: only ${categoriesCovered}/5 noir categories present (weather, lighting, urban texture, noir mood, time). Add more environmental grounding.`);
+      warnings.push(`Thin atmosphere: only ${categoriesCovered}/5 atmosphere categories present (weather, lighting, urban texture, mood, time). Add more environmental grounding.`);
       qualityScore -= 5;
     }
 
@@ -10070,21 +9813,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     console.log(`[StoryGen] 🔍 Running LLM validation on ${narrative.length} chars...`);
 
     try {
-      const validationPrompt = `You are a strict continuity editor for a noir detective story. Check this narrative excerpt for FACTUAL ERRORS against the story bible facts below.
+      const validationPrompt = `You are a strict continuity editor for a modern mystery thriller with a hidden fantasy layer (the Under-Map). Check this narrative excerpt for FACTUAL ERRORS against the story bible facts below.
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
-- Jack Halloway: Late 50s-60s, former Ashport PD detective, 30-year career, forcibly retired
-- Tom Wade: Jack's best friend for 30 YEARS (met in college), secretly manufactured evidence for 20 years
-- Sarah Reeves: Jack's former partner for 13 YEARS
-- Silas Reed: Jack's partner for 8 YEARS (most recent)
-- Emily Cross: Now known as Victoria Blackwell / The Midnight Confessor
-  - Was 22 when abducted by Deputy Chief Grange (7 years ago)
-  - Attempted suicide with 30 Oxycodone pills
-  - Jack declared her case closed while she was still in captivity
-- Eleanor Bellamy: Wrongfully convicted, imprisoned for 8 YEARS
-- Marcus Thornhill: Framed for embezzlement, committed suicide 8 years ago
-- Setting: Ashport (rain-soaked, neon-lit, perpetually overcast)
-- Story spans EXACTLY 12 DAYS (one chapter per day)
+- Jack Halloway: late 20s/early 30s; not a cop; pattern-spotter; initially does NOT know the Under-Map is real
+- Tom Wade: Jack's longtime friend (met ~12 years ago); knows more about city records/symbol reports than he admits
+- Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink, river-glass tokens); guides Jack via rules and routes
+- Deputy Chief Grange: runs suppression/containment around Under-Map incidents
+- Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
+- Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 2A, not earlier
 
 ## NARRATIVE TO CHECK:
 ${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
@@ -10221,7 +9958,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
     // Check for at least some short sentences (under 8 words) for punch
     const shortSentences = sentenceLengths.filter(len => len < 8).length;
     if (shortSentences < sentences.length * 0.1) {
-      warnings.push('Few short sentences for impact. Add punchy 3-7 word sentences for noir rhythm.');
+      warnings.push('Few short sentences for impact. Add punchy 3-7 word sentences for rhythm.');
     }
 
     // ========== 3. OPENER VARIETY ==========
@@ -10275,65 +10012,63 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
     // Major revelations that need proper setup before payoff
     const majorRevelations = [
       {
-        id: 'victoria_is_emily',
-        payoff: 'Victoria Blackwell is revealed to be Emily Cross',
+        id: 'under_map_is_real',
+        payoff: 'The Under-Map is undeniably real (threshold / impossible map confirmed)',
         requiredSetups: [
-          'References to Emily Cross case',
-          'Victoria showing knowledge only Emily would have',
-          'Physical or behavioral hints connecting Victoria to Emily',
-          'Victoria\'s scars or trauma references',
+          'Dead letter with glyph string and river-glass token',
+          'At least one repeating glyph observed in the environment (not just paper)',
+          'A "blank map" or missing-place anomaly is mentioned or witnessed',
         ],
-        minSetupCount: 3,
-        earliestPayoffChapter: 6,
+        minSetupCount: 2,
+        earliestPayoffChapter: 2,
+        latestPayoffChapter: 2,
+      },
+      {
+        id: 'victoria_cartographer',
+        payoff: 'Victoria Blackwell is (or works as) the Midnight Cartographer, guiding Jack via symbols and thresholds',
+        requiredSetups: [
+          'Signature / motif: silver ink, map-adjacent language, or cartography metaphors',
+          'Victoria demonstrates knowledge of Jack\'s movements or choices',
+          'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 3,
+        latestPayoffChapter: 8,
+      },
+      {
+        id: 'grange_containment',
+        payoff: 'Deputy Chief Grange is running a containment/suppression operation around Under-Map incidents',
+        requiredSetups: [
+          'A site is quietly sealed or witnesses are warned off',
+          'Police/officials deny or erase reports that should exist',
+          'Someone disappears shortly after mentioning symbols',
+        ],
+        minSetupCount: 2,
+        earliestPayoffChapter: 4,
         latestPayoffChapter: 10,
       },
       {
-        id: 'tom_betrayal',
-        payoff: 'Tom Wade has been manufacturing evidence for 20 years',
-        requiredSetups: [
-          'Tom\'s "perfect" evidence praised or noticed',
-          'Inconsistencies in old cases',
-          'Someone questioning forensic methods',
-          'Tom acting nervous or defensive',
-        ],
-        minSetupCount: 2,
-        earliestPayoffChapter: 5,
-        latestPayoffChapter: 9,
-      },
-      {
-        id: 'grange_serial_kidnapper',
-        payoff: 'Deputy Chief Grange is a serial kidnapper',
-        requiredSetups: [
-          'Missing persons cases mentioned',
-          'Grange having unusual power/access',
-          'Victims\' families or witnesses dismissed',
-        ],
-        minSetupCount: 2,
-        earliestPayoffChapter: 7,
-        latestPayoffChapter: 11,
-      },
-      {
         id: 'silas_blackmailed',
-        payoff: 'Silas Reed was blackmailed into framing Marcus Thornhill',
+        payoff: 'Silas Reed is being leveraged (blackmailed) into gatekeeping access to a key location/person',
         requiredSetups: [
           'Silas acting guilty or drinking heavily',
-          'Thornhill case inconsistencies',
           'References to something Silas is hiding',
+          'Silas deflects questions about maps/archives/permits',
         ],
         minSetupCount: 2,
         earliestPayoffChapter: 4,
         latestPayoffChapter: 8,
       },
       {
-        id: 'five_innocents',
-        payoff: 'The full list of five wrongfully convicted innocents',
+        id: 'five_anchors',
+        payoff: 'The five anchors (missing people / anchor points) are identified as a pattern',
         requiredSetups: [
-          'Individual innocent cases introduced',
-          'Pattern of manufactured evidence emerging',
-          'Victoria\'s "curriculum" references',
+          'At least two anchor-linked disappearances are named',
+          'A connecting symbol / motif repeats across sites',
+          'A hint that the pattern is deliberate (not random crime)',
         ],
-        minSetupCount: 4,
-        earliestPayoffChapter: 8,
+        minSetupCount: 3,
+        earliestPayoffChapter: 5,
         latestPayoffChapter: 11,
       },
     ];
@@ -10387,18 +10122,14 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       patterns.push(new RegExp(keywords.slice(0, 2).join('.*').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\.\\\*/g, '.{0,100}'), 'i'));
     }
 
-    // Character-specific patterns - use word boundaries to prevent substring false matches
-    if (/\bemily\b/i.test(setupLower)) {
-      patterns.push(/emily\s+cross/i, /cross\s+case/i, /that\s+girl.*(?:dead|missing|closed)/i);
-    }
     if (/\btom\b/i.test(setupLower)) {
-      patterns.push(/tom.*(?:evidence|forensic|perfect)/i, /wade.*(?:lab|report|test)/i);
+      patterns.push(/tom.*(?:map|atlas|archive|symbols?|glyphs?)/i, /wade.*(?:map|atlas|archive|symbols?|glyphs?)/i);
     }
     if (/\bvictoria\b/i.test(setupLower)) {
-      patterns.push(/victoria.*(?:know|scar|past|trauma)/i, /blackwell.*(?:secret|truth)/i);
+      patterns.push(/victoria.*(?:know|knew|knows|watch|watched|map|mapped|cartograph)/i, /blackwell.*(?:secret|rules?|map|cartograph|glyph)/i);
     }
     if (/\bgrange\b/i.test(setupLower)) {
-      patterns.push(/grange.*(?:power|access|missing|girl)/i, /deputy.*(?:chief|suspicious)/i);
+      patterns.push(/grange.*(?:sealed|contained|erased|suppressed|warning)/i, /deputy.*(?:chief|suspicious|sealed|contained)/i);
     }
     if (/\bsilas\b/i.test(setupLower)) {
       patterns.push(/silas.*(?:drink|guilt|hiding|secret)/i, /reed.*(?:nervous|scared)/i);
@@ -10453,35 +10184,30 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
    */
   _generatePayoffPatterns(revelationId) {
     const patterns = {
-      victoria_is_emily: [
-        /victoria.*(?:is|was)\s+emily/i,
-        /emily\s+cross.*(?:alive|survived|you)/i,
-        /blackwell.*(?:real\s+name|true\s+identity|emily)/i,
-        /confessor.*emily/i,
-        /you.*(?:are|were)\s+emily/i,
+      under_map_is_real: [
+        /\bunder-?map\b/i,
+        /\bthreshold\b.*\b(?:opened|unlatched|yawned|gaped|split)\b/i,
+        /\bthe\s+map\s+(?:moved|shifted|changed)\b/i,
+        /\bstreet\s+signs?\b.*\b(?:rearranged|rewrote|changed)\b/i,
       ],
-      tom_betrayal: [
-        /tom.*(?:manufactured|faked|planted)\s+evidence/i,
-        /wade.*(?:lied|fabricated|forged)/i,
-        /best\s+friend.*(?:betrayed|manufactured)/i,
-        /twenty\s+years.*(?:evidence|lies|manufactured)/i,
-        /forensic.*(?:fake|forged|manufactured)/i,
+      victoria_cartographer: [
+        /\bmidnight\s+cartographer\b/i,
+        /\bvictoria\b.*\b(?:mapped|mapping|cartograph|two\s+maps|rules)\b/i,
+        /\bblackwell\b.*\b(?:cartograph|map|glyph)\b/i,
       ],
-      grange_serial_kidnapper: [
-        /grange.*(?:kidnapped|abducted|took|held)/i,
-        /deputy.*(?:serial|victims|women)/i,
-        /23\s+(?:victims|women|girls)/i,
-        /grange.*(?:basement|captive|prisoner)/i,
+      grange_containment: [
+        /\bgrange\b.*\b(?:contain|containment|sealed|suppressed|erased)\b/i,
+        /\bdeputy\s+chief\b.*\b(?:contain|sealed|suppressed)\b/i,
       ],
       silas_blackmailed: [
         /silas.*(?:blackmailed|forced|made\s+to)/i,
-        /reed.*(?:framed|set\s+up)\s+(?:thornhill|marcus)/i,
-        /signed.*(?:documents|papers).*(?:blackmail|threaten)/i,
+        /reed.*(?:blackmailed|forced|threaten)/i,
+        /silas.*(?:keys?|access|permits?|archive).*(?:blackmail|threaten)/i,
       ],
-      five_innocents: [
-        /five\s+(?:innocents?|people|victims)/i,
-        /all\s+(?:five|of\s+them).*(?:innocent|wrongful|framed)/i,
-        /eleanor.*marcus.*(?:lisa|james|teresa)/i,
+      five_anchors: [
+        /\bfive\s+anchors?\b/i,
+        /\ball\s+five\b.*\b(?:anchors?|missing|pattern)\b/i,
+        /\banchor\b.*\bglyph\b/i,
       ],
     };
 
@@ -10536,7 +10262,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         t.description?.toLowerCase().includes('emily')
       );
       if (!victoriaThread || victoriaThread.status !== 'resolved') {
-        warnings.push('Final chapter should include climactic confrontation with Victoria/The Confessor');
+        warnings.push('Final chapter should include climactic confrontation involving Victoria and/or the containment forces shaping the Under-Map');
       }
     }
 
@@ -10563,15 +10289,15 @@ Your rewrite MUST address these prose quality issues:
 ${proseIssues.map(i => `- ${i}`).join('\n')}
 
 To fix these:
-1. **Metaphors**: Add noir-specific imagery (rain drumming, shadows pooling, neon bleeding)
+1. **Metaphors**: Add modern urban-uncanny imagery (reflections misbehaving, signage “almost” shifting, paper/ink that feels alive)
 2. **Sensory details**: Engage sight, sound, smell, touch, taste
 3. **Sentence variety**: Mix short punchy sentences (3-7 words) with longer flowing ones
 4. **Opener diversity**: Vary how sentences and paragraphs begin (not all "I" or "The")
 5. **Atmospheric grounding**: Open scenes with weather, lighting, physical setting
 6. **Dialogue**: Break up exchanges with action beats (what characters DO while talking)
 
-Example noir texture to emulate:
-"The rain fell on Ashport the way memory falls on the guilty, soft at first, then relentless. Neon bled into the wet streets, turning the city into a watercolor of regret."
+Example texture to emulate:
+"Ashport looked ordinary until you stared long enough. Reflections didn’t match their sources. A street sign held a curve that belonged on paper, not metal. The city kept pretending nothing was happening."
 ` : '';
 
     const fixPrompt = `The following generated story content contains violations that must be fixed.
@@ -10583,14 +10309,14 @@ ${proseGuidance}
 ## CRITICAL RULES:
 1. Maintain the exact plot and story events
 2. Keep all character names spelled correctly
-3. Use exact timeline numbers (30 years Tom friendship, 8 years Eleanor prison, etc.)
+3. Use exact canonical numbers when they matter (do not “round” or invent durations)
 4. Stay in third-person limited past tense (close on Jack)
 5. Never use forbidden words: delve, unravel, tapestry, myriad, whilst, realm
 
 ## ORIGINAL CONTENT:
 ${JSON.stringify(content, null, 2)}
 
-Rewrite the narrative to fix ALL issues while maintaining the noir style and story progression.`;
+Rewrite the narrative to fix ALL issues while maintaining the story’s thriller tone and progression.`;
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
@@ -10599,7 +10325,7 @@ Rewrite the narrative to fix ALL issues while maintaining the noir style and sto
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],
       {
-        systemPrompt: 'You are an expert noir editor. Fix all issues while enhancing the atmospheric prose quality. Never change the plot, only improve the writing.',
+        systemPrompt: 'You are an expert thriller editor. Fix all issues while enhancing atmosphere and clarity. Never change the plot, only improve the writing.',
         maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
         responseSchema,
       }
@@ -10618,29 +10344,29 @@ Rewrite the narrative to fix ALL issues while maintaining the noir style and sto
 
     const expandPrompt = `${groundingSection}
 
-Expand this noir detective narrative by approximately ${additionalWords} more words.
+Expand this narrative by approximately ${additionalWords} more words.
 
 CURRENT TEXT:
 ${narrative}
 
 REQUIREMENTS:
-1. Add atmospheric description (rain, shadows, city sounds)
+1. Add atmospheric description (urban texture, reflections, ambient sound)
 2. Expand Jack's internal monologue with self-reflection
 3. Add sensory details and physical grounding
 4. Include additional dialogue if characters are present
 5. DO NOT change the plot or ending
 6. DO NOT add new major events
-7. Maintain Jack Halloway's noir voice exactly
+7. Maintain Jack Halloway's established voice and POV (third-person limited)
 8. CRITICAL: Do not contradict ANY facts from the ABSOLUTE_FACTS section above
 9. Use ONLY the correct character names as specified
-10. Maintain the timeline - Jack is a retired detective, 30 years on the force
+10. Maintain the timeline and canon from ABSOLUTE_FACTS
 
 Output ONLY the expanded narrative. No tags, no commentary.`;
 
     const response = await llmService.complete(
       [{ role: 'user', content: expandPrompt }],
       {
-        systemPrompt: 'You are expanding noir fiction. Match the existing style exactly. Never contradict established facts.',
+        systemPrompt: 'You are expanding existing thriller prose. Match the existing style exactly. Never contradict established facts.',
         maxTokens: GENERATION_CONFIG.maxTokens.expansion,
       }
     );
@@ -10662,21 +10388,18 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     let grounding = `## ABSOLUTE_FACTS (NEVER CONTRADICT)
 
 ### PROTAGONIST
-- Jack Halloway: Retired detective, ${ABSOLUTE_FACTS.protagonist.careerLength} on the force
+- Jack Halloway: ${ABSOLUTE_FACTS.protagonist.age}; ${ABSOLUTE_FACTS.protagonist.currentStatus}
 - Setting: ${ABSOLUTE_FACTS.setting.city}, ${ABSOLUTE_FACTS.setting.atmosphere}
 
-### EXACT TIMELINE DURATIONS (Use these numbers precisely, never approximate)
-- Jack and Tom Wade: Best friends for exactly 30 years (met in college)
-- Tom Wade's evidence manufacturing: exactly 20 years (Jack was unaware)
-- Sarah Reeves: Jack's former partner for exactly 13 years
-- Silas Reed: Jack's former partner for exactly 8 years
-- Emily Cross case closed: exactly 7 years ago (Jack declared dead while she was still alive, held captive by Grange)
-- Eleanor Bellamy: In prison for exactly 8 years (wrongfully convicted of husband's murder)
+### CRITICAL WORLD RULES
+- Under-Map exists as a hidden layer; do not explain it like a “magic system” — show it through scene consequences
+- Reveal timing: first undeniable reveal occurs at the END of Chapter 2A
+- No Tolkien-style fantasy (no elves/dwarves/orcs, no medieval courts)
 
-### KEY CHARACTERS
-- Tom Wade: ${ABSOLUTE_FACTS.corruptOfficials.tomWade.title} - IMPORTANT: He manufactured evidence for 20 years, but has been Jack's best friend for 30 years. These are different durations.
-- Victoria Blackwell: Also known as ${ABSOLUTE_FACTS.antagonist.trueName}, The Midnight Confessor
-- The Five Innocents: Eleanor Bellamy, Marcus Thornhill, Dr. Lisa Chen, James Sullivan, Teresa Wade
+### KEY FIGURES
+- Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName} (“The Midnight Cartographer”)
+- Tom Wade: Jack’s friend and map/symbol researcher; knows more than he says
+- Deputy Chief Grange: suppression/containment operator around Under-Map incidents
 
 ## CHARACTER NAMES (USE EXACTLY)
 `;
@@ -10684,10 +10407,10 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     // Add key character names from CHARACTER_REFERENCE
     const keyCharacters = [
       { name: protagonist?.name || 'Jack Halloway', role: 'protagonist' },
-      { name: antagonist?.name || 'Victoria Blackwell', alias: 'Emily Cross, The Midnight Confessor' },
+      { name: antagonist?.name || 'Victoria Blackwell', alias: 'The Midnight Cartographer' },
       { name: allies?.sarahReeves?.name || 'Sarah Reeves', role: 'former partner' },
       { name: allies?.eleanorBellamy?.name || 'Eleanor Bellamy', role: 'wrongfully convicted' },
-      { name: villains?.tomWade?.name || 'Tom Wade', role: 'forensic examiner' },
+      { name: villains?.tomWade?.name || 'Tom Wade', role: 'researcher / records contact' },
     ];
 
     for (const char of keyCharacters) {
