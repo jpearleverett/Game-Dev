@@ -11,28 +11,20 @@
 // ============================================================================
 export const TIMELINE = {
   yearsAgo: {
-    30: 'Jack and Tom Wade meet in college, begin lifelong friendship',
-    25: 'Jack joins Ashport PD as a detective',
-    20: 'Tom Wade begins manufacturing evidence (Jack unaware)',
-    15: 'Marcus Webb and Richard Bellamy begin their secret affair',
-    13: 'Jack and Sarah Reeves become partners',
-    10: 'Eleanor Bellamy wrongfully convicted of murdering Richard (8 years in prison by story start)',
-    8: 'Marcus Thornhill framed for embezzlement by Silas Reed, commits suicide in lockup',
+    12: 'Jack Halloway and Tom Wade meet through a campus-arts work-study job cataloging old municipal signage',
+    9: 'The first documented “Blank Map” incident: a city block briefly appears on no satellite imagery and no paper maps',
     7: [
-      'Emily Cross (age 22) having affair with Richard Bellamy (age 48)',
-      'Emily attempts suicide (Oxycodone overdose, 30 pills)',
-      'Emily kidnapped by Deputy Chief Grange',
-      'Jack closes Emily Cross case, declares her dead while she is still being tortured',
-      'Emily hears Jack say "Case closed" while in captivity',
+      'A graduate cohort studying semiotics publishes a banned zine of repeating street symbols (“the Glyph Index”)',
+      'One of the editors disappears for 19 hours, returning with a palm scar shaped like a split eye',
     ],
-    5: 'Jack and Silas Reed become partners (8 years total by story)',
-    3: 'Emily escapes/released, begins transformation into Victoria Blackwell',
-    1: 'Jack forced into retirement',
+    4: 'Victoria Blackwell begins leaving “dead letters” in public places: envelopes that contain only symbol strings and a small river-glass token',
+    2: 'Tom Wade starts quietly collecting citywide reports of repeating symbols, insisting it is a pattern, not graffiti',
+    1: 'Jack quits a stable job after a “coincidence chain” makes him feel watched, then takes gig work and small investigative jobs to pay rent',
   },
   storyStart: {
     anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
-    day1: 'Jack receives first black envelope from The Midnight Confessor',
-    structure: '12 days, 12 cases from Jack\'s career being revisited',
+    day1: 'Jack receives his first “dead letter” with an impossible symbol sequence and a river-glass token',
+    structure: '12 days, 12 thresholds: each day pushes Jack deeper into a hidden reality threaded through Ashport’s streets',
   },
 };
 
@@ -42,166 +34,169 @@ export const TIMELINE = {
 export const ABSOLUTE_FACTS = {
   protagonist: {
     fullName: 'Jack Halloway',
-    age: 'Late 50s to early 60s',
-    formerTitle: 'Detective, Ashport Police Department',
-    currentStatus: 'Forcibly retired',
-    residence: 'Run-down office above Murphy\'s Bar',
-    careerLength: '30 years',
-    clearanceRate: 'Best in Ashport history (built on manufactured evidence)',
-    vices: ['Jameson whiskey', 'Chain smoking (occasional)'],
-    physicalState: 'Weathered, rumpled trench coat (charcoal gray), heavy stubble, tired eyes',
+    age: 'Late 20s to early 30s',
+    formerTitle: 'Junior field investigator (contract work), former city records clerk',
+    currentStatus: 'Underemployed, taking odd investigative jobs; quietly unraveling',
+    residence: 'A cramped office-sublet above Murphy\'s Bar (cheap rent, thin floorboards)',
+    careerLength: '7 years working cases and records (not a cop)',
+    clearanceRate: 'Reputation: unusually good at noticing patterns other people dismiss',
+    vices: ['Too much cold coffee', 'Insomnia', 'Compulsive note-taking'],
+    physicalState: 'Young but worn down; ink-stained fingers, tired eyes, coat that never quite dries in Ashport weather',
   },
 
   antagonist: {
-    trueName: 'Emily Cross',
+    trueName: 'Victoria Blackwell',
     aliasUsed: 'Victoria Blackwell',
-    titleUsed: 'The Midnight Confessor',
-    signatures: ['M.C.', 'V.A.', 'E.C.'],
-    ageAtAbduction: 22,
-    currentAge: 'Late 20s to early 30s (7 years since "death")',
-    occupation: 'Art student (former), wealthy information broker (current)',
-    abuser: 'Richard Bellamy (affair began when she was 19, he was 48)',
-    torturer: 'Deputy Chief William Grange (held her for months)',
-    suicideAttempt: 'Oxycodone overdose, 30 pills, age 23',
+    titleUsed: 'The Midnight Cartographer',
+    signatures: ['M.C.', 'V.B.', '⟂○'], // "Split Eye over Hollow Ring" mark, written textually
+    currentAge: 'Unknown (appears late 20s to mid 30s; may be misleading)',
+    occupation: 'Information broker (public-facing), symbol-runner (true role unknown)',
+    origin: 'Unknown; she claims Ashport has always had two maps, and Jack has only seen one',
     communication: {
-      method: 'Black envelopes with red wax seal',
-      ink: 'Silver ink',
-      markers: 'Obsidian chess pieces marking each day',
-      perfume: 'French floral with patchouli',
+      method: 'Black envelopes with a wax seal that never softens (even under heat)',
+      ink: 'Silver ink that does not photograph cleanly and “moves” when stared at too long',
+      markers: 'River-glass tokens (one per day), cold to the touch regardless of room temperature',
+      scent: 'Ozone and crushed basil (sharp, clean, unsettling)',
     },
-    motivation: 'Force Jack to understand what his arrogant certainty cost innocent people',
-    philosophy: '"Truth without power is just noise."',
+    motivation: 'Force Jack to follow the symbols until he cannot pretend they are coincidence, then make him choose what to do with the hidden map',
+    philosophy: '"A map is a promise. Break it, and the city breaks back."',
   },
 
   setting: {
     city: 'Ashport',
-    atmosphere: 'Rain-soaked, neon-lit, perpetually overcast',
-    tone: 'Modern detective thriller with classic aesthetics',
-    corruption: 'Systemic, reaches highest levels of police and courts',
+    atmosphere: 'Rain-soaked, neon-lit, perpetually overcast; streetlight halos, wet concrete, and too many reflections',
+    tone: 'Modern mystery thriller that slowly reveals an original fantasy world threaded through the city’s infrastructure',
+    coreMystery: 'Ashport has a second layer: a hidden topology (“the Under-Map”) accessed through symbol sequences and place-specific thresholds',
     keyLocations: {
       murphysBar: 'Bar beneath Jack\'s office',
-      greystoneCorrectional: 'Prison where Eleanor Bellamy is held',
-      bellamyEstate: 'Victorian mansion, now abandoned',
-      bluelineDiner: 'Where Claire Thornhill works',
-      victoriaPenthouse: 'Glass and steel, commanding city view',
-      fbiFieldOffice: 'Morrison Street',
+      jackOffice: 'A tiny room above the bar where Jack catalogs symbols and pins up maps',
+      underbridgeMarket: 'A night market under the elevated tracks where “found” objects appear without provenance',
+      civicArchive: 'Records office where Tom can access old zoning maps and vanished street plans',
+      blackwellPenthouse: 'Glass and steel, commanding city view; feels like a room built to observe, not live',
+      thresholdSites: 'Certain corners, stairwells, tunnels, and dead-ends that repeat symbol patterns at the edges of perception',
     },
   },
 
+  // These five people are the story’s recurring “missing” anchors. Each is tied to a distinct symbol.
   fiveInnocents: [
     {
       name: 'Eleanor Bellamy',
-      conviction: 'Murder of husband Richard Bellamy (arsenic poisoning)',
-      plantedEvidence: 'Sapphire necklace in deposit box, arsenic in tea set',
-      sentence: '8 years in Greystone Correctional',
-      truth: 'Richard was being blackmailed, killed by someone else',
-      daughter: 'Maya Bellamy',
+      role: 'Pattern historian (specialized in found symbols on public infrastructure)',
+      status: 'Missing',
+      symbol: 'HOLLOW SPIRAL',
+      lastKnown: 'Vanished from a stairwell landing that “shouldn’t exist” in the Civic Archive',
     },
     {
       name: 'Marcus Thornhill',
-      conviction: 'Financial crimes (embezzlement)',
-      plantedEvidence: 'Shell company documents forged by Silas Reed',
-      fate: 'Committed suicide in lockup, 3 days after conviction',
-      truth: 'Completely innocent, framed by real embezzlers',
-      daughter: 'Claire Thornhill',
+      role: 'Street-artist turned reluctant messenger',
+      status: 'Missing',
+      symbol: 'SPLIT EYE',
+      lastKnown: 'Caught on CCTV walking into an alley that does not connect to the street grid',
     },
     {
       name: 'Dr. Lisa Chen',
-      role: 'Lab technician',
-      crime: 'Reported Tom Wade\'s evidence tampering',
-      fate: 'Transferred, silenced, career destroyed',
+      role: 'Materials scientist (studies inks, pigments, and reflective coatings)',
+      status: 'Missing',
+      symbol: 'LADDER NOTCH',
+      lastKnown: 'Left a voicemail: “the ink isn’t on the paper, it’s under it”',
     },
     {
       name: 'James Sullivan',
-      details: 'Revealed progressively through story',
+      role: 'Paramedic who keeps seeing the same patient in different years',
+      status: 'Missing (intermittent)',
+      symbol: 'BROKEN HALO',
+      lastKnown: 'Reported “double addresses” where apartments occupy the same physical space',
     },
     {
       name: 'Teresa Wade',
-      relation: 'Tom Wade\'s own daughter',
-      irony: 'Convicted using her father\'s evidence manufacturing methods',
+      role: 'Tom Wade’s daughter; urban explorer and amateur cartographer',
+      status: 'Missing',
+      symbol: 'LOCKED KNOT',
+      lastKnown: 'Texted Jack a photo of a symbol carved into wet concrete that should not hold a carved line',
     },
   ],
 
+  // “Corrupt” here means “compromised by the Under-Map,” not necessarily criminal.
   corruptOfficials: {
     tomWade: {
-      title: 'Chief Forensic Examiner',
-      relationship: 'Jack\'s best friend for 30 years (college, academy, career)',
-      crime: 'Manufactured "perfect evidence" for 20 years',
-      impact: 'Every case he touched is now suspect',
-      daughter: 'Teresa Wade (one of the five innocents)',
+      title: 'City records specialist / unofficial map curator',
+      relationship: 'Jack\'s closest friend for 12 years (met in a records job)',
+      compromise: 'Obsessed with the Under-Map; may be trading information for access',
+      impact: 'He can open doors on paper that are closed in real life',
+      daughter: 'Teresa Wade (one of the five missing)',
     },
     silasReed: {
-      title: 'Detective (Jack\'s former partner)',
-      partnershipLength: '8 years with Jack',
-      crime: 'Signed documents that framed Marcus Thornhill',
-      motivation: 'Blackmailed 7 years ago over a secret',
-      currentState: 'Broken, alcoholic, living in expensive penthouse (blood money)',
+      title: 'Private security consultant / “fixer” for property developers',
+      partnershipLength: '3 years as Jack\'s occasional employer and source',
+      compromise: 'Knows how to “seal” a threshold; won’t say how he learned',
+      motivation: 'Debt to someone who signs only with symbols',
+      currentState: 'Polished, expensive, and terrified of quiet rooms',
     },
     helenPrice: {
-      title: 'Assistant District Attorney',
-      nickname: '"Queen of Convictions"',
-      record: '53 cases, 53 wins, never lost a trial (6 years)',
-      taintedCases: '21 involved manufactured evidence',
-      fate: 'Receives Victoria\'s dossier, may confess publicly or commit suicide',
+      title: 'City planner / zoning attorney',
+      nickname: '"The Redliner"',
+      record: 'Re-zoned entire neighborhoods with uncanny precision',
+      compromise: 'Her maps are always correct even when the city changes overnight',
+      fate: 'Receives Victoria’s dead letter containing a street that “doesn’t exist” but is marked as condemned',
     },
     deputyChiefGrange: {
       title: 'Deputy Chief, Ashport PD',
-      crimes: '23 kidnapping victims over years, 8 confirmed dead',
-      method: 'Used badge and authority to operate openly',
-      victim: 'Emily Cross (held and tortured for months)',
-      downfall: 'Sarah Reeves brings him down using witnesses Jack dismissed',
+      crimes: 'Uses police access to control “closed” spaces: basements, evidence lockers, stairwells, tunnels',
+      method: 'Treats thresholds like crime scenes: cordon, contain, disappear the witnesses',
+      target: 'Anyone who returns from the Under-Map talking about symbols',
+      downfallVector: 'Sarah Reeves gathers the small, “impossible” reports Jack once shrugged off',
     },
     theOverseer: {
-      role: 'Shadowy mastermind controlling systemic corruption',
-      method: 'Operates through proxies',
-      symbolism: 'Represents how deep the corruption goes',
+      role: 'An entity (or system) that enforces the Under-Map’s rules',
+      method: 'Operates through repeated geometry: the same doorframe, the same staircase, the same symbol, everywhere',
+      symbolism: 'Represents the city as a living puzzle that corrects anyone trying to solve it',
     },
   },
 
   supportingCharacters: {
     sarahReeves: {
-      role: 'Jack\'s former partner',
-      partnershipLength: '13 years',
+      role: 'Detective, Ashport PD; Jack’s reluctant ally',
+      partnershipLength: '5 years of intermittent collaboration (she trusts his eye, not his theories)',
       currentJob: 'Still on the force',
-      arc: 'Loses faith in Jack, starts Conviction Integrity Project',
-      achievement: 'Brings down Grange in 72 hours by following leads Jack dismissed',
+      arc: 'Starts as skeptic; becomes the human anchor when the city stops behaving',
+      achievement: 'Connects “minor” reports of repeating symbols into a pattern that forces official attention',
     },
     mayaBellamy: {
-      relation: 'Eleanor\'s daughter',
+      relation: 'Eleanor’s daughter',
       age: 'Mid 20s',
-      mission: 'Prove mother\'s innocence',
-      discovery: 'Found documents proving Richard was being blackmailed',
+      mission: 'Find her mother and prove she didn’t “run away”',
+      discovery: 'Keeps a notebook of symbol sightings that match her mother’s research',
     },
     claireThornhill: {
-      relation: 'Marcus Thornhill\'s daughter',
-      job: 'Waitress at Blueline Diner',
-      formerLife: 'Had scholarship, promising future',
-      mission: 'Spent 4 years building case proving father was framed',
-      evidence: 'Has "Thornhill Ledger" documenting the frame-up',
+      relation: 'Marcus Thornhill’s sister (not daughter)',
+      job: 'Tattoo apprentice; specializes in geometric work',
+      formerLife: 'Dropped out of architecture school',
+      mission: 'Recreate Marcus’s last wall from memory: the symbol sequence that “opened” the alley',
+      evidence: 'A sketchbook of repeating glyphs that appear to shift when copied',
     },
     marcusWebb: {
       role: 'Antique dealer, information broker',
       age: 'Mid 60s',
-      secret: 'Loved Richard Bellamy for 15 years (secret affair)',
-      guilt: 'Knew Eleanor was innocent, stayed silent',
-      inherited: 'Money from Richard',
+      secret: 'Sells objects that are older than their materials should allow',
+      guilt: 'Once sent someone through a threshold for money; they didn’t come back',
+      inherited: 'A map etched into glass that shows streets Ashport hasn’t built yet',
     },
     rebeccaMoss: {
-      role: 'Defense attorney',
-      clients: 'Represents the innocents, including Eleanor and Jack',
+      role: 'Attorney who specializes in “impossible liability” cases',
+      clients: 'Represents families of the missing; quietly advises Jack on what not to say on record',
     },
     agentMartinez: {
       fullName: 'Agent Luis Martinez',
       agency: 'FBI',
-      mission: 'Investigating Ashport corruption',
+      mission: 'Investigating a pattern of disappearances that do not fit conventional criminal profiles',
     },
     luciaMartinez: {
-      role: 'One of Grange\'s victims',
-      age: '24 at death',
+      role: 'Agent Martinez’s sister',
+      age: '24 at disappearance',
       occupation: 'Nursing student, engaged',
-      abduction: 'Three months after Jack closed Emily\'s case',
-      fate: 'Held 11 months, died in captivity',
-      significance: 'Died because Jack stopped looking',
+      disappearance: 'Walked into an elevator that arrived at no floors',
+      fate: 'Unknown',
+      significance: 'Her case is the federal “hook” into Ashport’s second map',
     },
   },
 };
@@ -320,23 +315,23 @@ export const WRITING_STYLE = {
   voice: {
     perspective: 'Third person limited (close on Jack Halloway)',
     tense: 'Past tense',
-    tone: 'Literary crime fiction, psychologically rich, elegiac',
+    tone: 'Literary mystery thriller with surreal pressure building at the edges of the real',
   },
 
   influences: [
-    'Dennis Lehane (trauma echoing through time, working-class authenticity, grief as undercurrent)',
     'Tana French (atmospheric dread, psychological interiority, the past haunting the present)',
-    'Kate Atkinson (structural complexity, dark wit beneath sorrow)',
-    'Richard Price (dialogue that reveals class and character, institutional rot)',
+    'China Miéville (inventive strangeness, urban uncanny, the city as organism)',
+    'Jeff VanderMeer (the weird made concrete, ecological/surreal texture)',
+    'Gillian Flynn (thriller propulsion, sharp turns, moral ambiguity)',
   ],
 
   mustInclude: [
-    'Atmospheric descriptions rooted in place and weather',
-    'Deep psychological interiority revealing Jack\'s guilt and fractured self-perception',
-    'Sensory details that trigger memory and emotion (sounds, smells, textures)',
-    'Dialogue that reveals character, class, and unspoken history',
-    'The weight of the past pressing on present moments',
-    'Trauma expressed through behavior rather than explanation',
+    'Atmospheric descriptions rooted in place, weather, and reflections',
+    'A sense of pattern: repeating shapes, echoed phrases, mirrored actions',
+    'Symbols presented as concrete objects (chalk, ink, etching, scar, stain) not abstract “magic”',
+    'Jack’s rational explanations first, his doubt arriving only after evidence piles up',
+    'A mystery-forward plot: clues accrue, hypotheses form, revelations reframe',
+    'Fantasy elements that feel new: unfamiliar beings, rules, and textures (NO medieval/Tolkien pastiche)',
   ],
 
   absolutelyForbidden: [
@@ -355,6 +350,8 @@ export const WRITING_STYLE = {
     'Summarizing instead of showing',
     'Summarizing dialogue (if conversation changes plot, write it in full direct dialogue - never "They talked for hours")',
     'Explaining character emotions directly (show through action and physical response, not narration)',
+    'Tolkien-style fantasy elements: elves, dwarves, orcs, medieval feudal courts, “ancient prophecies” as a crutch',
+    'Generic “magic system” exposition dumps (rules must be learned through scenes)',
   ],
 };
 
@@ -672,46 +669,43 @@ Even after all that, it still hadn't sunk in entirely. Katie, she felt, would wa
 // ============================================================================
 export const CONSISTENCY_RULES = [
   // CHARACTER NAMES & IDENTITIES
-  'Jack ALWAYS refers to Victoria as "Victoria" or "the Confessor" until her true identity as Emily is revealed',
-  'Victoria Blackwell is the alias; Emily Cross is the true identity',
-  'The Midnight Confessor signs as "M.C." or "V.A." or "E.C."',
+  'Jack always calls Victoria “Victoria” or “Blackwell.” He does NOT call her “Emily” (that identity does not exist in this version).',
+  'Victoria Blackwell is known as “The Midnight Cartographer.” She signs as "M.C.", "V.B.", or the textual mark "⟂○".',
+
+  // REALITY REVEAL TIMING (Critical pacing constraint)
+  'Jack does NOT know the Under-Map is real at the start of Chapter 2.',
+  'The first undeniable reveal that “the world is not what it seems” happens at the END of subchapter 2A (not earlier).',
+  'Before the end of 2A, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).',
 
   // TIMELINE FACTS (EXACT NUMBERS - Never approximate)
-  'Emily Cross case was closed 7 years ago exactly (not approximately)',
-  'Eleanor has been in prison for 8 years exactly',
-  'Tom Wade and Jack have been friends for 30 years exactly (met in college)',
-  'Jack and Sarah were partners for 13 years exactly',
-  'Jack and Silas were partners for 8 years exactly',
-  'Jack had a 30-year career as detective before forced retirement',
-  'Emily was 22 when abducted, making her late 20s to early 30s now',
+  'Jack and Tom Wade have been close friends for exactly 12 years (met in a records job).',
+  'Victoria has been leaving “dead letters” for exactly 4 years.',
+  'The “Blank Map” incident was exactly 9 years ago.',
 
   // SETTING & ATMOSPHERE
-  'Ashport is ALWAYS rainy, overcast, or recently rained - NEVER sunny or clear',
-  'Murphy\'s Bar is directly below Jack\'s office (Jack can hear the jukebox through the floorboards)',
-  'Ashport is neon-lit, morally gray, modern day with classic aesthetics',
+  'Ashport is always damp, overcast, or recently rained; the city is defined by reflections, sodium streetlight halos, and neon smear on wet pavement.',
+  'Murphy\'s Bar is directly below Jack\'s office (Jack can hear the jukebox through the floorboards).',
+  'This is NOT medieval fantasy. The surface world is modern. The fantasy world is hidden, infrastructural, and uncanny.',
+
+  // SYMBOL RULES (Core mystery engine)
+  'Symbols are called GLYPHS. They recur in the city and in Victoria’s letters.',
+  'There are exactly five anchor glyphs tied to the five missing people: HOLLOW SPIRAL, SPLIT EYE, LADDER NOTCH, BROKEN HALO, LOCKED KNOT.',
+  'Glyphs are not “spells.” They are keys to thresholds, and they do not work everywhere.',
+  'Silver ink in Victoria’s letters does not photograph cleanly; attempts to capture it produce blurred or doubled lines.',
 
   // CHARACTER TRAITS (Immutable)
-  'Jack drinks Jameson whiskey exclusively - never bourbon, scotch, vodka, or beer',
-  'Jack wears a rumpled charcoal gray trench coat',
-  'Victoria wears red, has expensive French perfume with floral and patchouli notes',
-  'The Confessor communicates via black envelopes with red wax seals and silver ink',
-  'Victoria leaves obsidian chess pieces as markers',
+  'Jack’s default coping mechanism is rationalization and documentation (notes, sketches, photos, maps).',
+  'Jack’s vice is cold coffee and insomnia; he is not a hardboiled alcoholic detective in this version.',
+  'Victoria’s presence is clean and unsettling: ozone/basil scent, calm diction, exact phrasing.',
 
-  // CASE FACTS (Plot-critical)
-  'There are exactly 5 innocents wrongfully convicted using manufactured evidence',
-  'Marcus Thornhill committed suicide in lockup (before trial) - he never went to prison',
-  'Richard Bellamy was an art dealer being blackmailed for embezzlement',
-  'Grange had exactly 23 kidnapping victims total, 8 confirmed dead',
-  'Helen Price had exactly 53 consecutive wins in court, 21 involved manufactured evidence',
-  'Tom Wade manufactured evidence for 20 years (Jack was unaware)',
-  'Eleanor was convicted of murdering Richard with arsenic poisoning (she was framed)',
+  // THRILLER CONSTRAINTS (No Tolkien pastiche)
+  'No elves/dwarves/orcs, no feudal courts, no “chosen one prophecy,” no faux-Old English diction.',
+  'Fantasy beings (if encountered) must feel unfamiliar and specific: more like living architecture, stitched light, or rule-bound anomalies than “classic races.”',
 
   // RELATIONSHIP STATES
-  'Sarah eventually loses faith in Jack and starts the Conviction Integrity Project',
-  'Tom Wade is Jack\'s best friend but betrayed him by manufacturing evidence',
-  'Silas Reed was blackmailed 7 years ago into framing Marcus Thornhill',
-  'Victoria was a victim of Richard Bellamy (affair started when she was 19, he was 48)',
-  'Deputy Chief Grange tortured Emily/Victoria for months after Jack closed her case',
+  'Sarah Reeves begins skeptical of Jack’s “symbol theory,” then becomes alarmed as evidence accumulates.',
+  'Tom Wade is Jack’s closest friend and the most compromised by obsession with the Under-Map; his loyalty is ambiguous.',
+  'Deputy Chief Grange treats thresholds like a containment problem and will suppress witnesses rather than investigate.',
 ];
 
 // ============================================================================
@@ -1211,7 +1205,7 @@ The driver got out. He looked like a cop— blond crew cut, red face, white shir
 // ============================================================================
 export const NEGATIVE_EXAMPLES = {
   tellDontShow: {
-    badVersion: `Jack suddenly felt a wave of shock wash over him as he realized the horrifying truth. The weight of the revelation was almost too much to bear. He couldn't help but notice that everything had changed in that moment, and he felt a profound sense of betrayal.`,
+    badVersion: `Jack suddenly realized the symbols were magical, and he felt terrified and shocked. The world was not what it seemed, and everything changed forever. He couldn't help but feel like his life was over.`,
     problems: [
       '"Suddenly" - false urgency, tells instead of shows',
       '"Felt a wave of shock" - abstract emotion, not physical',
@@ -1220,11 +1214,15 @@ export const NEGATIVE_EXAMPLES = {
       '"In that moment" - filler phrase, adds nothing',
       '"Profound sense of betrayal" - abstract, tells reader what to feel',
     ],
-    goodVersion: `The signature on the page—Jack knew that handwriting. Had known it for thirty years.
+    goodVersion: `The symbol on the paper did not sit still.
 
-Tom.
+Jack blinked. Looked away. Looked back.
 
-His coffee cup found the desk. Jack didn't remember setting it down. Didn't remember his hands going numb. The only thing that existed was that signature and the lie it exposed.`,
+The silver line had shifted a hair to the left, as if it had decided it preferred that shape.
+
+His thumbnail scraped the ink. It didn't smudge. It didn't lift. It didn't feel like anything at all, and that was the worst part. Paper had texture. Ink had drag. This had nothing.
+
+Downstairs, Murphy's jukebox changed songs without anyone touching it.`,
     whyItWorks: [
       'Physical action (cup finding desk) shows dissociation',
       '"Didn\'t remember" shows shock through lost time',
@@ -1234,9 +1232,9 @@ His coffee cup found the desk. Jack didn't remember setting it down. Didn't reme
   },
 
   overwrittenDialogue: {
-    badVersion: `"I can't believe what you've done," Jack said angrily, his voice trembling with rage. "You've betrayed everything we ever stood for. How could you do this to me, to us, to everything we built together?"
+    badVersion: `"So the Under-Map is real and the glyphs are keys," Jack said, terrified. "This changes everything and I feel like I'm losing my mind."
 
-"You have to understand," Tom replied desperately, "I never meant for it to go this far. I was just trying to help, to make sure the guilty paid for their crimes."`,
+"Yes," Victoria replied mysteriously. "You are the chosen one and you must fulfill the prophecy."`,
     problems: [
       'Adverb tags ("angrily," "desperately") tell what dialogue should show',
       'Characters explaining their emotions explicitly',
@@ -1244,13 +1242,15 @@ His coffee cup found the desk. Jack didn't remember setting it down. Didn't reme
       'No physical action—talking heads',
       'Melodramatic phrasing ("everything we ever stood for")',
     ],
-    goodVersion: `"Tom." Just the name. Jack couldn't find more.
+    goodVersion: `"You're sure this is just graffiti?" Sarah asked.
 
-"Let me explain—"
+Jack kept his eyes on the photo. "It's paint. It's a marker. It's whatever it needs to be so I can sleep."
 
-"Don't." Jack's hand found the edge of the desk. Held on. "Just tell me how many. How many cases. How many people."
+"Jack."
 
-Tom didn't answer. The silence was answer enough.`,
+He swallowed. "If I say it out loud, then it's real."
+
+Sarah didn't argue. She only slid the second photo across the table, the one taken three blocks away, same symbol, same angle, same line weight, like the city had traced it with the same hand.`,
     whyItWorks: [
       'Minimal dialogue does more than speeches',
       'Physical grounding (hand on desk) shows need for stability',
@@ -1261,7 +1261,7 @@ Tom didn't answer. The silence was answer enough.`,
   },
 
   flatPacing: {
-    badVersion: `Jack walked to the warehouse. He opened the door and went inside. He looked around at all the boxes. There were a lot of them. He opened one box and found documents. The documents were about cases. He read some of them. They were very interesting. He found evidence of corruption.`,
+    badVersion: `Jack went to the place. He saw a symbol. He was confused. Then he went somewhere else. He saw another symbol. It was spooky. Then he found a clue.`,
     problems: [
       'Every sentence same length and structure',
       'No variation in rhythm—monotonous',
@@ -1270,15 +1270,15 @@ Tom didn't answer. The silence was answer enough.`,
       'No sensory detail, no atmosphere',
       'Events listed rather than experienced',
     ],
-    goodVersion: `The warehouse door complained on its hinges—metal on rust, the sound of something that wanted to stay closed.
+    goodVersion: `The underpass smelled like wet pennies and old engines.
 
-Jack paused. Let his eyes adjust.
+Jack stopped under the third pillar because that's where Tom's text said the mark would be.
 
-Boxes. Hundreds of them. Floor to ceiling in rows that stretched back into darkness, each one labeled in a handwriting that made his stomach drop.
+It was there. Fresh. Too fresh. The concrete still glistened around the cut line as if it had been carved from inside the slab, not scratched onto it.
 
-He knew that handwriting.
+He raised his phone to photograph it. The screen showed the pillar. It showed his own hand.
 
-The first box came open with a whisper of old tape. Inside: case files. Not copies—originals, annotated in margins and between lines with the casual precision of a man who never expected to be caught.`,
+Where the symbol should have been, there was only blur, a smear of silver that refused to resolve into a shape.`,
     whyItWorks: [
       'Varied sentence length creates rhythm',
       'Sensory details (rusty hinges, sound) establish atmosphere',
@@ -1289,7 +1289,7 @@ The first box came open with a whisper of old tape. Inside: case files. Not copi
   },
 
   heavyForeshadowing: {
-    badVersion: `Jack looked at Tom, not knowing that this would be the last time he would see his friend as anything other than a monster. Little did he know that the contents of that folder would change everything forever. The truth was waiting, and when it came, nothing would ever be the same.`,
+    badVersion: `Jack looked at the symbol, not knowing this was the moment his life would change forever. Little did he know the Under-Map was about to reveal itself. Everything was about to become magical.`,
     problems: [
       '"Little did he know" - forbidden phrase, breaks immersion',
       'Tells reader something important is coming—destroys tension',
@@ -1297,13 +1297,13 @@ The first box came open with a whisper of old tape. Inside: case files. Not copi
       'Narrator intruding with future knowledge Jack doesn\'t have',
       'Promises impact instead of delivering it',
     ],
-    goodVersion: `Jack handed Tom the folder. Just like he had a hundred times before. Just like he would again, he assumed, because some things didn't change.
+    goodVersion: `Jack folded the letter back into its envelope and told himself it was a prank.
 
-Tom's smile stayed perfectly in place as he took it.
+He said it like a verdict, and for a few seconds he believed it.
 
-Perfectly.
+Then the river-glass token on his desk clicked once against the wood, as if it had been nudged by a finger.
 
-In thirty years, Jack had never noticed how little that smile moved.`,
+There was no finger.`,
     whyItWorks: [
       'Shows routine being disrupted, not announcing disruption',
       'Jack\'s false assumption creates dramatic irony',

@@ -3196,10 +3196,13 @@ The city held its breath. So did Jack.`;
   async _generateStoryArc(superPathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
 
-    const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter noir detective mystery.
+    const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter mystery thriller with an original hidden fantasy world.
 
 ## STORY PREMISE
-Jack Halloway, a retired detective, discovers his career was built on manufactured evidence. The Midnight Confessor (Victoria Blackwell, secretly Emily Cross) forces him to confront each wrongful conviction.
+Jack Halloway (late 20s/early 30s) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of “dead letters” from Victoria Blackwell (“The Midnight Cartographer”) draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport’s infrastructure.
+
+CRITICAL REVEAL TIMING:
+- The FIRST undeniable reveal that “the world is not what it seems” occurs at the END of subchapter 2A (not earlier).
 
 ## PLAYER SUPER-PATH: "${superPathKey}"
 Player personality: ${personality.narrativeStyle}
@@ -3211,26 +3214,22 @@ Create a high-level story arc outline for Chapters 2-12 that:
 2. Builds appropriate tension per story phase
 3. Ensures each chapter has a clear purpose advancing the mystery
 4. Creates meaningful decision points that reflect player personality
-5. Weaves all 5 innocents' stories together naturally
+5. Weaves the five missing anchors (each tied to a glyph) into the unfolding mystery
 6. CRITICAL: Defines what Jack PERSONALLY STANDS TO LOSE in each chapter
 7. CRITICAL: Includes an EMOTIONAL ANCHOR moment for each chapter
 
 ## STORY PHASES
-- Chapters 2-4: RISING ACTION (investigating, uncovering clues)
-  * Personal stakes focus: Jack's self-image and reputation
-- Chapters 5-7: COMPLICATIONS (betrayals revealed, stakes escalate)
-  * Personal stakes focus: Jack's relationships (Sarah, sense of purpose)
-- Chapters 8-10: CONFRONTATIONS (major revelations, direct confrontations)
-  * Personal stakes focus: Jack's freedom and physical safety
-- Chapters 11-12: RESOLUTION (final confrontation, consequences manifest)
-  * Personal stakes focus: Jack's redemption and legacy
+- Chapters 2-4: RISING ACTION (pattern recognition, deniable anomalies, then first threshold-crossing)
+  * Personal stakes focus: Jack's sanity, stability, and what he believes about the city
+- Chapters 5-7: COMPLICATIONS (the Under-Map has rules; allies compromise; the city “pushes back”)
+  * Personal stakes focus: Jack's relationships (Tom, Sarah) and his ability to trust
+- Chapters 8-10: CONFRONTATIONS (direct encounters with Under-Map forces; truth of Victoria’s role sharpens)
+  * Personal stakes focus: Jack's autonomy and physical safety across both layers of the city
+- Chapters 11-12: RESOLUTION (the choice: seal, reshape, or surrender the map; consequences lock in)
+  * Personal stakes focus: who Jack becomes and what Ashport is allowed to be
 
-## FIVE INNOCENTS TO WEAVE IN
-1. Eleanor Bellamy - wrongly convicted of husband's murder (8 years in Greystone)
-2. Marcus Thornhill - framed for embezzlement (committed suicide)
-3. Dr. Lisa Chen - reported evidence tampering (career destroyed)
-4. James Sullivan - details revealed progressively
-5. Teresa Wade - Tom Wade's own daughter (convicted using his methods)
+## FIVE MISSING ANCHORS TO WEAVE IN (from the story bible)
+${(ABSOLUTE_FACTS.fiveInnocents || []).map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}`).join('\n')}
 
 ## ENGAGEMENT REQUIREMENTS FOR EACH CHAPTER
 For each chapter, you MUST provide:
@@ -5690,55 +5689,59 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
    * Build grounding section with absolute facts
    */
   _buildGroundingSection(context) {
+    const safe = (v) => (v === undefined || v === null ? '' : String(v));
+
+    const timelineLines = [];
+    const yearsAgo = TIMELINE?.yearsAgo || {};
+    const yearKeys = Object.keys(yearsAgo)
+      .map(k => Number(k))
+      .filter(n => Number.isFinite(n))
+      .sort((a, b) => b - a);
+    for (const y of yearKeys) {
+      const entry = yearsAgo[y];
+      if (Array.isArray(entry)) {
+        timelineLines.push(`- ${y} years ago:`);
+        entry.forEach(e => timelineLines.push(`  - ${safe(e)}`));
+      } else {
+        timelineLines.push(`- ${y} years ago: ${safe(entry)}`);
+      }
+    }
+
+    const missing = (ABSOLUTE_FACTS?.fiveInnocents || [])
+      .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
+      .join('\n');
+
     return `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
 
 ### PROTAGONIST
-- Name: ${ABSOLUTE_FACTS.protagonist.fullName}
-- Age: ${ABSOLUTE_FACTS.protagonist.age}
-- Status: ${ABSOLUTE_FACTS.protagonist.currentStatus}
-- Career: ${ABSOLUTE_FACTS.protagonist.careerLength} as detective
-- Residence: ${ABSOLUTE_FACTS.protagonist.residence}
-- Vice: ${ABSOLUTE_FACTS.protagonist.vices[0]}
+- Name: ${safe(ABSOLUTE_FACTS.protagonist.fullName)}
+- Age: ${safe(ABSOLUTE_FACTS.protagonist.age)}
+- Status: ${safe(ABSOLUTE_FACTS.protagonist.currentStatus)}
+- Work background: ${safe(ABSOLUTE_FACTS.protagonist.careerLength)}
+- Residence: ${safe(ABSOLUTE_FACTS.protagonist.residence)}
+- Vice: ${safe(ABSOLUTE_FACTS.protagonist.vices?.[0])}
 
-### ANTAGONIST (The Midnight Confessor)
-- True Name: ${ABSOLUTE_FACTS.antagonist.trueName} (revealed later)
-- Current Alias: ${ABSOLUTE_FACTS.antagonist.aliasUsed}
-- Communication: ${ABSOLUTE_FACTS.antagonist.communication.method}, ${ABSOLUTE_FACTS.antagonist.communication.ink}
-- Age at abduction: ${ABSOLUTE_FACTS.antagonist.ageAtAbduction}
-- Torturer: ${ABSOLUTE_FACTS.antagonist.torturer}
-- Motivation: "${ABSOLUTE_FACTS.antagonist.motivation}"
+### ANTAGONIST / GUIDE FIGURE
+- Name: ${safe(ABSOLUTE_FACTS.antagonist.trueName)}
+- Alias/Title: ${safe(ABSOLUTE_FACTS.antagonist.titleUsed)} (${safe(ABSOLUTE_FACTS.antagonist.aliasUsed)})
+- Communication: ${safe(ABSOLUTE_FACTS.antagonist.communication?.method)}; ink: ${safe(ABSOLUTE_FACTS.antagonist.communication?.ink)}
+- Motivation: "${safe(ABSOLUTE_FACTS.antagonist.motivation)}"
 
 ### SETTING
-- City: ${ABSOLUTE_FACTS.setting.city}
-- Atmosphere: ${ABSOLUTE_FACTS.setting.atmosphere}
-- Key Location: Murphy's Bar is below Jack's office
+- City: ${safe(ABSOLUTE_FACTS.setting.city)}
+- Atmosphere: ${safe(ABSOLUTE_FACTS.setting.atmosphere)}
+- Core mystery: ${safe(ABSOLUTE_FACTS.setting.coreMystery)}
 
-### THE FIVE INNOCENTS
-1. Eleanor Bellamy - convicted of husband's murder, 8 years in Greystone
-2. Marcus Thornhill - framed for embezzlement, committed suicide in lockup
-3. Dr. Lisa Chen - reported evidence tampering, career destroyed
-4. James Sullivan - details revealed progressively
-5. Teresa Wade - Tom Wade's own daughter, convicted with his methods
+### CORE CONSTRAINT (Reveal timing)
+- Jack does NOT know the Under-Map is real at the start of Chapter 2.
+- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
+- Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
 
-### KEY RELATIONSHIPS (EXACT DURATIONS)
-- Jack and Tom Wade: Best friends for 30 years
-- Jack and Sarah Reeves: Partners for 13 years
-- Jack and Silas Reed: Partners for 8 years
-- Emily's "death": 7 years ago exactly
-- Eleanor's imprisonment: 8 years exactly
+### THE FIVE MISSING ANCHORS (Each tied to a glyph)
+${missing}
 
-### TIMELINE (Use these exact dates/durations)
-- 30 years ago: ${TIMELINE.yearsAgo[30]}
-- 25 years ago: ${TIMELINE.yearsAgo[25]}
-- 20 years ago: ${TIMELINE.yearsAgo[20]}
-- 15 years ago: ${TIMELINE.yearsAgo[15]}
-- 13 years ago: ${TIMELINE.yearsAgo[13]}
-- 10 years ago: ${TIMELINE.yearsAgo[10]}
-- 8 years ago: ${TIMELINE.yearsAgo[8]}
-- 7 years ago: Emily Cross events (affair, suicide attempt, kidnapping, Jack closes case)
-- 5 years ago: ${TIMELINE.yearsAgo[5]}
-- 3 years ago: ${TIMELINE.yearsAgo[3]}
-- 1 year ago: ${TIMELINE.yearsAgo[1]}
+### TIMELINE (Use exact numbers; never approximate)
+${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
 
 ### WRITING STYLE REQUIREMENTS
 **Voice:** ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
