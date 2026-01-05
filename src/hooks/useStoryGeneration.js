@@ -683,16 +683,10 @@ export function useStoryGeneration(storyCampaign) {
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
 
-    // Chapter routing:
-    // - 001A is static, but has branching narrative.
-    // - 001B/001C are generated dynamically and should be generated ONLY after the
-    //   player completes the prior subchapter's branching narrative (second choice).
-    //
-    // Therefore, allow this hook to run for Chapter 1 as well, so:
-    // - After 001A branching completes → generate 001B
-    // - After 001B branching completes → generate 001C
-    //
-    // (We still avoid generating anything for non-dynamic cases via needsGeneration().)
+    // Only trigger for chapters 2+ (Chapter 1 is static)
+    if (chapter < 2) {
+      return;
+    }
 
     // SUBCHAPTER C FLOW: Do NOT generate next chapter here.
     // Wait for the player to make their chapter-level decision,
