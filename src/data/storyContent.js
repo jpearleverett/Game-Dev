@@ -5,17 +5,39 @@ const CASE_CONTENT = storyNarrative?.caseContent || {};
 
 export const ROOT_PATH_KEY = 'ROOT';
 
-// Chapter 1 is always static, chapters 2-12 are dynamically generated
-const FIRST_DYNAMIC_CHAPTER = 2;
+// Chapter 1A is static, all other subchapters (1B, 1C, and chapters 2-12) are dynamically generated
+const FIRST_FULLY_DYNAMIC_CHAPTER = 2;
 
 /**
- * Check if a case number requires dynamic generation
+ * Check if a case number requires dynamic generation.
+ * Chapter 1A is static; Chapter 1B, 1C, and all of chapters 2-12 are dynamic.
  */
 export function isDynamicChapter(caseNumber) {
   if (!caseNumber) return false;
   const chapterSegment = caseNumber.slice(0, 3);
   const chapterNumber = parseInt(chapterSegment, 10);
-  return !Number.isNaN(chapterNumber) && chapterNumber >= FIRST_DYNAMIC_CHAPTER;
+  if (Number.isNaN(chapterNumber)) return false;
+
+  // Chapters 2-12 are fully dynamic
+  if (chapterNumber >= FIRST_FULLY_DYNAMIC_CHAPTER) return true;
+
+  // Chapter 1: only subchapter A is static, B and C are dynamic
+  if (chapterNumber === 1) {
+    const subchapterLetter = caseNumber.slice(3, 4).toUpperCase();
+    // 1B and 1C are dynamic, 1A is static
+    return subchapterLetter === 'B' || subchapterLetter === 'C';
+  }
+
+  return false;
+}
+
+/**
+ * Check if a case number is for static Chapter 1A content.
+ * Used for special handling of the static opening chapter.
+ */
+export function isStaticChapter1A(caseNumber) {
+  if (!caseNumber) return false;
+  return caseNumber.toUpperCase() === '001A';
 }
 
 /**
@@ -103,7 +125,7 @@ export function resolveStoryPathKey(caseNumber, storyCampaign) {
 
     // Prefer deterministic branch key from choiceHistory for dynamic chapters.
     // This prevents collisions where currentPathKey is only "A"/"B" or otherwise incomplete.
-    if (chapterNumber >= FIRST_DYNAMIC_CHAPTER) {
+    if (chapterNumber >= FIRST_FULLY_DYNAMIC_CHAPTER) {
       const computed = computeBranchPathKey(storyCampaign.choiceHistory, chapterNumber);
       if (computed && computed !== ROOT_PATH_KEY) {
         return computed;

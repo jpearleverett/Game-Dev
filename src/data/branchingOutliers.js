@@ -1,21 +1,24 @@
 export const BRANCHING_OUTLIER_SETS = {
+  // NOTE: 001C is now DYNAMICALLY GENERATED. This is fallback/template data.
+  // The actual decision options and puzzle words come from the LLM-generated content.
   '001C': {
     attempts: 5,
+    isDynamic: true,
     'ROOT': {
       sets: [
         {
           optionKey: 'A',
           label: 'A',
-          theme: { name: 'CAUTIOUS', icon: '🔮', summary: 'I need the evidence. Im going to see the daughter.' },
-          words: ["NEED", "EVIDENCE", "GOING", "DAUGHTER"],
-          descriptions: {"NEED": "Part of the 'A' path choice.", "EVIDENCE": "Part of the 'A' path choice.", "GOING": "Part of the 'A' path choice.", "DAUGHTER": "Part of the 'A' path choice."}
+          theme: { name: 'METHODICAL', icon: '🔮', summary: 'Take the careful, evidence-focused approach.' },
+          words: ["CAREFUL", "EVIDENCE", "THOROUGH", "INVESTIGATE"],
+          descriptions: {"CAREFUL": "Part of the methodical path.", "EVIDENCE": "Part of the methodical path.", "THOROUGH": "Part of the methodical path.", "INVESTIGATE": "Part of the methodical path."}
         },
         {
           optionKey: 'B',
           label: 'B',
-          theme: { name: 'CONFRONTAT', icon: '🔮', summary: 'I need to look him in the eye. Im going to Silas.' },
-          words: ["LOOK", "SILAS", "FORCE", "POWER"],
-          descriptions: {"LOOK": "Part of the 'B' path choice.", "SILAS": "Part of the 'B' path choice.", "FORCE": "Part of the 'B' path choice.", "POWER": "Part of the 'B' path choice."}
+          theme: { name: 'DIRECT', icon: '🔮', summary: 'Take the confrontational, action-oriented approach.' },
+          words: ["DIRECT", "CONFRONT", "ACTION", "RISK"],
+          descriptions: {"DIRECT": "Part of the direct path.", "CONFRONT": "Part of the direct path.", "ACTION": "Part of the direct path.", "RISK": "Part of the direct path."}
         },
       ]
     },

@@ -6,227 +6,230 @@ const RAW_SEASON_ONE_CASES = [
       caseNumber: '001A',
 
       day: 1,
-      title: 'Midnight Delivery',
-    mainTheme: { name: 'COMMUNICATION', icon: '✉️' },
-    outlierTheme: { name: 'BEGINNINGS', icon: '🔓' },
+      title: 'Dead Letter Office',
+    mainTheme: { name: 'IMPOSSIBILITY', icon: '✉️' },
+    outlierTheme: { name: 'THE IMPOSSIBLE', icon: '🔮' },
     attempts: 4,
       dailyIntro:
-        `Some confessions arrive at midnight. Some arrive seven years late. All of them cost something.`,
+        `The letter on the desk was stamped 'Undeliverable', but the handwriting was unmistakably his own.`,
       briefing: {
         summary:
-          'A mysterious envelope appeared at your door. Scan the items on your desk to identify the four methods the Confessor is using to stalk you.',
+          'Investigate the origin of the impossible letter and the nature of the silver glyph.',
         objectives: [
-          'Scan your desk for the specific communication channels the Confessor weaponises.',
-          'Isolate the four specific methods she used to deliver her ultimatum.',
-          'Lock the grid to prove you can hear her signal.'
+          'Analyze the silver ink\'s properties.',
+          'Verify the connection between the photo and the alley door.',
+          'Identify who \'Victoria\' is.'
         ]
       },
-      
+
       evidenceBoard: {
         polaroids: [
           {
-            id: '001A-confessor-arrival',
-            imageKey: 'silas', // Fallback or placeholder if silence not avail, but using mapped keys
+            id: '001A-dead-letter',
             imageKey: 'silence',
-            title: 'MIDNIGHT VISITOR',
-            subtitle: '2:47 AM ARRIVAL',
-            detail: 'Perfumed stranger. No knock. Just the slide of paper under the door and the scent of expensive French perfume lingering like a ghost.'
+            title: 'DEAD LETTER',
+            subtitle: 'RETURN TO SENDER',
+            detail: 'A cream-colored envelope stamped "Undeliverable" addressed to Victoria at The Threshold, 404 Acheron Ave. The return address was in Jack\'s own handwriting.'
           },
           {
-            id: '001A-eleanor-call',
+            id: '001A-silver-glyph',
             imageKey: 'sparkle',
-            title: 'ELEANOR\'S PLEA',
-            subtitle: 'GREYSTONE EMERGENCY',
-            detail: 'Sarah called at 3 AM. Eleanor Bellamy poisoned with ricin. She swore she was framed eight years ago. She swore there was a woman in red.'
+            title: 'SILVER GLYPH',
+            subtitle: 'THE PHOTOGRAPH',
+            detail: 'A glossy photo of the alley behind Murphy\'s. A complex shape in shimmering silver ink drawn on the door. The ink seems to vibrate when stared at too long.'
           },
           {
-            id: '001A-ultimatum-envelope',
+            id: '001A-alley-door',
             imageKey: 'default',
-            title: 'BLACK ENVELOPE',
-            subtitle: 'THE ULTIMATUM',
-            detail: '"Twelve days. Twelve cases. One you closed without certainty." Heavy stock. Red wax seal. The game piece that started the clock.'
+            title: 'MURPHY\'S ALLEY',
+            subtitle: 'BLANK DOOR',
+            detail: 'The photo shows a silver glyph on the door, but in reality the door is blank. Yet the photo grows warm when near it, and the ink seems to move.'
           }
         ]
       },
     board: {
       mainWords: [
         'LETTER',
-        'EMAIL',
-        'TEXT',
-        'CALL',
-        'VOICEMSG',
-        'MEMO',
-        'NOTE',
-        'FAX',
-        'CHAT',
-        'DISPATCH',
-        'TELEGRAM',
-        'MESSAGE'
+        'ENVELOPE',
+        'PHOTO',
+        'DOOR',
+        'MURPHY',
+        'VICTORIA',
+        'HALLOWAY',
+        'ALLEY',
+        'HANDWRITING',
+        'OFFICE',
+        'STAMP',
+        'INK'
       ],
-      outlierWords: ['ORIGIN', 'START', 'FIRST', 'DAWN']
+      outlierWords: ['THRESHOLD', 'ACHERON', 'SILVER', 'GLYPH']
     },
     clueSummaries: {
       main:
-        'You found the BEGINNINGS. Now read the journal to see how Jack uses it.',
+        'You found the IMPOSSIBLE elements. Now read the journal to see how Jack investigates them.',
       outliers: {
-        ORIGIN: 'Points Jack straight back to the Emily Cross file he buried—the origin she demands he reopen.',
-        START: 'Marks the first square in her twelve-day gauntlet and the moment the game truly begins.',
-        FIRST: 'Reminds him there was a first innocent he ignored, and that certainty cut someone loose.',
-        DAWN: 'Foreshadows the daily unlocks—he can rest, but the next reckoning arrives at dawn regardless.'
+        THRESHOLD: 'The address mentions "The Threshold" - a place that may not exist on any map.',
+        ACHERON: 'Acheron Avenue was paved over 5 years ago. How can a letter be addressed there?',
+        SILVER: 'The silver ink is not normal. It moves. It reacts. It might be alive.',
+        GLYPH: 'The symbol hurts to look at, vibrating against the photo paper like something trying to escape.'
       }
     }
-        
+
   },
   {
       id: 2,
       caseNumber: '001B',
-
+      // NOTE: 001B is now DYNAMICALLY GENERATED. This entry provides fallback/template data.
+      // The actual content (narrative, board, etc.) comes from generated storage.
+      isDynamic: true,
       day: 1,
-      title: "The Widow's Testimony",
-      mainTheme: { name: 'COMMUNICATION', icon: '✉️' },
-      outlierTheme: { name: 'GEMSTONES', icon: '💎' },
+      title: 'The Investigation Deepens',
+      mainTheme: { name: 'MYSTERY', icon: '🔍' },
+      outlierTheme: { name: 'EVIDENCE', icon: '🔮' },
       attempts: 4,
-      dailyIntro: `PREVIOUSLY: Black envelope at 2:47 AM. Twelve cases. One closed without certainty.
-Sarah called—Eleanor Bellamy poisoned at Greystone. Evidence stolen. Twelve files, twelve days.
-The woman in red. Always the woman in red. Jack's certainty turned to ash.`,
+      dailyIntro: `PREVIOUSLY: A letter Jack wrote but didn't write. A photo of a glyph that doesn't exist. The silver ink moved.`,
       briefing: {
         summary:
-          'Eleanor claims she was framed. Profile her financial status. Isolate the four luxury items that don\'t fit a struggling widow\'s budget.',
+          'Continue investigating the impossible letter and the silver glyph.',
         objectives: [
-          'Review the case file for items that don\'t match Eleanor\'s financial profile.',
-          'Identify the four expensive objects planted in her safety deposit box.',
-          'Clear the board to expose the evidence that was manufactured.'
+          'Follow up on the discoveries from 1A.',
+          'Investigate Victoria and The Threshold.',
+          'Understand the nature of the silver ink.'
         ]
       },
-            evidenceBoard: {
+      evidenceBoard: {
         polaroids: [
           {
-            id: '001B-visitation-booth',
+            id: '001B-investigation',
             imageKey: 'sparkle',
-            title: 'GREYSTONE VISIT',
-            subtitle: 'DYING DECLARATION',
-            detail: 'Eleanor looked like charcoal sketches of her former self. Shackled. Coughing blood. "Mrs. died when you sent me here."'
+            title: 'THE INVESTIGATION',
+            subtitle: 'CONTINUING',
+            detail: 'Jack follows the trail from the impossible letter. The questions multiply faster than answers.'
           },
           {
-            id: '001B-scarlet-visitor',
+            id: '001B-threshold',
             imageKey: 'silence',
-            title: 'SCARLET VISITOR',
-            subtitle: 'PRISON LOG',
-            detail: 'A woman in red visited three weeks ago. Told Eleanor that Jack Halloway would come. That he would finally learn what certainty costs.'
+            title: 'THE THRESHOLD',
+            subtitle: 'UNKNOWN LOCATION',
+            detail: 'The address on the letter mentioned "The Threshold." What is it? Where is it?'
           },
           {
-            id: '001B-ricin-note',
+            id: '001B-victoria',
             imageKey: 'default',
-            title: 'RICIN NOTE',
-            subtitle: 'TRAY MESSAGE',
-            detail: '"The widow knows the truth. Ask her about the woman in red." Found under her dinner tray. A prompt, not just a threat.'
+            title: 'VICTORIA',
+            subtitle: 'UNKNOWN RECIPIENT',
+            detail: 'Who is Victoria? Why was Jack\'s handwriting used to address a letter to her?'
           }
         ]
       },
       board: {
+        // Placeholder - actual board data comes from generated content
         mainWords: [
-          'CONFESSION',
-          'VISITATION',
-          'PRISON',
-          'SHACKLES',
-          'GUARD',
+          'THRESHOLD',
+          'VICTORIA',
+          'GLYPH',
+          'SILVER',
+          'INK',
           'LETTER',
-          'VOICE',
-          'WHISPER',
-          'TRUTH',
-          'PLEA',
-          'CAGE',
-          'WITNESS'
+          'PHOTO',
+          'DOOR',
+          'MURPHY',
+          'ALLEY',
+          'ACHERON',
+          'EVIDENCE'
         ],
-        outlierWords: ['SAPPHIRE', 'NECKLACE', 'JEWEL', 'STONE']
+        outlierWords: ['CLUE', 'TRACE', 'PROOF', 'SIGN']
       },
       clueSummaries: {
         main:
-          'You found the GEMSTONES. Now read the journal to see how Jack uses it.',
+          'The investigation continues. Content is dynamically generated.',
         outliers: {
-          SAPPHIRE: 'Shines a light on the planted necklace that sank the trial.',
-          NECKLACE: 'Names the forged heirloom that never appeared in Richard’s catalog.',
-          JEWEL: 'Signals the luxury bait Victoria used to manufacture certainty.',
-          STONE: 'Reminds Jack that every glittering clue was a weapon placed in plain sight.'
+          CLUE: 'A piece of evidence discovered during the investigation.',
+          TRACE: 'A trace of something that shouldn\'t exist.',
+          PROOF: 'Proof that the impossible is real.',
+          SIGN: 'A sign pointing toward the truth.'
         }
       }
-              
+
   },
   {
       id: 3,
       caseNumber: '001C',
-
+      // NOTE: 001C is now DYNAMICALLY GENERATED. This entry provides fallback/template data.
+      // The actual content (narrative, board, decision) comes from generated storage.
+      isDynamic: true,
+      isDecisionPoint: true,
       day: 1,
-      title: 'The Sapphire Trail',
-      mainTheme: { name: 'COMMUNICATION', icon: '✉️' },
-      outlierTheme: { name: 'CHESS PIECES', icon: '♟️' },
+      title: 'The Decision',
+      mainTheme: { name: 'CHOICE', icon: '⚖️' },
+      outlierTheme: { name: 'PATHS', icon: '🔀' },
       attempts: 4,
-      dailyIntro: `PREVIOUSLY: Eleanor in Greystone, dying from ricin. Eight years for maybe.
-She told him about the woman in red—elegant, dangerous, building evidence.
-Maya called, terrified. Then silence. Victoria had her. The widow's truth, too late to matter.`,
+      dailyIntro: `PREVIOUSLY: The letter. The glyph. The impossible ink that moves like it's alive.
+The investigation has led to a crossroads. Two paths forward, each with its own risks.`,
       briefing: {
         summary:
-          'The Confessor left a calling card on the desk. Decode the specific game pieces she is using to describe your team.',
+          'The investigation reaches a critical decision point. Choose how Jack will proceed.',
         objectives: [
-          'Analyze the chess board left by the Confessor.',
-          'Identify the four pieces representing the players in this game.',
-          'Decipher the metaphor to understand the threat.'
+          'Review what has been discovered about Victoria and The Threshold.',
+          'Weigh the evidence and the risks.',
+          'Make a choice that will shape the rest of the investigation.'
         ]
       },
-      
+
       evidenceBoard: {
         polaroids: [
           {
-            id: '001C-ruined-study',
+            id: '001C-crossroads',
             imageKey: 'default',
-            title: 'BELLAMY STUDY',
-            subtitle: 'CRACKED SAFE',
-            detail: 'Richard\'s study. The safe was empty. The jewelry catalog was missing. Proof that the sapphire necklace was never recorded in his meticulous logs.'
+            title: 'CROSSROADS',
+            subtitle: 'DECISION TIME',
+            detail: 'The investigation has led Jack to a fork in the road. Each path leads to different truths, different dangers.'
           },
           {
-            id: '001C-day-one-pawn',
+            id: '001C-path-a',
+            imageKey: 'sparkle',
+            title: 'PATH A',
+            subtitle: 'METHODICAL',
+            detail: 'The careful approach. Gather more evidence. Build the case piece by piece. Slower but thorough.'
+          },
+          {
+            id: '001C-path-b',
             imageKey: 'silence',
-            title: 'OBSIDIAN PAWN',
-            subtitle: 'GAME PIECE',
-            detail: 'Left on the desk. "DAY ONE: THE INNOCENT SUFFER." A heavy stone token marking the first casualty of the Confessor\'s lesson.'
-          },
-          {
-            id: '001C-sarah-sweep',
-            imageKey: 'voice',
-            title: 'SARAH REEVES',
-            subtitle: 'PARTNER SWEEP',
-            detail: 'Sarah beat me to the scene. Found the break-in. Warned me that seven years ago, Emily Cross disappeared.'
+            title: 'PATH B',
+            subtitle: 'DIRECT',
+            detail: 'The confrontational approach. Act now on what is known. Faster but riskier.'
           }
         ]
       },
       board: {
+        // Placeholder - actual board data comes from generated content
         mainWords: [
-          'STUDY',
-          'LEDGER',
-          'SAFE',
-          'CATALOG',
-          'DOOR',
-          'FOOTSTEP',
-          'FLASHLIGHT',
-          'FILE',
-          'PHOTO',
-          'PAWN',
-          'LETTER',
-          'EVIDENCE'
+          'CHOICE',
+          'PATH',
+          'DECISION',
+          'EVIDENCE',
+          'RISK',
+          'TRUTH',
+          'ACTION',
+          'WAIT',
+          'CONFRONT',
+          'INVESTIGATE',
+          'THRESHOLD',
+          'GLYPH'
         ],
-        outlierWords: ['PAWN', 'KNIGHT', 'BISHOP', 'CHECK']
+        outlierWords: ['FORK', 'BRANCH', 'ROUTE', 'WAY']
       },
       clueSummaries: {
         main:
-          'You found the CHESS PIECES. Now read the journal to see how Jack uses it.',
+          'The decision point. Content is dynamically generated.',
         outliers: {
-          PAWN: 'Marks the first chess piece Victoria uses to grade his progress.',
-          KNIGHT: 'Hints at the unseen moves already positioned against Jack.',
-          BISHOP: 'Signals the diagonal strikes—evidence that cuts across his assumptions.',
-          CHECK: 'Warns that the Confessor is measuring how close she is to cornering him.'
+          FORK: 'A fork in the investigation. Two paths, one choice.',
+          BRANCH: 'The story branches based on Jack\'s decision.',
+          ROUTE: 'The route Jack takes will determine what he discovers.',
+          WAY: 'There\'s always another way, but not always a better one.'
         }
       }
-            
+
   },
   {
       id: 4,
