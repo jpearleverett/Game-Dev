@@ -5,9 +5,7 @@ const CASE_CONTENT = storyNarrative?.caseContent || {};
 
 export const ROOT_PATH_KEY = 'ROOT';
 
-// Content routing:
-// - Chapter 1A (001A) is static/prewritten (ships with the app)
-// - Chapter 1B/1C (001B/001C) and Chapters 2-12 are dynamically generated via the LLM pipeline
+// Chapter 1 is always static, chapters 2-12 are dynamically generated
 const FIRST_DYNAMIC_CHAPTER = 2;
 
 /**
@@ -17,15 +15,7 @@ export function isDynamicChapter(caseNumber) {
   if (!caseNumber) return false;
   const chapterSegment = caseNumber.slice(0, 3);
   const chapterNumber = parseInt(chapterSegment, 10);
-  if (Number.isNaN(chapterNumber)) return false;
-
-  // Special-case: only 001A is static; 001B/001C are generated.
-  if (chapterNumber === 1) {
-    const letter = caseNumber.slice(3, 4).toUpperCase();
-    return letter === 'B' || letter === 'C';
-  }
-
-  return chapterNumber >= FIRST_DYNAMIC_CHAPTER;
+  return !Number.isNaN(chapterNumber) && chapterNumber >= FIRST_DYNAMIC_CHAPTER;
 }
 
 /**
@@ -302,7 +292,7 @@ export async function getStoryEntryAsync(caseNumber, pathKey, previousBranchingP
 export async function hasStoryContent(caseNumber, pathKey) {
   if (!caseNumber) return false;
 
-  // Static cases (e.g., 001A) always have bundled content
+  // Chapter 1 always has static content
   if (!isDynamicChapter(caseNumber)) {
     return getStoryEntry(caseNumber, pathKey) !== null;
   }

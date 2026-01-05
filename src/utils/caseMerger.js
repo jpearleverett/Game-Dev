@@ -98,10 +98,6 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
     // 6. Merge Story Metadata (Narrative, Polaroids, Briefing)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
-        // Prefer story-provided title when available (dynamic chapters + 001A override)
-        if (typeof storyMeta.title === 'string' && storyMeta.title.trim()) {
-            merged.title = storyMeta.title.trim();
-        }
 
         // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
         if (storyMeta.pathDecisions) {
@@ -246,10 +242,6 @@ export async function mergeCaseWithStoryAsync(baseCase, storyCampaign, getStoryE
     // 6. Merge Story Metadata (Narrative, Polaroids, Briefing)
     if (storyMeta) {
         merged.storyMeta = storyMeta;
-        // Prefer story-provided title when available (dynamic chapters + 001A override)
-        if (typeof storyMeta.title === 'string' && storyMeta.title.trim()) {
-            merged.title = storyMeta.title.trim();
-        }
 
         // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
         if (storyMeta.pathDecisions) {

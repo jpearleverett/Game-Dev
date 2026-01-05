@@ -487,9 +487,8 @@ class LLMService {
     // Gemini API endpoint
     const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
 
-    // Convert messages to Gemini format.
-    // Best practice: pass system instructions via systemInstruction (not prepended into user text).
-    const { contents, systemInstruction } = this._convertToGeminiFormat(messages, systemPrompt);
+    // Convert messages to Gemini format
+    const contents = this._convertToGeminiFormat(messages, systemPrompt);
 
     // Build generation config
     const generationConfig = {
@@ -547,7 +546,6 @@ class LLMService {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
               contents,
               generationConfig,
               safetySettings: [
@@ -1333,43 +1331,52 @@ class LLMService {
   _convertToGeminiFormat(messages, systemPrompt) {
     const contents = [];
 
-    // Prefer using systemInstruction (first-class field) instead of text injection.
+    // Gemini handles system prompts by prepending to the first user message
+    // or using a special system instruction format
     let systemInstruction = systemPrompt || '';
 
-    // Extract any system messages from the messages array and append them to systemInstruction.
-    const nonSystemMessages = (Array.isArray(messages) ? messages : []).filter((m) => {
-      if (m?.role === 'system') {
+    // Extract any system messages from the messages array
+    const nonSystemMessages = messages.filter(m => {
+      if (m.role === 'system') {
         systemInstruction = systemInstruction
-          ? `${systemInstruction}\n\n${m.content || ''}`
-          : (m.content || '');
+          ? `${systemInstruction}\n\n${m.content}`
+          : m.content;
         return false;
       }
       return true;
     });
 
-    for (const msg of nonSystemMessages) {
+    // Build the contents array
+    for (let i = 0; i < nonSystemMessages.length; i++) {
+      const msg = nonSystemMessages[i];
+      let text = msg.content;
+
+      // Prepend system instruction to the first user message
+      if (i === 0 && systemInstruction && msg.role === 'user') {
+        text = `${systemInstruction}\n\n---\n\n${text}`;
+      }
+
       // Build part with optional thought signature for reasoning continuity (Gemini 3)
-      const part = { text: msg?.content || '' };
-      if (msg?.thoughtSignature) {
+      const part = { text };
+      if (msg.thoughtSignature) {
         part.thoughtSignature = msg.thoughtSignature;
       }
 
       contents.push({
-        role: msg?.role === 'assistant' ? 'model' : 'user',
+        role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [part],
       });
     }
 
-    // If no messages but we have a system prompt, provide an empty user turn.
-    // (The systemInstruction will still steer behavior.)
-    if (contents.length === 0) {
+    // If no messages but we have a system prompt, create a user message
+    if (contents.length === 0 && systemInstruction) {
       contents.push({
         role: 'user',
-        parts: [{ text: '' }],
+        parts: [{ text: systemInstruction }],
       });
     }
 
-    return { contents, systemInstruction };
+    return contents;
   }
 
   _sleep(ms) {
