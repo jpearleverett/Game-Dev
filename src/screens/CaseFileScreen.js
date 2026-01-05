@@ -292,7 +292,6 @@ export default function CaseFileScreen({
 
   const handleBranchingComplete = useCallback((result) => {
     setBranchingProgress(result);
-    console.log('[CaseFileScreen] Branching narrative complete:', result);
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
@@ -305,7 +304,6 @@ export default function CaseFileScreen({
         const firstChoice = parts[0]; // e.g., "1A"
         const secondChoice = result.path; // e.g., "1A-2B" (full path is the second choice key)
         onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
-        console.log(`[CaseFileScreen] Saved branching choice for ${caseNumber}: ${firstChoice} -> ${secondChoice}`);
       }
     }
 
@@ -313,21 +311,18 @@ export default function CaseFileScreen({
     // Applies to ALL subchapters with branching narrative (including 1A)
     // Note: Prefetch is triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
     if (hasBranchingNarrative) {
-      console.log('[CaseFileScreen] Narrative complete - ready for puzzle');
       setNarrativeComplete(true);
     }
   }, [onSaveBranchingChoice, caseNumber, hasBranchingNarrative]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);
-    console.log('[CaseFileScreen] Evidence collected:', evidence);
   }, []);
 
   // NARRATIVE-FIRST FLOW: First choice is now just for tracking, no speculative prefetch
   // With narrative-first, we wait until branching is COMPLETE to generate next content
   // This means we only generate 1 version (the exact path player took), not 3 speculative versions
   const handleFirstChoice = useCallback((firstChoiceKey) => {
-    console.log('[CaseFileScreen] First choice made:', firstChoiceKey);
     // Note: No speculative prefetch needed - generation happens after second choice
     // via onSaveBranchingChoice -> triggerPrefetchAfterBranchingComplete
   }, []);
@@ -808,9 +803,8 @@ export default function CaseFileScreen({
                       onRevealDecision={handleRevealDecisionPanel}
                       onComplete={() => {
                         // NARRATIVE-FIRST FLOW: Mark linear narrative as complete
-                        // Applies to Chapter 1 and any fallback scenarios for dynamic chapters
+                        // Applies to fallback scenarios for dynamic chapters
                         if (isStoryMode) {
-                          console.log('[CaseFileScreen] Linear narrative complete - ready for puzzle');
                           setNarrativeComplete(true);
                         }
                       }}
