@@ -524,8 +524,10 @@ export function useStoryGeneration(storyCampaign) {
       return null;
     }
 
-    if (chapter < 2) {
-      return null; // Chapter 1 is static
+    // Chapter 1A is static, but 1B and 1C are dynamic
+    // For generateChapter, we generate all 3 subchapters, so skip only if entirely static
+    if (chapter < 1) {
+      return null; // Invalid chapter
     }
 
     // Only update status/progress for non-silent (user-facing) generations
@@ -608,9 +610,12 @@ export function useStoryGeneration(storyCampaign) {
    * when they finish reading and solving the puzzle for A
    */
   const pregenerateCurrentChapterSiblings = useCallback(async (chapter, pathKey, choiceHistory = []) => {
-    if (!isConfigured || chapter < 2) {
+    if (!isConfigured || chapter < 1) {
       return;
     }
+
+    // For Chapter 1, we generate 1B and 1C when player enters 1A (which is static but has branching)
+    // For all other chapters, this generates the B and C subchapters when entering A
 
     // Capture parameters at call time to prevent stale closure issues
     // Even though JS block scoping handles this, being explicit improves readability
@@ -683,11 +688,6 @@ export function useStoryGeneration(storyCampaign) {
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
 
-    // Only trigger for chapters 2+ (Chapter 1 is static)
-    if (chapter < 2) {
-      return;
-    }
-
     // SUBCHAPTER C FLOW: Do NOT generate next chapter here.
     // Wait for the player to make their chapter-level decision,
     // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
@@ -695,6 +695,11 @@ export function useStoryGeneration(storyCampaign) {
       console.log(`[useStoryGeneration] Subchapter C branching complete - waiting for player decision before generating next chapter`);
       return;
     }
+
+    // For Chapter 1: subchapter A is static, but B and C are dynamic
+    // After completing 1A, we need to generate 1B
+    // After completing 1B, we need to generate 1C
+    // (Subchapter C case handled above)
 
     // Generate the NEXT subchapter now that we have branching context
     const nextSubLetter = subchapter === 1 ? 'B' : 'C';
@@ -772,8 +777,9 @@ export function useStoryGeneration(storyCampaign) {
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
 
-    // Only trigger for chapters 2+ (Chapter 1 is static)
-    if (chapter < 2) {
+    // Chapter 1A is static but has branching, so speculative prefetch should work for 1B generation
+    // Skip invalid chapters
+    if (chapter < 1) {
       return;
     }
 

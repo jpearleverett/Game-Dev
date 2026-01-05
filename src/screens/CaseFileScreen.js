@@ -279,7 +279,8 @@ export default function CaseFileScreen({
   const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
   const subchapterLetter = caseNumber?.slice(3, 4);
   const isSubchapterC = subchapterLetter === 'C';
-  const isDynamicChapter = chapter >= 2;
+  // Chapter 1A is static; 1B, 1C, and all of chapters 2+ are dynamic
+  const isDynamicChapter = chapter >= 2 || (chapter === 1 && (subchapterLetter === 'B' || subchapterLetter === 'C'));
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
@@ -567,9 +568,9 @@ export default function CaseFileScreen({
           };
         }
         // Decision not yet made - don't show puzzle button (let them decide first)
-      } else if (narrativeReadyForPuzzle || chapter === 1) {
+      } else if (narrativeReadyForPuzzle || (chapter === 1 && subchapterLetter === 'A')) {
         // A/B subchapter: Show puzzle after narrative
-        // Exception: Chapter 1 A/B always shows puzzle button (skip narrative gating for replay flow)
+        // Exception: Chapter 1A (static) always shows puzzle button (skip narrative gating for replay flow)
         return {
           title: "Evidence Board Ready",
           body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",

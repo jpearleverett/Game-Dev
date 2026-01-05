@@ -48,10 +48,11 @@ export function useNavigationActions(navigation, game, audio) {
     // If puzzle already solved, no need to show narrative first
     if (isCaseCompleted) return false;
 
-    // For Chapter 1 (static): Show narrative first if not completed
-    if (chapter < 2) return true;
+    // For Chapter 1A (static): Show narrative first if not completed
+    const subchapterLetter = caseNumber.slice(3, 4).toUpperCase();
+    if (chapter === 1 && subchapterLetter === 'A') return true;
 
-    // For dynamic chapters (2+): Check if branching narrative has been read
+    // For dynamic chapters (1B, 1C, and chapters 2+): Check if branching narrative has been read
     const branchingChoices = storyCampaign?.branchingChoices || [];
     const hasCompletedBranching = branchingChoices.some(bc => bc.caseNumber === caseNumber);
 
