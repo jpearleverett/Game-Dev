@@ -507,6 +507,53 @@ const STORY_CONTENT_SCHEMA = {
       },
       description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status and urgency level for prioritization.'
     },
+    characterUpdates: {
+      type: 'object',
+      description: 'If any NEW named characters besides Jack/Victoria appear in this subchapter, record them here so they can persist consistently across chapters.',
+      properties: {
+        introduced: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Character name as used in prose (do NOT use any legacy forbidden names)' },
+              role: { type: 'string', description: '1 short clause describing who they are in the story' },
+              relationshipToJack: { type: 'string', description: 'How Jack relates to them right now (ally/contact/suspect/stranger)' },
+              relationshipToVictoria: { type: 'string', description: 'How Victoria relates to them (if known), else empty' },
+              backstory: { type: 'string', description: '2-3 sentence background that can be referenced later (no spoilers)' },
+              voice: {
+                type: 'object',
+                properties: {
+                  speakingStyle: { type: 'string', description: 'How they speak (cadence, formality, tells)' },
+                  writtenStyle: { type: 'string', description: 'If they write notes/messages, how that reads; else empty' },
+                  dialogueRhythm: { type: 'array', items: { type: 'string' }, description: '2-4 quick rhythm notes' },
+                  vocabularyTendencies: { type: 'array', items: { type: 'string' }, description: '2-4 recurring word choices / semantic domain' },
+                  physicalTells: { type: 'array', items: { type: 'string' }, description: '2-4 recurring physical tells' },
+                },
+              },
+              continuityFacts: { type: 'array', items: { type: 'string' }, description: '2-5 facts that must remain consistent for this character' },
+            },
+            required: ['name', 'role', 'relationshipToJack', 'backstory'],
+          },
+        },
+        updated: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Existing character name' },
+              role: { type: 'string' },
+              relationshipToJack: { type: 'string' },
+              relationshipToVictoria: { type: 'string' },
+              backstory: { type: 'string' },
+              voice: { type: 'object' },
+              continuityFacts: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['name'],
+          },
+        },
+      },
+    },
     previousThreadsAddressed: {
       type: 'array',
       items: {
@@ -922,6 +969,36 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status and urgency level for prioritization.'
     },
+    characterUpdates: {
+      type: 'object',
+      description: 'If any NEW named characters besides Jack/Victoria appear in this subchapter, record them here so they can persist consistently across chapters.',
+      properties: {
+        introduced: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              role: { type: 'string' },
+              relationshipToJack: { type: 'string' },
+              relationshipToVictoria: { type: 'string' },
+              backstory: { type: 'string' },
+              voice: { type: 'object' },
+              continuityFacts: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['name', 'role', 'relationshipToJack', 'backstory'],
+          },
+        },
+        updated: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { name: { type: 'string' } },
+            required: ['name'],
+          },
+        },
+      },
+    },
     previousThreadsAddressed: {
       type: 'array',
       items: {
@@ -1152,6 +1229,12 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 - Continuity: never contradict the Story Bible / established facts / dates / relationships.
 - Continuation: when a prior ending is provided (especially <scene_state> / exact last sentence), pick up immediately after it; do not restart, recap, or rephrase the ending.
 </non_negotiables>
+
+<cast_policy>
+- You MAY introduce new side characters as the story demands.
+- If you introduce a named character besides Jack and Victoria, you MUST record them in `characterUpdates.introduced` in your JSON output (voice + background + continuity facts).
+- Do NOT introduce or reference these legacy character names (they belong to an older story version and must never appear): Sarah, Reeves, Eleanor, Bellamy, Helen, Marcus, Thornhill, Tom, Wade, Silas, Reed, Grange, Emily, Confessor.
+</cast_policy>
 
 <reveal_timing>
 - Jack does NOT know the Under-Map is real at the start of Chapter 2.
@@ -1605,12 +1688,22 @@ class StoryGenerationService {
     // ========== CONTEXT CACHING OPTIMIZATION ==========
     // Cache for static prompt content (Story Bible, Character Reference, etc.)
     this.staticCacheKey = null; // Key for the static content cache
-    this.staticCacheVersion = 2; // Increment when static content changes
+    this.staticCacheVersion = 3; // Increment when static content changes
 
     // Cache for "chapter start" prefixes (static + story up to previous chapter).
     // This lets subchapters within a chapter send only the delta (current chapter so far).
     this.chapterStartCacheVersion = 1; // Increment when chapter cache format changes
     this.chapterStartCacheKeys = new Map(); // logicalKey -> cacheKey
+
+    // ========== Dynamic Character Registry ==========
+    // Persisted across sessions via storyContext so newly introduced characters
+    // remain consistent (voice, background, continuity facts).
+    this.characterRegistry = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      // key: lowercased name → record
+      characters: {},
+    };
   }
 
   /**
@@ -1622,9 +1715,105 @@ class StoryGenerationService {
     const s = String(text);
     // Replace legacy/forbidden character names with neutral placeholders.
     return s.replace(
-      /\b(Sarah|Reeves|Helen|Eleanor|Bellamy|Marcus|Thornhill|Tom|Wade|Silas|Reed|Grange|Emily)\b/gi,
+      /\b(Sarah|Reeves|Helen|Eleanor|Bellamy|Marcus|Thornhill|Tom|Wade|Silas|Reed|Grange|Emily|Confessor)\b/gi,
       'someone'
     );
+  }
+
+  _isForbiddenLegacyName(name) {
+    const n = String(name || '').trim().toLowerCase();
+    if (!n) return false;
+    const forbidden = new Set([
+      'sarah', 'reeves',
+      'eleanor', 'bellamy',
+      'helen',
+      'marcus', 'thornhill',
+      'tom', 'wade',
+      'silas', 'reed',
+      'grange',
+      'emily',
+      'confessor',
+    ]);
+    return forbidden.has(n);
+  }
+
+  _normalizeCharacterName(name) {
+    const raw = String(name || '').trim().replace(/\s+/g, ' ');
+    if (!raw) return '';
+    // Title-case each token, preserve simple punctuation like hyphen/apostrophe.
+    return raw.split(' ').map((part) => part.slice(0, 1).toUpperCase() + part.slice(1)).join(' ');
+  }
+
+  _applyCharacterUpdates(caseNumber, characterUpdates) {
+    if (!characterUpdates || typeof characterUpdates !== 'object') return;
+    const introduced = Array.isArray(characterUpdates.introduced) ? characterUpdates.introduced : [];
+    const updated = Array.isArray(characterUpdates.updated) ? characterUpdates.updated : [];
+    const all = [...introduced.map((c) => ({ ...c, _kind: 'introduced' })), ...updated.map((c) => ({ ...c, _kind: 'updated' }))];
+    if (all.length === 0) return;
+
+    const reg = this.characterRegistry || { version: 1, updatedAt: new Date().toISOString(), characters: {} };
+    reg.characters = reg.characters || {};
+
+    for (const ch of all) {
+      const proposedName = this._normalizeCharacterName(ch?.name);
+      if (!proposedName) continue;
+      // Never allow legacy cast names to enter the registry.
+      if (this._isForbiddenLegacyName(proposedName)) continue;
+      // Also protect Jack/Victoria from being re-added.
+      if (/^jack\b/i.test(proposedName) || /^victoria\b/i.test(proposedName)) continue;
+
+      const key = proposedName.toLowerCase();
+      const existing = reg.characters[key] || {};
+      const now = new Date().toISOString();
+
+      reg.characters[key] = {
+        name: proposedName,
+        role: ch?.role || existing.role || '',
+        relationshipToJack: ch?.relationshipToJack || existing.relationshipToJack || '',
+        relationshipToVictoria: ch?.relationshipToVictoria || existing.relationshipToVictoria || '',
+        backstory: ch?.backstory || existing.backstory || '',
+        voice: {
+          speakingStyle: ch?.voice?.speakingStyle || existing.voice?.speakingStyle || '',
+          writtenStyle: ch?.voice?.writtenStyle || existing.voice?.writtenStyle || '',
+          dialogueRhythm: Array.isArray(ch?.voice?.dialogueRhythm)
+            ? ch.voice.dialogueRhythm
+            : (existing.voice?.dialogueRhythm || []),
+          vocabularyTendencies: Array.isArray(ch?.voice?.vocabularyTendencies)
+            ? ch.voice.vocabularyTendencies
+            : (existing.voice?.vocabularyTendencies || []),
+          physicalTells: Array.isArray(ch?.voice?.physicalTells)
+            ? ch.voice.physicalTells
+            : (existing.voice?.physicalTells || []),
+        },
+        continuityFacts: [
+          ...new Set([
+            ...(Array.isArray(existing.continuityFacts) ? existing.continuityFacts : []),
+            ...(Array.isArray(ch?.continuityFacts) ? ch.continuityFacts : []),
+          ])
+        ].slice(-20),
+        firstSeenCaseNumber: existing.firstSeenCaseNumber || caseNumber,
+        lastSeenCaseNumber: caseNumber,
+        updatedAt: now,
+      };
+    }
+
+    // Cap registry size to prevent unbounded growth.
+    const keys = Object.keys(reg.characters);
+    const MAX_CHARACTERS = 40;
+    if (keys.length > MAX_CHARACTERS) {
+      keys.sort((a, b) => {
+        const ta = new Date(reg.characters[a]?.updatedAt || 0).getTime();
+        const tb = new Date(reg.characters[b]?.updatedAt || 0).getTime();
+        return tb - ta;
+      });
+      const keep = new Set(keys.slice(0, MAX_CHARACTERS));
+      for (const k of keys) {
+        if (!keep.has(k)) delete reg.characters[k];
+      }
+    }
+
+    reg.updatedAt = new Date().toISOString();
+    this.characterRegistry = reg;
   }
 
   // ==========================================================================
@@ -3725,6 +3914,24 @@ Generate realistic, specific consequences based on the actual narrative content.
     this.generatedStory = await loadGeneratedStory();
     this.storyContext = await getStoryContext();
 
+    // Hydrate character registry from persisted storyContext (if present).
+    if (this.storyContext?.characterRegistry && typeof this.storyContext.characterRegistry === 'object') {
+      this.characterRegistry = {
+        version: this.storyContext.characterRegistry.version || 1,
+        updatedAt: this.storyContext.characterRegistry.updatedAt || new Date().toISOString(),
+        characters: this.storyContext.characterRegistry.characters || {},
+      };
+    } else {
+      // Ensure storyContext exists so we can persist the registry later.
+      this.storyContext = this.storyContext || {};
+      this.storyContext.characterRegistry = this.characterRegistry;
+      try {
+        await saveStoryContext(this.storyContext);
+      } catch (e) {
+        // Non-fatal.
+      }
+    }
+
     // Hydrate any persisted dynamic decision consequences back into memory so
     // choice-driven context remains stable across app restarts.
     if (this.storyContext?.decisionConsequencesByKey && typeof this.storyContext.decisionConsequencesByKey === 'object') {
@@ -4458,9 +4665,13 @@ Generate realistic, specific consequences based on the actual narrative content.
       }
     }
 
-    // Extract characters present in the final scene
-    // Prompt hygiene: this project version is Jack + Victoria only.
-    const characterNames = ['Jack', 'Victoria'];
+    // Extract characters present in the final scene.
+    // Include known registry characters for continuity.
+    const reg = this.characterRegistry || {};
+    const known = reg.characters && typeof reg.characters === 'object'
+      ? Object.values(reg.characters).map((c) => c?.name).filter(Boolean)
+      : [];
+    const characterNames = ['Jack', 'Victoria', ...known.filter((n) => !this._isForbiddenLegacyName(n))].slice(0, 30);
     const presentCharacters = characterNames.filter(name =>
       new RegExp(`\\b${name}\\b`, 'i').test(lastParagraphs)
     );
@@ -4653,6 +4864,85 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     return section;
+  }
+
+  _buildCharacterRegistrySection(_context, _chapter, _subchapter) {
+    const reg = this.characterRegistry || {};
+    const chars = reg.characters && typeof reg.characters === 'object' ? reg.characters : {};
+    const entries = Object.values(chars).filter(Boolean);
+    if (entries.length === 0) return '';
+
+    // Show the most recently updated characters first (cap to keep prompt lean)
+    const sorted = [...entries].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+    const visible = sorted.slice(0, 12);
+
+    let out = `## DYNAMIC CHARACTER REGISTRY (Persist across chapters)\n`;
+    out += `These are previously introduced characters. Keep them consistent. If you introduce new named characters, add them to characterUpdates.\n\n`;
+
+    for (const c of visible) {
+      if (!c?.name || this._isForbiddenLegacyName(c.name)) continue;
+      out += `### ${c.name}\n`;
+      if (c.role) out += `- Role: ${c.role}\n`;
+      if (c.relationshipToJack) out += `- Relationship to Jack: ${c.relationshipToJack}\n`;
+      if (c.relationshipToVictoria) out += `- Relationship to Victoria: ${c.relationshipToVictoria}\n`;
+      if (c.backstory) out += `- Backstory: ${c.backstory}\n`;
+      const v = c.voice || {};
+      if (v.speakingStyle) out += `- Voice (speaking): ${v.speakingStyle}\n`;
+      if (v.writtenStyle) out += `- Voice (written): ${v.writtenStyle}\n`;
+      if (Array.isArray(v.dialogueRhythm) && v.dialogueRhythm.length) out += `- Dialogue rhythm: ${v.dialogueRhythm.slice(0, 4).join(' | ')}\n`;
+      if (Array.isArray(v.vocabularyTendencies) && v.vocabularyTendencies.length) out += `- Vocabulary: ${v.vocabularyTendencies.slice(0, 4).join(' | ')}\n`;
+      if (Array.isArray(v.physicalTells) && v.physicalTells.length) out += `- Physical tells: ${v.physicalTells.slice(0, 4).join(' | ')}\n`;
+      if (Array.isArray(c.continuityFacts) && c.continuityFacts.length) {
+        out += `- Continuity facts:\n${c.continuityFacts.slice(-6).map((f) => `  - ${f}`).join('\n')}\n`;
+      }
+      out += `- First seen: ${c.firstSeenCaseNumber || 'unknown'}; last seen: ${c.lastSeenCaseNumber || 'unknown'}\n\n`;
+    }
+
+    return out.trim();
+  }
+
+  _buildVoiceDNAForPrompt(charactersInScene = []) {
+    // Always include Jack + Victoria from static CHARACTER_REFERENCE.
+    const base = [];
+    try {
+      const p = CHARACTER_REFERENCE?.protagonist;
+      const a = CHARACTER_REFERENCE?.antagonist;
+      if (p) {
+        base.push(`### Jack Halloway\n- Dialogue: ${p.voiceAndStyle?.dialogue || 'Direct, clipped under stress'}\n- Internal: ${p.voiceAndStyle?.internalMonologue || 'Observational, pattern language'}\n`);
+      }
+      if (a) {
+        base.push(`### Victoria Blackwell\n- Speaking: ${a.voiceAndStyle?.speaking || 'Calm, precise'}\n- Written: ${a.voiceAndStyle?.written || 'Instructional, elegant'}\n`);
+      }
+    } catch (e) {
+      // Non-fatal.
+    }
+
+    const reg = this.characterRegistry || {};
+    const chars = reg.characters && typeof reg.characters === 'object' ? reg.characters : {};
+    const wanted = new Set(
+      (Array.isArray(charactersInScene) ? charactersInScene : [])
+        .map((n) => String(n || '').trim())
+        .filter(Boolean)
+    );
+
+    const dyn = [];
+    for (const name of wanted) {
+      const key = name.toLowerCase();
+      const c = chars[key];
+      if (!c || !c.name || this._isForbiddenLegacyName(c.name)) continue;
+      const v = c.voice || {};
+      const lines = [];
+      lines.push(`### ${c.name}`);
+      if (v.speakingStyle) lines.push(`- Speaking style: ${v.speakingStyle}`);
+      if (Array.isArray(v.dialogueRhythm) && v.dialogueRhythm.length) lines.push(`- Rhythm: ${v.dialogueRhythm.slice(0, 4).join(' | ')}`);
+      if (Array.isArray(v.vocabularyTendencies) && v.vocabularyTendencies.length) lines.push(`- Vocabulary: ${v.vocabularyTendencies.slice(0, 4).join(' | ')}`);
+      if (Array.isArray(v.physicalTells) && v.physicalTells.length) lines.push(`- Physical tells: ${v.physicalTells.slice(0, 4).join(' | ')}`);
+      dyn.push(lines.join('\n') + '\n');
+    }
+
+    const body = [...base, ...dyn].filter(Boolean).join('\n');
+    if (!body.trim()) return '';
+    return `## CHARACTER VOICE DNA\n${body}`.trim();
   }
 
   // ==========================================================================
@@ -4918,9 +5208,17 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     parts.push(this._buildKnowledgeSection(context));
     parts.push('</character_knowledge>');
 
+    // Dynamic Part 2b: Dynamic Character Registry (persisted voices + backgrounds)
+    const registrySection = this._buildCharacterRegistrySection(context, chapter, subchapter);
+    if (registrySection) {
+      parts.push('<character_registry>');
+      parts.push(registrySection);
+      parts.push('</character_registry>');
+    }
+
     // Dynamic Part 3: Voice DNA (character-specific dialogue patterns for this scene)
     const charactersInScene = this._extractCharactersFromContext(context, chapter);
-    const voiceDNA = buildVoiceDNASection(charactersInScene);
+    const voiceDNA = this._buildVoiceDNAForPrompt(charactersInScene);
     if (voiceDNA) {
       parts.push('<voice_dna>');
       parts.push(voiceDNA);
@@ -5008,6 +5306,12 @@ If any check fails, revise before returning your response.
 
     // Part 4: Character Knowledge State (who knows what)
     parts.push(this._buildKnowledgeSection(context));
+
+    // Part 4b: Dynamic Character Registry (persisted voices + backgrounds)
+    const registrySection = this._buildCharacterRegistrySection(context, chapter, subchapter);
+    if (registrySection) {
+      parts.push(registrySection);
+    }
 
     // Part 5: Style Examples (Few-shot) with Voice DNA and Dramatic Irony
     // Determine which characters might be in this scene based on context
@@ -5116,16 +5420,24 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
    * Extract characters likely to appear in a scene based on context
    */
   _extractCharactersFromContext(context, chapter) {
-    // Prompt hygiene: this project version is Jack + Victoria only.
     const characters = [];
 
-    // Check recent narrative for Victoria mentions
+    // Include dynamic registry characters if they appear in the most recent narrative.
+    const reg = this.characterRegistry || {};
+    const known = reg.characters && typeof reg.characters === 'object'
+      ? Object.values(reg.characters).map((c) => c?.name).filter(Boolean)
+      : [];
+
     if (context.previousChapters?.length > 0) {
       const recentChapter = context.previousChapters[context.previousChapters.length - 1];
       if (recentChapter?.narrative) {
-        const narrative = recentChapter.narrative.toLowerCase();
-        if (narrative.includes('victoria') || narrative.includes('blackwell') || narrative.includes('v. blackwell')) {
-          characters.push('Victoria');
+        const narrative = recentChapter.narrative;
+        // Victoria detection
+        if (/\b(victoria|blackwell|v\.\s*blackwell)\b/i.test(narrative)) characters.push('Victoria');
+        for (const name of known) {
+          if (!name || this._isForbiddenLegacyName(name)) continue;
+          const re = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          if (re.test(narrative)) characters.push(name);
         }
       }
     }
@@ -5705,7 +6017,7 @@ The narrative context differs by path, so the strategic options should differ to
     // Build voice DNA section for characters in this scene
     let voiceDNA = '';
     try {
-      voiceDNA = buildVoiceDNASection(charactersInScene);
+      voiceDNA = this._buildVoiceDNAForPrompt(charactersInScene);
       if (!voiceDNA || voiceDNA.length < 100) {
         console.warn('[StoryGen] ⚠️ Voice DNA short/empty. Characters:', charactersInScene);
       }
@@ -7264,9 +7576,17 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           jackBehaviorDeclaration: generatedContent.jackBehaviorDeclaration,
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
           previousThreadsAddressed: Array.isArray(generatedContent.previousThreadsAddressed) ? generatedContent.previousThreadsAddressed : [],
+          characterUpdates: generatedContent.characterUpdates || null,
           generatedAt: new Date().toISOString(),
           wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
         };
+
+        // Apply dynamic character registry updates (persist across chapters)
+        try {
+          this._applyCharacterUpdates(caseNumber, generatedContent.characterUpdates);
+        } catch (e) {
+          // Best-effort only.
+        }
 
         // Save the generated content
         await saveGeneratedChapter(caseNumber, effectivePathKey, storyEntry);
@@ -11009,6 +11329,14 @@ If no conflicts, return: {"conflicts": []}`;
       } catch (e) {
         // Never block story saving for pruning issues.
       }
+    }
+
+    // Persist dynamic character registry
+    if (!context.characterRegistry || typeof context.characterRegistry !== 'object') {
+      context.characterRegistry = this.characterRegistry;
+    } else {
+      // Source of truth is the in-memory registry updated during generation
+      context.characterRegistry = this.characterRegistry;
     }
 
     this.storyContext = context;
