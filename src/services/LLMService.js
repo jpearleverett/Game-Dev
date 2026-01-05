@@ -1109,8 +1109,10 @@ class LLMService {
                     parsedHeartbeatCount++;
                     continue;
                   } else if (parsed.type === 'error') {
-                    console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}`);
-                    throw new Error(parsed.error || 'Proxy returned error in stream');
+                    const statusBits = parsed.geminiStatus ? ` (geminiStatus=${parsed.geminiStatus})` : '';
+                    const details = parsed.details ? ` ${String(parsed.details)}` : '';
+                    console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}${statusBits}`);
+                    throw new Error(`${parsed.error || 'Proxy returned error in stream'}${statusBits}${details}`);
                   } else if (parsed.type === 'response') {
                     data = parsed;
                     break;
@@ -1119,7 +1121,9 @@ class LLMService {
                     break;
                   }
                 } catch (parseErr) {
-                  console.warn(`[LLMService] [${localRequestId}] Failed to parse SSE data: ${jsonStr.substring(0, 100)}`);
+                  console.warn(
+                    `[LLMService] [${localRequestId}] Failed to parse SSE data: ${parseErr?.message || 'unknown'} :: ${jsonStr.substring(0, 160)}`
+                  );
                 }
               }
             }
@@ -1135,8 +1139,10 @@ class LLMService {
                 parsedHeartbeatCount++;
                 continue;
               } else if (parsed.type === 'error') {
-                console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}`);
-                throw new Error(parsed.error || 'Proxy returned error in stream');
+                const statusBits = parsed.geminiStatus ? ` (geminiStatus=${parsed.geminiStatus})` : '';
+                const details = parsed.details ? ` ${String(parsed.details)}` : '';
+                console.error(`[LLMService] [${localRequestId}] Proxy stream error: ${parsed.error}${statusBits}`);
+                throw new Error(`${parsed.error || 'Proxy returned error in stream'}${statusBits}${details}`);
               } else if (parsed.type === 'response') {
                 data = parsed;
                 break;
@@ -1145,7 +1151,9 @@ class LLMService {
                 break;
               }
             } catch (parseErr) {
-              console.warn(`[LLMService] [${localRequestId}] Failed to parse NDJSON line: ${line.substring(0, 100)}`);
+              console.warn(
+                `[LLMService] [${localRequestId}] Failed to parse NDJSON line: ${parseErr?.message || 'unknown'} :: ${line.substring(0, 160)}`
+              );
             }
           }
         }
