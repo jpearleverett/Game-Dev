@@ -77,30 +77,10 @@ function extractFunctionReturnTemplateLiteral(fullSource, funcName) {
   return afterReturn.slice(0, endIdx);
 }
 
-function buildGroundingSection({ TIMELINE, ABSOLUTE_FACTS, WRITING_STYLE }, { includeStyle } = { includeStyle: true }) {
+function buildGroundingSection({ ABSOLUTE_FACTS, WRITING_STYLE }, { includeStyle } = { includeStyle: true }) {
   const safe = (v) => (v === undefined || v === null ? '' : String(v));
 
-  const timelineLines = [];
-  const yearsAgo = TIMELINE?.yearsAgo || {};
-  const yearKeys = Object.keys(yearsAgo)
-    .map((k) => Number(k))
-    .filter((n) => Number.isFinite(n))
-    .sort((a, b) => b - a);
-  for (const y of yearKeys) {
-    const entry = yearsAgo[y];
-    if (Array.isArray(entry)) {
-      timelineLines.push(`- ${y} years ago:`);
-      entry.forEach((e) => timelineLines.push(`  - ${safe(e)}`));
-    } else {
-      timelineLines.push(`- ${y} years ago: ${safe(entry)}`);
-    }
-  }
-
-  const missing = (ABSOLUTE_FACTS?.fiveInnocents || [])
-    .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
-    .join('\n');
-
-  let section = `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
+  let section = `## STORY BIBLE - CHAPTER 1 DRAFTING CONSTRAINTS
 
 ### PROTAGONIST
 - Name: ${safe(ABSOLUTE_FACTS.protagonist.fullName)}
@@ -110,27 +90,28 @@ function buildGroundingSection({ TIMELINE, ABSOLUTE_FACTS, WRITING_STYLE }, { in
 - Residence: ${safe(ABSOLUTE_FACTS.protagonist.residence)}
 - Vice: ${safe(ABSOLUTE_FACTS.protagonist.vices?.[0])}
 
-### ANTAGONIST / GUIDE FIGURE
-- Name: ${safe(ABSOLUTE_FACTS.antagonist.trueName)}
-- Alias/Title: ${safe(ABSOLUTE_FACTS.antagonist.titleUsed)} (${safe(ABSOLUTE_FACTS.antagonist.aliasUsed)})
-- Communication: ${safe(ABSOLUTE_FACTS.antagonist.communication?.method)}; ink: ${safe(ABSOLUTE_FACTS.antagonist.communication?.ink)}
-- Motivation: "${safe(ABSOLUTE_FACTS.antagonist.motivation)}"
+### VICTORIA (Keep her MYSTERIOUS)
+- Name used: Victoria Blackwell
+- Communication: dead letters (glyphs) and thresholds; keep her motives and history opaque
+- Rule: do NOT explain her. Imply power through specifics, restraint, and consequences.
 
 ### SETTING
 - City: ${safe(ABSOLUTE_FACTS.setting.city)}
 - Atmosphere: ${safe(ABSOLUTE_FACTS.setting.atmosphere)}
 - Core mystery: ${safe(ABSOLUTE_FACTS.setting.coreMystery)}
 
-### CORE CONSTRAINT (Reveal timing)
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
-- Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
+### CHAPTER 1 REVEAL ARC (Mandatory)
+- By the END of 001A: Jack finds proof the world isn't as it seems (no longer comfortable skepticism).
+- By the END of 001C: Jack can no longer deny it (undeniable, irreversible encounter/consequence).
+- By the END of 001C: Jack SOLVES a glyph (a “dead letter”) and uses the solution to move deeper into the Under-Map.
 
-### THE FIVE MISSING ANCHORS (Each tied to a glyph)
-${missing}
+### CAST CONSTRAINT (Chapter 1 only)
+- Do not introduce any named recurring characters besides Jack and Victoria.
+- Other people may appear only as unnamed background (e.g., a bartender, a guard), without backstory or ongoing threads.
 
-### TIMELINE (Use exact numbers; never approximate)
-${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
+### TERMINOLOGY
+- “Dead letters” = glyphs encoded into physical messages/signs that behave like language and locks.
+- Solving a dead letter produces a concrete effect (access, mapping change, threshold activation), not just “a clue.”
 `;
 
   if (includeStyle) {
@@ -151,7 +132,7 @@ ${WRITING_STYLE.absolutelyForbidden.map((item) => `- ${item}`).join('\n')}`;
 }
 
 function buildCharacterSection({ CHARACTER_REFERENCE }) {
-  const { protagonist, antagonist, allies, villains, victims, secondary } = CHARACTER_REFERENCE;
+  const { protagonist, antagonist } = CHARACTER_REFERENCE;
   const formatExamples = (phrases) => phrases.map((phrase) => `  - "${phrase}"`).join('\n');
 
   return `## CHARACTER VOICES (Match these exactly)
@@ -164,54 +145,16 @@ Dialogue: ${protagonist.voiceAndStyle.dialogue}
 Example Phrases:
 ${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
 
-### VICTORIA BLACKWELL / THE CONFESSOR / EMILY CROSS
+### VICTORIA BLACKWELL (Keep her MYSTERIOUS)
 Role: ${antagonist.role}
-Aliases: ${antagonist.aliases.join(', ')}
 Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
 Voice (Written): ${antagonist.voiceAndStyle.written}
-Example Phrases:
-${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
 
-### SARAH REEVES
-Role: ${allies.sarahReeves.role}
-Voice: ${allies.sarahReeves.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.sarahReeves.voiceAndStyle.examplePhrases)}
-
-### ELEANOR BELLAMY
-Role: ${allies.eleanorBellamy.role}
-Voice: ${allies.eleanorBellamy.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.eleanorBellamy.voiceAndStyle.examplePhrases)}
-
-### TOM WADE
-Role: ${villains.tomWade.role}
-Voice: ${villains.tomWade.voiceAndStyle?.speaking || 'Friendly surface with technical jargon as deflection'}
-Note: Jack's longtime friend (met ~12 years ago) who knows city records/symbol reports better than he admits
-
-### SILAS REED
-Role: ${villains.silasReed.role}
-Voice: ${villains.silasReed.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.silasReed.voiceAndStyle.examplePhrases)}
-
-### HELEN PRICE
-Role: ${villains.helenPrice.title} - ${villains.helenPrice.role}
-Voice: ${villains.helenPrice.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.helenPrice.voiceAndStyle.examplePhrases)}
-
-### CLAIRE THORNHILL
-Role: ${victims.claireThornhill.role}
-Voice: ${victims.claireThornhill.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(victims.claireThornhill.voiceAndStyle.examplePhrases)}
-
-### MARCUS WEBB
-Role: ${secondary.marcusWebb.role}
-Voice: ${secondary.marcusWebb.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(secondary.marcusWebb.voiceAndStyle.examplePhrases)}`;
+Rules (Chapter 1):
+- Do not provide her backstory, full agenda, or “how the Under-Map works.”
+- Imply power through precision: what she knows, what she withholds, and what happens when Jack disobeys.
+- Keep her dialogue elegant and controlled. No lore monologues.
+`;
 }
 
 function buildCraftTechniquesSection({
@@ -289,17 +232,9 @@ ${SUBTEXT_REQUIREMENTS.examples.map((e) => `"${e.surface}" → Subtext: "${e.sub
 }
 
 function buildVoiceDNASection({ VOICE_DNA }, charactersInScene = []) {
-  // Always include Jack's voice
-  const voicesToInclude = ['jack'];
-  charactersInScene.forEach((char) => {
-    const normalizedChar = String(char || '').toLowerCase();
-    if (normalizedChar.includes('victoria') || normalizedChar.includes('emily')) voicesToInclude.push('victoria');
-    else if (normalizedChar.includes('sarah')) voicesToInclude.push('sarah');
-    else if (normalizedChar.includes('tom') || normalizedChar.includes('wade')) voicesToInclude.push('tomWade');
-    else if (normalizedChar.includes('eleanor')) voicesToInclude.push('eleanor');
-    else if (normalizedChar.includes('claire')) voicesToInclude.push('claire');
-  });
-  const uniqueVoices = [...new Set(voicesToInclude)];
+  // For the Chapter 1 authoring prompt, restrict to Jack + Victoria only.
+  // (Other characters exist in the full story bible, but we want a focused opening.)
+  const uniqueVoices = ['jack', 'victoria'];
 
   let voiceSection = `
 ## CHARACTER VOICE DNA
@@ -341,8 +276,8 @@ function buildKnowledgeSection() {
 - None yet
 
 ### WHAT JACK DOES NOT YET KNOW (do not reveal prematurely):
-- What the Under-Map truly is (until the end of 2A)
-- Victoria Blackwell’s full agenda and constraints
+- What the Under-Map truly is (at the START of Chapter 1)
+- Victoria Blackwell’s true agenda and constraints
 `;
 }
 
@@ -354,12 +289,12 @@ function buildConsistencySectionEmpty() {
 
 ### YOUR CONSISTENCY RESPONSIBILITIES
 1. In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative
-   Examples: "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case"
+   Examples: "Jack pocketed the dead letter and felt it warm like skin", "Victoria's ink bled into a glyph when Jack lied"
 
 2. NEVER contradict:
    - Character names and relationships
    - Timeline durations when the story bible specifies exact numbers (do not “round” key relationships/events)
-   - The reveal timing: Under-Map becomes undeniable at the END of 2A, not earlier
+   - Chapter 1 arc: proof by end of 001A; undeniable by end of 001C; solved dead letter unlocks deeper access by end of 001C
    - Setting tone (modern city; hidden layer; no Tolkien-style fantasy)
    - Player's path personality and decision consequences
 
@@ -454,7 +389,20 @@ Jack adapts his approach to the situation. He can be patient when it serves him,
 - Use SINGLE QUOTES for all dialogue
 - Ensure the canonical "narrative" string matches your branching segments exactly
 - Do not contradict ABSOLUTE_FACTS or CONSISTENCY_RULES
-- Maintain plausible deniability of the Under-Map until the end of 2A`;
+- Do not introduce any named recurring characters besides Jack and Victoria
+- Chapter 1 arc: proof by end of 001A; undeniable by end of 001C; at end of 001C Jack solves a “dead letter” glyph to move deeper into the Under-Map
+
+### CHAPTER 1 STORY DESIGN PRINCIPLES (Make it compelling)
+1. The “normal” world should already feel pressurized: Jack’s routine almost works, but it’s brittle.
+2. Dead letters/glyphs must behave like a system (constraints, inputs, outputs), not vibes.
+3. Proof should be physical and costly. Belief becomes irreversible because it costs Jack something.
+4. Victoria is negative space: show impact, timing, precision, surveillance; do not explain her.
+5. Escalate as: clue → implication → consequence (the world forces the next move).
+6. Give Jack a plausible rationalization that almost wins, then break it with one un-fileable detail.
+7. Make the hook personal and concrete (a name, smell, phrase, object) — not abstract guilt.
+8. The city/Under-Map should feel reactive (routes, signage, reflections, thresholds behaving like a predator).
+9. Resolve one contained question inside Chapter 1 (how to read/solve a dead letter) while opening larger ones.
+10. End of 001C is the first deliberate use of magic: solving the dead letter causes access/activation and moves Jack deeper.`;
 
   // For Chapter 1 there are no previous threads; still keep the rule.
   task += `
@@ -480,6 +428,9 @@ function buildStoryContextEmpty(chapter, subchapter) {
   summary += `2. **ESTABLISH** atmosphere, baseline, and the first disruption\n`;
   summary += `3. **PLANT** questions and hooks; do not explain everything\n`;
   summary += `4. **END** with a forward-driving hook that demands the next subchapter\n`;
+  summary += `\n### CHAPTER 1 REQUIRED MILESTONES\n`;
+  summary += `- End of 001A: proof the world isn't as it seems (no longer deniable comfort)\n`;
+  summary += `- End of 001C: undeniable; and Jack solves a dead letter glyph that unlocks deeper access\n`;
   summary += `${'#'.repeat(80)}\n`;
   return summary;
 }
@@ -487,31 +438,18 @@ function buildStoryContextEmpty(chapter, subchapter) {
 function modifyMasterSystemPromptForFirstChapter(prompt) {
   let out = prompt;
 
+  // The runtime system prompt is continuation-focused; for the Chapter 1 authoring prompt,
+  // override reveal timing + add an explicit "no prior story" directive.
   out = out.replace(
-    '## CONTINUATION MANDATE - THIS IS YOUR PRIMARY DIRECTIVE',
-    '## OPENING MANDATE - THIS IS YOUR PRIMARY DIRECTIVE'
-  );
-  out = out.replace(
-    '**You are continuing an ongoing story. You are NOT summarizing or starting fresh.**',
-    '**You are writing the very first subchapter of the story. There is no prior story text.**'
+    /<reveal_timing>[\s\S]*?<\/reveal_timing>/m,
+    `<reveal_timing>
+- By the END of 001A: Jack finds proof the world isn't as it seems.
+- By the END of 001C: Jack can no longer deny it.
+- By the END of 001C: Jack solves a glyph (a “dead letter”) and uses the solution to move deeper into the Under-Map.
+</reveal_timing>`
   );
 
-  // Replace the continuation bullets block with an opening-specific version.
-  const blockStart = out.indexOf('Your narrative MUST:');
-  const blockEnd = out.indexOf('## CRITICAL CONSTRAINTS');
-  if (blockStart !== -1 && blockEnd !== -1 && blockEnd > blockStart) {
-    const before = out.slice(0, blockStart);
-    const after = out.slice(blockEnd);
-    const replacement = `Your narrative MUST:
-1. **BEGIN AT STORY START** (no prior scene exists; do not reference unseen events)
-2. **ESTABLISH BASELINE**: Jack’s life, Ashport’s atmosphere, and the normal that will be pressured
-3. **INTRODUCE THE INCITING DISRUPTION**: the first dead letter / first glyph / first impossible detail
-4. **SHOW, DON'T TELL**: write the actual scenes, not summary
-
-Your opening must feel inevitable and specific: rain, reflections, paper, ink, the city behaving almost normally.
-The mystery pressure should start immediately, even if the Under-Map remains deniable.`;
-    out = before + replacement + '\n\n' + after;
-  }
+  out += `\n\n<chapter1_opening_directive>\n- This is Chapter 1. There is no prior narrative. Do not recap or reference unseen events.\n- Do not introduce named recurring characters besides Jack and Victoria.\n</chapter1_opening_directive>\n`;
 
   return out;
 }
