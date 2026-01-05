@@ -7011,14 +7011,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Decision schema has decision field BEFORE narrative, so decision is generated first
         // This eliminates the need for two-pass generation while ensuring complete decisions
 
-        // NOTE: Gemini structured output schemas are great, but the API can reject very large/deep schemas.
-        // Our full subchapter schemas are extremely deep (branching narrative with many nested objects).
-        // In production this can cause "Failed to generate content" errors.
-        //
-        // So for MAIN subchapter generation we rely on strong prompting + app-side JSON repair/validation,
-        // and reserve strict schemas for smaller follow-up calls (like PATHDECISIONS_ONLY_SCHEMA).
         const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
-        const mainResponseSchema = null;
         let response;
 
         // Try cached generation first (works in both proxy and direct mode)
@@ -7069,7 +7062,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             dynamicPrompt,
             options: {
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-              responseSchema: mainResponseSchema,
+              responseSchema: schema,
               thinkingConfig: {
                 includeThoughts: process.env.INCLUDE_THOUGHTS === 'true', // Enable in dev to debug mystery logic
                 thinkingLevel: 'high' // Maximize reasoning depth for complex narrative generation
@@ -7112,7 +7105,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             {
               systemPrompt: MASTER_SYSTEM_PROMPT,
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
-              responseSchema: mainResponseSchema,
+              responseSchema: schema,
               traceId,
               requestContext: {
                 caseNumber,
