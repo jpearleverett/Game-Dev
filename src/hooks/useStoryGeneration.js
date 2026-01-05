@@ -706,7 +706,8 @@ export function useStoryGeneration(storyCampaign) {
     const nextSubIndex = subchapter === 1 ? 2 : 3;
     const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
 
-    console.log(`[useStoryGeneration] Generating ${nextCaseNumber} with branching context after player completed ${caseNumber}`);
+    console.log(`[useStoryGeneration] 🔗 SUBCHAPTER CHAIN: ${caseNumber} complete → generating ${nextCaseNumber}`);
+    console.log(`[useStoryGeneration]   Branching choices for context:`, branchingChoices?.map(bc => `${bc.caseNumber}:${bc.firstChoice}->${bc.secondChoice}`) || '(none)');
 
     // Flush storage to ensure current content is available for context
     try {
@@ -720,6 +721,7 @@ export function useStoryGeneration(storyCampaign) {
     const needsGen = await needsGeneration(nextCaseNumber, pathKey);
 
     if (needsGen && isMountedRef.current) {
+      const genStartTime = Date.now();
       try {
         setStatus(GENERATION_STATUS.GENERATING);
         setGenerationType(GENERATION_TYPE.PRELOAD);
@@ -733,15 +735,17 @@ export function useStoryGeneration(storyCampaign) {
           { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context' }
         );
 
+        const genDuration = Date.now() - genStartTime;
         if (entry && isMountedRef.current) {
           updateGeneratedCache(nextCaseNumber, pathKey, entry);
-          console.log(`[useStoryGeneration] Successfully generated ${nextCaseNumber} with branching context`);
+          console.log(`[useStoryGeneration] ✅ CHAIN COMPLETE: ${nextCaseNumber} generated in ${(genDuration/1000).toFixed(1)}s`);
         }
       } catch (err) {
-        console.warn(`[useStoryGeneration] Generation failed for ${nextCaseNumber}:`, err.message);
+        const genDuration = Date.now() - genStartTime;
+        console.warn(`[useStoryGeneration] ❌ Generation failed for ${nextCaseNumber} after ${(genDuration/1000).toFixed(1)}s:`, err.message);
       }
     } else if (!needsGen) {
-      console.log(`[useStoryGeneration] ${nextCaseNumber} already exists, skipping generation`);
+      console.log(`[useStoryGeneration] ⏭️ ${nextCaseNumber} already exists, skipping generation`);
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
