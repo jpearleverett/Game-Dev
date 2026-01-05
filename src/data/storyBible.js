@@ -207,10 +207,43 @@ export const ABSOLUTE_FACTS = {
 export const STORY_STRUCTURE = {
   totalChapters: 12,
   subchaptersPerChapter: 3,
-  chapter1: 'Static content from docx files',
+  chapter1A: 'Static content with branching choices (the dead letter with silver glyph)',
+  chapter1BandC: 'Dynamically generated based on player branching choices in 1A',
   chapters2to12: 'Dynamically generated based on player choices',
   decisionPoints: 'End of each chapter (subchapter 3/C)',
   branchingPaths: 'Binary choices create exponential path combinations',
+
+  // ========== CHAPTER 1 CONTEXT ==========
+  // This is the canonical starting point for ALL story generation.
+  // The LLM MUST use this as the foundation when generating 1B and 1C.
+  chapter1AContext: {
+    title: 'Dead Letter Office',
+    setting: 'Jack\'s office above Murphy\'s Bar, 2 AM, rainy night',
+    events: [
+      'Jack discovers a mysterious letter on his desk stamped "Return to Sender"',
+      'The letter is addressed to "Victoria, c/o The Threshold, 404 Acheron Ave" - a street that was paved over 5 years ago',
+      'The return address shows Jack\'s own handwriting, which he doesn\'t remember writing',
+      'Inside is a photograph of the alley behind Murphy\'s with a silver glyph drawn on the door',
+      'When Jack investigates the alley, the glyph is NOT visible on the actual door',
+      'The photo reacts physically: it grows warm and the silver ink appears to move when near the door',
+    ],
+    keyMysteries: [
+      'Who is Victoria?',
+      'What is "The Threshold"?',
+      'How did a letter appear in a locked room?',
+      'Why is the glyph visible in the photo but not on the actual door?',
+      'How was Jack\'s handwriting forged so perfectly?',
+      'What is the silver ink, and why does it seem alive?',
+    ],
+    characterState: {
+      jack: 'Suspicious, professionally skeptical, treating the impossible letter as evidence to be analyzed',
+      atmosphere: 'Cold, damp, rain-soaked, bass from Murphy\'s jukebox vibrating through the floor',
+    },
+    continuesTo: {
+      '1B': 'Jack investigates further, possibly seeking answers about the glyph, Victoria, or The Threshold',
+      '1C': 'The investigation deepens, leading to a critical decision point that will shape the rest of the story',
+    },
+  },
 
   pacing: {
     chapters2to4: {
@@ -239,6 +272,19 @@ export const STORY_STRUCTURE = {
   // Forces tempo variation to prevent narrative "sameness"
   // Each chapter has a required beat type that overrides default pacing
   chapterBeatTypes: {
+    1: {
+      type: 'INCITING_INCIDENT',
+      description: 'The impossible arrives: Jack receives a letter he wrote but did not write, leading to a photo with living ink',
+      wordCountModifier: 1.0,
+      requirements: [
+        'Continue from the dead letter discovery and silver glyph photo',
+        'Jack investigates the impossible: the ink, the glyph, Victoria, The Threshold',
+        'Build mystery without providing easy answers',
+        'Establish the uncanny tone: things that should not exist, do',
+        'End 1C with a decision that sets the investigation direction for Chapter 2',
+      ],
+      notes: '1A is static. 1B and 1C are generated based on player choices in 1A.',
+    },
     2: {
       type: 'INVESTIGATION',
       description: 'Methodical evidence gathering, interview-heavy, building the case',

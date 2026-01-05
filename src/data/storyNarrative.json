@@ -4,169 +4,389 @@
       "ROOT": {
         "chapter": 1,
         "subchapter": 1,
-        "title": "Midnight Delivery (Expanded)",
-        "bridgeText": "A mysterious envelope appeared at Jack's door. Scan the items on Jack's desk to identify the four methods the Confessor is using to stalk him.",
-        "narrative": "Rain fell on Ashport the way memory fell on the guilty, relentless, cold, and impossible to outrun. Jack's office sat four floors above street level, a corner box that smelled like yesterday's cigarettes and broken promises. Three hundred a month bought him water-stained walls and a view of Murphy's Bar, where neon script bled red through the window, GIRLS and DRINKS flickering like a dying heartbeat, painting everything in the color of old sins.\n\nThe clock said 2:47 AM. His body said older than that. His reflection in the grimy windowpane was a caricature of a detective: the trench coat too rumpled, the jaw stubble too heavy, the eyes too focused on the bottom of a coffee mug to see anything real. The high-frequency whine of thirty years' worth of gunfire played a relentless symphony in his skull. He was fueled by Jameson and the desperate need to believe retirement was a choice instead of a sentence.\n\nThen he heard them, footsteps on the stairs. Not the random noise of a city that never slept, but a specific, deliberate sound. Wrong. All wrong. Not the stumbling percussion of Murphy's refugees looking for a place to piss, nor the heavy tread of cops. These steps were a metronome. Precise. Someone who'd memorized which boards creaked and how to avoid them. Someone who'd practiced this approach with the quiet confidence of ritual. This wasn't a warning; it was a scheduled execution.\n\nThe .38 Special was already in the desk drawer, buried under case files he'd never finish and bills he couldn't pay. Jack's hand closed around the cold grip before the shadow stopped outside his door. Old habits. The kind that kept a man breathing when thinking would get him killed.\n\nNo knock. No introduction. Just the whisper of heavy, expensive paper sliding under wood, intimate as a confession or a final breath.\n\nBy the time Jack yanked the door open, the hallway was empty. Nothing but the ghost of perfume, something French and expensive, the kind that cost more than he made in a month back when he still made money. It hung in the air like an accusation, floral notes cut with something darker. Patchouli, maybe. Or regret. Or the metallic tang of dried blood.\n\nThe envelope lay on the threshold like a black tongue. Heavy paper. Red wax seal, imprinted with a stylized letter 'V' that looked sharp enough to cut. His name in silver ink that caught the dying neon and turned it into something beautiful and terrible: Detective Jack Halloway.\n\nInside, elegant script, the kind they taught at boarding schools where tuition cost more than his car:\n\n\"Dearest Detective,\n\nTwelve days. Twelve cases. Eleven you closed with absolute certainty. One you closed without it. They form the basis of your legend. They form the architecture of my return.\n\nBy the end, you'll understand what you took from me. It was not just a life, but a future. And the price must be paid in full.\n\nThe game begins now. You are already playing my opening move.\n\n\u2014The Midnight Confessor\"\n\nJack read it three times. The paper was expensive, you could tell by the weight, by the way the ink sat on the surface instead of bleeding through. This wasn't some crank with a grudge and a laser printer. This was money. Old money. The kind that didn't threaten; it promised.\n\nTwelve cases. Eleven with certainty. One without.\n\nThe bourbon in his stomach turned to battery acid. Thirty years wearing a badge meant cutting corners became second nature. A man made assumptions. Took educated guesses and baptized them as facts. Called it intuition when it was really just exhaustion. Jack had more than one case he'd closed on fumes and arrogance. But which one haunted the Midnight Confessor? And which one belonged to the kind of victim who had the resources to build a kingdom just to watch his burn?\n\nHis phone lit up, the screen turning his hands corpse-blue. Sarah Reeves. His former partner. The only cop who'd still take his calls at three in the morning, though Jack suspected that was less about loyalty and more about hoping he'd finally drunk himself to death so she could stop worrying.\n\n\"Tell me you're not involved,\" she demanded. No hello. No preamble.\n\n\"In what?\"\n\n\"Eleanor Bellamy. Someone tried to poison her tonight at Greystone.\"\n\nThe name hit like a fist. Eleanor Bellamy. Eight years ago. Society widow with a weakness for gin and a dead husband who'd mysteriously ingested enough arsenic to kill a horse. Jack had closed that case in three weeks. Found arsenic in her tea set, a sapphire necklace, and a clear motive: wealth. She'd sworn someone framed her, kept talking about a phantom woman in red. Jack had marked it \"unreliable, subject in denial, manufacturing alternative suspects.\" The evidence was perfect. He'd never questioned where perfect evidence came from.\n\n\"What poison?\" Jack's voice came out rust and gravel.\n\n\"Ricin. Warden found a note under her dinner tray: 'The widow knows the truth. Ask her about the woman in red.'\"\n\nJack's throat went to sandpaper. The woman in red. Eight years later and she was back.\n\n\"Jack, listen to me.\" Sarah's voice dropped. \"Someone broke into Evidence Room C last night. Professional job. Stole twelve case files. Your cases, Jack. Your biggest wins. The ones that made you a legend.\"\n\nJack looked at the black envelope again. The silver ink seemed to move in the neon light. Twelve cases. Twelve days.\n\n\"Jack, if someone's targeting your old cases, you're either bait or the next victim. Your call. But if Eleanor Bellamy dies tonight, that's on you too.\"\n\n\"If Eleanor's innocent, you put her there,\" Sarah said, and let the words sit between them like smoke.\n\n\"Everything's on you. That's your problem. You carry the world but never actually do anything about it.\" The line went dead.\n\nJack grabbed his coat. If Eleanor was innocent, he needed to hear it from her mouth. Needed to look in the eyes of someone whose life he'd destroyed and ask if thirty years of certainty were built on thirty years of arrogance.",
-        "board": {
-          "outlierWords": [
-            "LETTER",
-            "NOTE",
-            "MESSAGE",
-            "DISPATCH"
-          ],
-          "grid": [
-            [
-              "YEARS",
-              "CASES",
-              "RED",
-              "LETTER"
-            ],
-            [
-              "TOO",
-              "ENVELOPE",
-              "FOUR",
-              "TWELVE"
-            ],
-            [
-              "THIRTY",
-              "SOMEONE",
-              "CLOSED",
-              "THREE"
-            ],
-            [
-              "DISPATCH",
-              "MESSAGE",
-              "ELEANOR",
-              "NOTE"
+        "title": "Dead Letter Office",
+        "bridgeText": "The letter on the desk was stamped 'Undeliverable', but the handwriting was unmistakably his own.",
+        "previously": "None. This is the beginning of the story.",
+        "beatSheet": [
+          "Jack is working late in his office above Murphy's Bar, distracted by the noise and rain",
+          "He discovers a letter on his desk stamped 'Return to Sender' that he does not remember writing",
+          "He identifies the handwriting as his own, despite the impossibility",
+          "He opens the envelope to find a photograph of a nearby alley wall with a silver glyph drawn on it",
+          "He descends to the alley to compare the photograph to reality"
+        ],
+        "jackActionStyle": "balanced",
+        "jackRiskLevel": "moderate",
+        "jackBehaviorDeclaration": {
+          "primaryAction": "investigate",
+          "dialogueApproach": "measured",
+          "emotionalState": "suspicious",
+          "physicalBehavior": "tense",
+          "personalityConsistencyNote": "Jack approaches the anomaly with professional skepticism, treating the impossible letter as a piece of evidence to be analyzed rather than a supernatural event."
+        },
+        "branchingNarrative": {
+          "opening": {
+            "text": "The bass from Murphy's jukebox thumped through the floorboards, a rhythmic pressure against the soles of Jack Halloway's shoes. It was two in the morning, and Ashport was doing what it always did: drowning itself. Rain lashed the single window of his office, blurring the neon sign of the bail bondsman across the street into a smear of weeping red light.\n\nJack rubbed his eyes, his fingers coming away smelling of cheap coffee and copier toner. On his desk, the dossier for the Henderson skip-trace lay open, a dry autopsy of a man who didn't want to be found. But Jack wasn't looking at Henderson anymore.\n\nHe was looking at the envelope that had appeared on top of the file.\n\nIt was cream-colored, heavy stock, expensive—the kind of stationery lawyers used to threaten people politely. A red stamp marred the front: RETURN TO SENDER. NO SUCH ADDRESS. UNABLE TO FORWARD.\n\nJack didn't reach for it. Not yet. In seven years of digging through the city's paper guts, he'd learned that things out of place were usually dangerous. The office door was locked. The window was latched. He had been down at the bar for ten minutes to refill his mug, and in that gap, the world had shifted just enough to leave this here.\n\nHe leaned in, the desk lamp casting his shadow long across the paper. The address was written in black ink, precise and angular. \n\n*Victoria*\n*c/o The Threshold*\n*404 Acheron Ave*\n\nHe knew the street. Acheron Avenue had been paved over five years ago to make the highway on-ramp. It didn't exist. That wasn't the problem.\n\nThe problem was the return address.\n\n*Jack Halloway*\n*185 West End Ave*\n*Ashport*\n\nIt was his handwriting. The sharp loop of the J. The trailing, aggressive cross of the t. He had written this. He knew the muscle memory of those letters. \n\nExcept he hadn't.",
+            "details": [
+              {
+                "phrase": "thumped through the floorboards",
+                "note": "Murphy's is always loud. Cheap rent means thin floors.",
+                "evidenceCard": "Location: Office"
+              },
+              {
+                "phrase": "paved over five years ago",
+                "note": "Acheron Avenue is gone. Maps confirm it.",
+                "evidenceCard": "Clue: Impossible Address"
+              },
+              {
+                "phrase": "It was his handwriting",
+                "note": "Perfect forgery? Or memory gap?",
+                "evidenceCard": "Clue: The Forgery"
+              }
             ]
-          ],
-          "outlierTheme": {
-            "name": "COMMUNICATION",
-            "icon": "\ud83d\udd0e",
-            "summary": "A mysterious envelope appeared at your door. Scan the items on your desk to identify the four method..."
-          }
-        }
-      }
-    },
-    "001B": {
-      "ROOT": {
-        "chapter": 1,
-        "subchapter": 2,
-        "title": "The Widow's Testimony (Expanded)",
-        "bridgeText": "Eleanor claimed she was framed. Profile her financial status. Isolate the four luxury items that don't fit a struggling widow's budget.",
-        "narrative": "Greystone Correctional squatted on the edge of Ashport like a tombstone in a suit. Jack navigated the familiar corridors, the stale air tasting of despair and disinfectant.\n\nEleanor Bellamy looked like God had sketched her in charcoal and then smudged the edges. Eight years inside had carved away everything soft. She was brought into the visitors' room in shackles, rules were rules, and the system loved its rules.\n\n\"Detective Halloway.\" Not a question. An identification of a wound.\n\n\"Mrs. Bellamy. It's Eleanor,\" she corrected. \"Mrs. died when you sent me here.\" She coughed, wet, painful. The ricin had ravaged her throat. \"She said you'd come. Said you'd finally understand.\"\n\n\"The woman in red?\" Jack kept his voice steady and failed anyway.\n\n\"The woman who visited three weeks ago. Elegant. Beautiful in that way that feels dangerous. Like looking at a painting that could kill you. She said she was preparing something for you. An education, she called it. Said you'd learn what certainty costs when you measure it in years stolen from innocent people.\"\n\nJack forced the memory into place. \"Tell me about the night your husband died. The woman in red. Details.\"\n\n\"I told you seventeen times, Detective. I told you about the argument in his study. Their voices carried through the heating vents. Richard was terrified. He said, 'You can't prove any of that.' And she laughed. Cold. Like winter in a voice. She said, 'I don't need to prove it. I just need people to believe it. And they will. Because I'm very good at building evidence.'\"\n\nEleanor's eyes were the color of steel. \"She said something else I'll never forget: 'Innocence doesn't matter as much as certainty. Your detective was certain I was guilty. The system believed his certainty more than my truth.'\"\n\nThe sapphire necklace. The two-hundred-thousand-dollar one. Jack heard himself ask it anyway. \"How do you explain that? It was in your deposit box.\"\n\n\"It was planted. Richard cataloged every piece of jewelry. That necklace wasn't in any catalog. It appeared in my deposit box like a ghost. She told me she planted it, the woman in red. Said it was the perfect evidence needed to seal the conviction.\"\n\nThe woman in red. Real all along. Jack’s own handwriting swam before his eyes: \"Subject fixated on phantom woman in red. Classic deflection. Unreliable.\"\n\nHis phone buzzed. Sarah: \"Someone broke into Bellamy estate tonight. Anonymous tip said you'd be there. Don't go. It's a trap. DO NOT GO.\"\n\nBut Jack already felt the pull. The need to see the truth with his own eyes. To see what evidence had been planted and by whom.\n\nHe was halfway to his car when his phone rang. Unknown number. He answered.\n\nA woman's voice. Young. Terrified. Breathing like she'd been running. \"Detective Halloway? This is Maya. Maya Bellamy. Eleanor's daughter. My mother didn't kill Richard. I found documents, Richard's financial records. He was being blackmailed. I have—\"\n\nBackground sounds. A door opening. Heavy footsteps. Male voices, low and threatening.\n\n\"Maya?\"\n\n\"I have to go. Don't trust—\" Her voice dropped to a whisper, urgent, terrified. Then nothing. Dead air.\n\nJack's phone buzzed again. Text from unknown number: \"Maya Bellamy is safe, Detective. She's with me. Come to the Bellamy estate. See what truth looks like when you finally bother to look for it. \u2014M.C.\" Attached was a photo: Maya Bellamy sitting in an expensive penthouse, unharmed but traumatized. The woman in the photo wore red.\n\nJack drove toward the Bellamy estate. Into the trap. Into the rain.",
-        "board": {
-          "outlierWords": [
-            "SAPPHIRE",
-            "NECKLACE",
-            "JEWEL",
-            "STONE"
-          ],
-          "grid": [
-            [
-              "CERTAINTY",
-              "RULES",
-              "RED",
-              "WOMAN"
-            ],
-            [
-              "STONE",
-              "JEWEL",
-              "RICHARD",
-              "EVIDENCE"
-            ],
-            [
-              "EYES",
-              "MAYA",
-              "TERRIFIED",
-              "BELLAMY"
-            ],
-            [
-              "DON",
-              "NECKLACE",
-              "ELEANOR",
-              "SAPPHIRE"
+          },
+          "firstChoice": {
+            "prompt": "The letter is an impossibility. How does Jack handle it?",
+            "options": [
+              {
+                "key": "1A",
+                "label": "Analyze the handwriting",
+                "response": "Jack didn't pick it up. He opened the top drawer of his desk and pulled out a magnifying glass—a heavy brass thing he'd bought at an estate sale. He hovered the lens over the return address.\n\nInk flow. Pressure variance. The slight skip in the ballpoint on the upstroke of the 'k'. \n\n\"Cute,\" he whispered. \n\nIt wasn't just a good forgery; it was a biological match. If he were testifying in court right now, he'd have to swear he wrote it. But he hadn't. He didn't know a Victoria, and he didn't send letters to streets that were now highway concrete.\n\nHe pulled a latex glove from his pocket—a habit from the bad old days—snapped it on, and picked up the envelope. It felt heavier than paper should. Dense. He slid a letter opener under the flap. The glue gave way with a sound like tearing fabric.\n\nInside, there was no letter. Just a photograph.\n\nIt was a glossy 4x6 print of the alleyway directly behind Murphy's. He recognized the brickwork, the overflowing dumpster, the specific pattern of water stains on the rear security door. But in the photo, someone had drawn on the door.\n\nA single, complex shape in shimmering silver ink. It looked like a compass rose that had been broken and reassembled by a drunkard. It hurt his eyes to focus on it, the lines seeming to vibrate against the photo paper.\n\nJack flipped the photo over. Nothing on the back. He looked at the envelope again. \n\nThen he looked at the window. The alley was three stories down.",
+                "details": [
+                  {
+                    "phrase": "slight skip in the ballpoint",
+                    "note": "The forgery captures even his pen's defects.",
+                    "evidenceCard": "Clue: Perfect Penmanship"
+                  },
+                  {
+                    "phrase": "shimmering silver ink",
+                    "note": "Not standard marker. Looks metallic, almost fluid.",
+                    "evidenceCard": "Clue: Silver Glyph"
+                  }
+                ]
+              },
+              {
+                "key": "1B",
+                "label": "Secure the room first",
+                "response": "Jack pushed his chair back, the casters screaming on the wood. He stood up, turning a slow circle. The letter was the bait; he wanted to know where the trap was.\n\n\"Hello?\" he said. The word died in the damp air.\n\nHe checked the door. The deadbolt was thrown, the chain engaged. He walked to the window and checked the latch. Rusted shut. Dust undisturbed on the sill. \n\nSomeone had come in, placed the letter, and left without opening a door or a window. Or they'd been here the whole time.\n\nJack opened the closet. Nothing but his raincoat and a box of old tax returns. He checked under the desk. Empty. \n\nHe sat back down, his heart rate settling into a steady, angry rhythm. He didn't like tricks. He didn't like magic shows. He picked up the envelope with his bare hand, abandoning protocol. If it was poisoned, he was already dead.\n\nHe ripped it open. \n\nA photograph slid out. It showed the back door of Murphy's, the one leading to the alley. In the photo, a silver symbol was etched across the steel door. Jack frowned. He'd walked through that door two hours ago. It was grey, rusted, and covered in band stickers. There was no silver mark.\n\nHe held the photo up to the desk lamp. The silver ink caught the light, flaring with an intensity that seemed internal. It wasn't a reflection. It was a source.",
+                "details": [
+                  {
+                    "phrase": "Dust undisturbed",
+                    "note": "Impossible entry. No physical traces.",
+                    "evidenceCard": ""
+                  },
+                  {
+                    "phrase": "flaring with an intensity",
+                    "note": "The ink is luminescent or reactive.",
+                    "evidenceCard": "Clue: Reactive Ink"
+                  }
+                ]
+              },
+              {
+                "key": "1C",
+                "label": "Check his records",
+                "response": "Jack ignored the envelope for a moment and turned to his filing cabinet. 'Victoria.' The name felt generic, a placeholder. \n\nHe pulled the index for his active cases. Nothing. He checked the 'Cold/Archive' box. He flipped through the cards with the rhythmic *thwip-thwip-thwip* of practiced boredom. \n\nNo Victoria. No Acheron Avenue since the municipal redraw of '21.\n\n\"You're not in the system,\" Jack muttered. He looked back at the envelope. \"And you're not mine.\"\n\nHe grabbed the envelope and held it up to the light. It was opaque, security-tinted. He couldn't see through it. Impatient, he tore the end off. \n\nA single photograph fell onto his blotter. \n\nIt was a picture of the alley downstairs. Tonight. The rain in the photo matched the rain against his window. In the center of the frame, painted on the bricks in a bright, searing silver, was a symbol that looked like a tangled knot.\n\nJack picked up the photo. The ink was still wet. He touched it, expecting a smudge. His finger came away clean. He looked closer. The silver line wasn't sitting on top of the photo emulsion; it looked like it was woven *into* the paper, or floating just beneath the surface.\n\nHe checked the timestamp on the back of the photo. There wasn't one. But the dumpster in the shot was overflowing with the distinct blue boxes from the liquor delivery Murphy got on Tuesdays. Today was Tuesday.\n\nThis was taken tonight.",
+                "details": [
+                  {
+                    "phrase": "finger came away clean",
+                    "note": "Ink looks wet but is dry to touch.",
+                    "evidenceCard": "Clue: Impossible Ink"
+                  },
+                  {
+                    "phrase": "distinct blue boxes",
+                    "note": "Confirms the photo is recent. Very recent.",
+                    "evidenceCard": "Clue: Timestamp"
+                  }
+                ]
+              }
             ]
-          ],
-          "outlierTheme": {
-            "name": "GEMSTONES",
-            "icon": "\ud83d\udd0e",
-            "summary": "Eleanor claims she was framed. Profile her financial status. Isolate the four luxury items that don'..."
-          }
-        }
-      }
-    },
-    "001C": {
-      "ROOT": {
-        "chapter": 1,
-        "subchapter": 3,
-        "title": "The Fork in the Road (Expanded)",
-        "bridgeText": "The Confessor left a message on Richard's desk. Decode the game pieces she is using to describe Jack's team.",
-        "narrative": "The Bellamy estate was a mess. The front door was open. Jack drew his .38, the old gun feeling heavy and necessary.\n\nHe found Sarah in Richard's study, sitting behind the desk. \"Jesus Christ, Jack. You trying to give me a heart attack?\"\n\n\"What the hell are you doing here?\"\n\n\"My job.\" She gestured to the open safe behind the Lady Justice painting. \"Someone beat us to it. Took Richard's jewelry catalog. But they left something for you.\"\n\nOn the desk, centered on the blotter like an offering: a black chess piece. A pawn. Obsidian. Carved into the base: \"DAY ONE: THE INNOCENT SUFFER.\" Beside it, two distinct piles of documents.\n\n\"Victoria, or whoever she is, left us a choice,\" Sarah said, pointing to the two piles. \"Look at this.\"\n\nJack knelt, feeling the slick, expensive paper. The two paths pulled in opposite directions, like gravity deciding which way a man would fall.\n\nThe Left Pile: A thick dossier on Marcus Thornhill, the CFO who committed suicide in lockup. Clipped to the front was a sticky note: \"His daughter has been watching you for years. She works at the Blueline Diner. She has the paper trail you were too lazy to find. She calls it the Thornhill Ledger.\" This was hard evidence. Paper. Proof. The way a homicide detective built a case, piece by methodical piece. The safe, clean way.\n\nThe Right Pile: A single, sleek banking printout showing wire transfers from an offshore account. The handwriting on the authorization line was familiar. Painfully familiar. It was the sprawling, distinct signature of Jack's partner, Silas Reed. The note read: \"Ask your partner how he afforded that penthouse. Or go ask him yourself right now. His penthouse is compromised. He is weak. You are angry.\" This was raw emotion. Betrayal. The quick, reckless path driven by rage.\n\nJack's phone buzzed. A final, sharp text from unknown: \"Day One is ending, Detective. Day Two begins with a choice. Do you build your case like a cop, or do you confront the betrayal like a man? The daughter has the evidence. The partner has the guilt. You can't do both first. Fail to choose, and I choose for you.\"\n\nSarah looked at him, her face pale. \"Jack, that signature looks exactly like Silas. This is a setup. If we go to the diner for the ledger first, Silas will know we’re onto him. He could disappear, or destroy the rest of the evidence.\"\n\n\"But if we go to Silas now without the ledger,\" Jack countered, adrenaline surging, \"he'll deny everything. He's a good liar. He'll lawyer up, and we lose the chance to break him.\"\n\nJack looked between the two options. One path was clean conviction, the slow climb to redemption. The other path was immediate action, the chance to crush the betrayer right now, trading legality for rage. His entire career had been built on the first. His entire descent was fueled by the second.\n\nHe had to choose: evidence or instinct?",
-        "decision": {
-          "intro": [],
-          "options": [
+          },
+          "secondChoices": [
             {
-              "key": "A",
-              "title": "Go to the diner for the ledger.",
-              "consequence": null,
-              "focus": "Methodical. Evidence first. Build trust.",
-              "stats": "+Investigative, +SarahTrust",
-              "outcome": null,
-              "nextChapter": 2,
-              "nextPathKey": "A",
-              "details": []
+              "afterChoice": "1A",
+              "prompt": "Jack has the photo. The location is just downstairs. What's the move?",
+              "options": [
+                {
+                  "key": "1A-2A",
+                  "label": "Go downstairs to the alley",
+                  "response": "Jack pocketed the photo and grabbed his coat. The trench was still damp from the morning, smelling of wet wool and the city's exhaust. He switched off the desk lamp, plunging the office into the red wash of the neon sign outside.\n\nHe took the stairs two at a time, bypassing the door to Murphy's bar. The music muffled as he hit the ground floor and pushed open the heavy steel security door to the alley.\n\nThe air hit him like a cold towel. Rain hissed against the pavement, smelling of ozone and rotting cardboard. Jack pulled his collar up and walked to the spot where the photographer must have stood.\n\nHe held the photo up, aligning the edges with reality. \n\nThe dumpster matched. The water stains matched. The rusted conduit pipe matched.\n\nBut the door was blank.\n\nJack lowered the photo. He looked at the grey steel of the door. Just rust and stickers. No silver glyph. He looked at the photo again. The symbol was there, bright and arrogant.\n\n\"Graffiti artist with a fast eraser,\" Jack muttered, though he didn't believe it. You couldn't scrub stone that clean in this rain.\n\nHe stepped closer to the door, reaching out to touch the cold metal where the glyph should be. As his fingers grazed the steel, the photo in his other hand grew warm. Not hot, but warm, like a battery under load. \n\nJack froze. He pulled his hand back. The warmth faded. He touched the door again. \n\nHeat. \n\nHe looked down at the photo. The silver ink was moving. Just a fraction. Like a worm turning in soil.",
+                  "details": [
+                    {
+                      "phrase": "door was blank",
+                      "note": "Discrepancy between photo and reality.",
+                      "evidenceCard": "Clue: The Missing Glyph"
+                    },
+                    {
+                      "phrase": "photo in his other hand grew warm",
+                      "note": "Physical reaction to proximity.",
+                      "evidenceCard": "Clue: Haptic Feedback"
+                    }
+                  ]
+                },
+                {
+                  "key": "1A-2B",
+                  "label": "Test the ink with a lighter",
+                  "response": "Jack stayed in his office. He wasn't running out into the rain for a prank. He took his lighter from his pocket—a battered Zippo—and flicked it open. The flame danced in the drafty room.\n\nHe held the flame under the corner of the photograph, far enough to heat it, close enough to burn if he slipped.\n\n\"Let's see what you're made of,\" he said.\n\nUsually, photo paper blistered. It turned black and smelled of melting plastic. \n\nThis paper didn't smoke. Instead, the silver ink began to retreat. It didn't fade; it *crawled*. The glyph migrated away from the heat, the lines flowing like mercury across the image, reshaping themselves into a tight knot in the upper left corner, as far from the flame as possible.\n\nJack snapped the lighter shut. The flame died.\n\nSlowly, hesitantly, the silver ink uncoiled. It slid back across the glossy surface, returning to its original shape in the center of the door. \n\nJack set the photo down on his desk and backed away. He wiped his hands on his pants. \n\n\"Okay,\" he said to the empty room. \"That's new.\"",
+                  "details": [
+                    {
+                      "phrase": "ink began to retreat",
+                      "note": "The ink behaves like a living organism.",
+                      "evidenceCard": "Clue: Living Ink"
+                    },
+                    {
+                      "phrase": "returning to its original shape",
+                      "note": "It has a default state/memory.",
+                      "evidenceCard": ""
+                    }
+                  ]
+                },
+                {
+                  "key": "1A-2C",
+                  "label": "Scan and enlarge the glyph",
+                  "response": "Jack turned on his flatbed scanner. The whir and groan of the machine sounded loud in the quiet office. He placed the photo face down and hit the scan button.\n\nThe bar of light swept across the glass.\n\nJack waited for the image to load on his monitor. The preview popped up. The alley was there—the dumpster, the brick, the door.\n\nBut the door in the scan was blank.\n\nJack frowned. He picked up the photo. The silver glyph was right there, clear as day. He looked at the screen. Nothing. \n\n\"Reflective interference?\" he reasoned. He tried again. This time he watched the scanner light pass under the photo. \n\nWhen the light hit the silver ink, the ink didn't reflect. It absorbed. For a split second, the scanner's light dimmed, as if the ink had swallowed the energy.\n\nThe resulting image on the screen was distorted. Where the glyph should be, the pixels were scrambled, a block of digital noise that looked like static. \n\nJack zoomed in on the noise. It wasn't random. The static had a pattern. It repeated. \n\n0-0-1. 0-0-1. \n\nHe looked at the photo in his hand. The glyph sat there, analog and undeniable, mocking the digital copy.",
+                  "details": [
+                    {
+                      "phrase": "door in the scan was blank",
+                      "note": "The glyph cannot be digitized.",
+                      "evidenceCard": "Clue: Digital Blindspot"
+                    },
+                    {
+                      "phrase": "pixels were scrambled",
+                      "note": "It disrupts the sensor.",
+                      "evidenceCard": "Clue: Digital Static"
+                    }
+                  ]
+                }
+              ]
             },
             {
-              "key": "B",
-              "title": "Confront Silas at his penthouse.",
-              "consequence": null,
-              "focus": "Confrontational. Instinct first. Leverage rage.",
-              "stats": "+Aggressive, -SarahTrust",
-              "outcome": null,
-              "nextChapter": 2,
-              "nextPathKey": "B",
-              "details": []
+              "afterChoice": "1B",
+              "prompt": "The photo shows a glyph on the door downstairs. Jack knows that door. What next?",
+              "options": [
+                {
+                  "key": "1B-2A",
+                  "label": "Go verify the door",
+                  "response": "Jack didn't like discrepancies. He put the photo in his pocket, keeping his hand wrapped around it. He unlocked his office door and stepped into the hallway. \n\nThe smell of stale beer and floor polish. The music from Murphy's was louder here. He went down the back stairs, the wood creaking under his weight. He bypassed the bar entrance and went straight for the service exit.\n\nHe pushed the bar. The door clanged open into the alley.\n\nRain. Dark. The sodium light from the streetlamp at the corner turned the puddles into pools of orange oil. Jack walked to the center of the alley and turned to face the door he'd just exited.\n\nHe pulled out the photo. \n\nIn the picture: A silver knot on the door.\nIn reality: Rust and grey paint.\n\n\"Okay,\" Jack said. \"Okay.\" He looked around for a camera, a projector, anything that could have faked the image. The alley was empty. \n\nHe looked back at the photo. The silver ink was pulsing. A slow, rhythmic throb, like a breathing lung. \n\nJack felt a vibration against his palm. The photo was vibrating. \n\nHe stepped forward. As he got closer to the door, the vibration increased. It wasn't a buzzing; it was a pull. A magnetic tug drawing his hand toward the steel. \n\nHe stopped a foot away. The air between his hand and the door felt thick, charged with static. The hairs on his arm stood up. \n\nHe wasn't looking at a picture of a door. He was holding a key.",
+                  "details": [
+                    {
+                      "phrase": "magnetic tug",
+                      "note": "The photo interacts physically with the location.",
+                      "evidenceCard": "Clue: The Key"
+                    },
+                    {
+                      "phrase": "air... thick, charged",
+                      "note": "Atmospheric pressure change near the threshold.",
+                      "evidenceCard": ""
+                    }
+                  ]
+                },
+                {
+                  "key": "1B-2B",
+                  "label": "Call the landlord (Murphy)",
+                  "response": "Jack pulled his phone. He dialed Murphy downstairs. \n\n\"Yeah?\" Murphy's voice was a gravel slide, shouting over the music.\n\n\"It's Jack. You let anyone up to the second floor tonight?\"\n\n\"What? No. I'm pouring drinks here, Jack. Why? You got a leak?\"\n\n\"Something like that. Did you paint the back door?\"\n\n\"Paint the—Jack, are you drunk? It's raining sideways. Why would I paint the door?\"\n\n\"Just checking. Thanks.\"\n\nJack hung up. Murphy wasn't a good enough actor to lie about that. Jack looked at the photo again. The silver glyph seemed to be swirling now, the lines moving like oil on water.\n\nHe held the photo up to the window, overlaying it with the view of the alley below. \n\nFrom this angle, three stories up, the perspective was wrong. But as he tilted the photo, trying to align the dumpster in the image with the real dumpster below, the silver ink flashed.\n\nA beam of light—no, not light, *absence* of light—shot from the photo to the door below. Just for a microsecond. A black cord connecting the paper to the steel. \n\nJack blinked. The cord was gone. But down in the alley, the motion sensor light on the back door flickered on. \n\nThere was no one there.",
+                  "details": [
+                    {
+                      "phrase": "black cord connecting",
+                      "note": "Visual manifestation of the link.",
+                      "evidenceCard": "Clue: The Tether"
+                    },
+                    {
+                      "phrase": "motion sensor light ... flickered on",
+                      "note": "Action at a distance. The link is real.",
+                      "evidenceCard": ""
+                    }
+                  ]
+                },
+                {
+                  "key": "1B-2C",
+                  "label": "Burn the photo",
+                  "response": "This was wrong. Jack didn't know how, but he knew the texture of a setup. \n\n\"Not playing,\" he said.\n\nHe walked to the metal trash can by his desk. He held the corner of the photo with two fingers and flicked his lighter. \n\nThe flame touched the edge. \n\nThe paper didn't burn. It *shrieked*.\n\nA sound like tearing metal filled the small office, so high-pitched Jack dropped the photo and covered his ears. The sound cut off the instant the photo hit the floor.\n\nJack stared at it. The flame had left no mark. But the silver ink was agitated now, thrashing against the borders of the photograph like a trapped bird. \n\nThe lights in the office flickered. The neon sign across the street buzzed and died, plunging the room into sudden darkness.\n\nIn the dark, the photo on the floor glowed. The silver light spilled out, casting long, impossible shadows that rotated around the room. \n\nJack backed up until his legs hit his desk. The shadows weren't following the light. They were moving on their own.",
+                  "details": [
+                    {
+                      "phrase": "It shrieked",
+                      "note": "Object has a defense mechanism.",
+                      "evidenceCard": "Clue: Sonic Defense"
+                    },
+                    {
+                      "phrase": "shadows weren't following the light",
+                      "note": "Physics violation.",
+                      "evidenceCard": "Clue: Independent Shadows"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "afterChoice": "1C",
+              "prompt": "The photo is wet with impossible ink. It shows the alley right now.",
+              "options": [
+                {
+                  "key": "1C-2A",
+                  "label": "Go investigate the alley",
+                  "response": "Jack grabbed his coat. If the photo was taken *now*, the photographer might still be there. Or the paint might still be wet.\n\nHe moved fast. Out the door, down the stairs, hitting the exit bar with his shoulder. \n\nThe alley was empty. Just the rain and the trash. Jack scanned the rooftops—nothing. He looked at the door he'd just come through.\n\nNo symbol. Just the grey steel he knew.\n\nHe pulled the photo out to compare them. As he did, a drop of rain hit the photo paper. \n\nWhere the water touched the silver ink, it sizzled. A tiny wisp of steam rose up, smelling of ozone and... something sweet. Like burnt sugar.\n\nJack wiped the drop away. The ink was warm. \n\nHe looked at the door again. He held the photo up, superimposing it over the steel. \n\n*Click.* \n\nThe sound came from the door. It was the sound of a deadbolt sliding back. \n\nJack hadn't touched the door. He hadn't touched the handle. He was standing three feet away, holding a piece of paper. \n\nThe door creaked open an inch. Beyond it, the hallway to Murphy's was dark. Darker than it should be. The music had stopped.",
+                  "details": [
+                    {
+                      "phrase": "smelling of ozone and... burnt sugar",
+                      "note": "Specific sensory signature of the magic.",
+                      "evidenceCard": "Clue: Scent of Ozone"
+                    },
+                    {
+                      "phrase": "deadbolt sliding back",
+                      "note": "The photo acts as a remote key.",
+                      "evidenceCard": "Clue: Remote Unlocking"
+                    }
+                  ]
+                },
+                {
+                  "key": "1C-2B",
+                  "label": "Analyze the ink chemistry",
+                  "response": "Jack had a small kit in his desk—leftovers from a drug-testing gig he'd consulted on. He sat down and opened a solvent vial. Acetone.\n\nHe dipped a cotton swab in the acetone and touched it to the corner of the silver glyph on the photo.\n\nThe cotton turned black instantly. Not ink-black. Charred black. The swab disintegrated.\n\n\"Acid?\" Jack wondered. He tried water. \n\nThe water beaded on the ink. The silver surface rippled, and for a moment, Jack saw his own reflection in the line of the glyph. But the reflection wasn't moving. The reflection was staring still, while Jack blinked.\n\nHe threw the swab in the trash. He grabbed a magnifying glass. \n\nUp close, the ink wasn't liquid. It was composed of thousands of microscopic geometric shapes—triangles, interlocking and shifting. It was a mosaic, not a fluid.\n\nAnd it was rearranging itself. The shapes were marching, a colony of ants building a bridge. They were widening the glyph, consuming the photo paper to fuel their expansion.\n\nThe photo was growing.",
+                  "details": [
+                    {
+                      "phrase": "swab disintegrated",
+                      "note": "Chemical impossibility.",
+                      "evidenceCard": "Clue: Corrosive Ink"
+                    },
+                    {
+                      "phrase": "microscopic geometric shapes",
+                      "note": "Nanotech or magic? Structural, not fluid.",
+                      "evidenceCard": "Clue: Fractal Ink"
+                    }
+                  ]
+                },
+                {
+                  "key": "1C-2C",
+                  "label": "Photograph the photo",
+                  "response": "Jack pulled out his phone. He needed a record of this before it faded or changed. \n\nHe framed the shot. On the phone screen, the desk looked normal. The envelope looked normal. \n\nBut where the photo lay, the screen showed a black void. A rectangular hole in the world.\n\nJack tapped the screen to focus. The camera couldn't find a focal point. \n\nHe snapped the picture anyway. \n\nThe flash fired. \n\nThe silver ink on the paper *flashed back*.\n\nA blinding pulse of white light exploded from the desk. Jack reeled back, blinded, spots dancing in his vision. His phone was hot in his hand. \n\nHe looked at the phone. The screen was dead. He pressed the power button. Nothing. Fried.\n\nHe looked at the photo. The silver ink was dull now, grey and lifeless. \n\n\"You didn't like that,\" Jack whispered. He rubbed his eyes. The afterimage of the flash was still burned into his retinas. But it wasn't a spot of light. \n\nThe afterimage was a map.",
+                  "details": [
+                    {
+                      "phrase": "screen showed a black void",
+                      "note": "The object absorbs light/data.",
+                      "evidenceCard": "Clue: Anti-Photo"
+                    },
+                    {
+                      "phrase": "afterimage was a map",
+                      "note": "Information transfer via light.",
+                      "evidenceCard": "Clue: Retinal Map"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
+        "narrative": "The bass from Murphy's jukebox thumped through the floorboards, a rhythmic pressure against the soles of Jack Halloway's shoes. It was two in the morning, and Ashport was doing what it always did: drowning itself. Rain lashed the single window of his office, blurring the neon sign of the bail bondsman across the street into a smear of weeping red light.\n\nJack rubbed his eyes, his fingers coming away smelling of cheap coffee and copier toner. On his desk, the dossier for the Henderson skip-trace lay open, a dry autopsy of a man who didn't want to be found. But Jack wasn't looking at Henderson anymore.\n\nHe was looking at the envelope that had appeared on top of the file.\n\nIt was cream-colored, heavy stock, expensive—the kind of stationery lawyers used to threaten people politely. A red stamp marred the front: RETURN TO SENDER. NO SUCH ADDRESS. UNABLE TO FORWARD.\n\nJack didn't reach for it. Not yet. In seven years of digging through the city's paper guts, he'd learned that things out of place were usually dangerous. The office door was locked. The window was latched. He had been down at the bar for ten minutes to refill his mug, and in that gap, the world had shifted just enough to leave this here.\n\nHe leaned in, the desk lamp casting his shadow long across the paper. The address was written in black ink, precise and angular. \n\n*Victoria*\n*c/o The Threshold*\n*404 Acheron Ave*\n\nHe knew the street. Acheron Avenue had been paved over five years ago to make the highway on-ramp. It didn't exist. That wasn't the problem.\n\nThe problem was the return address.\n\n*Jack Halloway*\n*185 West End Ave*\n*Ashport*\n\nIt was his handwriting. The sharp loop of the J. The trailing, aggressive cross of the t. He had written this. He knew the muscle memory of those letters. \n\nExcept he hadn't.\n\nJack didn't pick it up. He opened the top drawer of his desk and pulled out a magnifying glass—a heavy brass thing he'd bought at an estate sale. He hovered the lens over the return address.\n\nInk flow. Pressure variance. The slight skip in the ballpoint on the upstroke of the 'k'. \n\n\"Cute,\" he whispered. \n\nIt wasn't just a good forgery; it was a biological match. If he were testifying in court right now, he'd have to swear he wrote it. But he hadn't. He didn't know a Victoria, and he didn't send letters to streets that were now highway concrete.\n\nHe pulled a latex glove from his pocket—a habit from the bad old days—snapped it on, and picked up the envelope. It felt heavier than paper should. Dense. He slid a letter opener under the flap. The glue gave way with a sound like tearing fabric.\n\nInside, there was no letter. Just a photograph.\n\nIt was a glossy 4x6 print of the alleyway directly behind Murphy's. He recognized the brickwork, the overflowing dumpster, the specific pattern of water stains on the rear security door. But in the photo, someone had drawn on the door.\n\nA single, complex shape in shimmering silver ink. It looked like a compass rose that had been broken and reassembled by a drunkard. It hurt his eyes to focus on it, the lines seeming to vibrate against the photo paper.\n\nJack flipped the photo over. Nothing on the back. He looked at the envelope again. \n\nThen he looked at the window. The alley was three stories down.\n\nJack pocketed the photo and grabbed his coat. The trench was still damp from the morning, smelling of wet wool and the city's exhaust. He switched off the desk lamp, plunging the office into the red wash of the neon sign outside.\n\nHe took the stairs two at a time, bypassing the door to Murphy's bar. The music muffled as he hit the ground floor and pushed open the heavy steel security door to the alley.\n\nThe air hit him like a cold towel. Rain hissed against the pavement, smelling of ozone and rotting cardboard. Jack pulled his collar up and walked to the spot where the photographer must have stood.\n\nHe held the photo up, aligning the edges with reality. \n\nThe dumpster matched. The water stains matched. The rusted conduit pipe matched.\n\nBut the door was blank.\n\nJack lowered the photo. He looked at the grey steel of the door. Just rust and stickers. No silver glyph. He looked at the photo again. The symbol was there, bright and arrogant.\n\n\"Graffiti artist with a fast eraser,\" Jack muttered, though he didn't believe it. You couldn't scrub stone that clean in this rain.\n\nHe stepped closer to the door, reaching out to touch the cold metal where the glyph should be. As his fingers grazed the steel, the photo in his other hand grew warm. Not hot, but warm, like a battery under load. \n\nJack froze. He pulled his hand back. The warmth faded. He touched the door again. \n\nHeat. \n\nHe looked down at the photo. The silver ink was moving. Just a fraction. Like a worm turning in soil.",
+        "chapterSummary": "Jack discovers a 'Returned to Sender' letter in his locked office that he never wrote, addressed to a non-existent street. Inside is a photo of the alley downstairs featuring a silver glyph that isn't visible in reality. When Jack investigates the alley, the photo reacts physically to the location, growing warm and the ink moving when he approaches the door.",
+        "puzzleCandidates": [
+          "Threshold",
+          "Acheron",
+          "Silver",
+          "Ink",
+          "Door",
+          "Frequency"
+        ],
+        "briefing": {
+          "summary": "Investigate the origin of the impossible letter and the nature of the silver glyph.",
+          "objectives": [
+            "Analyze the silver ink's properties",
+            "Verify the connection between the photo and the alley door",
+            "Identify who 'Victoria' is"
+          ]
+        },
+        "consistencyFacts": [
+          "Jack found a letter addressed to 'Victoria' at 'The Threshold, 404 Acheron Ave' which he seemingly wrote but didn't.",
+          "The letter contained a photo of the alley door with a silver glyph that is not visible to the naked eye.",
+          "The silver ink on the photo reacts physically (heat/movement) when brought close to the location it depicts.",
+          "Acheron Avenue was paved over 5 years ago and does not exist on current maps.",
+          "Jack's office was locked when the letter appeared."
+        ],
+        "narrativeThreads": [
+          {
+            "type": "investigation",
+            "description": "The 'Victoria' letter and the nature of the silver glyph",
+            "status": "active",
+            "urgency": "critical",
+            "characters": [
+              "Jack Halloway",
+              "Victoria"
+            ],
+            "dueChapter": 2
+          },
+          {
+            "type": "revelation",
+            "description": "Jack's handwriting was perfectly forged on the letter",
+            "status": "active",
+            "urgency": "background",
+            "characters": [
+              "Jack Halloway"
+            ]
+          },
+          {
+            "type": "physical_state",
+            "description": "The photo vibrates and heats up near the alley door",
+            "status": "active",
+            "urgency": "normal",
+            "characters": [
+              "Jack Halloway"
+            ]
+          }
+        ],
+        "previousThreadsAddressed": [],
+        "engagementMetrics": {
+          "questionsRaised": [
+            "Who is Victoria?",
+            "How did a letter appear in a locked room?",
+            "Why is the glyph visible in the photo but not on the door?",
+            "How was Jack's handwriting forged so perfectly?"
+          ],
+          "questionsAnswered": [],
+          "emotionalPeak": "Jack realizing the handwriting on the impossible letter is undeniably his own.",
+          "cliffhangerStrength": "unbearable"
+        },
+        "sensoryAnchors": {
+          "dominantSense": "touch",
+          "recurringDetail": "the bass from the jukebox thumping through the floor/walls",
+          "atmosphereNote": "Cold, damp, and vibrating with low-frequency sound"
+        },
+        "finalMoment": "He looked down at the photo. The silver ink was moving. Just a fraction. Like a worm turning in soil.",
+        "microRevelation": "The silver ink is not just pigment; it is reactive and possibly alive.",
+        "personalStakesThisChapter": "Jack's reliance on empirical evidence is threatened; if he can't trust his own handwriting or his locked door, he isn't safe.",
         "board": {
           "outlierWords": [
-            "PAWN",
-            "KNIGHT",
-            "BISHOP",
-            "CHECK"
+            "THRESHOLD",
+            "ACHERON",
+            "SILVER",
+            "GLYPH"
           ],
           "grid": [
             [
-              "SARAH",
-              "PAWN",
-              "LEDGER",
-              "SILAS"
+              "LETTER",
+              "THRESHOLD",
+              "ENVELOPE",
+              "MURPHY"
             ],
             [
-              "RICHARD",
-              "CHECK",
-              "PIECE",
-              "BISHOP"
+              "SILVER",
+              "PHOTO",
+              "DOOR",
+              "INK"
             ],
             [
-              "OPEN",
-              "METHODICAL",
-              "EVIDENCE",
-              "PATH"
+              "ACHERON",
+              "VICTORIA",
+              "HALLOWAY",
+              "ALLEY"
             ],
             [
-              "CHOOSE",
-              "PARTNER",
-              "KNIGHT",
-              "PAPER"
+              "GLYPH",
+              "HANDWRITING",
+              "OFFICE",
+              "STAMP"
             ]
           ],
           "outlierTheme": {
-            "name": "CHESS PIECES",
-            "icon": "\ud83d\udd0e",
-            "summary": "The Confessor left a message on Richard's desk. Decode the game pieces she is using to describe your..."
+            "name": "THE IMPOSSIBLE",
+            "icon": "🔍",
+            "summary": "A letter appeared in a locked office with Jack's handwriting. Find the four impossible elements."
           }
         }
       }
