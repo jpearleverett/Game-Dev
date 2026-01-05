@@ -1232,7 +1232,7 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 
 <cast_policy>
 - You MAY introduce new side characters as the story demands.
-- If you introduce a named character besides Jack and Victoria, you MUST record them in `characterUpdates.introduced` in your JSON output (voice + background + continuity facts).
+- If you introduce a named character besides Jack and Victoria, you MUST record them in "characterUpdates.introduced" in your JSON output (voice + background + continuity facts).
 - Do NOT introduce or reference these legacy character names (they belong to an older story version and must never appear): Sarah, Reeves, Eleanor, Bellamy, Helen, Marcus, Thornhill, Tom, Wade, Silas, Reed, Grange, Emily, Confessor.
 </cast_policy>
 
