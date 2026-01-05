@@ -136,7 +136,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Mention Tom\'s name"',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine the symbol", "Mention Victoria\'s name"',
     },
     response: {
       type: 'string',
@@ -477,7 +477,7 @@ const STORY_CONTENT_SCHEMA = {
           },
           description: {
             type: 'string',
-            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+            description: 'Brief description of the thread (e.g., "Jack agreed to meet Victoria at Vance and Sixteenth before the rain stops")'
           },
           status: {
             type: 'string',
@@ -496,7 +496,7 @@ const STORY_CONTENT_SCHEMA = {
           },
           deadline: {
             type: 'string',
-            description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
+            description: 'If this thread has a time constraint, specify it (e.g., "before the rain stops", "within 48 hours"). Leave empty if no deadline.'
           },
           dueChapter: {
             type: 'number',
@@ -623,7 +623,7 @@ const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Victoria directly"' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
@@ -892,7 +892,7 @@ const DECISION_CONTENT_SCHEMA = {
           },
           description: {
             type: 'string',
-            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+            description: 'Brief description of the thread (e.g., "Jack agreed to meet Victoria at Vance and Sixteenth before the rain stops")'
           },
           status: {
             type: 'string',
@@ -911,7 +911,7 @@ const DECISION_CONTENT_SCHEMA = {
           },
           deadline: {
             type: 'string',
-            description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
+            description: 'If this thread has a time constraint, specify it (e.g., "before the rain stops", "within 48 hours"). Leave empty if no deadline.'
           },
           dueChapter: {
             type: 'number',
@@ -1442,16 +1442,10 @@ const buildVoiceDNASection = (charactersInScene = []) => {
   // Add any other characters specified
   charactersInScene.forEach(char => {
     const normalizedChar = char.toLowerCase();
-    if (normalizedChar.includes('victoria') || normalizedChar.includes('emily')) {
+    // Only allow Victoria as an additional voice in the prompt.
+    // This project version is Jack + Victoria only.
+    if (normalizedChar.includes('victoria') || normalizedChar.includes('blackwell')) {
       voicesToInclude.push('victoria');
-    } else if (normalizedChar.includes('sarah')) {
-      voicesToInclude.push('sarah');
-    } else if (normalizedChar.includes('tom') || normalizedChar.includes('wade')) {
-      voicesToInclude.push('tomWade');
-    } else if (normalizedChar.includes('eleanor')) {
-      voicesToInclude.push('eleanor');
-    } else if (normalizedChar.includes('claire')) {
-      voicesToInclude.push('claire');
     }
   });
 
@@ -1511,17 +1505,6 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
         'Jack suspects Victoria is shaping his route through the city on purpose',
       readerKnows: 'The reader recognizes her signatures (silver ink, rule-language, river-glass tokens) and intent',
       useFor: 'Write scenes where Victoria leaves “instructions” Jack resents but follows. Let readers feel the trap tightening.',
-    });
-  }
-
-  // Grange as containment operator (mid chapters)
-  if (chapter >= 3 && chapter <= 10) {
-    ironies.push({
-      secret: 'Deputy Chief Grange is suppressing Under-Map incidents and erasing witnesses',
-      jackKnows: chapter < 6 ? 'Jack sees Grange as an obstruction with too much reach' :
-        'Jack knows Grange is actively shutting sites down, but not the full mechanism',
-      readerKnows: 'Readers understand that “accidents” and missing reports are deliberate containment',
-      useFor: 'When Jack brushes against official denial, let readers see the pattern Jack doesn’t want to name.',
     });
   }
 
@@ -1628,6 +1611,20 @@ class StoryGenerationService {
     // This lets subchapters within a chapter send only the delta (current chapter so far).
     this.chapterStartCacheVersion = 1; // Increment when chapter cache format changes
     this.chapterStartCacheKeys = new Map(); // logicalKey -> cacheKey
+  }
+
+  /**
+   * Prompt hygiene: this project version is Jack + Victoria only.
+   * Sanitize any legacy cast names that might exist in cached arcs/outlines.
+   */
+  _sanitizePromptText(text) {
+    if (text === undefined || text === null) return '';
+    const s = String(text);
+    // Replace legacy/forbidden character names with neutral placeholders.
+    return s.replace(
+      /\b(Sarah|Reeves|Helen|Eleanor|Bellamy|Marcus|Thornhill|Tom|Wade|Silas|Reed|Grange|Emily)\b/gi,
+      'someone'
+    );
   }
 
   // ==========================================================================
@@ -2628,14 +2625,14 @@ Create a high-level story arc outline for Chapters 2-12 that:
 - Chapters 2-4: RISING ACTION (pattern recognition, deniable anomalies, then first threshold-crossing)
   * Personal stakes focus: Jack's sanity, stability, and what he believes about the city
 - Chapters 5-7: COMPLICATIONS (the Under-Map has rules; allies compromise; the city “pushes back”)
-  * Personal stakes focus: Jack's relationships (Tom, Sarah) and his ability to trust
+  * Personal stakes focus: Jack's ability to trust and to keep his life intact
 - Chapters 8-10: CONFRONTATIONS (direct encounters with Under-Map forces; truth of Victoria’s role sharpens)
   * Personal stakes focus: Jack's autonomy and physical safety across both layers of the city
 - Chapters 11-12: RESOLUTION (the choice: seal, reshape, or surrender the map; consequences lock in)
   * Personal stakes focus: who Jack becomes and what Ashport is allowed to be
 
 ## FIVE MISSING ANCHORS TO WEAVE IN (from the story bible)
-${(ABSOLUTE_FACTS.fiveInnocents || []).map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}`).join('\n')}
+- There are five missing anchors, each tied to a distinct glyph. Do not list or invent extra named cast here.
 
 ## ENGAGEMENT REQUIREMENTS FOR EACH CHAPTER
 For each chapter, you MUST provide:
@@ -2644,7 +2641,7 @@ For each chapter, you MUST provide:
    - NOT "his safety" → "the ability to walk into Murphy's without checking the door"
 2. **emotionalAnchor**: The gut-punch moment for this chapter. Not plot, but FEELING.
    - A face, a memory, a realization that hits the reader in the chest
-   - Examples: "Seeing Eleanor's hands aged from prison labor", "Reading his own signature on the warrant that destroyed Marcus"
+   - Examples: "Realizing a detail he dismissed was a warning", "Seeing his own notes become evidence against his certainty"
 3. **microRevelationHint**: What small truth should be revealed in each subchapter
 
 Provide a structured arc ensuring each innocent's story gets proper attention and EVERY chapter has personal stakes that escalate.`;
@@ -2681,8 +2678,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
           properties: {
             jack: { type: 'string', description: 'Jack\'s emotional journey across chapters' },
             victoria: { type: 'string', description: 'How Victoria\'s presence evolves' },
-            sarah: { type: 'string', description: 'Sarah Reeves\' arc' },
-            tomWade: { type: 'string', description: 'Tom Wade\'s betrayal arc' },
+            // Prompt hygiene: this project version is Jack + Victoria only.
           },
         },
         consistencyAnchors: {
@@ -2739,9 +2735,9 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
         { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: 'Jack\'s grip on “normal” reality', emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
         { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria’s rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack’s trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
         { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack’s ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
-        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn’t exist', personalStakes: 'Jack’s relationship with Tom and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
+        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn’t exist', personalStakes: 'Jack’s relationship to the city itself', emotionalAnchor: 'Realizing familiarity can be weaponized' },
         { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack’s safety', emotionalAnchor: 'Crossing a line he can’t uncross' },
-        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Grange tightens containment', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack’s moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
+        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Containment tightens', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack’s moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
         { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria’s agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack’s autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
         { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack’s life and someone else’s', emotionalAnchor: 'A rescue attempt goes wrong' },
         { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: 'What Jack is willing to break', emotionalAnchor: 'Accepting that rules can be weaponized' },
@@ -2751,8 +2747,6 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       characterArcs: {
         jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
         victoria: 'Cartographer who tests Jack’s capacity to read rules without becoming a weapon',
-        sarah: 'Pragmatic ally whose patience has limits',
-        tomWade: 'Friend with access to records and secrets he doesn’t want named',
       },
       consistencyAnchors: [
         'Jack Halloway is in his late 20s/early 30s and does NOT start with Under-Map knowledge',
@@ -3099,7 +3093,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       };
 
       // Make the "immediate" consequence feel concrete even without an LLM call.
-      // Titles are imperative; convert to an infinitive-ish phrase ("Confront Wade" -> "confront Wade").
+      // Titles are imperative; convert to an infinitive-ish phrase ("Confront Victoria" -> "confront Victoria").
       const toAction = String(title || '')
         .trim()
         .replace(/^[A-Z]/, (m) => m.toLowerCase());
@@ -4370,9 +4364,6 @@ Generate realistic, specific consequences based on the actual narrative content.
       protagonist: ABSOLUTE_FACTS.protagonist,
       antagonist: ABSOLUTE_FACTS.antagonist,
       setting: ABSOLUTE_FACTS.setting,
-      fiveInnocents: ABSOLUTE_FACTS.fiveInnocents,
-      corruptOfficials: ABSOLUTE_FACTS.corruptOfficials,
-      supportingCharacters: ABSOLUTE_FACTS.supportingCharacters,
     };
   }
 
@@ -4468,9 +4459,8 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     // Extract characters present in the final scene
-    const characterNames = [
-      'Jack', 'Tom', 'Victoria', 'Grange', 'Silas', 'Sarah', 'Maris', 'Niko', 'Saffron', 'Eleanor'
-    ];
+    // Prompt hygiene: this project version is Jack + Victoria only.
+    const characterNames = ['Jack', 'Victoria'];
     const presentCharacters = characterNames.filter(name =>
       new RegExp(`\\b${name}\\b`, 'i').test(lastParagraphs)
     );
@@ -4517,7 +4507,6 @@ Generate realistic, specific consequences based on the actual narrative content.
           'Victoria Blackwell’s full agenda and constraints',
         ],
       },
-      sarah: { knows: [], suspects: [] },
       victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack’s likely routes and choices'], suspects: [] },
     };
 
@@ -4525,7 +4514,6 @@ Generate realistic, specific consequences based on the actual narrative content.
     const revelationPatterns = [
       { pattern: /Jack (?:learned|discovered|realized|found out|understood) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
       { pattern: /Jack (?:suspected|wondered if|began to think|considered) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'suspects' },
-      { pattern: /Sarah (?:told Jack|revealed|confessed|admitted) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
       { pattern: /Victoria (?:revealed|showed|told|exposed) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
     ];
 
@@ -5128,40 +5116,20 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
    * Extract characters likely to appear in a scene based on context
    */
   _extractCharactersFromContext(context, chapter) {
+    // Prompt hygiene: this project version is Jack + Victoria only.
     const characters = [];
 
-    // Always include Jack (protagonist)
-    // Check story arc for chapter-specific characters
-    if (this.storyArc?.chapterArcs) {
-      const chapterArc = this.storyArc.chapterArcs.find(a => a.chapter === chapter);
-      if (chapterArc?.innocentFeatured) {
-        characters.push(chapterArc.innocentFeatured);
-      }
-    }
-
-    // Check active threads for characters
-    if (context.narrativeThreads) {
-      context.narrativeThreads.forEach(thread => {
-        if (thread.characters) {
-          characters.push(...thread.characters);
-        }
-      });
-    }
-
-    // Check recent narrative for character mentions
+    // Check recent narrative for Victoria mentions
     if (context.previousChapters?.length > 0) {
       const recentChapter = context.previousChapters[context.previousChapters.length - 1];
       if (recentChapter?.narrative) {
         const narrative = recentChapter.narrative.toLowerCase();
-        if (narrative.includes('victoria') || narrative.includes('blackwell')) characters.push('Victoria');
-        if (narrative.includes('sarah') || narrative.includes('reeves')) characters.push('Sarah');
-        if (narrative.includes('tom') || narrative.includes('wade')) characters.push('Tom');
-        if (narrative.includes('eleanor') || narrative.includes('bellamy')) characters.push('Eleanor');
-        if (narrative.includes('claire') || narrative.includes('thornhill')) characters.push('Claire');
+        if (narrative.includes('victoria') || narrative.includes('blackwell') || narrative.includes('v. blackwell')) {
+          characters.push('Victoria');
+        }
       }
     }
 
-    // Deduplicate and return
     return [...new Set(characters)];
   }
 
@@ -5177,28 +5145,28 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
       if (chapterArc) {
         section += `### CHAPTER ${chapter} FOCUS\n`;
         section += `**Phase:** ${chapterArc.phase}\n`;
-        section += `**Primary Focus:** ${chapterArc.primaryFocus}\n`;
+        section += `**Primary Focus:** ${this._sanitizePromptText(chapterArc.primaryFocus)}\n`;
         section += `**Tension Level:** ${chapterArc.tensionLevel}/10\n`;
 
         if (chapterArc.personalStakes) {
           section += `\n### PERSONAL STAKES (What Jack loses if he fails HERE)\n`;
-          section += `${chapterArc.personalStakes}\n`;
+          section += `${this._sanitizePromptText(chapterArc.personalStakes)}\n`;
           section += `\n**Make the reader FEEL this is at risk. Show it, don't tell it.**\n`;
         }
 
         if (chapterArc.emotionalAnchor) {
           section += `\n### EMOTIONAL ANCHOR (The gut-punch moment for this chapter)\n`;
-          section += `${chapterArc.emotionalAnchor}\n`;
+          section += `${this._sanitizePromptText(chapterArc.emotionalAnchor)}\n`;
           section += `\n**This is not plot. This is FEELING. Write it to hit the reader in the chest.**\n`;
         }
 
         if (chapterArc.keyRevelation) {
           section += `\n### KEY REVELATION\n`;
-          section += `${chapterArc.keyRevelation}\n`;
+          section += `${this._sanitizePromptText(chapterArc.keyRevelation)}\n`;
         }
 
         section += `\n### ENDING HOOK\n`;
-        section += `This chapter should end with: "${chapterArc.endingHook}"\n`;
+        section += `This chapter should end with: "${this._sanitizePromptText(chapterArc.endingHook)}"\n`;
         section += `\n**For subchapter ${['A', 'B', 'C'][subchapter - 1]}: Build toward this ending while creating micro-hooks at the end of your subchapter.**\n`;
       }
     }
@@ -5231,26 +5199,6 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
   _buildGroundingSection(context, { includeStyle = true } = {}) {
     const safe = (v) => (v === undefined || v === null ? '' : String(v));
 
-    const timelineLines = [];
-    const yearsAgo = TIMELINE?.yearsAgo || {};
-    const yearKeys = Object.keys(yearsAgo)
-      .map(k => Number(k))
-      .filter(n => Number.isFinite(n))
-      .sort((a, b) => b - a);
-    for (const y of yearKeys) {
-      const entry = yearsAgo[y];
-      if (Array.isArray(entry)) {
-        timelineLines.push(`- ${y} years ago:`);
-        entry.forEach(e => timelineLines.push(`  - ${safe(e)}`));
-      } else {
-        timelineLines.push(`- ${y} years ago: ${safe(entry)}`);
-      }
-    }
-
-    const missing = (ABSOLUTE_FACTS?.fiveInnocents || [])
-      .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
-      .join('\n');
-
     let section = `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
 
 ### PROTAGONIST
@@ -5263,7 +5211,7 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 
 ### ANTAGONIST / GUIDE FIGURE
 - Name: ${safe(ABSOLUTE_FACTS.antagonist.trueName)}
-- Alias/Title: ${safe(ABSOLUTE_FACTS.antagonist.titleUsed)} (${safe(ABSOLUTE_FACTS.antagonist.aliasUsed)})
+- Title: ${safe(ABSOLUTE_FACTS.antagonist.titleUsed)}
 - Communication: ${safe(ABSOLUTE_FACTS.antagonist.communication?.method)}; ink: ${safe(ABSOLUTE_FACTS.antagonist.communication?.ink)}
 - Motivation: "${safe(ABSOLUTE_FACTS.antagonist.motivation)}"
 
@@ -5276,12 +5224,6 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 - Jack does NOT know the Under-Map is real at the start of Chapter 2.
 - The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
 - Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
-
-### THE FIVE MISSING ANCHORS (Each tied to a glyph)
-${missing}
-
-### TIMELINE (Use exact numbers; never approximate)
-${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
 `;
 
     // Writing style is large and repeated elsewhere; include only when needed.
@@ -5458,13 +5400,10 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
    * Build character reference section
    */
   _buildCharacterSection() {
-    const { protagonist, antagonist, allies, villains, victims, secondary } = CHARACTER_REFERENCE;
+    const { protagonist, antagonist } = CHARACTER_REFERENCE;
 
-    // Helper to format example phrases
-    const formatExamples = (phrases) => {
-      return phrases.map(phrase => `  - "${phrase}"`).join('\n');
-    };
-
+    // Prompt hygiene: this project version is Jack + Victoria only.
+    // Also avoid listing extra aliases as separate “characters”.
     return `## CHARACTER VOICES (Match these exactly)
 
 ### JACK HALLOWAY (Protagonist - Narration is close third-person on Jack)
@@ -5472,57 +5411,11 @@ Role: ${protagonist.role}, ${protagonist.age}
 Voice: ${protagonist.voiceAndStyle.narrative}
 Internal Monologue: ${protagonist.voiceAndStyle.internalMonologue}
 Dialogue: ${protagonist.voiceAndStyle.dialogue}
-Example Phrases:
-${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
 
-### VICTORIA BLACKWELL / THE CONFESSOR / EMILY CROSS
+### VICTORIA BLACKWELL (The Midnight Cartographer)
 Role: ${antagonist.role}
-Aliases: ${antagonist.aliases.join(', ')}
 Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
-Voice (Written): ${antagonist.voiceAndStyle.written}
-Example Phrases:
-${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
-
-### SARAH REEVES
-Role: ${allies.sarahReeves.role}
-Voice: ${allies.sarahReeves.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.sarahReeves.voiceAndStyle.examplePhrases)}
-
-### ELEANOR BELLAMY
-Role: ${allies.eleanorBellamy.role}
-Voice: ${allies.eleanorBellamy.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.eleanorBellamy.voiceAndStyle.examplePhrases)}
-
-### TOM WADE
-Role: ${villains.tomWade.role}
-Voice: ${villains.tomWade.voiceAndStyle?.speaking || 'Friendly surface with technical jargon as deflection'}
-Note: Jack's longtime friend (met ~12 years ago) who knows city records/symbol reports better than he admits
-
-### SILAS REED
-Role: ${villains.silasReed.role}
-Voice: ${villains.silasReed.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.silasReed.voiceAndStyle.examplePhrases)}
-
-### HELEN PRICE
-Role: ${villains.helenPrice.title} - ${villains.helenPrice.role}
-Voice: ${villains.helenPrice.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.helenPrice.voiceAndStyle.examplePhrases)}
-
-### CLAIRE THORNHILL
-Role: ${victims.claireThornhill.role}
-Voice: ${victims.claireThornhill.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(victims.claireThornhill.voiceAndStyle.examplePhrases)}
-
-### MARCUS WEBB
-Role: ${secondary.marcusWebb.role}
-Voice: ${secondary.marcusWebb.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(secondary.marcusWebb.voiceAndStyle.examplePhrases)}`;
+Voice (Written): ${antagonist.voiceAndStyle.written}`;
   }
 
   /**
@@ -5613,12 +5506,12 @@ ${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
       task += `
 
 ### STORY ARC GUIDANCE (Follow this for consistency)
-- **Chapter Focus:** ${chapterArc.primaryFocus}
-${chapterArc.innocentFeatured ? `- **Featured Innocent:** ${chapterArc.innocentFeatured}` : ''}
-${chapterArc.keyRevelation ? `- **Key Revelation:** ${chapterArc.keyRevelation}` : ''}
+- **Chapter Focus:** ${this._sanitizePromptText(chapterArc.primaryFocus)}
+${chapterArc.innocentFeatured ? `- **Featured Innocent:** ${this._sanitizePromptText(chapterArc.innocentFeatured)}` : ''}
+${chapterArc.keyRevelation ? `- **Key Revelation:** ${this._sanitizePromptText(chapterArc.keyRevelation)}` : ''}
 - **Tension Level:** ${chapterArc.tensionLevel}/10
-- **Ending Hook:** ${chapterArc.endingHook}
-${chapterArc.decisionTheme ? `- **Decision Theme:** ${chapterArc.decisionTheme}` : ''}`;
+- **Ending Hook:** ${this._sanitizePromptText(chapterArc.endingHook)}
+${chapterArc.decisionTheme ? `- **Decision Theme:** ${this._sanitizePromptText(chapterArc.decisionTheme)}` : ''}`;
     }
 
     // ========== NEW: Chapter Outline Guidance ==========
@@ -5626,13 +5519,13 @@ ${chapterArc.decisionTheme ? `- **Decision Theme:** ${chapterArc.decisionTheme}`
       task += `
 
 ### SUBCHAPTER ${subchapterLabel} OUTLINE (Follow this structure)
-- **Focus:** ${subchapterOutline.focus}
-- **Key Beats:** ${subchapterOutline.keyBeats?.join(', ') || 'Build tension naturally'}
-${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOutline.endingTransition}` : ''}`;
+- **Focus:** ${this._sanitizePromptText(subchapterOutline.focus)}
+- **Key Beats:** ${(subchapterOutline.keyBeats || []).map((b) => this._sanitizePromptText(b)).join(', ') || 'Build tension naturally'}
+${subchapterOutline.endingTransition ? `- **Transition to next:** ${this._sanitizePromptText(subchapterOutline.endingTransition)}` : ''}`;
 
       if (isDecisionPoint && subchapterOutline.decisionSetup) {
         task += `
-- **Decision Setup:** ${subchapterOutline.decisionSetup}
+- **Decision Setup:** ${this._sanitizePromptText(subchapterOutline.decisionSetup)}
 - **Option A Direction:** ${subchapterOutline.optionADirection || 'More direct approach'}
 - **Option B Direction:** ${subchapterOutline.optionBDirection || 'More cautious approach'}`;
       }
@@ -5643,13 +5536,13 @@ ${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOu
       task += `
 
 ### OPENING CAUSALITY (Mandatory)
-${outline.openingCausality}`;
+${this._sanitizePromptText(outline.openingCausality)}`;
     }
     if (Array.isArray(outline?.mustReference) && outline.mustReference.length > 0) {
       task += `
 
 ### MUST-REFERENCE ANCHORS (Mandatory)
-${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
+${outline.mustReference.slice(0, 6).map((x) => `- ${this._sanitizePromptText(x)}`).join('\n')}`;
     }
 
     // ========== NEW: Narrative Thread Continuity ==========
@@ -5912,7 +5805,7 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
 
 ### YOUR CONSISTENCY RESPONSIBILITIES
 1. In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative
-   Examples: "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case"
+   Examples: "Jack agreed to go to Vance and Sixteenth before the rain stops", "Victoria’s letter predicted the weather precisely"
 
 2. NEVER contradict:
    - Character names and relationships
@@ -9463,9 +9356,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
 - Jack Halloway: late 20s/early 30s; not a cop; pattern-spotter; initially does NOT know the Under-Map is real
-- Tom Wade: Jack's longtime friend (met ~12 years ago); knows more about city records/symbol reports than he admits
-- Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink, river-glass tokens); guides Jack via rules and routes
-- Deputy Chief Grange: runs suppression/containment around Under-Map incidents
+- Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink); guides Jack via rules and routes
 - Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
 - Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 2A, not earlier
 
@@ -10028,8 +9919,6 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     // Use the imported constants directly (not STORY_BIBLE which doesn't exist)
     const protagonist = CHARACTER_REFERENCE.protagonist;
     const antagonist = CHARACTER_REFERENCE.antagonist;
-    const allies = CHARACTER_REFERENCE.allies;
-    const villains = CHARACTER_REFERENCE.villains;
 
     let grounding = `## ABSOLUTE_FACTS (NEVER CONTRADICT)
 
@@ -10044,8 +9933,6 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
 ### KEY FIGURES
 - Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName} (“The Midnight Cartographer”)
-- Tom Wade: Jack’s friend and map/symbol researcher; knows more than he says
-- Deputy Chief Grange: suppression/containment operator around Under-Map incidents
 
 ## CHARACTER NAMES (USE EXACTLY)
 `;
@@ -10054,9 +9941,6 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     const keyCharacters = [
       { name: protagonist?.name || 'Jack Halloway', role: 'protagonist' },
       { name: antagonist?.name || 'Victoria Blackwell', alias: 'The Midnight Cartographer' },
-      { name: allies?.sarahReeves?.name || 'Sarah Reeves', role: 'former partner' },
-      { name: allies?.eleanorBellamy?.name || 'Eleanor Bellamy', role: 'wrongfully convicted' },
-      { name: villains?.tomWade?.name || 'Tom Wade', role: 'researcher / records contact' },
     ];
 
     for (const char of keyCharacters) {
