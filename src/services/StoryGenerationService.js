@@ -77,14 +77,14 @@ const DECISION_CONSEQUENCES = {
   // Chapter 1 decision consequences
   '001C': {
     A: {
-      immediate: 'Jack chose to go to the Blueline Diner to meet Marcus Thornhill’s daughter and secure the ledger',
-      ongoing: ['More careful approach', 'More complete evidence trail', 'Slower confrontation with suspects', 'Higher Sarah trust'],
-      characterImpact: { trust: +10, aggression: -5, thoroughness: +15 },
+      immediate: 'Jack chose a careful approach: document the letter’s anomalies and pursue leads before stepping into the Threshold’s trap',
+      ongoing: ['More methodical evidence trail', 'More caution around the Under-Map', 'Slower escalation, fewer reckless exposures', 'Higher ally trust'],
+      characterImpact: { trust: +8, aggression: -5, thoroughness: +12 },
     },
     B: {
-      immediate: 'Jack chose to confront Silas Reed immediately at his penthouse',
-      ongoing: ['More adversarial relationships', 'Faster revelation of threats', 'Higher personal risk', 'Lower Sarah trust'],
-      characterImpact: { trust: -10, aggression: +15, thoroughness: -5 },
+      immediate: 'Jack chose a direct approach: follow the letter’s instruction immediately, prioritizing speed and instinct over preparation',
+      ongoing: ['More adversarial encounters', 'Faster revelation of threats', 'Higher personal risk', 'Lower ally trust'],
+      characterImpact: { trust: -8, aggression: +12, thoroughness: -5 },
     },
   },
   // Additional chapter consequences will be generated dynamically
@@ -4057,7 +4057,9 @@ Generate realistic, specific consequences based on the actual narrative content.
    * Check if a specific chapter/subchapter needs generation
    */
   needsGeneration(chapter, subchapter, pathKey) {
-    if (chapter <= 1) return false;
+    // Chapter 1A is static; Chapter 1B/1C and chapters 2+ can be generated.
+    if (chapter <= 0) return false;
+    if (chapter === 1 && subchapter === 1) return false;
     const caseNumber = formatCaseNumber(chapter, subchapter);
     const key = `${caseNumber}_${pathKey}`;
     return !this.generatedStory?.chapters?.[key];
@@ -4147,20 +4149,49 @@ Generate realistic, specific consequences based on the actual narrative content.
       narrativeThreads: [], // Active story threads to maintain
     };
 
-    // Add Chapter 1 content (static) - FULL TEXT
-    for (let sub = 1; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
+    // Add Chapter 1 content - FULL TEXT
+    // - 001A is static (prewritten)
+    // - 001B/001C are generated (LLM), stored like other generated chapters
+    //
+    // When generating within Chapter 1, only include the subchapters that already exist
+    // (i.e., subchapters strictly before the target subchapter).
+    const maxChapter1SubToInclude = targetChapter === 1
+      ? Math.max(0, Math.min(SUBCHAPTERS_PER_CHAPTER, targetSubchapter - 1))
+      : SUBCHAPTERS_PER_CHAPTER;
+
+    for (let sub = 1; sub <= maxChapter1SubToInclude; sub++) {
       const caseNum = formatCaseNumber(1, sub);
-      const entry = getStoryEntry(caseNum, 'ROOT');
+      let entry = null;
+
+      if (sub === 1) {
+        entry = getStoryEntry(caseNum, 'ROOT');
+      } else {
+        // Chapter 1B/1C are generated; load from storage/memory if available
+        entry = await this.getGeneratedEntryAsync(caseNum, 'ROOT');
+      }
+
       if (entry?.narrative) {
+        // If we have branching choices for this case, use the REALIZED narrative.
+        const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNum);
+        let narrativeText = entry.narrative;
+        if (branchingChoice && entry.branchingNarrative) {
+          narrativeText = buildRealizedNarrative(
+            entry.branchingNarrative,
+            branchingChoice.firstChoice,
+            branchingChoice.secondChoice
+          );
+        }
+
         context.previousChapters.push({
           chapter: 1,
           subchapter: sub,
           pathKey: 'ROOT',
           title: entry.title || `Chapter 1.${sub}`,
-          narrative: entry.narrative,
+          narrative: narrativeText,
           decision: entry.decision || null,
           chapterSummary: entry.chapterSummary || null,
-          isRecent: true, // Mark all as recent to include full text
+          branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
+          isRecent: true,
         });
       }
     }
@@ -4213,7 +4244,17 @@ Generate realistic, specific consequences based on the actual narrative content.
     if (targetSubchapter > 1) {
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
-        const entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
+        let entry = null;
+
+        // Chapter 1A is static, but the rest of Chapter 1 is generated.
+        if (targetChapter === 1) {
+          entry = sub === 1
+            ? getStoryEntry(caseNum, 'ROOT')
+            : await this.getGeneratedEntryAsync(caseNum, 'ROOT');
+        } else {
+          entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
+        }
+
         if (entry) {
           // Check if we have branching choices for this case - use REALIZED narrative
           const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNum);
@@ -6630,8 +6671,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       throw new Error('LLM Service not configured. Please set an API key in settings.');
     }
 
-    if (chapter <= 1) {
-      throw new Error('Chapter 1 uses static content and should not be generated.');
+    // Chapter 1A is static; 1B/1C should be generated like later chapters.
+    if (chapter <= 0) {
+      throw new Error('Invalid chapter number.');
+    }
+    if (chapter === 1 && subchapter === 1) {
+      throw new Error('Chapter 1A uses static content and should not be generated.');
     }
 
     const caseNumber = formatCaseNumber(chapter, subchapter);

@@ -33,7 +33,7 @@ import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
-import { getStoryEntry, ROOT_PATH_KEY } from "../data/storyContent";
+import { getStoryEntry, ROOT_PATH_KEY, isDynamicChapter as isDynamicCaseNumber } from "../data/storyContent";
 import {
   formatCountdown,
   parseDailyIntro,
@@ -279,7 +279,7 @@ export default function CaseFileScreen({
   const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
   const subchapterLetter = caseNumber?.slice(3, 4);
   const isSubchapterC = subchapterLetter === 'C';
-  const isDynamicChapter = chapter >= 2;
+  const isDynamicChapter = isDynamicCaseNumber(caseNumber);
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
