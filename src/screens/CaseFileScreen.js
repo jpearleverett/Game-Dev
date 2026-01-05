@@ -279,9 +279,6 @@ export default function CaseFileScreen({
   const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
   const subchapterLetter = caseNumber?.slice(3, 4);
   const isSubchapterC = subchapterLetter === 'C';
-  // All subchapters have branching narrative (including 1A which has static content but branching choices)
-  // This controls UI flow (showing puzzle button after narrative), not content generation
-  const hasBranchingNarrative = chapter >= 1;
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
