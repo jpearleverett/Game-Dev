@@ -77,30 +77,10 @@ function extractFunctionReturnTemplateLiteral(fullSource, funcName) {
   return afterReturn.slice(0, endIdx);
 }
 
-function buildGroundingSection({ TIMELINE, ABSOLUTE_FACTS, WRITING_STYLE }, { includeStyle } = { includeStyle: true }) {
+function buildGroundingSection({ ABSOLUTE_FACTS, WRITING_STYLE }, { includeStyle } = { includeStyle: true }) {
   const safe = (v) => (v === undefined || v === null ? '' : String(v));
 
-  const timelineLines = [];
-  const yearsAgo = TIMELINE?.yearsAgo || {};
-  const yearKeys = Object.keys(yearsAgo)
-    .map((k) => Number(k))
-    .filter((n) => Number.isFinite(n))
-    .sort((a, b) => b - a);
-  for (const y of yearKeys) {
-    const entry = yearsAgo[y];
-    if (Array.isArray(entry)) {
-      timelineLines.push(`- ${y} years ago:`);
-      entry.forEach((e) => timelineLines.push(`  - ${safe(e)}`));
-    } else {
-      timelineLines.push(`- ${y} years ago: ${safe(entry)}`);
-    }
-  }
-
-  const missing = (ABSOLUTE_FACTS?.fiveInnocents || [])
-    .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
-    .join('\n');
-
-  let section = `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
+  let section = `## STORY BIBLE - CHAPTER 1 DRAFTING CONSTRAINTS
 
 ### PROTAGONIST
 - Name: ${safe(ABSOLUTE_FACTS.protagonist.fullName)}
@@ -110,27 +90,28 @@ function buildGroundingSection({ TIMELINE, ABSOLUTE_FACTS, WRITING_STYLE }, { in
 - Residence: ${safe(ABSOLUTE_FACTS.protagonist.residence)}
 - Vice: ${safe(ABSOLUTE_FACTS.protagonist.vices?.[0])}
 
-### ANTAGONIST / GUIDE FIGURE
-- Name: ${safe(ABSOLUTE_FACTS.antagonist.trueName)}
-- Alias/Title: ${safe(ABSOLUTE_FACTS.antagonist.titleUsed)} (${safe(ABSOLUTE_FACTS.antagonist.aliasUsed)})
-- Communication: ${safe(ABSOLUTE_FACTS.antagonist.communication?.method)}; ink: ${safe(ABSOLUTE_FACTS.antagonist.communication?.ink)}
-- Motivation: "${safe(ABSOLUTE_FACTS.antagonist.motivation)}"
+### VICTORIA (Keep her MYSTERIOUS)
+- Name used: Victoria Blackwell
+- Communication: dead letters (glyphs) and thresholds; keep her motives and history opaque
+- Rule: do NOT explain her. Imply power through specifics, restraint, and consequences.
 
 ### SETTING
 - City: ${safe(ABSOLUTE_FACTS.setting.city)}
 - Atmosphere: ${safe(ABSOLUTE_FACTS.setting.atmosphere)}
 - Core mystery: ${safe(ABSOLUTE_FACTS.setting.coreMystery)}
 
-### CORE CONSTRAINT (Reveal timing)
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
-- Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
+### CHAPTER 1 REVEAL ARC (Mandatory)
+- By the END of 001A: Jack finds proof the world isn't as it seems (no longer comfortable skepticism).
+- By the END of 001C: Jack can no longer deny it (undeniable, irreversible encounter/consequence).
+- By the END of 001C: Jack SOLVES a glyph (a “dead letter”) and uses the solution to move deeper into the Under-Map.
 
-### THE FIVE MISSING ANCHORS (Each tied to a glyph)
-${missing}
+### CAST CONSTRAINT (Chapter 1 only)
+- Do not introduce any named recurring characters besides Jack and Victoria.
+- Other people may appear only as unnamed background (e.g., a bartender, a guard), without backstory or ongoing threads.
 
-### TIMELINE (Use exact numbers; never approximate)
-${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
+### TERMINOLOGY
+- “Dead letters” = glyphs encoded into physical messages/signs that behave like language and locks.
+- Solving a dead letter produces a concrete effect (access, mapping change, threshold activation), not just “a clue.”
 `;
 
   if (includeStyle) {
