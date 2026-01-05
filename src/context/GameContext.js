@@ -81,9 +81,17 @@ export function GameProvider({
           const pathKey = story.getCurrentPathKey(caseNumber);
           llmTrace('GameContext', traceId, 'activateStoryCase.resolvedTarget', { caseNumber, pathKey }, 'debug');
 
-          // Check if we need to generate content for this case
+          // Check if we need to generate content for this case.
+          // - Chapter 1A is static and never generated.
+          // - Chapter 1B/1C are dynamic and must be generated even before the first chapter-level decision exists.
+          // - Chapters 2+ are dynamic and require at least one prior decision to determine path key.
           const hasFirstDecision = (story.storyCampaign?.choiceHistory?.length || 0) > 0;
-          if (isDynamicChapter(caseNumber) && hasFirstDecision) {
+          const { chapter: caseChapter, subchapter: caseSubchapter } = parseCaseNumber(caseNumber);
+          const shouldEnsureContent = isDynamicChapter(caseNumber) && (
+            caseChapter === 1 ? caseSubchapter > 1 : hasFirstDecision
+          );
+
+          if (shouldEnsureContent) {
             console.log(`[GameContext] Ensuring story content for ${caseNumber} (path: ${pathKey})...`);
             const genStartTime = Date.now();
             const genResult = await story.ensureStoryContent(caseNumber, pathKey);
