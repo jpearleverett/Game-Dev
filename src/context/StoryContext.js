@@ -458,7 +458,6 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Trigger prefetch for next subchapter with the updated branchingChoices
     if (isLLMConfigured) {
-      console.log(`[StoryContext] Triggering prefetch after branching complete for ${caseNumber}`);
       triggerPrefetchAfterBranchingComplete(caseNumber, pathKey, choiceHistory, branchingChoices);
     }
   }, [saveBranchingChoice, progress.storyCampaign, isLLMConfigured, triggerPrefetchAfterBranchingComplete]);

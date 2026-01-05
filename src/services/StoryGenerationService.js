@@ -4871,6 +4871,7 @@ ${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
     const existing = await llmService.getCache(cacheKey);
     if (existing) {
       this.chapterStartCacheKeys.set(logicalKey, cacheKey);
+      console.log(`[StoryGenerationService] ♻️ Chapter-start cache HIT for Chapter ${chapter} (path: ${effectivePathKey})`);
       return cacheKey;
     }
 
@@ -6806,6 +6807,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
       // Build comprehensive context (now includes story arc and chapter outline)
       // TRUE INFINITE BRANCHING: Pass branchingChoices to build realized narrative from player's actual path
+      const branchingChoicesForContext = branchingChoices || [];
+      console.log(`[StoryGenerationService] 📖 Building context for ${caseNumber}:`, {
+        pathKey: effectivePathKey,
+        branchingChoicesCount: branchingChoicesForContext.length,
+        branchingChoices: branchingChoicesForContext.map(bc => `${bc.caseNumber}:${bc.firstChoice}->${bc.secondChoice}`).join(', ') || '(none)',
+      });
       const context = await this.buildStoryContext(chapter, subchapter, effectivePathKey, choiceHistory, branchingChoices);
 
       // Apply thread normalization, capping, and archival to prevent state explosion

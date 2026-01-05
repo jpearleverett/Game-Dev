@@ -258,7 +258,6 @@ async function loadToCache(caseNumber, pathKey, previousBranchingPath = null) {
   if (previousBranchingPath) {
     const speculativeKey = `${caseNumber}_${pathKey}_${previousBranchingPath}`;
     if (generatedCache[speculativeKey]) {
-      console.log(`[storyContent] Found speculatively cached content for ${caseNumber} (path: ${previousBranchingPath})`);
       return generatedCache[speculativeKey];
     }
   }
