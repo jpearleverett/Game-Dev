@@ -28,9 +28,9 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 </non_negotiables>
 
 <reveal_timing>
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 2A (not earlier).
-- Before then, any anomalies must remain plausibly deniable.
+- By the END of 001A: Jack finds proof the world isn't as it seems.
+- By the END of 001C: Jack can no longer deny it.
+- By the END of 001C: Jack solves a glyph (a “dead letter”) and uses the solution to move deeper into the Under-Map.
 </reveal_timing>
 
 <how_to_use_the_prompt>
@@ -59,6 +59,12 @@ Every urgency="critical" thread must appear there, with originalThread copied ex
 If a thread has been marked "acknowledged" 2+ times without "progressed" or "resolved", it is OVERDUE.
 You MUST either progress it meaningfully, resolve it, or mark it as "failed" with a clear in-story reason.
 </thread_escalation_rule>
+
+<chapter1_opening_directive>
+- This is Chapter 1. There is no prior narrative. Do not recap or reference unseen events.
+- Do not introduce named recurring characters besides Jack and Victoria.
+</chapter1_opening_directive>
+
 ```
 
 ---
@@ -70,7 +76,7 @@ This is the content your engine caches (story bible, character voices, craft tec
 ```text
 <story_bible>
 
-## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
+## STORY BIBLE - CHAPTER 1 DRAFTING CONSTRAINTS
 
 ### PROTAGONIST
 - Name: Jack Halloway
@@ -80,38 +86,28 @@ This is the content your engine caches (story bible, character voices, craft tec
 - Residence: A cramped office-sublet above Murphy's Bar (cheap rent, thin floorboards)
 - Vice: Too much cold coffee
 
-### ANTAGONIST / GUIDE FIGURE
-- Name: Victoria Blackwell
-- Alias/Title: The Midnight Cartographer (Victoria Blackwell)
-- Communication: Black envelopes with a wax seal that never softens (even under heat); ink: Silver ink that does not photograph cleanly and “moves” when stared at too long
-- Motivation: "Force Jack to follow the symbols until he cannot pretend they are coincidence, then make him choose what to do with the hidden map"
+### VICTORIA (Keep her MYSTERIOUS)
+- Name used: Victoria Blackwell
+- Communication: dead letters (glyphs) and thresholds; keep her motives and history opaque
+- Rule: do NOT explain her. Imply power through specifics, restraint, and consequences.
 
 ### SETTING
 - City: Ashport
 - Atmosphere: Rain-soaked, neon-lit, perpetually overcast; streetlight halos, wet concrete, and too many reflections
 - Core mystery: Ashport has a second layer: a hidden topology (“the Under-Map”) accessed through symbol sequences and place-specific thresholds
 
-### CORE CONSTRAINT (Reveal timing)
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
-- Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
+### CHAPTER 1 REVEAL ARC (Mandatory)
+- By the END of 001A: Jack finds proof the world isn't as it seems (no longer comfortable skepticism).
+- By the END of 001C: Jack can no longer deny it (undeniable, irreversible encounter/consequence).
+- By the END of 001C: Jack SOLVES a glyph (a “dead letter”) and uses the solution to move deeper into the Under-Map.
 
-### THE FIVE MISSING ANCHORS (Each tied to a glyph)
-1. Eleanor Bellamy — Pattern historian (specialized in found symbols on public infrastructure); symbol: HOLLOW SPIRAL; status: Missing
-2. Marcus Thornhill — Street-artist turned reluctant messenger; symbol: SPLIT EYE; status: Missing
-3. Dr. Lisa Chen — Materials scientist (studies inks, pigments, and reflective coatings); symbol: LADDER NOTCH; status: Missing
-4. James Sullivan — Paramedic who keeps seeing the same patient in different years; symbol: BROKEN HALO; status: Missing (intermittent)
-5. Teresa Wade — Tom Wade’s daughter; urban explorer and amateur cartographer; symbol: LOCKED KNOT; status: Missing
+### CAST CONSTRAINT (Chapter 1 only)
+- Do not introduce any named recurring characters besides Jack and Victoria.
+- Other people may appear only as unnamed background (e.g., a bartender, a guard), without backstory or ongoing threads.
 
-### TIMELINE (Use exact numbers; never approximate)
-- 12 years ago: Jack Halloway and Tom Wade meet through a campus-arts work-study job cataloging old municipal signage
-- 9 years ago: The first documented “Blank Map” incident: a city block briefly appears on no satellite imagery and no paper maps
-- 7 years ago:
-  - A graduate cohort studying semiotics publishes a banned zine of repeating street symbols (“the Glyph Index”)
-  - One of the editors disappears for 19 hours, returning with a palm scar shaped like a split eye
-- 4 years ago: Victoria Blackwell begins leaving “dead letters” in public places: envelopes that contain only symbol strings and a small river-glass token
-- 2 years ago: Tom Wade starts quietly collecting citywide reports of repeating symbols, insisting it is a pattern, not graffiti
-- 1 years ago: Jack quits a stable job after a “coincidence chain” makes him feel watched, then takes gig work and small investigative jobs to pay rent
+### TERMINOLOGY
+- “Dead letters” = glyphs encoded into physical messages/signs that behave like language and locks.
+- Solving a dead letter produces a concrete effect (access, mapping change, threshold activation), not just “a clue.”
 
 
 </story_bible>
@@ -132,67 +128,16 @@ Example Phrases:
   - ""A city can lie without opening its mouth.""
   - ""The map was correct. The street was the part that changed.""
 
-### VICTORIA BLACKWELL / THE CONFESSOR / EMILY CROSS
+### VICTORIA BLACKWELL (Keep her MYSTERIOUS)
 Role: Primary antagonist/guide; architect of Jack’s route through the mystery
-Aliases: The Midnight Cartographer, V.A., Cartographer
 Voice (Speaking): Calm, precise, minimal contractions, uses questions as locks
 Voice (Written): Instructional but elegant; rules disguised as poetry
-Example Phrases:
-  - ""Two maps. Choose which one you will pretend is real.""
-  - ""Do not name it yet.""
-  - ""Follow the line once. Never twice.""
 
-### SARAH REEVES
-Role: Pragmatic ally; investigator-type (not a noir cop stereotype)
-Voice: Blunt, efficient, asks for specifics
-Example Phrases:
-  - ""Show me the photo. Not the story.""
-  - ""If it repeats, it’s not random.""
-  - ""Don’t go alone.""
+Rules (Chapter 1):
+- Do not provide her backstory, full agenda, or “how the Under-Map works.”
+- Imply power through precision: what she knows, what she withholds, and what happens when Jack disobeys.
+- Keep her dialogue elegant and controlled. No lore monologues.
 
-### ELEANOR BELLAMY
-Role: Anchor-linked survivor / pattern historian (not “wrongfully convicted” canon)
-Voice: Clipped, exact, allergic to exaggeration
-Example Phrases:
-  - ""Don’t call it a sign. It’s a rule.""
-  - ""If it’s there, it wants to be seen.""
-
-### TOM WADE
-Role: Friend with access to archives/maps; knows more than he says
-Voice: Warm, evasive when cornered; uses logistics as cover
-Note: Jack's longtime friend (met ~12 years ago) who knows city records/symbol reports better than he admits
-
-### SILAS REED
-Role: Fixer / gatekeeper to permits, access, and quiet favors
-Voice: Charm as armor; laughs too quickly
-Example Phrases:
-  - ""You didn’t hear that from me.""
-  - ""Wrong door, Jack.""
-  - ""Some lines are expensive.""
-
-### HELEN PRICE
-Role: City counsel / development liaison - Institutional pressure; makes places “disappear” via paperwork
-Voice: Polite, legalistic, weaponized calm
-Example Phrases:
-  - ""That’s not in the public record.""
-  - ""You’re mistaken.""
-  - ""This site is closed.""
-
-### CLAIRE THORNHILL
-Role: A witness who notices patterns; keeps a private log
-Voice: Fast, nervous precision; dates, times, receipts
-Example Phrases:
-  - ""It happened twice.""
-  - ""That’s not the same sign.""
-  - ""I wrote it down.""
-
-### MARCUS WEBB
-Role: Antique dealer / information broker for odd artifacts
-Voice: Cultured, cautious, trades in hints
-Example Phrases:
-  - ""Some objects remember.""
-  - ""You want a map? Define map.""
-  - ""Careful what you carry.""
 
 </character_reference>
 
@@ -1572,6 +1517,10 @@ You are writing Chapter 1, Subchapter 1 (A).
 2. **ESTABLISH** atmosphere, baseline, and the first disruption
 3. **PLANT** questions and hooks; do not explain everything
 4. **END** with a forward-driving hook that demands the next subchapter
+
+### CHAPTER 1 REQUIRED MILESTONES
+- End of 001A: proof the world isn't as it seems (no longer deniable comfort)
+- End of 001C: undeniable; and Jack solves a dead letter glyph that unlocks deeper access
 ################################################################################
 
 
@@ -1590,8 +1539,8 @@ You are writing Chapter 1, Subchapter 1 (A).
 - None yet
 
 ### WHAT JACK DOES NOT YET KNOW (do not reveal prematurely):
-- What the Under-Map truly is (until the end of 2A)
-- Victoria Blackwell’s full agenda and constraints
+- What the Under-Map truly is (at the START of Chapter 1)
+- Victoria Blackwell’s true agenda and constraints
 
 </character_knowledge>
 
@@ -1624,6 +1573,24 @@ Use these patterns to maintain consistent character voices:
 - Cuts off explanations with a direct question
 - Lets silence test the other person
 
+### Victoria Blackwell / The Midnight Cartographer
+**Sentence Patterns:**
+- Controlled sentences, no filler
+- Questions used as locks
+- Rules disguised as statements
+
+**Vocabulary Tendencies:**
+- Map language: “route,” “line,” “legend,” “scale,” “blank”
+- Constraint language: “don’t,” “never,” “once,” “until”
+
+**Physical Tells:**
+- Stillness as dominance
+- Touches nothing unless it’s deliberate
+
+**Dialogue Rhythm:**
+- Waits for Jack to speak first
+- Ends exchanges with a single clean instruction
+
 </voice_dna>
 
 
@@ -1636,12 +1603,12 @@ Use these patterns to maintain consistent character voices:
 
 ### YOUR CONSISTENCY RESPONSIBILITIES
 1. In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative
-   Examples: "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case"
+   Examples: "Jack pocketed the dead letter and felt it warm like skin", "Victoria's ink bled into a glyph when Jack lied"
 
 2. NEVER contradict:
    - Character names and relationships
    - Timeline durations when the story bible specifies exact numbers (do not “round” key relationships/events)
-   - The reveal timing: Under-Map becomes undeniable at the END of 2A, not earlier
+   - Chapter 1 arc: proof by end of 001A; undeniable by end of 001C; solved dead letter unlocks deeper access by end of 001C
    - Setting tone (modern city; hidden layer; no Tolkien-style fantasy)
    - Player's path personality and decision consequences
 
@@ -1699,7 +1666,20 @@ Jack adapts his approach to the situation. He can be patient when it serves him,
 - Use SINGLE QUOTES for all dialogue
 - Ensure the canonical "narrative" string matches your branching segments exactly
 - Do not contradict ABSOLUTE_FACTS or CONSISTENCY_RULES
-- Maintain plausible deniability of the Under-Map until the end of 2A
+- Do not introduce any named recurring characters besides Jack and Victoria
+- Chapter 1 arc: proof by end of 001A; undeniable by end of 001C; at end of 001C Jack solves a “dead letter” glyph to move deeper into the Under-Map
+
+### CHAPTER 1 STORY DESIGN PRINCIPLES (Make it compelling)
+1. The “normal” world should already feel pressurized: Jack’s routine almost works, but it’s brittle.
+2. Dead letters/glyphs must behave like a system (constraints, inputs, outputs), not vibes.
+3. Proof should be physical and costly. Belief becomes irreversible because it costs Jack something.
+4. Victoria is negative space: show impact, timing, precision, surveillance; do not explain her.
+5. Escalate as: clue → implication → consequence (the world forces the next move).
+6. Give Jack a plausible rationalization that almost wins, then break it with one un-fileable detail.
+7. Make the hook personal and concrete (a name, smell, phrase, object) — not abstract guilt.
+8. The city/Under-Map should feel reactive (routes, signage, reflections, thresholds behaving like a predator).
+9. Resolve one contained question inside Chapter 1 (how to read/solve a dead letter) while opening larger ones.
+10. End of 001C is the first deliberate use of magic: solving the dead letter causes access/activation and moves Jack deeper.
 
 ### PREVIOUS_ACTIVE_THREADS (Must be addressed)
 - None (this is the first chapter; there are no prior threads to carry forward)
