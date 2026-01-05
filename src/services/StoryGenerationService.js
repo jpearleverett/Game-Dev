@@ -5262,7 +5262,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
     parts.push(`
 <task>
-Write subchapter ${chapter}.${subchapter} (${beatType}).
+Based on the context above, write subchapter ${chapter}.${subchapter} (${beatType}).
 
 Before writing, plan:
 1. What narrative threads from ACTIVE_THREADS must be addressed?
@@ -5457,28 +5457,28 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
       if (chapterArc) {
         section += `### CHAPTER ${chapter} FOCUS\n`;
         section += `**Phase:** ${chapterArc.phase}\n`;
-        section += `**Primary Focus:** ${this._sanitizePromptText(chapterArc.primaryFocus)}\n`;
+        section += `**Primary Focus:** ${chapterArc.primaryFocus || ''}\n`;
         section += `**Tension Level:** ${chapterArc.tensionLevel}/10\n`;
 
         if (chapterArc.personalStakes) {
           section += `\n### PERSONAL STAKES (What Jack loses if he fails HERE)\n`;
-          section += `${this._sanitizePromptText(chapterArc.personalStakes)}\n`;
+          section += `${chapterArc.personalStakes}\n`;
           section += `\n**Make the reader FEEL this is at risk. Show it, don't tell it.**\n`;
         }
 
         if (chapterArc.emotionalAnchor) {
           section += `\n### EMOTIONAL ANCHOR (The gut-punch moment for this chapter)\n`;
-          section += `${this._sanitizePromptText(chapterArc.emotionalAnchor)}\n`;
+          section += `${chapterArc.emotionalAnchor}\n`;
           section += `\n**This is not plot. This is FEELING. Write it to hit the reader in the chest.**\n`;
         }
 
         if (chapterArc.keyRevelation) {
           section += `\n### KEY REVELATION\n`;
-          section += `${this._sanitizePromptText(chapterArc.keyRevelation)}\n`;
+          section += `${chapterArc.keyRevelation}\n`;
         }
 
         section += `\n### ENDING HOOK\n`;
-        section += `This chapter should end with: "${this._sanitizePromptText(chapterArc.endingHook)}"\n`;
+        section += `This chapter should end with: "${chapterArc.endingHook || ''}"\n`;
         section += `\n**For subchapter ${['A', 'B', 'C'][subchapter - 1]}: Build toward this ending while creating micro-hooks at the end of your subchapter.**\n`;
       }
     }
@@ -5818,12 +5818,12 @@ ${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
       task += `
 
 ### STORY ARC GUIDANCE (Follow this for consistency)
-- **Chapter Focus:** ${this._sanitizePromptText(chapterArc.primaryFocus)}
-${chapterArc.innocentFeatured ? `- **Featured Innocent:** ${this._sanitizePromptText(chapterArc.innocentFeatured)}` : ''}
-${chapterArc.keyRevelation ? `- **Key Revelation:** ${this._sanitizePromptText(chapterArc.keyRevelation)}` : ''}
+- **Chapter Focus:** ${chapterArc.primaryFocus || ''}
+${chapterArc.innocentFeatured ? `- **Featured Innocent:** ${chapterArc.innocentFeatured}` : ''}
+${chapterArc.keyRevelation ? `- **Key Revelation:** ${chapterArc.keyRevelation}` : ''}
 - **Tension Level:** ${chapterArc.tensionLevel}/10
-- **Ending Hook:** ${this._sanitizePromptText(chapterArc.endingHook)}
-${chapterArc.decisionTheme ? `- **Decision Theme:** ${this._sanitizePromptText(chapterArc.decisionTheme)}` : ''}`;
+- **Ending Hook:** ${chapterArc.endingHook || ''}
+${chapterArc.decisionTheme ? `- **Decision Theme:** ${chapterArc.decisionTheme}` : ''}`;
     }
 
     // ========== NEW: Chapter Outline Guidance ==========
@@ -5831,13 +5831,13 @@ ${chapterArc.decisionTheme ? `- **Decision Theme:** ${this._sanitizePromptText(c
       task += `
 
 ### SUBCHAPTER ${subchapterLabel} OUTLINE (Follow this structure)
-- **Focus:** ${this._sanitizePromptText(subchapterOutline.focus)}
-- **Key Beats:** ${(subchapterOutline.keyBeats || []).map((b) => this._sanitizePromptText(b)).join(', ') || 'Build tension naturally'}
-${subchapterOutline.endingTransition ? `- **Transition to next:** ${this._sanitizePromptText(subchapterOutline.endingTransition)}` : ''}`;
+- **Focus:** ${subchapterOutline.focus || ''}
+- **Key Beats:** ${(subchapterOutline.keyBeats || []).join(', ') || 'Build tension naturally'}
+${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOutline.endingTransition}` : ''}`;
 
       if (isDecisionPoint && subchapterOutline.decisionSetup) {
         task += `
-- **Decision Setup:** ${this._sanitizePromptText(subchapterOutline.decisionSetup)}
+- **Decision Setup:** ${subchapterOutline.decisionSetup}
 - **Option A Direction:** ${subchapterOutline.optionADirection || 'More direct approach'}
 - **Option B Direction:** ${subchapterOutline.optionBDirection || 'More cautious approach'}`;
       }
@@ -5848,13 +5848,13 @@ ${subchapterOutline.endingTransition ? `- **Transition to next:** ${this._saniti
       task += `
 
 ### OPENING CAUSALITY (Mandatory)
-${this._sanitizePromptText(outline.openingCausality)}`;
+${outline.openingCausality}`;
     }
     if (Array.isArray(outline?.mustReference) && outline.mustReference.length > 0) {
       task += `
 
 ### MUST-REFERENCE ANCHORS (Mandatory)
-${outline.mustReference.slice(0, 6).map((x) => `- ${this._sanitizePromptText(x)}`).join('\n')}`;
+${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
     }
 
     // ========== NEW: Narrative Thread Continuity ==========
