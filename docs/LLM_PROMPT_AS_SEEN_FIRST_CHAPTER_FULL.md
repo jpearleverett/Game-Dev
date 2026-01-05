@@ -54,6 +54,11 @@ It must match those segments verbatim (no paraphrase).
 You MUST address every thread listed in ACTIVE_THREADS / PREVIOUS_ACTIVE_THREADS by filling previousThreadsAddressed.
 Every urgency="critical" thread must appear there, with originalThread copied exactly and narrativeReference quoting the specific sentence(s) from your narrative.
 </thread_accounting_rule>
+
+<thread_escalation_rule>
+If a thread has been marked "acknowledged" 2+ times without "progressed" or "resolved", it is OVERDUE.
+You MUST either progress it meaningfully, resolve it, or mark it as "failed" with a clear in-story reason.
+</thread_escalation_rule>
 ```
 
 ---
