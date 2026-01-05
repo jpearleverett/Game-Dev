@@ -279,15 +279,16 @@ export default function CaseFileScreen({
   const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
   const subchapterLetter = caseNumber?.slice(3, 4);
   const isSubchapterC = subchapterLetter === 'C';
-  // Chapter 1A is static; 1B, 1C, and all of chapters 2+ are dynamic
-  const isDynamicChapter = chapter >= 2 || (chapter === 1 && (subchapterLetter === 'B' || subchapterLetter === 'C'));
+  // All subchapters have branching narrative (including 1A which has static content but branching choices)
+  // This controls UI flow (showing puzzle button after narrative), not content generation
+  const hasBranchingNarrative = chapter >= 1;
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
-    if (!isDynamicChapter || !caseNumber) return null;
+    if (!hasBranchingNarrative || !caseNumber) return null;
     const branchingChoices = storyCampaign?.branchingChoices || [];
     return branchingChoices.find(bc => bc.caseNumber === caseNumber);
-  }, [isDynamicChapter, caseNumber, storyCampaign?.branchingChoices]);
+  }, [hasBranchingNarrative, caseNumber, storyCampaign?.branchingChoices]);
 
   const handleBranchingComplete = useCallback((result) => {
     setBranchingProgress(result);
@@ -309,13 +310,13 @@ export default function CaseFileScreen({
     }
 
     // NARRATIVE-FIRST FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
-    // Applies to ALL dynamic chapters (2+), not just C
+    // Applies to ALL subchapters with branching narrative (including 1A)
     // Note: Prefetch is triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
-    if (isDynamicChapter) {
+    if (hasBranchingNarrative) {
       console.log('[CaseFileScreen] Narrative complete - ready for puzzle');
       setNarrativeComplete(true);
     }
-  }, [onSaveBranchingChoice, caseNumber, isDynamicChapter]);
+  }, [onSaveBranchingChoice, caseNumber, hasBranchingNarrative]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);
@@ -568,9 +569,8 @@ export default function CaseFileScreen({
           };
         }
         // Decision not yet made - don't show puzzle button (let them decide first)
-      } else if (narrativeReadyForPuzzle || (chapter === 1 && subchapterLetter === 'A')) {
-        // A/B subchapter: Show puzzle after narrative
-        // Exception: Chapter 1A (static) always shows puzzle button (skip narrative gating for replay flow)
+      } else if (narrativeReadyForPuzzle) {
+        // A/B subchapter: Show puzzle after narrative is complete (branching choices made)
         return {
           title: "Evidence Board Ready",
           body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",

@@ -82,8 +82,9 @@ export function GameProvider({
           llmTrace('GameContext', traceId, 'activateStoryCase.resolvedTarget', { caseNumber, pathKey }, 'debug');
 
           // Check if we need to generate content for this case
-          const hasFirstDecision = (story.storyCampaign?.choiceHistory?.length || 0) > 0;
-          if (isDynamicChapter(caseNumber) && hasFirstDecision) {
+          // isDynamicChapter returns true for 1B, 1C, and all of chapters 2-12
+          // (1A is static but has branching; its content is in storyNarrative.json)
+          if (isDynamicChapter(caseNumber)) {
             console.log(`[GameContext] Ensuring story content for ${caseNumber} (path: ${pathKey})...`);
             const genStartTime = Date.now();
             const genResult = await story.ensureStoryContent(caseNumber, pathKey);
