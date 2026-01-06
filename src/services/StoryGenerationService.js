@@ -535,65 +535,9 @@ const STORY_CONTENT_SCHEMA = {
       },
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
-    // ========== ENGAGEMENT TRACKING FIELDS ==========
-    engagementMetrics: {
-      type: 'object',
-      description: 'Metrics tracking reader engagement elements in this subchapter',
-      properties: {
-        questionsRaised: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'New questions planted in the reader\'s mind this subchapter (mystery, character, threat, or thematic questions)',
-        },
-        questionsAnswered: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Questions from previous chapters addressed (partially or fully) in this subchapter',
-        },
-        emotionalPeak: {
-          type: 'string',
-          description: 'Quote the single most emotionally intense moment in this subchapter (the gut-punch line)',
-        },
-        cliffhangerStrength: {
-          type: 'string',
-          enum: ['soft_hook', 'medium_tension', 'unbearable'],
-          description: 'How desperately will the reader want to continue? unbearable = they cannot stop here',
-        },
-      },
-      required: ['questionsRaised', 'emotionalPeak', 'cliffhangerStrength'],
-    },
-    sensoryAnchors: {
-      type: 'object',
-      description: 'Sensory grounding for this scene to make it viscerally real',
-      properties: {
-        dominantSense: {
-          type: 'string',
-          enum: ['sight', 'sound', 'smell', 'touch', 'taste'],
-          description: 'Primary sense emphasized in this scene',
-        },
-        recurringDetail: {
-          type: 'string',
-          description: 'One specific sensory detail mentioned 2-3 times (e.g., "the drip of the faucet", "the smell of old cigarettes", "rain on the windows")',
-        },
-        atmosphereNote: {
-          type: 'string',
-          description: 'Brief description of the overall sensory atmosphere (e.g., "claustrophobic and damp", "sterile and cold", "chaotic and loud")',
-        },
-      },
-      required: ['dominantSense', 'recurringDetail', 'atmosphereNote'],
-    },
-    finalMoment: {
-      type: 'string',
-      description: 'The EXACT last 1-2 sentences of your narrative. Must create unbearable forward momentum. Examples: a character entering, a name spoken, a realization that reframes everything, a gun cocking, a phone ringing with a dead person\'s number.',
-    },
-    microRevelation: {
-      type: 'string',
-      description: 'The small truth or clue revealed in this subchapter. Every subchapter must reveal SOMETHING new (a name, a date, a connection, a lie exposed).',
-    },
-    personalStakesThisChapter: {
-      type: 'string',
-      description: 'What does Jack personally stand to lose if he fails in THIS specific chapter? Be viscerally specific (not "his reputation" but "the last person who still believes in him").',
-    },
+    // NOTE: engagementMetrics, sensoryAnchors, finalMoment, microRevelation, personalStakesThisChapter
+    // were removed - Gemini 3's native thinking handles craft quality internally.
+    // These are now covered by <craft_quality_checklist> in the system prompt.
     // CANONICAL NARRATIVE - String representation for context building
     // This is the "canonical path" (opening + 1A + 1A-2A) concatenated into a single string
     // Used by context building, scene state extraction, and narrative thread analysis
@@ -602,7 +546,7 @@ const STORY_CONTENT_SCHEMA = {
       description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
 };
 
 /**
@@ -950,65 +894,9 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
     },
-    // ========== ENGAGEMENT TRACKING FIELDS (DECISION SCHEMA) ==========
-    engagementMetrics: {
-      type: 'object',
-      description: 'Metrics tracking reader engagement elements in this subchapter',
-      properties: {
-        questionsRaised: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'New questions planted in the reader\'s mind this subchapter (mystery, character, threat, or thematic questions)',
-        },
-        questionsAnswered: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Questions from previous chapters addressed (partially or fully) in this subchapter',
-        },
-        emotionalPeak: {
-          type: 'string',
-          description: 'Quote the single most emotionally intense moment in this subchapter (the gut-punch line)',
-        },
-        cliffhangerStrength: {
-          type: 'string',
-          enum: ['soft_hook', 'medium_tension', 'unbearable'],
-          description: 'For decision points, this should almost always be "unbearable" - the decision itself is the hook',
-        },
-      },
-      required: ['questionsRaised', 'emotionalPeak', 'cliffhangerStrength'],
-    },
-    sensoryAnchors: {
-      type: 'object',
-      description: 'Sensory grounding for this scene to make it viscerally real',
-      properties: {
-        dominantSense: {
-          type: 'string',
-          enum: ['sight', 'sound', 'smell', 'touch', 'taste'],
-          description: 'Primary sense emphasized in this scene',
-        },
-        recurringDetail: {
-          type: 'string',
-          description: 'One specific sensory detail mentioned 2-3 times (e.g., "the drip of the faucet", "the smell of old cigarettes", "rain on the windows")',
-        },
-        atmosphereNote: {
-          type: 'string',
-          description: 'Brief description of the overall sensory atmosphere (e.g., "claustrophobic and damp", "sterile and cold", "chaotic and loud")',
-        },
-      },
-      required: ['dominantSense', 'recurringDetail', 'atmosphereNote'],
-    },
-    finalMoment: {
-      type: 'string',
-      description: 'The EXACT last 1-2 sentences BEFORE the decision prompt. Must create maximum tension at the moment of choice.',
-    },
-    microRevelation: {
-      type: 'string',
-      description: 'The small truth or clue revealed in this subchapter. Every subchapter must reveal SOMETHING new (a name, a date, a connection, a lie exposed).',
-    },
-    personalStakesThisChapter: {
-      type: 'string',
-      description: 'What does Jack personally stand to lose if he fails in THIS specific chapter? Be viscerally specific (not "his reputation" but "the last person who still believes in him").',
-    },
+    // NOTE: engagementMetrics, sensoryAnchors, finalMoment, microRevelation, personalStakesThisChapter
+    // were removed - Gemini 3's native thinking handles craft quality internally.
+    // These are now covered by <craft_quality_checklist> in the system prompt.
     // CANONICAL NARRATIVE - String representation for context building
     // This is the "canonical path" (opening + 1A + 1A-2A) concatenated into a single string
     // Used by context building, scene state extraction, and narrative thread analysis
@@ -1020,7 +908,7 @@ const DECISION_CONTENT_SCHEMA = {
     // This prevents truncation from cutting off decision structure
   },
   // TEMPORARY: Using 'decision' instead of 'pathDecisions' to test schema complexity
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed', 'engagementMetrics', 'sensoryAnchors', 'finalMoment', 'microRevelation', 'personalStakesThisChapter'],
+  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
 };
 
 // ============================================================================
@@ -1189,7 +1077,17 @@ Every urgency="critical" thread must appear there, with originalThread copied ex
 <thread_escalation_rule>
 If a thread has been marked "acknowledged" 2+ times without "progressed" or "resolved", it is OVERDUE.
 You MUST either progress it meaningfully, resolve it, or mark it as "failed" with a clear in-story reason.
-</thread_escalation_rule>`;
+</thread_escalation_rule>
+
+<craft_quality_checklist>
+Before finalizing your narrative, internally verify these craft elements (do NOT output these—just ensure your writing embodies them):
+- SENSORY GROUNDING: Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically
+- MICRO-REVELATION: Every subchapter reveals at least one new fact, name, connection, or lie exposed
+- FORWARD MOMENTUM: The ending creates unbearable curiosity—a door opening, a name spoken, a realization
+- PERSONAL STAKES: What does Jack personally stand to lose in this specific scene? Make it visceral, not abstract
+- EMOTIONAL PEAK: Include at least one gut-punch moment—a line that lands with emotional weight
+- VARIED RHYTHM: Mix punchy short sentences with flowing longer ones; avoid monotony
+</craft_quality_checklist>`;
 
 // ============================================================================
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
