@@ -35,6 +35,11 @@ import {
   ICEBERG_TECHNIQUE,
   SUBTEXT_REQUIREMENTS,
 } from '../data/storyBible';
+import {
+  getScenesByCategory,
+  getMixedScenes,
+  MANY_SHOT_METADATA,
+} from '../data/manyShot/index';
 
 // Note: STORY_STRUCTURE.chapterBeatTypes is now used for tempo variation
 
@@ -1168,6 +1173,74 @@ ${NEGATIVE_EXAMPLES.heavyForeshadowing.problems.map(p => `- ${p}`).join('\n')}
 
 ### GOOD VERSION:
 "${NEGATIVE_EXAMPLES.heavyForeshadowing.goodVersion}"
+`;
+};
+
+// ============================================================================
+// MANY-SHOT SCENE EXAMPLES - Pattern learning from Mystic River
+// ============================================================================
+const buildManyShotExamples = (beatType, chapterBeatType, limit = 15) => {
+  // Map beat types and chapter types to relevant scene categories
+  const categoryMap = {
+    // Subchapter beat types
+    'Opening/Hook (A)': ['setup', 'atmospheric', 'internal_monologue'],
+    'Development/Conflict (B)': ['dialogue_tension', 'confrontation', 'investigation'],
+    'Resolution/Decision (C)': ['decision_point', 'revelation', 'aftermath'],
+
+    // Chapter beat types
+    'CHASE': ['action', 'dialogue_tension'],
+    'BOTTLE_EPISODE': ['dialogue_tension', 'internal_monologue', 'confrontation'],
+    'CONFRONTATION': ['confrontation', 'dialogue_tension', 'revelation'],
+    'BETRAYAL': ['revelation', 'aftermath', 'darkest_moment'],
+    'INVESTIGATION': ['investigation', 'interrogation', 'internal_monologue'],
+    'SETUP': ['setup', 'atmospheric'],
+    'CLIMAX': ['action', 'confrontation', 'revelation'],
+    'RESOLUTION': ['aftermath', 'decision_point', 'revelation'],
+  };
+
+  // Determine which categories to use
+  let categories = [];
+
+  // First try chapter beat type
+  if (chapterBeatType?.type && categoryMap[chapterBeatType.type]) {
+    categories = categoryMap[chapterBeatType.type];
+  }
+  // Fall back to subchapter beat type
+  else if (beatType && categoryMap[beatType]) {
+    categories = categoryMap[beatType];
+  }
+  // Default mix
+  else {
+    categories = ['dialogue_tension', 'internal_monologue', 'investigation'];
+  }
+
+  // Get scenes from selected categories
+  const scenesPerCategory = Math.ceil(limit / categories.length);
+  const selectedScenes = categories.flatMap(category =>
+    getScenesByCategory(category, scenesPerCategory)
+  ).slice(0, limit);
+
+  if (selectedScenes.length === 0) {
+    return ''; // No many-shot examples available
+  }
+
+  // Build the many-shot section
+  const categoryNames = categories.map(c => {
+    const metadata = MANY_SHOT_METADATA[c];
+    return `${c} (${metadata?.totalExamples || 0} examples)`;
+  }).join(', ');
+
+  return `
+## MANY-SHOT LEARNING: ${categories[0].toUpperCase()} SCENES
+Study these ${selectedScenes.length} scene excerpts from Dennis Lehane's "Mystic River" to absorb patterns for ${categoryNames}:
+
+${selectedScenes.map((scene, i) => `---
+EXAMPLE ${i + 1}:
+${scene.substring(0, 600)}${scene.length > 600 ? '...' : ''}
+`).join('\n')}
+
+---
+These scenes demonstrate the natural rhythm, dialogue patterns, and emotional beats characteristic of masterful noir fiction. Let them guide your voice, pacing, and scene construction.
 `;
 };
 
@@ -4970,7 +5043,9 @@ If any check fails, revise before returning your response.
     const charactersInScene = this._extractCharactersFromContext(context, chapter);
     const pathKey = context.pathKey || '';
     const choiceHistory = context.playerChoices || [];
-    parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory));
+    const beatType = this._getBeatType(chapter, subchapter);
+    const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+    parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType));
 
     // Part 6: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
@@ -5744,7 +5819,7 @@ The narrative context differs by path, so the strategic options should differ to
   /**
    * Build style examples section (few-shot learning)
    */
-  _buildStyleSection(charactersInScene = [], chapter = 2, pathKey = '', choiceHistory = []) {
+  _buildStyleSection(charactersInScene = [], chapter = 2, pathKey = '', choiceHistory = [], beatType = '', chapterBeatType = null) {
     // Build extended examples section
     let extendedExamples = '';
     try {
@@ -5755,6 +5830,18 @@ The narrative context differs by path, so the strategic options should differ to
     } catch (e) {
       console.error('[StoryGen] ❌ Extended examples FAILED:', e.message);
       extendedExamples = '';
+    }
+
+    // Build many-shot examples section based on beat type
+    let manyShotExamples = '';
+    try {
+      manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+      if (manyShotExamples) {
+        console.log(`[StoryGen] ✅ Many-shot: ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
+      }
+    } catch (e) {
+      console.error('[StoryGen] ❌ Many-shot examples FAILED:', e.message);
+      manyShotExamples = '';
     }
 
     // Build voice DNA section for characters in this scene
@@ -5792,6 +5879,8 @@ ${EXAMPLE_PASSAGES.tenseMoment}
 ${STYLE_EXAMPLES}
 
 ${extendedExamples}
+
+${manyShotExamples}
 
 ${voiceDNA}
 
