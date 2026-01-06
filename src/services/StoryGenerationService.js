@@ -271,11 +271,9 @@ const BRANCHING_NARRATIVE_SCHEMA = {
 const STORY_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
-    beatSheet: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Ordered list of 3-5 major plot beats for this scene, planned BEFORE writing narrative.',
-    },
+    // NOTE: beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration, storyDay
+    // were moved to <internal_planning> in system prompt - Gemini 3's native thinking
+    // handles these internally without outputting them, reducing token usage by ~20%.
     title: {
       type: 'string',
       description: 'Evocative chapter title, 2-5 words',
@@ -287,53 +285,6 @@ const STORY_CONTENT_SCHEMA = {
     previously: {
       type: 'string',
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), third-person past tense.',
-    },
-    jackActionStyle: {
-      type: 'string',
-      enum: ['cautious', 'balanced', 'direct'],
-      description: 'How Jack approaches situations in this chapter. MUST match the player path personality provided in context. cautious=methodical/careful, direct=aggressive/confrontational, balanced=adaptive',
-    },
-    jackRiskLevel: {
-      type: 'string',
-      enum: ['low', 'moderate', 'high'],
-      description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
-    },
-    jackBehaviorDeclaration: {
-      type: 'object',
-      description: 'EXPLICIT declaration of Jack\'s behavior in this scene. Fill out BEFORE writing narrative. MUST match path personality.',
-      properties: {
-        primaryAction: {
-          type: 'string',
-          enum: ['investigate', 'confront', 'observe', 'negotiate', 'flee', 'wait', 'interrogate', 'follow'],
-          description: 'The main action Jack takes in this scene',
-        },
-        dialogueApproach: {
-          type: 'string',
-          enum: ['aggressive', 'measured', 'evasive', 'empathetic', 'threatening', 'pleading'],
-          description: 'How Jack speaks to other characters',
-        },
-        emotionalState: {
-          type: 'string',
-          enum: ['determined', 'desperate', 'cautious', 'angry', 'regretful', 'suspicious', 'resigned'],
-          description: 'Jack\'s dominant emotional state',
-        },
-        physicalBehavior: {
-          type: 'string',
-          enum: ['tense', 'relaxed', 'aggressive', 'defensive', 'stealthy', 'commanding'],
-          description: 'How Jack carries himself physically',
-        },
-        personalityConsistencyNote: {
-          type: 'string',
-          description: 'Brief explanation of how this behavior aligns with player path personality (aggressive/methodical/balanced)',
-        },
-      },
-      required: ['primaryAction', 'dialogueApproach', 'emotionalState', 'physicalBehavior', 'personalityConsistencyNote'],
-    },
-    storyDay: {
-      type: 'number',
-      description: 'Which day of the 12-day timeline this scene takes place. Chapter 2 = Day 2, Chapter 3 = Day 3, etc. The story spans exactly 12 days.',
-      minimum: 1,
-      maximum: 12,
     },
     // BRANCHING NARRATIVE - Interactive story with player choices
     // Structure: Opening (280-320w) -> Choice1 (3 opts) -> Middles (3x 280-320w) -> Choice2 (3 each) -> Endings (9x 280-320w)
@@ -440,10 +391,7 @@ const STORY_CONTENT_SCHEMA = {
       },
       required: ['opening', 'firstChoice', 'secondChoices'],
     },
-    chapterSummary: {
-      type: 'string',
-      description: 'A concise 2-3 sentence summary of the narrative you just wrote, to be used for memory in future chapters.',
-    },
+    // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this; was never displayed
     puzzleCandidates: {
       type: 'array',
       items: { type: 'string' },
@@ -465,11 +413,8 @@ const STORY_CONTENT_SCHEMA = {
       },
       required: ['summary', 'objectives'],
     },
-    consistencyFacts: {
-      type: 'array',
-      items: { type: 'string' },
-      description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
-    },
+    // NOTE: consistencyFacts removed - was deleted before storage anyway; narrative threads handle continuity
+    // NOTE: previousThreadsAddressed removed - was deleted before storage; thread tracking handled in system prompt
     narrativeThreads: {
       type: 'array',
       items: {
@@ -492,61 +437,29 @@ const STORY_CONTENT_SCHEMA = {
           urgency: {
             type: 'string',
             enum: ['critical', 'normal', 'background'],
-            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters (appointments, immediate threats), normal=should be addressed soon (promises, investigations), background=can develop over time (relationships, slow revelations)'
+            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters'
           },
           characters: {
             type: 'array',
             items: { type: 'string' },
             description: 'Characters involved in this thread'
           },
-          deadline: {
-            type: 'string',
-            description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
-          },
           dueChapter: {
             type: 'number',
-            description: 'For critical urgency threads, the chapter number by which this MUST be resolved. critical=current chapter+1, normal=current chapter+3, background=no limit. Example: if current chapter is 5 and urgency is critical, dueChapter should be 6 or 7.'
+            description: 'Chapter number by which this MUST be resolved (critical=current+1, normal=current+3)'
           }
         },
         required: ['type', 'description', 'status', 'urgency']
       },
-      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status and urgency level for prioritization.'
+      description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
-    previousThreadsAddressed: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          originalThread: {
-            type: 'string',
-            description: 'Description of the previous thread being addressed'
-          },
-          howAddressed: {
-            type: 'string',
-            enum: ['resolved', 'progressed', 'acknowledged', 'delayed', 'failed'],
-            description: 'How this thread was handled: resolved=completed, progressed=moved forward, acknowledged=mentioned but not resolved, delayed=postponed with reason, failed=abandoned'
-          },
-          narrativeReference: {
-            type: 'string',
-            description: 'Brief quote or description of where in your narrative this thread was addressed'
-          }
-        },
-        required: ['originalThread', 'howAddressed', 'narrativeReference']
-      },
-      description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
-    },
-    // NOTE: engagementMetrics, sensoryAnchors, finalMoment, microRevelation, personalStakesThisChapter
-    // were removed - Gemini 3's native thinking handles craft quality internally.
-    // These are now covered by <craft_quality_checklist> in the system prompt.
     // CANONICAL NARRATIVE - String representation for context building
-    // This is the "canonical path" (opening + 1A + 1A-2A) concatenated into a single string
-    // Used by context building, scene state extraction, and narrative thread analysis
     narrative: {
       type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity.',
     },
   },
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
 };
 
 /**
@@ -622,15 +535,14 @@ const DECISION_ONLY_SCHEMA = {
 
 /**
  * Schema for decision point subchapters (end of each chapter)
+ * NOTE: Same slimmed schema as STORY_CONTENT_SCHEMA - dead fields moved to system prompt
  */
 const DECISION_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
-    beatSheet: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Ordered list of 3-5 major plot beats for this scene, planned BEFORE writing narrative.',
-    },
+    // NOTE: beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration, storyDay
+    // were moved to <internal_planning> in system prompt - Gemini 3's native thinking
+    // handles these internally without outputting them, reducing token usage by ~20%.
     title: {
       type: 'string',
       description: 'Evocative chapter title, 2-5 words',
@@ -643,54 +555,7 @@ const DECISION_CONTENT_SCHEMA = {
       type: 'string',
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), third-person past tense.',
     },
-    jackActionStyle: {
-      type: 'string',
-      enum: ['cautious', 'balanced', 'direct'],
-      description: 'How Jack approaches situations in this chapter. MUST match the player path personality provided in context. cautious=methodical/careful, direct=aggressive/confrontational, balanced=adaptive',
-    },
-    jackRiskLevel: {
-      type: 'string',
-      enum: ['low', 'moderate', 'high'],
-      description: 'The level of risk Jack takes in this chapter. MUST align with player path personality risk tolerance.',
-    },
-    jackBehaviorDeclaration: {
-      type: 'object',
-      description: 'EXPLICIT declaration of Jack\'s behavior in this scene. Fill out BEFORE writing narrative. MUST match path personality.',
-      properties: {
-        primaryAction: {
-          type: 'string',
-          enum: ['investigate', 'confront', 'observe', 'negotiate', 'flee', 'wait', 'interrogate', 'follow'],
-          description: 'The main action Jack takes in this scene',
-        },
-        dialogueApproach: {
-          type: 'string',
-          enum: ['aggressive', 'measured', 'evasive', 'empathetic', 'threatening', 'pleading'],
-          description: 'How Jack speaks to other characters',
-        },
-        emotionalState: {
-          type: 'string',
-          enum: ['determined', 'desperate', 'cautious', 'angry', 'regretful', 'suspicious', 'resigned'],
-          description: 'Jack\'s dominant emotional state',
-        },
-        physicalBehavior: {
-          type: 'string',
-          enum: ['tense', 'relaxed', 'aggressive', 'defensive', 'stealthy', 'commanding'],
-          description: 'How Jack carries himself physically',
-        },
-        personalityConsistencyNote: {
-          type: 'string',
-          description: 'Brief explanation of how this behavior aligns with player path personality (aggressive/methodical/balanced)',
-        },
-      },
-      required: ['primaryAction', 'dialogueApproach', 'emotionalState', 'physicalBehavior', 'personalityConsistencyNote'],
-    },
-    storyDay: {
-      type: 'number',
-      description: 'Which day of the 12-day timeline this scene takes place. Chapter 2 = Day 2, Chapter 3 = Day 3, etc. The story spans exactly 12 days.',
-      minimum: 1,
-      maximum: 12,
-    },
-    // TEMPORARY: Simple single decision instead of 9-path pathDecisions
+    // Decision structure for chapter-ending choices
     // Testing if pathDecisions complexity is causing Gemini schema rejection
     decision: {
       type: 'object',
@@ -799,10 +664,7 @@ const DECISION_CONTENT_SCHEMA = {
       },
       required: ['opening', 'firstChoice', 'secondChoices'],
     },
-    chapterSummary: {
-      type: 'string',
-      description: 'A concise 2-3 sentence summary of a CANONICAL path through the narrative (pick one representative path).',
-    },
+    // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this
     puzzleCandidates: {
       type: 'array',
       items: { type: 'string' },
@@ -819,16 +681,13 @@ const DECISION_CONTENT_SCHEMA = {
         objectives: {
           type: 'array',
           items: { type: 'string' },
-          description: '2-3 specific directives for the player, e.g., "Identify both paths forward", "Weigh the evidence for each choice"',
+          description: '2-3 specific directives for the player',
         },
       },
       required: ['summary', 'objectives'],
     },
-    consistencyFacts: {
-      type: 'array',
-      items: { type: 'string' },
-      description: '3-5 specific facts from this narrative that must remain consistent in future chapters',
-    },
+    // NOTE: consistencyFacts removed - was deleted before storage anyway
+    // NOTE: previousThreadsAddressed removed - was deleted before storage; handled in system prompt
     narrativeThreads: {
       type: 'array',
       items: {
@@ -841,7 +700,7 @@ const DECISION_CONTENT_SCHEMA = {
           },
           description: {
             type: 'string',
-            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+            description: 'Brief description of the thread'
           },
           status: {
             type: 'string',
@@ -851,64 +710,29 @@ const DECISION_CONTENT_SCHEMA = {
           urgency: {
             type: 'string',
             enum: ['critical', 'normal', 'background'],
-            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters (appointments, immediate threats), normal=should be addressed soon (promises, investigations), background=can develop over time (relationships, slow revelations)'
+            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters'
           },
           characters: {
             type: 'array',
             items: { type: 'string' },
             description: 'Characters involved in this thread'
           },
-          deadline: {
-            type: 'string',
-            description: 'If this thread has a time constraint, specify it (e.g., "midnight tonight", "before Eleanor\'s appeal", "within 48 hours"). Leave empty if no deadline.'
-          },
           dueChapter: {
             type: 'number',
-            description: 'For critical urgency threads, the chapter number by which this MUST be resolved. critical=current chapter+1, normal=current chapter+3, background=no limit. Example: if current chapter is 5 and urgency is critical, dueChapter should be 6 or 7.'
+            description: 'Chapter number by which this MUST be resolved (critical=current+1, normal=current+3)'
           }
         },
         required: ['type', 'description', 'status', 'urgency']
       },
-      description: 'Active story threads from this narrative: promises made, meetings scheduled, investigations started, relationships changed, injuries sustained, threats issued. Include resolution status and urgency level for prioritization.'
+      description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
-    previousThreadsAddressed: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          originalThread: {
-            type: 'string',
-            description: 'Description of the previous thread being addressed'
-          },
-          howAddressed: {
-            type: 'string',
-            enum: ['resolved', 'progressed', 'acknowledged', 'delayed', 'failed'],
-            description: 'How this thread was handled: resolved=completed, progressed=moved forward, acknowledged=mentioned but not resolved, delayed=postponed with reason, failed=abandoned'
-          },
-          narrativeReference: {
-            type: 'string',
-            description: 'Brief quote or description of where in your narrative this thread was addressed'
-          }
-        },
-        required: ['originalThread', 'howAddressed', 'narrativeReference']
-      },
-      description: 'REQUIRED: For each ACTIVE thread from previous chapters (appointments, promises, investigations), explain how your narrative addresses it. Every critical thread MUST be acknowledged.'
-    },
-    // NOTE: engagementMetrics, sensoryAnchors, finalMoment, microRevelation, personalStakesThisChapter
-    // were removed - Gemini 3's native thinking handles craft quality internally.
-    // These are now covered by <craft_quality_checklist> in the system prompt.
     // CANONICAL NARRATIVE - String representation for context building
-    // This is the "canonical path" (opening + 1A + 1A-2A) concatenated into a single string
-    // Used by context building, scene state extraction, and narrative thread analysis
     narrative: {
       type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity. Write naturally - this is what the context system reads.',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total).',
     },
-    // NOTE: pathDecisions field moved BEFORE narrative in schema to ensure all 9 are generated first
-    // This prevents truncation from cutting off decision structure
   },
-  // TEMPORARY: Using 'decision' instead of 'pathDecisions' to test schema complexity
-  required: ['beatSheet', 'title', 'bridge', 'previously', 'jackActionStyle', 'jackRiskLevel', 'jackBehaviorDeclaration', 'storyDay', 'decision', 'branchingNarrative', 'narrative', 'chapterSummary', 'puzzleCandidates', 'briefing', 'consistencyFacts', 'narrativeThreads', 'previousThreadsAddressed'],
+  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
 };
 
 // ============================================================================
@@ -1069,13 +893,27 @@ opening.text + (blank line) + firstChoice.options[0].response + (blank line) + s
 It must match those segments verbatim (no paraphrase).
 </canonical_narrative_rule>
 
+<internal_planning>
+Before writing narrative, internally determine (do NOT output these—just let them guide your writing):
+- BEAT STRUCTURE: What are the 3-5 major plot beats for this scene?
+- JACK'S PRIMARY ACTION: investigate | confront | observe | negotiate | flee | wait | interrogate | follow
+- JACK'S DIALOGUE APPROACH: aggressive | measured | evasive | empathetic | threatening | pleading
+- JACK'S EMOTIONAL STATE: determined | desperate | cautious | angry | regretful | suspicious | resigned
+- JACK'S PHYSICAL BEHAVIOR: tense | relaxed | aggressive | defensive | stealthy | commanding
+- PERSONALITY ALIGNMENT: Does this match the player's path personality (aggressive/methodical/balanced)?
+- STORY DAY: This is Day N of the 12-day timeline (Chapter N = Day N)
+These decisions should manifest naturally in the prose without being explicitly stated.
+</internal_planning>
+
 <thread_accounting_rule>
-You MUST address every thread listed in ACTIVE_THREADS / PREVIOUS_ACTIVE_THREADS by filling previousThreadsAddressed.
-Every urgency="critical" thread must appear there, with originalThread copied exactly and narrativeReference quoting the specific sentence(s) from your narrative.
+You MUST address every thread listed in ACTIVE_THREADS. Every urgency="critical" thread MUST be:
+- Acknowledged or progressed in the narrative (not just thought about—characters must ACT on it)
+- Referenced naturally through dialogue or action, not exposition
+Critical threads cannot be ignored—if truly impossible to address, explain why in-narrative.
 </thread_accounting_rule>
 
 <thread_escalation_rule>
-If a thread has been marked "acknowledged" 2+ times without "progressed" or "resolved", it is OVERDUE.
+If a thread has been active for 2+ chapters without resolution, it is OVERDUE.
 You MUST either progress it meaningfully, resolve it, or mark it as "failed" with a clear in-story reason.
 </thread_escalation_rule>
 
@@ -4515,6 +4353,130 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
+   * Extract character dialogue history for voice consistency across chapters.
+   * Per Gemini 3 best practices: track recent dialogue patterns per character
+   * to maintain consistent voice across the 12-chapter arc.
+   * @param {Array} previousChapters - Previous chapter entries
+   * @returns {Object} - Dialogue history per character
+   */
+  _extractCharacterDialogueHistory(previousChapters) {
+    const characterDialogue = {
+      'Tom Wade': { lines: [], patterns: [], count: 0 },
+      'Victoria Blackwell': { lines: [], patterns: [], count: 0 },
+      'Sarah': { lines: [], patterns: [], count: 0 },
+      'Grange': { lines: [], patterns: [], count: 0 },
+    };
+
+    // Patterns to identify who is speaking
+    const speakerPatterns = [
+      { name: 'Tom Wade', patterns: [/(?:Tom|Wade)\s+said/gi, /"[^"]+"\s+Tom/gi, /Tom(?:'s|'d|'ll)/gi] },
+      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell|Cartographer)\s+said/gi, /"[^"]+"\s+Victoria/gi] },
+      { name: 'Sarah', patterns: [/Sarah\s+said/gi, /"[^"]+"\s+Sarah/gi] },
+      { name: 'Grange', patterns: [/(?:Grange|Deputy Chief)\s+said/gi, /"[^"]+"\s+Grange/gi] },
+    ];
+
+    // Extract dialogue from each chapter
+    for (const ch of previousChapters) {
+      if (!ch.narrative) continue;
+
+      // Extract all dialogue (text in quotes)
+      const dialogueMatches = ch.narrative.matchAll(/"([^"]+)"/g);
+
+      for (const match of dialogueMatches) {
+        const line = match[0];
+        const lineContent = match[1];
+        const lineIndex = match.index;
+
+        // Determine speaker by looking at context around the quote
+        const contextStart = Math.max(0, lineIndex - 100);
+        const contextEnd = Math.min(ch.narrative.length, lineIndex + line.length + 100);
+        const context = ch.narrative.slice(contextStart, contextEnd);
+
+        for (const { name, patterns } of speakerPatterns) {
+          const isThisSpeaker = patterns.some(p => p.test(context));
+          if (isThisSpeaker && lineContent.length > 10 && lineContent.length < 200) {
+            characterDialogue[name].lines.push({
+              line: lineContent,
+              chapter: ch.chapter,
+              subchapter: ch.subchapter,
+            });
+            characterDialogue[name].count++;
+            break; // Only attribute to one speaker
+          }
+        }
+      }
+    }
+
+    // Extract speech patterns for each character
+    for (const [name, data] of Object.entries(characterDialogue)) {
+      if (data.lines.length >= 3) {
+        // Analyze patterns from dialogue
+        const allLines = data.lines.map(l => l.line).join(' ');
+
+        // Tom Wade patterns: questions, deflection, knowing more
+        if (name === 'Tom Wade') {
+          const questionCount = (allLines.match(/\?/g) || []).length;
+          if (questionCount / data.lines.length > 0.3) {
+            data.patterns.push('Frequently uses questions');
+          }
+          if (/you (?:sure|know|understand)/i.test(allLines)) {
+            data.patterns.push('Often deflects or challenges');
+          }
+        }
+
+        // Victoria patterns: cryptic, rule-bound
+        if (name === 'Victoria Blackwell') {
+          if (/rule|must|cannot|boundary/i.test(allLines)) {
+            data.patterns.push('References rules and boundaries');
+          }
+          if (/pattern|map|route|path/i.test(allLines)) {
+            data.patterns.push('Uses mapping/pattern metaphors');
+          }
+        }
+
+        // Keep only last 5 lines per character (most recent)
+        data.lines = data.lines.slice(-5);
+      }
+    }
+
+    return characterDialogue;
+  }
+
+  /**
+   * Build character dialogue history section for the prompt
+   * @param {Object} dialogueHistory - Result from _extractCharacterDialogueHistory
+   * @returns {string} - Formatted section for prompt
+   */
+  _buildDialogueHistorySection(dialogueHistory) {
+    if (!dialogueHistory) return '';
+
+    let section = `\n## CHARACTER VOICE HISTORY\n`;
+    section += `**Maintain consistent dialogue patterns for each character:**\n\n`;
+
+    for (const [name, data] of Object.entries(dialogueHistory)) {
+      if (data.lines.length === 0) continue;
+
+      section += `### ${name}\n`;
+
+      // Speech patterns
+      if (data.patterns.length > 0) {
+        section += `**Patterns:** ${data.patterns.join('; ')}\n`;
+      }
+
+      // Recent lines
+      section += `**Recent dialogue:**\n`;
+      data.lines.forEach(l => {
+        section += `- Ch${l.chapter}: "${l.line.slice(0, 100)}${l.line.length > 100 ? '...' : ''}"\n`;
+      });
+      section += `\n`;
+    }
+
+    section += `>>> Maintain each character's established voice patterns <<<\n`;
+
+    return section;
+  }
+
+  /**
    * Build scene state section for the prompt
    */
   _buildSceneStateSection(context, chapter, subchapter) {
@@ -4546,6 +4508,52 @@ Generate realistic, specific consequences based on the actual narrative content.
     section += `>>> DO NOT REPEAT OR REPHRASE THIS ENDING - CONTINUE FROM IT <<<\n`;
 
     return section;
+  }
+
+  /**
+   * Get the thought signature from the previous subchapter for reasoning continuity.
+   * Per Gemini 3 docs: thought signatures maintain reasoning chain across multi-turn conversations.
+   * @param {number} chapter - Current chapter
+   * @param {number} subchapter - Current subchapter
+   * @param {string} pathKey - Current path key
+   * @returns {string|null} - The previous thought signature, or null if not available
+   */
+  _getPreviousThoughtSignature(chapter, subchapter, pathKey) {
+    if (!this.generatedStory?.chapters) return null;
+
+    // Determine the previous subchapter key
+    let prevChapter = chapter;
+    let prevSubchapter = subchapter - 1;
+
+    if (prevSubchapter < 1) {
+      // Go to previous chapter's last subchapter (typically 3)
+      prevChapter = chapter - 1;
+      prevSubchapter = 3;
+    }
+
+    if (prevChapter < 1) return null; // No previous for first subchapter
+
+    // Find the matching entry from generated story
+    const entries = Object.values(this.generatedStory.chapters);
+
+    // For same chapter, use same pathKey; for previous chapter, derive from pathKey
+    const targetKey = prevChapter === chapter
+      ? pathKey
+      : pathKey.split('-').slice(0, -1).join('-') || 'ROOT'; // Go up one branch level
+
+    // Find entry matching chapter, subchapter, and closest path
+    const matchingEntry = entries.find(e =>
+      e.chapter === prevChapter &&
+      e.subchapter === prevSubchapter &&
+      (e.pathKey === targetKey || e.pathKey === 'ROOT' || targetKey === 'ROOT')
+    );
+
+    if (matchingEntry?.thoughtSignature) {
+      console.log(`[StoryGenerationService] 🧠 Found thought signature from ${prevChapter}.${prevSubchapter} (${matchingEntry.pathKey})`);
+      return matchingEntry.thoughtSignature;
+    }
+
+    return null;
   }
 
   /**
@@ -4884,6 +4892,18 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
       parts.push('<scene_state>');
       parts.push(sceneState);
       parts.push('</scene_state>');
+    }
+
+    // Dynamic Part 6.5: Character Dialogue History (voice consistency)
+    // Only include if we have enough previous content (chapter 3+)
+    if (chapter >= 3 && context.previousChapters?.length >= 3) {
+      const dialogueHistory = this._extractCharacterDialogueHistory(context.previousChapters);
+      const dialogueSection = this._buildDialogueHistorySection(dialogueHistory);
+      if (dialogueSection) {
+        parts.push('<character_voices>');
+        parts.push(dialogueSection);
+        parts.push('</character_voices>');
+      }
     }
 
     // Dynamic Part 7: Personal Stakes & Engagement Guidance
@@ -5278,7 +5298,11 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
       );
     }
 
-    // Include FULL narratives for ALL chapters
+    // ========== FULL NARRATIVE INCLUSION ==========
+    // With Gemini 3's 1M token context window, the entire 12-chapter story (~42k tokens)
+    // uses only ~4% of context capacity. No summarization needed - include everything.
+    // Full context maximizes consistency across the 12-chapter arc.
+
     for (const ch of allChapters) {
       const isImmediatelyPrevious = (
         immediatelyPrevious &&
@@ -5296,7 +5320,7 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
         summary += `\n### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n\n`;
       }
 
-      // Include the FULL narrative text - NO TRUNCATION
+      // Include FULL narrative text for ALL chapters - no summarization needed with 1M context
       if (ch.narrative) {
         summary += ch.narrative;
         summary += '\n';
@@ -5781,71 +5805,97 @@ ${dramaticIrony}`;
     const cw = GENERATION_CONFIG?.contextWindowing || {};
     const maxFacts = cw.maxFactsInPrompt || 60;
     const maxThreads = cw.maxThreadsInPrompt || 30;
+    const currentChapter = context.currentPosition?.chapter || 1;
 
     let section = `## CONSISTENCY VERIFICATION
 
 ### ESTABLISHED FACTS (Never contradict)
 ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
 
-    // Add active narrative threads that need to be maintained
+    // ========== ENHANCED THREAD PRIORITY INJECTION ==========
+    // Sort threads by priority: urgency × overdue status
+    // Critical/overdue threads MUST be addressed in the narrative
     if (context.narrativeThreads && context.narrativeThreads.length > 0) {
-      const threadsByType = {};
-      context.narrativeThreads.slice(-maxThreads).forEach(t => {
-        if (!threadsByType[t.type]) threadsByType[t.type] = [];
-        threadsByType[t.type].push(t);
-      });
+      // Calculate priority score for each thread
+      const prioritizedThreads = context.narrativeThreads
+        .filter(t => t.status === 'active')
+        .map(t => {
+          // Base priority from urgency
+          let priority = t.urgency === 'critical' ? 3 : t.urgency === 'normal' ? 2 : 1;
 
-      section += `\n\n### ACTIVE NARRATIVE THREADS (MUST Address or acknowledge)`;
+          // Overdue bonus (threads past their due chapter)
+          const isOverdue = t.dueChapter && currentChapter > t.dueChapter;
+          if (isOverdue) priority += 5;
 
-      // Critical threads first (appointments, promises, threats)
-      const criticalTypes = ['appointment', 'promise', 'threat'];
-      const otherTypes = Object.keys(threadsByType).filter(t => !criticalTypes.includes(t));
+          // Type bonus (appointments/promises/threats are more urgent)
+          const urgentTypes = ['appointment', 'promise', 'threat'];
+          if (urgentTypes.includes(t.type)) priority += 1;
 
-      // With 1M token context, include ALL threads with full detail
-      const maxPerCriticalType = 15;  // All critical appointments/promises/threats
-      const maxPerOtherType = 10;     // Generous for other thread types
-      const maxDescLen = 500;         // Full thread descriptions
+          return { ...t, priority, isOverdue };
+        })
+        .sort((a, b) => b.priority - a.priority)
+        .slice(0, maxThreads);
 
-      criticalTypes.forEach(type => {
-        if (threadsByType[type] && threadsByType[type].length > 0) {
-          section += `\n**[CRITICAL] ${type.toUpperCase()} (must be addressed):**`;
-          threadsByType[type].slice(-maxPerCriticalType).forEach(t => {
-            const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > maxDescLen ? desc.slice(0, maxDescLen) + '...' : desc;
-            section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
-            if (t.characters && t.characters.length > 0) {
-              section += ` [Characters: ${t.characters.join(', ')}]`;
-            }
-          });
-        }
-      });
+      // Separate mandatory vs optional threads
+      const mandatoryThreads = prioritizedThreads.filter(t => t.priority >= 4 || t.isOverdue);
+      const optionalThreads = prioritizedThreads.filter(t => t.priority < 4 && !t.isOverdue);
 
-      otherTypes.forEach(type => {
-        if (threadsByType[type] && threadsByType[type].length > 0) {
+      // ========== MANDATORY THREAD REQUIREMENTS (Cannot be ignored) ==========
+      if (mandatoryThreads.length > 0) {
+        section += `\n\n${'='.repeat(60)}`;
+        section += `\n### MANDATORY THREAD REQUIREMENTS`;
+        section += `\n${'='.repeat(60)}`;
+        section += `\n**These threads MUST be addressed in your narrative. Failure to address them is a consistency violation.**\n`;
+
+        mandatoryThreads.forEach((t, idx) => {
+          const overdueTag = t.isOverdue ? '⚠️ OVERDUE' : '';
+          const priorityTag = t.urgency === 'critical' ? '🔴 CRITICAL' : '🟡 URGENT';
+          const desc = t.description || t.excerpt || '';
+          const truncatedDesc = desc.length > 400 ? desc.slice(0, 400) + '...' : desc;
+
+          section += `\n${idx + 1}. [${priorityTag}${overdueTag ? ' ' + overdueTag : ''}] ${t.type.toUpperCase()}`;
+          section += `\n   "${truncatedDesc}"`;
+          if (t.characters && t.characters.length > 0) {
+            section += `\n   Characters: ${t.characters.join(', ')}`;
+          }
+          if (t.dueChapter) {
+            section += `\n   Due by: Chapter ${t.dueChapter}${t.isOverdue ? ' (OVERDUE!)' : ''}`;
+          }
+          section += `\n`;
+        });
+
+        section += `\n>>> YOU MUST address ALL threads above through dialogue or action, not just thoughts <<<`;
+        section += `\n${'='.repeat(60)}`;
+      }
+
+      // ========== ACTIVE THREADS (Should address if possible) ==========
+      if (optionalThreads.length > 0) {
+        section += `\n\n### ACTIVE THREADS (Address if narratively appropriate)`;
+
+        const threadsByType = {};
+        optionalThreads.forEach(t => {
+          if (!threadsByType[t.type]) threadsByType[t.type] = [];
+          threadsByType[t.type].push(t);
+        });
+
+        Object.keys(threadsByType).forEach(type => {
           section += `\n**${type.toUpperCase()}:**`;
-          threadsByType[type].slice(-maxPerOtherType).forEach(t => {
+          threadsByType[type].forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > maxDescLen ? desc.slice(0, maxDescLen) + '...' : desc;
-            section += `\n- Ch${t.chapter || '?'}.${t.subchapter || '?'}: "${truncatedDesc}"`;
+            const truncatedDesc = desc.length > 300 ? desc.slice(0, 300) + '...' : desc;
+            section += `\n- Ch${t.chapter || '?'}: "${truncatedDesc}"`;
           });
-        }
-      });
+        });
+      }
     }
 
     section += `
 
 ### YOUR CONSISTENCY RESPONSIBILITIES
-1. In your "consistencyFacts" array, include 3-5 NEW specific facts from your narrative
-   Examples: "Jack agreed to meet Sarah at the docks at midnight", "Victoria revealed she knows about the Thornhill case"
-
-2. NEVER contradict:
-   - Character names and relationships
-   - Timeline durations when the story bible specifies exact numbers (do not “round” key relationships/events)
-   - The reveal timing: Under-Map becomes undeniable at the END of 2A, not earlier
-   - Setting tone (modern city; hidden layer; no Tolkien-style fantasy)
-   - Player's path personality and decision consequences
-
-3. If you introduced a plot thread (meeting, promise, revelation), it MUST be addressed eventually`;
+1. MANDATORY threads above must be visibly addressed in dialogue or action
+2. NEVER contradict established character names, relationships, or timeline facts
+3. Setting tone: modern city with hidden fantasy layer (no Tolkien-style elements)
+4. Respect player's path personality and previous decision consequences`;
 
     return section;
   }
@@ -6759,7 +6809,21 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             usingChapterStartCache ? { cachedHistoryMaxChapter: chapter - 1 } : {}
           );
 
-          console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
+          // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
+          // Retrieve previous thought signature for reasoning chain continuity
+          const prevThoughtSignature = this._getPreviousThoughtSignature(chapter, subchapter, effectivePathKey);
+
+          // Build prior messages with thought signature if available
+          const priorMessages = [];
+          if (prevThoughtSignature && context.previousChapters?.length > 0) {
+            const lastChapter = context.previousChapters[context.previousChapters.length - 1];
+            const prevNarrativeSummary = lastChapter?.narrative
+              ? `Previous scene summary: ${lastChapter.narrative.slice(0, 500)}...`
+              : 'Continuing the story...';
+            priorMessages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
+          }
+
+          console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}${prevThoughtSignature ? ' (with thought signature)' : ''}`);
           llmTrace('StoryGenerationService', traceId, 'prompt.built', {
             caseNumber,
             pathKey,
@@ -6769,6 +6833,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cacheKey,
             cachingEnabled: true,
             dynamicPromptLength: dynamicPrompt?.length || 0,
+            hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
             schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
@@ -6782,6 +6847,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           response = await llmService.completeWithCache({
             cacheKey,
             dynamicPrompt,
+            priorMessages,
             options: {
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
               responseSchema: schema,
@@ -6804,6 +6870,24 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
           const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
+          // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
+          // Per Gemini 3 docs: thought signatures maintain reasoning chain across multi-turn conversations.
+          // Retrieve the thought signature from the previous subchapter and include it in the conversation.
+          const prevThoughtSignature = this._getPreviousThoughtSignature(chapter, subchapter, effectivePathKey);
+
+          // Build messages with thought signature if available
+          // The thought signature must be attached to a model message with representative previous content
+          const messages = [];
+          if (prevThoughtSignature && context.previousChapters?.length > 0) {
+            // Get a summary of the previous narrative for context
+            const lastChapter = context.previousChapters[context.previousChapters.length - 1];
+            const prevNarrativeSummary = lastChapter?.narrative
+              ? `Previous scene summary: ${lastChapter.narrative.slice(0, 500)}...`
+              : 'Continuing the story...';
+            messages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
+          }
+          messages.push({ role: 'user', content: prompt });
+
           llmTrace('StoryGenerationService', traceId, 'prompt.built', {
             caseNumber,
             pathKey,
@@ -6812,6 +6896,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             isDecisionPoint,
             cachingEnabled: false,
             promptLength: prompt?.length || 0,
+            hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
             schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
@@ -6823,7 +6908,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }, 'debug');
 
           response = await llmService.complete(
-            [{ role: 'user', content: prompt }],
+            messages,
             {
               systemPrompt: MASTER_SYSTEM_PROMPT,
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
@@ -6835,6 +6920,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 subchapter,
                 pathKey,
                 isDecisionPoint,
+                hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
                 reason,
               },
             }
@@ -7273,6 +7359,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
 
         // Build the story entry
+        // NOTE: Schema was slimmed down - beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration,
+        // storyDay, chapterSummary, consistencyFacts, previousThreadsAddressed were removed from output.
+        // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking handles internally).
         const storyEntry = {
           chapter,
           subchapter,
@@ -7281,25 +7370,19 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           title: generatedContent.title,
           narrative: generatedContent.narrative,
           // BRANCHING NARRATIVE: Interactive story structure with player choices
-          // This powers the BranchingNarrativeReader component for in-subchapter choices
           branchingNarrative: generatedContent.branchingNarrative || null,
           bridgeText: generatedContent.bridgeText,
-          previously: generatedContent.previously || '', // Recap of previous events
+          previously: generatedContent.previously || '',
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
-          decision: isDecisionPoint ? generatedContent.decision : null, // Simple single-decision fallback
+          decision: isDecisionPoint ? generatedContent.decision : null,
           board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision, generatedContent.puzzleCandidates, chapter),
-          consistencyFacts: generatedContent.consistencyFacts || [],
-          chapterSummary: generatedContent.chapterSummary, // Store high-quality summary
-          // Persist structured continuity/personality fields for future context + validation.
-          storyDay: generatedContent.storyDay,
-          jackActionStyle: generatedContent.jackActionStyle,
-          jackRiskLevel: generatedContent.jackRiskLevel,
-          jackBehaviorDeclaration: generatedContent.jackBehaviorDeclaration,
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
-          previousThreadsAddressed: Array.isArray(generatedContent.previousThreadsAddressed) ? generatedContent.previousThreadsAddressed : [],
           generatedAt: new Date().toISOString(),
           wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
+          // Thought signature for multi-chapter reasoning continuity (Gemini 3)
+          // Persisted and passed to next chapter generation to maintain reasoning chain
+          thoughtSignature: firstCallThoughtSignature || null,
         };
 
         // Save the generated content
@@ -8047,13 +8130,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // =========================================================================
     // CATEGORY 2.5: STORY DAY CONSISTENCY
     // =========================================================================
-    // Validate that storyDay matches chapter number (story spans exactly 12 days)
-    if (content.storyDay !== undefined && context.currentPosition?.chapter) {
-      const expectedDay = context.currentPosition.chapter;
-      if (content.storyDay !== expectedDay) {
-        issues.push(`STORY DAY MISMATCH: LLM declared day ${content.storyDay} but chapter ${expectedDay} should be day ${expectedDay}. The story spans exactly 12 days, one per chapter.`);
-      }
-    }
+    // NOTE: storyDay field was removed from schema - now handled via <internal_planning> in system prompt.
+    // The LLM determines storyDay internally (Chapter N = Day N) without outputting it.
 
     // Check for relative time references that could cause drift
     const relativeTimePatterns = [
@@ -8139,129 +8217,29 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 4: CHARACTER BEHAVIOR CONSISTENCY (Based on path personality)
-    // Enforced as errors UNLESS emotional state justifies deviation
+    // NOTE: jackActionStyle, jackRiskLevel, jackBehaviorDeclaration were removed from schema.
+    // Behavior consistency is now validated through narrative text analysis only.
+    // The LLM handles behavior planning internally via <internal_planning> in system prompt.
     // =========================================================================
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
 
-      // Check emotional state early - desperate/angry/regretful allows personality deviations
-      // Regretful Jack might act rashly out of guilt (e.g., confessing, taking unnecessary risks)
-      const emotionalState = content.jackBehaviorDeclaration?.emotionalState;
-      const allowsPersonalityBreak = emotionalState === 'desperate' || emotionalState === 'angry' || emotionalState === 'regretful';
-
-      // Validate jackActionStyle and jackRiskLevel from LLM output match expected personality
-      const expectedActionStyle = personality.riskTolerance === 'low' ? 'cautious'
-        : personality.riskTolerance === 'high' ? 'direct' : 'balanced';
-      const expectedRiskLevel = personality.riskTolerance || 'moderate';
-
-      // Check if LLM declared action style matches expected (from schema output)
-      if (content.jackActionStyle && content.jackActionStyle !== expectedActionStyle) {
-        // Allow balanced as acceptable middle ground
-        if (content.jackActionStyle !== 'balanced' && expectedActionStyle !== 'balanced') {
-          if (allowsPersonalityBreak) {
-            warnings.push(`Jack's action style "${content.jackActionStyle}" differs from expected "${expectedActionStyle}", but emotional state "${emotionalState}" may justify this.`);
-          } else {
-            issues.push(`Jack's action style mismatch: LLM declared "${content.jackActionStyle}" but player path personality expects "${expectedActionStyle}"`);
-          }
-        }
-      }
-
-      if (content.jackRiskLevel && content.jackRiskLevel !== expectedRiskLevel) {
-        // Allow moderate as acceptable middle ground
-        if (content.jackRiskLevel !== 'moderate' && expectedRiskLevel !== 'moderate') {
-          if (allowsPersonalityBreak) {
-            warnings.push(`Jack's risk level "${content.jackRiskLevel}" differs from expected "${expectedRiskLevel}", but emotional state "${emotionalState}" may justify this.`);
-          } else {
-            issues.push(`Jack's risk level mismatch: LLM declared "${content.jackRiskLevel}" but player path personality expects "${expectedRiskLevel}"`);
-          }
-        }
-      }
-
-      // =========================================================================
-      // BEHAVIOR DECLARATION VALIDATION (Schema-Level Enforcement)
-      // Uses allowsPersonalityBreak defined above for emotional state exceptions
-      // =========================================================================
-      if (content.jackBehaviorDeclaration) {
-        const behavior = content.jackBehaviorDeclaration;
-
-        // Define personality-appropriate behaviors
-        const methodicalBehaviors = {
-          primaryAction: ['investigate', 'observe', 'wait', 'follow'],
-          dialogueApproach: ['measured', 'evasive', 'empathetic'],
-          physicalBehavior: ['tense', 'defensive', 'stealthy'],
-        };
-
-        const aggressiveBehaviors = {
-          primaryAction: ['confront', 'interrogate', 'negotiate'],
-          dialogueApproach: ['aggressive', 'threatening'],
-          physicalBehavior: ['aggressive', 'commanding', 'tense'],
-        };
-
-        if (personality.riskTolerance === 'low') {
-          // Methodical player - check for aggressive behaviors
-          if (behavior.primaryAction && aggressiveBehaviors.primaryAction.includes(behavior.primaryAction)) {
-            if (!methodicalBehaviors.primaryAction.includes(behavior.primaryAction)) {
-              if (allowsPersonalityBreak) {
-                warnings.push(`Methodical player declared aggressive primaryAction="${behavior.primaryAction}", but emotional state "${emotionalState}" may justify this.`);
-              } else {
-                issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared primaryAction="${behavior.primaryAction}". Expected one of: ${methodicalBehaviors.primaryAction.join(', ')}`);
-              }
-            }
-          }
-          if (behavior.dialogueApproach && aggressiveBehaviors.dialogueApproach.includes(behavior.dialogueApproach)) {
-            if (allowsPersonalityBreak) {
-              warnings.push(`Methodical player declared aggressive dialogueApproach="${behavior.dialogueApproach}", but emotional state "${emotionalState}" may justify this.`);
-            } else {
-              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared dialogueApproach="${behavior.dialogueApproach}". Expected one of: ${methodicalBehaviors.dialogueApproach.join(', ')}`);
-            }
-          }
-          if (behavior.physicalBehavior === 'aggressive' || behavior.physicalBehavior === 'commanding') {
-            if (allowsPersonalityBreak) {
-              warnings.push(`Methodical player declared aggressive physicalBehavior="${behavior.physicalBehavior}", but emotional state "${emotionalState}" may justify this.`);
-            } else {
-              issues.push(`BEHAVIOR DECLARATION MISMATCH: Methodical player but declared physicalBehavior="${behavior.physicalBehavior}". Expected one of: ${methodicalBehaviors.physicalBehavior.join(', ')}`);
-            }
-          }
-        } else if (personality.riskTolerance === 'high') {
-          // Aggressive player - check for overly cautious behaviors (always warnings, not errors)
-          if (behavior.primaryAction === 'wait' || behavior.primaryAction === 'flee') {
-            warnings.push(`BEHAVIOR NOTE: Aggressive player declared primaryAction="${behavior.primaryAction}" - ensure this is justified by circumstances`);
-          }
-          if (behavior.dialogueApproach === 'evasive' || behavior.dialogueApproach === 'pleading') {
-            warnings.push(`BEHAVIOR NOTE: Aggressive player declared dialogueApproach="${behavior.dialogueApproach}" - ensure this is justified by circumstances`);
-          }
-        }
-
-        // Verify the personalityConsistencyNote is present and reasonable
-        if (!behavior.personalityConsistencyNote || behavior.personalityConsistencyNote.length < 20) {
-          warnings.push('Behavior declaration missing or has insufficient personalityConsistencyNote explanation');
-        }
-      }
-
       // Check for personality-inconsistent behavior in narrative text
-      // Uses emotionalState and allowsPersonalityBreak already defined at start of Category 4
+      // NOTE: These are now warnings only since we can't detect emotional state exceptions
+      // without the schema field. Trust the <internal_planning> system prompt guidance.
       if (personality.riskTolerance === 'low') {
-        // Methodical Jack shouldn't suddenly be reckless (unless emotionally compromised)
-        // Improved regex: use word boundaries and exclude false positives like "charged with"
+        // Methodical Jack shouldn't suddenly be reckless
         const recklessBehavior = /\b(?:i|jack)\s+(?:rushed|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)\b/i;
-        const chargedAction = /\b(?:i|jack)\s+charged\s+(?:in|into|through|forward|at)\b/i; // Separate to exclude "charged with"
+        const chargedAction = /\b(?:i|jack)\s+charged\s+(?:in|into|through|forward|at)\b/i;
 
         if (recklessBehavior.test(narrativeOriginal) || chargedAction.test(narrativeOriginal)) {
-          if (allowsPersonalityBreak) {
-            warnings.push(`Methodical Jack is acting recklessly, but emotional state "${emotionalState}" may justify this deviation.`);
-          } else {
-            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting recklessly (rushed/charged/stormed). Rewrite with cautious approach or set emotionalState to "desperate", "angry", or "regretful".');
-          }
+          warnings.push('Methodical Jack is acting recklessly (rushed/charged/stormed). Verify this fits the scene context.');
         }
 
-        // Check for impulsive actions - improved with word boundaries
+        // Check for impulsive actions
         const impulsiveActions = /\bwithout\s+(?:thinking|hesitation|a\s+second\s+thought)\b|\b(?:i|jack)\s+(?:grabbed|lunged|dove|leapt)\s+(?:at|for|toward)\b/i;
         if (impulsiveActions.test(narrativeOriginal)) {
-          if (allowsPersonalityBreak) {
-            warnings.push(`Methodical Jack is acting impulsively, but emotional state "${emotionalState}" may justify this.`);
-          } else {
-            issues.push('PERSONALITY VIOLATION: Methodical Jack is acting impulsively. Rewrite with deliberate actions or set emotionalState to "desperate", "angry", or "regretful".');
-          }
+          warnings.push('Methodical Jack is acting impulsively. Verify this fits the scene context.');
         }
       } else if (personality.riskTolerance === 'high') {
         // Aggressive Jack shouldn't suddenly become overly cautious
@@ -8575,13 +8553,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       }
     }
 
-    // Chapter summary: should be concise, memory-friendly.
-    if (typeof content.chapterSummary === 'string') {
-      const summarySentences = content.chapterSummary.match(/[^.!?]+[.!?]+/g) || [];
-      if (summarySentences.length > 5) warnings.push(`chapterSummary has many sentences (${summarySentences.length}). Aim for 2-3 sentences.`);
-      const summaryWords = content.chapterSummary.split(/\s+/).filter(Boolean).length;
-      if (summaryWords > 120) warnings.push(`chapterSummary is long (${summaryWords} words). Aim for <= 60-80 words.`);
-    }
+    // NOTE: chapterSummary validation removed - field no longer in schema
 
     // Puzzle candidates should be anchored in the narrative so the board feels fair.
     if (Array.isArray(content.puzzleCandidates)) {
@@ -9385,8 +9357,28 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     console.log(`[StoryGen] 🔍 Running LLM validation on ${narrative.length} chars...`);
 
+    // ========== CRITICAL THREAD CHECKING ==========
+    // Extract critical/overdue threads that MUST be addressed
+    const currentChapter = context.currentPosition?.chapter || 1;
+    const criticalThreads = (context.narrativeThreads || [])
+      .filter(t => t.status === 'active')
+      .filter(t => {
+        const isOverdue = t.dueChapter && currentChapter > t.dueChapter;
+        const isCritical = t.urgency === 'critical';
+        const isUrgentType = ['appointment', 'promise', 'threat'].includes(t.type);
+        return isOverdue || isCritical || isUrgentType;
+      })
+      .slice(0, 5); // Top 5 most critical threads
+
+    const threadSection = criticalThreads.length > 0 ? `
+## CRITICAL THREADS (Must be addressed in narrative):
+${criticalThreads.map((t, i) => `${i + 1}. [${t.type}] ${t.description}${t.dueChapter ? ` (Due: Ch${t.dueChapter})` : ''}`).join('\n')}
+
+Check if each critical thread above is addressed through dialogue or action (not just thoughts).
+` : '';
+
     try {
-      const validationPrompt = `You are a strict continuity editor for a modern mystery thriller with a hidden fantasy layer (the Under-Map). Check this narrative excerpt for FACTUAL ERRORS against the story bible facts below.
+      const validationPrompt = `You are a strict continuity editor for a modern mystery thriller with a hidden fantasy layer (the Under-Map). Check this narrative excerpt for FACTUAL ERRORS and THREAD VIOLATIONS.
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
 - Jack Halloway: late 20s/early 30s; not a cop; pattern-spotter; initially does NOT know the Under-Map is real
@@ -9395,7 +9387,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 - Deputy Chief Grange: runs suppression/containment around Under-Map incidents
 - Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
 - Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 2A, not earlier
-
+${threadSection}
 ## NARRATIVE TO CHECK:
 ${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
 
@@ -9404,31 +9396,34 @@ ${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
 2. Check timeline references ("X years ago" must match the facts above)
 3. Check character relationships (who knows who, how long)
 4. Check setting details (city name, locations)
+${criticalThreads.length > 0 ? '5. Verify each CRITICAL THREAD is addressed (through dialogue/action, not just thought)' : ''}
 
 Respond with JSON:
 {
   "hasIssues": true/false,
   "issues": ["specific issue 1", "specific issue 2"],
   "suggestions": ["how to fix issue 1", "how to fix issue 2"],
+  "unaddressedThreads": ["thread description if not addressed"],
   "confidence": "high"/"medium"/"low"
 }
 
-If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [], "confidence": "high" }`;
+If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [], "unaddressedThreads": [], "confidence": "high" }`;
 
       const response = await llmService.complete(
         [{ role: 'user', content: validationPrompt }],
         {
-          systemPrompt: 'You are a meticulous continuity editor. Find factual errors. Be specific. No false positives.',
-          maxTokens: 800,
+          systemPrompt: 'You are a meticulous continuity editor. Find factual errors and unaddressed plot threads. Be specific. No false positives.',
+          maxTokens: 1000,
           responseSchema: {
             type: 'object',
             properties: {
               hasIssues: { type: 'boolean' },
               issues: { type: 'array', items: { type: 'string' } },
               suggestions: { type: 'array', items: { type: 'string' } },
+              unaddressedThreads: { type: 'array', items: { type: 'string' } },
               confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
             },
-            required: ['hasIssues', 'issues', 'suggestions', 'confidence'],
+            required: ['hasIssues', 'issues', 'suggestions', 'unaddressedThreads', 'confidence'],
           },
           traceId: `validation-${Date.now()}`,
           thinkingLevel: 'low', // Fast validation, don't need deep reasoning
@@ -9449,9 +9444,21 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         return { issues: [], suggestions: [], validated: false, reason: 'parse error' };
       }
 
-      if (result.hasIssues && result.issues.length > 0) {
-        console.log(`[StoryGen] ❌ LLM validation found ${result.issues.length} issues:`);
-        result.issues.forEach((issue, i) => {
+      // Combine regular issues with unaddressed thread issues
+      const allIssues = [...(result.issues || [])];
+      const unaddressedThreads = result.unaddressedThreads || [];
+
+      // Add unaddressed threads as issues
+      if (unaddressedThreads.length > 0) {
+        unaddressedThreads.forEach(thread => {
+          allIssues.push(`[THREAD] Unaddressed critical thread: ${thread}`);
+        });
+        console.log(`[StoryGen] ⚠️ ${unaddressedThreads.length} critical threads not addressed in narrative`);
+      }
+
+      if (allIssues.length > 0) {
+        console.log(`[StoryGen] ❌ LLM validation found ${allIssues.length} issues:`);
+        allIssues.forEach((issue, i) => {
           console.log(`  ${i + 1}. ${issue}`);
           if (result.suggestions[i]) {
             console.log(`     → Fix: ${result.suggestions[i]}`);
@@ -9462,8 +9469,9 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       }
 
       return {
-        issues: result.issues || [],
+        issues: allIssues,
         suggestions: result.suggestions || [],
+        unaddressedThreads,
         confidence: result.confidence || 'medium',
         validated: true,
       };

@@ -1,0 +1,5488 @@
+[
+  {
+    "chunkId": "chunk_0001",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "atmospheric",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Establishes the characters and setting, focusing on the sensory details of their environment."
+  },
+  {
+    "chunkId": "chunk_0002",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "atmospheric",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Continues establishing the characters and their relationships, adding more detail to the setting."
+  },
+  {
+    "chunkId": "chunk_0003",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "social-commentary"
+    ],
+    "quality": "good",
+    "reason": "Further develops the characters and their social context, highlighting the differences between them."
+  },
+  {
+    "chunkId": "chunk_0004",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "atmospheric",
+      "foreshadowing"
+    ],
+    "quality": "good",
+    "reason": "Builds suspense and foreshadows future events with the description of the subway and the boys' actions."
+  },
+  {
+    "chunkId": "chunk_0005",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Deals with the immediate consequences of the subway incident and sets up future conflict."
+  },
+  {
+    "chunkId": "chunk_0006",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Masterful use of subtext in confrontation between Sean and his father, revealing underlying tensions."
+  },
+  {
+    "chunkId": "chunk_0007",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "atmospheric"
+    ],
+    "quality": "average",
+    "reason": "Sets the stage for the events that follow, focusing on the characters' moods and interactions."
+  },
+  {
+    "chunkId": "chunk_0008",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Creates tension through seemingly innocent dialogue and actions, hinting at deeper issues."
+  },
+  {
+    "chunkId": "chunk_0009",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "The boys are presented with a choice that will have significant consequences, creating suspense."
+  },
+  {
+    "chunkId": "chunk_0010",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "internal_monologue"
+    ],
+    "quality": "good",
+    "reason": "Sean's internal conflict highlights the gravity of the decision and foreshadows potential consequences."
+  },
+  {
+    "chunkId": "chunk_0011",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "excellent",
+    "reason": "The scene establishes the volatile relationship between the boys through escalating confrontation and loaded dialogue."
+  },
+  {
+    "chunkId": "chunk_0012",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "ominous"
+    ],
+    "quality": "good",
+    "reason": "Sets up the inciting incident with a description of the ominous figures approaching the boys."
+  },
+  {
+    "chunkId": "chunk_0013",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power-dynamics"
+    ],
+    "quality": "excellent",
+    "reason": "The power dynamic between the cop and Dave is palpable, creating a tense and unsettling confrontation."
+  },
+  {
+    "chunkId": "chunk_0014",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Focuses on the immediate consequences of Dave being taken and the shifting dynamics between Jimmy and Sean."
+  },
+  {
+    "chunkId": "chunk_0015",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "The police investigation begins, with Sean and Jimmy providing fragmented details, creating suspense."
+  },
+  {
+    "chunkId": "chunk_0016",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "emotional",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "The scene depicts the emotional fallout of Dave's disappearance on Sean and his family."
+  },
+  {
+    "chunkId": "chunk_0017",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Provides insight into Jimmy's state of mind and his motivations for stealing the glove."
+  },
+  {
+    "chunkId": "chunk_0018",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Excellent internal monologue showing Jimmy's conflicting emotions and growing resentment."
+  },
+  {
+    "chunkId": "chunk_0019",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Focuses on the community's reaction to Dave's return and sets the stage for future events."
+  },
+  {
+    "chunkId": "chunk_0020",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Reveals Jimmy's infatuation and his desire to connect with Miss Powell, adding another layer to his character."
+  },
+  {
+    "chunkId": "chunk_0021",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Sets the scene of the neighborhood's reaction to Dave's return, focusing on Jimmy's perspective and feelings of exclusion."
+  },
+  {
+    "chunkId": "chunk_0022",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Further develops the atmosphere of the neighborhood and its unique way of celebrating."
+  },
+  {
+    "chunkId": "chunk_0023",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "mood-setting"
+    ],
+    "quality": "average",
+    "reason": "Focuses on Jimmy's thoughts and feelings, particularly his curiosity and unease about Miss Powell."
+  },
+  {
+    "chunkId": "chunk_0024",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "backstory"
+    ],
+    "quality": "average",
+    "reason": "Provides backstory on Jimmy's relationship with his mother and her past struggles."
+  },
+  {
+    "chunkId": "chunk_0025",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Illustrates the strained relationship between Jimmy and his parents through their dialogue."
+  },
+  {
+    "chunkId": "chunk_0026",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Highlights the complex dynamic between Jimmy and his mother, and Jimmy's feelings towards Dave."
+  },
+  {
+    "chunkId": "chunk_0027",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "character-driven",
+      "mood-setting"
+    ],
+    "quality": "good",
+    "reason": "Focuses on Jimmy's feelings of being damaged and the sadness he experiences watching Dave."
+  },
+  {
+    "chunkId": "chunk_0028",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "backstory"
+    ],
+    "quality": "good",
+    "reason": "Provides insight into Dave's perspective and his feelings of being different and targeted."
+  },
+  {
+    "chunkId": "chunk_0029",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [
+      "action"
+    ],
+    "tags": [
+      "character-driven",
+      "violent"
+    ],
+    "quality": "good",
+    "reason": "Depicts Dave's experience with bullying and the lasting impact of his abduction."
+  },
+  {
+    "chunkId": "chunk_0030",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Continues to illustrate Dave's humiliation and vulnerability through the bullying incident."
+  },
+  {
+    "chunkId": "chunk_0031",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Details Dave's social isolation after the abduction, showing the lasting impact."
+  },
+  {
+    "chunkId": "chunk_0032",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Explains the changing dynamics between the boys and Jimmy's descent into crime."
+  },
+  {
+    "chunkId": "chunk_0033",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Focuses on Dave's trauma and his mother's fear, shaping his future."
+  },
+  {
+    "chunkId": "chunk_0034",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Describes Dave's escape and immediate aftermath, highlighting his vulnerability."
+  },
+  {
+    "chunkId": "chunk_0035",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "psychological",
+      "dream-sequence"
+    ],
+    "quality": "good",
+    "reason": "Dave recalls a crucial detail from his abduction through a dream, a delayed revelation."
+  },
+  {
+    "chunkId": "chunk_0036",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "Sean learns about the fate of Dave's abductors, but the conversation is terse and emotionally charged."
+  },
+  {
+    "chunkId": "chunk_0037",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Establishes Brendan's character and his intense love for Katie, setting up their planned escape."
+  },
+  {
+    "chunkId": "chunk_0038",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Brendan reflects on his life and possessions, emphasizing his connection to Katie."
+  },
+  {
+    "chunkId": "chunk_0039",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Contrasts Brendan's hopeful anticipation with Jimmy's darker mood, foreshadowing conflict."
+  },
+  {
+    "chunkId": "chunk_0040",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "character-driven",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Jimmy reflects on his own lost youth and his daughter's burgeoning adulthood, creating a somber mood."
+  },
+  {
+    "chunkId": "chunk_0041",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "metaphorical"
+    ],
+    "quality": "good",
+    "reason": "Establishes Dave's fatalistic worldview and foreshadows events."
+  },
+  {
+    "chunkId": "chunk_0042",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "colloquial"
+    ],
+    "quality": "average",
+    "reason": "Explains Dave's options and hints at his discontent, setting up potential actions."
+  },
+  {
+    "chunkId": "chunk_0043",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "social-commentary"
+    ],
+    "quality": "good",
+    "reason": "Establishes the changing social landscape and Dave's precarious position."
+  },
+  {
+    "chunkId": "chunk_0044",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "foreshadowing"
+    ],
+    "quality": "good",
+    "reason": "Reveals Dave's desperation and foreshadows potential violence."
+  },
+  {
+    "chunkId": "chunk_0045",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets the scene before the crime, establishing Katie's state of mind and environment."
+  },
+  {
+    "chunkId": "chunk_0046",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Further establishes the events leading up to the crime, showing the girls' intoxication."
+  },
+  {
+    "chunkId": "chunk_0047",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "Roman confronts Katie, revealing his possessiveness and control."
+  },
+  {
+    "chunkId": "chunk_0048",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Describes the environment and Katie's desire to leave, building tension."
+  },
+  {
+    "chunkId": "chunk_0049",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "average",
+    "reason": "The goodbye scene adds emotional weight and foreshadows the tragedy."
+  },
+  {
+    "chunkId": "chunk_0050",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "emotional",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Shows the lasting impact of Katie's death on Eve, highlighting the emotional consequences."
+  },
+  {
+    "chunkId": "chunk_0051",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Memory triggered by present sensory input, strong emotional resonance."
+  },
+  {
+    "chunkId": "chunk_0052",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "setting",
+      "descriptive"
+    ],
+    "quality": "average",
+    "reason": "Setting the scene and Dave's state of mind, but not deeply noir."
+  },
+  {
+    "chunkId": "chunk_0053",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "philosophical"
+    ],
+    "quality": "good",
+    "reason": "Internal reflection on loss and disappointment, bordering on despair."
+  },
+  {
+    "chunkId": "chunk_0054",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Dave's internal lustful thoughts, setting up potential future conflict."
+  },
+  {
+    "chunkId": "chunk_0055",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Dave's internal thoughts on lost potential and fleeting hope, setting up character arc."
+  },
+  {
+    "chunkId": "chunk_0056",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Dialogue reveals character and creates tension, setting up Celeste's motivations."
+  },
+  {
+    "chunkId": "chunk_0057",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "descriptive"
+    ],
+    "quality": "average",
+    "reason": "Establishing Celeste's situation and motivations."
+  },
+  {
+    "chunkId": "chunk_0058",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "descriptive"
+    ],
+    "quality": "average",
+    "reason": "Processing the death of Celeste's mother and its impact."
+  },
+  {
+    "chunkId": "chunk_0059",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Initial confrontation and suspicious dialogue after Dave's injury."
+  },
+  {
+    "chunkId": "chunk_0060",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "interrogation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Celeste questioning Dave, increasing suspicion and tension."
+  },
+  {
+    "chunkId": "chunk_0061",
+    "primaryCategory": "action",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "violent",
+      "first-person narration"
+    ],
+    "quality": "good",
+    "reason": "Dave recounts a violent encounter, blurring the lines between self-defense and excessive force."
+  },
+  {
+    "chunkId": "chunk_0062",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "suspenseful",
+      "moral ambiguity"
+    ],
+    "quality": "excellent",
+    "reason": "Celeste's reaction to Dave's confession reveals her willingness to protect him, raising moral questions."
+  },
+  {
+    "chunkId": "chunk_0063",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "suspenseful",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "The dialogue between Dave and Celeste is fraught with unspoken anxieties and conflicting emotions."
+  },
+  {
+    "chunkId": "chunk_0064",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "sensory-rich",
+      "flashback"
+    ],
+    "quality": "good",
+    "reason": "Celeste's flashback to her childhood injury creates a visceral connection to her current state of anxiety."
+  },
+  {
+    "chunkId": "chunk_0065",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "suspenseful",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "The conversation between Dave and Celeste highlights their differing perspectives and growing unease."
+  },
+  {
+    "chunkId": "chunk_0066",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "suspenseful",
+      "strategic"
+    ],
+    "quality": "excellent",
+    "reason": "Celeste's internal monologue reveals her calculated efforts to cover up the crime and protect Dave."
+  },
+  {
+    "chunkId": "chunk_0067",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Establishes Katie's absence and Jimmy's frustration, setting the stage for the investigation."
+  },
+  {
+    "chunkId": "chunk_0068",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Highlights the strained relationship between Annabeth and Katie, adding to the family dynamics."
+  },
+  {
+    "chunkId": "chunk_0069",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "The argument between Jimmy and Annabeth reveals their underlying tensions and differing personalities."
+  },
+  {
+    "chunkId": "chunk_0070",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "backstory"
+    ],
+    "quality": "good",
+    "reason": "Provides backstory on Jimmy's past and his relationship with Marita, adding depth to his character."
+  },
+  {
+    "chunkId": "chunk_0071",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "ominous"
+    ],
+    "quality": "good",
+    "reason": "The conversation with Marita is filled with underlying tension and foreshadowing, especially the 'orange curtains' line."
+  },
+  {
+    "chunkId": "chunk_0072",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "emotional",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Deals with the immediate aftermath of Katie's death and Jimmy's emotional state, including his feelings towards his surviving daughter."
+  },
+  {
+    "chunkId": "chunk_0073",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "setting"
+    ],
+    "quality": "average",
+    "reason": "Establishes the setting of Jimmy's store on a Sunday morning and introduces the routine."
+  },
+  {
+    "chunkId": "chunk_0074",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Jimmy is subtly investigating Katie's whereabouts through a phone call, creating tension with the false brightness in his tone."
+  },
+  {
+    "chunkId": "chunk_0075",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [],
+    "tags": [
+      "descriptive",
+      "sensory-rich"
+    ],
+    "quality": "average",
+    "reason": "Describes the chaotic atmosphere of the store on a Sunday morning, adding to the overall sense of unease."
+  },
+  {
+    "chunkId": "chunk_0076",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets up the interaction between Jimmy and Brendan Harris, creating a sense of foreboding."
+  },
+  {
+    "chunkId": "chunk_0077",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's internal monologue analyzes Brendan's behavior, building suspense and hinting at potential conflict."
+  },
+  {
+    "chunkId": "chunk_0078",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "The conversation between Jimmy, Pete, and Brendan is filled with awkwardness and suspicion, heightened by Brendan's reaction to Katie's name."
+  },
+  {
+    "chunkId": "chunk_0079",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "The dialogue continues to build tension as Jimmy probes Brendan about knowing his daughter's name, creating a sense of unease."
+  },
+  {
+    "chunkId": "chunk_0080",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Pete confronts Jimmy about his intense gaze towards Brendan, highlighting the underlying tension and Jimmy's simmering anger."
+  },
+  {
+    "chunkId": "chunk_0081",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "dreamlike",
+      "sensory-rich",
+      "symbolic"
+    ],
+    "quality": "good",
+    "reason": "Captures the disjointed logic of a dream, revealing Sean's subconscious anxieties."
+  },
+  {
+    "chunkId": "chunk_0082",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Establishes Sean's state of mind and the mundane reality he's returning to after suspension."
+  },
+  {
+    "chunkId": "chunk_0083",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Introduces Brendan's worry about Katie's whereabouts and their relationship dynamics, creating suspense."
+  },
+  {
+    "chunkId": "chunk_0084",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Reveals Katie and Brendan's relationship through dialogue, hinting at underlying insecurities and complexities."
+  },
+  {
+    "chunkId": "chunk_0085",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Highlights Brendan's fear of Jimmy Marcus and his associates, building suspense and establishing potential antagonists."
+  },
+  {
+    "chunkId": "chunk_0086",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Provides a vivid description of the Savage brothers' upbringing, creating a sense of place and character background."
+  },
+  {
+    "chunkId": "chunk_0087",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "suspenseful"
+    ],
+    "quality": "average",
+    "reason": "Sets up Katie's relationships and Brendan's anxiety before transitioning to the discovery of her car, increasing suspense."
+  },
+  {
+    "chunkId": "chunk_0088",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "procedural",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Details the initial police response to the discovery of Katie's car, establishing the beginning of the investigation."
+  },
+  {
+    "chunkId": "chunk_0089",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Establishes Sean's return to work and his forced partnership with Whitey, creating tension and setting up the investigation."
+  },
+  {
+    "chunkId": "chunk_0090",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Uses the kingfisher as a symbolic element while Sean and Whitey discuss the case, adding to the atmosphere and foreshadowing."
+  },
+  {
+    "chunkId": "chunk_0091",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "procedural",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Detailed examination of the crime scene, focusing on physical evidence."
+  },
+  {
+    "chunkId": "chunk_0092",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Continues the investigation, adding details about the victim and potential leads, with some character interaction."
+  },
+  {
+    "chunkId": "chunk_0093",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Establishes Jimmy's character and his perspective on family and community through observation of his daughter's communion."
+  },
+  {
+    "chunkId": "chunk_0094",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Focuses on Jimmy's internal thoughts and frustrations, providing insight into his values and concerns about his children."
+  },
+  {
+    "chunkId": "chunk_0095",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Continues Jimmy's internal monologue, emphasizing his connection with his daughter and foreshadowing potential conflict."
+  },
+  {
+    "chunkId": "chunk_0096",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Highlights Jimmy's emotional state and desire to preserve precious moments, creating a sense of vulnerability."
+  },
+  {
+    "chunkId": "chunk_0097",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "action"
+    ],
+    "quality": "good",
+    "reason": "A tense confrontation with a potentially dangerous individual, emphasizing the officers' cautious approach."
+  },
+  {
+    "chunkId": "chunk_0098",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "De-escalation of a potentially violent situation through careful dialogue and observation."
+  },
+  {
+    "chunkId": "chunk_0099",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "average",
+    "reason": "Initial questioning of a suspect, revealing his nervousness and potential innocence, creating ambiguity."
+  },
+  {
+    "chunkId": "chunk_0100",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Establishes Katie's loving relationship with her daughters, highlighting the tragedy of her disappearance."
+  },
+  {
+    "chunkId": "chunk_0101",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "emotional",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Establishes Jimmy's state of mind and fear for Katie, setting up his protective nature."
+  },
+  {
+    "chunkId": "chunk_0102",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "exposition",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Provides backstory on Jimmy's criminal past and his attempts to stay straight, creating tension."
+  },
+  {
+    "chunkId": "chunk_0103",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-driven",
+      "atmospheric"
+    ],
+    "quality": "average",
+    "reason": "Establishes the relationship between Jimmy and Annabeth, hinting at future developments."
+  },
+  {
+    "chunkId": "chunk_0104",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Jimmy attempts to manipulate Annabeth, revealing his past and intentions."
+  },
+  {
+    "chunkId": "chunk_0105",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's internal relief reveals his manipulative nature and the stakes of the interaction."
+  },
+  {
+    "chunkId": "chunk_0106",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Initial crime scene investigation, focusing on the environment and first clues."
+  },
+  {
+    "chunkId": "chunk_0107",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "procedural",
+      "descriptive"
+    ],
+    "quality": "average",
+    "reason": "Detailed examination of the crime scene, gathering evidence."
+  },
+  {
+    "chunkId": "chunk_0108",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "descriptive",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Sets the scene and provides context about the location, hinting at its significance."
+  },
+  {
+    "chunkId": "chunk_0109",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "average",
+    "reason": "Brief scene establishing Jimmy's relationship with his daughter Nadine."
+  },
+  {
+    "chunkId": "chunk_0110",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Jimmy realizes Katie is likely the victim, creating a moment of horror and dread."
+  },
+  {
+    "chunkId": "chunk_0111",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Internal thoughts revealing Celeste's anxieties and suspicions, mixed with domestic sounds."
+  },
+  {
+    "chunkId": "chunk_0112",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Internal monologue during a sexual encounter, revealing Celeste's motivations and fears, leading to a realization about Dave's behavior."
+  },
+  {
+    "chunkId": "chunk_0113",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "psychological",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Celeste realizes Dave lied to her, solidifying her suspicions. Internal monologue is key."
+  },
+  {
+    "chunkId": "chunk_0114",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "psychological",
+      "social-commentary"
+    ],
+    "quality": "average",
+    "reason": "Celeste's thoughts on muggings and the threat women face, providing context and atmosphere. Not directly plot-driving."
+  },
+  {
+    "chunkId": "chunk_0115",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "psychological",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Celeste reflects on Dave's past and his lies, setting up future conflicts and revealing character history."
+  },
+  {
+    "chunkId": "chunk_0116",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "psychological",
+      "plot-driven"
+    ],
+    "quality": "good",
+    "reason": "Celeste decides she must confront Dave about his lies, a crucial turning point. Internal monologue motivates her decision."
+  },
+  {
+    "chunkId": "chunk_0117",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Description of Dave teaching Michael baseball, establishing their relationship and Dave's character. Primarily atmospheric."
+  },
+  {
+    "chunkId": "chunk_0118",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Dialogue between Dave and Michael, followed by Celeste's appearance, creating a subtle tension and establishing family dynamics."
+  },
+  {
+    "chunkId": "chunk_0119",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Tension arises from Celeste's questioning and Michael's eagerness to leave, coupled with Dave's internal frustration."
+  },
+  {
+    "chunkId": "chunk_0120",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot-driven"
+    ],
+    "quality": "good",
+    "reason": "Confrontation between Dave and Celeste about the newspaper and the lack of coverage, escalating the tension and suspicion."
+  },
+  {
+    "chunkId": "chunk_0121",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Tension-filled dialogue revealing trauma and denial after Dave's abduction."
+  },
+  {
+    "chunkId": "chunk_0122",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Setting the scene with detailed description, creating a tense atmosphere."
+  },
+  {
+    "chunkId": "chunk_0123",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive",
+      "internal"
+    ],
+    "quality": "good",
+    "reason": "Atmospheric description combined with Jimmy's internal reaction, building suspense."
+  },
+  {
+    "chunkId": "chunk_0124",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "descriptive"
+    ],
+    "quality": "average",
+    "reason": "Dialogue with subtext about the police activity, maintaining the tense atmosphere."
+  },
+  {
+    "chunkId": "chunk_0125",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "internal",
+      "psychological"
+    ],
+    "quality": "average",
+    "reason": "Internal monologue revealing Jimmy's anxiety and past, mixed with dialogue."
+  },
+  {
+    "chunkId": "chunk_0126",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "internal",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Strong internal monologue conveying Jimmy's dread and certainty of a negative truth."
+  },
+  {
+    "chunkId": "chunk_0127",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot"
+    ],
+    "quality": "average",
+    "reason": "Scene setting up the investigation and the arrival of Jimmy at the scene."
+  },
+  {
+    "chunkId": "chunk_0128",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "internal",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Internal monologue showing Jimmy's desperation and barely controlled rage."
+  },
+  {
+    "chunkId": "chunk_0129",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot"
+    ],
+    "quality": "average",
+    "reason": "Jimmy making decisions and assigning tasks, showing his attempt to control the situation."
+  },
+  {
+    "chunkId": "chunk_0130",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Confrontation between Jimmy and Sean, filled with unspoken tension and suspicion."
+  },
+  {
+    "chunkId": "chunk_0131",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Jimmy confronts Sean, using emotional appeals and veiled threats. The power dynamic is clear and tense."
+  },
+  {
+    "chunkId": "chunk_0132",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power-dynamics"
+    ],
+    "quality": "good",
+    "reason": "Continuation of the confrontation, showing Jimmy's desperation and Sean's professional detachment. The walkie-talkie interruption adds suspense."
+  },
+  {
+    "chunkId": "chunk_0133",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "reflective"
+    ],
+    "quality": "average",
+    "reason": "Focuses on Celeste's thoughts and the description of the iron, setting a domestic scene and hinting at themes of durability vs. disposability."
+  },
+  {
+    "chunkId": "chunk_0134",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "reflective",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Celeste's internal monologue reveals her anxiety and growing suspicion, contrasting the mundane TV programming with the potential horror of the news."
+  },
+  {
+    "chunkId": "chunk_0135",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "suspenseful",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Celeste realizes the news isn't covering the event she suspects Dave is involved in, increasing her fear and suspicion."
+  },
+  {
+    "chunkId": "chunk_0136",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "suspenseful",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Celeste remembers the blood in the drain, triggering her decision to clean up the evidence. The sensory details heighten the tension."
+  },
+  {
+    "chunkId": "chunk_0137",
+    "primaryCategory": "action",
+    "secondaryCategories": [],
+    "tags": [
+      "sensory-rich",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Detailed description of Celeste removing the drainpipe, focusing on the physical effort and the unpleasant discoveries. It's action in the sense of taking steps to cover up."
+  },
+  {
+    "chunkId": "chunk_0138",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "procedural",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Celeste reflects on her actions and the limits of her ability to help Dave, highlighting her internal conflict and the potential consequences."
+  },
+  {
+    "chunkId": "chunk_0139",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "suspenseful",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "The interruption of the golf game and the breaking news report create suspense and foreshadow the discovery of the missing woman's car."
+  },
+  {
+    "chunkId": "chunk_0140",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [],
+    "tags": [
+      "suspenseful",
+      "information-driven"
+    ],
+    "quality": "average",
+    "reason": "Celeste learns about the police search and the discovery of the missing woman's car, solidifying her fears and connecting the events."
+  },
+  {
+    "chunkId": "chunk_0141",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Focuses on Jimmy's reaction and the scene's atmosphere after Sean leaves, setting the stage for the investigation."
+  },
+  {
+    "chunkId": "chunk_0142",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "internal-conflict",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Builds tension through Jimmy's internal state as he waits for his wife, foreshadowing bad news."
+  },
+  {
+    "chunkId": "chunk_0143",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "The phone call reveals Katie's disappearance, triggering Jimmy's dread and setting the plot in motion. Strong emotional impact."
+  },
+  {
+    "chunkId": "chunk_0144",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Establishes the grim atmosphere of the crime scene and the cops' resigned attitude. Also shows Sean beginning his investigation."
+  },
+  {
+    "chunkId": "chunk_0145",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "philosophical",
+      "dark"
+    ],
+    "quality": "good",
+    "reason": "Provides insight into Sean's cynical worldview shaped by his job, contributing to the noir atmosphere."
+  },
+  {
+    "chunkId": "chunk_0146",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "procedural",
+      "political"
+    ],
+    "quality": "average",
+    "reason": "Explains the jurisdictional conflict and the political implications of the case, setting up potential obstacles for Sean."
+  },
+  {
+    "chunkId": "chunk_0147",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "procedural"
+    ],
+    "quality": "good",
+    "reason": "Details the initial crime scene investigation, focusing on the physical evidence and the reactions of the investigators."
+  },
+  {
+    "chunkId": "chunk_0148",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "deductive"
+    ],
+    "quality": "good",
+    "reason": "Sean examines the body and draws conclusions about the victim's last moments, demonstrating his investigative skills."
+  },
+  {
+    "chunkId": "chunk_0149",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "graphic"
+    ],
+    "quality": "good",
+    "reason": "Further examination of the body reveals more details about the crime, adding to the grim atmosphere and Sean's understanding."
+  },
+  {
+    "chunkId": "chunk_0150",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "shocking",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "The discovery of the bullet wound is a significant revelation, changing the nature of the crime and adding a new layer of complexity."
+  },
+  {
+    "chunkId": "chunk_0151",
+    "primaryCategory": "action",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's visceral reaction and attempted interference create a chaotic action scene with emotional weight."
+  },
+  {
+    "chunkId": "chunk_0152",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "The description of the scene after the discovery of the body is powerfully atmospheric and emotionally charged, emphasizing the horror."
+  },
+  {
+    "chunkId": "chunk_0153",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "visual"
+    ],
+    "quality": "good",
+    "reason": "Whitey's meticulous van placement, while seemingly mundane, contributes to the controlled atmosphere of the crime scene and hints at his experience."
+  },
+  {
+    "chunkId": "chunk_0154",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "The conversation between Sean and Friel is laced with tension, hinting at Friel's expectations and Sean's past."
+  },
+  {
+    "chunkId": "chunk_0155",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "Friel's reprimand of Sean is a tense confrontation, revealing Friel's demanding nature and Sean's internal struggles."
+  },
+  {
+    "chunkId": "chunk_0156",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Friel's intense monologue reveals his motivations and worldview, creating a sense of unease and highlighting the pressure on Sean."
+  },
+  {
+    "chunkId": "chunk_0157",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "descriptive",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "The internal monologue provides crucial insight into Friel's character and his approach to his work, setting up the stakes for the investigation."
+  },
+  {
+    "chunkId": "chunk_0158",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Whitey's report provides initial investigative details, but the scene is primarily functional and lacks significant tension."
+  },
+  {
+    "chunkId": "chunk_0159",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Continuation of the investigation, focusing on evidence and potential leads. Mostly functional."
+  },
+  {
+    "chunkId": "chunk_0160",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Further discussion of investigative avenues, including interviews and forensic analysis. Remains primarily functional."
+  },
+  {
+    "chunkId": "chunk_0161",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Processing the crime scene, focusing on Sean's internal state and the environment."
+  },
+  {
+    "chunkId": "chunk_0162",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's internal state in prison, the sounds and atmosphere of the prison are emphasized."
+  },
+  {
+    "chunkId": "chunk_0163",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "average",
+    "reason": "Tension between Jimmy and Woodrell, internal thoughts about the situation."
+  },
+  {
+    "chunkId": "chunk_0164",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Setting the scene of Jimmy and Annabeth waiting for news, building tension."
+  },
+  {
+    "chunkId": "chunk_0165",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "psychological",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's internal struggle with hope and despair, refusing to accept the worst."
+  },
+  {
+    "chunkId": "chunk_0166",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "action"
+    ],
+    "quality": "average",
+    "reason": "Setting the scene with the arrival of the press and the police response."
+  },
+  {
+    "chunkId": "chunk_0167",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Annabeth's reaction to the news and the arrival of the coroner, a moment of intense grief."
+  },
+  {
+    "chunkId": "chunk_0168",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "excellent",
+    "reason": "Jimmy identifies his daughter's body, a devastating revelation and the lowest point."
+  },
+  {
+    "chunkId": "chunk_0169",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "philosophical",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's philosophical reflection on how small decisions can change everything, revealing his state of mind."
+  },
+  {
+    "chunkId": "chunk_0170",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "emotional",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's reflection on his past and how it led to this moment, hinting at a decision he might make."
+  },
+  {
+    "chunkId": "chunk_0171",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "psychological",
+      "atmospheric"
+    ],
+    "quality": "good",
+    "reason": "Establishes Sean's internal conflict and hints at past trauma."
+  },
+  {
+    "chunkId": "chunk_0172",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "sensory-rich",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Sets the scene and introduces Annabeth's stoicism under pressure."
+  },
+  {
+    "chunkId": "chunk_0173",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Standard interrogation scene, gathering basic information."
+  },
+  {
+    "chunkId": "chunk_0174",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Subtle revelation about Katie's behavior, potential clue."
+  },
+  {
+    "chunkId": "chunk_0175",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Tension rises as Jimmy's past is brought up, creating conflict."
+  },
+  {
+    "chunkId": "chunk_0176",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Potential suspect (Bobby O'Donnell) is revealed."
+  },
+  {
+    "chunkId": "chunk_0177",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Introduces the Savage brothers and their reputation, foreshadowing potential conflict."
+  },
+  {
+    "chunkId": "chunk_0178",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "philosophical"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's monologue about the changing neighborhood adds depth and foreshadows the future."
+  },
+  {
+    "chunkId": "chunk_0179",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Jimmy confronts the detectives about the investigation's timeline, creating tension."
+  },
+  {
+    "chunkId": "chunk_0180",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Sean makes a decision to speak for Annabeth, and the car conversation sets up a past event."
+  },
+  {
+    "chunkId": "chunk_0181",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "dark humor"
+    ],
+    "quality": "good",
+    "reason": "Reveals Whitey's dark worldview through casual conversation, creating tension."
+  },
+  {
+    "chunkId": "chunk_0182",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "symbolic"
+    ],
+    "quality": "good",
+    "reason": "Sets a somber mood and foreshadows events through vivid imagery and Jimmy's internal state."
+  },
+  {
+    "chunkId": "chunk_0183",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Shows the immediate aftermath of the murder and the initial stages of the investigation, focusing on Jimmy's reaction."
+  },
+  {
+    "chunkId": "chunk_0184",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Details the investigative steps taken by the police, focusing on evidence gathering."
+  },
+  {
+    "chunkId": "chunk_0185",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Illustrates the challenges of interviewing grieving witnesses and the detectives' methods."
+  },
+  {
+    "chunkId": "chunk_0186",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power dynamics"
+    ],
+    "quality": "good",
+    "reason": "Highlights the detectives' attempts to extract information from a reluctant witness, emphasizing the power dynamics."
+  },
+  {
+    "chunkId": "chunk_0187",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot-driven"
+    ],
+    "quality": "good",
+    "reason": "Uncovers crucial information about Katie's relationships and potential suspects through interrogation."
+  },
+  {
+    "chunkId": "chunk_0188",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "resistance"
+    ],
+    "quality": "average",
+    "reason": "Shows the difficulty of getting information from uncooperative witnesses and introduces a new character, Val Savage."
+  },
+  {
+    "chunkId": "chunk_0189",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "atmospheric"
+    ],
+    "quality": "average",
+    "reason": "The detectives follow up on leads, interviewing a witness and gathering potentially useful information."
+  },
+  {
+    "chunkId": "chunk_0190",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "clue"
+    ],
+    "quality": "good",
+    "reason": "A seemingly innocuous detail from a witness provides a potentially important clue about the crime."
+  },
+  {
+    "chunkId": "chunk_0191",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "setting-mood"
+    ],
+    "quality": "average",
+    "reason": "Routine investigation, establishing timeline and potential leads."
+  },
+  {
+    "chunkId": "chunk_0192",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Timeline solidifies, Dave Boyle's name surfaces, creating suspense."
+  },
+  {
+    "chunkId": "chunk_0193",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Initial confrontation with Roman, establishing power dynamics and veiled threats."
+  },
+  {
+    "chunkId": "chunk_0194",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Formal questioning of Roman, focusing on his interaction with the victim."
+  },
+  {
+    "chunkId": "chunk_0195",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Interrogation continues, probing Roman's alibi and girlfriend's identity."
+  },
+  {
+    "chunkId": "chunk_0196",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "plot-twist"
+    ],
+    "quality": "good",
+    "reason": "Roman reveals Bobby was in jail, throwing a wrench in the investigation."
+  },
+  {
+    "chunkId": "chunk_0197",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-driven",
+      "setting-mood"
+    ],
+    "quality": "good",
+    "reason": "Detailed description of the Harris's home, setting a grim and depressing mood."
+  },
+  {
+    "chunkId": "chunk_0198",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Questioning Brendan, revealing inconsistencies and his relationship with Katie."
+  },
+  {
+    "chunkId": "chunk_0199",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Brendan reveals plans to marry Katie in Vegas, adding an emotional layer."
+  },
+  {
+    "chunkId": "chunk_0200",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Tension between mother and son escalates, revealing a dysfunctional family dynamic."
+  },
+  {
+    "chunkId": "chunk_0201",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "realistic"
+    ],
+    "quality": "good",
+    "reason": "Standard interrogation scene, showing power dynamics and evasiveness."
+  },
+  {
+    "chunkId": "chunk_0202",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "introspective"
+    ],
+    "quality": "excellent",
+    "reason": "Excellent internal monologue establishing the detective's burnout and disillusionment."
+  },
+  {
+    "chunkId": "chunk_0203",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "introspective",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Deep dive into the detective's feelings of numbness and despair, a classic noir trope."
+  },
+  {
+    "chunkId": "chunk_0204",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "introspective",
+      "relationship"
+    ],
+    "quality": "good",
+    "reason": "Explores the detective's hardening worldview and its impact on his marriage."
+  },
+  {
+    "chunkId": "chunk_0205",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Tense phone call with estranged wife, hinting at a deeper mystery and personal pain."
+  },
+  {
+    "chunkId": "chunk_0206",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "introspective",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Further exploration of the detective's obsession with his estranged wife and the mysterious phone calls."
+  },
+  {
+    "chunkId": "chunk_0207",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets the scene at the house after the tragedy, introducing characters and relationships."
+  },
+  {
+    "chunkId": "chunk_0208",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Focuses on the emotional aftermath and the support system around the grieving family."
+  },
+  {
+    "chunkId": "chunk_0209",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Tender but strained interaction between Jimmy and Annabeth, highlighting the emotional toll."
+  },
+  {
+    "chunkId": "chunk_0210",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Continues setting the scene and introducing more characters involved in the situation."
+  },
+  {
+    "chunkId": "chunk_0211",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-focused"
+    ],
+    "quality": "good",
+    "reason": "Sets the scene at the wake, introducing characters and relationships amidst grief."
+  },
+  {
+    "chunkId": "chunk_0212",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-focused",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Celeste's thoughts reveal her relationship with Dave and the impact of the murder."
+  },
+  {
+    "chunkId": "chunk_0213",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "character-focused",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Celeste grapples with the reality of Katie's death and her own suspicions."
+  },
+  {
+    "chunkId": "chunk_0214",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-focused"
+    ],
+    "quality": "average",
+    "reason": "Describes the scene at the wake, focusing on Jimmy and Theo's interactions."
+  },
+  {
+    "chunkId": "chunk_0215",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "character-focused"
+    ],
+    "quality": "average",
+    "reason": "Further establishes the relationship between Jimmy and Theo."
+  },
+  {
+    "chunkId": "chunk_0216",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-focused"
+    ],
+    "quality": "good",
+    "reason": "Theo's backstory provides context and hints at his character."
+  },
+  {
+    "chunkId": "chunk_0217",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Theo attempts to comfort Jimmy, but underlying tension is present."
+  },
+  {
+    "chunkId": "chunk_0218",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "The conversation between Theo and Jimmy escalates, revealing potential conflict."
+  },
+  {
+    "chunkId": "chunk_0219",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's graphic description of Katie's body reveals his grief and anger."
+  },
+  {
+    "chunkId": "chunk_0220",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "The tension between Jimmy and Theo reaches a breaking point, leading to a confrontation."
+  },
+  {
+    "chunkId": "chunk_0221",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Character reflecting on past, processing grief (or lack thereof)."
+  },
+  {
+    "chunkId": "chunk_0222",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "ominous"
+    ],
+    "quality": "good",
+    "reason": "Setting the scene for the arrival of the detectives and foreshadowing tension."
+  },
+  {
+    "chunkId": "chunk_0223",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "average",
+    "reason": "Reunion with underlying tension and hints of past events."
+  },
+  {
+    "chunkId": "chunk_0224",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power-dynamics"
+    ],
+    "quality": "good",
+    "reason": "Detectives begin questioning Dave, establishing power dynamics."
+  },
+  {
+    "chunkId": "chunk_0225",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power-dynamics"
+    ],
+    "quality": "average",
+    "reason": "Continuation of the interrogation, Dave's discomfort is palpable."
+  },
+  {
+    "chunkId": "chunk_0226",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Interrogation intensifies, Dave reveals he saw Katie."
+  },
+  {
+    "chunkId": "chunk_0227",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "average",
+    "reason": "Detectives probe Dave's alibi and try to catch him in a lie."
+  },
+  {
+    "chunkId": "chunk_0228",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "average",
+    "reason": "Detectives ask about unusual behavior at the bar, increasing suspicion."
+  },
+  {
+    "chunkId": "chunk_0229",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "average",
+    "reason": "Interrogation concludes, Dave's anxiety is evident."
+  },
+  {
+    "chunkId": "chunk_0230",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "psychological",
+      "symbolic"
+    ],
+    "quality": "good",
+    "reason": "Dave's internal struggle and dissociation are revealed, hinting at his dark side."
+  },
+  {
+    "chunkId": "chunk_0231",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "psychological",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Internal turmoil and mental state of Dave are revealed."
+  },
+  {
+    "chunkId": "chunk_0232",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets the scene at Jimmy's house and Dave's outsider status."
+  },
+  {
+    "chunkId": "chunk_0233",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Tense exchange between Dave and Jimmy, with Dave's lie about his hand."
+  },
+  {
+    "chunkId": "chunk_0234",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Establishes the strained relationship between Dave and Jimmy."
+  },
+  {
+    "chunkId": "chunk_0235",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Dave is questioned by Jimmy about seeing Katie, creating tension."
+  },
+  {
+    "chunkId": "chunk_0236",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "stream-of-consciousness"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's overwhelming grief and responsibilities are revealed."
+  },
+  {
+    "chunkId": "chunk_0237",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets up the scene with Sean and Whitey before their meeting."
+  },
+  {
+    "chunkId": "chunk_0238",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Subtle power dynamics and potential test for Sean are established."
+  },
+  {
+    "chunkId": "chunk_0239",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey discuss the investigation and potential suspects."
+  },
+  {
+    "chunkId": "chunk_0240",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey analyze the crime scene and question the shooter's actions."
+  },
+  {
+    "chunkId": "chunk_0241",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "character-analysis",
+      "speculative"
+    ],
+    "quality": "good",
+    "reason": "Sean's internal reconstruction of the crime, showing his thought process."
+  },
+  {
+    "chunkId": "chunk_0242",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "excellent",
+    "reason": "Tense exchange between Sean and Whitey, highlighting Boyle as a potential suspect."
+  },
+  {
+    "chunkId": "chunk_0243",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Whitey's persistent suspicion of Boyle and his reasoning."
+  },
+  {
+    "chunkId": "chunk_0244",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "information-heavy",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Setting the scene for the investigation, outlining the evidence and interviews."
+  },
+  {
+    "chunkId": "chunk_0245",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "information-heavy",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Reporting on the progress of the investigation, focusing on witness interviews."
+  },
+  {
+    "chunkId": "chunk_0246",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "speculative"
+    ],
+    "quality": "good",
+    "reason": "Discussion of the killer's motive and potential profile."
+  },
+  {
+    "chunkId": "chunk_0247",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "descriptive",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Discovery of the blood in the parking lot and its implications."
+  },
+  {
+    "chunkId": "chunk_0248",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "information-heavy",
+      "procedural"
+    ],
+    "quality": "good",
+    "reason": "Analysis of the blood evidence and its connection to a possible second victim."
+  },
+  {
+    "chunkId": "chunk_0249",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power-dynamics"
+    ],
+    "quality": "good",
+    "reason": "Whitey's reaction to the suggestion of ignoring the blood evidence."
+  },
+  {
+    "chunkId": "chunk_0250",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "information-heavy",
+      "speculative"
+    ],
+    "quality": "good",
+    "reason": "Reconstructing the events leading up to the murder based on witness statements."
+  },
+  {
+    "chunkId": "chunk_0251",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "investigative"
+    ],
+    "quality": "good",
+    "reason": "Formal questioning revealing doubts about the victim's behavior."
+  },
+  {
+    "chunkId": "chunk_0252",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "investigative"
+    ],
+    "quality": "good",
+    "reason": "Continued interrogation, focusing on inconsistencies in the evidence."
+  },
+  {
+    "chunkId": "chunk_0253",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "investigative"
+    ],
+    "quality": "average",
+    "reason": "Dialogue summarizing the lack of leads and potential motives."
+  },
+  {
+    "chunkId": "chunk_0254",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "excellent",
+    "reason": "Deep dive into Jimmy's guilt and premonition of tragedy."
+  },
+  {
+    "chunkId": "chunk_0255",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "excellent",
+    "reason": "Jimmy's internal struggle with his last memory of Katie."
+  },
+  {
+    "chunkId": "chunk_0256",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's grief and fleeting moment of comfort, followed by scene setup."
+  },
+  {
+    "chunkId": "chunk_0257",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "Subtle confrontation between the detectives and Dave, filled with suspicion."
+  },
+  {
+    "chunkId": "chunk_0258",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "investigative"
+    ],
+    "quality": "good",
+    "reason": "Detectives discussing Dave's alibi and suspicious details."
+  },
+  {
+    "chunkId": "chunk_0259",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "emotional",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Celeste overhears the detectives discussing Dave, leading to a revelation."
+  },
+  {
+    "chunkId": "chunk_0260",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "excellent",
+    "reason": "Celeste's realization about Dave, juxtaposed with a happy memory of Katie."
+  },
+  {
+    "chunkId": "chunk_0261",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "emotional",
+      "analytical"
+    ],
+    "quality": "good",
+    "reason": "Character processing suspicion and trying to deny it."
+  },
+  {
+    "chunkId": "chunk_0262",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "emotional",
+      "analytical"
+    ],
+    "quality": "good",
+    "reason": "Internal conflict and rationalization about Dave's potential guilt."
+  },
+  {
+    "chunkId": "chunk_0263",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "emotional",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Celeste's realization combined with police questioning creates tension."
+  },
+  {
+    "chunkId": "chunk_0264",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "character-focused"
+    ],
+    "quality": "average",
+    "reason": "Attempt to lighten the mood, but still underlying tension."
+  },
+  {
+    "chunkId": "chunk_0265",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "character-focused"
+    ],
+    "quality": "average",
+    "reason": "Continued attempt to lighten the mood, but Dave remains a point of interest."
+  },
+  {
+    "chunkId": "chunk_0266",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "Subtle confrontation and suspicion directed at Dave."
+  },
+  {
+    "chunkId": "chunk_0267",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [],
+    "tags": [
+      "character-focused",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Celeste's reaction and Sean's suspicion after the interaction."
+  },
+  {
+    "chunkId": "chunk_0268",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Sean confronts Celeste with her potential knowledge, creating strong tension."
+  },
+  {
+    "chunkId": "chunk_0269",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Celeste's internal conflict during the police questioning."
+  },
+  {
+    "chunkId": "chunk_0270",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Sean directly confronts Celeste about her fear and potential knowledge."
+  },
+  {
+    "chunkId": "chunk_0271",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "relationship-focused"
+    ],
+    "quality": "good",
+    "reason": "Tension between Sean and Jimmy, setting up future interactions."
+  },
+  {
+    "chunkId": "chunk_0272",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "investigation"
+    ],
+    "quality": "good",
+    "reason": "Sean confronts Jimmy about Katie's relationship, revealing crucial information."
+  },
+  {
+    "chunkId": "chunk_0273",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot-focused"
+    ],
+    "quality": "average",
+    "reason": "Discussion between Sean and Whitey about the Boyle case, advancing the investigation."
+  },
+  {
+    "chunkId": "chunk_0274",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "internal_monologue"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey discuss the inconsistencies in the Boyle case, highlighting the complexity of the investigation and Sean's doubts."
+  },
+  {
+    "chunkId": "chunk_0275",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "argumentative"
+    ],
+    "quality": "good",
+    "reason": "Whitey presents a strong case against Boyle, creating tension and highlighting conflicting viewpoints."
+  },
+  {
+    "chunkId": "chunk_0276",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "moral_conflict"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey discuss the ethics of pursuing Boyle, forcing Sean to confront his own biases."
+  },
+  {
+    "chunkId": "chunk_0277",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "internal",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Sean's internal monologue reveals his suspicion of Dave, creating suspense and foreshadowing future events."
+  },
+  {
+    "chunkId": "chunk_0278",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "internal",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Celeste's internal monologue reveals her fear and growing suspicion of Dave, a crucial revelation."
+  },
+  {
+    "chunkId": "chunk_0279",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "sensory-rich"
+    ],
+    "quality": "average",
+    "reason": "Setting the scene for Katie's funeral arrangements, establishing Jimmy's emotional state."
+  },
+  {
+    "chunkId": "chunk_0280",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "internal",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's internal monologue reveals his grief and discomfort with the funeral arrangements, creating a somber atmosphere."
+  },
+  {
+    "chunkId": "chunk_0281",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "intense"
+    ],
+    "quality": "excellent",
+    "reason": "Powerful internal monologue revealing Jimmy's grief and vengeful intent."
+  },
+  {
+    "chunkId": "chunk_0282",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "descriptive",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Establishes Annabeth's character and creates a slightly tense atmosphere through observation and dialogue."
+  },
+  {
+    "chunkId": "chunk_0283",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-revealing"
+    ],
+    "quality": "good",
+    "reason": "Dialogue reveals Sean's past and creates tension through unspoken emotions."
+  },
+  {
+    "chunkId": "chunk_0284",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "character-revealing"
+    ],
+    "quality": "good",
+    "reason": "Dialogue continues to reveal Sean's past and his relationship with his wife, creating a sense of unease."
+  },
+  {
+    "chunkId": "chunk_0285",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "philosophical",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Annabeth reveals her cynical worldview, offering a revelation about her character and potentially Katie's situation."
+  },
+  {
+    "chunkId": "chunk_0286",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "dreamlike",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Brendan's internal monologue creates a vivid, imagined scene, contrasting with the present reality."
+  },
+  {
+    "chunkId": "chunk_0287",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "emotional",
+      "intense"
+    ],
+    "quality": "good",
+    "reason": "Brendan's internal monologue reveals his grief and the temptation of violence, leading to a decision point."
+  },
+  {
+    "chunkId": "chunk_0288",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "intense"
+    ],
+    "quality": "good",
+    "reason": "Brendan's internal monologue highlights his internal conflict and inability to act, emphasizing his despair."
+  },
+  {
+    "chunkId": "chunk_0289",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-driven",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Brendan makes a small decision to clean the gun, a step towards potential violence, and interacts with Ray."
+  },
+  {
+    "chunkId": "chunk_0290",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "emotional",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "Brendan's internal monologue reveals his desire to express his grief and connect with someone."
+  },
+  {
+    "chunkId": "chunk_0291",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "atmospheric",
+      "descriptive"
+    ],
+    "quality": "average",
+    "reason": "Setting the scene for Sean's parents' environment."
+  },
+  {
+    "chunkId": "chunk_0292",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Sean's internal thoughts about his parents' retirement community and his guilt."
+  },
+  {
+    "chunkId": "chunk_0293",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "realistic"
+    ],
+    "quality": "average",
+    "reason": "Depicting a mundane family interaction, establishing relationships."
+  },
+  {
+    "chunkId": "chunk_0294",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "psychological",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Revealing details about Sean's marriage and his parents' perspective."
+  },
+  {
+    "chunkId": "chunk_0295",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Tension in the dialogue between Sean and his parents, revealing their disconnect."
+  },
+  {
+    "chunkId": "chunk_0296",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "psychological",
+      "introspective"
+    ],
+    "quality": "good",
+    "reason": "Sean's reflections on his relationship with his father and the nature of their communication."
+  },
+  {
+    "chunkId": "chunk_0297",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Dialogue between Sean and his father, revealing past events and character history."
+  },
+  {
+    "chunkId": "chunk_0298",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Sean questioning his father about the Dave Boyle case, revealing inconsistencies and raising suspicions."
+  },
+  {
+    "chunkId": "chunk_0299",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "realistic"
+    ],
+    "quality": "average",
+    "reason": "Dialogue between Sean and his father, showcasing their communication style and underlying tension."
+  },
+  {
+    "chunkId": "chunk_0300",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Sean directly questioning his father about Dave's potential involvement in the crime."
+  },
+  {
+    "chunkId": "chunk_0301",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext",
+      "power-dynamics"
+    ],
+    "quality": "excellent",
+    "reason": "Father-son conversation loaded with unspoken accusations and history. Demonstrates how to create tension through seemingly innocuous dialogue."
+  },
+  {
+    "chunkId": "chunk_0302",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-development",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Continues the tense conversation, revealing more about the father's character and his relationship with Sean. Sets up future interactions."
+  },
+  {
+    "chunkId": "chunk_0303",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-development"
+    ],
+    "quality": "good",
+    "reason": "Further develops the strained relationship between Sean and his father, with a hint of Sean's internal struggles."
+  },
+  {
+    "chunkId": "chunk_0304",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "setting",
+      "ominous",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets a dark mood with the vampire movie and Dave's detached behavior. Dialogue hints at underlying issues."
+  },
+  {
+    "chunkId": "chunk_0305",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "The conversation between Dave and Celeste is stilted and suspicious, creating tension and foreshadowing."
+  },
+  {
+    "chunkId": "chunk_0306",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "symbolism"
+    ],
+    "quality": "good",
+    "reason": "Dave's rambling about vampires serves as a metaphor for his own dark secrets and Celeste's growing unease."
+  },
+  {
+    "chunkId": "chunk_0307",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "The confrontation between Dave and Celeste escalates as she voices her suspicions. Dave's calm demeanor is unsettling."
+  },
+  {
+    "chunkId": "chunk_0308",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Celeste reveals what she overheard, increasing the tension and Dave's defensiveness."
+  },
+  {
+    "chunkId": "chunk_0309",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "psychological",
+      "shocking"
+    ],
+    "quality": "excellent",
+    "reason": "Dave's breakdown and fragmented memories of his abduction are a major revelation, showcasing his trauma and potential guilt. A truly dark moment."
+  },
+  {
+    "chunkId": "chunk_0310",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "psychological",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "The scene captures the crumbling of Dave and Celeste's marriage as they confront the truth about their relationship and Dave's past. A moment of despair and realization."
+  },
+  {
+    "chunkId": "chunk_0311",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "ominous"
+    ],
+    "quality": "good",
+    "reason": "Dave's veiled threat creates immediate tension and suspicion."
+  },
+  {
+    "chunkId": "chunk_0312",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Reveals Dave's resentment and inner turmoil, fueling potential actions."
+  },
+  {
+    "chunkId": "chunk_0313",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "character-driven",
+      "surreal"
+    ],
+    "quality": "average",
+    "reason": "Illustrates Dave's fractured psyche and descent into a dark world, but a bit abstract."
+  },
+  {
+    "chunkId": "chunk_0314",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "moral-dilemma"
+    ],
+    "quality": "good",
+    "reason": "Highlights Dave's internal struggle between good and evil, a crucial noir element."
+  },
+  {
+    "chunkId": "chunk_0315",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "character-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Dave confronts his inner demons and the realization of his transformation."
+  },
+  {
+    "chunkId": "chunk_0316",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [],
+    "tags": [
+      "character-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Celeste makes a quick decision to escape, driven by fear and suspicion."
+  },
+  {
+    "chunkId": "chunk_0317",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot-focused"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey discuss evidence, revealing potential complications in the case."
+  },
+  {
+    "chunkId": "chunk_0318",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "plot-focused"
+    ],
+    "quality": "good",
+    "reason": "Further investigation reveals a potential link to an old crime, adding complexity."
+  },
+  {
+    "chunkId": "chunk_0319",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "surreal",
+      "symbolic"
+    ],
+    "quality": "average",
+    "reason": "Jimmy's dreamlike vision represents his guilt and grief, a descent into despair."
+  },
+  {
+    "chunkId": "chunk_0320",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "exposition",
+      "procedural"
+    ],
+    "quality": "good",
+    "reason": "Explains the dynamics and strategies of interrogation, setting the stage for future scenes."
+  },
+  {
+    "chunkId": "chunk_0321",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [],
+    "tags": [
+      "internal_monologue",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Reveals Barnes' motive and mindset, explaining a past crime and his general attitude. More exposition than classic noir revelation."
+  },
+  {
+    "chunkId": "chunk_0322",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power_dynamics"
+    ],
+    "quality": "excellent",
+    "reason": "Classic interrogation scene with cops pressing Dave on inconsistencies. Tense dialogue and power play are well-executed."
+  },
+  {
+    "chunkId": "chunk_0323",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "cat_and_mouse"
+    ],
+    "quality": "excellent",
+    "reason": "Interrogation continues, Dave deflects and the cops' case weakens. Good example of suspect turning the tables."
+  },
+  {
+    "chunkId": "chunk_0324",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plot_twist"
+    ],
+    "quality": "excellent",
+    "reason": "Interrogation intensifies with blood evidence. A key piece of evidence is introduced, creating a turning point."
+  },
+  {
+    "chunkId": "chunk_0325",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "doubt"
+    ],
+    "quality": "good",
+    "reason": "Interrogation falters as the cops' evidence is questioned. Doubt creeps in, weakening their position."
+  },
+  {
+    "chunkId": "chunk_0326",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "internal_conflict"
+    ],
+    "quality": "good",
+    "reason": "Dialogue between cops reveals their doubts and a strategic decision to change tactics. Internal conflict within the investigation team."
+  },
+  {
+    "chunkId": "chunk_0327",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "exposition"
+    ],
+    "quality": "average",
+    "reason": "Sean investigates the gun's origin, interviewing Lowell. Primarily exposition to advance the plot."
+  },
+  {
+    "chunkId": "chunk_0328",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "internal_conflict"
+    ],
+    "quality": "good",
+    "reason": "Combines investigation (Sean) with Dave's internal monologue during the interrogation. Creates tension and contrast."
+  },
+  {
+    "chunkId": "chunk_0329",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "psychological",
+      "dark"
+    ],
+    "quality": "excellent",
+    "reason": "Dave's internal monologue reveals his acceptance and justification of the murder. Dark and disturbing insight into his psyche."
+  },
+  {
+    "chunkId": "chunk_0330",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Tension builds as Sean and Whitey observe Dave's unsettling behavior. A subtle confrontation through observation."
+  },
+  {
+    "chunkId": "chunk_0331",
+    "primaryCategory": "setup",
+    "secondaryCategories": [],
+    "tags": [
+      "exposition",
+      "character-background"
+    ],
+    "quality": "average",
+    "reason": "Provides background information on Raymond, but lacks strong noir elements."
+  },
+  {
+    "chunkId": "chunk_0332",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "crime-details"
+    ],
+    "quality": "good",
+    "reason": "Dialogue reveals Raymond's criminal history and the investigation's progress, creating tension."
+  },
+  {
+    "chunkId": "chunk_0333",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-conflict"
+    ],
+    "quality": "good",
+    "reason": "Tension between detectives Devine and Whitey about the direction of the investigation."
+  },
+  {
+    "chunkId": "chunk_0334",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-background"
+    ],
+    "quality": "good",
+    "reason": "Investigation reveals Jimmy's connection to a criminal crew, a significant revelation."
+  },
+  {
+    "chunkId": "chunk_0335",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-thoughts"
+    ],
+    "quality": "average",
+    "reason": "Sets the mood and provides insight into Jimmy's thoughts, but not strongly noir."
+  },
+  {
+    "chunkId": "chunk_0336",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "crime-details"
+    ],
+    "quality": "good",
+    "reason": "Dialogue reveals information about alibis and potential suspects, creating tension."
+  },
+  {
+    "chunkId": "chunk_0337",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "crime-details"
+    ],
+    "quality": "good",
+    "reason": "Gathering clues from informants about a potential witness and a suspicious car."
+  },
+  {
+    "chunkId": "chunk_0338",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "crime-details"
+    ],
+    "quality": "good",
+    "reason": "Continuing the investigation by searching for the runaway kid and his potential knowledge."
+  },
+  {
+    "chunkId": "chunk_0339",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-conflict"
+    ],
+    "quality": "good",
+    "reason": "Dialogue reveals information about Just Ray's kid and creates suspense about Val's withheld information."
+  },
+  {
+    "chunkId": "chunk_0340",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "character_background"
+    ],
+    "tags": [
+      "sensory-rich",
+      "character-description"
+    ],
+    "quality": "good",
+    "reason": "Provides a detailed and atmospheric description of a character, hinting at a troubled past."
+  },
+  {
+    "chunkId": "chunk_0341",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Burden recounts past events, revealing crucial information about the case and past connections."
+  },
+  {
+    "chunkId": "chunk_0342",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "exposition"
+    ],
+    "quality": "good",
+    "reason": "Further details of the past crime are revealed, focusing on Marcus and the deal he made."
+  },
+  {
+    "chunkId": "chunk_0343",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "speculative"
+    ],
+    "quality": "good",
+    "reason": "Burden speculates on Jimmy's involvement in Ray Harris's disappearance, adding another layer of suspicion."
+  },
+  {
+    "chunkId": "chunk_0344",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Vivid description of Sean's hangover and emotional state, highlighting his vulnerability and dread."
+  },
+  {
+    "chunkId": "chunk_0345",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "philosophical",
+      "melancholy"
+    ],
+    "quality": "excellent",
+    "reason": "Dave's internal thoughts on death and memory create a somber and reflective mood."
+  },
+  {
+    "chunkId": "chunk_0346",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "procedural",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Sets up the lineup and introduces Tommy Moldanado, the witness. Also contains internal monologue about the witness."
+  },
+  {
+    "chunkId": "chunk_0347",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "The lineup scene and Moldanado's shaky identification of Dave create suspense and doubt."
+  },
+  {
+    "chunkId": "chunk_0348",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "emotional",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Celeste struggles with the decision of whether to reveal Dave's behavior to Jimmy, highlighting her internal conflict."
+  },
+  {
+    "chunkId": "chunk_0349",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "average",
+    "reason": "Sets up the meeting between Celeste and Jimmy, creating anticipation for her revelation."
+  },
+  {
+    "chunkId": "chunk_0350",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Celeste reveals she may have left Dave, and Jimmy's reaction suggests he already suspects something."
+  },
+  {
+    "chunkId": "chunk_0351",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "internal_monologue",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Celeste reveals Dave's bloody return, shifting the narrative. Strong emotional impact."
+  },
+  {
+    "chunkId": "chunk_0352",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "emotional",
+      "character_development"
+    ],
+    "quality": "good",
+    "reason": "Celeste's internal justification for her actions. Reveals her fear and confusion."
+  },
+  {
+    "chunkId": "chunk_0353",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Jimmy questions Celeste, leading to the crucial question of Dave's guilt. Tense and revealing."
+  },
+  {
+    "chunkId": "chunk_0354",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character_development"
+    ],
+    "quality": "good",
+    "reason": "Sean interviews Brendan about his father. Subtly reveals information about Brendan's past."
+  },
+  {
+    "chunkId": "chunk_0355",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "procedural"
+    ],
+    "quality": "average",
+    "reason": "Review of evidence in the case. Moves the plot forward, but lacks strong atmosphere."
+  },
+  {
+    "chunkId": "chunk_0356",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Sean investigates Brendan's father's past. Raises suspicion and adds complexity."
+  },
+  {
+    "chunkId": "chunk_0357",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "high_tension"
+    ],
+    "quality": "excellent",
+    "reason": "Sean confronts Brendan with evidence, escalating the tension. Shows Sean's aggressive tactics."
+  },
+  {
+    "chunkId": "chunk_0358",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "high_tension"
+    ],
+    "quality": "good",
+    "reason": "Sean bluffs Brendan, forcing a decision. Dave's return to his apartment provides a contrast."
+  },
+  {
+    "chunkId": "chunk_0359",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "emotional",
+      "character_development"
+    ],
+    "quality": "good",
+    "reason": "Dave's internal struggle and regret. Provides insight into his character and motivations."
+  },
+  {
+    "chunkId": "chunk_0360",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "emotional",
+      "character_development"
+    ],
+    "quality": "good",
+    "reason": "Dave's plans for the future and desire to confess. Shows his hope and determination."
+  },
+  {
+    "chunkId": "chunk_0361",
+    "primaryCategory": "action",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "violent",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Visceral description of violence, loss of control."
+  },
+  {
+    "chunkId": "chunk_0362",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "sensory-rich",
+      "internal"
+    ],
+    "quality": "good",
+    "reason": "Processing the immediate consequences of violence, internal reaction."
+  },
+  {
+    "chunkId": "chunk_0363",
+    "primaryCategory": "action",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "violent",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Continuation of violent act and immediate aftermath, focus on disposal."
+  },
+  {
+    "chunkId": "chunk_0364",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "internal",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Dave's rationalization and assessment of risk after the event."
+  },
+  {
+    "chunkId": "chunk_0365",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "internal",
+      "atmospheric",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Character's thoughts intertwined with setting description, creating mood."
+  },
+  {
+    "chunkId": "chunk_0366",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "internal",
+      "subtext"
+    ],
+    "quality": "good",
+    "reason": "Seemingly friendly encounter with underlying tension and Dave's internal state."
+  },
+  {
+    "chunkId": "chunk_0367",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "internal",
+      "subtext"
+    ],
+    "quality": "average",
+    "reason": "Dave's internal justification and sense of place contrasted with potential danger."
+  },
+  {
+    "chunkId": "chunk_0368",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "speculative"
+    ],
+    "quality": "good",
+    "reason": "Detectives discussing possible motives and suspects, building theories."
+  },
+  {
+    "chunkId": "chunk_0369",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "speculative"
+    ],
+    "quality": "good",
+    "reason": "Further investigation and speculation, ruling out a potential suspect."
+  },
+  {
+    "chunkId": "chunk_0370",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "descriptive",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "Discovery of crucial evidence, described with sensory detail."
+  },
+  {
+    "chunkId": "chunk_0371",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Detailed description of the crime scene, focusing on visual and olfactory details."
+  },
+  {
+    "chunkId": "chunk_0372",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "procedural",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Continues the investigation, showing the initial steps and the interaction between the detectives."
+  },
+  {
+    "chunkId": "chunk_0373",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "procedural",
+      "character-introduction"
+    ],
+    "quality": "average",
+    "reason": "Describes the arrival of the Homicide team and introduces a new character, setting up future interactions."
+  },
+  {
+    "chunkId": "chunk_0374",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plotting"
+    ],
+    "quality": "good",
+    "reason": "Dialogue between Sean and Whitey discussing the case and potential connections, revealing doubts and theories."
+  },
+  {
+    "chunkId": "chunk_0375",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Interrogation scene with Brendan, highlighting the power dynamics and the suspect's demeanor."
+  },
+  {
+    "chunkId": "chunk_0376",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "introspective",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Sean's internal thoughts about Lauren and his past, leading to a potential decision point about contacting her."
+  },
+  {
+    "chunkId": "chunk_0377",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "introspective",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Continues Sean's internal monologue, exploring his feelings about Lauren and justifying his actions."
+  },
+  {
+    "chunkId": "chunk_0378",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [],
+    "tags": [
+      "procedural",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Reviewing evidence (ballistics report, 911 call) and discussing the case."
+  },
+  {
+    "chunkId": "chunk_0379",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "investigation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "plotting"
+    ],
+    "quality": "good",
+    "reason": "A key piece of information is revealed from the 911 tape, changing the direction of the investigation."
+  },
+  {
+    "chunkId": "chunk_0380",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "descriptive",
+      "dialogue-driven"
+    ],
+    "quality": "average",
+    "reason": "Shifts focus to Dave and Val, establishing their location and relationship through dialogue and setting description."
+  },
+  {
+    "chunkId": "chunk_0381",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "good",
+    "reason": "Conversation reveals character backgrounds and hints at underlying tensions."
+  },
+  {
+    "chunkId": "chunk_0382",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "character-driven",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Dave's internal thoughts reveal his insecurities and contrast with the perceived masculinity of others."
+  },
+  {
+    "chunkId": "chunk_0383",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's arrival and behavior create unease and foreshadow conflict."
+  },
+  {
+    "chunkId": "chunk_0384",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "character-driven"
+    ],
+    "quality": "average",
+    "reason": "The dialogue is tense, but Celeste's internal monologue feels somewhat disconnected."
+  },
+  {
+    "chunkId": "chunk_0385",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "The conversation about Ray Harris becomes increasingly ominous and unsettling."
+  },
+  {
+    "chunkId": "chunk_0386",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Dave's internal panic and physical reactions heighten the tension of the scene."
+  },
+  {
+    "chunkId": "chunk_0387",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "descriptive",
+      "sensory-rich"
+    ],
+    "quality": "good",
+    "reason": "The description of the environment adds to the sense of isolation and foreboding."
+  },
+  {
+    "chunkId": "chunk_0388",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "character-driven",
+      "philosophical"
+    ],
+    "quality": "average",
+    "reason": "Dave's philosophical musings feel somewhat disconnected from the immediate tension."
+  },
+  {
+    "chunkId": "chunk_0389",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "suspenseful",
+      "dialogue-driven"
+    ],
+    "quality": "excellent",
+    "reason": "The setup and Jimmy's slow approach create intense suspense before the confrontation."
+  },
+  {
+    "chunkId": "chunk_0390",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's monologue reveals his motivations and connects past events to the present conflict."
+  },
+  {
+    "chunkId": "chunk_0391",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Intense dialogue revealing Jimmy's motivations and past, creating tension with Dave."
+  },
+  {
+    "chunkId": "chunk_0392",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "internal_monologue",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Dave realizes he's about to be killed, revealing his fear and desperation through internal monologue."
+  },
+  {
+    "chunkId": "chunk_0393",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "unreliable_narrator"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's interrogation of Dave about the molester story, highlighting Dave's inconsistencies and Jimmy's suspicion."
+  },
+  {
+    "chunkId": "chunk_0394",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Continued interrogation, focusing on Dave's inability to provide a convincing explanation, escalating tension."
+  },
+  {
+    "chunkId": "chunk_0395",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Dave faces the impossible choice between death and lying, revealing his deepest fears and desperation."
+  },
+  {
+    "chunkId": "chunk_0396",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "psychological",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Dave's internal struggle as he contemplates lying to save his life, showcasing his fear of death and desire for redemption."
+  },
+  {
+    "chunkId": "chunk_0397",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Dave confesses to killing Katie, providing a false explanation that resonates with Jimmy's understanding of Dave's character."
+  },
+  {
+    "chunkId": "chunk_0398",
+    "primaryCategory": "darkest_moment",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Dave's realization that he's dying and that no one cares, highlighting the bleakness and indifference of the world."
+  },
+  {
+    "chunkId": "chunk_0399",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "action"
+    ],
+    "tags": [
+      "violent",
+      "descriptive"
+    ],
+    "quality": "good",
+    "reason": "Jimmy kills Dave and begins to dispose of the evidence, showcasing the cold and calculated nature of his actions."
+  },
+  {
+    "chunkId": "chunk_0400",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "symbolic",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Jimmy washes Dave's blood off in the Mystic River, haunted by his past and the symbolic weight of his actions, transitioning to the next scene."
+  },
+  {
+    "chunkId": "chunk_0401",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [],
+    "tags": [
+      "introspective",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Brendan's internal struggle with truth and lies is explored."
+  },
+  {
+    "chunkId": "chunk_0402",
+    "primaryCategory": "investigation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "clues"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey discuss evidence and leads in the case."
+  },
+  {
+    "chunkId": "chunk_0403",
+    "primaryCategory": "interrogation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "power-dynamics"
+    ],
+    "quality": "good",
+    "reason": "Brendan attempts to get information from Ray, creating tension."
+  },
+  {
+    "chunkId": "chunk_0404",
+    "primaryCategory": "action",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "violent",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Brendan physically confronts Johnny and Ray, escalating the conflict."
+  },
+  {
+    "chunkId": "chunk_0405",
+    "primaryCategory": "action",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "violent",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Sean and Whitey interrupt the violence, leading to a tense standoff."
+  },
+  {
+    "chunkId": "chunk_0406",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "good",
+    "reason": "Tense conversation between Sean and Johnny, filled with underlying threat."
+  },
+  {
+    "chunkId": "chunk_0407",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "confrontation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "suspenseful"
+    ],
+    "quality": "good",
+    "reason": "Sean tries to defuse the situation with Johnny, using psychological tactics."
+  },
+  {
+    "chunkId": "chunk_0408",
+    "primaryCategory": "action",
+    "secondaryCategories": [],
+    "tags": [
+      "suspenseful",
+      "resolution"
+    ],
+    "quality": "good",
+    "reason": "Sean disarms Johnny, resolving the immediate threat."
+  },
+  {
+    "chunkId": "chunk_0409",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "reflective",
+      "emotional"
+    ],
+    "quality": "average",
+    "reason": "Sean reflects on the situation, followed by a scene setup."
+  },
+  {
+    "chunkId": "chunk_0410",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Sean reveals the identity of the killers to Jimmy, a crucial revelation."
+  },
+  {
+    "chunkId": "chunk_0411",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "emotional",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Jimmy learns about the kids and Dave's disappearance, leading to a breakdown."
+  },
+  {
+    "chunkId": "chunk_0412",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "revelation",
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "tense"
+    ],
+    "quality": "excellent",
+    "reason": "Sean confronts Jimmy about killing Dave, a major turning point."
+  },
+  {
+    "chunkId": "chunk_0413",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "internal",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Sean's internal monologue after realizing Jimmy killed Dave, and his call to Lauren."
+  },
+  {
+    "chunkId": "chunk_0414",
+    "primaryCategory": "setup",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "domestic",
+      "character-focused"
+    ],
+    "quality": "average",
+    "reason": "Setting the scene with Jimmy and Annabeth, establishing their relationship before the confession."
+  },
+  {
+    "chunkId": "chunk_0415",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "internal"
+    ],
+    "quality": "excellent",
+    "reason": "Jimmy's internal turmoil and confession to Annabeth, a moment of intense despair."
+  },
+  {
+    "chunkId": "chunk_0416",
+    "primaryCategory": "revelation",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Jimmy confesses to Annabeth about killing Dave and his feelings of unworthiness."
+  },
+  {
+    "chunkId": "chunk_0417",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "decision_point"
+    ],
+    "tags": [
+      "emotional",
+      "dialogue-driven"
+    ],
+    "quality": "good",
+    "reason": "Annabeth's response to Jimmy's confession, manipulating him with emotional appeals."
+  },
+  {
+    "chunkId": "chunk_0418",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "manipulative"
+    ],
+    "quality": "good",
+    "reason": "Annabeth reveals her knowledge of Celeste's suspicions and her own manipulative nature."
+  },
+  {
+    "chunkId": "chunk_0419",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "character-focused",
+      "dark"
+    ],
+    "quality": "excellent",
+    "reason": "Annabeth solidifies Jimmy's decision to stay out of jail, embracing their dark side."
+  },
+  {
+    "chunkId": "chunk_0420",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "sensory-rich",
+      "reflective"
+    ],
+    "quality": "average",
+    "reason": "Jimmy wakes up after the events, reflecting on the exhaustion and the weight of his actions. Setting the mood."
+  },
+  {
+    "chunkId": "chunk_0421",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "darkest_moment"
+    ],
+    "tags": [
+      "emotional",
+      "sensory-rich"
+    ],
+    "quality": "excellent",
+    "reason": "Deep dive into Jimmy's despair and exhaustion after Katie's death, revealing the weight of his past."
+  },
+  {
+    "chunkId": "chunk_0422",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "descriptive",
+      "setting"
+    ],
+    "quality": "good",
+    "reason": "Establishes the setting of the parade and the community gathering, creating a backdrop for future events."
+  },
+  {
+    "chunkId": "chunk_0423",
+    "primaryCategory": "aftermath",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's interaction with Maureen and Dan reveals his emotional state and the community's support, but also hints at underlying tensions."
+  },
+  {
+    "chunkId": "chunk_0424",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Jimmy reflects on his reputation and his role in the community, setting up his future actions and motivations."
+  },
+  {
+    "chunkId": "chunk_0425",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "setup"
+    ],
+    "tags": [
+      "character-driven",
+      "reflective"
+    ],
+    "quality": "good",
+    "reason": "Jimmy's internal thoughts reveal his power dynamics and his relationship with other characters, setting the stage for conflict."
+  },
+  {
+    "chunkId": "chunk_0426",
+    "primaryCategory": "confrontation",
+    "secondaryCategories": [
+      "dialogue_tension"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological"
+    ],
+    "quality": "excellent",
+    "reason": "Intense confrontation between Jimmy and Dave, filled with accusations, justifications, and underlying tension."
+  },
+  {
+    "chunkId": "chunk_0427",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "descriptive",
+      "hopeful"
+    ],
+    "quality": "good",
+    "reason": "Contrasting the dark events with the bright day and the promise of healing at the parade, creating a sense of hope amidst despair."
+  },
+  {
+    "chunkId": "chunk_0428",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "character-driven",
+      "reflective"
+    ],
+    "quality": "excellent",
+    "reason": "Jimmy confronts his past actions and his lack of remorse, revealing his true nature and motivations."
+  },
+  {
+    "chunkId": "chunk_0429",
+    "primaryCategory": "decision_point",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "character-driven",
+      "plotting"
+    ],
+    "quality": "good",
+    "reason": "Jimmy makes a decision to embrace his criminal past and reclaim his power, setting the stage for future conflicts."
+  },
+  {
+    "chunkId": "chunk_0430",
+    "primaryCategory": "atmospheric",
+    "secondaryCategories": [
+      "aftermath"
+    ],
+    "tags": [
+      "descriptive",
+      "observational"
+    ],
+    "quality": "average",
+    "reason": "Sean observes the parade and the community, reflecting on the history of the town and the complex relationships between its inhabitants."
+  },
+  {
+    "chunkId": "chunk_0431",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "internal_monologue"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "psychological",
+      "atmospheric"
+    ],
+    "quality": "good",
+    "reason": "Dialogue reveals character's internal state and relationship dynamics, with some atmospheric description."
+  },
+  {
+    "chunkId": "chunk_0432",
+    "primaryCategory": "dialogue_tension",
+    "secondaryCategories": [
+      "revelation"
+    ],
+    "tags": [
+      "dialogue-driven",
+      "subtext",
+      "emotional"
+    ],
+    "quality": "excellent",
+    "reason": "Tense conversation reveals crucial information and heightens the emotional stakes, excellent use of subtext."
+  },
+  {
+    "chunkId": "chunk_0433",
+    "primaryCategory": "internal_monologue",
+    "secondaryCategories": [
+      "atmospheric"
+    ],
+    "tags": [
+      "introspective",
+      "sensory-rich",
+      "emotional"
+    ],
+    "quality": "good",
+    "reason": "Focus on Sean's internal thoughts and feelings, set against the backdrop of the parade, creates a reflective mood."
+  }
+]
