@@ -33,13 +33,27 @@ Your **storyreference.docx** (Mystic River by Dennis Lehane):
 
 ## 🚀 Quick Start
 
+**On Termux (Android), use the Standalone versions:**
+
 ```bash
 # Test with 5 chunks first (verify it works)
-node scripts/testCategorization.js
+node scripts/testCategorizationStandalone.js
 
 # Run full categorization (433 chunks, ~$0.10 cost)
+node scripts/categorizeWithGeminiStandalone.js
+```
+
+**On desktop/server with full dev environment:**
+
+```bash
+# Test with 5 chunks first
+node scripts/testCategorization.js
+
+# Run full categorization
 node scripts/categorizeWithGemini.js
 ```
+
+**Why two versions?** The standalone scripts work with plain Node.js (no React Native dependencies), while the regular versions integrate with your LLMService.
 
 ## 📊 What You'll Get
 

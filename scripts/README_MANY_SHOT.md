@@ -2,7 +2,9 @@
 
 Automatically extract and categorize scenes from Mystic River for many-shot learning in story generation.
 
-## Quick Start
+## Quick Start (Termux/Android)
+
+**Important:** Use the **Standalone** versions of scripts on Termux (they work with plain Node.js):
 
 ```bash
 # Step 1: Extract text from .docx (already done!)
@@ -11,9 +13,18 @@ node scripts/extractStoryReference.js
 # Step 2: Split into scene chunks (already done!)
 node scripts/extractSceneChunks.js
 
-# Step 3: Categorize with Gemini (THIS IS THE MAIN STEP)
-node scripts/categorizeWithGemini.js
+# Step 3: Test with 5 chunks (FREE - verify it works)
+node scripts/testCategorizationStandalone.js
+
+# Step 4: Run full categorization (~$0.10)
+node scripts/categorizeWithGeminiStandalone.js
 ```
+
+**Script Versions:**
+- `testCategorization.js` - Requires React Native (won't work on Termux)
+- `testCategorizationStandalone.js` - ✅ Works on Termux (use this!)
+- `categorizeWithGemini.js` - Requires React Native (won't work on Termux)
+- `categorizeWithGeminiStandalone.js` - ✅ Works on Termux (use this!)
 
 ## What This Does
 
