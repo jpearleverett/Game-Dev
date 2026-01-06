@@ -1885,9 +1885,10 @@ class LLMService {
    * @param {string} params.cacheKey - Cache key to use
    * @param {string} params.dynamicPrompt - Dynamic prompt to append to cached content
    * @param {Object} params.options - Standard generation options
+   * @param {Array} params.priorMessages - Optional prior messages with thought signatures for continuity
    * @returns {Promise<Object>} Generation response with usage metadata
    */
-  async completeWithCache({ cacheKey, dynamicPrompt, options = {} }) {
+  async completeWithCache({ cacheKey, dynamicPrompt, options = {}, priorMessages = [] }) {
     await this._initializeCacheStorage();
 
     const cache = await this.getCache(cacheKey);
@@ -1903,9 +1904,12 @@ class LLMService {
     if (this.config.proxyUrl) {
       console.log('[LLMService] Using proxy mode for cached generation');
 
+      // Build messages with prior thought signatures if provided
+      const messages = [...priorMessages, { role: 'user', content: dynamicPrompt }];
+
       // Call via proxy with cachedContent parameter
       const response = await this._callViaProxy(
-        [{ role: 'user', content: dynamicPrompt }],
+        messages,
         {
           model,
           temperature: 1.0, // Forced for Gemini 3
@@ -1958,6 +1962,17 @@ class LLMService {
 
     const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
 
+    // Build contents array with prior messages (thought signatures) if provided
+    const contents = [];
+    for (const msg of priorMessages) {
+      const parts = [{ text: msg.content }];
+      if (msg.thoughtSignature) {
+        parts.push({ thoughtSignature: msg.thoughtSignature });
+      }
+      contents.push({ role: msg.role, parts });
+    }
+    contents.push({ role: 'user', parts: [{ text: dynamicPrompt }] });
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
@@ -1971,12 +1986,7 @@ class LLMService {
           },
           body: JSON.stringify({
             cached_content: cache.name,
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: dynamicPrompt }],
-              },
-            ],
+            contents,
             generationConfig,
             safetySettings: [
               {
