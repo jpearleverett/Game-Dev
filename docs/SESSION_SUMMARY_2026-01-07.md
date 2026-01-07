@@ -552,3 +552,177 @@ This session successfully:
 6. Fixed regex validation false positives (POV violations, "weight of" patterns, puzzleCandidates)
 
 All 5 major LLM optimizations now have 100% coverage across both cached and uncached code paths. The many-shot system is fully active, providing 15 professional scene examples per generation to improve prose quality, pacing, and sensory detail. Validation is now more accurate, with fewer false positives and clearer focus on story-breaking issues vs stylistic preferences.
+
+---
+---
+
+# Session Summary: Path-Specific Decision Lookup Fix
+
+**Date:** January 7, 2026 (Session 2)
+**Branch:** `claude/fix-subchapter-inconsistency-3tG1n`
+**Repository:** Game-Dev (React Native noir mystery game with LLM-generated story content)
+
+---
+
+## Overview
+
+User reported that after playing through subchapters 1A, 1B, and 1C, the decision options shown at the end of 1C didn't relate to the branching choices made within 1C. Investigation revealed a bug in how the player's path was being stored and looked up.
+
+---
+
+## Problem Discovery
+
+**User's logs showed malformed path storage:**
+
+```
+[useStoryEngine] Saving branching choice for 001A: 1B -> 1B-1B-2C
+[useStoryEngine] Saving branching choice for 001B: 1C -> 1C-1C-2A
+[useStoryEngine] Saving branching choice for 001C: 1B -> 1B-1B-2C
+```
+
+**Expected format:** `1B -> 1B-2C`
+**Actual format:** `1B -> 1B-1B-2C` (duplicate prefix)
+
+This caused path-specific decision lookups to fail because:
+- `pathDecisions` uses keys like `"1B-2C"`
+- Lookup was searching for `"1B-1B-2C"` (no match)
+- Fallback to `"1A-2A"` meant wrong decision was shown
+
+---
+
+## Root Cause
+
+**File:** `src/components/BranchingNarrativeReader.js:431`
+
+The second choice option keys are already full path keys (e.g., `"1B-2C"`) as defined in the schema. But `handleEndingComplete` was constructing the path by prepending the first choice again:
+
+```javascript
+// BEFORE (broken)
+onComplete?.({
+  path: `${firstChoiceMade}-${secondChoiceMade}`,  // "1B" + "-" + "1B-2C" = "1B-1B-2C"
+  evidence: collectedEvidence,
+});
+```
+
+**Schema definition** (StoryGenerationService.js:208-210):
+```javascript
+key: {
+  type: 'string',
+  description: 'Unique identifier: "1A-2A", "1A-2B", "1A-2C", etc.',
+},
+```
+
+The second choice option's `key` already contains the full path, so prepending `firstChoiceMade` created a duplicate.
+
+---
+
+## Fix Applied
+
+**Commit:** `bb75480` - "Fix duplicate path prefix in branching choice path construction"
+
+```javascript
+// AFTER (fixed)
+onComplete?.({
+  path: secondChoiceMade, // secondChoiceMade already contains full path key like "1B-2C"
+  evidence: collectedEvidence,
+});
+```
+
+Also removed `firstChoiceMade` from the `useCallback` dependency array since it's no longer used.
+
+---
+
+## Path Naming Convention Clarified
+
+User asked about the path format `1B-2C` vs something like `1AC_2CA`.
+
+**Current format explanation:**
+- `1B` = **First** choice point, option **B** (the "1" means first decision)
+- `2C` = **Second** choice point, option **C** (the "2" means second decision)
+
+This creates a 3×3 grid of 9 unique paths per subchapter:
+
+```
+1A-2A  1A-2B  1A-2C
+1B-2A  1B-2B  1B-2C
+1C-2A  1C-2B  1C-2C
+```
+
+---
+
+## Architecture Clarifications
+
+### What Affects What
+
+| Component | Affected By |
+|-----------|-------------|
+| Story content in 1B | Choices made in 1A (via `buildRealizedNarrative`) |
+| Story content in 1C | Choices made in 1A + 1B |
+| **Decision at end of 1C** | Only choices made **within 1C** |
+
+The A and B subchapter choices affect narrative context but NOT the path-specific decisions shown at the end of C subchapters.
+
+### C Subchapter Generation Flow
+
+C subchapters use **two API calls**:
+
+1. **First call:** Generates branching narrative
+   - Opening segment
+   - 3 first choice options with middle segments
+   - 9 ending segments (3×3) with summaries
+
+2. **Second call:** Generates path-specific decisions
+   - Uses summaries from first call as context
+   - Creates 9 tailored decision variants
+   - Each decision reflects what happened in that specific path
+
+This allows the LLM to craft decisions that feel like direct consequences of the player's journey.
+
+---
+
+## Files Modified
+
+### src/components/BranchingNarrativeReader.js
+
+**Line 431:** Fixed path construction to use `secondChoiceMade` directly instead of `${firstChoiceMade}-${secondChoiceMade}`
+
+---
+
+## Commits
+
+1. **`fe3f2fd`** - (Previous session) Fix path-specific decision lookups to use player's actual branching path
+2. **`bb75480`** - Fix duplicate path prefix in branching choice path construction
+
+---
+
+## Key Learnings
+
+### 1. Schema Keys vs Constructed Values
+
+When schema defines complete keys (like `"1B-2C"`), don't reconstruct them from components. The duplication bug came from not recognizing that `secondChoiceMade` already contained the full path key.
+
+### 2. Log Format Reveals Data Structure Issues
+
+The log format `1B -> 1B-1B-2C` immediately showed the duplication problem. Including both raw values in logs made debugging straightforward.
+
+### 3. Lookup Failures Can Be Silent
+
+The path lookup was failing silently and falling back to `"1A-2A"`, showing the wrong decision. Without explicit logging of lookup misses, this could have gone unnoticed longer.
+
+---
+
+## Testing Verification
+
+After this fix, the logs should show:
+
+```
+[useStoryEngine] Saving branching choice for 001C: 1B -> 1B-2C
+```
+
+And the decision lookup in `caseMerger.js` will correctly find `pathDecisions["1B-2C"]`, showing the player the decision tailored to their specific path through the subchapter.
+
+---
+
+## Conclusion
+
+This session fixed a path duplication bug that caused C subchapter decisions to not match the player's actual branching choices. The fix was a one-line change to use the already-complete path key instead of reconstructing it. Combined with the previous session's fix for hardcoded `pathDecisions['1A-2A']` lookups, the path-specific decision system should now work correctly end-to-end.
