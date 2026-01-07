@@ -167,8 +167,8 @@ export function gameReducer(state, action) {
         }
 
         case 'ADVANCE_CASE': {
-            const { progress, activeCaseId, attemptsRemaining, layout } = action.payload;
-            
+            const { progress, activeCaseId, attemptsRemaining, layout, preserveStatus } = action.payload;
+
             let nextLayouts = state.boardLayouts;
             if (layout && layout.caseId && Array.isArray(layout.grid)) {
                  nextLayouts = { [layout.caseId]: layout.grid };
@@ -184,7 +184,9 @@ export function gameReducer(state, action) {
                 lockedMainWords: [],
                 selectedWords: [],
                 submissionHistory: [],
-                status: STATUS.IN_PROGRESS,
+                // When navigating to show narrative (preserveStatus=true), keep the current status
+                // so the CaseSolvedScreen button doesn't flicker to "Retry Case"
+                status: preserveStatus ? state.status : STATUS.IN_PROGRESS,
                 lastUpdated: Date.now(),
             };
         }

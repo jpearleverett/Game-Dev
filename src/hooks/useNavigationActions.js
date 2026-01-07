@@ -221,13 +221,19 @@ export function useNavigationActions(navigation, game, audio) {
   }, [handleStoryStart]);
 
   const handleStoryContinue = useCallback(async () => {
-    const result = await continueStoryCampaign();
+    // NARRATIVE-FIRST FLOW: Pre-compute whether we need narrative before puzzle
+    // This determines whether to preserve the SOLVED status during navigation
+    // (prevents the CaseSolvedScreen button from flickering to "Retry Case")
+    const targetCaseNumber = storyCampaign?.activeCaseNumber;
+    const willNeedNarrativeFirst = needsNarrativeFirst(targetCaseNumber);
+
+    // Pass preserveStatus: true when navigating to CaseFile (narrative-first flow)
+    // This keeps the SOLVED status so button stays "Continue Investigation"
+    const result = await continueStoryCampaign({ preserveStatus: willNeedNarrativeFirst });
     if (result?.ok) {
-      // NARRATIVE-FIRST FLOW: For ALL chapters, go to narrative first, then puzzle
-      // This gives LLM time to generate next content while player solves puzzle
-      // Use result.caseNumber to avoid stale closure issues
-      const targetCaseNumber = result.caseNumber || storyCampaign?.activeCaseNumber;
-      if (needsNarrativeFirst(targetCaseNumber)) {
+      // Use result.caseNumber if available (avoids stale closure issues)
+      const finalTargetCaseNumber = result.caseNumber || targetCaseNumber;
+      if (needsNarrativeFirst(finalTargetCaseNumber)) {
         console.log('[Navigation] Narrative-first flow - showing narrative before puzzle');
         navigation.navigate('CaseFile');
       } else {

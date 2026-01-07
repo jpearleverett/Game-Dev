@@ -726,3 +726,210 @@ And the decision lookup in `caseMerger.js` will correctly find `pathDecisions["1
 ## Conclusion
 
 This session fixed a path duplication bug that caused C subchapter decisions to not match the player's actual branching choices. The fix was a one-line change to use the already-complete path key instead of reconstructing it. Combined with the previous session's fix for hardcoded `pathDecisions['1A-2A']` lookups, the path-specific decision system should now work correctly end-to-end.
+
+---
+---
+
+# Session Summary: CaseSolvedScreen Button State Fix
+
+**Date:** January 7, 2026 (Session 3)
+**Branch:** `claude/fix-puzzle-completion-llm-DcDX0`
+**Repository:** Game-Dev (React Native noir mystery game with LLM-generated story content)
+
+---
+
+## Overview
+
+User reported that after completing a puzzle and navigating to the CaseSolvedScreen, the button showed "Retry Case" instead of "Continue Investigation". When tapped, it navigated to the current subchapter's case file instead of the next one.
+
+---
+
+## Problem Discovery
+
+**User's description:**
+> "Whenever I finish a puzzle after a subchapter and go to the cases solved screen, once the LLM is done generating the next subchapter, the button says 'retry case' rather than continue investigation and when I tap it it takes me back to the case file for the subchapter I just read rather than the next one."
+
+**Expected behavior:**
+- Button says "Continue Investigation"
+- Tapping navigates to the NEXT subchapter's case file
+
+**Actual behavior:**
+- Button says "Retry Case"
+- Tapping navigates to the CURRENT (just completed) subchapter's case file
+
+---
+
+## Root Cause Analysis
+
+The issue was in the navigation flow when continuing from CaseSolvedScreen:
+
+1. User solves puzzle → `status` = `SOLVED`
+2. User taps "Continue Investigation" on CaseSolvedScreen
+3. `handleStoryContinue` → `continueStoryCampaign` → `activateStoryCase`
+4. Inside `activateStoryCase`, `setActiveCaseInternal(targetCase.id)` is called
+5. `setActiveCaseInternal` dispatches `ADVANCE_CASE` action
+6. **`ADVANCE_CASE` always sets `status` to `IN_PROGRESS`**
+7. CaseSolvedScreen re-renders with `status = IN_PROGRESS`
+8. Button now shows "Retry Case" (because `solved` = `status === SOLVED` is now `false`)
+9. Navigation finally happens
+
+The problem: Step 6-8 happened BEFORE navigation (step 9), causing the button to briefly flicker to "Retry Case".
+
+**Key code locations:**
+
+- `gameReducer.js:187`: `ADVANCE_CASE` action always set `status: STATUS.IN_PROGRESS`
+- `useGameLogic.js:196-212`: `setActiveCaseInternal` dispatched `ADVANCE_CASE`
+- `GameContext.js:130`: `activateStoryCase` called `setActiveCaseInternal`
+- `useNavigationActions.js:223-238`: `handleStoryContinue` called `continueStoryCampaign` before checking navigation destination
+
+---
+
+## Fix Applied
+
+**Commit:** `c5f2071` - "Fix CaseSolvedScreen button showing 'Retry Case' after puzzle completion"
+
+### Changes Made
+
+**1. gameReducer.js (lines 170, 187-189)**
+
+Added `preserveStatus` option to `ADVANCE_CASE` action:
+
+```javascript
+case 'ADVANCE_CASE': {
+    const { progress, activeCaseId, attemptsRemaining, layout, preserveStatus } = action.payload;
+    // ...
+    return {
+        // ...
+        // When navigating to show narrative (preserveStatus=true), keep the current status
+        // so the CaseSolvedScreen button doesn't flicker to "Retry Case"
+        status: preserveStatus ? state.status : STATUS.IN_PROGRESS,
+        // ...
+    };
+}
+```
+
+**2. useGameLogic.js (lines 196-215)**
+
+Updated `setActiveCaseInternal` to accept `preserveStatus` option:
+
+```javascript
+const setActiveCaseInternal = useCallback((caseId, { preserveStatus = false } = {}) => {
+    // ...
+    dispatch({
+        type: 'ADVANCE_CASE',
+        payload: {
+            // ...
+            preserveStatus,
+        }
+    });
+}, [cases, assignBoardLayout, stableStoryCampaign]);
+```
+
+**3. GameContext.js (lines 62, 130-132, 189-191)**
+
+Updated `activateStoryCase` and `continueStoryCampaign` to pass through `preserveStatus`:
+
+```javascript
+const activateStoryCase = useCallback(
+    async ({ skipLock = false, mode: targetMode = 'daily', preserveStatus = false } = {}) => {
+        // ...
+        setActiveCaseInternal(targetCase.id, { preserveStatus });
+        // ...
+    }
+);
+
+const continueStoryCampaign = useCallback(({ preserveStatus = false } = {}) => {
+    return activateStoryCase({ mode: 'story', preserveStatus });
+}, [activateStoryCase]);
+```
+
+**4. useNavigationActions.js (lines 223-244)**
+
+Updated `handleStoryContinue` to pre-compute whether narrative is needed and pass `preserveStatus`:
+
+```javascript
+const handleStoryContinue = useCallback(async () => {
+    // Pre-compute whether we need narrative before puzzle
+    const targetCaseNumber = storyCampaign?.activeCaseNumber;
+    const willNeedNarrativeFirst = needsNarrativeFirst(targetCaseNumber);
+
+    // Pass preserveStatus: true when navigating to CaseFile (narrative-first flow)
+    const result = await continueStoryCampaign({ preserveStatus: willNeedNarrativeFirst });
+
+    if (result?.ok) {
+        const finalTargetCaseNumber = result.caseNumber || targetCaseNumber;
+        if (needsNarrativeFirst(finalTargetCaseNumber)) {
+            navigation.navigate('CaseFile');
+        } else {
+            navigation.navigate('Board');
+        }
+    }
+}, [...]);
+```
+
+---
+
+## How the Fix Works
+
+**Before fix:**
+1. User taps "Continue Investigation"
+2. `continueStoryCampaign` → `activateStoryCase` → `setActiveCaseInternal`
+3. Status reset to `IN_PROGRESS` immediately
+4. Button flickers to "Retry Case"
+5. Navigation happens
+
+**After fix:**
+1. User taps "Continue Investigation"
+2. `needsNarrativeFirst` is checked first
+3. If going to CaseFile (narrative-first), `preserveStatus: true` is passed
+4. Status remains `SOLVED` during the transition
+5. Button stays "Continue Investigation"
+6. Navigation happens
+7. Status is reset later when user actually starts the next puzzle
+
+---
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/context/gameReducer.js` | Added `preserveStatus` option to `ADVANCE_CASE` action |
+| `src/hooks/useGameLogic.js` | Updated `setActiveCaseInternal` to accept `preserveStatus` |
+| `src/context/GameContext.js` | Updated `activateStoryCase` and `continueStoryCampaign` to pass `preserveStatus` |
+| `src/hooks/useNavigationActions.js` | Updated `handleStoryContinue` to pre-compute and pass `preserveStatus` |
+
+---
+
+## Key Learnings
+
+### 1. State Updates Before Navigation Cause UI Flicker
+
+When state is updated before navigation, components can re-render with the new state before the navigation actually occurs. This creates visible UI glitches.
+
+**Solution:** Pass hints about intended navigation to state updates, allowing them to preserve relevant state during transitions.
+
+### 2. Pre-Computing Navigation Decisions
+
+The `needsNarrativeFirst` check was happening AFTER state was updated. Moving it BEFORE allowed us to make informed decisions about whether to preserve status.
+
+### 3. Optional Parameters Maintain Backwards Compatibility
+
+Using `{ preserveStatus = false } = {}` as the default parameter meant existing callers didn't need to change, and the default behavior (resetting status) remained the same.
+
+---
+
+## Testing Verification
+
+After this fix:
+1. Solve a puzzle
+2. Navigate to CaseSolvedScreen
+3. Button should say "Continue Investigation"
+4. Tap button
+5. Should navigate to NEXT subchapter's CaseFile
+6. Status is reset to `IN_PROGRESS` when user taps "Solve Puzzle" to start the next puzzle
+
+---
+
+## Conclusion
+
+This session fixed a UI flicker bug where the CaseSolvedScreen button showed "Retry Case" instead of "Continue Investigation" during the transition to the next subchapter. The fix adds a `preserveStatus` option throughout the state update chain, allowing status to be preserved when navigating to narrative (CaseFile) but reset when navigating directly to puzzle (Board).
