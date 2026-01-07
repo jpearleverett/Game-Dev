@@ -193,10 +193,10 @@ export function useGameLogic(cases, progress, updateProgress) {
       });
   }, [cases]);
   
-  const setActiveCaseInternal = useCallback((caseId) => {
+  const setActiveCaseInternal = useCallback((caseId, { preserveStatus = false } = {}) => {
       let targetCase = cases.find(c => c.id === caseId);
       if (!targetCase) return;
-      
+
       // Merge story data
       targetCase = mergeCaseWithStory(targetCase, stableStoryCampaign, getStoryEntry);
 
@@ -206,7 +206,10 @@ export function useGameLogic(cases, progress, updateProgress) {
           payload: {
               activeCaseId: targetCase.id,
               attemptsRemaining: targetCase.attempts,
-              layout: { caseId: targetCase.id, grid }
+              layout: { caseId: targetCase.id, grid },
+              // When navigating from CaseSolvedScreen to CaseFile (narrative-first flow),
+              // preserve the SOLVED status so the button doesn't flicker to "Retry Case"
+              preserveStatus,
           }
       });
   }, [cases, assignBoardLayout, stableStoryCampaign]);

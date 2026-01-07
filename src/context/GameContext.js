@@ -59,7 +59,7 @@ export function GameProvider({
   }, [hydrationComplete, gameState.hydrationComplete, progress, initializeGame]);
 
   const activateStoryCase = useCallback(
-    async ({ skipLock = false, mode: targetMode = 'daily' } = {}) => {
+    async ({ skipLock = false, mode: targetMode = 'daily', preserveStatus = false } = {}) => {
       // Story Mode Logic
       if (targetMode === 'story') {
           const traceId = createTraceId('activateStoryCase');
@@ -127,7 +127,9 @@ export function GameProvider({
 
           if (!targetCase) return { ok: false, reason: 'missing-case-data' };
 
-          setActiveCaseInternal(targetCase.id);
+          // When preserveStatus is true (navigating to CaseFile for narrative-first flow),
+          // keep the SOLVED status so the CaseSolvedScreen button doesn't flicker to "Retry Case"
+          setActiveCaseInternal(targetCase.id, { preserveStatus });
           setMode('story');
           llmTrace('GameContext', traceId, 'activateStoryCase.navigationReady', {
             caseId: targetCase.id,
@@ -184,8 +186,8 @@ export function GameProvider({
     return activateStoryCase({ mode: 'story' });
   }, [updateProgress, activateStoryCase]);
 
-  const continueStoryCampaign = useCallback(() => {
-    return activateStoryCase({ mode: 'story' });
+  const continueStoryCampaign = useCallback(({ preserveStatus = false } = {}) => {
+    return activateStoryCase({ mode: 'story', preserveStatus });
   }, [activateStoryCase]);
 
   const openStoryCase = useCallback((caseId) => {
