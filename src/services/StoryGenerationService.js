@@ -8645,7 +8645,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       { pattern: /\bseemingly\b|\binterestingly\b|\bnotably\b|\bcertainly\b|\bundoubtedly\b/i, issue: 'Forbidden flowery adverbs detected' },
       { pattern: /\bundeniably\b|\bprofoundly\b|\bunmistakably\b|\binherently\b/i, issue: 'Forbidden AI-ism adverbs detected (undeniably, profoundly, unmistakably, inherently)' },
       { pattern: /\bdelve\b|\bunravel\b|\btapestry\b|\bmyriad\b/i, issue: 'Forbidden words detected (delve, unravel, tapestry, myriad)' },
-      { pattern: /\brealm\b|\bintricate\b|\bnuanced\b|\bpivotal\b|\bcrucial\b/i, issue: 'Forbidden AI-ism words detected (realm, intricate, nuanced, pivotal, crucial)' },
+      { pattern: /\bin the realm of\b|\bintricate\b|\bnuanced\b/i, issue: 'Forbidden AI-ism phrases detected (in the realm of, intricate, nuanced)' },
+      { pattern: /\bpivotal\b|\bcrucial\b/i, issue: 'Overused emphasis words detected (pivotal, crucial) - consider stronger alternatives' },
       { pattern: /\ba testament to\b|\bserves as a reminder\b/i, issue: 'Forbidden cliche phrase detected' },
       // Removed: "weight of/gravity of" - these are legitimate phrases in noir fiction
       { pattern: /\bmoreover\b|\bfurthermore\b|\bin essence\b|\bconsequently\b|\badditionally\b/i, issue: 'Forbidden academic connectors detected' },
