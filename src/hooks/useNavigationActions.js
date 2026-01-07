@@ -227,9 +227,22 @@ export function useNavigationActions(navigation, game, audio) {
     const targetCaseNumber = storyCampaign?.activeCaseNumber;
     const willNeedNarrativeFirst = needsNarrativeFirst(targetCaseNumber);
 
+    console.log('[Navigation] handleStoryContinue called:', {
+      targetCaseNumber,
+      willNeedNarrativeFirst,
+      completedCaseNumbers: storyCampaign?.completedCaseNumbers,
+      branchingChoices: storyCampaign?.branchingChoices?.map(bc => bc.caseNumber),
+    });
+
     // Pass preserveStatus: true when navigating to CaseFile (narrative-first flow)
     // This keeps the SOLVED status so button stays "Continue Investigation"
     const result = await continueStoryCampaign({ preserveStatus: willNeedNarrativeFirst });
+
+    console.log('[Navigation] continueStoryCampaign returned:', {
+      ok: result?.ok,
+      caseNumber: result?.caseNumber,
+      reason: result?.reason,
+    });
 
     // IMPORTANT: State has already been updated inside continueStoryCampaign
     // (activeCaseId is now the next case). We MUST navigate to avoid leaving
@@ -238,10 +251,16 @@ export function useNavigationActions(navigation, game, audio) {
     if (result?.ok) {
       // Use result.caseNumber if available (avoids stale closure issues)
       const finalTargetCaseNumber = result.caseNumber || targetCaseNumber;
-      if (needsNarrativeFirst(finalTargetCaseNumber)) {
-        console.log('[Navigation] Narrative-first flow - showing narrative before puzzle');
+      const shouldShowNarrative = needsNarrativeFirst(finalTargetCaseNumber);
+      console.log('[Navigation] Checking needsNarrativeFirst:', {
+        finalTargetCaseNumber,
+        shouldShowNarrative,
+      });
+      if (shouldShowNarrative) {
+        console.log('[Navigation] Narrative-first flow - navigating to CaseFile');
         navigation.navigate('CaseFile');
       } else {
+        console.log('[Navigation] Narrative already read - navigating to Board');
         navigation.navigate('Board');
       }
     } else {
