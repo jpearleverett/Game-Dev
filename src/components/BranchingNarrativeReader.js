@@ -428,10 +428,10 @@ export default function BranchingNarrativeReader({
   const handleEndingComplete = useCallback(() => {
     setEndingState(SEGMENT_STATES.COMPLETE);
     onComplete?.({
-      path: `${firstChoiceMade}-${secondChoiceMade}`,
+      path: secondChoiceMade, // secondChoiceMade already contains full path key like "1B-2C"
       evidence: collectedEvidence,
     });
-  }, [firstChoiceMade, secondChoiceMade, collectedEvidence, onComplete]);
+  }, [secondChoiceMade, collectedEvidence, onComplete]);
 
   // Handle detail tap
   const handleDetailTap = useCallback((detail) => {
