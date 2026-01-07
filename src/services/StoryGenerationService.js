@@ -9612,7 +9612,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         [{ role: 'user', content: validationPrompt }],
         {
           systemPrompt: 'You are a meticulous continuity editor. Find factual errors and unaddressed plot threads. Be specific. No false positives.',
-          maxTokens: 1000,
+          maxTokens: 2000, // Increased from 1000 - validation needs space for structured output
           responseSchema: {
             type: 'object',
             properties: {
@@ -9632,6 +9632,12 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       // Track token usage
       this._trackTokenUsage(response?.usage, 'LLM Validation');
 
+      // Check for truncation
+      if (response.isTruncated || response.finishReason === 'MAX_TOKENS') {
+        console.warn('[StoryGen] ⚠️ LLM validation response truncated (hit maxTokens). Validation skipped.');
+        return { issues: [], suggestions: [], validated: false, reason: 'truncated response' };
+      }
+
       // Parse response
       let result;
       try {
@@ -9639,7 +9645,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
           ? JSON.parse(response.content)
           : response.content;
       } catch (parseErr) {
-        console.warn('[StoryGen] ⚠️ Failed to parse LLM validation response');
+        console.warn('[StoryGen] ⚠️ Failed to parse LLM validation response:', parseErr.message);
         return { issues: [], suggestions: [], validated: false, reason: 'parse error' };
       }
 
@@ -9659,12 +9665,13 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         console.log(`[StoryGen] ❌ LLM validation found ${allIssues.length} issues:`);
         allIssues.forEach((issue, i) => {
           console.log(`  ${i + 1}. ${issue}`);
-          if (result.suggestions[i]) {
+          // Safe access: check if suggestions array exists and has this index
+          if (result.suggestions && result.suggestions[i]) {
             console.log(`     → Fix: ${result.suggestions[i]}`);
           }
         });
       } else {
-        console.log(`[StoryGen] ✅ LLM validation passed (confidence: ${result.confidence})`);
+        console.log(`[StoryGen] ✅ LLM validation passed (confidence: ${result.confidence || 'unknown'})`);
       }
 
       return {
