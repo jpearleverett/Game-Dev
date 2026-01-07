@@ -8645,9 +8645,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       { pattern: /\bseemingly\b|\binterestingly\b|\bnotably\b|\bcertainly\b|\bundoubtedly\b/i, issue: 'Forbidden flowery adverbs detected' },
       { pattern: /\bundeniably\b|\bprofoundly\b|\bunmistakably\b|\binherently\b/i, issue: 'Forbidden AI-ism adverbs detected (undeniably, profoundly, unmistakably, inherently)' },
       { pattern: /\bdelve\b|\bunravel\b|\btapestry\b|\bmyriad\b/i, issue: 'Forbidden words detected (delve, unravel, tapestry, myriad)' },
-      { pattern: /\brealm\b|\bintricate\b|\bnuanced\b|\bpivotal\b|\bcrucial\b/i, issue: 'Forbidden AI-ism words detected (realm, intricate, nuanced, pivotal, crucial)' },
+      { pattern: /\bin the realm of\b|\bintricate\b|\bnuanced\b/i, issue: 'Forbidden AI-ism phrases detected (in the realm of, intricate, nuanced)' },
+      { pattern: /\bpivotal\b|\bcrucial\b/i, issue: 'Overused emphasis words detected (pivotal, crucial) - consider stronger alternatives' },
       { pattern: /\ba testament to\b|\bserves as a reminder\b/i, issue: 'Forbidden cliche phrase detected' },
-      { pattern: /\bthe weight of\b|\bthe gravity of\b|\bthe magnitude of\b|\bthe enormity of\b/i, issue: 'Forbidden "weight/gravity of" phrase detected' },
+      // Removed: "weight of/gravity of" - these are legitimate phrases in noir fiction
       { pattern: /\bmoreover\b|\bfurthermore\b|\bin essence\b|\bconsequently\b|\badditionally\b/i, issue: 'Forbidden academic connectors detected' },
       { pattern: /\bthis moment\b|\bthis realization\b|\bthis truth\b/i, issue: 'Forbidden meta-commentary detected ("this moment/realization/truth")' },
       { pattern: /\bin that moment\b|\bat that instant\b|\bin the blink of an eye\b/i, issue: 'Forbidden time transition cliche detected' },
@@ -8765,27 +8766,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
 
     // NOTE: chapterSummary validation removed - field no longer in schema
-
-    // Puzzle candidates should be anchored in the narrative so the board feels fair.
-    if (Array.isArray(content.puzzleCandidates)) {
-      if (content.puzzleCandidates.length < 6) warnings.push(`puzzleCandidates has only ${content.puzzleCandidates.length} words. Aim for 6-8 distinct words.`);
-      const lowerNarr = narrativeOriginal.toLowerCase();
-      const narrativeWords = lowerNarr.match(/\b\w+\b/g) || [];
-      content.puzzleCandidates.forEach((w) => {
-        if (!w || typeof w !== 'string') return;
-        const token = w.toLowerCase();
-        // Use prefix matching: puzzle word should be recognizable in narrative
-        // "rain" matches "raining" ✓, "investigate" matches "investigation" ✓
-        // but "rain" doesn't match "train" ✓ (neither is prefix of other)
-        const foundInNarrative = narrativeWords.some(nw => {
-          if (token.length < 4 || nw.length < 4) return token === nw;
-          return token.startsWith(nw) || nw.startsWith(token);
-        });
-        if (!foundInNarrative) {
-          warnings.push(`puzzleCandidates word "${w}" does not appear in narrative. Prefer words drawn directly from the prose for fairness.`);
-        }
-      });
-    }
+    // NOTE: puzzleCandidates validation removed - user preference
 
     // =========================================================================
     // CATEGORY 9: PERSPECTIVE/TENSE CONSISTENCY
@@ -8808,14 +8789,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       // to prevent apostrophes from closing double-quoted dialogue
       // - ASCII double quote: "
       // - Left/right curly double quotes: " " (U+201C, U+201D)
+      // - ASCII single quote: ' (used for dialogue in this story)
       // - Left curly single quote: ' (U+2018) - used for dialogue
       // - Right curly single quote: ' (U+2019) - used for dialogue AND apostrophes
-      // NOTE: ASCII single quote ' is ambiguous (apostrophe vs quote) so we only
-      // treat curly single quotes as dialogue markers to avoid false positives
+      // NOTE: We handle ASCII single quotes now by detecting apostrophes vs dialogue context
       const isOpeningDouble = (ch) => ch === '"' || ch === '\u201C';
       const isClosingDouble = (ch) => ch === '"' || ch === '\u201D';
-      const isOpeningSingle = (ch) => ch === '\u2018'; // Only curly opening single quote
-      const isClosingSingle = (ch) => ch === '\u2019'; // Only curly closing single quote
+      const isOpeningSingle = (ch) => ch === "'" || ch === '\u2018'; // ASCII or curly quote
+      const isClosingSingle = (ch) => ch === "'" || ch === '\u2019'; // ASCII or curly quote
 
       for (let i = 0; i < text.length; i++) {
         const ch = text[i];
@@ -8832,16 +8813,30 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           continue;
         }
 
-        // Handle single quotes (only curly quotes to avoid apostrophe confusion)
+        // Handle single quotes (detect apostrophes vs dialogue)
         if (quoteType === null && isOpeningSingle(ch)) {
-          if (flush()) return true;
-          quoteType = 'single';
-          continue;
+          // Check if this looks like an apostrophe (letter on both sides) vs dialogue opening
+          const nextChar = i + 1 < text.length ? text[i + 1] : '';
+          const prevChar = i > 0 ? text[i - 1] : '';
+          const isLikelyApostrophe = /[a-z]/i.test(prevChar) && /[a-z]/i.test(nextChar);
+
+          if (!isLikelyApostrophe) {
+            if (flush()) return true;
+            quoteType = 'single';
+            continue;
+          }
         }
         if (quoteType === 'single' && isClosingSingle(ch)) {
-          buf = '';
-          quoteType = null;
-          continue;
+          // Check if this closes dialogue (preceded by letter/punctuation, followed by space/punctuation)
+          const prevChar = i > 0 ? text[i - 1] : '';
+          const nextChar = i + 1 < text.length ? text[i + 1] : '';
+          const isLikelyApostrophe = /[a-z]/i.test(prevChar) && /[a-z]/i.test(nextChar);
+
+          if (!isLikelyApostrophe) {
+            buf = '';
+            quoteType = null;
+            continue;
+          }
         }
 
         // Only accumulate narration segments (outside quotes)
