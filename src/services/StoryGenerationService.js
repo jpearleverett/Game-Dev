@@ -9612,7 +9612,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         [{ role: 'user', content: validationPrompt }],
         {
           systemPrompt: 'You are a meticulous continuity editor. Find factual errors and unaddressed plot threads. Be specific. No false positives.',
-          maxTokens: 2000, // Increased from 1000 - validation needs space for structured output
+          maxTokens: 10000, // Increased from 1000 - validation needs space for structured output
           responseSchema: {
             type: 'object',
             properties: {
