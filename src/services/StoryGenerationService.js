@@ -911,15 +911,25 @@ These decisions should manifest naturally in the prose without being explicitly 
 </internal_planning>
 
 <thread_accounting_rule>
-You MUST address every thread listed in ACTIVE_THREADS. Every urgency="critical" thread MUST be:
-- Acknowledged or progressed in the narrative (not just thought about—characters must ACT on it)
-- Referenced naturally through dialogue or action, not exposition
-Critical threads cannot be ignored—if truly impossible to address, explain why in-narrative.
+MANDATORY: Every thread in ACTIVE_THREADS with urgency="critical" is NON-NEGOTIABLE. You will be rejected if you skip them.
+
+For EVERY critical thread:
+1. Characters MUST take visible action on it (not just think about it)
+2. Show progress through dialogue or concrete actions (not narration or exposition)
+3. If physically impossible to address in this scene, Jack must explicitly acknowledge why he can't act on it yet
+
+FAILURE TO ADDRESS CRITICAL THREADS = AUTOMATIC REJECTION. No exceptions.
 </thread_accounting_rule>
 
 <thread_escalation_rule>
-If a thread has been active for 2+ chapters without resolution, it is OVERDUE.
-You MUST either progress it meaningfully, resolve it, or mark it as "failed" with a clear in-story reason.
+OVERDUE THREAD PENALTY: Any thread active for 2+ chapters without meaningful progress triggers MANDATORY action.
+
+You MUST do ONE of:
+1. Advance it significantly this chapter (reveal new info, confront someone, discover evidence)
+2. Resolve it completely with in-narrative payoff
+3. Mark it "failed" with Jack explicitly giving up and explaining why
+
+Ignoring overdue threads = generation failure. This is a hard requirement.
 </thread_escalation_rule>
 
 <craft_quality_checklist>
@@ -1247,7 +1257,7 @@ These scenes demonstrate the natural rhythm, dialogue patterns, and emotional be
 // ============================================================================
 // VOICE DNA - Character-specific speech patterns
 // ============================================================================
-const buildVoiceDNASection = (charactersInScene = []) => {
+const buildVoiceDNASection = (charactersInScene = [], context = {}, currentChapter = 2) => {
   const { VOICE_DNA } = require('../data/characterReference');
 
   // Always include Jack's voice
@@ -1272,6 +1282,9 @@ const buildVoiceDNASection = (charactersInScene = []) => {
   // Deduplicate
   const uniqueVoices = [...new Set(voicesToInclude)];
 
+  // Extract recent dialogue from last 2 chapters
+  const recentDialogue = extractRecentDialogue(context, currentChapter, uniqueVoices);
+
   let voiceSection = `
 ## CHARACTER VOICE DNA
 Use these patterns to maintain consistent character voices:
@@ -1294,11 +1307,111 @@ ${voice.physicalTells.map(t => `- ${t}`).join('\n')}
 
 **Dialogue Rhythm:**
 ${voice.dialogueRhythm.map(r => `- ${r}`).join('\n')}
-
 `;
+
+    // Add recent dialogue examples if available
+    if (recentDialogue[voiceKey] && recentDialogue[voiceKey].length > 0) {
+      voiceSection += `
+**Recent Dialogue Examples:**
+${recentDialogue[voiceKey].map(d => `- "${d}"`).join('\n')}
+`;
+    }
+
+    voiceSection += '\n';
   });
 
   return voiceSection;
+};
+
+/**
+ * Extract recent dialogue from the last 2 chapters for specified characters
+ */
+const extractRecentDialogue = (context, currentChapter, characterKeys) => {
+  const dialogueMap = {};
+  characterKeys.forEach(key => { dialogueMap[key] = []; });
+
+  if (!context.chapters || context.chapters.length === 0) {
+    return dialogueMap;
+  }
+
+  // Get last 2 chapters of content
+  const startChapter = Math.max(1, currentChapter - 2);
+  const chaptersToScan = [];
+
+  for (let ch = startChapter; ch < currentChapter; ch++) {
+    const chapterData = context.chapters.find(c => c.chapter === ch);
+    if (chapterData && chapterData.subchapters) {
+      chapterData.subchapters.forEach(sub => {
+        if (sub.narrative) {
+          chaptersToScan.push(sub.narrative);
+        }
+        // Also check branching narrative paths if they exist
+        if (sub.branchingNarrative) {
+          const bn = sub.branchingNarrative;
+          if (bn.opening?.text) chaptersToScan.push(bn.opening.text);
+          if (bn.firstChoice?.options) {
+            bn.firstChoice.options.forEach(opt => {
+              if (opt.response) chaptersToScan.push(opt.response);
+            });
+          }
+          if (bn.secondChoices) {
+            bn.secondChoices.forEach(sc => {
+              if (sc.options) {
+                sc.options.forEach(opt => {
+                  if (opt.response) chaptersToScan.push(opt.response);
+                });
+              }
+            });
+          }
+        }
+      });
+    }
+  }
+
+  // Extract dialogue using simple regex matching
+  // Looking for patterns like: "..." said Victoria, Victoria said "...", "dialogue."
+  characterKeys.forEach(charKey => {
+    const charNames = getCharacterNameVariants(charKey);
+    const allText = chaptersToScan.join(' ');
+
+    charNames.forEach(name => {
+      // Pattern 1: "dialogue" said Name / Name said "dialogue"
+      const pattern1 = new RegExp(`[""]([^""]{10,100})[""]\\s*(?:said|asked|replied|whispered|muttered)\\s+${name}`, 'gi');
+      const pattern2 = new RegExp(`${name}\\s+(?:said|asked|replied|whispered|muttered)\\s*[""]([^""]{10,100})[""]`, 'gi');
+
+      let matches1 = allText.matchAll(pattern1);
+      let matches2 = allText.matchAll(pattern2);
+
+      for (const match of matches1) {
+        if (dialogueMap[charKey].length < 3) {
+          dialogueMap[charKey].push(match[1].trim());
+        }
+      }
+
+      for (const match of matches2) {
+        if (dialogueMap[charKey].length < 3) {
+          dialogueMap[charKey].push(match[1].trim());
+        }
+      }
+    });
+  });
+
+  return dialogueMap;
+};
+
+/**
+ * Get name variants for character matching
+ */
+const getCharacterNameVariants = (charKey) => {
+  const variants = {
+    jack: ['Jack', 'Thornton'],
+    victoria: ['Victoria', 'Emily', 'Blackwell'],
+    sarah: ['Sarah', 'Reeves'],
+    tomWade: ['Tom', 'Wade', 'Thomas'],
+    eleanor: ['Eleanor', 'Cross'],
+    claire: ['Claire', 'Ashford'],
+  };
+  return variants[charKey] || [charKey];
 };
 
 // ============================================================================
@@ -1868,8 +1981,7 @@ Jack sat with that until the jukebox downstairs switched songs. Then he gathered
       narrative: template.narrative,
       branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
       chapterSummary: `Chapter ${chapter}.${subchapter}: ${template.bridgeText}`,
-      jackActionStyle: 'balanced',
-      jackRiskLevel: 'moderate',
+      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
       puzzleCandidates: this._extractKeywordsFromNarrative(template.narrative).slice(0, 8),
       briefing: {
         summary: 'Continue the investigation.',
@@ -1942,8 +2054,7 @@ Whatever the morning brought, he'd meet it with open eyes. That was all he could
       narrative: minimalNarrative,
       branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
       chapterSummary: `Chapter ${chapter}.${subchapter}: The investigation continues through Ashport.`,
-      jackActionStyle: 'balanced',
-      jackRiskLevel: 'moderate',
+      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
       puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'PATTERN', 'SILVER', 'GLASS', 'LINE'],
       briefing: {
         summary: 'Continue the investigation.',
@@ -2076,9 +2187,7 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
       narrative: narrative,
       branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
       chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The pattern tightened and demanded a response.`,
-      jackActionStyle: personality.riskTolerance === 'high' ? 'direct' :
-                       personality.riskTolerance === 'low' ? 'cautious' : 'balanced',
-      jackRiskLevel: personality.riskTolerance || 'moderate',
+      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
       puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'SILVER', 'GLASS', 'ANCHOR', 'PATTERN'],
       briefing: {
         summary: `Continue the investigation through this critical phase.`,
@@ -5045,7 +5154,7 @@ If any check fails, revise before returning your response.
     const choiceHistory = context.playerChoices || [];
     const beatType = this._getBeatType(chapter, subchapter);
     const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
-    parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType));
+    parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType, context));
 
     // Part 6: Consistency Checklist
     parts.push(this._buildConsistencySection(context));
@@ -5819,7 +5928,7 @@ The narrative context differs by path, so the strategic options should differ to
   /**
    * Build style examples section (few-shot learning)
    */
-  _buildStyleSection(charactersInScene = [], chapter = 2, pathKey = '', choiceHistory = [], beatType = '', chapterBeatType = null) {
+  _buildStyleSection(charactersInScene = [], chapter = 2, pathKey = '', choiceHistory = [], beatType = '', chapterBeatType = null, context = {}) {
     // Build extended examples section
     let extendedExamples = '';
     try {
@@ -5847,7 +5956,7 @@ The narrative context differs by path, so the strategic options should differ to
     // Build voice DNA section for characters in this scene
     let voiceDNA = '';
     try {
-      voiceDNA = buildVoiceDNASection(charactersInScene);
+      voiceDNA = buildVoiceDNASection(charactersInScene, context, chapter);
       if (!voiceDNA || voiceDNA.length < 100) {
         console.warn('[StoryGen] ⚠️ Voice DNA short/empty. Characters:', charactersInScene);
       }
@@ -7692,7 +7801,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         puzzleCandidates: parsed.puzzleCandidates || [], // LLM suggested puzzle words
         briefing: parsed.briefing || { summary: '', objectives: [] },
         consistencyFacts: Array.isArray(parsed.consistencyFacts) ? parsed.consistencyFacts : [],
-        // Schema-enforced structured fields (needed for validation + continuity)
+        // NOTE: storyDay, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration removed from schema
+        // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking)
+        // Kept for backward compatibility with old saved data
         storyDay: parsed.storyDay,
         jackActionStyle: parsed.jackActionStyle,
         jackRiskLevel: parsed.jackRiskLevel,
@@ -8833,20 +8944,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // Note: Category 4 handles detailed checks; this is a broader safety net
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
-      // Re-use emotional state check from above (allow breaks for desperate/angry/regretful)
-      const emotionalStateForCat11 = content.jackBehaviorDeclaration?.emotionalState;
-      const allowsBreakCat11 = emotionalStateForCat11 === 'desperate' || emotionalStateForCat11 === 'angry' || emotionalStateForCat11 === 'regretful';
+      // NOTE: jackBehaviorDeclaration removed from schema - now in <internal_planning>
+      // Legacy validation kept for old data but won't run on new generations
 
       // Check for reckless behavior when player has been methodical
       if (personality.riskTolerance === 'low' || personality.narrativeStyle?.includes('cautiously')) {
         // Improved patterns: exclude standalone words that could be false positives
         const recklessPatterns = /\b(?:rushed\s+(?:in|into|forward)|stormed\s+(?:in|into|out)|burst\s+(?:in|into|through)|leapt\s+without|didn't\s+wait|threw\s+caution)\b/i;
         if (recklessPatterns.test(narrativeOriginal)) {
-          if (allowsBreakCat11) {
-            warnings.push(`Reckless behavior detected, but emotional state "${emotionalStateForCat11}" may justify this.`);
-          } else {
-            warnings.push('Narrative shows reckless behavior that may conflict with methodical path personality. Consider setting emotionalState to "desperate", "angry", or "regretful" if intentional.');
-          }
+          warnings.push('Narrative shows reckless behavior that may conflict with methodical path personality');
         }
       }
 
@@ -8858,14 +8964,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         }
       }
 
-      // Verify jackActionStyle field matches context personality
-      if (content.jackActionStyle) {
-        const expectedStyle = personality.riskTolerance === 'low' ? 'cautious' :
-                              personality.riskTolerance === 'high' ? 'direct' : 'balanced';
-        if (content.jackActionStyle !== expectedStyle && content.jackActionStyle !== 'balanced') {
-          warnings.push(`jackActionStyle "${content.jackActionStyle}" may not match path personality (expected "${expectedStyle}")`);
-        }
-      }
+      // NOTE: jackActionStyle field validation removed - field no longer in schema
     }
 
     // =========================================================================
