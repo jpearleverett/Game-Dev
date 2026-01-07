@@ -5044,13 +5044,24 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     parts.push(this._buildKnowledgeSection(context));
     parts.push('</character_knowledge>');
 
-    // Dynamic Part 3: Voice DNA (character-specific dialogue patterns for this scene)
+    // Dynamic Part 3: Voice DNA + Many-Shot Examples (beat-specific)
     const charactersInScene = this._extractCharactersFromContext(context, chapter);
-    const voiceDNA = buildVoiceDNASection(charactersInScene);
+    const beatType = this._getBeatType(chapter, subchapter);
+    const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+
+    // Voice DNA with recent dialogue examples
+    const voiceDNA = buildVoiceDNASection(charactersInScene, context, chapter);
     if (voiceDNA) {
       parts.push('<voice_dna>');
       parts.push(voiceDNA);
       parts.push('</voice_dna>');
+    }
+
+    // Many-shot examples based on current beat type
+    const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+    if (manyShotExamples) {
+      parts.push(manyShotExamples);
+      console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
     }
 
     // Dynamic Part 4: Dramatic Irony (chapter-specific ironies)
@@ -5098,7 +5109,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
     // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
     const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
-    const beatType = this._getBeatType(chapter, subchapter);
+    // Note: beatType already declared earlier for many-shot examples (line 5049)
 
     parts.push(`
 <task>
