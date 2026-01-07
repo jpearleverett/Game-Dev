@@ -230,6 +230,11 @@ export function useNavigationActions(navigation, game, audio) {
     // Pass preserveStatus: true when navigating to CaseFile (narrative-first flow)
     // This keeps the SOLVED status so button stays "Continue Investigation"
     const result = await continueStoryCampaign({ preserveStatus: willNeedNarrativeFirst });
+
+    // IMPORTANT: State has already been updated inside continueStoryCampaign
+    // (activeCaseId is now the next case). We MUST navigate to avoid leaving
+    // the user on CaseSolvedScreen showing the next case's data.
+
     if (result?.ok) {
       // Use result.caseNumber if available (avoids stale closure issues)
       const finalTargetCaseNumber = result.caseNumber || targetCaseNumber;
@@ -239,8 +244,13 @@ export function useNavigationActions(navigation, game, audio) {
       } else {
         navigation.navigate('Board');
       }
+    } else {
+      // Even if continueStoryCampaign had an issue, the state may have been
+      // partially updated. Navigate to CaseFile as fallback to avoid getting
+      // stuck on CaseSolvedScreen with wrong case data.
+      console.warn('[Navigation] continueStoryCampaign result not ok, navigating to CaseFile as fallback:', result?.reason);
+      navigation.navigate('CaseFile');
     }
-    // If not ok, the overlay will show the error/not-configured state
   }, [continueStoryCampaign, navigation, storyCampaign?.activeCaseNumber, needsNarrativeFirst]);
 
   const handleStorySelectCase = useCallback(async (caseId) => {
