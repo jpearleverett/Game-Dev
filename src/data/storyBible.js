@@ -720,8 +720,8 @@ export const CONSISTENCY_RULES = [
 
   // REALITY REVEAL TIMING (Critical pacing constraint)
   'Jack does NOT know the Under-Map is real at the start of Chapter 2.',
-  'The first undeniable reveal that “the world is not what it seems” happens at the END of subchapter 2A (not earlier).',
-  'Before the end of 2A, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).',
+  'The first undeniable reveal that “the world is not what it seems” happens at the END of subchapter 1C (not earlier).',
+  'Before the end of 1C, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).',
 
   // TIMELINE FACTS (EXACT NUMBERS - Never approximate)
   'Jack and Tom Wade have been close friends for exactly 12 years (met in a records job).',
