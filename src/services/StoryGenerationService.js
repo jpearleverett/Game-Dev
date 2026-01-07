@@ -2997,9 +2997,11 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       const decisionPathKey = this._getPathKeyForChapter(chapter, history);
       const decisionEntry = this.getGeneratedEntry(choice.caseNumber, decisionPathKey) || getStoryEntry(choice.caseNumber, 'ROOT');
       // Handle both legacy (decision) and new (pathDecisions) formats
-      // For pathDecisions, use canonical path 1A-2A since Option A/B are consistent across paths
-      const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
-      const chosen = decisionData?.options?.find((o) => o.key === choice.optionKey) || null;
+      // Use player's actual branching path for path-specific decision lookup
+      const decisionData = this._getPathDecisionData(decisionEntry, choice.caseNumber, this.currentBranchingChoices || []);
+      const chosen = decisionData?.options?.find((o) => o.key === choice.optionKey)
+        || (choice.optionKey === 'A' ? decisionData?.optionA : decisionData?.optionB)
+        || null;
 
       const title = chosen?.title || `Option ${choice.optionKey}`;
       const focus = chosen?.focus || '';
@@ -3089,10 +3091,12 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     const decisionPathKey = this._getPathKeyForChapter(chapter, fullChoiceHistory);
     const decisionEntry = this.getGeneratedEntry(choice.caseNumber, decisionPathKey);
     // Handle both legacy (decision) and new (pathDecisions) formats
-    // Use canonical path 1A-2A for consequence generation since Option A/B are consistent across paths
-    const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
-    const decisionContext = decisionData?.options?.find(o => o.key === choice.optionKey);
-    const otherOption = decisionData?.options?.find(o => o.key !== choice.optionKey);
+    // Use player's actual branching path for path-specific decision lookup
+    const decisionData = this._getPathDecisionData(decisionEntry, choice.caseNumber, this.currentBranchingChoices || []);
+    const decisionContext = decisionData?.options?.find(o => o.key === choice.optionKey)
+      || (choice.optionKey === 'A' ? decisionData?.optionA : decisionData?.optionB);
+    const otherOption = decisionData?.options?.find(o => o.key !== choice.optionKey)
+      || (choice.optionKey === 'A' ? decisionData?.optionB : decisionData?.optionA);
 
     // Extract narrative context for richer consequence generation
     const narrativeContext = decisionEntry?.narrative ? decisionEntry.narrative.slice(-2000) : '';
@@ -3418,7 +3422,8 @@ Generate realistic, specific consequences based on the actual narrative content.
             getStoryEntry(choice.caseNumber, 'ROOT');
 
           // Handle both legacy (decision) and new (pathDecisions) formats
-          const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
+          // Use player's actual branching path for path-specific decision lookup
+          const decisionData = this._getPathDecisionData(decisionEntry, choice.caseNumber, this.currentBranchingChoices || []);
           const opt =
             decisionData?.options?.find((o) => o?.key === choice.optionKey) ||
             (choice.optionKey === 'A' ? decisionData?.optionA : decisionData?.optionB) ||
@@ -4095,6 +4100,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         title: chapter1AEntry.title || 'Chapter 1.1',
         narrative: narrativeText1A,
         decision: chapter1AEntry.decision || null,
+        pathDecisions: chapter1AEntry.pathDecisions || null, // Store path-specific decisions for proper lookup
         chapterSummary: chapter1AEntry.chapterSummary || null,
         branchingPath: branchingChoice1A ? `${branchingChoice1A.firstChoice}-${branchingChoice1A.secondChoice}` : null,
         isRecent: true, // Mark as recent to include full text
@@ -4129,6 +4135,7 @@ Generate realistic, specific consequences based on the actual narrative content.
             title: entry.title || `Chapter 1.${sub}`,
             narrative: narrativeText,
             decision: entry.decision || null,
+            pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
             chapterSummary: entry.chapterSummary || null,
             branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
             isRecent: true, // Mark as recent to include full text
@@ -4173,6 +4180,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               narrative: narrativeText, // REALIZED narrative from player's actual path
               chapterSummary: entry.chapterSummary || null,
               decision: entry.decision || null,
+              pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
               branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
               isRecent: true, // Mark all as recent to include full text
             });
@@ -4222,6 +4230,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               narrative: narrativeText, // REALIZED narrative from player's actual path
               chapterSummary: entry.chapterSummary || null,
               decision: entry.decision || null,
+              pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
               branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
               isRecent: true, // Current chapter always recent
             });
@@ -4263,9 +4272,14 @@ Generate realistic, specific consequences based on the actual narrative content.
       const decisionPathKey = this._getPathKeyForChapter(decisionChapter, choiceHistory);
       const decisionEntry = this.getGeneratedEntry(last.caseNumber, decisionPathKey) || getStoryEntry(last.caseNumber, 'ROOT');
       // Handle both legacy (decision) and new (pathDecisions) formats
-      const decisionData = decisionEntry?.pathDecisions?.['1A-2A'] || decisionEntry?.decision;
-      const chosenOption = decisionData?.options?.find((o) => o.key === last.optionKey) || null;
-      const otherOption = decisionData?.options?.find((o) => o.key !== last.optionKey) || null;
+      // Use player's actual branching path for path-specific decision lookup
+      const decisionData = this._getPathDecisionData(decisionEntry, last.caseNumber, branchingChoices);
+      const chosenOption = decisionData?.options?.find((o) => o.key === last.optionKey)
+        || (last.optionKey === 'A' ? decisionData?.optionA : decisionData?.optionB)
+        || null;
+      const otherOption = decisionData?.options?.find((o) => o.key !== last.optionKey)
+        || (last.optionKey === 'A' ? decisionData?.optionB : decisionData?.optionA)
+        || null;
 
       // Prefer stored title/focus from choice history (always available after decision),
       // fall back to looking it up from the decision entry
@@ -5539,10 +5553,27 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
 
         // Also show the decision options that were presented
         // Handle both legacy (decision) and new (pathDecisions) formats
-        const decisionData = ch.pathDecisions?.['1A-2A'] || ch.decision;
-        if (decisionData?.options) {
+        // Use player's actual branching path for path-specific decision lookup
+        let decisionData = ch.decision; // Default to legacy format
+        if (ch.pathDecisions) {
+          // Try to look up path-specific decision using player's branchingPath
+          const playerPath = ch.branchingPath || '1A-2A';
+          if (Array.isArray(ch.pathDecisions)) {
+            decisionData = ch.pathDecisions.find(d => d.pathKey === playerPath)
+              || ch.pathDecisions.find(d => d.pathKey === '1A-2A')
+              || ch.pathDecisions[0]
+              || ch.decision;
+          } else {
+            decisionData = ch.pathDecisions[playerPath] || ch.pathDecisions['1A-2A'] || ch.decision;
+          }
+        }
+        // Handle both formats: options array (legacy) or optionA/optionB (new)
+        const options = decisionData?.options || (decisionData?.optionA && decisionData?.optionB
+          ? [{ key: 'A', ...decisionData.optionA }, { key: 'B', ...decisionData.optionB }]
+          : null);
+        if (options) {
           summary += `\n[Decision options were:\n`;
-          decisionData.options.forEach(opt => {
+          options.forEach(opt => {
             const chosen = choice?.optionKey === opt.key ? ' ← CHOSEN' : '';
             summary += `   ${opt.key}: "${opt.title}" - ${opt.focus}${chosen}\n`;
           });
@@ -6878,6 +6909,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // This tracks which path the player took through branching narratives (e.g., "1B" -> "1B-2C")
     // Used to build the "realized narrative" for context - what the player actually experienced
     const branchingChoices = options?.branchingChoices || [];
+
+    // Store branchingChoices on instance so helper functions can access player's actual path
+    // This enables _getPathDecisionData to look up path-specific decisions correctly
+    this.currentBranchingChoices = branchingChoices;
 
     // Deduplication: Return existing promise if generation is already in flight for this exact content
     // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
@@ -11336,6 +11371,51 @@ If no conflicts, return: {"conflicts": []}`;
     if (!caseNumber) return 1;
     const chapterPart = caseNumber.slice(0, 3);
     return parseInt(chapterPart, 10) || 1;
+  }
+
+  /**
+   * Get the path-specific decision data for a case, using the player's actual branching path.
+   *
+   * For pathDecisions format: looks up the player's specific path (e.g., "1B-2C") from branchingChoices
+   * Falls back to canonical "1A-2A" if no branchingChoice exists, then to legacy decision format.
+   *
+   * @param {Object} entry - The story entry containing pathDecisions or decision
+   * @param {string} caseNumber - The case number to look up (e.g., "001C")
+   * @param {Array} branchingChoices - Player's branching choices array
+   * @returns {Object|null} The decision data (intro, optionA, optionB, or options array)
+   */
+  _getPathDecisionData(entry, caseNumber, branchingChoices = []) {
+    if (!entry) return null;
+
+    // Legacy format: single decision object
+    if (!entry.pathDecisions) {
+      return entry.decision || null;
+    }
+
+    // New format: 9 path-specific decisions
+    // Find the player's branching choice for this case
+    const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNumber);
+    const playerPath = branchingChoice?.secondChoice || null;
+
+    // Support both array format (new) and object format (legacy pathDecisions)
+    if (Array.isArray(entry.pathDecisions)) {
+      // Array format: find by pathKey property
+      if (playerPath) {
+        const pathSpecific = entry.pathDecisions.find(d => d.pathKey === playerPath);
+        if (pathSpecific) return pathSpecific;
+      }
+      // Fallback chain: canonical path -> first entry
+      return entry.pathDecisions.find(d => d.pathKey === '1A-2A')
+        || entry.pathDecisions[0]
+        || entry.decision
+        || null;
+    } else {
+      // Object format: lookup by key
+      if (playerPath && entry.pathDecisions[playerPath]) {
+        return entry.pathDecisions[playerPath];
+      }
+      return entry.pathDecisions['1A-2A'] || entry.decision || null;
+    }
   }
 
   _shuffleArray(array) {
