@@ -828,6 +828,9 @@ The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
 ## PATH ENDINGS (What the player discovered/experienced):
 {{pathSummaries}}
 
+## PATH STRUCTURED NOTES (Use these to stay grounded; do not invent new named entities)
+{{pathStructuredNotes}}
+
 ## BASE DECISION (MUST REMAIN THE SAME TWO DIRECTIONS)
 You are tailoring the decision framing per-path, but you are NOT inventing new unrelated choices.
 All 9 pathDecisions MUST still represent the same underlying binary choice as the base decision below.
@@ -4084,6 +4087,17 @@ Generate realistic, specific consequences based on the actual narrative content.
       narrativeThreads: [], // Active story threads to maintain
     };
 
+    // Branching narrative path formatting helper.
+    // Our stored `secondChoice` is expected to be the full key (e.g., "1B-2C").
+    // Logging it as `${firstChoice}-${secondChoice}` can produce confusing doubles like "1B-1B-2C".
+    const formatBranchingPath = (firstChoice, secondChoice) => {
+      const first = String(firstChoice || '').trim();
+      const second = String(secondChoice || '').trim();
+      if (!first && !second) return null;
+      if (first && second && second.startsWith(`${first}-`)) return second;
+      return first && second ? `${first}-${second}` : (second || first);
+    };
+
     // Add Chapter 1A content (static) - FULL TEXT
     // Note: Only 1A is static; 1B and 1C are dynamically generated
     const chapter1AEntry = getStoryEntry('001A', 'ROOT');
@@ -4099,7 +4113,7 @@ Generate realistic, specific consequences based on the actual narrative content.
           branchingChoice1A.firstChoice,
           branchingChoice1A.secondChoice
         );
-        console.log(`[StoryGenerationService] Using realized narrative for 001A: path ${branchingChoice1A.firstChoice}-${branchingChoice1A.secondChoice}`);
+        console.log(`[StoryGenerationService] Using realized narrative for 001A: path ${formatBranchingPath(branchingChoice1A.firstChoice, branchingChoice1A.secondChoice)}`);
       }
 
       context.previousChapters.push({
@@ -4111,7 +4125,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         decision: chapter1AEntry.decision || null,
         pathDecisions: chapter1AEntry.pathDecisions || null, // Store path-specific decisions for proper lookup
         chapterSummary: chapter1AEntry.chapterSummary || null,
-        branchingPath: branchingChoice1A ? `${branchingChoice1A.firstChoice}-${branchingChoice1A.secondChoice}` : null,
+        branchingPath: branchingChoice1A ? formatBranchingPath(branchingChoice1A.firstChoice, branchingChoice1A.secondChoice) : null,
         isRecent: true, // Mark as recent to include full text
       });
     }
@@ -4133,7 +4147,7 @@ Generate realistic, specific consequences based on the actual narrative content.
             branchingChoice.firstChoice,
             branchingChoice.secondChoice
           );
-          console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${branchingChoice.firstChoice}-${branchingChoice.secondChoice}`);
+          console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
         }
 
         if (narrativeText) {
@@ -4146,7 +4160,7 @@ Generate realistic, specific consequences based on the actual narrative content.
             decision: entry.decision || null,
             pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
             chapterSummary: entry.chapterSummary || null,
-            branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
+            branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
             isRecent: true, // Mark as recent to include full text
           });
         }
@@ -4177,7 +4191,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               branchingChoice.firstChoice,
               branchingChoice.secondChoice
             );
-            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${branchingChoice.firstChoice}-${branchingChoice.secondChoice}`);
+            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
           }
 
           if (narrativeText) {
@@ -4190,7 +4204,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               chapterSummary: entry.chapterSummary || null,
               decision: entry.decision || null,
               pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
-              branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
+              branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
               isRecent: true, // Mark all as recent to include full text
             });
           }
@@ -4227,7 +4241,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               branchingChoice.firstChoice,
               branchingChoice.secondChoice
             );
-            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${branchingChoice.firstChoice}-${branchingChoice.secondChoice}`);
+            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
           }
 
           if (narrativeText) {
@@ -4240,7 +4254,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               chapterSummary: entry.chapterSummary || null,
               decision: entry.decision || null,
               pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
-              branchingPath: branchingChoice ? `${branchingChoice.firstChoice}-${branchingChoice.secondChoice}` : null,
+              branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
               isRecent: true, // Current chapter always recent
             });
           }
@@ -7261,6 +7275,75 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               }).join('\n');
             }).join('\n');
 
+            // Build richer structured notes without echoing full narrative (avoids RECITATION).
+            // We include: per-path labels, summaries, evidence card labels, and extracted keywords.
+            const extractKeywords = (text, max = 10) => {
+              const STOP = new Set([
+                'the','a','an','and','or','to','of','in','on','for','with','at','from','into','over','under','before','after',
+                'he','she','they','him','her','them','his','their','its','this','that','these','those','as','is','be','been','being',
+                'jack','halloway','now','then',
+              ]);
+              const tokens = String(text || '')
+                .toLowerCase()
+                .split(/[^a-z0-9]+/g)
+                .map((t) => t.trim())
+                .filter((t) => t && t.length >= 4 && !STOP.has(t));
+              const uniq = [];
+              for (const t of tokens) {
+                if (!uniq.includes(t)) uniq.push(t);
+                if (uniq.length >= max) break;
+              }
+              return uniq;
+            };
+
+            const getEvidenceCards = (details) => {
+              const cards = [];
+              const arr = Array.isArray(details) ? details : [];
+              for (const d of arr) {
+                const label = String(d?.evidenceCard || '').trim();
+                if (label && !cards.includes(label)) cards.push(label);
+              }
+              return cards;
+            };
+
+            const firstChoiceByKey = {};
+            for (const opt of firstChoiceOpts) {
+              if (opt?.key) firstChoiceByKey[String(opt.key).toUpperCase()] = opt;
+            }
+
+            const pathStructuredNotes = secondChoices.map((sc) => {
+              const afterChoice = String(sc.afterChoice || '').toUpperCase();
+              const first = firstChoiceByKey[afterChoice] || null;
+              const opts = Array.isArray(sc.options) ? sc.options : [];
+              return opts.map((endOpt) => {
+                const rawKey = String(endOpt?.key || '').toUpperCase();
+                // Normalize keys if generator returned "2C" (we still want stable path keys in prompt)
+                const normalizedKey = /^2[ABC]$/.test(rawKey) && /^1[ABC]$/.test(afterChoice) ? `${afterChoice}-${rawKey}` : rawKey;
+                const evidenceCards = [
+                  ...getEvidenceCards(branchingNarrative?.opening?.details),
+                  ...getEvidenceCards(first?.details),
+                  ...getEvidenceCards(endOpt?.details),
+                ].slice(0, 6);
+                const combinedText = [
+                  first?.label,
+                  first?.summary,
+                  endOpt?.label,
+                  endOpt?.summary,
+                  evidenceCards.join(' '),
+                ].filter(Boolean).join(' | ');
+                const keywords = extractKeywords(combinedText, 10);
+                return [
+                  `- ${normalizedKey}:`,
+                  `  - firstChoiceLabel: "${first?.label || '?'}"`,
+                  `  - firstChoiceSummary: "${first?.summary || inferTone(first?.label)}"`,
+                  `  - endingLabel: "${endOpt?.label || '?'}"`,
+                  `  - endingSummary: "${endOpt?.summary || pathSummaryMap[normalizedKey] || ''}"`,
+                  `  - evidenceCards: [${evidenceCards.map((c) => `"${c}"`).join(', ')}]`,
+                  `  - keywords: [${keywords.map((k) => `"${k}"`).join(', ')}]`,
+                ].join('\n');
+              }).join('\n');
+            }).join('\n');
+
             const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
               // First choice options with labels and summaries (not full narrative)
               .replace('{{firstChoice1ALabel}}', firstChoiceOpts[0]?.label || 'Option 1A')
@@ -7271,6 +7354,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               .replace('{{firstChoice1CSummary}}', firstChoiceOpts[2]?.summary || inferTone(firstChoiceOpts[2]?.label))
               // Path summaries (15-25 words each, not full narrative content)
               .replace('{{pathSummaries}}', pathSummaries || 'Not available')
+              .replace('{{pathStructuredNotes}}', pathStructuredNotes || 'Not available')
               // Simple decision base
               .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
               .replace('{{optionAFocus}}', generatedContent.decision?.optionA?.focus || 'Not specified')

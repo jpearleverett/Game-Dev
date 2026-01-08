@@ -249,6 +249,42 @@ export function useStoryEngine(progress, updateProgress) {
       return;
     }
 
+    // Normalize + validate choice keys.
+    // Branching narrative keys are expected to be:
+    // - firstChoice: "1A" | "1B" | "1C"
+    // - secondChoice: "1A-2A" .. "1C-2C"
+    //
+    // We've seen malformed keys get persisted (e.g. "A-A-B" or "1B-1B-2C").
+    // Reject/normalize here so downstream story context and pathDecisions lookup stay correct.
+    const fc = String(firstChoice).trim().toUpperCase();
+    let sc = String(secondChoice).trim().toUpperCase();
+
+    const firstOk = /^1[ABC]$/.test(fc);
+    const secondFullOk = /^1[ABC]-2[ABC]$/.test(sc);
+    const secondShortOk = /^2[ABC]$/.test(sc);
+
+    if (firstOk && secondShortOk) {
+      sc = `${fc}-${sc}`;
+    }
+
+    // If caller passed a duplicated form like "1B-1B-2C", collapse it.
+    // Keep the trailing "1B-2C" segment.
+    const dupMatch = sc.match(/^(1[ABC])-(1[ABC]-2[ABC])$/);
+    if (dupMatch) {
+      sc = dupMatch[2];
+    }
+
+    if (!firstOk || !/^1[ABC]-2[ABC]$/.test(sc)) {
+      console.warn('[useStoryEngine] Rejecting malformed branching choice keys:', {
+        caseNumber,
+        firstChoice,
+        secondChoice,
+        normalizedFirst: fc,
+        normalizedSecond: sc,
+      });
+      return;
+    }
+
     const existingChoices = storyCampaign.branchingChoices || [];
 
     // Check if we already have a choice for this case (shouldn't happen, but be safe)
@@ -260,8 +296,8 @@ export function useStoryEngine(progress, updateProgress) {
 
     const newChoice = {
       caseNumber,
-      firstChoice,
-      secondChoice,
+      firstChoice: fc,
+      secondChoice: sc,
       completedAt: new Date().toISOString(),
     };
 
@@ -272,7 +308,7 @@ export function useStoryEngine(progress, updateProgress) {
       branchingChoices: updatedChoices,
     };
 
-    console.log(`[useStoryEngine] Saving branching choice for ${caseNumber}: ${firstChoice} -> ${secondChoice}`);
+    console.log(`[useStoryEngine] Saving branching choice for ${caseNumber}: ${fc} -> ${sc}`);
 
     updateProgress({
       storyCampaign: updatedStory,
