@@ -58,7 +58,7 @@ export const CHARACTER_REFERENCE = {
   antagonist: {
     name: 'Victoria Blackwell',
     aliases: ['The Midnight Cartographer', 'V.A.', 'Cartographer'],
-    role: 'Primary antagonist/guide; architect of Jack's route through the mystery',
+    role: "Primary antagonist/guide; architect of Jack's route through the mystery",
     age: '30s',
     physicalDescription: {
       appearance: 'Controlled elegance; difficult to read; never looks rushed',
@@ -69,7 +69,7 @@ export const CHARACTER_REFERENCE = {
       coreTraits: [
         'Strategic, patient, rules-minded',
         'Speaks in constraints and consequences',
-        'Protective of the Under-Map's "grammar" while exploiting it',
+        'Protective of the Under-Map\'s "grammar" while exploiting it',
       ],
       flaws: [
         'Treats people like routes',
@@ -81,7 +81,7 @@ export const CHARACTER_REFERENCE = {
       ],
     },
     backstory: {
-      origin: 'Connected to Ashport's semiotics/urban-mapping underground',
+      origin: 'Connected to Ashport\'s semiotics/urban-mapping underground',
       motive: 'Force Jack to see the pattern, then decide what kind of person follows it',
     },
     methods: {
@@ -169,7 +169,7 @@ export const VOICE_DNA = {
     ],
     physicalTells: [
       'Stillness as dominance',
-      'Touches nothing unless it's deliberate',
+      'Touches nothing unless it\'s deliberate',
     ],
     dialogueRhythm: [
       'Waits for Jack to speak first',
