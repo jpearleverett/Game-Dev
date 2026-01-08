@@ -221,56 +221,31 @@ export function useNavigationActions(navigation, game, audio) {
   }, [handleStoryStart]);
 
   const handleStoryContinue = useCallback(async () => {
-    // NARRATIVE-FIRST FLOW: Pre-compute whether we need narrative before puzzle
-    // This determines whether to preserve the SOLVED status during navigation
-    // (prevents the CaseSolvedScreen button from flickering to "Retry Case")
-    const targetCaseNumber = storyCampaign?.activeCaseNumber;
-    const willNeedNarrativeFirst = needsNarrativeFirst(targetCaseNumber);
+    // Call continueStoryCampaign WITHOUT preserveStatus - this was causing navigation issues
+    // The button may briefly show wrong text during the async call, but navigation will work
+    const result = await continueStoryCampaign();
 
-    console.log('[Navigation] handleStoryContinue called:', {
-      targetCaseNumber,
-      willNeedNarrativeFirst,
-      completedCaseNumbers: storyCampaign?.completedCaseNumbers,
-      branchingChoices: storyCampaign?.branchingChoices?.map(bc => bc.caseNumber),
-    });
-
-    // Pass preserveStatus: true when navigating to CaseFile (narrative-first flow)
-    // This keeps the SOLVED status so button stays "Continue Investigation"
-    const result = await continueStoryCampaign({ preserveStatus: willNeedNarrativeFirst });
-
-    console.log('[Navigation] continueStoryCampaign returned:', {
+    console.log('[Navigation] handleStoryContinue result:', {
       ok: result?.ok,
       caseNumber: result?.caseNumber,
       reason: result?.reason,
     });
 
-    // IMPORTANT: State has already been updated inside continueStoryCampaign
-    // (activeCaseId is now the next case). We MUST navigate to avoid leaving
-    // the user on CaseSolvedScreen showing the next case's data.
+    // Get the target case number from the result (fresh value, not from closure)
+    const targetCaseNumber = result?.caseNumber;
 
-    if (result?.ok) {
-      // Use result.caseNumber if available (avoids stale closure issues)
-      const finalTargetCaseNumber = result.caseNumber || targetCaseNumber;
-      const shouldShowNarrative = needsNarrativeFirst(finalTargetCaseNumber);
-      console.log('[Navigation] Checking needsNarrativeFirst:', {
-        finalTargetCaseNumber,
-        shouldShowNarrative,
-      });
-      if (shouldShowNarrative) {
-        console.log('[Navigation] Narrative-first flow - navigating to CaseFile');
-        navigation.navigate('CaseFile');
-      } else {
-        console.log('[Navigation] Narrative already read - navigating to Board');
-        navigation.navigate('Board');
-      }
+    if (result?.ok && targetCaseNumber) {
+      // For the next subchapter, we ALWAYS need to show narrative first
+      // because the player hasn't read it yet (they just advanced from previous subchapter)
+      // Use navigation.replace to ensure we actually leave CaseSolvedScreen
+      console.log('[Navigation] Navigating to CaseFile for', targetCaseNumber);
+      navigation.replace('CaseFile');
     } else {
-      // Even if continueStoryCampaign had an issue, the state may have been
-      // partially updated. Navigate to CaseFile as fallback to avoid getting
-      // stuck on CaseSolvedScreen with wrong case data.
-      console.warn('[Navigation] continueStoryCampaign result not ok, navigating to CaseFile as fallback:', result?.reason);
-      navigation.navigate('CaseFile');
+      // Fallback: always navigate to CaseFile to avoid getting stuck
+      console.warn('[Navigation] continueStoryCampaign issue, navigating to CaseFile as fallback:', result?.reason);
+      navigation.replace('CaseFile');
     }
-  }, [continueStoryCampaign, navigation, storyCampaign?.activeCaseNumber, needsNarrativeFirst]);
+  }, [continueStoryCampaign, navigation]);
 
   const handleStorySelectCase = useCallback(async (caseId) => {
     const opened = await openStoryCase(caseId);
