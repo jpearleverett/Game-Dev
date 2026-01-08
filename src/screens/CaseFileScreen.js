@@ -382,7 +382,51 @@ export default function CaseFileScreen({
   );
 
   // Game State Logic
-  const storyDecision = activeCase?.storyDecision;
+  // Decision data can be:
+  // - `activeCase.storyDecision` (injected by caseMerger after looking up pathDecisions)
+  // - `storyMeta.decision` (legacy single decision)
+  // - `storyMeta.pathDecisions` (new: 9 decisions keyed by branching narrative ending path)
+  //
+  // For subchapter C, we want the decision options to reflect the *player's realized path*
+  // through the branching narrative immediately after the second choice is made, even before
+  // persistence updates propagate back into `activeCase`.
+  const storyDecision = useMemo(() => {
+    const fallback = activeCase?.storyDecision || storyMeta?.decision || null;
+
+    const metaPathDecisions = storyMeta?.pathDecisions;
+    if (!metaPathDecisions) return fallback;
+
+    // Only C subchapters use pathDecisions.
+    if (subchapterLetter !== 'C') return fallback;
+
+    // Prefer the in-session completed path; fall back to persisted branching choice; then default.
+    const completedPathKey =
+      (typeof branchingProgress?.path === 'string' && branchingProgress.path) ||
+      (typeof existingBranchingChoice?.secondChoice === 'string' && existingBranchingChoice.secondChoice) ||
+      null;
+
+    const defaultPathKey = '1A-2A';
+    const pathKey = completedPathKey || defaultPathKey;
+
+    if (Array.isArray(metaPathDecisions)) {
+      return (
+        metaPathDecisions.find((d) => d?.pathKey === pathKey) ||
+        metaPathDecisions.find((d) => d?.pathKey === defaultPathKey) ||
+        metaPathDecisions[0] ||
+        fallback
+      );
+    }
+
+    // Legacy object map format
+    return metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
+  }, [
+    activeCase?.storyDecision,
+    storyMeta?.decision,
+    storyMeta?.pathDecisions,
+    subchapterLetter,
+    branchingProgress?.path,
+    existingBranchingChoice?.secondChoice,
+  ]);
   const awaitingDecision = Boolean(storyDecision && storyCampaign?.awaitingDecision && storyCampaign?.pendingDecisionCase === caseNumber);
   const storyLocked = Boolean(!awaitingDecision && storyUnlockAt);
   const storyActiveCaseNumber = storyCampaign?.activeCaseNumber;
@@ -460,10 +504,13 @@ export default function CaseFileScreen({
   // 2. Narrative-first C subchapter: before puzzle, but ONLY after branching narrative is complete
   //    (existingBranchingChoice means player has made both sets of branching choices)
   // 3. For Chapter 1 (no branching narrative): show when in story mode C subchapter before puzzle
+  const branchingDecisionReady = hasBranchingNarrative
+    ? Boolean(existingBranchingChoice) || Boolean(branchingProgress) || narrativeComplete
+    : true;
   const showDecisionOptions = showDecision && (
     awaitingDecision ||
     (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision && (
-      hasBranchingNarrative ? existingBranchingChoice : true
+      branchingDecisionReady
     ))
   );
 
