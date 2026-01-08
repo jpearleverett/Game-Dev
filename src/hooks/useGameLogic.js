@@ -193,7 +193,7 @@ export function useGameLogic(cases, progress, updateProgress) {
       });
   }, [cases]);
   
-  const setActiveCaseInternal = useCallback((caseId, { preserveStatus = false } = {}) => {
+  const setActiveCaseInternal = useCallback((caseId) => {
       let targetCase = cases.find(c => c.id === caseId);
       if (!targetCase) return;
 
@@ -207,9 +207,6 @@ export function useGameLogic(cases, progress, updateProgress) {
               activeCaseId: targetCase.id,
               attemptsRemaining: targetCase.attempts,
               layout: { caseId: targetCase.id, grid },
-              // When navigating from CaseSolvedScreen to CaseFile (narrative-first flow),
-              // preserve the SOLVED status so the button doesn't flicker to "Retry Case"
-              preserveStatus,
           }
       });
   }, [cases, assignBoardLayout, stableStoryCampaign]);
