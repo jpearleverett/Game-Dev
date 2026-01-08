@@ -7320,7 +7320,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 // Normalize keys if generator returned "2C" (we still want stable path keys in prompt)
                 const normalizedKey = /^2[ABC]$/.test(rawKey) && /^1[ABC]$/.test(afterChoice) ? `${afterChoice}-${rawKey}` : rawKey;
                 const evidenceCards = [
-                  ...getEvidenceCards(branchingNarrative?.opening?.details),
+                  // NOTE: Use `bn` (generatedContent.branchingNarrative) in this scope.
+                  // Referencing an undefined identifier here can break the whole second-call pipeline.
+                  ...getEvidenceCards(bn?.opening?.details),
                   ...getEvidenceCards(first?.details),
                   ...getEvidenceCards(endOpt?.details),
                 ].slice(0, 6);
