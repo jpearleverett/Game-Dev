@@ -4905,17 +4905,8 @@ ${extendedExamples}
     parts.push('</style_examples>');
     console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
-    // Part 5: Consistency Rules (STATIC)
-    const rulesSection = `## CONSISTENCY CHECKLIST - Self-Validation Rules
-
-Before generating, verify these facts are never contradicted:
-
-${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
-`;
-    parts.push('<consistency_rules>');
-    parts.push(rulesSection);
-    parts.push('</consistency_rules>');
-    console.log(`[Cache] Consistency rules: ${rulesSection.length} chars`);
+    // NOTE: Consistency rules NOT included in static cache - they are in _buildDynamicPrompt
+    // so that thread data can be updated dynamically per request
 
     const fullContent = parts.join('\n\n');
     console.log(`[Cache] TOTAL static content: ${fullContent.length} chars (~${Math.round(fullContent.length / 4)} tokens est.)`);
@@ -5173,7 +5164,8 @@ If any check fails, revise before returning your response.
     const parts = [];
 
     // Part 1: Story Bible Grounding (RAG)
-    parts.push(this._buildGroundingSection(context));
+    // Note: includeStyle=false because style is in Part 5 (_buildStyleSection)
+    parts.push(this._buildGroundingSection(context, { includeStyle: false }));
 
     // Part 2: Complete Story So Far (FULL TEXT)
     parts.push(this._buildStorySummarySection(context));
@@ -5430,12 +5422,6 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 - Atmosphere: ${safe(ABSOLUTE_FACTS.setting.atmosphere)}
 - Core mystery: ${safe(ABSOLUTE_FACTS.setting.coreMystery)}
 
-### CORE CONSTRAINT (Reveal timing)
-- Jack does NOT know the Under-Map is real until the END of subchapter 1C.
-- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 1C.
-- Before the end of 1C, anomalies must be plausibly deniable; keep the uncanny at the edges.
-- After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
-
 ### CREATIVE FREEDOM
 - The LLM may generate any supporting characters, locations, and plot elements as the story requires.
 - Only Jack Halloway and Victoria Blackwell have canonical definitions.
@@ -5617,20 +5603,8 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
       summary += '\n';
     }
 
-    // Add strong continuation reminder at the end
-    summary += `\n${'#'.repeat(80)}\n`;
-    summary += `## CONTINUATION REQUIREMENTS\n\n`;
-    summary += `You are writing Chapter ${currentChapter}, Subchapter ${currentSubchapter} (${['A', 'B', 'C'][currentSubchapter - 1]}).\n\n`;
-    summary += `1. **DO NOT** summarize or recap what happened - the player already read it\n`;
-    summary += `2. **DO NOT** skip scenes or time jumps without showing what happened\n`;
-    summary += `3. **START** your narrative exactly where the previous subchapter ended\n`;
-    summary += `4. **CONTINUE** the story in real-time, scene by scene\n`;
-    if (currentSubchapter === 1 && context.lastDecision) {
-      summary += `5. **CRITICAL**: The player chose "${context.lastDecision.chosenTitle || 'Option ' + context.lastDecision.optionKey}" - SHOW THIS SCENE HAPPENING NOW\n`;
-      summary += `   - DO NOT write "After Jack did X..." - WRITE THE SCENE OF JACK DOING X\n`;
-      summary += `   - First 200+ words should be the actual scene of the chosen action\n`;
-    }
-    summary += `${'#'.repeat(80)}\n`;
+    // NOTE: Continuation requirements are in _buildSceneStateSection and _buildTaskSection
+    // to avoid duplication
 
     return summary;
   }
