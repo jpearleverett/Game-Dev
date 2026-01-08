@@ -828,17 +828,26 @@ The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
 ## PATH ENDINGS (What the player discovered/experienced):
 {{pathSummaries}}
 
-## BASE DECISION THEME (Use as inspiration, NOT as exact titles):
-- Theme A: "{{optionATitle}}" ({{optionAFocus}})
-- Theme B: "{{optionBTitle}}" ({{optionBFocus}})
+## BASE DECISION (MUST REMAIN THE SAME TWO DIRECTIONS)
+You are tailoring the decision framing per-path, but you are NOT inventing new unrelated choices.
+All 9 pathDecisions MUST still represent the same underlying binary choice as the base decision below.
+
+- Base Option A (anchor): "{{optionATitle}}" ({{optionAFocus}})
+- Base Option B (anchor): "{{optionBTitle}}" ({{optionBFocus}})
+
+### HARD CONSTRAINTS
+- Option A titles across paths must remain a close paraphrase of Base Option A (keep the same core nouns/verbs).
+- Option B titles across paths must remain a close paraphrase of Base Option B (keep the same core nouns/verbs).
+- DO NOT introduce new locations/characters/objects not mentioned in the first-choice labels/summaries or path summaries.
+- If unsure, keep titles closer to the base anchors rather than drifting.
 
 ## YOUR TASK
 For each of the 9 paths, generate a UNIQUE decision variant:
 
-1. **UNIQUE TITLES**: Create path-specific option titles that reflect what THIS player discovered
+1. **UNIQUE TITLES (WITH ANCHORS)**: Create path-specific option titles that reflect what THIS player discovered
    - If path 1A-2A discovered evidence X, the options should reference X
    - If path 1C-2B had a different revelation, options should reflect THAT
-   - Avoid generic titles that could apply to any path
+   - BUT each title must still clearly be Option A vs Option B from the base decision above
 
 2. **PATH-SPECIFIC INTRO**: Frame the decision (1-2 sentences) based on what happened in that specific path
 
@@ -7240,12 +7249,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
             // Build path summaries from the generated branching narrative
             // Uses the new 'summary' field (15-25 words each) instead of full narrative excerpts
+            const pathSummaryMap = {};
             const pathSummaries = secondChoices.map((sc, scIdx) => {
               const afterChoice = sc.afterChoice || `1${String.fromCharCode(65 + scIdx)}`;
               const opts = sc.options || [];
               return opts.map((opt, optIdx) => {
                 const pathKey = `${afterChoice}-2${String.fromCharCode(65 + optIdx)}`;
                 const summary = opt.summary || `Player chose "${opt.label || 'an option'}"`;
+                pathSummaryMap[pathKey] = summary;
                 return `- ${pathKey}: ${summary}`;
               }).join('\n');
             }).join('\n');
@@ -7372,6 +7383,52 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               console.log(`[StoryGenerationService] 📊 Path-specific decisions received:`);
               for (const [pathKey, decision] of Object.entries(pathDecisionsObj)) {
                 console.log(`  - ${pathKey}: A="${decision.optionA?.title || '?'}" | B="${decision.optionB?.title || '?'}"`);
+              }
+
+              // Guardrail: ensure pathDecisions stay aligned to the base decision.
+              // If the model drifts (e.g. returns unrelated actions), fall back to base decision for all paths
+              // so the UI stays coherent with the narrative.
+              const baseA = generatedContent.decision?.optionA?.title || '';
+              const baseB = generatedContent.decision?.optionB?.title || '';
+              const tokenize = (text) =>
+                String(text || '')
+                  .toLowerCase()
+                  .split(/[^a-z0-9]+/g)
+                  .map((t) => t.trim())
+                  .filter(Boolean);
+              const STOP = new Set(['the','a','an','and','or','to','of','in','on','for','with','at','from','into','over','under','before','after','now','then','alone']);
+              const overlap = (title, baseTitle) => {
+                const a = new Set(tokenize(title).filter((t) => t.length >= 3 && !STOP.has(t)));
+                const b = new Set(tokenize(baseTitle).filter((t) => t.length >= 3 && !STOP.has(t)));
+                if (!a.size || !b.size) return false;
+                for (const t of a) if (b.has(t)) return true;
+                return false;
+              };
+
+              let driftCount = 0;
+              for (const d of Object.values(pathDecisionsObj)) {
+                if (!overlap(d?.optionA?.title, baseA)) driftCount += 1;
+                if (!overlap(d?.optionB?.title, baseB)) driftCount += 1;
+              }
+
+              // If more than a couple options drift, the set is not trustworthy.
+              if (driftCount >= 4) {
+                console.warn(`[StoryGenerationService] ⚠️ pathDecisions drift detected (${driftCount} mismatches). Falling back to base decision for all paths.`);
+                const allPathKeys = [
+                  '1A-2A','1A-2B','1A-2C',
+                  '1B-2A','1B-2B','1B-2C',
+                  '1C-2A','1C-2B','1C-2C',
+                ];
+                const fallbackObj = {};
+                for (const pk of allPathKeys) {
+                  const summary = pathSummaryMap[pk] || '';
+                  fallbackObj[pk] = {
+                    intro: summary ? `${summary}` : (generatedContent.decision?.intro || ''),
+                    optionA: { ...(generatedContent.decision?.optionA || { key: 'A', title: 'Option A', focus: '', personalityAlignment: 'balanced' }), key: 'A' },
+                    optionB: { ...(generatedContent.decision?.optionB || { key: 'B', title: 'Option B', focus: '', personalityAlignment: 'balanced' }), key: 'B' },
+                  };
+                }
+                generatedContent.pathDecisions = fallbackObj;
               }
 
               llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
