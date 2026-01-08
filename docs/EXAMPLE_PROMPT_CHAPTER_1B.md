@@ -333,8 +333,107 @@ Murphy's expression didn't change, but her hand tightened on the doorframe. 'And
 - Asks for specifics, not feelings
 - Cuts off explanations with a direct question
 - Lets silence test the other person
+
+---
+
+## EXTENDED EXAMPLE: COMPLETE TENSION SCENE
+Study how this scene builds tension through dialogue, physical action, and emotional undercurrent:
+
+She found some plastic gloves under the sink, ones she used when cleaning the toilet, and she put them on and checked for any tears in the rubber. When she was satisfied there were none, she took his shirt from the sink and his jeans off the floor. The jeans were dark with blood, too, and left a smear on the white tile.
+
+"How'd you get it on your jeans?"
+
+"What?"
+
+"The blood."
+
+He looked at them hanging from her hand. He looked at the floor. "I was kneeling over him." He shrugged. "I dunno. I guess it splashed up, like on the shirt."
+
+"Oh."
+
+He met her eyes. "Yeah. Oh."
+
+[...scene continues with psychological complicity building through domestic action...]
+
+---
+
+## EXTENDED EXAMPLE: REVELATION MOMENT
+Study how this scene delivers a game-changing revelation while maintaining emotional impact:
+
+[Full revelation scene from EXTENDED_STYLE_GROUNDING.revelationScene]
+
+---
+
+## EXTENDED EXAMPLE: CHAPTER ENDING (CLIFFHANGER)
+Study how this scene creates unbearable forward momentum:
+
+[Full cliffhanger scene from EXTENDED_STYLE_GROUNDING.chapterEnding]
+
+---
+
+## ANNOTATED EXAMPLE: Physical Emotion
+"[Passage showing emotion through physical action]"
+
+WHY THIS WORKS:
+- Physical behavior replaces internal monologue
+- Tension conveyed through what the body does, not what the mind thinks
+- Reader infers emotional state without being told
+
+## ANNOTATED EXAMPLE: Dialogue Subtext
+"[Passage showing layered dialogue]"
+
+WHY THIS WORKS:
+- Surface conversation masks actual meaning
+- Reader feels the gap between words and intent
+- Character reveals themselves through what they don't say
+
+[...10+ more annotated examples covering: tension building, chapter hooks, sensory world-building, character through action, crowd as character, dialogue revealing class, threat through normality, complex emotion through object, waiting as character, psychological complicity...]
 </style_examples>
 ```
+
+---
+
+### Section 4B: Many-Shot Examples (Beat-Specific)
+
+For Chapter 1B with beat type `INVESTIGATION`, the prompt includes **15 scene excerpts** from Dennis Lehane's "Mystic River" selected from these categories:
+- `investigation` (36 examples)
+- `interrogation` (examples)
+- `internal_monologue` (examples)
+
+```markdown
+## MANY-SHOT LEARNING: INVESTIGATION SCENES
+Study these 15 scene excerpts from Dennis Lehane's "Mystic River" to absorb patterns for investigation:
+
+---
+EXAMPLE 1:
+See if any detectives would have picked up a kid for fighting on this street." "A kid." "Dave Boyle." "Oh, Jesus. His mother." "Let's hold off on that. Okay? Let's just see what the police say. Right?" Sean's mother went back inside. Sean looked at his father. He didn't seem to know where to put his hands. He put them in his pockets, then he pulled them out, wiped them on his pants...
+
+---
+EXAMPLE 2:
+"Jimmy?" "Here, Drew." "Sorry. It was Diane Cestra slept over. She's in there on the floor of Eve's bedroom, but no Katie." The flutter in Jimmy's chest stopped hard, as if it had been pinched between tweezers. "Hey, no problem." "Eve said Katie dropped them off round one? Didn't say where she was going." "Okay, man." Jimmy put a false brightness into his tone. "I'll track her down."...
+
+---
+EXAMPLE 3:
+He relayed the information to Dispatch and Dispatch sent a unit out to Sydney Street. One of the patrolmen called back and requested more units, a Crime Scene tech or two, and, oh yeah, maybe you want to send a couple Homicides down or somebody like that. Just an idea. "Have you found a body, Thirty-three? Over." "Ah, negative, Dispatch." "Thirty-three, why the request for Homicide if there's no body? Over." "Looks of this car, Dispatch? I kinda feel like we're going to find one around here sooner or later."...
+
+[...12 more examples...]
+
+---
+These scenes demonstrate the natural rhythm, dialogue patterns, and emotional beats characteristic of masterful noir fiction. Let them guide your voice, pacing, and scene construction.
+```
+
+**Category mapping for many-shot examples:**
+
+| Beat Type | Categories Used |
+|-----------|-----------------|
+| `INVESTIGATION` | investigation, interrogation, internal_monologue |
+| `CHASE` | action, dialogue_tension |
+| `BOTTLE_EPISODE` | dialogue_tension, internal_monologue, confrontation |
+| `CONFRONTATION` | confrontation, dialogue_tension, revelation |
+| `BETRAYAL` | revelation, aftermath, darkest_moment |
+| `Opening/Hook (A)` | setup, atmospheric, internal_monologue |
+| `Development/Conflict (B)` | dialogue_tension, confrontation, investigation |
+| `Resolution/Decision (C)` | decision_point, revelation, aftermath |
 
 ---
 
@@ -709,13 +808,43 @@ The model must return valid JSON matching this structure:
 | Story Bible | Absolute facts, timeline | ~400 |
 | Character Reference | Jack & Victoria voices | ~300 |
 | Craft Techniques | Writing rules | ~600 |
-| Style Examples | Few-shot examples | ~1200 |
+| **Style Examples** | Basic few-shot examples | ~800 |
+| **Extended Style Examples** | Full scenes w/ annotations (4 scenes + 12 annotated examples) | ~3,000 |
+| **Many-Shot Examples** | 15 Mystic River excerpts (beat-specific) | ~2,500 |
+| Voice DNA | Character speech patterns | ~400 |
 | Story Context | Previous chapter full text | ~800 |
 | Character Knowledge | What Jack knows/doesn't know | ~200 |
 | Active Threads | Mandatory story elements | ~300 |
 | Scene State | Exact continuation point | ~150 |
 | Engagement Guidance | Chapter-specific goals | ~200 |
 | Task Specification | Current requirements | ~500 |
-| **TOTAL** | | **~5,500** |
+| **TOTAL** | | **~11,000** |
+
+### Example Content Breakdown
+
+**EXAMPLE_PASSAGES** (from storyBible.js):
+- `atmosphericOpening` - Dennis Lehane opening about childhood/setting
+- `dialogueExample` - Extended dialogue scene showing subtext
+- `internalMonologue` - First-person psychological scene
+- `tenseMoment` - Tension through short, punchy interaction
+
+**EXTENDED_STYLE_GROUNDING** (from storyBible.js):
+- `tensionScene` - Full scene: psychological complicity through domestic action
+- `revelationScene` - Full scene: game-changing revelation with emotional impact
+- `chapterEnding` - Full scene: cliffhanger technique
+- `dialogueUnderTension` - Full scene: dialogue with layered subtext
+
+**ANNOTATED_EXAMPLES** (from storyBible.js):
+- 12 annotated passages with "WHY THIS WORKS" explanations covering:
+  - Physical emotion, dialogue subtext, tension building
+  - Chapter hooks, sensory world-building, character through action
+  - Crowd as character, dialogue revealing class
+  - Threat through normality, complex emotion through object
+  - Waiting as character, psychological complicity
+
+**MANY_SHOT_SCENES** (from src/data/manyShot/*.js):
+- 12 categories, 300+ total examples from "Mystic River"
+- Categories: setup, aftermath, dialogue_tension, decision_point, confrontation, investigation, internal_monologue, atmospheric, darkest_moment, revelation, action, interrogation
+- 15 examples selected per generation based on beat type
 
 The actual prompt will vary based on story length (more previous chapters = more tokens in story context) and whether context caching is used.
