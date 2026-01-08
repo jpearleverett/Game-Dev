@@ -804,47 +804,63 @@ The model must return valid JSON matching this structure:
 
 | Section | Purpose | ~Tokens |
 |---------|---------|---------|
-| System Instruction | Identity, rules, constraints | ~800 |
-| Story Bible | Absolute facts, timeline | ~400 |
-| Character Reference | Jack & Victoria voices | ~300 |
-| Craft Techniques | Writing rules | ~600 |
-| **Style Examples** | Basic few-shot examples | ~800 |
-| **Extended Style Examples** | Full scenes w/ annotations (4 scenes + 12 annotated examples) | ~3,000 |
-| **Many-Shot Examples** | 15 Mystic River excerpts (beat-specific) | ~2,500 |
-| Voice DNA | Character speech patterns | ~400 |
-| Story Context | Previous chapter full text | ~800 |
-| Character Knowledge | What Jack knows/doesn't know | ~200 |
-| Active Threads | Mandatory story elements | ~300 |
-| Scene State | Exact continuation point | ~150 |
-| Engagement Guidance | Chapter-specific goals | ~200 |
-| Task Specification | Current requirements | ~500 |
-| **TOTAL** | | **~11,000** |
+| System Instruction | Identity, rules, constraints | ~270 |
+| Story Bible | CONSISTENCY_RULES, setting facts | ~670 |
+| Character Reference | Jack & Victoria full voice DNA | ~530 |
+| Craft Techniques | WRITING_STYLE, influences, forbidden patterns | ~1,070 |
+| **Style Examples** | 9 Mystic River passages (incl. 3500-word dialogueExample) | ~8,100 |
+| **Extended Style Examples** | 4 full scenes + 14 annotated examples w/ WHY THIS WORKS | ~7,500 |
+| **Many-Shot Examples** | 15 Mystic River excerpts (beat-specific, 600 chars each) | ~2,700 |
+| Voice DNA | Character speech patterns for scene characters | ~400 |
+| Story Context | Previous chapter full text (varies by chapter) | ~670-1,340 |
+| Character Knowledge | What Jack knows/doesn't know | ~270 |
+| Active Threads | Mandatory story elements | ~400 |
+| Scene State | Exact continuation point | ~200 |
+| Engagement Guidance | Chapter-specific goals | ~270 |
+| Task Specification | Current requirements + JSON schema | ~670 |
+| **TOTAL** | | **~23,700-24,400** |
 
 ### Example Content Breakdown
 
-**EXAMPLE_PASSAGES** (from storyBible.js):
-- `atmosphericOpening` - Dennis Lehane opening about childhood/setting
-- `dialogueExample` - Extended dialogue scene showing subtext
-- `internalMonologue` - First-person psychological scene
-- `tenseMoment` - Tension through short, punchy interaction
+**STYLE_EXAMPLES** (via EXAMPLE_PASSAGES from storyBible.js, ~8,100 tokens):
+- `atmosphericOpening` - Dennis Lehane opening about childhood/setting (~250 words)
+- `dialogueExample` - **Extended dialogue scene showing subtext (~3,500 words - largest example)**
+- `internalMonologue` - First-person psychological scene (~350 words)
+- `tenseMoment` - Tension through short, punchy interaction (~450 words)
+- `characterConfrontation` - Power dynamics in conflict (~300 words)
+- `emotionalRevelation` - Delivering devastating news (~200 words)
+- `chaseSequence` - Action with psychological insight (~400 words)
+- `investigationScene` - Discovery through questioning (~550 words)
+- `quietMoment` - Grief through small gestures (~150 words)
 
-**EXTENDED_STYLE_GROUNDING** (from storyBible.js):
-- `tensionScene` - Full scene: psychological complicity through domestic action
-- `revelationScene` - Full scene: game-changing revelation with emotional impact
-- `chapterEnding` - Full scene: cliffhanger technique
-- `dialogueUnderTension` - Full scene: dialogue with layered subtext
+**EXTENDED_STYLE_GROUNDING** (from storyBible.js, ~2,800 tokens):
+- `tensionScene` - Full scene: psychological complicity through domestic action (~750 words)
+- `revelationScene` - Full scene: game-changing revelation with emotional impact (~350 words)
+- `chapterEnding` - Full scene: cliffhanger technique (~600 words)
+- `dialogueUnderTension` - Full scene: dialogue with layered subtext (~400 words)
 
-**ANNOTATED_EXAMPLES** (from storyBible.js):
-- 12 annotated passages with "WHY THIS WORKS" explanations covering:
-  - Physical emotion, dialogue subtext, tension building
-  - Chapter hooks, sensory world-building, character through action
-  - Crowd as character, dialogue revealing class
-  - Threat through normality, complex emotion through object
-  - Waiting as character, psychological complicity
+**ANNOTATED_EXAMPLES** (from storyBible.js, ~4,700 tokens):
+- 14 annotated passages with "WHY THIS WORKS" explanations (5-8 annotations each):
+  - sensoryWorldBuildingExample, characterThroughActionExample, crowdAsCharacterExample
+  - dialogueRevealingClassExample, threatThroughNormalityExample, complexEmotionThroughObjectExample
+  - waitingAsCharacterExample, psychologicalComplicityExample, acceptingDarknessExample
+  - silentReconnectionExample, burnoutMonologueExample, memoryErasureExample
+  - darkEmpowermentExample, physicalDecayAsTraumaExample, victimHumanizationExample
+  - physicalEmotionExample, dialogueSubtextExample, tensionBuildingExample, chapterHookExample
 
-**MANY_SHOT_SCENES** (from src/data/manyShot/*.js):
-- 12 categories, 300+ total examples from "Mystic River"
+**MANY_SHOT_SCENES** (from src/data/manyShot/*.js, ~2,700 tokens):
+- 12 categories, 300+ total examples from "Mystic River" (~109,000 words in library)
 - Categories: setup, aftermath, dialogue_tension, decision_point, confrontation, investigation, internal_monologue, atmospheric, darkest_moment, revelation, action, interrogation
-- 15 examples selected per generation based on beat type
+- **15 examples selected per generation** based on beat type, **truncated to 600 chars each**
 
-The actual prompt will vary based on story length (more previous chapters = more tokens in story context) and whether context caching is used.
+**NEGATIVE_EXAMPLES** (included in extended examples):
+- 2 "bad vs good" writing comparisons with problems/whyItWorks annotations
+
+### Notes on Prompt Size
+
+The actual prompt will vary based on:
+- Story length (more previous chapters = more tokens in story context)
+- Whether context caching is used (static content cached = lower per-request tokens)
+- Beat type (different many-shot categories selected)
+
+**With context caching**: The static content (~18,000 tokens) is cached, reducing per-request cost to ~6,000 tokens for dynamic content only.

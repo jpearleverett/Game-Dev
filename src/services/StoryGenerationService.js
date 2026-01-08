@@ -4888,14 +4888,6 @@ ${WRITING_STYLE.absolutelyForbidden.map(f => `- ${f}`).join('\n')}
 ### Required Elements:
 ${WRITING_STYLE.mustInclude.map(r => `- ${r}`).join('\n')}
 
-### Example Passages:
-${Object.entries(EXAMPLE_PASSAGES)
-  .map(([key, passage]) => {
-    return `**${key}**:
-${passage}`;
-  })
-  .join('\n\n')}
-
 ${STYLE_EXAMPLES}
 
 ${extendedExamples}
