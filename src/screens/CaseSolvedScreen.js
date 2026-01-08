@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -150,6 +150,12 @@ export default function CaseSolvedScreen({
 }) {
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
   const solved = status === GAME_STATUS.SOLVED;
+  // In story mode, advancing to the next subchapter can update game state *before*
+  // navigation completes. That would flip `solved` to false and incorrectly change
+  // the primary CTA label to "Retry Case" while still on this screen.
+  // Lock the CTA based on the state when this screen first mounted.
+  const initialSolvedRef = useRef(solved);
+  const [advanceInFlight, setAdvanceInFlight] = useState(false);
   const caseNumber = activeCase?.caseNumber;
   const hasStoryCampaign = Boolean(storyCampaign);
   const awaitingDecision = Boolean(
@@ -989,22 +995,28 @@ export default function CaseSolvedScreen({
               <>
                 {/* NARRATIVE-FIRST FLOW: Primary action is to continue to next subchapter */}
                 <PrimaryButton
-                  label={solved ? "Continue Investigation" : "Retry Case"}
+                  label={initialSolvedRef.current ? "Continue Investigation" : "Retry Case"}
                   onPress={() => {
-                    if (solved) {
-                      onAdvanceStory?.();
-                    } else {
-                      // For failed cases, go back to board to retry
-                      onReadCaseFile?.();
+                    if (initialSolvedRef.current) {
+                      if (advanceInFlight) return;
+                      setAdvanceInFlight(true);
+                      Promise.resolve(onAdvanceStory?.()).finally(() => {
+                        // If navigation happens, this screen unmounts and this setState is moot.
+                        // If it doesn't, re-enable the button so the user isn't stuck.
+                        setAdvanceInFlight(false);
+                      });
+                      return;
                     }
+                    // For failed cases, go back to the case file to retry
+                    onReadCaseFile?.();
                   }}
-                  icon={solved
+                  icon={initialSolvedRef.current
                     ? <MaterialCommunityIcons name="arrow-right-bold" size={20} color={COLORS.textSecondary} />
                     : <MaterialCommunityIcons name="replay" size={20} color={COLORS.textSecondary} />
                   }
-                  disabled={storyLocked && solved}
+                  disabled={(storyLocked && initialSolvedRef.current) || advanceInFlight}
                 />
-                {storyLocked && solved ? (
+                {storyLocked && initialSolvedRef.current ? (
                   <Text style={styles.storyStatusText}>
                     Next chapter unlocks after the current lock expires.
                   </Text>
