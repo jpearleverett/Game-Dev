@@ -422,67 +422,17 @@ export default function CaseFileScreen({
     const defaultPathKey = '1A-2A';
     const pathKey = completedPathKey || defaultPathKey;
 
-    const baseDecision = storyMeta?.decision || null;
-    const baseATitle = baseDecision?.optionA?.title || '';
-    const baseBTitle = baseDecision?.optionB?.title || '';
-
-    const tokenize = (text) =>
-      String(text || '')
-        .toLowerCase()
-        .split(/[^a-z0-9]+/g)
-        .map((t) => t.trim())
-        .filter(Boolean);
-
-    const STOP = new Set([
-      'the','a','an','and','or','to','of','in','on','for','with','at','from','into','over','under','before','after',
-      'now','then','your','you','his','her','their','our','us','as','is','be','been','being','this','that','these','those',
-      'alone',
-    ]);
-
-    const hasOverlap = (title, baseTitle) => {
-      const a = new Set(tokenize(title).filter((t) => t.length >= 3 && !STOP.has(t)));
-      const b = new Set(tokenize(baseTitle).filter((t) => t.length >= 3 && !STOP.has(t)));
-      if (!a.size || !b.size) return false;
-      for (const t of a) {
-        if (b.has(t)) return true;
-      }
-      return false;
-    };
-
     if (Array.isArray(metaPathDecisions)) {
       const picked =
         metaPathDecisions.find((d) => d?.pathKey === pathKey) ||
         metaPathDecisions.find((d) => d?.pathKey === defaultPathKey) ||
         metaPathDecisions[0] ||
         fallback;
-
-      // Guardrail: If the pathDecision is wildly off-theme (doesn't overlap the base A/B),
-      // fall back to the base decision. This fixes cases where the 2nd-call generator drifts.
-      if (
-        baseDecision &&
-        picked?.optionA?.title &&
-        picked?.optionB?.title &&
-        !hasOverlap(picked.optionA.title, baseATitle) &&
-        !hasOverlap(picked.optionB.title, baseBTitle)
-      ) {
-        return baseDecision;
-      }
-
       return picked;
     }
 
     // Legacy object map format
-    const picked = metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
-    if (
-      baseDecision &&
-      picked?.optionA?.title &&
-      picked?.optionB?.title &&
-      !hasOverlap(picked.optionA.title, baseATitle) &&
-      !hasOverlap(picked.optionB.title, baseBTitle)
-    ) {
-      return baseDecision;
-    }
-    return picked;
+    return metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
   }, [
     activeCase?.storyDecision,
     storyMeta?.decision,
