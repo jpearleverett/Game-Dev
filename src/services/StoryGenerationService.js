@@ -7390,6 +7390,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               // so the UI stays coherent with the narrative.
               const baseA = generatedContent.decision?.optionA?.title || '';
               const baseB = generatedContent.decision?.optionB?.title || '';
+              const baseAFocus = generatedContent.decision?.optionA?.focus || '';
+              const baseBFocus = generatedContent.decision?.optionB?.focus || '';
               const tokenize = (text) =>
                 String(text || '')
                   .toLowerCase()
@@ -7405,30 +7407,38 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 return false;
               };
 
+              // If the model drifts, don't discard everything (that makes it feel "rejected").
+              // Instead, clamp each drifting title/focus back to the base anchors, while keeping
+              // the path-specific intro. This preserves coherence and maintains per-path flavor.
               let driftCount = 0;
-              for (const d of Object.values(pathDecisionsObj)) {
-                if (!overlap(d?.optionA?.title, baseA)) driftCount += 1;
-                if (!overlap(d?.optionB?.title, baseB)) driftCount += 1;
+              for (const [pk, d] of Object.entries(pathDecisionsObj)) {
+                const aOk = overlap(d?.optionA?.title, baseA);
+                const bOk = overlap(d?.optionB?.title, baseB);
+                if (!aOk) {
+                  driftCount += 1;
+                  if (d?.optionA) {
+                    d.optionA.title = baseA || d.optionA.title;
+                    d.optionA.focus = baseAFocus || d.optionA.focus;
+                    d.optionA.key = 'A';
+                  }
+                }
+                if (!bOk) {
+                  driftCount += 1;
+                  if (d?.optionB) {
+                    d.optionB.title = baseB || d.optionB.title;
+                    d.optionB.focus = baseBFocus || d.optionB.focus;
+                    d.optionB.key = 'B';
+                  }
+                }
+                // Ensure intro always exists; use the path summary if the model gave empty intro.
+                if (!d?.intro || !String(d.intro).trim()) {
+                  const summary = pathSummaryMap[pk] || '';
+                  d.intro = summary || generatedContent.decision?.intro || '';
+                }
               }
 
-              // If more than a couple options drift, the set is not trustworthy.
-              if (driftCount >= 4) {
-                console.warn(`[StoryGenerationService] ⚠️ pathDecisions drift detected (${driftCount} mismatches). Falling back to base decision for all paths.`);
-                const allPathKeys = [
-                  '1A-2A','1A-2B','1A-2C',
-                  '1B-2A','1B-2B','1B-2C',
-                  '1C-2A','1C-2B','1C-2C',
-                ];
-                const fallbackObj = {};
-                for (const pk of allPathKeys) {
-                  const summary = pathSummaryMap[pk] || '';
-                  fallbackObj[pk] = {
-                    intro: summary ? `${summary}` : (generatedContent.decision?.intro || ''),
-                    optionA: { ...(generatedContent.decision?.optionA || { key: 'A', title: 'Option A', focus: '', personalityAlignment: 'balanced' }), key: 'A' },
-                    optionB: { ...(generatedContent.decision?.optionB || { key: 'B', title: 'Option B', focus: '', personalityAlignment: 'balanced' }), key: 'B' },
-                  };
-                }
-                generatedContent.pathDecisions = fallbackObj;
+              if (driftCount > 0) {
+                console.warn(`[StoryGenerationService] ⚠️ pathDecisions drift detected (${driftCount} mismatches). Clamped drifting titles back to base anchors.`);
               }
 
               llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
