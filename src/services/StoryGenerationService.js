@@ -884,9 +884,10 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 </non_negotiables>
 
 <reveal_timing>
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 2A (not earlier).
-- Before then, any anomalies must remain plausibly deniable.
+- Jack does NOT know the Under-Map is real until the END of subchapter 1C.
+- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 1C (not earlier).
+- Before the end of 1C, any anomalies must remain plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).
+- After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
 </reveal_timing>
 
 <how_to_use_the_prompt>
@@ -5097,17 +5098,9 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
       console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
     }
 
-    // Dynamic Part 4: Dramatic Irony (chapter-specific ironies)
-    const pathKey = context.pathKey || '';
-    const choiceHistory = context.playerChoices || [];
-    const dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
-    if (dramaticIrony) {
-      parts.push('<dramatic_irony>');
-      parts.push(dramaticIrony);
-      parts.push('</dramatic_irony>');
-    }
+    // NOTE: Dramatic irony section removed - LLM has creative freedom
 
-    // Dynamic Part 5: Consistency Checklist (established facts + active threads)
+    // Dynamic Part 4: Consistency Checklist (established facts + active threads)
     parts.push('<active_threads>');
     parts.push(this._buildConsistencySection(context));
     parts.push('</active_threads>');
@@ -5251,9 +5244,6 @@ ${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')
 - Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
 - Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
 - Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
-
-**Dramatic Irony:** ${ENGAGEMENT_REQUIREMENTS.dramaticIrony.description}
-${ENGAGEMENT_REQUIREMENTS.dramaticIrony.examples.map(e => `- ${e}`).join('\n')}
 
 **Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
 Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
@@ -5419,10 +5409,6 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
       }
     }
 
-    const missing = (ABSOLUTE_FACTS?.fiveInnocents || [])
-      .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
-      .join('\n');
-
     let section = `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
 
 ### PROTAGONIST
@@ -5445,12 +5431,14 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 - Core mystery: ${safe(ABSOLUTE_FACTS.setting.coreMystery)}
 
 ### CORE CONSTRAINT (Reveal timing)
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
-- Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
+- Jack does NOT know the Under-Map is real until the END of subchapter 1C.
+- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 1C.
+- Before the end of 1C, anomalies must be plausibly deniable; keep the uncanny at the edges.
+- After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
 
-### THE FIVE MISSING ANCHORS (Each tied to a glyph)
-${missing}
+### CREATIVE FREEDOM
+- The LLM may generate any supporting characters, locations, and plot elements as the story requires.
+- Only Jack Halloway and Victoria Blackwell have canonical definitions.
 
 ### TIMELINE (Use exact numbers; never approximate)
 ${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
@@ -5651,14 +5639,14 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
    * Build character reference section
    */
   _buildCharacterSection() {
-    const { protagonist, antagonist, allies, villains, victims, secondary } = CHARACTER_REFERENCE;
+    const { protagonist, antagonist } = CHARACTER_REFERENCE;
 
     // Helper to format example phrases
     const formatExamples = (phrases) => {
       return phrases.map(phrase => `  - "${phrase}"`).join('\n');
     };
 
-    return `## CHARACTER VOICES (Match these exactly)
+    return `## CHARACTER VOICES (Defined Characters)
 
 ### JACK HALLOWAY (Protagonist - Narration is close third-person on Jack)
 Role: ${protagonist.role}, ${protagonist.age}
@@ -5668,7 +5656,7 @@ Dialogue: ${protagonist.voiceAndStyle.dialogue}
 Example Phrases:
 ${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
 
-### VICTORIA BLACKWELL / THE CONFESSOR / EMILY CROSS
+### VICTORIA BLACKWELL / THE MIDNIGHT CARTOGRAPHER
 Role: ${antagonist.role}
 Aliases: ${antagonist.aliases.join(', ')}
 Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
@@ -5676,46 +5664,9 @@ Voice (Written): ${antagonist.voiceAndStyle.written}
 Example Phrases:
 ${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
 
-### SARAH REEVES
-Role: ${allies.sarahReeves.role}
-Voice: ${allies.sarahReeves.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.sarahReeves.voiceAndStyle.examplePhrases)}
-
-### ELEANOR BELLAMY
-Role: ${allies.eleanorBellamy.role}
-Voice: ${allies.eleanorBellamy.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.eleanorBellamy.voiceAndStyle.examplePhrases)}
-
-### TOM WADE
-Role: ${villains.tomWade.role}
-Voice: ${villains.tomWade.voiceAndStyle?.speaking || 'Friendly surface with technical jargon as deflection'}
-Note: Jack's longtime friend (met ~12 years ago) who knows city records/symbol reports better than he admits
-
-### SILAS REED
-Role: ${villains.silasReed.role}
-Voice: ${villains.silasReed.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.silasReed.voiceAndStyle.examplePhrases)}
-
-### HELEN PRICE
-Role: ${villains.helenPrice.title} - ${villains.helenPrice.role}
-Voice: ${villains.helenPrice.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.helenPrice.voiceAndStyle.examplePhrases)}
-
-### CLAIRE THORNHILL
-Role: ${victims.claireThornhill.role}
-Voice: ${victims.claireThornhill.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(victims.claireThornhill.voiceAndStyle.examplePhrases)}
-
-### MARCUS WEBB
-Role: ${secondary.marcusWebb.role}
-Voice: ${secondary.marcusWebb.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(secondary.marcusWebb.voiceAndStyle.examplePhrases)}`;
+### OTHER CHARACTERS
+The LLM has creative freedom to generate any supporting characters as the story requires.
+Create distinctive voices for any new characters that serve the narrative.`;
   }
 
   /**
@@ -6026,17 +5977,7 @@ The narrative context differs by path, so the strategic options should differ to
       voiceDNA = '';
     }
 
-    // Build dramatic irony section based on chapter
-    let dramaticIrony = '';
-    try {
-      dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
-      if (!dramaticIrony || dramaticIrony.length < 50) {
-        console.warn('[StoryGen] ⚠️ Dramatic irony empty for chapter', chapter);
-      }
-    } catch (e) {
-      console.error('[StoryGen] ❌ Dramatic irony FAILED:', e.message);
-      dramaticIrony = '';
-    }
+    // NOTE: Dramatic irony section removed - LLM has creative freedom
 
     return `## STYLE REFERENCE
 
@@ -6052,9 +5993,7 @@ ${extendedExamples}
 
 ${manyShotExamples}
 
-${voiceDNA}
-
-${dramaticIrony}`;
+${voiceDNA}`;
   }
 
   /**
@@ -9598,21 +9537,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       report.issues.push(`STYLE_EXAMPLES check failed: ${e.message}`);
     }
 
-    // Check dramatic irony builder
-    try {
-      const irony = buildDramaticIronySection(3, 'ROOT', []);
-      report.components.dramaticIrony = {
-        length: irony?.length || 0,
-        hasContent: !!irony && irony.length > 100,
-        preview: irony?.slice(0, 200) || 'EMPTY',
-      };
-      if (!irony || irony.length < 100) {
-        report.issues.push('Dramatic irony section empty for test chapter');
-      }
-    } catch (e) {
-      report.components.dramaticIrony = { error: e.message };
-      report.issues.push(`Dramatic irony FAILED: ${e.message}`);
-    }
+    // NOTE: Dramatic irony check removed - feature disabled
 
     // Check voice DNA builder
     try {
