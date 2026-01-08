@@ -293,14 +293,28 @@ export default function CaseFileScreen({
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
     if (onSaveBranchingChoice && caseNumber && result?.path) {
-      // Parse the path string to extract first and second choices
-      // Path format: "1A-2B" means first choice was "1A", second was "1A-2B"
-      // We need to extract: firstChoice = "1A", secondChoice = "1A-2B"
-      const parts = result.path.split('-');
+      // Parse the path string to extract first and second choices.
+      // Expect full key like "1B-2C", but be resilient if older content returns "2C".
+      const rawPath = String(result.path || '').trim();
+      const rawFirst = typeof result.firstChoice === 'string' ? result.firstChoice.trim() : '';
+      const normalizedPath =
+        rawPath.includes('-')
+          ? rawPath
+          : rawFirst && rawPath
+            ? `${rawFirst}-${rawPath}`
+            : rawPath;
+
+      const parts = normalizedPath.split('-');
       if (parts.length >= 2) {
-        const firstChoice = parts[0]; // e.g., "1A"
-        const secondChoice = result.path; // e.g., "1A-2B" (full path is the second choice key)
+        const firstChoice = parts[0]; // e.g., "1B"
+        const secondChoice = normalizedPath; // e.g., "1B-2C"
         onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
+      } else {
+        console.warn('[CaseFileScreen] Branching complete, but could not normalize path:', {
+          caseNumber,
+          rawPath,
+          rawFirst,
+        });
       }
     }
 
