@@ -293,14 +293,28 @@ export default function CaseFileScreen({
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
     if (onSaveBranchingChoice && caseNumber && result?.path) {
-      // Parse the path string to extract first and second choices
-      // Path format: "1A-2B" means first choice was "1A", second was "1A-2B"
-      // We need to extract: firstChoice = "1A", secondChoice = "1A-2B"
-      const parts = result.path.split('-');
+      // Parse the path string to extract first and second choices.
+      // Expect full key like "1B-2C", but be resilient if older content returns "2C".
+      const rawPath = String(result.path || '').trim();
+      const rawFirst = typeof result.firstChoice === 'string' ? result.firstChoice.trim() : '';
+      const normalizedPath =
+        rawPath.includes('-')
+          ? rawPath
+          : rawFirst && rawPath
+            ? `${rawFirst}-${rawPath}`
+            : rawPath;
+
+      const parts = normalizedPath.split('-');
       if (parts.length >= 2) {
-        const firstChoice = parts[0]; // e.g., "1A"
-        const secondChoice = result.path; // e.g., "1A-2B" (full path is the second choice key)
+        const firstChoice = parts[0]; // e.g., "1B"
+        const secondChoice = normalizedPath; // e.g., "1B-2C"
         onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
+      } else {
+        console.warn('[CaseFileScreen] Branching complete, but could not normalize path:', {
+          caseNumber,
+          rawPath,
+          rawFirst,
+        });
       }
     }
 
@@ -408,17 +422,67 @@ export default function CaseFileScreen({
     const defaultPathKey = '1A-2A';
     const pathKey = completedPathKey || defaultPathKey;
 
+    const baseDecision = storyMeta?.decision || null;
+    const baseATitle = baseDecision?.optionA?.title || '';
+    const baseBTitle = baseDecision?.optionB?.title || '';
+
+    const tokenize = (text) =>
+      String(text || '')
+        .toLowerCase()
+        .split(/[^a-z0-9]+/g)
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+    const STOP = new Set([
+      'the','a','an','and','or','to','of','in','on','for','with','at','from','into','over','under','before','after',
+      'now','then','your','you','his','her','their','our','us','as','is','be','been','being','this','that','these','those',
+      'alone',
+    ]);
+
+    const hasOverlap = (title, baseTitle) => {
+      const a = new Set(tokenize(title).filter((t) => t.length >= 3 && !STOP.has(t)));
+      const b = new Set(tokenize(baseTitle).filter((t) => t.length >= 3 && !STOP.has(t)));
+      if (!a.size || !b.size) return false;
+      for (const t of a) {
+        if (b.has(t)) return true;
+      }
+      return false;
+    };
+
     if (Array.isArray(metaPathDecisions)) {
-      return (
+      const picked =
         metaPathDecisions.find((d) => d?.pathKey === pathKey) ||
         metaPathDecisions.find((d) => d?.pathKey === defaultPathKey) ||
         metaPathDecisions[0] ||
-        fallback
-      );
+        fallback;
+
+      // Guardrail: If the pathDecision is wildly off-theme (doesn't overlap the base A/B),
+      // fall back to the base decision. This fixes cases where the 2nd-call generator drifts.
+      if (
+        baseDecision &&
+        picked?.optionA?.title &&
+        picked?.optionB?.title &&
+        !hasOverlap(picked.optionA.title, baseATitle) &&
+        !hasOverlap(picked.optionB.title, baseBTitle)
+      ) {
+        return baseDecision;
+      }
+
+      return picked;
     }
 
     // Legacy object map format
-    return metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
+    const picked = metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
+    if (
+      baseDecision &&
+      picked?.optionA?.title &&
+      picked?.optionB?.title &&
+      !hasOverlap(picked.optionA.title, baseATitle) &&
+      !hasOverlap(picked.optionB.title, baseBTitle)
+    ) {
+      return baseDecision;
+    }
+    return picked;
   }, [
     activeCase?.storyDecision,
     storyMeta?.decision,

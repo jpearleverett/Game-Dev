@@ -365,6 +365,18 @@ export default function BranchingNarrativeReader({
   const [secondChoiceMade, setSecondChoiceMade] = useState(null);
   const [endingState, setEndingState] = useState(SEGMENT_STATES.HIDDEN);
 
+  // Normalize second choice keys to a full path key.
+  // Some generated content may incorrectly return keys like "2C" instead of "1B-2C".
+  // We always persist + emit full keys so pathDecisions lookup is stable.
+  const normalizePathKey = useCallback((firstKey, secondKey) => {
+    const fk = String(firstKey || '').trim();
+    const sk = String(secondKey || '').trim();
+    if (!fk || !sk) return sk || fk || null;
+    if (/^1[ABC]-2[ABC]$/i.test(sk)) return sk.toUpperCase();
+    if (/^2[ABC]$/i.test(sk) && /^1[ABC]$/i.test(fk)) return `${fk.toUpperCase()}-${sk.toUpperCase()}`;
+    return sk.toUpperCase();
+  }, []);
+
   // Track revealed details and collected evidence
   const [revealedDetails, setRevealedDetails] = useState(new Set());
   const [collectedEvidence, setCollectedEvidence] = useState([]);
@@ -383,8 +395,11 @@ export default function BranchingNarrativeReader({
 
   const currentEndingSegment = useMemo(() => {
     if (!secondChoiceMade || !currentSecondChoice?.options) return null;
-    return currentSecondChoice.options.find(o => o.key === secondChoiceMade);
-  }, [secondChoiceMade, currentSecondChoice]);
+    return currentSecondChoice.options.find((o) => {
+      const normalized = normalizePathKey(firstChoiceMade, o?.key);
+      return normalized === secondChoiceMade;
+    }) || null;
+  }, [secondChoiceMade, currentSecondChoice, firstChoiceMade, normalizePathKey]);
 
   // Handle opening complete
   const handleOpeningComplete = useCallback(() => {
@@ -415,23 +430,27 @@ export default function BranchingNarrativeReader({
 
   // Handle second choice selection
   const handleSecondChoice = useCallback((option) => {
-    setSecondChoiceMade(option.key);
+    const normalized = normalizePathKey(firstChoiceMade, option.key);
+    setSecondChoiceMade(normalized);
     setEndingState(SEGMENT_STATES.TYPING);
 
     // Scroll to show new content
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 100);
-  }, []);
+  }, [firstChoiceMade, normalizePathKey]);
 
   // Handle ending complete
   const handleEndingComplete = useCallback(() => {
     setEndingState(SEGMENT_STATES.COMPLETE);
     onComplete?.({
-      path: secondChoiceMade, // secondChoiceMade already contains full path key like "1B-2C"
+      // Always emit a stable full path key like "1B-2C"
+      path: secondChoiceMade,
+      firstChoice: firstChoiceMade,
+      secondChoice: secondChoiceMade,
       evidence: collectedEvidence,
     });
-  }, [secondChoiceMade, collectedEvidence, onComplete]);
+  }, [secondChoiceMade, firstChoiceMade, collectedEvidence, onComplete]);
 
   // Handle detail tap
   const handleDetailTap = useCallback((detail) => {
