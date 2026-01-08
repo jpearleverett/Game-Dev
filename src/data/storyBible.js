@@ -77,128 +77,9 @@ export const ABSOLUTE_FACTS = {
     },
   },
 
-  // These five people are the story’s recurring “missing” anchors. Each is tied to a distinct symbol.
-  fiveInnocents: [
-    {
-      name: 'Eleanor Bellamy',
-      role: 'Pattern historian (specialized in found symbols on public infrastructure)',
-      status: 'Missing',
-      symbol: 'HOLLOW SPIRAL',
-      lastKnown: 'Vanished from a stairwell landing that “shouldn’t exist” in the Civic Archive',
-    },
-    {
-      name: 'Marcus Thornhill',
-      role: 'Street-artist turned reluctant messenger',
-      status: 'Missing',
-      symbol: 'SPLIT EYE',
-      lastKnown: 'Caught on CCTV walking into an alley that does not connect to the street grid',
-    },
-    {
-      name: 'Dr. Lisa Chen',
-      role: 'Materials scientist (studies inks, pigments, and reflective coatings)',
-      status: 'Missing',
-      symbol: 'LADDER NOTCH',
-      lastKnown: 'Left a voicemail: “the ink isn’t on the paper, it’s under it”',
-    },
-    {
-      name: 'James Sullivan',
-      role: 'Paramedic who keeps seeing the same patient in different years',
-      status: 'Missing (intermittent)',
-      symbol: 'BROKEN HALO',
-      lastKnown: 'Reported “double addresses” where apartments occupy the same physical space',
-    },
-    {
-      name: 'Teresa Wade',
-      role: 'Tom Wade’s daughter; urban explorer and amateur cartographer',
-      status: 'Missing',
-      symbol: 'LOCKED KNOT',
-      lastKnown: 'Texted Jack a photo of a symbol carved into wet concrete that should not hold a carved line',
-    },
-  ],
-
-  // “Corrupt” here means “compromised by the Under-Map,” not necessarily criminal.
-  corruptOfficials: {
-    tomWade: {
-      title: 'City records specialist / unofficial map curator',
-      relationship: 'Jack\'s closest friend for 12 years (met in a records job)',
-      compromise: 'Obsessed with the Under-Map; may be trading information for access',
-      impact: 'He can open doors on paper that are closed in real life',
-      daughter: 'Teresa Wade (one of the five missing)',
-    },
-    silasReed: {
-      title: 'Private security consultant / “fixer” for property developers',
-      partnershipLength: '3 years as Jack\'s occasional employer and source',
-      compromise: 'Knows how to “seal” a threshold; won’t say how he learned',
-      motivation: 'Debt to someone who signs only with symbols',
-      currentState: 'Polished, expensive, and terrified of quiet rooms',
-    },
-    helenPrice: {
-      title: 'City planner / zoning attorney',
-      nickname: '"The Redliner"',
-      record: 'Re-zoned entire neighborhoods with uncanny precision',
-      compromise: 'Her maps are always correct even when the city changes overnight',
-      fate: 'Receives Victoria’s dead letter containing a street that “doesn’t exist” but is marked as condemned',
-    },
-    deputyChiefGrange: {
-      title: 'Deputy Chief, Ashport PD',
-      crimes: 'Uses police access to control “closed” spaces: basements, evidence lockers, stairwells, tunnels',
-      method: 'Treats thresholds like crime scenes: cordon, contain, disappear the witnesses',
-      target: 'Anyone who returns from the Under-Map talking about symbols',
-      downfallVector: 'Sarah Reeves gathers the small, “impossible” reports Jack once shrugged off',
-    },
-    theOverseer: {
-      role: 'An entity (or system) that enforces the Under-Map’s rules',
-      method: 'Operates through repeated geometry: the same doorframe, the same staircase, the same symbol, everywhere',
-      symbolism: 'Represents the city as a living puzzle that corrects anyone trying to solve it',
-    },
-  },
-
-  supportingCharacters: {
-    sarahReeves: {
-      role: 'Detective, Ashport PD; Jack’s reluctant ally',
-      partnershipLength: '5 years of intermittent collaboration (she trusts his eye, not his theories)',
-      currentJob: 'Still on the force',
-      arc: 'Starts as skeptic; becomes the human anchor when the city stops behaving',
-      achievement: 'Connects “minor” reports of repeating symbols into a pattern that forces official attention',
-    },
-    mayaBellamy: {
-      relation: 'Eleanor’s daughter',
-      age: 'Mid 20s',
-      mission: 'Find her mother and prove she didn’t “run away”',
-      discovery: 'Keeps a notebook of symbol sightings that match her mother’s research',
-    },
-    claireThornhill: {
-      relation: 'Marcus Thornhill’s sister (not daughter)',
-      job: 'Tattoo apprentice; specializes in geometric work',
-      formerLife: 'Dropped out of architecture school',
-      mission: 'Recreate Marcus’s last wall from memory: the symbol sequence that “opened” the alley',
-      evidence: 'A sketchbook of repeating glyphs that appear to shift when copied',
-    },
-    marcusWebb: {
-      role: 'Antique dealer, information broker',
-      age: 'Mid 60s',
-      secret: 'Sells objects that are older than their materials should allow',
-      guilt: 'Once sent someone through a threshold for money; they didn’t come back',
-      inherited: 'A map etched into glass that shows streets Ashport hasn’t built yet',
-    },
-    rebeccaMoss: {
-      role: 'Attorney who specializes in “impossible liability” cases',
-      clients: 'Represents families of the missing; quietly advises Jack on what not to say on record',
-    },
-    agentMartinez: {
-      fullName: 'Agent Luis Martinez',
-      agency: 'FBI',
-      mission: 'Investigating a pattern of disappearances that do not fit conventional criminal profiles',
-    },
-    luciaMartinez: {
-      role: 'Agent Martinez’s sister',
-      age: '24 at disappearance',
-      occupation: 'Nursing student, engaged',
-      disappearance: 'Walked into an elevator that arrived at no floors',
-      fate: 'Unknown',
-      significance: 'Her case is the federal “hook” into Ashport’s second map',
-    },
-  },
+  // NOTE: Other characters (allies, antagonists, supporting cast) are not predefined.
+  // The LLM has creative freedom to generate characters as the story requires.
+  // Only Jack Halloway (protagonist) and Victoria Blackwell (antagonist) have canonical definitions.
 };
 
 // ============================================================================
@@ -715,18 +596,18 @@ Even after all that, it still hadn't sunk in entirely. Katie, she felt, would wa
 // ============================================================================
 export const CONSISTENCY_RULES = [
   // CHARACTER NAMES & IDENTITIES
-  'Jack always calls Victoria “Victoria” or “Blackwell.” He does NOT call her “Emily” (that identity does not exist in this version).',
-  'Victoria Blackwell is known as “The Midnight Cartographer.” She signs as "M.C.", "V.B.", or the textual mark "⟂○".',
+  'Jack always calls Victoria "Victoria" or "Blackwell."',
+  'Victoria Blackwell is known as "The Midnight Cartographer." She signs as "M.C.", "V.B.", or the textual mark "⟂○".',
 
   // REALITY REVEAL TIMING (Critical pacing constraint)
-  'Jack does NOT know the Under-Map is real at the start of Chapter 2.',
-  'The first undeniable reveal that “the world is not what it seems” happens at the END of subchapter 1C (not earlier).',
+  'Jack does NOT know the Under-Map is real until Chapter 1C.',
+  'The first undeniable reveal that "the world is not what it seems" happens at the END of subchapter 1C (not earlier).',
   'Before the end of 1C, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).',
+  'After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.',
 
   // TIMELINE FACTS (EXACT NUMBERS - Never approximate)
-  'Jack and Tom Wade have been close friends for exactly 12 years (met in a records job).',
-  'Victoria has been leaving “dead letters” for exactly 4 years.',
-  'The “Blank Map” incident was exactly 9 years ago.',
+  'Victoria has been leaving "dead letters" for exactly 4 years.',
+  'The "Blank Map" incident was exactly 9 years ago.',
 
   // SETTING & ATMOSPHERE
   'Ashport is always damp, overcast, or recently rained; the city is defined by reflections, sodium streetlight halos, and neon smear on wet pavement.',
@@ -734,24 +615,22 @@ export const CONSISTENCY_RULES = [
   'This is NOT medieval fantasy. The surface world is modern. The fantasy world is hidden, infrastructural, and uncanny.',
 
   // SYMBOL RULES (Core mystery engine)
-  'Symbols are called GLYPHS. They recur in the city and in Victoria’s letters.',
-  'There are exactly five anchor glyphs tied to the five missing people: HOLLOW SPIRAL, SPLIT EYE, LADDER NOTCH, BROKEN HALO, LOCKED KNOT.',
-  'Glyphs are not “spells.” They are keys to thresholds, and they do not work everywhere.',
-  'Silver ink in Victoria’s letters does not photograph cleanly; attempts to capture it produce blurred or doubled lines.',
+  'Symbols are called GLYPHS. They recur in the city and in Victoria's letters.',
+  'Glyphs are not "spells." They are keys to thresholds, and they do not work everywhere.',
+  'Silver ink in Victoria's letters does not photograph cleanly; attempts to capture it produce blurred or doubled lines.',
 
   // CHARACTER TRAITS (Immutable)
-  'Jack’s default coping mechanism is rationalization and documentation (notes, sketches, photos, maps).',
-  'Jack’s vice is cold coffee and insomnia; he is not a hardboiled alcoholic detective in this version.',
-  'Victoria’s presence is clean and unsettling: ozone/basil scent, calm diction, exact phrasing.',
+  'Jack's default coping mechanism is rationalization and documentation (notes, sketches, photos, maps).',
+  'Jack's vice is cold coffee and insomnia; he is not a hardboiled alcoholic detective in this version.',
+  'Victoria's presence is clean and unsettling: ozone/basil scent, calm diction, exact phrasing.',
 
   // THRILLER CONSTRAINTS (No Tolkien pastiche)
-  'No elves/dwarves/orcs, no feudal courts, no “chosen one prophecy,” no faux-Old English diction.',
-  'Fantasy beings (if encountered) must feel unfamiliar and specific: more like living architecture, stitched light, or rule-bound anomalies than “classic races.”',
+  'No elves/dwarves/orcs, no feudal courts, no "chosen one prophecy," no faux-Old English diction.',
+  'Fantasy beings (if encountered) must feel unfamiliar and specific: more like living architecture, stitched light, or rule-bound anomalies than "classic races."',
 
-  // RELATIONSHIP STATES
-  'Sarah Reeves begins skeptical of Jack’s “symbol theory,” then becomes alarmed as evidence accumulates.',
-  'Tom Wade is Jack’s closest friend and the most compromised by obsession with the Under-Map; his loyalty is ambiguous.',
-  'Deputy Chief Grange treats thresholds like a containment problem and will suppress witnesses rather than investigate.',
+  // CREATIVE FREEDOM
+  'The LLM may generate any supporting characters as the story requires.',
+  'Character names, relationships, and arcs are flexible except for Jack and Victoria.',
 ];
 
 // ============================================================================
@@ -1418,17 +1297,6 @@ export const ENGAGEMENT_REQUIREMENTS = {
       arc: 'Chapters 4, 7, 10 - game-changers that recontextualize everything the reader thought they knew',
     },
     rule: 'Revelations should make readers say "I KNEW something was off" or "Oh god, that changes everything"',
-  },
-
-  // Dramatic irony leverage
-  dramaticIrony: {
-    description: 'The reader knows things Jack doesn\'t - USE THIS',
-    examples: [
-      'Reader knows Victoria = Emily before Jack does',
-      'Reader suspects Tom before Jack confirms it',
-      'Reader sees danger Jack walks into blind',
-    ],
-    technique: 'Write scenes where readers CRINGE at Jack\'s ignorance. Let them see the trap closing.',
   },
 
   // The ticking clock

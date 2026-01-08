@@ -884,9 +884,10 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 </non_negotiables>
 
 <reveal_timing>
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 2A (not earlier).
-- Before then, any anomalies must remain plausibly deniable.
+- Jack does NOT know the Under-Map is real until the END of subchapter 1C.
+- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 1C (not earlier).
+- Before the end of 1C, any anomalies must remain plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).
+- After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
 </reveal_timing>
 
 <how_to_use_the_prompt>
@@ -4887,14 +4888,6 @@ ${WRITING_STYLE.absolutelyForbidden.map(f => `- ${f}`).join('\n')}
 ### Required Elements:
 ${WRITING_STYLE.mustInclude.map(r => `- ${r}`).join('\n')}
 
-### Example Passages:
-${Object.entries(EXAMPLE_PASSAGES)
-  .map(([key, passage]) => {
-    return `**${key}**:
-${passage}`;
-  })
-  .join('\n\n')}
-
 ${STYLE_EXAMPLES}
 
 ${extendedExamples}
@@ -4904,17 +4897,8 @@ ${extendedExamples}
     parts.push('</style_examples>');
     console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
-    // Part 5: Consistency Rules (STATIC)
-    const rulesSection = `## CONSISTENCY CHECKLIST - Self-Validation Rules
-
-Before generating, verify these facts are never contradicted:
-
-${CONSISTENCY_RULES.map(rule => `- ${rule}`).join('\n')}
-`;
-    parts.push('<consistency_rules>');
-    parts.push(rulesSection);
-    parts.push('</consistency_rules>');
-    console.log(`[Cache] Consistency rules: ${rulesSection.length} chars`);
+    // NOTE: Consistency rules NOT included in static cache - they are in _buildDynamicPrompt
+    // so that thread data can be updated dynamically per request
 
     const fullContent = parts.join('\n\n');
     console.log(`[Cache] TOTAL static content: ${fullContent.length} chars (~${Math.round(fullContent.length / 4)} tokens est.)`);
@@ -5097,17 +5081,9 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
       console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
     }
 
-    // Dynamic Part 4: Dramatic Irony (chapter-specific ironies)
-    const pathKey = context.pathKey || '';
-    const choiceHistory = context.playerChoices || [];
-    const dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
-    if (dramaticIrony) {
-      parts.push('<dramatic_irony>');
-      parts.push(dramaticIrony);
-      parts.push('</dramatic_irony>');
-    }
+    // NOTE: Dramatic irony section removed - LLM has creative freedom
 
-    // Dynamic Part 5: Consistency Checklist (established facts + active threads)
+    // Dynamic Part 4: Consistency Checklist (established facts + active threads)
     parts.push('<active_threads>');
     parts.push(this._buildConsistencySection(context));
     parts.push('</active_threads>');
@@ -5144,9 +5120,10 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
     // Note: beatType already declared earlier for many-shot examples (line 5049)
 
+    // Gemini 3 best practice: Anchor reasoning to context with transition phrase
     parts.push(`
 <task>
-Write subchapter ${chapter}.${subchapter} (${beatType}).
+Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}).
 
 Before writing, plan:
 1. What narrative threads from ACTIVE_THREADS must be addressed?
@@ -5180,7 +5157,8 @@ If any check fails, revise before returning your response.
     const parts = [];
 
     // Part 1: Story Bible Grounding (RAG)
-    parts.push(this._buildGroundingSection(context));
+    // Note: includeStyle=false because style is in Part 5 (_buildStyleSection)
+    parts.push(this._buildGroundingSection(context, { includeStyle: false }));
 
     // Part 2: Complete Story So Far (FULL TEXT)
     parts.push(this._buildStorySummarySection(context));
@@ -5219,7 +5197,9 @@ If any check fails, revise before returning your response.
     parts.push(this._buildCraftTechniquesSection());
 
     // Part 10: Current Task Specification (LAST for recency effect)
-    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
+    // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+    const taskSection = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
+    parts.push(`Based on all the context provided above, complete the following task:\n\n${taskSection}`);
 
     return parts.join('\n\n---\n\n');
   }
@@ -5251,9 +5231,6 @@ ${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')
 - Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
 - Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
 - Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
-
-**Dramatic Irony:** ${ENGAGEMENT_REQUIREMENTS.dramaticIrony.description}
-${ENGAGEMENT_REQUIREMENTS.dramaticIrony.examples.map(e => `- ${e}`).join('\n')}
 
 **Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
 Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
@@ -5419,10 +5396,6 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
       }
     }
 
-    const missing = (ABSOLUTE_FACTS?.fiveInnocents || [])
-      .map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}; status: ${p.status || 'Unknown'}`)
-      .join('\n');
-
     let section = `## STORY BIBLE - ABSOLUTE FACTS (Never contradict these)
 
 ### PROTAGONIST
@@ -5444,13 +5417,9 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 - Atmosphere: ${safe(ABSOLUTE_FACTS.setting.atmosphere)}
 - Core mystery: ${safe(ABSOLUTE_FACTS.setting.coreMystery)}
 
-### CORE CONSTRAINT (Reveal timing)
-- Jack does NOT know the Under-Map is real at the start of Chapter 2.
-- The FIRST undeniable reveal that the world is not what it seems occurs at the END of subchapter 2A.
-- Before the end of 2A, anomalies must be plausibly deniable; keep the uncanny at the edges.
-
-### THE FIVE MISSING ANCHORS (Each tied to a glyph)
-${missing}
+### CREATIVE FREEDOM
+- The LLM may generate any supporting characters, locations, and plot elements as the story requires.
+- Only Jack Halloway and Victoria Blackwell have canonical definitions.
 
 ### TIMELINE (Use exact numbers; never approximate)
 ${timelineLines.length ? timelineLines.join('\n') : '- (No timeline entries)'}
@@ -5629,20 +5598,8 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
       summary += '\n';
     }
 
-    // Add strong continuation reminder at the end
-    summary += `\n${'#'.repeat(80)}\n`;
-    summary += `## CONTINUATION REQUIREMENTS\n\n`;
-    summary += `You are writing Chapter ${currentChapter}, Subchapter ${currentSubchapter} (${['A', 'B', 'C'][currentSubchapter - 1]}).\n\n`;
-    summary += `1. **DO NOT** summarize or recap what happened - the player already read it\n`;
-    summary += `2. **DO NOT** skip scenes or time jumps without showing what happened\n`;
-    summary += `3. **START** your narrative exactly where the previous subchapter ended\n`;
-    summary += `4. **CONTINUE** the story in real-time, scene by scene\n`;
-    if (currentSubchapter === 1 && context.lastDecision) {
-      summary += `5. **CRITICAL**: The player chose "${context.lastDecision.chosenTitle || 'Option ' + context.lastDecision.optionKey}" - SHOW THIS SCENE HAPPENING NOW\n`;
-      summary += `   - DO NOT write "After Jack did X..." - WRITE THE SCENE OF JACK DOING X\n`;
-      summary += `   - First 200+ words should be the actual scene of the chosen action\n`;
-    }
-    summary += `${'#'.repeat(80)}\n`;
+    // NOTE: Continuation requirements are in _buildSceneStateSection and _buildTaskSection
+    // to avoid duplication
 
     return summary;
   }
@@ -5651,14 +5608,14 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
    * Build character reference section
    */
   _buildCharacterSection() {
-    const { protagonist, antagonist, allies, villains, victims, secondary } = CHARACTER_REFERENCE;
+    const { protagonist, antagonist } = CHARACTER_REFERENCE;
 
     // Helper to format example phrases
     const formatExamples = (phrases) => {
       return phrases.map(phrase => `  - "${phrase}"`).join('\n');
     };
 
-    return `## CHARACTER VOICES (Match these exactly)
+    return `## CHARACTER VOICES (Defined Characters)
 
 ### JACK HALLOWAY (Protagonist - Narration is close third-person on Jack)
 Role: ${protagonist.role}, ${protagonist.age}
@@ -5668,7 +5625,7 @@ Dialogue: ${protagonist.voiceAndStyle.dialogue}
 Example Phrases:
 ${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
 
-### VICTORIA BLACKWELL / THE CONFESSOR / EMILY CROSS
+### VICTORIA BLACKWELL / THE MIDNIGHT CARTOGRAPHER
 Role: ${antagonist.role}
 Aliases: ${antagonist.aliases.join(', ')}
 Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
@@ -5676,46 +5633,9 @@ Voice (Written): ${antagonist.voiceAndStyle.written}
 Example Phrases:
 ${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
 
-### SARAH REEVES
-Role: ${allies.sarahReeves.role}
-Voice: ${allies.sarahReeves.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.sarahReeves.voiceAndStyle.examplePhrases)}
-
-### ELEANOR BELLAMY
-Role: ${allies.eleanorBellamy.role}
-Voice: ${allies.eleanorBellamy.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(allies.eleanorBellamy.voiceAndStyle.examplePhrases)}
-
-### TOM WADE
-Role: ${villains.tomWade.role}
-Voice: ${villains.tomWade.voiceAndStyle?.speaking || 'Friendly surface with technical jargon as deflection'}
-Note: Jack's longtime friend (met ~12 years ago) who knows city records/symbol reports better than he admits
-
-### SILAS REED
-Role: ${villains.silasReed.role}
-Voice: ${villains.silasReed.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.silasReed.voiceAndStyle.examplePhrases)}
-
-### HELEN PRICE
-Role: ${villains.helenPrice.title} - ${villains.helenPrice.role}
-Voice: ${villains.helenPrice.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(villains.helenPrice.voiceAndStyle.examplePhrases)}
-
-### CLAIRE THORNHILL
-Role: ${victims.claireThornhill.role}
-Voice: ${victims.claireThornhill.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(victims.claireThornhill.voiceAndStyle.examplePhrases)}
-
-### MARCUS WEBB
-Role: ${secondary.marcusWebb.role}
-Voice: ${secondary.marcusWebb.voiceAndStyle.speaking}
-Example Phrases:
-${formatExamples(secondary.marcusWebb.voiceAndStyle.examplePhrases)}`;
+### OTHER CHARACTERS
+The LLM has creative freedom to generate any supporting characters as the story requires.
+Create distinctive voices for any new characters that serve the narrative.`;
   }
 
   /**
@@ -6026,17 +5946,7 @@ The narrative context differs by path, so the strategic options should differ to
       voiceDNA = '';
     }
 
-    // Build dramatic irony section based on chapter
-    let dramaticIrony = '';
-    try {
-      dramaticIrony = buildDramaticIronySection(chapter, pathKey, choiceHistory);
-      if (!dramaticIrony || dramaticIrony.length < 50) {
-        console.warn('[StoryGen] ⚠️ Dramatic irony empty for chapter', chapter);
-      }
-    } catch (e) {
-      console.error('[StoryGen] ❌ Dramatic irony FAILED:', e.message);
-      dramaticIrony = '';
-    }
+    // NOTE: Dramatic irony section removed - LLM has creative freedom
 
     return `## STYLE REFERENCE
 
@@ -6052,9 +5962,7 @@ ${extendedExamples}
 
 ${manyShotExamples}
 
-${voiceDNA}
-
-${dramaticIrony}`;
+${voiceDNA}`;
   }
 
   /**
@@ -9598,21 +9506,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       report.issues.push(`STYLE_EXAMPLES check failed: ${e.message}`);
     }
 
-    // Check dramatic irony builder
-    try {
-      const irony = buildDramaticIronySection(3, 'ROOT', []);
-      report.components.dramaticIrony = {
-        length: irony?.length || 0,
-        hasContent: !!irony && irony.length > 100,
-        preview: irony?.slice(0, 200) || 'EMPTY',
-      };
-      if (!irony || irony.length < 100) {
-        report.issues.push('Dramatic irony section empty for test chapter');
-      }
-    } catch (e) {
-      report.components.dramaticIrony = { error: e.message };
-      report.issues.push(`Dramatic irony FAILED: ${e.message}`);
-    }
+    // NOTE: Dramatic irony check removed - feature disabled
 
     // Check voice DNA builder
     try {
