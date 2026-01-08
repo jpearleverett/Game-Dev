@@ -831,26 +831,22 @@ The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
 ## PATH STRUCTURED NOTES (Use these to stay grounded; do not invent new named entities)
 {{pathStructuredNotes}}
 
-## BASE DECISION (MUST REMAIN THE SAME TWO DIRECTIONS)
-You are tailoring the decision framing per-path, but you are NOT inventing new unrelated choices.
-All 9 pathDecisions MUST still represent the same underlying binary choice as the base decision below.
+## DECISION MOMENT (Per-path decisions are authoritative)
+Each of the 9 paths can legitimately lead to DIFFERENT decisions. The player lived a different ending, so the fork can change.
 
-- Base Option A (anchor): "{{optionATitle}}" ({{optionAFocus}})
-- Base Option B (anchor): "{{optionBTitle}}" ({{optionBFocus}})
+For reference only (optional): the canonical decision generated in the main pass was:
+- Option A: "{{optionATitle}}" ({{optionAFocus}})
+- Option B: "{{optionBTitle}}" ({{optionBFocus}})
 
-### HARD CONSTRAINTS
-- Option A titles across paths must remain a close paraphrase of Base Option A (keep the same core nouns/verbs).
-- Option B titles across paths must remain a close paraphrase of Base Option B (keep the same core nouns/verbs).
-- DO NOT introduce new locations/characters/objects not mentioned in the first-choice labels/summaries or path summaries.
-- If unsure, keep titles closer to the base anchors rather than drifting.
+You MAY diverge from these titles if the path notes justify it. Prefer decisions that clearly follow from each path's ending.
 
 ## YOUR TASK
 For each of the 9 paths, generate a UNIQUE decision variant:
 
-1. **UNIQUE TITLES (WITH ANCHORS)**: Create path-specific option titles that reflect what THIS player discovered
+1. **UNIQUE TITLES**: Create path-specific option titles that reflect what THIS player discovered
    - If path 1A-2A discovered evidence X, the options should reference X
    - If path 1C-2B had a different revelation, options should reflect THAT
-   - BUT each title must still clearly be Option A vs Option B from the base decision above
+   - Avoid generic titles that could apply to any path
 
 2. **PATH-SPECIFIC INTRO**: Frame the decision (1-2 sentences) based on what happened in that specific path
 
@@ -7320,7 +7316,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 // Normalize keys if generator returned "2C" (we still want stable path keys in prompt)
                 const normalizedKey = /^2[ABC]$/.test(rawKey) && /^1[ABC]$/.test(afterChoice) ? `${afterChoice}-${rawKey}` : rawKey;
                 const evidenceCards = [
-                  ...getEvidenceCards(branchingNarrative?.opening?.details),
+                  // NOTE: Use `bn` (generatedContent.branchingNarrative) in this scope.
+                  // Referencing an undefined identifier here can break the whole second-call pipeline.
+                  ...getEvidenceCards(bn?.opening?.details),
                   ...getEvidenceCards(first?.details),
                   ...getEvidenceCards(endOpt?.details),
                 ].slice(0, 6);
@@ -7469,61 +7467,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 console.log(`  - ${pathKey}: A="${decision.optionA?.title || '?'}" | B="${decision.optionB?.title || '?'}"`);
               }
 
-              // Guardrail: ensure pathDecisions stay aligned to the base decision.
-              // If the model drifts (e.g. returns unrelated actions), fall back to base decision for all paths
-              // so the UI stays coherent with the narrative.
-              const baseA = generatedContent.decision?.optionA?.title || '';
-              const baseB = generatedContent.decision?.optionB?.title || '';
-              const baseAFocus = generatedContent.decision?.optionA?.focus || '';
-              const baseBFocus = generatedContent.decision?.optionB?.focus || '';
-              const tokenize = (text) =>
-                String(text || '')
-                  .toLowerCase()
-                  .split(/[^a-z0-9]+/g)
-                  .map((t) => t.trim())
-                  .filter(Boolean);
-              const STOP = new Set(['the','a','an','and','or','to','of','in','on','for','with','at','from','into','over','under','before','after','now','then','alone']);
-              const overlap = (title, baseTitle) => {
-                const a = new Set(tokenize(title).filter((t) => t.length >= 3 && !STOP.has(t)));
-                const b = new Set(tokenize(baseTitle).filter((t) => t.length >= 3 && !STOP.has(t)));
-                if (!a.size || !b.size) return false;
-                for (const t of a) if (b.has(t)) return true;
-                return false;
-              };
-
-              // If the model drifts, don't discard everything (that makes it feel "rejected").
-              // Instead, clamp each drifting title/focus back to the base anchors, while keeping
-              // the path-specific intro. This preserves coherence and maintains per-path flavor.
-              let driftCount = 0;
-              for (const [pk, d] of Object.entries(pathDecisionsObj)) {
-                const aOk = overlap(d?.optionA?.title, baseA);
-                const bOk = overlap(d?.optionB?.title, baseB);
-                if (!aOk) {
-                  driftCount += 1;
-                  if (d?.optionA) {
-                    d.optionA.title = baseA || d.optionA.title;
-                    d.optionA.focus = baseAFocus || d.optionA.focus;
-                    d.optionA.key = 'A';
-                  }
-                }
-                if (!bOk) {
-                  driftCount += 1;
-                  if (d?.optionB) {
-                    d.optionB.title = baseB || d.optionB.title;
-                    d.optionB.focus = baseBFocus || d.optionB.focus;
-                    d.optionB.key = 'B';
-                  }
-                }
-                // Ensure intro always exists; use the path summary if the model gave empty intro.
-                if (!d?.intro || !String(d.intro).trim()) {
-                  const summary = pathSummaryMap[pk] || '';
-                  d.intro = summary || generatedContent.decision?.intro || '';
-                }
-              }
-
-              if (driftCount > 0) {
-                console.warn(`[StoryGenerationService] ⚠️ pathDecisions drift detected (${driftCount} mismatches). Clamped drifting titles back to base anchors.`);
-              }
+              // No clamping/fallback here: per-path pathDecisions are authoritative by design.
+              // If the model drifts, we allow it — this is still better than collapsing to one decision.
 
               llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
                 pathCount: Object.keys(pathDecisionsObj).length,
@@ -7540,8 +7485,22 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.failed', {
               error: secondCallError.message,
             }, 'error');
-            // Continue with simple decision - it's a valid fallback
+            // Do not silently fall back for decision-point subchapters.
+            // If pathDecisions cannot be generated, force a retry so the player doesn't see a collapsed decision set.
+            const err = new Error(`Failed to generate pathDecisions: ${secondCallError.message}`);
+            err.retryable = true;
+            err.isPathDecisionsFailure = true;
+            throw err;
           }
+        }
+
+        // Enforce: decision-point subchapters must have pathDecisions so the UI can show the correct
+        // two-path decision set for the player's realized branching path.
+        if (isDecisionPoint && !generatedContent.pathDecisions) {
+          const err = new Error('Decision subchapter missing pathDecisions');
+          err.retryable = true;
+          err.isPathDecisionsFailure = true;
+          throw err;
         }
 
         // Validate decision structure for decision points (path-specific decisions)
