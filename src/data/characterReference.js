@@ -165,7 +165,7 @@ export const VOICE_DNA = {
     ],
     vocabularyTendencies: [
       'Map language: "route," "line," "legend," "scale," "blank"',
-      'Constraint language: "don't," "never," "once," "until"',
+      `Constraint language: "don't," "never," "once," "until"`,
     ],
     physicalTells: [
       'Stillness as dominance',
