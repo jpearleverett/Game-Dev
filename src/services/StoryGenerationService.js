@@ -5128,9 +5128,10 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
     // Note: beatType already declared earlier for many-shot examples (line 5049)
 
+    // Gemini 3 best practice: Anchor reasoning to context with transition phrase
     parts.push(`
 <task>
-Write subchapter ${chapter}.${subchapter} (${beatType}).
+Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}).
 
 Before writing, plan:
 1. What narrative threads from ACTIVE_THREADS must be addressed?
@@ -5204,7 +5205,9 @@ If any check fails, revise before returning your response.
     parts.push(this._buildCraftTechniquesSection());
 
     // Part 10: Current Task Specification (LAST for recency effect)
-    parts.push(this._buildTaskSection(context, chapter, subchapter, isDecisionPoint));
+    // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+    const taskSection = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
+    parts.push(`Based on all the context provided above, complete the following task:\n\n${taskSection}`);
 
     return parts.join('\n\n---\n\n');
   }
