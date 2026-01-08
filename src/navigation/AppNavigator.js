@@ -178,7 +178,7 @@ export default function AppNavigator({ fontsReady, audio }) {
       </Stack.Screen>
 
       <Stack.Screen name="CaseFile">
-        {({ navigation }) => {
+        {({ navigation, route }) => {
           const actions = useNavigationActions(navigation, game, audio);
 
           // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
@@ -189,6 +189,15 @@ export default function AppNavigator({ fontsReady, audio }) {
             navigation.navigate('Board');
           };
 
+          // If navigation provided a specific case number, prefer that case's data.
+          // This avoids a transient frame where `activeCase` is still the previous case
+          // right after advancing the story (e.g., 001A -> 001B).
+          const targetCaseNumber = route?.params?.caseNumber;
+          const caseFromParams = targetCaseNumber
+            ? cases.find((c) => c.caseNumber === targetCaseNumber)
+            : null;
+          const resolvedActiveCase = caseFromParams || activeCase;
+
           // NARRATIVE-FIRST FIX: Check if user has story progress even if not in explicit story mode
           // This ensures the "Solve Puzzle" button appears correctly for all story chapters
           const hasStoryProgress = progress.storyCampaign?.chapter != null && progress.storyCampaign?.activeCaseNumber;
@@ -196,7 +205,7 @@ export default function AppNavigator({ fontsReady, audio }) {
 
           return (
             <CaseFileScreen
-              activeCase={activeCase}
+              activeCase={resolvedActiveCase}
               nextUnlockAt={progress.nextUnlockAt}
               storyCampaign={progress.storyCampaign}
               solvedCaseIds={progress.solvedCaseIds}

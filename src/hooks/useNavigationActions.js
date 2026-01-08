@@ -221,28 +221,26 @@ export function useNavigationActions(navigation, game, audio) {
   }, [handleStoryStart]);
 
   const handleStoryContinue = useCallback(async () => {
-    // Call continueStoryCampaign WITHOUT preserveStatus - this was causing navigation issues
-    // The button may briefly show wrong text during the async call, but navigation will work
-    const result = await continueStoryCampaign();
+    try {
+      // `continueStoryCampaign()` ultimately calls `activateStoryCase({ mode: 'story' })`,
+      // which *awaits* story generation for dynamic chapters (including 001B).
+      // If it returns ok=true, the LLM narrative is already cached and ready to render.
+      const result = await continueStoryCampaign();
 
-    console.log('[Navigation] handleStoryContinue result:', {
-      ok: result?.ok,
-      caseNumber: result?.caseNumber,
-      reason: result?.reason,
-    });
+      console.log('[Navigation] handleStoryContinue result:', {
+        ok: result?.ok,
+        caseNumber: result?.caseNumber,
+        reason: result?.reason,
+      });
 
-    // Get the target case number from the result (fresh value, not from closure)
-    const targetCaseNumber = result?.caseNumber;
+      const targetCaseNumber = result?.caseNumber;
 
-    if (result?.ok && targetCaseNumber) {
-      // For the next subchapter, we ALWAYS need to show narrative first
-      // because the player hasn't read it yet (they just advanced from previous subchapter)
-      // Use navigation.replace to ensure we actually leave CaseSolvedScreen
-      console.log('[Navigation] Navigating to CaseFile for', targetCaseNumber);
-      navigation.replace('CaseFile');
-    } else {
-      // Fallback: always navigate to CaseFile to avoid getting stuck
-      console.warn('[Navigation] continueStoryCampaign issue, navigating to CaseFile as fallback:', result?.reason);
+      // Always leave the Solved screen. Pass the target case number to avoid
+      // any transient "stale activeCase" frame during async state updates.
+      navigation.replace('CaseFile', targetCaseNumber ? { caseNumber: targetCaseNumber } : undefined);
+    } catch (error) {
+      // Never strand the user on the results screen if something throws.
+      console.warn('[Navigation] continueStoryCampaign threw, routing to CaseFile:', error?.message || error);
       navigation.replace('CaseFile');
     }
   }, [continueStoryCampaign, navigation]);
