@@ -9524,6 +9524,28 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       report.issues.push(`Voice DNA FAILED: ${e.message}`);
     }
 
+    // Check many-shot examples
+    try {
+      const manyShotA = buildManyShotExamples('Opening/Hook (A)', null, 15);
+      const manyShotB = buildManyShotExamples('Development/Conflict (B)', null, 15);
+      const manyShotC = buildManyShotExamples('Resolution/Decision (C)', null, 15);
+      report.components.manyShotExamples = {
+        openingHook: { length: manyShotA?.length || 0, hasContent: manyShotA?.length > 1000 },
+        developmentConflict: { length: manyShotB?.length || 0, hasContent: manyShotB?.length > 1000 },
+        resolutionDecision: { length: manyShotC?.length || 0, hasContent: manyShotC?.length > 1000 },
+        previewB: manyShotB?.slice(0, 300) || 'EMPTY',
+      };
+      if (!manyShotA || manyShotA.length < 1000) {
+        report.issues.push('Many-shot examples for Opening/Hook (A) missing or too short');
+      }
+      if (!manyShotB || manyShotB.length < 1000) {
+        report.issues.push('Many-shot examples for Development/Conflict (B) missing or too short');
+      }
+    } catch (e) {
+      report.components.manyShotExamples = { error: e.message };
+      report.issues.push(`Many-shot examples FAILED: ${e.message}`);
+    }
+
     // Check WRITING_STYLE
     try {
       report.components.writingStyle = {
