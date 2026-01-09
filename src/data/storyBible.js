@@ -39,13 +39,24 @@ export const TIMELINE = {
     5: 'Jack builds a reputation for finding information other investigators miss; he charges less than the big firms and works stranger hours',
     4: 'Jack takes a desk job at a corporate security company for stable income; hates sitting still and quits after eight months',
     3: 'Jack goes back to freelance work; rents a cheap office above a bar called Murphy\'s because the landlord doesn\'t ask questions',
-    2: 'Jack handles background checks, serves subpoenas, tracks down witnesses, and occasionally finds someone\'s missing relative',
-    1: 'Jack is 29 years old, underemployed, and spending too many nights cross-referencing old city maps because he can\'t sleep',
+
+    // The burnout
+    2: [
+      'Jack takes a missing persons case: a mother looking for her adult son who stopped returning calls',
+      'Jack finds him in three weeks; the son had cut contact on purpose, was finally getting clean, didn\'t want his family involved',
+      'Jack gives the mother the address anyway; it\'s what she paid for',
+      'Two months later Jack reads that the son overdosed; the mother had shown up, there was a fight, he relapsed',
+      'Jack can\'t prove the connection but can\'t stop thinking about it; stops taking missing persons cases',
+      'Jack starts sleeping less, drinking more, letting his apartment go; work slows down because he stops returning calls',
+    ],
+
+    // Present day
+    1: 'Jack is 29 years old, going through the motions; takes only simple jobs now, background checks and process serving, nothing that requires him to find anyone',
   },
   storyStart: {
     anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
     jackAge: 29,
-    jackState: 'Freelance investigator scraping by on odd jobs; knows the city\'s records better than anyone but can\'t explain why that matters',
+    jackState: 'Burned out, depressed, scraping by on small jobs; still good at what he does but afraid of what happens when he actually finds something',
   },
 };
 
