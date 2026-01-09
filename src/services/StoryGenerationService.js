@@ -5332,10 +5332,9 @@ Techniques:
 ${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')}
 
 **Personal Stakes Progression:**
-- Chapters 2-4: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters2to4}
-- Chapters 5-7: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters5to7}
-- Chapters 8-10: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters8to10}
-- Chapters 11-12: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters11to12}
+- Chapters 1-4: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters1to4}
+- Chapters 5-9: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters5to9}
+- Chapters 10-12: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters10to12}
 
 **Revelation Gradient:**
 - Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
