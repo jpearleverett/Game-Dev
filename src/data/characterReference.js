@@ -57,7 +57,6 @@ export const CHARACTER_REFERENCE = {
 
   antagonist: {
     name: 'Victoria Blackwell',
-    aliases: ['The Midnight Cartographer', 'V.A.', 'Cartographer'],
     role: "Primary antagonist/guide; architect of Jack's route through the mystery",
     age: '30s',
     physicalDescription: {
@@ -85,7 +84,7 @@ export const CHARACTER_REFERENCE = {
       motive: 'Force Jack to see the pattern, then decide what kind of person follows it',
     },
     methods: {
-      communication: 'Dead letters with silver ink, river-glass tokens, and rule-like phrasing',
+      communication: 'Dead letters with silver ink and rule-like phrasing',
       philosophy: '"If you name it too early, you lose it."',
     },
     relationships: {
@@ -157,7 +156,7 @@ export const VOICE_DNA = {
   },
 
   victoria: {
-    name: 'Victoria Blackwell / The Midnight Cartographer',
+    name: 'Victoria Blackwell',
     sentencePatterns: [
       'Controlled sentences, no filler',
       'Questions used as locks',
