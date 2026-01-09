@@ -2676,9 +2676,6 @@ Create a high-level story arc outline for Chapters 2-12 that:
 - Chapters 11-12: RESOLUTION (the choice: seal, reshape, or surrender the map; consequences lock in)
   * Personal stakes focus: who Jack becomes and what Ashport is allowed to be
 
-## FIVE MISSING ANCHORS TO WEAVE IN (from the story bible)
-${(ABSOLUTE_FACTS.fiveInnocents || []).map((p, i) => `${i + 1}. ${p.name} — ${p.role || 'Missing person'}; symbol: ${p.symbol || 'UNKNOWN'}`).join('\n')}
-
 ## ENGAGEMENT REQUIREMENTS FOR EACH CHAPTER
 For each chapter, you MUST provide:
 1. **personalStakes**: What Jack personally loses if he fails THIS chapter. Be viscerally specific.
@@ -4457,9 +4454,6 @@ Generate realistic, specific consequences based on the actual narrative content.
       protagonist: ABSOLUTE_FACTS.protagonist,
       antagonist: ABSOLUTE_FACTS.antagonist,
       setting: ABSOLUTE_FACTS.setting,
-      fiveInnocents: ABSOLUTE_FACTS.fiveInnocents,
-      corruptOfficials: ABSOLUTE_FACTS.corruptOfficials,
-      supportingCharacters: ABSOLUTE_FACTS.supportingCharacters,
     };
   }
 
