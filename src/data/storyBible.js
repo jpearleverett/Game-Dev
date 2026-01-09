@@ -66,14 +66,15 @@ export const TIMELINE = {
 export const ABSOLUTE_FACTS = {
   protagonist: {
     fullName: 'Jack Halloway',
-    age: 'Late 20s to early 30s',
-    formerTitle: 'Junior field investigator (contract work), former city records clerk',
-    currentStatus: 'Underemployed, taking odd investigative jobs; quietly unraveling',
+    age: 29,
+    formerTitle: 'Freelance investigator, former file clerk at Ashport City Records Office',
+    currentStatus: 'Burned out and depressed; takes only simple jobs now, avoids anything that requires finding people',
     residence: 'A cramped office-sublet above Murphy\'s Bar (cheap rent, thin floorboards)',
-    careerLength: '7 years working cases and records (not a cop)',
-    clearanceRate: 'Reputation: unusually good at noticing patterns other people dismiss',
-    vices: ['Too much cold coffee', 'Insomnia', 'Compulsive note-taking'],
-    physicalState: 'Young but worn down; ink-stained fingers, tired eyes, coat that never quite dries in Ashport weather',
+    careerLength: 'About 10 years in records and investigation work',
+    reputation: 'Used to be good at finding information others missed; now just going through the motions',
+    vices: ['Drinking too much', 'Insomnia', 'Compulsive note-taking'],
+    physicalState: 'Young but worn down; tired eyes, unshaven, clothes that haven\'t been washed in too long',
+    burnout: 'A missing persons case ended badly two years ago; Jack found someone who didn\'t want to be found, and they died after he gave up the address',
   },
 
   antagonist: {
@@ -98,7 +99,7 @@ export const ABSOLUTE_FACTS = {
     coreMystery: 'Ashport has a second layer: a hidden topology (“the Under-Map”) accessed through symbol sequences and place-specific thresholds',
     keyLocations: {
       murphysBar: 'Bar beneath Jack\'s office',
-      jackOffice: 'A tiny room above the bar where Jack catalogs symbols and pins up maps',
+      jackOffice: 'A tiny room above the bar; desk, filing cabinet, old maps on the walls from his records days',
       underbridgeMarket: 'A night market under the elevated tracks where “found” objects appear without provenance',
       civicArchive: 'Records office where Jack can access old zoning maps and vanished street plans',
       blackwellPenthouse: 'Glass and steel, commanding city view; feels like a room built to observe, not live',
