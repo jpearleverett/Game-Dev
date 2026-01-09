@@ -4874,21 +4874,27 @@ Generate realistic, specific consequences based on the actual narrative content.
     const extendedExamples = this._buildExtendedStyleExamplesForCache();
     console.log(`[Cache] Extended examples: ${extendedExamples.length} chars`);
 
+    // Defensive access for WRITING_STYLE properties
+    const wsVoice = WRITING_STYLE?.voice || {};
+    const wsInfluences = Array.isArray(WRITING_STYLE?.influences) ? WRITING_STYLE.influences : [];
+    const wsForbidden = Array.isArray(WRITING_STYLE?.absolutelyForbidden) ? WRITING_STYLE.absolutelyForbidden : [];
+    const wsMustInclude = Array.isArray(WRITING_STYLE?.mustInclude) ? WRITING_STYLE.mustInclude : [];
+
     const styleSection = `## WRITING STYLE - Voice DNA Examples
 
-Voice: ${WRITING_STYLE.voice.perspective}, ${WRITING_STYLE.voice.tense}
-Tone: ${WRITING_STYLE.voice.tone}
+Voice: ${wsVoice.perspective || 'Third-person limited'}, ${wsVoice.tense || 'past tense'}
+Tone: ${wsVoice.tone || 'Noir-inflected literary'}
 
 Influences:
-${WRITING_STYLE.influences.map(i => `- ${i}`).join('\n')}
+${wsInfluences.map(i => `- ${i}`).join('\n') || '- Dennis Lehane'}
 
 ### Forbidden Patterns (NEVER use):
-${WRITING_STYLE.absolutelyForbidden.map(f => `- ${f}`).join('\n')}
+${wsForbidden.map(f => `- ${f}`).join('\n') || '- Generic prose'}
 
 ### Required Elements:
-${WRITING_STYLE.mustInclude.map(r => `- ${r}`).join('\n')}
+${wsMustInclude.map(r => `- ${r}`).join('\n') || '- Atmospheric prose'}
 
-${STYLE_EXAMPLES}
+${STYLE_EXAMPLES || ''}
 
 ${extendedExamples}
 `;
@@ -5209,68 +5215,87 @@ If any check fails, revise before returning your response.
    * These are static techniques from storyBible that guide HOW to write compelling prose.
    */
   _buildCraftTechniquesSection() {
+    // Helper for safe array mapping with join
+    const safeJoin = (arr, mapper, fallback = '- (not available)') => {
+      if (!Array.isArray(arr) || arr.length === 0) return fallback;
+      return arr.map(mapper).join('\n');
+    };
+
+    // Defensive access for nested properties
+    const engReq = ENGAGEMENT_REQUIREMENTS || {};
+    const questionEcon = engReq.questionEconomy || {};
+    const finalLineHook = engReq.finalLineHook || {};
+    const personalStakes = engReq.personalStakes?.progression || {};
+    const revelationGrad = engReq.revelationGradient?.levels || {};
+    const emotionalAnchor = engReq.emotionalAnchor || {};
+    const microTension = MICRO_TENSION_TECHNIQUES || {};
+    const sentenceRhythm = SENTENCE_RHYTHM || {};
+    const iceberg = ICEBERG_TECHNIQUE || {};
+    const subtext = SUBTEXT_REQUIREMENTS || {};
+    const subtextLayers = subtext.layers || {};
+
     return `## CRAFT TECHNIQUES - How to Write Compelling Prose
 
 ### ENGAGEMENT REQUIREMENTS
 
-**Question Economy:** ${ENGAGEMENT_REQUIREMENTS.questionEconomy.description}
-- Balance Rule: ${ENGAGEMENT_REQUIREMENTS.questionEconomy.balanceRule}
+**Question Economy:** ${questionEcon.description || 'Plant new questions, selectively answer others'}
+- Balance Rule: ${questionEcon.balanceRule || 'Balance mystery, character, threat, and thematic questions'}
 - Question Types: Mystery (plot), Character (relationships), Threat (tension), Thematic (meaning)
 
-**Final Line Hook:** ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
+**Final Line Hook:** ${finalLineHook.description || 'End each subchapter with forward momentum'}
 Techniques:
-${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map(t => `- ${t}`).join('\n')}
+${safeJoin(finalLineHook.techniques, t => `- ${t}`)}
 
 **Personal Stakes Progression:**
-- Chapters 2-4: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters2to4}
-- Chapters 5-7: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters5to7}
-- Chapters 8-10: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters8to10}
-- Chapters 11-12: ${ENGAGEMENT_REQUIREMENTS.personalStakes.progression.chapters11to12}
+- Chapters 2-4: ${personalStakes.chapters2to4 || 'Reputation and self-image at stake'}
+- Chapters 5-7: ${personalStakes.chapters5to7 || 'Relationships at stake'}
+- Chapters 8-10: ${personalStakes.chapters8to10 || 'Freedom and safety at stake'}
+- Chapters 11-12: ${personalStakes.chapters11to12 || 'Redemption and legacy at stake'}
 
 **Revelation Gradient:**
-- Micro (every subchapter): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
-- Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
-- Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
+- Micro (every subchapter): ${revelationGrad.micro || 'A new fact, name, or lie exposed'}
+- Chapter (end of each): ${revelationGrad.chapter || 'Character nature or conspiracy revealed'}
+- Arc (chapters 4, 7, 10): ${revelationGrad.arc || 'World-shifting discovery'}
 
-**Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
-Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
+**Emotional Anchor:** ${emotionalAnchor.description || 'Ground abstract stakes in specific faces'}
+Rule: ${emotionalAnchor.rule || 'Use specific faces, not abstract concepts'}
 
 ### MICRO-TENSION TECHNIQUES
-${MICRO_TENSION_TECHNIQUES.description}
+${microTension.description || 'Every paragraph needs tension at the micro level'}
 
 Every paragraph MUST contain at least one:
-${MICRO_TENSION_TECHNIQUES.elements.map(e => `- ${e}`).join('\n')}
+${safeJoin(microTension.elements, e => `- ${e}`)}
 
-**Warning:** ${MICRO_TENSION_TECHNIQUES.warning}
+**Warning:** ${microTension.warning || 'Flat paragraphs kill pacing'}
 
 ### SENTENCE RHYTHM (Noir Cadence)
-${SENTENCE_RHYTHM.description}
+${sentenceRhythm.description || 'Vary sentence length for rhythm'}
 
 Pattern example:
-${SENTENCE_RHYTHM.pattern}
+${sentenceRhythm.pattern || 'Short. Short. Longer sentence with detail. Short.'}
 
 Rules:
-${SENTENCE_RHYTHM.rules.map(r => `- ${r}`).join('\n')}
+${safeJoin(sentenceRhythm.rules, r => `- ${r}`)}
 
 ### THE ICEBERG TECHNIQUE
-${ICEBERG_TECHNIQUE.description}
+${iceberg.description || 'Show 10%, imply 90%'}
 
 Applications:
-${ICEBERG_TECHNIQUE.applications.map(a => `- ${a}`).join('\n')}
+${safeJoin(iceberg.applications, a => `- ${a}`)}
 
-Principle: ${ICEBERG_TECHNIQUE.principle}
+Principle: ${iceberg.principle || 'What is NOT said matters most'}
 
 ### SUBTEXT IN DIALOGUE
-${SUBTEXT_REQUIREMENTS.description}
+${subtext.description || 'Characters rarely say what they mean'}
 
 Layers:
-- Surface: ${SUBTEXT_REQUIREMENTS.layers.surface}
-- Actual: ${SUBTEXT_REQUIREMENTS.layers.actual}
+- Surface: ${subtextLayers.surface || 'What characters literally say'}
+- Actual: ${subtextLayers.actual || 'What they really mean'}
 
 Examples:
-${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subtext}"`).join('\n')}
+${safeJoin(subtext.examples, e => `"${e?.surface || ''}" → Subtext: "${e?.subtext || ''}"`, '- (no examples)')}
 
-**Rule:** ${SUBTEXT_REQUIREMENTS.rule}`;
+**Rule:** ${subtext.rule || 'Never let characters say exactly what they mean'}`;
   }
 
   /**
@@ -5608,30 +5633,39 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
    * Build character reference section
    */
   _buildCharacterSection() {
-    const { protagonist, antagonist } = CHARACTER_REFERENCE;
+    const { protagonist, antagonist } = CHARACTER_REFERENCE || {};
 
-    // Helper to format example phrases
+    // Helper to format example phrases with defensive check
     const formatExamples = (phrases) => {
+      if (!Array.isArray(phrases)) return '  - (no examples available)';
       return phrases.map(phrase => `  - "${phrase}"`).join('\n');
     };
+
+    // Defensive access for nested properties
+    const protRole = protagonist?.role || 'Unknown';
+    const protAge = protagonist?.age || 'Unknown';
+    const protVoice = protagonist?.voiceAndStyle || {};
+    const antRole = antagonist?.role || 'Unknown';
+    const antAliases = Array.isArray(antagonist?.aliases) ? antagonist.aliases.join(', ') : 'Unknown';
+    const antVoice = antagonist?.voiceAndStyle || {};
 
     return `## CHARACTER VOICES (Defined Characters)
 
 ### JACK HALLOWAY (Protagonist - Narration is close third-person on Jack)
-Role: ${protagonist.role}, ${protagonist.age}
-Voice: ${protagonist.voiceAndStyle.narrative}
-Internal Monologue: ${protagonist.voiceAndStyle.internalMonologue}
-Dialogue: ${protagonist.voiceAndStyle.dialogue}
+Role: ${protRole}, ${protAge}
+Voice: ${protVoice.narrative || 'Third-person limited, past tense'}
+Internal Monologue: ${protVoice.internalMonologue || 'Observational'}
+Dialogue: ${protVoice.dialogue || 'Direct, not flowery'}
 Example Phrases:
-${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
+${formatExamples(protVoice.examplePhrases)}
 
 ### VICTORIA BLACKWELL / THE MIDNIGHT CARTOGRAPHER
-Role: ${antagonist.role}
-Aliases: ${antagonist.aliases.join(', ')}
-Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
-Voice (Written): ${antagonist.voiceAndStyle.written}
+Role: ${antRole}
+Aliases: ${antAliases}
+Voice (Speaking): ${antVoice.speaking || 'Calm, precise'}
+Voice (Written): ${antVoice.written || 'Instructional but elegant'}
 Example Phrases:
-${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
+${formatExamples(antVoice.examplePhrases)}
 
 ### OTHER CHARACTERS
 The LLM has creative freedom to generate any supporting characters as the story requires.
