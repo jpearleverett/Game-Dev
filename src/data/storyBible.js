@@ -615,14 +615,14 @@ export const CONSISTENCY_RULES = [
   'This is NOT medieval fantasy. The surface world is modern. The fantasy world is hidden, infrastructural, and uncanny.',
 
   // SYMBOL RULES (Core mystery engine)
-  'Symbols are called GLYPHS. They recur in the city and in Victoria's letters.',
+  'Symbols are called GLYPHS. They recur in the city and in Victoria\'s letters.',
   'Glyphs are not "spells." They are keys to thresholds, and they do not work everywhere.',
-  'Silver ink in Victoria's letters does not photograph cleanly; attempts to capture it produce blurred or doubled lines.',
+  'Silver ink in Victoria\'s letters does not photograph cleanly; attempts to capture it produce blurred or doubled lines.',
 
   // CHARACTER TRAITS (Immutable)
-  'Jack's default coping mechanism is rationalization and documentation (notes, sketches, photos, maps).',
-  'Jack's vice is cold coffee and insomnia; he is not a hardboiled alcoholic detective in this version.',
-  'Victoria's presence is clean and unsettling: ozone/basil scent, calm diction, exact phrasing.',
+  'Jack\'s default coping mechanism is rationalization and documentation (notes, sketches, photos, maps).',
+  'Jack\'s vice is cold coffee and insomnia; he is not a hardboiled alcoholic detective in this version.',
+  'Victoria\'s presence is clean and unsettling: ozone/basil scent, calm diction, exact phrasing.',
 
   // THRILLER CONSTRAINTS (No Tolkien pastiche)
   'No elves/dwarves/orcs, no feudal courts, no "chosen one prophecy," no faux-Old English diction.',
