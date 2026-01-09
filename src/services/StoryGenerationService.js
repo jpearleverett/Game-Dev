@@ -9636,8 +9636,8 @@ Check if each critical thread above is addressed through dialogue or action (not
       const validationPrompt = `You are a strict continuity editor for a modern mystery thriller with a hidden fantasy layer (the Under-Map). Check this narrative excerpt for FACTUAL ERRORS and THREAD VIOLATIONS.
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
-- Jack Halloway: late 20s/early 30s; not a cop; pattern-spotter; initially does NOT know the Under-Map is real
-- Tom Wade: Jack's longtime friend (met ~12 years ago); knows more about city records/symbol reports than he admits
+- Jack Halloway: 29 years old; burned out freelance investigator; former file clerk; avoids finding people after a case went bad; initially does NOT know the Under-Map is real
+- Tom Wade: Jack's friend; knows more about city records/symbol reports than he admits
 - Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink, river-glass tokens); guides Jack via rules and routes
 - Deputy Chief Grange: runs suppression/containment around Under-Map incidents
 - Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
