@@ -11,43 +11,41 @@
 // ============================================================================
 export const TIMELINE = {
   jackHistory: {
-    // Early life and education
-    18: 'Jack Halloway graduates high school in a small town outside Ashport; unremarkable student, but teachers noted his obsessive attention to detail in history projects',
-    17: 'Jack enrolls at Ashport Community College, undeclared major; works nights stocking shelves at a 24-hour drugstore to pay tuition',
-    15: 'Jack discovers an affinity for archival work during a part-time job digitizing old court records; switches major to Information Sciences',
+    // Early life
+    childhood: 'Jack grows up in a small town outside Ashport; quiet kid, preferred puzzles and maps to sports',
+    18: 'Jack graduates high school with average grades; moves to Ashport for community college',
 
-    // Meeting Tom and early career
-    12: 'Jack meets Tom Wade through a campus-arts work-study job cataloging old municipal signage; they bond over shared fascination with Ashport\'s layered history',
-    11: 'Jack graduates with an associate degree; takes entry-level position as a city records clerk in Ashport\'s Civic Archive',
+    // Education and first jobs
+    17: 'Jack works nights stocking shelves at a pharmacy while taking general education classes; no clear career path',
+    16: 'Jack gets a part-time job scanning old documents at the county courthouse; discovers he likes the work more than his classes',
+    15: 'Jack drops out of college to work full-time as a file clerk at the Ashport City Records Office',
 
-    // Records clerk years
-    10: 'Jack earns reputation at the Archive for finding "unfindable" documents; supervisors start routing difficult research requests to his desk',
-    9: 'Jack notices his first pattern: three unrelated property disputes all reference the same surveyor\'s error from 1952; files a note, moves on',
-    8: 'A local insurance investigator hires Jack off-hours to trace ownership records for a fraud case; Jack\'s first taste of investigative work',
+    // City records years
+    14: 'Jack learns the city\'s filing systems inside and out; becomes the go-to person when someone needs an old permit or property record',
+    13: 'Jack gets promoted to research assistant; spends his days pulling zoning maps, deed transfers, and building inspection reports for lawyers and city planners',
+    12: 'Jack starts noticing when things don\'t match up: addresses that appear on one map but not another, streets renamed without explanation, buildings with permits filed after they were built',
 
     // Transition to investigation
-    7: 'Jack leaves the Civic Archive to become a junior field investigator for a small private firm; takes a pay cut but gains access to street-level work',
-    6: 'Jack handles his first solo case: a missing persons trace that leads him through three weeks of dead ends before he finds the subject alive in a shelter two blocks from where the search started; learns that proximity doesn\'t mean visibility',
-    5: 'Jack develops his signature method: paper maps, handwritten notes, physical photographs; refuses to rely solely on digital tools after a database error nearly tanks a case',
+    11: 'A lawyer offers Jack side work tracing property ownership for a real estate dispute; Jack finds a chain of shell companies in two days',
+    10: 'Jack quits the Records Office to work for a small private investigation firm; takes a pay cut but gets to leave his desk',
+    9: 'Jack learns skip tracing: finding people who don\'t want to be found by following paper trails, utility records, forwarding addresses',
 
-    // Growing reputation and growing unease
-    4: 'Jack\'s firm closes; he picks up contract work from attorneys, insurance companies, and the occasional worried spouse; income unstable but skills sharpening',
-    3: 'Tom Wade shows Jack a collection of photographs: repeating symbols appearing across Ashport, chalked on walls, scratched into benches, painted on storm drains; Jack dismisses it as graffiti, but the conversation lingers',
-    2: 'Jack takes a "stable" desk job at a corporate security firm; hates it immediately but needs the health insurance',
+    // Building skills
+    8: 'Jack works his first missing person case; learns to walk neighborhoods, talk to bartenders, check bus station lockers',
+    7: 'Jack develops a habit of using paper maps and handwritten notes; he trusts what he can hold in his hands',
+    6: 'The PI firm closes; Jack starts freelancing for lawyers, insurance adjusters, and anyone who needs something found',
 
-    // The unraveling
-    1: [
-      'Jack notices a "coincidence chain": the same car parked outside three unrelated client sites; his coffee order ready before he speaks at a cafe he\'s never visited; a wrong number that recites his home address before hanging up',
-      'Jack quits the corporate job after six months; tells himself it\'s burnout, but the truth is simpler: he felt watched, and he couldn\'t prove it, and that bothered him more than being broke',
-      'Jack rents a cramped office-sublet above Murphy\'s Bar; cheap rent, thin floorboards, and a landlord who doesn\'t ask questions',
-      'Jack begins taking odd investigative jobs to pay rent: process serving, background checks, the occasional "find my deadbeat ex" case; he tells himself it\'s temporary',
-    ],
+    // Freelance years
+    5: 'Jack builds a reputation for finding information other investigators miss; he charges less than the big firms and works stranger hours',
+    4: 'Jack takes a desk job at a corporate security company for stable income; hates sitting still and quits after eight months',
+    3: 'Jack goes back to freelance work; rents a cheap office above a bar called Murphy\'s because the landlord doesn\'t ask questions',
+    2: 'Jack handles background checks, serves subpoenas, tracks down witnesses, and occasionally finds someone\'s missing relative',
+    1: 'Jack is 29 years old, underemployed, and spending too many nights cross-referencing old city maps because he can\'t sleep',
   },
   storyStart: {
     anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
-    jackState: 'Underemployed, exhausted, quietly unraveling; seven years of pattern-recognition have made him good at his work but bad at ignoring things that don\'t add up',
-    day1: 'Jack receives his first "dead letter" with an impossible symbol sequence',
-    structure: '12 days, 12 thresholds: each day pushes Jack deeper into a hidden reality threaded through Ashport\'s streets',
+    jackAge: 29,
+    jackState: 'Freelance investigator scraping by on odd jobs; knows the city\'s records better than anyone but can\'t explain why that matters',
   },
 };
 
