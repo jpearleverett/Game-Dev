@@ -23,7 +23,7 @@ export const TIMELINE = {
   },
   storyStart: {
     anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
-    day1: 'Jack receives his first “dead letter” with an impossible symbol sequence and a river-glass token',
+    day1: 'Jack receives his first “dead letter” with an impossible symbol sequence',
     structure: '12 days, 12 thresholds: each day pushes Jack deeper into a hidden reality threaded through Ashport’s streets',
   },
 };
@@ -47,16 +47,13 @@ export const ABSOLUTE_FACTS = {
   antagonist: {
     trueName: 'Victoria Blackwell',
     aliasUsed: 'Victoria Blackwell',
-    titleUsed: 'The Midnight Cartographer',
-    signatures: ['M.C.', 'V.B.', '⟂○'], // "Split Eye over Hollow Ring" mark, written textually
     currentAge: 'Unknown (appears late 20s to mid 30s; may be misleading)',
-    occupation: 'Information broker (public-facing), symbol-runner (true role unknown)',
+    occupation: 'Information broker (public-facing), true role unknown',
     origin: 'Unknown; she claims Ashport has always had two maps, and Jack has only seen one',
     communication: {
       method: 'Black envelopes with a wax seal that never softens (even under heat)',
       ink: 'Silver ink that does not photograph cleanly and “moves” when stared at too long',
-      markers: 'River-glass tokens (one per day), cold to the touch regardless of room temperature',
-      scent: 'Ozone and crushed basil (sharp, clean, unsettling)',
+      scent: 'Sharp, clean, unsettling',
     },
     motivation: 'Force Jack to follow the symbols until he cannot pretend they are coincidence, then make him choose what to do with the hidden map',
     philosophy: '"A map is a promise. Break it, and the city breaks back."',
@@ -71,7 +68,7 @@ export const ABSOLUTE_FACTS = {
       murphysBar: 'Bar beneath Jack\'s office',
       jackOffice: 'A tiny room above the bar where Jack catalogs symbols and pins up maps',
       underbridgeMarket: 'A night market under the elevated tracks where “found” objects appear without provenance',
-      civicArchive: 'Records office where Tom can access old zoning maps and vanished street plans',
+      civicArchive: 'Records office where Jack can access old zoning maps and vanished street plans',
       blackwellPenthouse: 'Glass and steel, commanding city view; feels like a room built to observe, not live',
       thresholdSites: 'Certain corners, stairwells, tunnels, and dead-ends that repeat symbol patterns at the edges of perception',
     },
@@ -98,7 +95,7 @@ export const STORY_STRUCTURE = {
   // This is the canonical starting point for ALL story generation.
   // The LLM MUST use this as the foundation when generating 1B and 1C.
   chapter1AContext: {
-    title: 'Dead Letter Office',
+    title: 'The Envelope',
     setting: 'Jack\'s office above Murphy\'s Bar, 2 AM, rainy night',
     events: [
       'Jack discovers a mysterious letter on his desk stamped "Return to Sender"',
@@ -170,7 +167,7 @@ export const STORY_STRUCTURE = {
       type: 'INVESTIGATION',
       description: 'Methodical evidence gathering, interview-heavy, building the case',
       wordCountModifier: 1.0, // Standard length
-      requirements: ['At least one witness interview', 'Discovery of key evidence', 'End with a lead to follow'],
+      requirements: ['Skeptical analysis', 'Discovery of new evidence', 'End with a mystery to follow'],
     },
     3: {
       type: 'REVELATION',
@@ -264,6 +261,7 @@ export const WRITING_STYLE = {
   absolutelyForbidden: [
     'Em dashes (—) - use commas, periods, semicolons instead',
     '"X is not just Y, it\'s Z" constructions',
+    'Constructions with the following sentence structure "The silver current didn\'t just move; it sang"',
     '"In a world where..." openings',
     '"Little did he know..." foreshadowing',
     '"I couldn\'t help but..." or "I found myself..."',
@@ -597,17 +595,11 @@ Even after all that, it still hadn't sunk in entirely. Katie, she felt, would wa
 export const CONSISTENCY_RULES = [
   // CHARACTER NAMES & IDENTITIES
   'Jack always calls Victoria "Victoria" or "Blackwell."',
-  'Victoria Blackwell is known as "The Midnight Cartographer." She signs as "M.C.", "V.B.", or the textual mark "⟂○".',
-
   // REALITY REVEAL TIMING (Critical pacing constraint)
   'Jack does NOT know the Under-Map is real until Chapter 1C.',
   'The first undeniable reveal that "the world is not what it seems" happens at the END of subchapter 1C (not earlier).',
   'Before the end of 1C, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).',
   'After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.',
-
-  // TIMELINE FACTS (EXACT NUMBERS - Never approximate)
-  'Victoria has been leaving "dead letters" for exactly 4 years.',
-  'The "Blank Map" incident was exactly 9 years ago.',
 
   // SETTING & ATMOSPHERE
   'Ashport is always damp, overcast, or recently rained; the city is defined by reflections, sodium streetlight halos, and neon smear on wet pavement.',
@@ -615,21 +607,20 @@ export const CONSISTENCY_RULES = [
   'This is NOT medieval fantasy. The surface world is modern. The fantasy world is hidden, infrastructural, and uncanny.',
 
   // SYMBOL RULES (Core mystery engine)
-  'Symbols are called GLYPHS. They recur in the city and in Victoria\'s letters.',
+  'Glyphs are called Dead Letters. They recur in the city and in Victoria\'s letters.',
   'Glyphs are not "spells." They are keys to thresholds, and they do not work everywhere.',
   'Silver ink in Victoria\'s letters does not photograph cleanly; attempts to capture it produce blurred or doubled lines.',
 
   // CHARACTER TRAITS (Immutable)
   'Jack\'s default coping mechanism is rationalization and documentation (notes, sketches, photos, maps).',
-  'Jack\'s vice is cold coffee and insomnia; he is not a hardboiled alcoholic detective in this version.',
-  'Victoria\'s presence is clean and unsettling: ozone/basil scent, calm diction, exact phrasing.',
+  'Victoria\'s presence is clean and unsettling: odd scent, calm diction, exact phrasing.',
 
   // THRILLER CONSTRAINTS (No Tolkien pastiche)
   'No elves/dwarves/orcs, no feudal courts, no "chosen one prophecy," no faux-Old English diction.',
   'Fantasy beings (if encountered) must feel unfamiliar and specific: more like living architecture, stitched light, or rule-bound anomalies than "classic races."',
 
   // CREATIVE FREEDOM
-  'The LLM may generate any supporting characters as the story requires.',
+  'You may generate any supporting characters as the story requires.',
   'Character names, relationships, and arcs are flexible except for Jack and Victoria.',
 ];
 
@@ -1248,8 +1239,8 @@ export const ENGAGEMENT_REQUIREMENTS = {
     description: 'Every subchapter should plant new questions and selectively answer others',
     questionTypes: {
       mystery: 'What happened? Who did it? What does it mean? (Plot questions)',
-      character: 'Will Sarah forgive Jack? Can Tom be redeemed? (Relationship questions)',
-      threat: 'Will Grange find him? Is Victoria ally or enemy? (Tension questions)',
+      character: 'Will Jack forgive himself? Can he be redeemed? (Relationship questions)',
+      threat: 'Will Victoria find him? Is Victoria ally or enemy? (Tension questions)',
       thematic: 'Can Jack truly change? Is redemption possible? (Meaning questions)',
     },
     balanceRule: 'Maintain 3-5 active burning questions at all times. Answer one, plant two.',
@@ -1270,8 +1261,8 @@ export const ENGAGEMENT_REQUIREMENTS = {
     ],
     examples: [
       'Victoria Blackwell smiled. "Hello, Jack. It\'s time we talked about endgames."',
-      'The caller ID showed a number Jack knew by heart. Tom\'s number. But Tom was dead.',
-      'Sarah didn\'t answer. Couldn\'t. Because standing behind her, gun drawn, was the last person Jack expected.',
+      'The caller ID showed a number Jack knew by heart. His own.',
+      'She didn\'t answer. Couldn\'t. Because standing behind her, gun drawn, was the last person Jack expected.',
       'He\'d always been the evidence.',
     ],
   },
@@ -1280,10 +1271,9 @@ export const ENGAGEMENT_REQUIREMENTS = {
   personalStakes: {
     description: 'What Jack personally loses should escalate through the story',
     progression: {
-      chapters2to4: 'Jack\'s self-image and reputation at stake',
-      chapters5to7: 'Jack\'s relationships at stake (Sarah, his sense of purpose)',
-      chapters8to10: 'Jack\'s freedom and physical safety at stake',
-      chapters11to12: 'Jack\'s redemption and legacy at stake',
+      chapters1to4: 'Jack\'s self-image and reputation at stake',
+      chapters5to9: 'Jack\'s freedom and physical safety at stake',
+      chapters10to12: 'Jack\'s redemption and legacy at stake',
     },
     requirement: 'Each chapter must make clear what Jack loses if he fails THIS chapter.',
   },
@@ -1303,7 +1293,7 @@ export const ENGAGEMENT_REQUIREMENTS = {
   tickingClock: {
     description: 'Time pressure should be FELT, not just mentioned',
     implementation: {
-      element: 'What time-sensitive pressure exists (midnight meeting, 24 hours until evidence destroyed)',
+      element: 'What time-sensitive pressure exists (midnight meeting, 24 hours until threshold destroyed)',
       reminders: 'The clock should be referenced 2-3 times per subchapter',
       physicality: 'Show the clock through physical symptoms: checking watch, sun position, exhaustion',
     },
@@ -1369,7 +1359,6 @@ export const ICEBERG_TECHNIQUE = {
     'Characters reference events that happened "that night in February" without explaining',
     'Jack avoids looking at the third barstool at Murphy\'s without saying why',
     'Victoria touches her wrist when lying—we never learn why',
-    'Tom\'s laugh changes when Helen Price is mentioned',
   ],
   principle: 'Mystery isn\'t about what you reveal. It\'s about what you deliberately don\'t.',
   execution: 'Let readers sense depths they can\'t see. The unspoken creates intrigue.',
@@ -1386,7 +1375,7 @@ export const SUBTEXT_REQUIREMENTS = {
   },
   examples: [
     {
-      surface: '"Coffee?" Sarah asked.',
+      surface: '"Coffee?" She asked.',
       subtext: 'I\'m willing to have this conversation if you are.',
     },
     {
