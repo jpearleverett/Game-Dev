@@ -433,12 +433,13 @@ class LLMService {
       responseSchema = null,
       traceId = null,
       requestContext = null,
+      thinkingLevel = null,  // null = use default 'high', can override for specific tasks
     } = options;
 
     if (this.config.provider === 'gemini') {
       // Use rate-limited request wrapper to prevent API overload during preloading bursts
       return this._rateLimitedRequest(() =>
-        this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext })
+        this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel })
       );
     }
 
@@ -452,7 +453,7 @@ class LLMService {
    *
    * Routes through proxy if configured (production), otherwise direct API (dev)
    */
-  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext }) {
+  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel }) {
     const model = this.config.model || 'gemini-3-flash-preview';
 
     // DEBUG: Log config to see what mode we're in
@@ -480,6 +481,7 @@ class LLMService {
         responseSchema,
         traceId,
         requestContext,
+        thinkingLevel,  // Pass through for proxy to use
       });
     }
 
@@ -499,10 +501,11 @@ class LLMService {
     };
 
     // Add thinking configuration for Gemini 3
-    // Using 'high' for story generation - latency-tolerant, quality-critical
+    // Default to 'high' for story generation - latency-tolerant, quality-critical
+    // Allow callers to override for specific tasks requiring different reasoning depth
     if (isGemini3) {
       generationConfig.thinkingConfig = {
-        thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
+        thinkingLevel: thinkingLevel || 'high', // Default to 'high' for complex narrative generation
       };
     }
 
@@ -924,7 +927,7 @@ class LLMService {
    *
    * Supports both SSE format (data: {...}\n\n) and legacy NDJSON ({...}\n) for backwards compatibility.
    */
-  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent }) {
+  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent, thinkingLevel }) {
     let lastError = null;
     let attempt = 0;
     const operationStart = Date.now();
@@ -993,6 +996,7 @@ class LLMService {
           systemPrompt,
           responseSchema,
           cachedContent, // Optional: cached content reference for context caching
+          thinkingLevel, // Optional: override thinkingLevel for specific tasks (default: 'high')
           stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
           clientTraceId: traceId || null,
           clientRequestContext: requestContext || null,

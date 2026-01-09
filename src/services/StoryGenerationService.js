@@ -805,61 +805,171 @@ const PATHDECISIONS_ONLY_SCHEMA = {
   required: ['pathDecisions'],
 };
 
-// Prompt template for the second call to generate path-specific decisions
+// ============================================================================
+// PATHDECISIONS SYSTEM PROMPT - Story context for path-specific decisions
+// Per Gemini 3 best practices: XML tags, persona, explicit constraints
+// ============================================================================
+const PATHDECISIONS_SYSTEM_PROMPT = `<identity>
+You are the author of "Dead Letters," crafting path-specific decision variants for Jack Halloway's investigation.
+You understand that different player journeys through the branching narrative lead to genuinely different discoveries—and those discoveries MUST shape what decisions make sense.
+</identity>
+
+<story_context>
+- PROTAGONIST: Jack Halloway, 29, burned-out freelance investigator. Former file clerk. Drinks too much. A missing persons case went wrong two years ago and he's never forgiven himself.
+- SETTING: Ashport—rain-soaked, neon-lit, perpetually overcast. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
+- TONE: Modern mystery thriller that slowly reveals an original fantasy world. Noir-adjacent but not pastiche.
+- ANTAGONIST: Victoria Blackwell—information broker who communicates via black envelopes with silver ink. Her philosophy: "A map is a promise. Break it, and the city breaks back."
+</story_context>
+
+<core_mandate>
+Each of the 9 branching paths represents a DIFFERENT player experience. The decisions you generate must reflect what THAT specific player discovered, not generic options that could apply to any path.
+
+CRITICAL: If a player discovered a name, their decision should involve that name. If they witnessed a threshold react, their decision should involve that threshold. The discoveries ARE the decision drivers.
+</core_mandate>
+
+<output_contract>
+Return ONLY valid JSON matching the schema. No commentary.
+</output_contract>`;
+
+// ============================================================================
+// PATHDECISIONS PROMPT TEMPLATE - Structured per Gemini 3 best practices
+// Uses XML tags, explicit planning, few-shot examples, causality mapping
 // IMPORTANT: Uses SUMMARIES (15-25 words each) instead of full narrative content.
 // Full narrative excerpts trigger Gemini's RECITATION safety filter.
-const PATHDECISIONS_PROMPT_TEMPLATE = `Generate 9 UNIQUE path-specific decision variants for a mystery-thriller branching narrative set in a modern city with a hidden fantasy layer (the Under-Map).
+// ============================================================================
+const PATHDECISIONS_PROMPT_TEMPLATE = `<task>
+Generate 9 UNIQUE path-specific decision variants for Chapter 1C of "Dead Letters."
+Each path represents a different player journey—different discoveries require different decisions.
+</task>
 
-## CRITICAL REQUIREMENT
-Each path MUST have DIFFERENT option titles based on what the player discovered/experienced in that path.
-DO NOT use identical titles across all 9 paths - that defeats the purpose of branching narratives.
-The decisions should feel like natural consequences of the player's specific journey.
+<path_structure>
+The 9 paths follow this format: [FIRST_CHOICE]-[ENDING]
+- FIRST_CHOICE (1A, 1B, 1C): How the player APPROACHED the scene (their investigative style)
+- ENDING (2A, 2B, 2C): What the player DISCOVERED as a result
 
-## PATH KEY FORMAT
-The 9 paths are: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
-- First part = first choice (1A, 1B, 1C) - determines player's APPROACH
-- Second part = ending within that branch (2A, 2B, 2C) - determines what they DISCOVERED
+Path keys: 1A-2A, 1A-2B, 1A-2C, 1B-2A, 1B-2B, 1B-2C, 1C-2A, 1C-2B, 1C-2C
+</path_structure>
 
-## FIRST CHOICE (How the player approached the scene):
+<player_approaches>
+These are the three ways the player could have approached this scene:
 - 1A: "{{firstChoice1ALabel}}" → {{firstChoice1ASummary}}
 - 1B: "{{firstChoice1BLabel}}" → {{firstChoice1BSummary}}
 - 1C: "{{firstChoice1CLabel}}" → {{firstChoice1CSummary}}
+</player_approaches>
 
-## PATH ENDINGS (What the player discovered/experienced):
+<path_discoveries>
+These are what each path discovered (the ending they experienced):
 {{pathSummaries}}
+</path_discoveries>
 
-## PATH STRUCTURED NOTES (Use these to stay grounded; do not invent new named entities)
+<path_details>
+Detailed notes for each path (use these to stay grounded—do not invent entities not mentioned):
 {{pathStructuredNotes}}
+</path_details>
 
-## DECISION MOMENT (Per-path decisions are authoritative)
-Each of the 9 paths can legitimately lead to DIFFERENT decisions. The player lived a different ending, so the fork can change.
-
-For reference only (optional): the canonical decision generated in the main pass was:
+<canonical_decision_reference>
+The main narrative pass generated this base decision (use as inspiration, not constraint):
 - Option A: "{{optionATitle}}" ({{optionAFocus}})
 - Option B: "{{optionBTitle}}" ({{optionBFocus}})
+</canonical_decision_reference>
 
-You MAY diverge from these titles if the path notes justify it. Prefer decisions that clearly follow from each path's ending.
+<reasoning_instructions>
+Before generating each path's decision, internally reason through:
+1. WHAT did this player discover? (Extract the key revelation from the path notes)
+2. HOW does that discovery change what options make sense? (Causality mapping)
+3. WHAT would Jack specifically do with THIS information? (Character consistency)
+4. WHY would the options differ from other paths? (Differentiation check)
+</reasoning_instructions>
 
-## YOUR TASK
-For each of the 9 paths, generate a UNIQUE decision variant:
+<causality_rules>
+Discoveries MUST drive decisions. Follow these causality patterns:
 
-1. **UNIQUE TITLES**: Create path-specific option titles that reflect what THIS player discovered
-   - If path 1A-2A discovered evidence X, the options should reference X
-   - If path 1C-2B had a different revelation, options should reflect THAT
-   - Avoid generic titles that could apply to any path
+DISCOVERY TYPE → DECISION PATTERN:
+- Found a NAME → Options involve: confronting the person, researching them, or using the name as leverage
+- Found a SYMBOL/GLYPH → Options involve: following it, documenting it, testing it, or using it as bait
+- Witnessed an ANOMALY → Options involve: investigating immediately, retreating to process, or provoking it further
+- Gained EVIDENCE → Options involve: confronting someone with it, verifying it independently, or using it as protection
+- Learned a LOCATION → Options involve: going there immediately, surveilling it first, or using it to lure someone
 
-2. **PATH-SPECIFIC INTRO**: Frame the decision (1-2 sentences) based on what happened in that specific path
+If the discovery doesn't fit these patterns, derive the decision logically from what was learned.
+</causality_rules>
 
-3. **TAILORED FOCUS**: The "focus" should explain why this option makes sense given what the player experienced
+<few_shot_examples>
+GOOD path-specific decisions (note how discoveries drive the options):
 
-4. **PERSONALITY**: Set personalityAlignment based on path tone: "aggressive", "cautious", or "balanced"
+Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marked envelope)
+{
+  "pathKey": "1A-2A",
+  "intro": "The courier's envelope bears the same symbol Jack saw on the threshold. Blackwell's network runs deeper than he thought.",
+  "optionA": {
+    "key": "A",
+    "title": "Follow the courier to Blackwell",
+    "focus": "Use this connection to trace Blackwell's location directly—aggressive but potentially revealing.",
+    "personalityAlignment": "aggressive"
+  },
+  "optionB": {
+    "key": "B",
+    "title": "Photograph the envelope, let them go",
+    "focus": "Document the symbol connection without alerting Blackwell's network to Jack's interest.",
+    "personalityAlignment": "cautious"
+  }
+}
 
-EXAMPLE of good variation:
-- 1A-2A (found a glyph keyed to a missing anchor): "Trace the glyph to its next site" vs "Use the glyph as bait"
-- 1B-2C (witnessed a threshold react): "Cross now before it closes" vs "Mark it and pull back"
-- 1C-2A (learned a name tied to the Under-Map): "Confront the name-holder" vs "Verify the name through the Archive"
+Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the name aloud)
+{
+  "pathKey": "1B-2C",
+  "intro": "The threshold responded to the name—proof that the Under-Map isn't just symbols, it's listening.",
+  "optionA": {
+    "key": "A",
+    "title": "Speak the name again and step through",
+    "focus": "Test whether the threshold will open fully—risk everything to see what's on the other side.",
+    "personalityAlignment": "aggressive"
+  },
+  "optionB": {
+    "key": "B",
+    "title": "Record the coordinates, retreat to research",
+    "focus": "Document this reactive threshold before attempting anything irreversible.",
+    "personalityAlignment": "cautious"
+  }
+}
 
-Generate pathDecisions array with 9 objects: { pathKey, intro, optionA {key, title, focus, personalityAlignment}, optionB {key, title, focus, personalityAlignment} }`;
+Example 3 - Path 1C-2B (Discovery: Found a ledger with names of the disappeared, including Jack's old case)
+{
+  "pathKey": "1C-2B",
+  "intro": "The ledger connects Jack's failed case to Blackwell's operation. The guilt he's carried might have a different shape.",
+  "optionA": {
+    "key": "A",
+    "title": "Confront Blackwell with the ledger",
+    "focus": "Force a direct confrontation—Jack needs answers about what really happened two years ago.",
+    "personalityAlignment": "aggressive"
+  },
+  "optionB": {
+    "key": "B",
+    "title": "Cross-reference the names with city records",
+    "focus": "Verify the ledger's claims before revealing that Jack has it—knowledge is leverage.",
+    "personalityAlignment": "cautious"
+  }
+}
+
+BAD examples (generic, not path-specific):
+❌ "Investigate further" vs "Wait and see" — Too vague, could apply to any path
+❌ "Take action" vs "Be careful" — No connection to what was discovered
+❌ Same titles across multiple paths — Defeats the purpose of branching narratives
+</few_shot_examples>
+
+<output_requirements>
+Generate 9 pathDecisions objects with:
+1. pathKey: The path identifier (1A-2A through 1C-2C)
+2. intro: 1-2 sentences framing the decision based on THIS path's discovery
+3. optionA: Action option with key="A", title (3-8 words, imperative), focus (why this makes sense), personalityAlignment
+4. optionB: Alternative option with key="B", title (3-8 words, imperative), focus (why this makes sense), personalityAlignment
+
+CRITICAL CHECKS before finalizing:
+✓ Each path's options reference what THAT path discovered
+✓ No two paths have identical option titles
+✓ The intro mentions the specific discovery or revelation
+✓ Options feel like natural next steps given what Jack learned
+</output_requirements>`;
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
@@ -7301,9 +7411,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               pathDecisionsResponse = await llmService.complete(
                 messages,
                 {
-                  systemPrompt: 'You generate path-specific decision variants for an interactive mystery thriller. Respond with valid JSON only.',
+                  // Use enhanced system prompt with story context, character info, and constraints
+                  // This significantly improves path-decision quality by grounding the model in the narrative world
+                  systemPrompt: PATHDECISIONS_SYSTEM_PROMPT,
                   maxTokens: GENERATION_CONFIG.maxTokens.pathDecisions, // 16k tokens for complex branching + thinking
                   responseSchema: PATHDECISIONS_ONLY_SCHEMA,
+                  // Use 'high' thinkingLevel for complex multi-path reasoning per Gemini 3 best practices
+                  // This task requires understanding 9 different player journeys and deriving unique decisions
+                  thinkingLevel: 'high',
                   traceId: traceId + '-pathDecisions' + (retryAttempt > 0 ? `-retry${retryAttempt}` : ''),
                   requestContext: {
                     caseNumber,
