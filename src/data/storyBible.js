@@ -7,24 +7,56 @@
  */
 
 // ============================================================================
-// TIMELINE - Events in chronological order (BEFORE the story begins)
+// TIMELINE - Jack Halloway's Life & Career (BEFORE the story begins)
 // ============================================================================
 export const TIMELINE = {
-  yearsAgo: {
-    12: 'Jack Halloway and Tom Wade meet through a campus-arts work-study job cataloging old municipal signage',
-    9: 'The first documented “Blank Map” incident: a city block briefly appears on no satellite imagery and no paper maps',
-    7: [
-      'A graduate cohort studying semiotics publishes a banned zine of repeating street symbols (“the Glyph Index”)',
-      'One of the editors disappears for 19 hours, returning with a palm scar shaped like a split eye',
+  jackHistory: {
+    // Early life
+    childhood: 'Jack grows up in a small town outside Ashport; quiet kid, preferred puzzles and maps to sports',
+    18: 'Jack graduates high school with average grades; moves to Ashport for community college',
+
+    // Education and first jobs
+    17: 'Jack works nights stocking shelves at a pharmacy while taking general education classes; no clear career path',
+    16: 'Jack gets a part-time job scanning old documents at the county courthouse; discovers he likes the work more than his classes',
+    15: 'Jack drops out of college to work full-time as a file clerk at the Ashport City Records Office',
+
+    // City records years
+    14: 'Jack learns the city\'s filing systems inside and out; becomes the go-to person when someone needs an old permit or property record',
+    13: 'Jack gets promoted to research assistant; spends his days pulling zoning maps, deed transfers, and building inspection reports for lawyers and city planners',
+    12: 'Jack starts noticing when things don\'t match up: addresses that appear on one map but not another, streets renamed without explanation, buildings with permits filed after they were built',
+
+    // Transition to investigation
+    11: 'A lawyer offers Jack side work tracing property ownership for a real estate dispute; Jack finds a chain of shell companies in two days',
+    10: 'Jack quits the Records Office to work for a small private investigation firm; takes a pay cut but gets to leave his desk',
+    9: 'Jack learns skip tracing: finding people who don\'t want to be found by following paper trails, utility records, forwarding addresses',
+
+    // Building skills
+    8: 'Jack works his first missing person case; learns to walk neighborhoods, talk to bartenders, check bus station lockers',
+    7: 'Jack develops a habit of using paper maps and handwritten notes; he trusts what he can hold in his hands',
+    6: 'The PI firm closes; Jack starts freelancing for lawyers, insurance adjusters, and anyone who needs something found',
+
+    // Freelance years
+    5: 'Jack builds a reputation for finding information other investigators miss; he charges less than the big firms and works stranger hours',
+    4: 'Jack takes a desk job at a corporate security company for stable income; hates sitting still and quits after eight months',
+    3: 'Jack goes back to freelance work; rents a cheap office above a bar called Murphy\'s because the landlord doesn\'t ask questions',
+
+    // The burnout
+    2: [
+      'Jack takes a missing persons case: a mother looking for her adult son who stopped returning calls',
+      'Jack finds him in three weeks; the son had cut contact on purpose, was finally getting clean, didn\'t want his family involved',
+      'Jack gives the mother the address anyway; it\'s what she paid for',
+      'Two months later Jack reads that the son overdosed; the mother had shown up, there was a fight, he relapsed',
+      'Jack can\'t prove the connection but can\'t stop thinking about it; stops taking missing persons cases',
+      'Jack starts sleeping less, drinking more, letting his apartment go; work slows down because he stops returning calls',
     ],
-    4: 'Victoria Blackwell begins leaving “dead letters” in public places: envelopes that contain only symbol strings and a small river-glass token',
-    2: 'Tom Wade starts quietly collecting citywide reports of repeating symbols, insisting it is a pattern, not graffiti',
-    1: 'Jack quits a stable job after a “coincidence chain” makes him feel watched, then takes gig work and small investigative jobs to pay rent',
+
+    // Present day
+    1: 'Jack is 29 years old, going through the motions; takes only simple jobs now, background checks and process serving, nothing that requires him to find anyone',
   },
   storyStart: {
     anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
-    day1: 'Jack receives his first “dead letter” with an impossible symbol sequence',
-    structure: '12 days, 12 thresholds: each day pushes Jack deeper into a hidden reality threaded through Ashport’s streets',
+    jackAge: 29,
+    jackState: 'Burned out, depressed, scraping by on small jobs; still good at what he does but afraid of what happens when he actually finds something',
   },
 };
 
