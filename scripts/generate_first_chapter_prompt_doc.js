@@ -187,9 +187,6 @@ ${ENGAGEMENT_REQUIREMENTS.finalLineHook.techniques.map((t) => `- ${t}`).join('\n
 - Chapter (end of each): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.chapter}
 - Arc (chapters 4, 7, 10): ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.arc}
 
-**Dramatic Irony:** ${ENGAGEMENT_REQUIREMENTS.dramaticIrony.description}
-${ENGAGEMENT_REQUIREMENTS.dramaticIrony.examples.map((e) => `- ${e}`).join('\n')}
-
 **Emotional Anchor:** ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.description}
 Rule: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
 

@@ -5484,18 +5484,55 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
     const safe = (v) => (v === undefined || v === null ? '' : String(v));
 
     const timelineLines = [];
-    const yearsAgo = TIMELINE?.yearsAgo || {};
-    const yearKeys = Object.keys(yearsAgo)
-      .map(k => Number(k))
-      .filter(n => Number.isFinite(n))
-      .sort((a, b) => b - a);
-    for (const y of yearKeys) {
-      const entry = yearsAgo[y];
-      if (Array.isArray(entry)) {
-        timelineLines.push(`- ${y} years ago:`);
-        entry.forEach(e => timelineLines.push(`  - ${safe(e)}`));
-      } else {
-        timelineLines.push(`- ${y} years ago: ${safe(entry)}`);
+    // TIMELINE DATA SOURCE NOTE:
+    // - `src/data/storyBible.js` currently stores Jack's timeline under `TIMELINE.jackHistory`
+    //   (a mix of numeric keys + "childhood") and story start details under `TIMELINE.storyStart`.
+    // - Older iterations used `TIMELINE.yearsAgo`.
+    // This prompt builder supports BOTH so we don't silently drop canonical history.
+
+    // Always include story-start anchor if available.
+    if (TIMELINE?.storyStart) {
+      if (TIMELINE.storyStart.anchorDate) timelineLines.push(`- Story starts on: ${safe(TIMELINE.storyStart.anchorDate)}`);
+      if (TIMELINE.storyStart.jackAge) timelineLines.push(`- Jack's age at story start: ${safe(TIMELINE.storyStart.jackAge)}`);
+      if (TIMELINE.storyStart.jackState) timelineLines.push(`- Jack's state at story start: ${safe(TIMELINE.storyStart.jackState)}`);
+    }
+
+    // Prefer explicit yearsAgo if present; otherwise fall back to jackHistory.
+    const yearsAgo = TIMELINE?.yearsAgo;
+    if (yearsAgo && typeof yearsAgo === 'object') {
+      const yearKeys = Object.keys(yearsAgo)
+        .map(k => Number(k))
+        .filter(n => Number.isFinite(n))
+        .sort((a, b) => b - a);
+      for (const y of yearKeys) {
+        const entry = yearsAgo[y];
+        if (Array.isArray(entry)) {
+          timelineLines.push(`- ${y} years ago:`);
+          entry.forEach(e => timelineLines.push(`  - ${safe(e)}`));
+        } else {
+          timelineLines.push(`- ${y} years ago: ${safe(entry)}`);
+        }
+      }
+    } else {
+      const jackHistory = TIMELINE?.jackHistory;
+      if (jackHistory && typeof jackHistory === 'object') {
+        if (jackHistory.childhood) timelineLines.push(`- Childhood: ${safe(jackHistory.childhood)}`);
+
+        const numericKeys = Object.keys(jackHistory)
+          .filter(k => k !== 'childhood')
+          .map(k => Number(k))
+          .filter(n => Number.isFinite(n))
+          .sort((a, b) => b - a);
+
+        for (const k of numericKeys) {
+          const entry = jackHistory[k];
+          if (Array.isArray(entry)) {
+            timelineLines.push(`- Timeline marker ${k}:`);
+            entry.forEach(e => timelineLines.push(`  - ${safe(e)}`));
+          } else {
+            timelineLines.push(`- Timeline marker ${k}: ${safe(entry)}`);
+          }
+        }
       }
     }
 
@@ -5511,7 +5548,8 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 
 ### ANTAGONIST / GUIDE FIGURE
 - Name: ${safe(ABSOLUTE_FACTS.antagonist.trueName)}
-- Alias/Title: ${safe(ABSOLUTE_FACTS.antagonist.titleUsed)} (${safe(ABSOLUTE_FACTS.antagonist.aliasUsed)})
+- Alias used: ${safe(ABSOLUTE_FACTS.antagonist.aliasUsed)}
+- Public-facing role: ${safe(ABSOLUTE_FACTS.antagonist.occupation)}
 - Communication: ${safe(ABSOLUTE_FACTS.antagonist.communication?.method)}; ink: ${safe(ABSOLUTE_FACTS.antagonist.communication?.ink)}
 - Motivation: "${safe(ABSOLUTE_FACTS.antagonist.motivation)}"
 
