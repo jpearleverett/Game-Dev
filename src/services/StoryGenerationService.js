@@ -1365,7 +1365,7 @@ Study these ${selectedScenes.length} scene excerpts from Dennis Lehane's "Mystic
 
 ${selectedScenes.map((scene, i) => `---
 EXAMPLE ${i + 1}:
-${scene.substring(0, 600)}${scene.length > 600 ? '...' : ''}
+${scene}
 `).join('\n')}
 
 ---
