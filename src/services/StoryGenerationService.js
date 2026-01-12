@@ -146,7 +146,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Mention Tom\'s name"',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Mention Tom\'s name". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
     },
     response: {
       type: 'string',
@@ -211,7 +211,7 @@ const SECOND_CHOICE_SCHEMA = {
           },
           label: {
             type: 'string',
-            description: 'Short action label (2-5 words)',
+            description: 'Short action label (2-5 words). NOTE: For 2C options (e.g., 1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
           },
           response: {
             type: 'string',
@@ -332,7 +332,7 @@ const STORY_CONTENT_SCHEMA = {
                 type: 'object',
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
-                  label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity.' },
+                  label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity. NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
                   response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
                   details: {
                     type: 'array',
@@ -371,7 +371,7 @@ const STORY_CONTENT_SCHEMA = {
                   type: 'object',
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
-                    label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options.' },
+                    label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options. NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
                     response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude this path.' },
                     details: {
                       type: 'array',
@@ -621,7 +621,7 @@ const DECISION_CONTENT_SCHEMA = {
                 type: 'object',
                 properties: {
                   key: { type: 'string' },
-                  label: { type: 'string' },
+                  label: { type: 'string', description: 'Action label (2-5 words). NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
                   response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
                   summary: { type: 'string', description: 'One-sentence summary of what happens (15-25 words). Used for decision context.' },
                   details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
@@ -649,7 +649,7 @@ const DECISION_CONTENT_SCHEMA = {
                   type: 'object',
                   properties: {
                     key: { type: 'string' },
-                    label: { type: 'string' },
+                    label: { type: 'string', description: 'Action label (2-5 words). NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
                     response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude at the decision moment.' },
                     summary: { type: 'string', description: 'One-sentence summary of this path ending (15-25 words). Used for decision context.' },
                     details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
@@ -5357,7 +5357,34 @@ Layers:
 Examples:
 ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subtext}"`).join('\n')}
 
-**Rule:** ${SUBTEXT_REQUIREMENTS.rule}`;
+**Rule:** ${SUBTEXT_REQUIREMENTS.rule}
+
+### BRANCHING CHOICE DESIGN (For Interactive Narratives)
+
+When generating branching choices (firstChoice options 1A/1B/1C and secondChoices options 2A/2B/2C):
+
+**Options A and B (Standard Choices):**
+- Two distinct, logical approaches to the situation
+- One typically more aggressive/direct, one more cautious/methodical
+- Both should be defensible choices with meaningful consequences
+
+**Option C (WILDCARD - Required for all C options):**
+- The WILDCARD option should be unexpected, creative, or unconventional
+- It offers a surprising third path that players might not have considered
+- Examples of wildcard approaches:
+  - Doing something seemingly unrelated that yields unexpected results
+  - Taking a risky gamble or bold action outside normal behavior
+  - Using humor, misdirection, or an unorthodox tactic
+  - Acting on intuition rather than logic
+  - Making an unexpected alliance or revealing hidden information
+- The wildcard should still be IN CHARACTER for Jack (noir detective, not silly)
+- It should feel like a "what if I tried THIS?" moment
+- The response should deliver on the promise of the unexpected choice
+
+**Wildcard Quality Check:**
+- Does option C feel genuinely different from A and B? (Not just a third variation)
+- Would a player be surprised and intrigued by this option?
+- Does it add variety and replayability to the narrative?`;
   }
 
   /**
