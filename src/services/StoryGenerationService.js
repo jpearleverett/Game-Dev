@@ -458,13 +458,8 @@ const STORY_CONTENT_SCHEMA = {
       },
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
-    // CANONICAL NARRATIVE - String representation for context building
-    narrative: {
-      type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity.',
-    },
   },
-  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
 };
 
 /**
@@ -731,13 +726,8 @@ const DECISION_CONTENT_SCHEMA = {
       },
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
-    // CANONICAL NARRATIVE - String representation for context building
-    narrative: {
-      type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total).',
-    },
   },
-  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
 };
 
 // ============================================================================
@@ -1010,12 +1000,6 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 - Return ONLY valid JSON that matches the provided schema. No commentary, no markdown.
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
 </output_contract>
-
-<canonical_narrative_rule>
-The required "narrative" field MUST be an exact concatenation of:
-opening.text + (blank line) + firstChoice.options[0].response + (blank line) + secondChoices[0].options[0].response
-It must match those segments verbatim (no paraphrase).
-</canonical_narrative_rule>
 
 <internal_planning>
 Before writing narrative, internally determine (do NOT output these—just let them guide your writing):
@@ -7573,8 +7557,22 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           }, 'debug');
         }
 
+        // Build canonical narrative from branchingNarrative for validation/expansion
+        // Uses opening + first choice (1A) + first ending (1A-2A) as the canonical path
+        if (!generatedContent.narrative && generatedContent.branchingNarrative) {
+          const bn = generatedContent.branchingNarrative;
+          const parts = [];
+          if (bn.opening?.text) parts.push(bn.opening.text);
+          const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A');
+          if (firstOption?.response) parts.push(firstOption.response);
+          const secondGroup = bn.secondChoices?.find(sc => sc.afterChoice === '1A');
+          const secondOption = secondGroup?.options?.find(o => o.key === '1A-2A');
+          if (secondOption?.response) parts.push(secondOption.response);
+          generatedContent.narrative = parts.join('\n\n');
+        }
+
         // Validate word count - only expand if significantly short
-        let wordCount = generatedContent.narrative.split(/\s+/).length;
+        let wordCount = generatedContent.narrative?.split(/\s+/).length || 0;
         let expansionAttempts = 0;
         const MAX_EXPANSION_ATTEMPTS = 1; // Reduced to minimize API calls
 
@@ -7770,13 +7768,17 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // NOTE: Schema was slimmed down - beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration,
         // storyDay, chapterSummary, consistencyFacts, previousThreadsAddressed were removed from output.
         // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking handles internally).
+        // Extract all text from branchingNarrative for board generation and word count
+        const allNarrativeText = this._extractAllTextFromBranchingNarrative(generatedContent.branchingNarrative);
+
         const storyEntry = {
           chapter,
           subchapter,
           pathKey: effectivePathKey,
           caseNumber,
           title: generatedContent.title,
-          narrative: generatedContent.narrative,
+          // Store canonical narrative (built from branchingNarrative 1A->1A-2A path) for context fallback
+          narrative: generatedContent.narrative || null,
           // BRANCHING NARRATIVE: Interactive story structure with player choices
           branchingNarrative: generatedContent.branchingNarrative || null,
           bridgeText: generatedContent.bridgeText,
@@ -7784,10 +7786,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
           decision: isDecisionPoint ? generatedContent.decision : null,
-          board: this._generateBoardData(generatedContent.narrative, isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision, generatedContent.puzzleCandidates, chapter),
+          board: this._generateBoardData(allNarrativeText, isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision, generatedContent.puzzleCandidates, chapter),
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
           generatedAt: new Date().toISOString(),
-          wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
+          wordCount: allNarrativeText?.split(/\s+/).length || 0,
           // Thought signature for multi-chapter reasoning continuity (Gemini 3)
           // Persisted and passed to next chapter generation to maintain reasoning chain
           thoughtSignature: firstCallThoughtSignature || null,
@@ -10662,6 +10664,48 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     if (!title) return null;
     const words = title.split(/\s+/).slice(0, 2).join(' ');
     return words.length > 12 ? words.slice(0, 12).toUpperCase() : words.toUpperCase();
+  }
+
+  /**
+   * Extract all text content from a branchingNarrative object.
+   * Combines opening + all first choice responses + all second choice responses.
+   * Used for puzzle keyword extraction where we want words from any possible path.
+   * @param {object} branchingNarrative - The branching narrative object
+   * @returns {string} Combined text from all narrative segments
+   */
+  _extractAllTextFromBranchingNarrative(branchingNarrative) {
+    if (!branchingNarrative) return '';
+
+    const parts = [];
+
+    // Opening (shared by all paths)
+    if (branchingNarrative.opening?.text) {
+      parts.push(branchingNarrative.opening.text);
+    }
+
+    // All first choice responses
+    if (branchingNarrative.firstChoice?.options) {
+      for (const option of branchingNarrative.firstChoice.options) {
+        if (option?.response) {
+          parts.push(option.response);
+        }
+      }
+    }
+
+    // All second choice responses
+    if (branchingNarrative.secondChoices) {
+      for (const secondChoiceGroup of branchingNarrative.secondChoices) {
+        if (secondChoiceGroup?.options) {
+          for (const option of secondChoiceGroup.options) {
+            if (option?.response) {
+              parts.push(option.response);
+            }
+          }
+        }
+      }
+    }
+
+    return parts.join('\n\n');
   }
 
   _extractKeywordsFromNarrative(narrative) {

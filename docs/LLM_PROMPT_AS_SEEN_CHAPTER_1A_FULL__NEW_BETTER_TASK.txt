@@ -35,11 +35,6 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
 </output_contract>
 
-<canonical_narrative_rule>
-The required "narrative" field MUST be an exact concatenation of:
-opening.text + (blank line) + firstChoice.options[0].response + (blank line) + secondChoices[0].options[0].response
-It must match those segments verbatim (no paraphrase).
-</canonical_narrative_rule>
 
 <internal_planning>
 Before writing narrative, internally determine (do NOT output these—just let them guide your writing):
@@ -1447,11 +1442,6 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
 </output_contract>
 
-<canonical_narrative_rule>
-The required "narrative" field MUST be an exact concatenation of:
-opening.text + (blank line) + firstChoice.options[0].response + (blank line) + secondChoices[0].options[0].response
-It must match those segments verbatim (no paraphrase).
-</canonical_narrative_rule>
 
 <internal_planning>
 Before writing narrative, internally determine (do NOT output these—just let them guide your writing):
@@ -1923,4 +1913,4 @@ const STORY_CONTENT_SCHEMA = {
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },  
   },
-  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],

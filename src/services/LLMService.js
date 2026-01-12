@@ -1497,11 +1497,11 @@ class LLMService {
       // Validate required fields exist and have meaningful content
       const validationIssues = [];
 
-      // Check for narrative field (most critical)
-      if (!parsed.narrative) {
-        validationIssues.push('Missing narrative field');
-      } else if (typeof parsed.narrative === 'string' && parsed.narrative.length < 200) {
-        validationIssues.push(`Narrative too short after repair: ${parsed.narrative.length} chars`);
+      // Check for branchingNarrative field (most critical)
+      if (!parsed.branchingNarrative?.opening?.text) {
+        validationIssues.push('Missing branchingNarrative.opening.text field');
+      } else if (parsed.branchingNarrative.opening.text.length < 200) {
+        validationIssues.push(`Opening text too short after repair: ${parsed.branchingNarrative.opening.text.length} chars`);
       }
 
       // Check for title field
