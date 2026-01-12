@@ -1,0 +1,376 @@
+{
+  "title": "The Letter He Never Wrote",
+  "bridge": "A black envelope arrives bearing Jack's own handwriting, words he never penned.",
+  "previously": "This is the beginning of Jack Halloway's investigation into the impossible.",
+  "branchingNarrative": {
+    "opening": {
+      "text": "The rain had been falling on Ashport for three days straight, and Jack Halloway's office smelled like wet wood and yesterday's coffee. He sat at his desk above Murphy's Bar, listening to the muffled thump of the jukebox through the floorboards, a half-empty bottle of Jameson keeping him company while he pretended to review a stack of background checks he'd been putting off for a week.\n\nTwenty-nine years old and already running on fumes. That was the thought that kept circling back, persistent as the rain against his window.\n\nThe envelope arrived at 4:47 PM. He knew the exact time because he'd been watching the clock, counting down the minutes until he could justify switching from coffee to whiskey. The kid from the mail room at the building's front desk, a teenager named Marco who usually just slid things under the door, knocked this time.\n\n'Someone left this for you,' Marco said, holding it at arm's length like it might bite. 'No return address. Weird seal.'\n\nJack took it. Black paper, heavy stock, the kind that cost more than his monthly rent. The seal was dark red wax pressed with a symbol he didn't recognize, something between a compass rose and a closed eye. The wax felt wrong under his thumb. Too hard. Too cold. Like it had never been warm enough to melt in the first place.\n\nHe turned the envelope over.\n\nHis own name stared back at him, written in silver ink that seemed to shift when he tilted it toward the light. But that wasn't what made his stomach drop.\n\nThe handwriting was his. His exact hand, the particular way he looped his Js, the slight backward lean he'd never been able to correct. He would have sworn on anything that mattered that he'd written his own name on this envelope.\n\nExcept he hadn't. He'd never seen this envelope before in his life.",
+      "details": [
+        {
+          "phrase": "black paper, heavy stock",
+          "note": "Expensive. Custom made. This isn't junk mail or a prank. Someone spent real money to get my attention.",
+          "evidenceCard": "Black Envelope"
+        },
+        {
+          "phrase": "symbol he didn't recognize",
+          "note": "Somewhere between a compass and a closed eye. I should sketch this before I forget the details.",
+          "evidenceCard": "Wax Seal Symbol"
+        },
+        {
+          "phrase": "silver ink that seemed to shift",
+          "note": "Trick of the light. Has to be. Metallic inks do strange things under fluorescents.",
+          "evidenceCard": ""
+        }
+      ]
+    },
+    "firstChoice": {
+      "prompt": "How does Jack open the envelope?",
+      "options": [
+        {
+          "key": "1A",
+          "label": "Photograph the seal first",
+          "response": "Jack set the envelope down and reached for his phone. Old habits. Document everything before you disturb it. He'd learned that lesson the hard way back at the Records Office, watching lawyers tear apart cases because some clerk hadn't bothered to note the condition of a file before opening it.\n\nHe took three shots of the seal from different angles, then one of the handwriting. The silver ink photographed strangely, coming out as a gray smear in the image rather than the crisp lines he could see with his naked eye. Faulty camera. Had to be.\n\nHe used his letter opener, sliding it beneath the seal with the care of a surgeon. The wax separated cleanly, leaving no residue on the blade. Inside, he found two items: a single sheet of paper folded in thirds, and a photograph.\n\nThe letter first. He unfolded it and felt the room tilt slightly, that vertiginous sensation of standing at the edge of something high.\n\nThe handwriting was his again. Every word, every curve of every letter, unmistakably his own hand. But the message made no sense:\n\n'Jack. You wrote this letter two weeks from now. The photograph will prove it. Find The Threshold before November 28th. Ask for Victoria Blackwell. She will explain what you already suspect but refuse to believe. The map is not the territory. The territory is not what you think. Trust the ink.'\n\nHe read it three times. The words didn't change.\n\nTwo weeks from now. November 28th. Today was November 14th.\n\nHe set the letter aside with hands that had developed a slight tremor and picked up the photograph. It showed a section of brick wall somewhere in the city, unremarkable except for a symbol spray-painted in what looked like silver paint. The same symbol from the wax seal. Beneath it, someone had written coordinates in neat block letters.\n\nJack held the photograph closer to the lamp.\n\nThe silver paint in the image seemed to pulse, just slightly, like a vein.",
+          "details": [
+            {
+              "phrase": "photographed strangely",
+              "note": "The ink doesn't capture right. Could be the metallic content interfering with the camera sensor. Or could be something else.",
+              "evidenceCard": ""
+            },
+            {
+              "phrase": "two weeks from now",
+              "note": "Impossible. Unless someone's running a very elaborate con. But why? What's the angle?",
+              "evidenceCard": "The Letter"
+            },
+            {
+              "phrase": "coordinates in neat block letters",
+              "note": "GPS coordinates. I can map these. Somewhere in the warehouse district, looks like.",
+              "evidenceCard": "Location Coordinates"
+            }
+          ]
+        },
+        {
+          "key": "1B",
+          "label": "Break the seal immediately",
+          "response": "Jack didn't hesitate. Whatever game someone was playing, he wasn't going to give them the satisfaction of watching him overthink it. He cracked the seal with his thumb, feeling the wax split with an odd reluctance, like it wanted to stay closed.\n\nTwo items inside. A letter and a photograph.\n\nHe went for the photograph first because photographs didn't lie. Or at least, they lied in ways he knew how to detect. He'd spent enough years examining documents to spot alterations, composites, the telltale signs of manipulation.\n\nThe image showed a brick wall tagged with a symbol in silver paint, the same design from the seal. Below the symbol, coordinates had been written in careful block letters. The location would be somewhere in the city. He could feel that much, the way certain addresses just felt local, carried the particular weight of Ashport's geography.\n\nBut something was wrong with the photograph.\n\nHe held it under his desk lamp, tilting it back and forth. The silver symbol in the image caught the light differently than the brick behind it. Not like paint on a wall. More like the symbol existed in a different layer of reality altogether, pasted over the photograph rather than captured within it.\n\nHis eyes were playing tricks. They had to be. Three days of rain and not enough sleep and too much whiskey would do that to a man.\n\nHe set the photograph aside and unfolded the letter.\n\nHis own handwriting filled the page. His exact hand. He felt his pulse in his temples as he read words he had never written:\n\n'Jack. You wrote this letter two weeks from now. The photograph will prove it. Find The Threshold before November 28th. Ask for Victoria Blackwell. She will explain what you already suspect but refuse to believe. The map is not the territory. The territory is not what you think. Trust the ink.'\n\nHe read it again. The date at the top of the letter said November 28th, 2025.\n\nToday was November 14th.",
+          "details": [
+            {
+              "phrase": "the wax split with an odd reluctance",
+              "note": "Probably just high-quality sealing wax. The expensive stuff has more grip. Nothing supernatural about manufacturing quality.",
+              "evidenceCard": ""
+            },
+            {
+              "phrase": "different layer of reality",
+              "note": "That's not how I'd describe it in a report. More like: suspected digital manipulation or unusual printing technique.",
+              "evidenceCard": "Strange Photograph"
+            },
+            {
+              "phrase": "November 28th, 2025",
+              "note": "Fourteen days from now. Someone wants me to believe in time travel. Someone with very good forgery skills.",
+              "evidenceCard": "The Letter"
+            }
+          ]
+        },
+        {
+          "key": "1C",
+          "label": "Check the envelope for other clues",
+          "response": "Jack turned the envelope over in his hands, examining every edge. No return address, but that didn't mean much. The paper itself might tell him something. He held it up to the light from his window, looking for watermarks, manufacturer stamps, anything that might indicate origin.\n\nNothing. The black paper was completely opaque, swallowing the gray afternoon light that leaked through the rain-streaked glass.\n\nHe sniffed it. Old habit from his records days. Paper held scent. Cigarette smoke, perfume, mildew from improper storage. This envelope smelled like nothing at all. Not ink, not paper, not the faint chemical tang of modern printing. It smelled like absence, like the negative space where a scent should be.\n\nThat bothered him more than the handwriting.\n\nHe cracked the seal and pulled out the contents. A letter and a photograph, both on the same strange black paper stock as the envelope itself.\n\nThe photograph showed a brick wall somewhere in the city, marked with a silver symbol that matched the wax seal. Coordinates had been written beneath it in block letters that weren't his handwriting, at least. Small mercy.\n\nThe letter was worse.\n\nEvery word was his. Not just the handwriting but the phrasing, the particular rhythm of how he structured sentences when he was writing something important. Whoever had forged this had studied him with disturbing intimacy.\n\n'Jack. You wrote this letter two weeks from now. The photograph will prove it. Find The Threshold before November 28th. Ask for Victoria Blackwell. She will explain what you already suspect but refuse to believe. The map is not the territory. The territory is not what you think. Trust the ink.'\n\nHe looked at the date. November 28th, 2025.\n\nHe looked at the calendar on his wall. November 14th.\n\nA practical joke would be easier to explain. But practical jokes had a point, a punchline, someone waiting to laugh. This felt like something else entirely. This felt like a door opening onto a room he hadn't known existed.",
+          "details": [
+            {
+              "phrase": "smelled like nothing at all",
+              "note": "Everything smells like something. Paper, ink, the oils from whoever handled it. This is wrong. This is deliberately wrong.",
+              "evidenceCard": "Scentless Envelope"
+            },
+            {
+              "phrase": "studied him with disturbing intimacy",
+              "note": "Someone's been watching me. Long enough to learn my handwriting. Long enough to know how I think.",
+              "evidenceCard": ""
+            },
+            {
+              "phrase": "The Threshold",
+              "note": "A name. A place? A business? Something to look up. First solid lead.",
+              "evidenceCard": "The Threshold"
+            }
+          ]
+        }
+      ]
+    },
+    "secondChoices": [
+      {
+        "afterChoice": "1A",
+        "prompt": "What does Jack investigate first?",
+        "options": [
+          {
+            "key": "1A-2A",
+            "label": "Map the coordinates",
+            "response": "Jack pulled up a mapping application on his computer, the ancient desktop humming with the effort of running modern software. He typed in the coordinates from the photograph, half-expecting them to lead somewhere impossible, the middle of the harbor or a location that didn't exist.\n\nThey resolved to an address in the old warehouse district, down near the Ashport docks where the city's industry had slowly rotted into abandonment over the past two decades. He knew that area. He'd served papers there a few times, tracked down a skip who'd been squatting in one of the derelict buildings. The kind of place where the city's infrastructure frayed at the edges, where streetlights didn't always work and the few remaining businesses kept irregular hours.\n\nThe specific location was a building called the Harmon Exchange, according to his map. Former shipping company headquarters, closed in 2019, currently listed as pending renovation. A quick search turned up nothing about current tenants or any business called The Threshold.\n\nBut Victoria Blackwell was a different story.\n\nHer name appeared in the city's public records exactly once: a business license for an information brokerage, filed eighteen months ago. The registered address was different from the coordinates, somewhere in the financial district. No phone number. No website. Just a name and a license and a fee paid in cash.\n\nJack leaned back in his chair, the whiskey forgotten on his desk.\n\nSomeone had sent him a letter he would supposedly write in two weeks, pointing him toward an abandoned building and a woman who barely existed on paper. It was either an elaborate hoax or something else, something he didn't have a name for yet.\n\nHe looked at the photograph again. The silver symbol seemed to catch light that wasn't in the room.\n\nHe needed to see that wall for himself. Tonight, before the rain washed away whatever evidence might be there.",
+            "details": [
+              {
+                "phrase": "Harmon Exchange",
+                "note": "I remember this place. Walked past it six months ago serving papers on a ship captain. The windows were dark. The door had a padlock that looked older than I am.",
+                "evidenceCard": "Harmon Exchange"
+              },
+              {
+                "phrase": "information brokerage",
+                "note": "People who sell information don't usually advertise. They find clients, not the other way around. Why would Victoria Blackwell have a public license?",
+                "evidenceCard": "Victoria Blackwell"
+              },
+              {
+                "phrase": "catch light that wasn't in the room",
+                "note": "I need to stop staring at this thing. My eyes are tired. The photograph is just a photograph.",
+                "evidenceCard": ""
+              }
+            ]
+          },
+          {
+            "key": "1A-2B",
+            "label": "Research Victoria Blackwell",
+            "response": "Jack started with the obvious routes. Public records, social media, business registrations. The kind of searches he could do in his sleep, the bread and butter of ten years in this work.\n\nVictoria Blackwell existed, but barely. One business license for an information brokerage, no website, no social media presence, no photographs attached to any public record. The license had been filed eighteen months ago and renewed six months later, both times with cash payments. The registered address was a mail forwarding service in the financial district, the kind of place that existed specifically to give businesses a respectable address without an actual presence.\n\nNo phone number. No email. No way to contact her except, apparently, to show up at a location provided by a letter Jack had supposedly written himself two weeks in the future.\n\nHe dug deeper. Court records, property transfers, utility connections. Nothing. It was like she had appeared in Ashport fully formed, leaving just enough paperwork to be legal and not a single trace more.\n\nThat kind of absence took work. That kind of absence was intentional.\n\nHe pulled up the coordinates from the photograph and mapped them. An old warehouse in the dock district, the Harmon Exchange. Closed for years, pending renovation that never seemed to happen. He'd passed it once or twice, noticed the way the building seemed to lean slightly, as if it were tired of standing.\n\nThe photograph sat on his desk, the silver symbol catching the light from his lamp in ways that didn't quite make sense. He'd photographed it himself, but in those images the symbol was just a gray smear. Only the original showed that strange, almost liquid quality.\n\nJack checked his watch. 5:23 PM. Still light enough to visit the warehouse district if he left now.\n\nOr he could wait. Do more research. Approach this carefully, the way he'd been approaching everything for the past two years.\n\nThe letter's date burned in his mind. November 28th. Fourteen days.",
+            "details": [
+              {
+                "phrase": "appeared in Ashport fully formed",
+                "note": "Either she's using an alias, or she's been erased from somewhere else. People don't just spring into existence at middle age.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "lean slightly, as if it were tired",
+                "note": "Foundation settling. The whole dock district is built on fill from the 1920s. Half those buildings will be condemned in ten years.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "Fourteen days",
+                "note": "That's the deadline. If there's any truth to this, I have two weeks to figure out what's happening. And if it's a hoax, I have two weeks to find who's playing games.",
+                "evidenceCard": "November 28th Deadline"
+              }
+            ]
+          },
+          {
+            "key": "1A-2C",
+            "label": "Analyze the ink more closely",
+            "response": "Jack pulled his desk lamp closer and angled the photograph beneath it. The silver symbol seemed to drink in the light rather than reflect it, which made no sense. Silver was reflective. That was the whole point of silver.\n\nHe grabbed a magnifying glass from his desk drawer, the old-fashioned kind with a brass handle that had belonged to his grandfather. Through the lens, the symbol's lines appeared perfectly smooth, no visible brushstrokes or spray patterns. Not paint, then. Not any kind of paint he recognized.\n\nThe ink on the letter was stranger still. Under magnification, it seemed to shift and crawl at the edges of each letter, like something alive trying to hold a shape it hadn't quite mastered. He blinked, and when he looked again, the letters were perfectly still.\n\nStress. Had to be stress. And bad lighting, and too much whiskey, and the particular kind of paranoia that came from spending too long alone with your thoughts.\n\nHe tried photographing the letter with his phone's macro lens. Same result as the envelope: the silver ink rendered as a gray blur, unreadable in the image even though he could see every word clearly with his naked eyes.\n\nJack set everything down and walked to his window. The rain had slackened to a drizzle, and through the gaps in the clouds he could see the lights of downtown Ashport beginning to flicker on for the evening. Somewhere out there was a woman named Victoria Blackwell who ran an information brokerage. Somewhere out there was an abandoned warehouse with a symbol painted on its wall.\n\nAnd somewhere, somehow, there was an explanation for how someone had perfectly forged his handwriting to write a letter dated two weeks in the future.\n\nHe just had to find it before whatever this was found him first.\n\nThe photograph sat on his desk, the silver symbol pulsing faintly in his peripheral vision. When he turned to look directly at it, it was perfectly still.",
+            "details": [
+              {
+                "phrase": "drink in the light rather than reflect it",
+                "note": "Some materials do this. Vantablack, certain carbon compounds. Expensive. Specialized. Not something you'd use for street art.",
+                "evidenceCard": "Unusual Ink Properties"
+              },
+              {
+                "phrase": "shift and crawl at the edges",
+                "note": "I'm tired. I've been staring at this too long. The mind sees patterns where there aren't any. That's what I'll tell myself.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "pulsing faintly in his peripheral vision",
+                "note": "Peripheral vision is unreliable. Everyone knows that. The brain fills in gaps with what it expects to see. Or with what it fears.",
+                "evidenceCard": ""
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "afterChoice": "1B",
+        "prompt": "How does Jack proceed with the investigation?",
+        "options": [
+          {
+            "key": "1B-2A",
+            "label": "Head to the coordinates now",
+            "response": "Jack grabbed his coat from the hook by the door, the old canvas jacket he'd worn through a hundred stakeouts and a thousand wet nights. The coordinates were burned into his memory now, and he could feel them pulling at him like a hook in his chest.\n\nThe warehouse district was a twenty-minute walk in good weather, longer in the rain. He took the route through the back streets, avoiding the main roads where the evening traffic would be picking up. Past the shuttered storefronts on Mercer, through the alley behind the old textile mill, down to where the cobblestones gave way to cracked asphalt and the streetlights grew sparse.\n\nThe Harmon Exchange loomed at the end of a dead-end street, a four-story brick building with windows that had been boarded up so long the plywood had started to rot. A chain-link fence surrounded the property, but the gate hung open on rusted hinges, as if someone had decided keeping people out wasn't worth the effort.\n\nJack found the wall from the photograph on the building's east side, facing an empty lot overgrown with weeds.\n\nThe symbol was there. Silver paint, or something like it, marking the brick in clean lines that seemed to glow faintly in the dying light. Below it, the coordinates he'd already memorized, and below those, three words he hadn't seen in the photograph:\n\nTHE THRESHOLD AWAITS\n\nHe reached out to touch the symbol. His fingers stopped an inch from the wall.\n\nThe silver wasn't paint. Up close, he could see that now. It was embedded in the brick itself, as if it had grown there, as if the wall had always contained this pattern and someone had merely revealed it.\n\nA door banged open somewhere inside the building. Footsteps echoed in the hollow space.\n\nJack pressed himself against the wall, heart hammering, and waited to see who else had come to find The Threshold.",
+            "details": [
+              {
+                "phrase": "the gate hung open on rusted hinges",
+                "note": "Either someone's been here recently, or the security company gave up years ago. Either way, I'm not the first visitor.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "THE THRESHOLD AWAITS",
+                "note": "Not in the original photo. Either this is new, or the photograph was deliberately incomplete. Either way, someone knew I was coming.",
+                "evidenceCard": "Threshold Graffiti"
+              },
+              {
+                "phrase": "grown there",
+                "note": "Impossible. Brick doesn't grow. Metal doesn't embed itself. There's a technique I'm not seeing, that's all. A process I don't understand.",
+                "evidenceCard": ""
+              }
+            ]
+          },
+          {
+            "key": "1B-2B",
+            "label": "Call in a favor first",
+            "response": "Jack knew a forger. Everyone in his line of work knew at least one, though most wouldn't admit it in polite company. Sal Renko operated out of a print shop in Midtown, specializing in what he called 'document restoration' for clients who needed old papers to look a little older, or new papers to look like they'd always existed.\n\nSal answered on the third ring. 'Halloway. Been a while.'\n\n'I need your eyes on something.'\n\n'My eyes cost money.'\n\n'Dinner at Fortunato's. Your pick of the menu.'\n\nA pause. Sal's weakness for Italian food was legendary. 'When?'\n\n'Now. I'll meet you there in thirty.'\n\nForty-five minutes later, they sat in a back booth at Fortunato's while Sal examined the letter and photograph under a jeweler's loupe. The old man's face was unreadable, the practiced blank expression of someone who'd spent decades not reacting to unusual documents.\n\n'The handwriting's real,' Sal said finally.\n\n'That's impossible. I didn't write it.'\n\n'I didn't say you wrote it. I said the handwriting's real. Not traced, not printed, not digitally composed. Someone actually wrote these words with a pen, using your exact muscle memory, your exact pressure patterns.' Sal set down the loupe. 'That doesn't happen, Jack. That's not how forgery works.'\n\n'Then how do you explain it?'\n\nSal slid the letter back across the table. 'I don't. And I don't want to. Whatever this is, it's not my kind of strange.'\n\nHe stood up, leaving his untouched plate of veal.\n\n'Sal. What aren't you telling me?'\n\nThe old forger paused at the edge of the booth. 'I've seen that symbol before. The one on the seal and in the photograph. Years ago, on a job I walked away from. My advice? Walk away too.'\n\nHe was gone before Jack could ask anything else.",
+            "details": [
+              {
+                "phrase": "using your exact muscle memory",
+                "note": "Sal's the best document man in Ashport. If he says the handwriting is real, then someone found a way to copy more than my letters. They copied my hand.",
+                "evidenceCard": "Handwriting Analysis"
+              },
+              {
+                "phrase": "not my kind of strange",
+                "note": "Sal's seen everything. Confederate bonds, papal indulgences, celebrity death threats. If this spooked him, I should be worried.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "a job I walked away from",
+                "note": "Sal doesn't walk away from jobs. The money's too good and his conscience died decades ago. What could possibly have scared him?",
+                "evidenceCard": "Sal's Warning"
+              }
+            ]
+          },
+          {
+            "key": "1B-2C",
+            "label": "Search for The Threshold online",
+            "response": "Jack turned to his computer, the familiar comfort of research. The Threshold. It had to exist somewhere, leave some trace in the digital infrastructure of the city.\n\nStandard searches returned nothing useful. A handful of psychology articles about sensory thresholds. A defunct bar in Seattle. An experimental theater company in Prague. Nothing in Ashport, nothing connected to Victoria Blackwell, nothing that matched the symbol on the seal.\n\nHe tried different approaches. Business license databases. Commercial property listings. Building permits. The kind of deep searches that had made his reputation back when he'd cared about having one.\n\nThe Threshold didn't appear anywhere.\n\nBut he found something else.\n\nA city planning document from 2019, buried in the archives, referenced something called 'Threshold Infrastructure Assessment' in relation to the Harmon Exchange property. The document itself was missing, replaced with a note that read 'FILE TRANSFERRED - SEE SPECIAL COLLECTIONS.' No explanation of what Special Collections was or where to find it.\n\nThe Harmon Exchange. The same building from his coordinates.\n\nJack dug further. Historical society records showed the building had been constructed in 1923 as a shipping headquarters, but the original architect's name had been redacted from all available copies of the plans. Insurance records indicated the building had never filed a single claim in its entire existence, which was statistically improbable for a waterfront property.\n\nAnd then he found the photograph.\n\nA newspaper clipping from 1952, archived online by some local history enthusiast. The image showed a crowd gathered outside the Harmon Exchange for what the caption described as 'the annual Threshold opening.' The faces in the crowd were blurred by age and poor reproduction, but one figure stood apart, a woman in a dark coat standing at the edge of the frame.\n\nShe was looking directly at the camera. Directly at Jack, across seventy years of time.\n\nHe enlarged the image until the pixels dissolved into static, but he couldn't shake the feeling that she was still watching.",
+            "details": [
+              {
+                "phrase": "FILE TRANSFERRED - SEE SPECIAL COLLECTIONS",
+                "note": "Special Collections. That's city bureaucrat code for 'we don't want you to find this.' Someone's buried information deliberately.",
+                "evidenceCard": "Missing City File"
+              },
+              {
+                "phrase": "never filed a single claim",
+                "note": "Ninety-six years without a broken window, a flood, a fire? In a waterfront building? That's not luck. That's something else.",
+                "evidenceCard": "Harmon Exchange History"
+              },
+              {
+                "phrase": "the annual Threshold opening",
+                "note": "Annual. This has been happening for decades. Maybe longer. And I've never heard a whisper of it.",
+                "evidenceCard": "1952 Newspaper Clipping"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "afterChoice": "1C",
+        "prompt": "What's Jack's next move?",
+        "options": [
+          {
+            "key": "1C-2A",
+            "label": "Visit Murphy's for information",
+            "response": "Murphy's Bar occupied the ground floor of Jack's building, and he'd been drinking there long enough to know that the owner saw everything that happened on this block. If someone had hand-delivered a strange envelope, Murphy might have seen them.\n\nThe bar was half-empty at this hour, caught between the afternoon drinkers and the evening crowd. Jack slid onto a stool at the end of the bar, away from the two old men arguing about horse racing near the window.\n\nMurphy himself was behind the bar, a thick-armed man with a gray beard and eyes that noticed everything. He set a glass of Jameson in front of Jack without being asked.\n\n'You look like you've seen something,' Murphy said.\n\n'Received something. Black envelope, delivered this afternoon. Marco said someone left it at the desk. You see who dropped it off?'\n\nMurphy wiped down a glass, taking his time. 'Woman. Tall. Dark hair, expensive coat. Walked in like she owned the place, asked for your name specifically, left the envelope with Marco, walked out. Total time, maybe two minutes.'\n\n'She say anything else?'\n\n'Told Marco to make sure you got it before dark. Said it was important.'\n\nJack turned the information over in his mind. A woman. Victoria Blackwell? Or someone working for her?\n\n'She come in here before? Ever?'\n\nMurphy shook his head. 'First time I've seen her. But Jack...' He leaned closer, his voice dropping. 'I've been running this bar for twenty-three years. I know every regular, every cop, every skip-tracer, every hustler in this part of town. That woman wasn't any of those. She moved like she was walking through a place that didn't quite match what she was seeing. Like she was somewhere else and here at the same time.'\n\n'That's a strange way to describe someone.'\n\n'It was a strange thing to see.' Murphy straightened up. 'Whatever's in that envelope, be careful. Some doors, once you open them, they don't close again.'",
+            "details": [
+              {
+                "phrase": "expensive coat",
+                "note": "Money. Resources. Someone who can afford quality and isn't worried about being noticed. That narrows the field or widens it, depending on how you look.",
+                "evidenceCard": "Mystery Woman Description"
+              },
+              {
+                "phrase": "before dark",
+                "note": "Specific timing. There's a reason she wanted me to read this before sunset. Something about the daylight, or about what happens after it's gone.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "somewhere else and here at the same time",
+                "note": "Murphy doesn't talk like that. He's a bartender, not a poet. If something struck him as that strange, it was genuinely strange.",
+                "evidenceCard": "Murphy's Warning"
+              }
+            ]
+          },
+          {
+            "key": "1C-2B",
+            "label": "Try to reproduce his own handwriting",
+            "response": "Jack pulled a fresh sheet of paper from his desk drawer and picked up his pen. If this was a forgery, then he should be able to spot the differences when he compared it to his actual handwriting. And if it wasn't a forgery, if someone had somehow copied not just his letters but the exact pressure of his hand, the particular rhythm of how he formed each word, then...\n\nHe didn't want to finish that thought.\n\nHe wrote the same phrase from the letter: 'You wrote this letter two weeks from now.'\n\nThen he set the two documents side by side.\n\nThey were identical.\n\nNot similar. Identical. The same slight hesitation before the 'w' in 'wrote.' The same pressure increase on the downstroke of the 'y.' The same microscopic lift between 'two' and 'weeks' where his pen had briefly left the paper.\n\nJack wrote the phrase again. And again. Five times, ten times, until his hand was cramped and the desk was covered in paper.\n\nEvery version matched. Not just the original letter, but each other. His handwriting was so consistent, so precise, that he couldn't find a single variation between any of the samples.\n\nThat was impossible. Handwriting naturally varied. Fatigue, temperature, mood, the angle of the paper. No one wrote with perfect consistency.\n\nExcept, apparently, he did.\n\nOr except, somehow, the letter had been written by his hand at a time when he would write it exactly as he was writing now, with the same pen, the same desk, the same weight of confusion pressing down on his thoughts.\n\nJack stared at the papers scattered across his desk, all of them saying the same thing, all of them in his own undeniable hand.\n\nThe letter wasn't a forgery. He was starting to believe it might actually be his.",
+            "details": [
+              {
+                "phrase": "same slight hesitation",
+                "note": "I always pause before w's. Have since I was a kid, something about how I learned to write. No one would know to fake that. No one could.",
+                "evidenceCard": "Handwriting Comparison"
+              },
+              {
+                "phrase": "perfect consistency",
+                "note": "This isn't normal. This isn't human. Either I'm losing my mind or something fundamental about how I understand the world is wrong.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "might actually be his",
+                "note": "If I wrote this letter two weeks from now, then in two weeks I'll have a reason. I'll know something I don't know yet. And I'll be scared enough to warn myself.",
+                "evidenceCard": "Self-Written Letter Theory"
+              }
+            ]
+          },
+          {
+            "key": "1C-2C",
+            "label": "Sleep on it, start fresh tomorrow",
+            "response": "Jack put the envelope, the letter, and the photograph in his desk drawer and locked it. Then he finished the whiskey, turned off his lamp, and went to bed.\n\nHe did not sleep.\n\nHe lay in the narrow bed in the corner of his office, listening to the rain against the window and the muffled bass from Murphy's jukebox below, and he stared at the ceiling, and he thought about handwriting and silver ink and a woman named Victoria Blackwell who barely existed in any record he could find.\n\nAt 2:17 AM, he got up to check the drawer. The envelope was still there. He hadn't dreamed it.\n\nAt 3:43 AM, he got up again. This time, he took the photograph out and held it up to the sodium-orange light that leaked through his window from the street below. The silver symbol seemed to pulse, but that was probably his exhausted eyes playing tricks.\n\nAt 5:19 AM, the rain stopped.\n\nJack dressed, made coffee, and sat at his desk watching the sky lighten over Ashport. The city emerged from the darkness in stages: first the harbor lights, then the downtown towers, then the old church steeples that dotted the residential neighborhoods. A city layered on itself, built and rebuilt over centuries, each version leaving traces beneath the next.\n\nThe map is not the territory, the letter said. The territory is not what you think.\n\nJack had spent his entire career learning to read maps, to trace connections, to find the patterns hidden in records and documents. He'd always believed that if you looked hard enough, long enough, you could understand anything.\n\nNow he wasn't sure.\n\nNow he wasn't sure if the city he'd lived in for eleven years was the same city that had always been there, or if something else had been hiding beneath it all along, waiting for him to notice.\n\nThe photograph sat on his desk, the silver symbol watching him like an eye that never blinked.",
+            "details": [
+              {
+                "phrase": "hadn't dreamed it",
+                "note": "Part of me hoped I had. Part of me hoped this morning would arrive and the envelope would be gone, just a stress hallucination. No such luck.",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "built and rebuilt over centuries",
+                "note": "Every city has layers. Ashport more than most. What's buried under the streets I walk every day? What's been forgotten?",
+                "evidenceCard": ""
+              },
+              {
+                "phrase": "waiting for him to notice",
+                "note": "That's the question that won't let go. Has this always been here? Or did something change? And if something changed, what triggered it? Why now? Why me?",
+                "evidenceCard": "The Hidden Layer Question"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "puzzleCandidates": [
+    "envelope",
+    "threshold",
+    "symbol",
+    "silver",
+    "warehouse",
+    "blackwell",
+    "ink",
+    "harmon"
+  ],
+  "briefing": {
+    "summary": "Investigate the mysterious black envelope and determine who Victoria Blackwell is and what The Threshold means.",
+    "objectives": [
+      "Examine the letter and photograph for clues about their origin",
+      "Research Victoria Blackwell and The Threshold in city records",
+      "Identify the location shown in the photograph coordinates"
+    ]
+  },
+  "narrativeThreads": [
+    {
+      "type": "investigation",
+      "description": "The origin of the black envelope and its impossible contents",
+      "status": "active",
+      "urgency": "critical",
+      "characters": ["Jack Halloway"],
+      "dueChapter": 2
+    },
+    {
+      "type": "investigation",
+      "description": "Identity and motives of Victoria Blackwell",
+      "status": "active",
+      "urgency": "critical",
+      "characters": ["Jack Halloway", "Victoria Blackwell"],
+      "dueChapter": 3
+    },
+    {
+      "type": "appointment",
+      "description": "The November 28th deadline mentioned in the letter",
+      "status": "active",
+      "urgency": "normal",
+      "characters": ["Jack Halloway"],
+      "dueChapter": 12
+    },
+    {
+      "type": "investigation",
+      "description": "The nature and location of The Threshold",
+      "status": "active",
+      "urgency": "normal",
+      "characters": ["Jack Halloway"],
+      "dueChapter": 4
+    },
+    {
+      "type": "revelation",
+      "description": "The meaning of the silver symbol and its connection to Jack",
+      "status": "active",
+      "urgency": "background",
+      "characters": ["Jack Halloway"],
+      "dueChapter": 6
+    }
+  ]
+}
