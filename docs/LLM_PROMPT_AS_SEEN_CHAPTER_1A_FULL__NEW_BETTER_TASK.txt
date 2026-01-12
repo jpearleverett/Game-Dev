@@ -20,7 +20,7 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 <reveal_timing>
 - Jack does NOT know the Under-Map is real until the END of subchapter 1C.
 - The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 1C (not earlier).
-- Before the end of 1C, any anomalies must remain plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).
+- Before the end of 1C, any anomalies must remain plausibly deniable and Jack is extremely skeptical (graffiti, coincidence, stress, faulty lighting, bad maps).
 - After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
 </reveal_timing>
 
@@ -1672,7 +1672,7 @@ Write **Chapter 1, Subchapter 1 (A)**
 
 ### STORY POSITION
 - Chapter 1 of 12 (11 remaining)
-- Subchapter 1 of 3
+- Subchapter A (1 of 3)
 - Current path: "ROOT"
 - Phase: RISING ACTION
 
@@ -1680,7 +1680,7 @@ Write **Chapter 1, Subchapter 1 (A)**
 **The impossible arrives: Jack receives a letter he wrote but did not write, leading to a photo with living ink**
 
 This chapter MUST include:
-- Continue from the dead letter discovery and silver glyph photo
+- Continue from the letter discovery and silver glyph photo
 - Jack investigates the impossible: the ink, the glyph, Victoria, The Threshold
 - Build mystery without providing easy answers
 - Establish the uncanny tone: things that should not exist, do
@@ -1709,7 +1709,7 @@ Jack adapts his approach to the situation. He can be patient when it serves him,
 ### PACING REQUIREMENTS
 - Continue establishing the mystery
 - Introduce new suspects or complications
-- Jack should be actively investigating
+- Jack should be actively investigating and highly skeptical
 - Build relationships with allies/adversaries
 - Plant seeds for later revelations
 
