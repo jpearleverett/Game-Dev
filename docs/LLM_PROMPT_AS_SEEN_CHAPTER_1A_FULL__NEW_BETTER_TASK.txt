@@ -1884,8 +1884,6 @@ const STORY_CONTENT_SCHEMA = {
       },
       required: ['summary', 'objectives'],
     },
-    // NOTE: consistencyFacts removed - was deleted before storage anyway; narrative threads handle continuity
-    // NOTE: previousThreadsAddressed removed - was deleted before storage; thread tracking handled in system prompt
     narrativeThreads: {
       type: 'array',
       items: {
@@ -1898,7 +1896,7 @@ const STORY_CONTENT_SCHEMA = {
           },
           description: {
             type: 'string',
-            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+            description: 'Brief description of the thread'
           },
           status: {
             type: 'string',
@@ -1923,11 +1921,6 @@ const STORY_CONTENT_SCHEMA = {
         required: ['type', 'description', 'status', 'urgency']
       },
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
-    },
-    // CANONICAL NARRATIVE - String representation for context building
-    narrative: {
-      type: 'string',
-      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity.',
-    },
+    },  
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
