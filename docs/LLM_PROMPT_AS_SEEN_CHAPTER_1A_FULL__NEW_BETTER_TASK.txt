@@ -1737,3 +1737,197 @@ After generating your narrative, review it against these quality gates:
 
 If any check fails, revise before returning your response.
 </self_critique>
+
+--- RESPONSE SCHEMA (STORY_CONTENT_SCHEMA) ---
+const STORY_CONTENT_SCHEMA = {
+  type: 'object',
+  properties: {
+    // NOTE: beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration, storyDay
+    // were moved to <internal_planning> in system prompt - Gemini 3's native thinking
+    // handles these internally without outputting them, reducing token usage by ~20%.
+    title: {
+      type: 'string',
+      description: 'Evocative chapter title, 2-5 words',
+    },
+    bridge: {
+      type: 'string',
+      description: 'One short, compelling sentence hook for this subchapter (max 15 words)',
+    },
+    previously: {
+      type: 'string',
+      description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), third-person past tense.',
+    },
+    // BRANCHING NARRATIVE - Interactive story with player choices
+    // Structure: Opening (280-320w) -> Choice1 (3 opts) -> Middles (3x 280-320w) -> Choice2 (3 each) -> Endings (9x 280-320w)
+    // Total: ~4000+ words generated, player experiences 850-950 words per path
+    branchingNarrative: {
+      type: 'object',
+      description: 'Interactive branching narrative with 2 choice points and 9 possible paths',
+      properties: {
+        opening: {
+          type: 'object',
+          properties: {
+            text: {
+              type: 'string',
+              description: 'Opening scene shared by all paths (280-320 words minimum). Set the scene, build to first choice.',
+            },
+            details: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  phrase: { type: 'string', description: 'Exact phrase from text that can be tapped' },
+                  note: { type: 'string', description: 'Jack\'s observation (15-25 words)' },
+                  evidenceCard: { type: 'string', description: 'Evidence card label if applicable (2-4 words), or empty' },
+                },
+                required: ['phrase', 'note'],
+              },
+            },
+          },
+          required: ['text'],
+        },
+        firstChoice: {
+          type: 'object',
+          properties: {
+            prompt: { type: 'string', description: 'Choice context (5-15 words). E.g., "How does Jack respond?"' },
+            options: {
+              type: 'array',
+              minItems: 3,
+              maxItems: 3,
+              items: {
+                type: 'object',
+                properties: {
+                  key: { type: 'string', description: '"1A", "1B", or "1C"' },
+                  label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity.' },
+                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
+                  details: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        phrase: { type: 'string' },
+                        note: { type: 'string' },
+                        evidenceCard: { type: 'string' },
+                      },
+                      required: ['phrase', 'note'],
+                    },
+                  },
+                },
+                required: ['key', 'label', 'response'],
+              },
+            },
+          },
+          required: ['prompt', 'options'],
+        },
+        secondChoices: {
+          type: 'array',
+          minItems: 3,
+          maxItems: 3,
+          description: 'Three second-choice points, one following each first choice (1A, 1B, 1C)',
+          items: {
+            type: 'object',
+            properties: {
+              afterChoice: { type: 'string', description: 'Which first choice this follows: "1A", "1B", or "1C"' },
+              prompt: { type: 'string', description: 'Choice context (5-15 words)' },
+              options: {
+                type: 'array',
+                minItems: 3,
+                maxItems: 3,
+                items: {
+                  type: 'object',
+                  properties: {
+                    key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
+                    label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options.' },
+                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude this path.' },
+                    details: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          phrase: { type: 'string' },
+                          note: { type: 'string' },
+                          evidenceCard: { type: 'string' },
+                        },
+                        required: ['phrase', 'note'],
+                      },
+                    },
+                  },
+                  required: ['key', 'label', 'response'],
+                },
+              },
+            },
+            required: ['afterChoice', 'prompt', 'options'],
+          },
+        },
+      },
+      required: ['opening', 'firstChoice', 'secondChoices'],
+    },
+    // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this; was never displayed
+    puzzleCandidates: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'List of 6-8 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
+    },
+    briefing: {
+      type: 'object',
+      description: 'Mission briefing for the evidence board puzzle',
+      properties: {
+        summary: {
+          type: 'string',
+          description: 'One sentence objective for this subchapter, e.g., "Find the connection between the warehouse records and the missing witness."',
+        },
+        objectives: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '2-3 specific directives for the player, e.g., "Cross-reference the shipping manifests", "Identify the code words used"',
+        },
+      },
+      required: ['summary', 'objectives'],
+    },
+    // NOTE: consistencyFacts removed - was deleted before storage anyway; narrative threads handle continuity
+    // NOTE: previousThreadsAddressed removed - was deleted before storage; thread tracking handled in system prompt
+    narrativeThreads: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['appointment', 'revelation', 'investigation', 'relationship', 'physical_state', 'promise', 'threat'],
+            description: 'Category of narrative thread'
+          },
+          description: {
+            type: 'string',
+            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+          },
+          status: {
+            type: 'string',
+            enum: ['active', 'resolved', 'failed'],
+            description: 'Whether this thread is still pending, was resolved, or failed'
+          },
+          urgency: {
+            type: 'string',
+            enum: ['critical', 'normal', 'background'],
+            description: 'How urgent is this thread? critical=must resolve within 1-2 chapters'
+          },
+          characters: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Characters involved in this thread'
+          },
+          dueChapter: {
+            type: 'number',
+            description: 'Chapter number by which this MUST be resolved (critical=current+1, normal=current+3)'
+          }
+        },
+        required: ['type', 'description', 'status', 'urgency']
+      },
+      description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
+    },
+    // CANONICAL NARRATIVE - String representation for context building
+    narrative: {
+      type: 'string',
+      description: 'CANONICAL NARRATIVE: Concatenate opening.text + firstChoice.options[0].response (1A) + secondChoices[0].options[0].response (1A-2A) into a single continuous narrative string (850-950 words total). This represents the "default" path for context continuity.',
+    },
+  },
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'narrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
