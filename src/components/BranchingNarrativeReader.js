@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   Easing,
+  ImageBackground,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,27 @@ import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
+
+// Noir/Detective paper texture background
+const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jpg");
+
+// Noir aesthetic constants - "Dirty Typewriter" look
+const NOIR_TYPOGRAPHY = {
+  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  color: '#1a1a1a', // Off-black for ink
+  fontSize: 16,
+  lineHeight: 28,
+  // Ink bleed effect via text shadow
+  textShadowColor: 'rgba(0, 0, 0, 0.25)',
+  textShadowOffset: { width: 0.5, height: 0.5 },
+  textShadowRadius: 1,
+};
+
+// Heavy internal padding for paper margins
+const NOIR_PADDING = {
+  horizontal: 32,
+  vertical: 48,
+};
 
 /**
  * BranchingNarrativeReader - Interactive story component with choices and tappable details
@@ -346,12 +369,7 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
   revealedDetails,
   palette,
 }) {
-  const { moderateScale, sizeClass } = useResponsiveLayout();
-  const compact = sizeClass === 'xsmall' || sizeClass === 'small';
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const narrativeSize = moderateScale(FONT_SIZES.md);
-  const narrativeLineHeight = Math.round(narrativeSize * (compact ? 1.6 : 1.8));
 
   useEffect(() => {
     if (state !== SEGMENT_STATES.HIDDEN) {
@@ -363,12 +381,16 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
     }
   }, [state]);
 
+  // Noir "Dirty Typewriter" text style
   const textStyle = useMemo(() => ({
-    fontSize: narrativeSize,
-    lineHeight: narrativeLineHeight,
-    fontFamily: FONTS.mono,
-    color: "#2b1a10",
-  }), [narrativeSize, narrativeLineHeight]);
+    fontSize: NOIR_TYPOGRAPHY.fontSize,
+    lineHeight: NOIR_TYPOGRAPHY.lineHeight,
+    fontFamily: NOIR_TYPOGRAPHY.fontFamily,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+  }), []);
 
   if (state === SEGMENT_STATES.HIDDEN) {
     return null;
@@ -549,15 +571,31 @@ export default function BranchingNarrativeReader({
 
   return (
     <View style={[styles.container, style]}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { padding: scaleSpacing(compact ? SPACING.sm : SPACING.md) },
-        ]}
-        showsVerticalScrollIndicator={false}
+      {/* Noir/Detective paper texture background */}
+      <ImageBackground
+        source={CASE_FILE_BG}
+        resizeMode="cover"
+        style={styles.noirBackground}
       >
+        {/* Gradient overlay for readability: transparent top → dark bottom */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.5)']}
+          style={styles.gradientOverlay}
+          pointerEvents="none"
+        />
+
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingHorizontal: NOIR_PADDING.horizontal,
+              paddingVertical: NOIR_PADDING.vertical,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Opening Segment */}
         <NarrativeSegment
           text={branchingNarrative.opening?.text || ''}
@@ -630,7 +668,8 @@ export default function BranchingNarrativeReader({
             </View>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </ImageBackground>
 
       {/* Observation Popup */}
       {activePopup && (
@@ -647,7 +686,15 @@ export default function BranchingNarrativeReader({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#faf8f3',
+    overflow: 'hidden',
+  },
+  noirBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   scrollView: {
     flex: 1,
@@ -693,10 +740,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   choicePromptText: {
-    fontFamily: FONTS.primarySemiBold,
-    color: '#5a3c26',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: NOIR_TYPOGRAPHY.color,
     marginBottom: 16,
     fontStyle: 'italic',
+    fontWeight: '600',
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
   },
   choiceButtonsRow: {
     flexDirection: 'column',
@@ -721,11 +772,15 @@ const styles = StyleSheet.create({
     borderColor: '#5a1a15',
   },
   choiceLabel: {
-    fontFamily: FONTS.monoBold,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
     color: '#f8d8a8',
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   choiceLabelSelected: {
     color: '#fff',
@@ -764,14 +819,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   evidenceCardText: {
-    fontFamily: FONTS.monoBold,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
     color: '#fff',
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   tapToDismiss: {
-    fontFamily: FONTS.mono,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     color: '#8a6a4b',
     fontSize: 11,
     textAlign: 'center',
@@ -786,12 +842,16 @@ const styles = StyleSheet.create({
     borderColor: '#3a2515',
   },
   evidenceTrayLabel: {
-    fontFamily: FONTS.monoBold,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
     color: '#8a6a4b',
     fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0.5, height: 0.5 },
+    textShadowRadius: 1,
   },
   evidenceCards: {
     flexDirection: 'row',
@@ -810,16 +870,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   evidenceCardLabel: {
-    fontFamily: FONTS.monoBold,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
     color: '#1a120b',
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   errorText: {
-    fontFamily: FONTS.mono,
-    color: '#8a6a4b',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: NOIR_TYPOGRAPHY.color,
     textAlign: 'center',
     padding: 24,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
   },
 });
