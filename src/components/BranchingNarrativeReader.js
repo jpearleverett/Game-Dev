@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   Easing,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -173,7 +174,7 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   );
 });
 
-// Observation popup when detail is tapped
+// Observation popup when detail is tapped - uses Modal for proper screen centering
 const ObservationPopup = React.memo(function ObservationPopup({
   detail,
   onDismiss,
@@ -198,29 +199,37 @@ const ObservationPopup = React.memo(function ObservationPopup({
   }, [onDismiss, slideAnim, opacityAnim]);
 
   return (
-    <Pressable style={styles.popupOverlay} onPress={handleDismiss}>
-      <Animated.View
-        style={[
-          styles.observationPopup,
-          {
-            transform: [{ translateY: slideAnim }],
-            opacity: opacityAnim,
-            borderRadius: scaleRadius(RADIUS.lg),
-            padding: scaleSpacing(SPACING.md),
-          },
-        ]}
-      >
-        <Text style={[styles.observationNote, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
-          {detail.note}
-        </Text>
-        {detail.evidenceCard && (
-          <View style={styles.evidenceCardBadge}>
-            <Text style={styles.evidenceCardText}>📄 {detail.evidenceCard}</Text>
-          </View>
-        )}
-        <Text style={styles.tapToDismiss}>Tap to continue</Text>
-      </Animated.View>
-    </Pressable>
+    <Modal
+      visible={true}
+      transparent={true}
+      animationType="none"
+      statusBarTranslucent={true}
+      onRequestClose={handleDismiss}
+    >
+      <Pressable style={styles.popupOverlay} onPress={handleDismiss}>
+        <Animated.View
+          style={[
+            styles.observationPopup,
+            {
+              transform: [{ translateY: slideAnim }],
+              opacity: opacityAnim,
+              borderRadius: scaleRadius(RADIUS.lg),
+              padding: scaleSpacing(SPACING.md),
+            },
+          ]}
+        >
+          <Text style={[styles.observationNote, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
+            {detail.note}
+          </Text>
+          {detail.evidenceCard && (
+            <View style={styles.evidenceCardBadge}>
+              <Text style={styles.evidenceCardText}>📄 {detail.evidenceCard}</Text>
+            </View>
+          )}
+          <Text style={styles.tapToDismiss}>Tap to continue</Text>
+        </Animated.View>
+      </Pressable>
+    </Modal>
   );
 });
 
@@ -716,7 +725,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   popupOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
