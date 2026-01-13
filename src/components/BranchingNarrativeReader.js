@@ -51,9 +51,11 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   isRevealed,
 }) {
   const handlePress = useCallback(() => {
-    if (isRevealed) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onTap({ phrase, note, evidenceCard });
+    // Lighter haptic for re-reading, stronger for first discovery
+    Haptics.impactAsync(
+      isRevealed ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
+    );
+    onTap({ phrase, note, evidenceCard, isRevealed });
   }, [isRevealed, phrase, note, evidenceCard, onTap]);
 
   return (
@@ -512,19 +514,23 @@ export default function BranchingNarrativeReader({
     });
   }, [secondChoiceMade, firstChoiceMade, collectedEvidence, onComplete]);
 
-  // Handle detail tap
+  // Handle detail tap - allows re-tapping to re-read, but only collects evidence once
   const handleDetailTap = useCallback((detail) => {
     setActivePopup(detail);
-    setRevealedDetails(prev => new Set(prev).add(detail.phrase));
 
-    if (detail.evidenceCard) {
-      const newEvidence = {
-        label: detail.evidenceCard,
-        phrase: detail.phrase,
-        note: detail.note,
-      };
-      setCollectedEvidence(prev => [...prev, newEvidence]);
-      onEvidenceCollected?.(newEvidence);
+    // Only mark as revealed and collect evidence on first tap
+    if (!detail.isRevealed) {
+      setRevealedDetails(prev => new Set(prev).add(detail.phrase));
+
+      if (detail.evidenceCard) {
+        const newEvidence = {
+          label: detail.evidenceCard,
+          phrase: detail.phrase,
+          note: detail.note,
+        };
+        setCollectedEvidence(prev => [...prev, newEvidence]);
+        onEvidenceCollected?.(newEvidence);
+      }
     }
   }, [onEvidenceCollected]);
 
