@@ -17,7 +17,6 @@ import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
-import { parseRichText } from "../utils/richTextParser";
 
 /**
  * BranchingNarrativeReader - Interactive story component with choices and tappable details
@@ -59,8 +58,6 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
     onTap({ phrase, note, evidenceCard, isRevealed });
   }, [isRevealed, phrase, note, evidenceCard, onTap]);
 
-  const richSegments = useMemo(() => parseRichText(phrase), [phrase]);
-
   return (
     <Text
       onPress={handlePress}
@@ -69,9 +66,7 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
         isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
       ]}
     >
-      {richSegments.map((rs, i) => (
-         <Text key={i} style={rs.style}>{rs.text}</Text>
-      ))}
+      {phrase}
     </Text>
   );
 });
@@ -163,14 +158,7 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
     <Text style={textStyle}>
       {segments.map((segment, index) => {
         if (segment.type === 'text') {
-          const richSegments = parseRichText(segment.content);
-          return (
-            <Text key={index}>
-              {richSegments.map((rs, i) => (
-                <Text key={i} style={rs.style}>{rs.text}</Text>
-              ))}
-            </Text>
-          );
+          return <Text key={index}>{segment.content}</Text>;
         } else {
           return (
             <InlineTappablePhrase
