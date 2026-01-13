@@ -16,7 +16,30 @@ import * as Haptics from "expo-haptics";
 import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
+import { NARRATIVE_COLORS } from "../constants/colors";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
+
+// Word patterns for mood-based coloring within narrative text segments
+const MOOD_PATTERNS = {
+  danger: /\b(blood|dead|death|kill|murder|shot|bullet|gun|knife|wound|scream|terror|fear|pain|hurt|violent|corpse|body)\b/gi,
+  mystery: /\b(shadow|dark|hidden|secret|strange|unknown|mysterious|vanish|disappear|clue|evidence|suspect|witness|alibi)\b/gi,
+  discovery: /\b(found|discover|notice|realize|understand|reveal|truth|answer|solve|uncover|detect|spot|observe|see)\b/gi,
+  emotion: /\b(love|hate|anger|sad|happy|anxious|nervous|worry|desperate|hopeful|bitter|jealous|regret|guilt|shame)\b/gi,
+  nature: /\b(rain|storm|fog|mist|night|cold|wind|thunder|lightning|smoke|fire|water|snow|sun|moon|cloud)\b/gi,
+  time: /\b(yesterday|tomorrow|tonight|morning|evening|midnight|dawn|dusk|hour|minute|moment|suddenly|finally|always|never)\b/gi,
+  sounds: /\b(crack|bang|thud|whisper|murmur|crash|click|snap|buzz|hum|roar|rustle|creak|slam)\b/gi,
+};
+
+// Mood-based style mapping
+const MOOD_STYLES = {
+  danger: { color: NARRATIVE_COLORS.danger, fontFamily: FONTS.monoBold },
+  mystery: { color: NARRATIVE_COLORS.mystery, fontStyle: 'italic' },
+  discovery: { color: NARRATIVE_COLORS.discovery, fontFamily: FONTS.monoBold },
+  emotion: { color: NARRATIVE_COLORS.emotion, fontStyle: 'italic' },
+  nature: { color: NARRATIVE_COLORS.nature },
+  time: { color: NARRATIVE_COLORS.time, fontFamily: FONTS.monoBold },
+  sounds: { color: NARRATIVE_COLORS.dangerLight, fontStyle: 'italic', fontFamily: FONTS.monoBold },
+};
 
 /**
  * BranchingNarrativeReader - Interactive story component with choices and tappable details
@@ -144,21 +167,187 @@ function parseTextWithDetails(text, details) {
   return segments;
 }
 
-// Render narrative text with inline tappable phrases
+// Apply mood-based styling to a text segment
+function applyMoodStyling(text, baseKey) {
+  const allMatches = [];
+
+  Object.entries(MOOD_PATTERNS).forEach(([mood, pattern]) => {
+    let match;
+    const regex = new RegExp(pattern.source, pattern.flags);
+    while ((match = regex.exec(text)) !== null) {
+      allMatches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        word: match[0],
+        mood,
+      });
+    }
+  });
+
+  // Sort and filter overlaps
+  allMatches.sort((a, b) => a.start - b.start);
+  const filtered = [];
+  let lastEnd = 0;
+  for (const m of allMatches) {
+    if (m.start >= lastEnd) {
+      filtered.push(m);
+      lastEnd = m.end;
+    }
+  }
+
+  if (filtered.length === 0) {
+    return [{ type: 'plain', content: text, key: `${baseKey}-plain` }];
+  }
+
+  const result = [];
+  let currentPos = 0;
+
+  filtered.forEach((match, mIndex) => {
+    if (match.start > currentPos) {
+      result.push({
+        type: 'plain',
+        content: text.substring(currentPos, match.start),
+        key: `${baseKey}-p${mIndex}`,
+      });
+    }
+
+    result.push({
+      type: 'mood',
+      mood: match.mood,
+      content: match.word,
+      key: `${baseKey}-m${mIndex}`,
+    });
+
+    currentPos = match.end;
+  });
+
+  if (currentPos < text.length) {
+    result.push({
+      type: 'plain',
+      content: text.substring(currentPos),
+      key: `${baseKey}-end`,
+    });
+  }
+
+  return result;
+}
+
+// Drop Cap component for first letter styling
+const DropCap = React.memo(function DropCap({ letter }) {
+  return (
+    <Text style={styles.dropCap}>{letter}</Text>
+  );
+});
+
+// Render narrative text with inline tappable phrases AND rich styling
 const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   text,
   details,
   onDetailTap,
   revealedDetails,
   textStyle,
+  isFirstSegment = false,
 }) {
   const segments = useMemo(() => parseTextWithDetails(text, details), [text, details]);
+
+  // Determine if we should show drop cap
+  const showDropCap = isFirstSegment &&
+    segments.length > 0 &&
+    segments[0].type === 'text' &&
+    segments[0].content.length > 0;
+
+  const renderStyledText = (content, baseKey, isFirst = false) => {
+    // Check for quoted text first
+    const quotePattern = /"([^"]+)"/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    let partIndex = 0;
+
+    while ((match = quotePattern.exec(content)) !== null) {
+      // Text before quote - apply mood styling
+      if (match.index > lastIndex) {
+        const beforeText = content.substring(lastIndex, match.index);
+        const styledParts = applyMoodStyling(beforeText, `${baseKey}-bq${partIndex}`);
+        styledParts.forEach(part => {
+          if (part.type === 'mood') {
+            parts.push(
+              <Text key={part.key} style={MOOD_STYLES[part.mood]}>
+                {part.content}
+              </Text>
+            );
+          } else {
+            parts.push(<Text key={part.key}>{part.content}</Text>);
+          }
+        });
+      }
+
+      // Quoted text with special styling
+      parts.push(
+        <Text key={`${baseKey}-quote${partIndex}`} style={styles.quotedText}>
+          "{match[1]}"
+        </Text>
+      );
+      partIndex++;
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Remaining text - apply mood styling
+    if (lastIndex < content.length) {
+      const remainingText = content.substring(lastIndex);
+      const styledParts = applyMoodStyling(remainingText, `${baseKey}-rem`);
+      styledParts.forEach(part => {
+        if (part.type === 'mood') {
+          parts.push(
+            <Text key={part.key} style={MOOD_STYLES[part.mood]}>
+              {part.content}
+            </Text>
+          );
+        } else {
+          parts.push(<Text key={part.key}>{part.content}</Text>);
+        }
+      });
+    }
+
+    // If no quotes found, just apply mood styling to entire content
+    if (parts.length === 0) {
+      const styledParts = applyMoodStyling(content, baseKey);
+      styledParts.forEach(part => {
+        if (part.type === 'mood') {
+          parts.push(
+            <Text key={part.key} style={MOOD_STYLES[part.mood]}>
+              {part.content}
+            </Text>
+          );
+        } else {
+          parts.push(<Text key={part.key}>{part.content}</Text>);
+        }
+      });
+    }
+
+    return parts;
+  };
 
   return (
     <Text style={textStyle}>
       {segments.map((segment, index) => {
         if (segment.type === 'text') {
-          return <Text key={index}>{segment.content}</Text>;
+          // Apply drop cap to first segment if applicable
+          if (index === 0 && showDropCap) {
+            const firstChar = segment.content[0];
+            const restContent = segment.content.substring(1);
+            return (
+              <Text key={index}>
+                <DropCap letter={firstChar} />
+                {renderStyledText(restContent, `seg${index}`, false)}
+              </Text>
+            );
+          }
+          return (
+            <Text key={index}>
+              {renderStyledText(segment.content, `seg${index}`)}
+            </Text>
+          );
         } else {
           return (
             <InlineTappablePhrase
@@ -345,6 +534,7 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
   onDetailTap,
   revealedDetails,
   palette,
+  isFirstSegment = false,
 }) {
   const { moderateScale, sizeClass } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -367,7 +557,7 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
     fontSize: narrativeSize,
     lineHeight: narrativeLineHeight,
     fontFamily: FONTS.mono,
-    color: "#2b1a10",
+    color: NARRATIVE_COLORS.base,
   }), [narrativeSize, narrativeLineHeight]);
 
   if (state === SEGMENT_STATES.HIDDEN) {
@@ -389,7 +579,7 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
         />
       )}
 
-      {/* After typing complete, show text with inline tappable phrases */}
+      {/* After typing complete, show richly styled text with inline tappable phrases */}
       {state === SEGMENT_STATES.COMPLETE && (
         <Pressable onPress={() => {}}>
           <NarrativeTextWithDetails
@@ -398,6 +588,7 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
             onDetailTap={onDetailTap}
             revealedDetails={revealedDetails}
             textStyle={textStyle}
+            isFirstSegment={isFirstSegment}
           />
         </Pressable>
       )}
@@ -558,7 +749,7 @@ export default function BranchingNarrativeReader({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Opening Segment */}
+        {/* Opening Segment - with drop cap for dramatic opening */}
         <NarrativeSegment
           text={branchingNarrative.opening?.text || ''}
           details={branchingNarrative.opening?.details || []}
@@ -567,6 +758,7 @@ export default function BranchingNarrativeReader({
           onDetailTap={handleDetailTap}
           revealedDetails={revealedDetails}
           palette={palette}
+          isFirstSegment={true}
         />
 
         {/* First Choice */}
@@ -674,19 +866,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(139, 90, 43, 0.25)',
     textDecorationLine: 'none',
   },
+  // Drop cap styling - dramatic serif letter for opening
+  dropCap: {
+    fontSize: 44,
+    lineHeight: 48,
+    fontFamily: FONTS.secondaryBold,
+    color: NARRATIVE_COLORS.danger,
+    textShadowColor: NARRATIVE_COLORS.dropCapShadow,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  // Quoted dialogue styling
+  quotedText: {
+    fontStyle: 'italic',
+    color: NARRATIVE_COLORS.baseLight,
+  },
   // Inline tappable phrase styles (embedded within narrative text)
   inlineTappable: {
     // Base styles applied to all inline tappable phrases
   },
   inlineTappableUnrevealed: {
-    backgroundColor: 'rgba(139, 90, 43, 0.15)',
+    backgroundColor: NARRATIVE_COLORS.tappableUnrevealed,
     textDecorationLine: 'underline',
     textDecorationStyle: 'dotted',
-    textDecorationColor: '#8b5a2b',
+    textDecorationColor: NARRATIVE_COLORS.tappableUnderline,
+    borderRadius: 2,
   },
   inlineTappableRevealed: {
-    backgroundColor: 'rgba(139, 90, 43, 0.3)',
+    backgroundColor: NARRATIVE_COLORS.tappableRevealed,
     textDecorationLine: 'none',
+    borderRadius: 2,
   },
   choicePromptContainer: {
     marginVertical: 24,
