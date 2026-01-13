@@ -3,56 +3,41 @@ import {
   Animated,
   Easing,
   FlatList,
+  ImageBackground,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from 'expo-av';
 
+// Noir/Detective paper texture background
+const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jpg");
+
 import TypewriterText from "./TypewriterText";
-import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 
-const BINDER_RING_COUNT = 3;
-const FONT_TWEAK_FACTOR = 0.95;
-const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
+// Noir aesthetic constants
+const NOIR_TYPOGRAPHY = {
+  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  color: '#1a1a1a', // Off-black for ink
+  fontSize: 16,
+  lineHeight: 28,
+  // Ink bleed effect via text shadow
+  textShadowColor: 'rgba(0, 0, 0, 0.25)',
+  textShadowOffset: { width: 0.5, height: 0.5 },
+  textShadowRadius: 1,
+};
 
-// Lined notebook paper background component
-// Memoized to prevent expensive re-renders when parent updates
-const NotebookLines = React.memo(function NotebookLines({ lineHeight, pageHeight, marginLeft }) {
-  const lineCount = Math.floor(pageHeight / lineHeight);
-
-  // Memoize the lines array to avoid recreating on every render
-  const lines = useMemo(() =>
-    Array.from({ length: lineCount }).map((_, i) => (
-      <View
-        key={`line-${i}`}
-        style={[
-          styles.ruleLine,
-          { top: (i + 1) * lineHeight }
-        ]}
-      />
-    )),
-    [lineCount, lineHeight]
-  );
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {/* Red margin line */}
-      <View
-        style={[
-          styles.marginLine,
-          { left: marginLeft }
-        ]}
-      />
-      {/* Horizontal ruled lines */}
-      {lines}
-    </View>
-  );
-});
+// Heavy internal padding for paper margins
+const NOIR_PADDING = {
+  horizontal: 32,
+  vertical: 48,
+};
 
 // Memoized to prevent recreating animation instances on parent re-renders
 const PulsingArrow = React.memo(function PulsingArrow() {
@@ -109,15 +94,7 @@ export default function NarrativePager({
   const blockRadius = scaleRadius(RADIUS.lg);
   const sectionPaddingH = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
   const sectionPaddingV = scaleSpacing(compact ? SPACING.sm : SPACING.md);
-  const pagePaddingH = scaleSpacing(compact ? SPACING.sm : SPACING.md);
-  const pagePaddingV = scaleSpacing(compact ? SPACING.sm : SPACING.md);
   const pageGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
-  const ringSize = Math.max(14, Math.round(scaleSpacing(compact ? SPACING.md : SPACING.lg)));
-  const tapeWidth = Math.max(82, Math.round(scaleSpacing(compact ? SPACING.xxl : SPACING.xxl + SPACING.sm)));
-
-  const narrativeSize = shrinkFont(moderateScale(FONT_SIZES.md));
-  const narrativeLineHeight = Math.round(narrativeSize * (compact ? 1.6 : 1.8));
-  const slugSize = shrinkFont(moderateScale(FONT_SIZES.xs));
   const arrowSize = Math.max(40, Math.round(scaleSpacing(compact ? SPACING.xl : SPACING.xxl)));
   const arrowFontSize = Math.round(arrowSize * 0.48);
   const pageHeight = Math.round(moderateScale(compact ? 450 : 540));
@@ -281,112 +258,98 @@ export default function NarrativePager({
           {
             width: pageWidth || "100%",
             height: pageHeight,
-            paddingHorizontal: pagePaddingH,
-            paddingTop: pagePaddingV,
-            paddingBottom: pagePaddingV + scaleSpacing(SPACING.md),
             borderRadius: blockRadius,
             marginRight: isLastPage ? 0 : pageGap,
           },
         ]}
       >
-        {/* Lined notebook paper background */}
-        <NotebookLines
-          lineHeight={narrativeLineHeight}
-          pageHeight={pageHeight}
-          marginLeft={pagePaddingH - 4}
-        />
-
-        {/* Tap Zones */}
-        <Pressable
-          style={[styles.tapZone, styles.tapZoneLeft]}
-          disabled={index === 0}
-          onPress={() => triggerPageFlip(-1)}
-        />
-        <Pressable
-          style={[styles.tapZone, styles.tapZoneRight]}
-          disabled={isLastPage}
-          onPress={() => triggerPageFlip(1)}
-        />
-
-        {/* Decorative Tape */}
-        <View style={[styles.tape, styles.tapeLeft, { width: tapeWidth * 0.68 }]} />
-        <View style={[styles.tape, styles.tapeRight, { width: tapeWidth * 0.54 }]} />
-
-        {/* Binder Rings */}
-        <View style={[styles.ringColumn, { left: -(ringSize * 0.58), width: ringSize }]}>
-          {Array.from({ length: BINDER_RING_COUNT }).map((_, i) => (
-            <View
-              key={`ring-${i}`}
-              style={[styles.ring, { width: ringSize, height: ringSize, borderRadius: ringSize / 2 }]}
-            />
-          ))}
-        </View>
-
-        {/* Content */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            gap: scaleSpacing(SPACING.xs),
-            paddingBottom: scaleSpacing(SPACING.xxl),
-          }}
-          showsVerticalScrollIndicator={false}
+        {/* Noir/Detective paper texture background */}
+        <ImageBackground
+          source={CASE_FILE_BG}
+          resizeMode="cover"
+          style={styles.pageBackground}
+          imageStyle={{ borderRadius: blockRadius }}
         >
-          <Text
-            style={[
-              styles.label,
-              {
-                fontSize: shrinkFont(moderateScale(FONT_SIZES.xs)),
-                color: "#5a3c26",
-                letterSpacing: compact ? 1.8 : 2.4,
-              },
-            ]}
-          >
-            {entryLabel.toUpperCase()}
-          </Text>
-
-          <TypewriterText
-            text={item.text}
-            speed={8}
-            delay={100}
-            isActive={isActive}
-            isFinished={completedPages.has(index)}
-            onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
-            style={{
-              fontSize: narrativeSize,
-              lineHeight: narrativeLineHeight,
-              fontFamily: FONTS.mono,
-              color: "#2b1a10",
-            }}
+          {/* Gradient overlay for readability: transparent top → dark bottom */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.5)']}
+            style={[styles.gradientOverlay, { borderRadius: blockRadius }]}
+            pointerEvents="none"
           />
-          {completedPages.has(index) && !isLastPage && (
-            <View style={styles.nextPageCueContainer}>
-                <PulsingArrow />
-            </View>
-          )}
 
-          {/* Decision Button */}
-          {showReveal && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.choiceButton,
-                { borderRadius: blockRadius, marginTop: scaleSpacing(SPACING.md) },
-                pressed && styles.choiceButtonPressed,
+          {/* Tap Zones */}
+          <Pressable
+            style={[styles.tapZone, styles.tapZoneLeft]}
+            disabled={index === 0}
+            onPress={() => triggerPageFlip(-1)}
+          />
+          <Pressable
+            style={[styles.tapZone, styles.tapZoneRight]}
+            disabled={isLastPage}
+            onPress={() => triggerPageFlip(1)}
+          />
+
+          {/* Content with heavy noir padding */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: NOIR_PADDING.horizontal,
+              paddingVertical: NOIR_PADDING.vertical,
+              gap: scaleSpacing(SPACING.xs),
+              paddingBottom: scaleSpacing(SPACING.xxl),
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text
+              style={[
+                styles.noirLabel,
+                {
+                  letterSpacing: compact ? 1.8 : 2.4,
+                },
               ]}
-              onPress={onRevealDecision}
             >
-              <Text style={{ fontFamily: FONTS.monoBold, color: "#3a1c06", fontSize: narrativeSize }}>
-                Seal Your Path
-              </Text>
-            </Pressable>
-          )}
-        </ScrollView>
+              {entryLabel.toUpperCase()}
+            </Text>
 
-        {/* Page Number */}
-        <View style={styles.pageStamp} pointerEvents="none">
-          <Text style={[styles.pageStampText, { fontSize: slugSize }]}>
-            {`PAGE ${String(index + 1).padStart(2, "0")}`}
-          </Text>
-        </View>
+            <TypewriterText
+              text={item.text}
+              speed={8}
+              delay={100}
+              isActive={isActive}
+              isFinished={completedPages.has(index)}
+              onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
+              style={styles.noirText}
+            />
+            {completedPages.has(index) && !isLastPage && (
+              <View style={styles.nextPageCueContainer}>
+                  <PulsingArrow />
+              </View>
+            )}
+
+            {/* Decision Button */}
+            {showReveal && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.choiceButton,
+                  { borderRadius: blockRadius, marginTop: scaleSpacing(SPACING.md) },
+                  pressed && styles.choiceButtonPressed,
+                ]}
+                onPress={onRevealDecision}
+              >
+                <Text style={styles.choiceButtonText}>
+                  Seal Your Path
+                </Text>
+              </Pressable>
+            )}
+          </ScrollView>
+
+          {/* Page Number */}
+          <View style={styles.pageStamp} pointerEvents="none">
+            <Text style={styles.noirPageStampText}>
+              {`PAGE ${String(index + 1).padStart(2, "0")}`}
+            </Text>
+          </View>
+        </ImageBackground>
       </View>
     );
   }, [
@@ -394,17 +357,9 @@ export default function NarrativePager({
     completedPages,
     showDecisionPrompt,
     pageWidth,
-    pagePaddingH,
-    pagePaddingV,
     blockRadius,
     pageGap,
-    tapeWidth,
-    ringSize,
     scaleSpacing,
-    narrativeSize,
-    narrativeLineHeight,
-    slugSize,
-    moderateScale,
     compact,
     pages.length,
     triggerPageFlip,
@@ -500,29 +455,22 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   page: {
-    backgroundColor: "#faf8f3", // Warm off-white notebook paper
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#d8d0c4",
+    borderColor: "rgba(40, 30, 20, 0.6)",
     shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 5, height: 5 },
-    elevation: 4,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 4, height: 6 },
+    elevation: 6,
   },
-  marginLine: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: "rgba(205, 92, 92, 0.35)", // Subtle red margin line
+  pageBackground: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
   },
-  ruleLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(176, 196, 222, 0.4)", // Light blue ruled lines
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   tapZone: {
     position: "absolute",
@@ -533,55 +481,42 @@ const styles = StyleSheet.create({
   },
   tapZoneLeft: { left: 0 },
   tapZoneRight: { right: 0 },
-  tape: {
-    position: "absolute",
-    height: 24,
-    backgroundColor: "rgba(230, 210, 180, 0.65)", // More translucent tape
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+  // Noir "Dirty Typewriter" label style
+  noirLabel: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 12,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+    opacity: 0.7,
+    fontWeight: 'bold',
   },
-  tapeLeft: { top: 12, left: -15, transform: [{ rotate: "-32deg" }] },
-  tapeRight: { bottom: 12, right: -10, transform: [{ rotate: "24deg" }] },
-  ringColumn: {
-    position: "absolute",
-    top: "12%",
-    bottom: "12%",
-    justifyContent: "space-between",
-    left: -12, 
-    width: 24,
-    zIndex: 20,
-  },
-  ring: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#d4d4d4",
-    borderWidth: 2,
-    borderColor: "#999",
-    shadowColor: "#000",
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 4,
-  },
-  label: {
-    fontFamily: FONTS.monoBold,
-    opacity: 0.8,
+  // Noir "Dirty Typewriter" text style
+  noirText: {
+    fontFamily: NOIR_TYPOGRAPHY.fontFamily,
+    fontSize: NOIR_TYPOGRAPHY.fontSize,
+    lineHeight: NOIR_TYPOGRAPHY.lineHeight,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
   },
   pageStamp: {
     position: "absolute",
-    bottom: 12,
+    bottom: 16,
     alignSelf: "center",
-    opacity: 0.4,
+    opacity: 0.5,
   },
-  pageStampText: {
-    fontFamily: FONTS.mono,
-    color: "#5a3c26",
+  noirPageStampText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 11,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+    fontWeight: 'bold',
+    letterSpacing: 1.5,
   },
   arrow: {
     position: "absolute",
@@ -603,11 +538,12 @@ const styles = StyleSheet.create({
   arrowDisabled: { opacity: 0 },
   arrowLabel: {
     color: "#f8d8a8",
-    fontFamily: FONTS.monoBold,
-    marginBottom: 2, // Optical adjustment
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
   choiceButton: {
-    backgroundColor: "#8a2a22", // Red wax seal color
+    backgroundColor: "#8a2a22",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
@@ -626,15 +562,28 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     transform: [{ scale: 0.96 }],
   },
+  choiceButtonText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
+    color: "#f8d8a8",
+    fontSize: NOIR_TYPOGRAPHY.fontSize,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   nextPageCueContainer: {
     alignItems: 'flex-end',
     marginTop: 8,
     marginRight: 12,
   },
   nextPageCue: {
-    fontFamily: FONTS.secondaryBold,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
     fontStyle: 'italic',
     fontSize: 18,
-    color: '#8a6a4b',
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
   },
 });
