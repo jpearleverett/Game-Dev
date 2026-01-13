@@ -12,10 +12,8 @@ import {
 import { Audio } from 'expo-av';
 
 import TypewriterText from "./TypewriterText";
-import StylizedNarrativeText from "./StylizedNarrativeText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
-import { NARRATIVE_COLORS } from "../constants/colors";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 
 const BINDER_RING_COUNT = 3;
@@ -346,35 +344,20 @@ export default function NarrativePager({
             {entryLabel.toUpperCase()}
           </Text>
 
-          {/* Show typewriter during typing, then switch to richly styled text */}
-          {!completedPages.has(index) ? (
-            <TypewriterText
-              text={item.text}
-              speed={8}
-              delay={100}
-              isActive={isActive}
-              isFinished={false}
-              onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
-              style={{
-                fontSize: narrativeSize,
-                lineHeight: narrativeLineHeight,
-                fontFamily: FONTS.mono,
-                color: NARRATIVE_COLORS.base,
-              }}
-            />
-          ) : (
-            <StylizedNarrativeText
-              text={item.text}
-              baseSize={narrativeSize}
-              lineHeight={narrativeLineHeight / narrativeSize}
-              enableDropCap={item.pageIndex === 0}
-              enableMoodColors={true}
-              style={{
-                fontFamily: FONTS.mono,
-                color: NARRATIVE_COLORS.base,
-              }}
-            />
-          )}
+          <TypewriterText
+            text={item.text}
+            speed={8}
+            delay={100}
+            isActive={isActive}
+            isFinished={completedPages.has(index)}
+            onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
+            style={{
+              fontSize: narrativeSize,
+              lineHeight: narrativeLineHeight,
+              fontFamily: FONTS.mono,
+              color: "#2b1a10",
+            }}
+          />
           {completedPages.has(index) && !isLastPage && (
             <View style={styles.nextPageCueContainer}>
                 <PulsingArrow />

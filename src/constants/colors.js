@@ -1,39 +1,3 @@
-// Rich narrative text color palette for dynamic storytelling
-export const NARRATIVE_COLORS = {
-  // Base text colors
-  base: '#2b1a10',
-  baseLight: '#4a3828',
-
-  // Mood colors - evocative and dramatic
-  danger: '#8a2a22',       // Blood red - violence, threat
-  dangerLight: '#c45c5c',  // Lighter danger
-  mystery: '#2a4a6a',      // Deep blue - unknown, secrets
-  mysteryLight: '#4a7a9a', // Lighter mystery
-  discovery: '#6a5a2a',    // Gold/amber - findings, revelations
-  discoveryLight: '#9a8a4a',
-  emotion: '#5a2a5a',      // Purple - feelings, tension
-  emotionLight: '#8a5a8a',
-  nature: '#2a5a3a',       // Forest green - environment, weather
-  natureLight: '#4a8a5a',
-
-  // Special styling
-  whisper: '#7a6a5a',      // Muted - quiet speech, thoughts
-  shout: '#6a1a12',        // Dark red - loud, emphasis
-  name: '#3a2a4a',         // Deep purple - character names
-  place: '#2a3a4a',        // Slate blue - locations
-  time: '#5a4a3a',         // Sepia - time references
-  clue: '#8a6a2a',         // Amber - evidence, important details
-
-  // Drop cap and decorative
-  dropCap: '#8a2a22',
-  dropCapShadow: 'rgba(138, 42, 34, 0.3)',
-
-  // Tappable phrase styling
-  tappableUnrevealed: 'rgba(106, 90, 42, 0.25)',
-  tappableRevealed: 'rgba(138, 42, 34, 0.2)',
-  tappableUnderline: '#8a6a2a',
-};
-
 export const COLORS = {
   background: '#1F1B18',
   backgroundAlt: '#24201D',
