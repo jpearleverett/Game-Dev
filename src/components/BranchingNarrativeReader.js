@@ -41,71 +41,135 @@ const SEGMENT_STATES = {
   COMPLETE: 'complete',
 };
 
-// Tappable detail component
-const TappableDetail = React.memo(function TappableDetail({
+// Inline tappable phrase component - renders within the narrative text flow
+const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   phrase,
   note,
   evidenceCard,
   onTap,
   isRevealed,
-  palette,
-  textStyle,
 }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  // Subtle pulse animation for unrevealed details
-  useEffect(() => {
-    if (!isRevealed) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-          Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    }
-  }, [isRevealed, glowAnim]);
-
   const handlePress = useCallback(() => {
     if (isRevealed) return;
-
-    // Haptic feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    // Scale animation
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
-    ]).start();
-
     onTap({ phrase, note, evidenceCard });
-  }, [isRevealed, phrase, note, evidenceCard, onTap, scaleAnim]);
-
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.6],
-  });
+  }, [isRevealed, phrase, note, evidenceCard, onTap]);
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Pressable onPress={handlePress} disabled={isRevealed}>
-        <Animated.Text
-          style={[
-            textStyle,
-            styles.tappableText,
-            isRevealed && styles.tappableTextRevealed,
-            !isRevealed && {
-              textDecorationLine: 'underline',
-              textDecorationStyle: 'dotted',
-            },
-          ]}
-        >
-          {phrase}
-        </Animated.Text>
-      </Pressable>
-    </Animated.View>
+    <Text
+      onPress={handlePress}
+      style={[
+        styles.inlineTappable,
+        isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
+      ]}
+    >
+      {phrase}
+    </Text>
+  );
+});
+
+// Parse narrative text and create segments with inline tappable phrases
+function parseTextWithDetails(text, details) {
+  if (!details || details.length === 0) {
+    return [{ type: 'text', content: text }];
+  }
+
+  // Find all phrase positions in the text (case-insensitive search)
+  const phrasePositions = [];
+  for (const detail of details) {
+    const lowerText = text.toLowerCase();
+    const lowerPhrase = detail.phrase.toLowerCase();
+    let startIndex = 0;
+
+    while (true) {
+      const pos = lowerText.indexOf(lowerPhrase, startIndex);
+      if (pos === -1) break;
+
+      phrasePositions.push({
+        start: pos,
+        end: pos + detail.phrase.length,
+        detail: detail,
+        // Use the actual text from the narrative to preserve case
+        actualPhrase: text.substring(pos, pos + detail.phrase.length),
+      });
+      startIndex = pos + 1;
+    }
+  }
+
+  // Sort by position
+  phrasePositions.sort((a, b) => a.start - b.start);
+
+  // Remove overlapping phrases (keep first occurrence)
+  const filtered = [];
+  let lastEnd = 0;
+  for (const pos of phrasePositions) {
+    if (pos.start >= lastEnd) {
+      filtered.push(pos);
+      lastEnd = pos.end;
+    }
+  }
+
+  // Build segments
+  const segments = [];
+  let currentPos = 0;
+
+  for (const pos of filtered) {
+    // Add text before the phrase
+    if (pos.start > currentPos) {
+      segments.push({
+        type: 'text',
+        content: text.substring(currentPos, pos.start),
+      });
+    }
+    // Add the tappable phrase
+    segments.push({
+      type: 'tappable',
+      content: pos.actualPhrase,
+      detail: pos.detail,
+    });
+    currentPos = pos.end;
+  }
+
+  // Add remaining text after last phrase
+  if (currentPos < text.length) {
+    segments.push({
+      type: 'text',
+      content: text.substring(currentPos),
+    });
+  }
+
+  return segments;
+}
+
+// Render narrative text with inline tappable phrases
+const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
+  text,
+  details,
+  onDetailTap,
+  revealedDetails,
+  textStyle,
+}) {
+  const segments = useMemo(() => parseTextWithDetails(text, details), [text, details]);
+
+  return (
+    <Text style={textStyle}>
+      {segments.map((segment, index) => {
+        if (segment.type === 'text') {
+          return <Text key={index}>{segment.content}</Text>;
+        } else {
+          return (
+            <InlineTappablePhrase
+              key={index}
+              phrase={segment.content}
+              note={segment.detail.note}
+              evidenceCard={segment.detail.evidenceCard}
+              onTap={onDetailTap}
+              isRevealed={revealedDetails.has(segment.detail.phrase)}
+            />
+          );
+        }
+      })}
+    </Text>
   );
 });
 
@@ -261,7 +325,7 @@ const ChoicePrompt = React.memo(function ChoicePrompt({
   );
 });
 
-// Narrative segment with typewriter effect and tappable details
+// Narrative segment with typewriter effect and inline tappable details
 const NarrativeSegment = React.memo(function NarrativeSegment({
   text,
   details = [],
@@ -295,49 +359,36 @@ const NarrativeSegment = React.memo(function NarrativeSegment({
     color: "#2b1a10",
   }), [narrativeSize, narrativeLineHeight]);
 
-  // Parse text to find and wrap tappable details
-  const renderTextWithDetails = useMemo(() => {
-    if (!details || details.length === 0) {
-      return text;
-    }
-
-    // For now, just return plain text - detail highlighting would require
-    // more complex text parsing. The details are shown as separate tappable areas.
-    return text;
-  }, [text, details]);
-
   if (state === SEGMENT_STATES.HIDDEN) {
     return null;
   }
 
   return (
     <Animated.View style={[styles.segmentContainer, { opacity: fadeAnim }]}>
-      <TypewriterText
-        text={renderTextWithDetails}
-        speed={8}
-        delay={100}
-        isActive={state === SEGMENT_STATES.TYPING}
-        isFinished={state === SEGMENT_STATES.COMPLETE}
-        onComplete={onComplete}
-        style={textStyle}
-      />
+      {/* During typing, show plain text with typewriter effect */}
+      {state === SEGMENT_STATES.TYPING && (
+        <TypewriterText
+          text={text}
+          speed={8}
+          delay={100}
+          isActive={true}
+          isFinished={false}
+          onComplete={onComplete}
+          style={textStyle}
+        />
+      )}
 
-      {/* Tappable details shown below the text */}
-      {state === SEGMENT_STATES.COMPLETE && details.length > 0 && (
-        <View style={styles.detailsContainer}>
-          {details.map((detail, index) => (
-            <TappableDetail
-              key={`detail-${index}`}
-              phrase={detail.phrase}
-              note={detail.note}
-              evidenceCard={detail.evidenceCard}
-              onTap={onDetailTap}
-              isRevealed={revealedDetails.has(detail.phrase)}
-              palette={palette}
-              textStyle={textStyle}
-            />
-          ))}
-        </View>
+      {/* After typing complete, show text with inline tappable phrases */}
+      {state === SEGMENT_STATES.COMPLETE && (
+        <Pressable onPress={() => {}}>
+          <NarrativeTextWithDetails
+            text={text}
+            details={details}
+            onDetailTap={onDetailTap}
+            revealedDetails={revealedDetails}
+            textStyle={textStyle}
+          />
+        </Pressable>
       )}
     </Animated.View>
   );
@@ -606,6 +657,20 @@ const styles = StyleSheet.create({
   },
   tappableTextRevealed: {
     backgroundColor: 'rgba(139, 90, 43, 0.25)',
+    textDecorationLine: 'none',
+  },
+  // Inline tappable phrase styles (embedded within narrative text)
+  inlineTappable: {
+    // Base styles applied to all inline tappable phrases
+  },
+  inlineTappableUnrevealed: {
+    backgroundColor: 'rgba(139, 90, 43, 0.15)',
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'dotted',
+    textDecorationColor: '#8b5a2b',
+  },
+  inlineTappableRevealed: {
+    backgroundColor: 'rgba(139, 90, 43, 0.3)',
     textDecorationLine: 'none',
   },
   choicePromptContainer: {
