@@ -44,19 +44,43 @@ export function calculatePaginationParams({
 }
 
 /**
- * Estimates how many visual lines a paragraph will take when rendered.
+ * Estimates how many visual lines text will take when rendered.
  * This is an approximation - React Native does the actual wrapping.
  */
-function estimateParagraphLines(paragraph, charsPerLine) {
-  if (!paragraph || charsPerLine <= 0) return 1;
-  // Estimate lines based on character count, rounding up
-  return Math.max(1, Math.ceil(paragraph.length / charsPerLine));
+function estimateLines(text, charsPerLine) {
+  if (!text || charsPerLine <= 0) return 0;
+  return Math.max(1, Math.ceil(text.length / charsPerLine));
 }
 
 /**
- * Paginates narrative segments by filling pages to capacity.
- * Does NOT manually wrap text - lets React Native handle line breaks naturally.
- * Only splits on paragraph boundaries when possible.
+ * Splits text into sentences, preserving the sentence endings.
+ */
+function splitIntoSentences(text) {
+  // Match sentences ending with . ! ? followed by space or end of string
+  const sentenceRegex = /[^.!?]*[.!?]+(?:\s+|$)/g;
+  const sentences = text.match(sentenceRegex);
+
+  if (!sentences) {
+    // No sentence endings found, return the whole text
+    return [text];
+  }
+
+  // Check if there's remaining text after the last sentence
+  const matched = sentences.join('');
+  if (matched.length < text.length) {
+    const remainder = text.slice(matched.length).trim();
+    if (remainder) {
+      sentences.push(remainder);
+    }
+  }
+
+  return sentences.map(s => s.trim()).filter(Boolean);
+}
+
+/**
+ * Paginates narrative segments by filling pages to FULL capacity.
+ * Will split mid-paragraph and mid-sentence when needed to ensure
+ * every page is filled to the bottom.
  *
  * @param {string[]} segments - Array of narrative text segments
  * @param {Object} options - Pagination options
@@ -73,13 +97,14 @@ export function paginateNarrativeSegments(
   }
 
   const pages = [];
+  const maxCharsPerPage = charsPerLine * maxLinesPerPage;
 
   segments.forEach((rawSegment, segmentIndex) => {
     if (typeof rawSegment !== "string") {
       return;
     }
 
-    // Parse paragraphs - keep them intact, don't wrap manually
+    // Parse paragraphs
     const paragraphs = rawSegment
       .replace(/\\n/g, "\n")
       .replace(/\r/g, "")
@@ -91,55 +116,107 @@ export function paginateNarrativeSegments(
       return;
     }
 
-    // Build pages by fitting whole paragraphs when possible
+    // Build a list of "units" - sentences with paragraph break markers
+    const units = [];
+    paragraphs.forEach((para, paraIndex) => {
+      const sentences = splitIntoSentences(para);
+      sentences.forEach((sentence, sentIndex) => {
+        units.push({
+          text: sentence,
+          // Mark if this is the start of a new paragraph (needs extra line break before it)
+          isNewParagraph: paraIndex > 0 && sentIndex === 0,
+        });
+      });
+    });
+
+    // Now fill pages to capacity
     const segmentPages = [];
-    let currentPageParagraphs = [];
-    let currentPageLineCount = 0;
+    let currentPageText = '';
+    let currentPageLines = 0;
 
-    for (let i = 0; i < paragraphs.length; i++) {
-      const para = paragraphs[i];
-      const paraLines = estimateParagraphLines(para, charsPerLine);
-      // Add 1 for paragraph spacing (blank line between paragraphs)
-      const linesNeeded = currentPageParagraphs.length > 0 ? paraLines + 1 : paraLines;
+    for (let i = 0; i < units.length; i++) {
+      const unit = units[i];
+      const unitText = unit.text;
+      const unitLines = estimateLines(unitText, charsPerLine);
 
-      // Check if this paragraph fits on current page
-      if (currentPageLineCount + linesNeeded <= maxLinesPerPage) {
-        currentPageParagraphs.push(para);
-        currentPageLineCount += linesNeeded;
-      } else {
-        // Paragraph doesn't fit - need to handle overflow
-        if (currentPageParagraphs.length > 0) {
-          // Flush current page first
-          segmentPages.push(currentPageParagraphs.join('\n\n'));
-          currentPageParagraphs = [];
-          currentPageLineCount = 0;
+      // Calculate lines needed including paragraph spacing
+      const spacingLines = unit.isNewParagraph && currentPageText ? 1 : 0;
+      const totalLinesNeeded = unitLines + spacingLines;
+
+      // Check if this unit fits on the current page
+      if (currentPageLines + totalLinesNeeded <= maxLinesPerPage) {
+        // It fits - add to current page
+        if (currentPageText) {
+          currentPageText += unit.isNewParagraph ? '\n\n' : ' ';
         }
+        currentPageText += unitText;
+        currentPageLines += totalLinesNeeded;
+      } else {
+        // Doesn't fit - need to handle overflow
+        const remainingLines = maxLinesPerPage - currentPageLines;
+        const remainingChars = remainingLines * charsPerLine;
 
-        // Check if paragraph is too long for a single page
-        if (paraLines > maxLinesPerPage) {
-          // Split long paragraph by sentences or chunks
-          const chunks = splitLongParagraph(para, charsPerLine, maxLinesPerPage);
-          chunks.forEach((chunk, chunkIdx) => {
-            if (chunkIdx === chunks.length - 1) {
-              // Last chunk - add to current page for next paragraph
-              currentPageParagraphs.push(chunk);
-              currentPageLineCount = estimateParagraphLines(chunk, charsPerLine);
-            } else {
-              // Full chunk - make its own page
-              segmentPages.push(chunk);
+        if (remainingLines > 0 && remainingChars > 20) {
+          // We have some space left - try to fill it
+          // Find a good break point in the unit text
+          let breakPoint = findBreakPoint(unitText, remainingChars);
+
+          if (breakPoint > 20) {
+            // Add first part to current page
+            const firstPart = unitText.slice(0, breakPoint).trim();
+            if (currentPageText) {
+              currentPageText += unit.isNewParagraph ? '\n\n' : ' ';
             }
-          });
+            currentPageText += firstPart;
+
+            // Flush current page
+            segmentPages.push(currentPageText);
+
+            // Start new page with remainder
+            const remainder = unitText.slice(breakPoint).trim();
+            currentPageText = remainder;
+            currentPageLines = estimateLines(remainder, charsPerLine);
+          } else {
+            // Not enough space for meaningful content - flush and start fresh
+            if (currentPageText) {
+              segmentPages.push(currentPageText);
+            }
+            currentPageText = unitText;
+            currentPageLines = unitLines;
+          }
         } else {
-          // Paragraph fits on a fresh page
-          currentPageParagraphs.push(para);
-          currentPageLineCount = paraLines;
+          // No meaningful space left - flush and start fresh
+          if (currentPageText) {
+            segmentPages.push(currentPageText);
+          }
+
+          // Check if unit itself is too big for one page
+          if (unitLines > maxLinesPerPage) {
+            // Split the unit across multiple pages
+            let remaining = unitText;
+            while (remaining.length > 0) {
+              const charsForPage = maxLinesPerPage * charsPerLine;
+              if (remaining.length <= charsForPage) {
+                currentPageText = remaining;
+                currentPageLines = estimateLines(remaining, charsPerLine);
+                remaining = '';
+              } else {
+                const breakPoint = findBreakPoint(remaining, charsForPage);
+                segmentPages.push(remaining.slice(0, breakPoint).trim());
+                remaining = remaining.slice(breakPoint).trim();
+              }
+            }
+          } else {
+            currentPageText = unitText;
+            currentPageLines = unitLines;
+          }
         }
       }
     }
 
-    // Flush remaining paragraphs
-    if (currentPageParagraphs.length > 0) {
-      segmentPages.push(currentPageParagraphs.join('\n\n'));
+    // Flush any remaining content
+    if (currentPageText) {
+      segmentPages.push(currentPageText);
     }
 
     // Convert to page objects
@@ -158,53 +235,33 @@ export function paginateNarrativeSegments(
 }
 
 /**
- * Splits a long paragraph into chunks that fit on pages.
- * Tries to split on sentence boundaries when possible.
+ * Finds a good break point in text near the target character count.
+ * Prefers breaking at sentence boundaries, then word boundaries.
  */
-function splitLongParagraph(paragraph, charsPerLine, maxLinesPerPage) {
-  const maxCharsPerPage = charsPerLine * maxLinesPerPage;
-  const chunks = [];
+function findBreakPoint(text, targetChars) {
+  if (text.length <= targetChars) {
+    return text.length;
+  }
 
-  // Try to split on sentence boundaries (. ! ?)
-  const sentences = paragraph.match(/[^.!?]+[.!?]+\s*/g) || [paragraph];
+  // Look for sentence break near target
+  const searchStart = Math.floor(targetChars * 0.7);
+  const searchEnd = Math.min(targetChars, text.length);
 
-  let currentChunk = '';
-
-  for (const sentence of sentences) {
-    const potentialChunk = currentChunk + sentence;
-
-    if (potentialChunk.length <= maxCharsPerPage) {
-      currentChunk = potentialChunk;
-    } else {
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-      }
-
-      // If single sentence is too long, split by character count
-      if (sentence.length > maxCharsPerPage) {
-        let remaining = sentence;
-        while (remaining.length > maxCharsPerPage) {
-          // Find a good break point (space) near the limit
-          let breakPoint = maxCharsPerPage;
-          while (breakPoint > maxCharsPerPage * 0.7 && remaining[breakPoint] !== ' ') {
-            breakPoint--;
-          }
-          if (remaining[breakPoint] !== ' ') {
-            breakPoint = maxCharsPerPage; // No good break point, just cut
-          }
-          chunks.push(remaining.slice(0, breakPoint).trim());
-          remaining = remaining.slice(breakPoint).trim();
-        }
-        currentChunk = remaining;
-      } else {
-        currentChunk = sentence;
-      }
+  // First, try to find a sentence ending (. ! ?)
+  for (let i = searchEnd; i >= searchStart; i--) {
+    if ((text[i] === '.' || text[i] === '!' || text[i] === '?') &&
+        (i + 1 >= text.length || text[i + 1] === ' ')) {
+      return i + 1;
     }
   }
 
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
+  // No sentence break - find a word boundary (space)
+  for (let i = searchEnd; i >= searchStart; i--) {
+    if (text[i] === ' ') {
+      return i;
+    }
   }
 
-  return chunks.length > 0 ? chunks : [paragraph];
+  // No good break point - just cut at target
+  return targetChars;
 }
