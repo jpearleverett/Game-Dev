@@ -25,8 +25,8 @@ import useResponsiveLayout from "../hooks/useResponsiveLayout";
 const NOIR_TYPOGRAPHY = {
   fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   color: '#1a1a1a', // Off-black for ink
-  fontSize: 16,
-  lineHeight: 28,
+  fontSize: 14,
+  lineHeight: 22,
   // Ink bleed effect via text shadow
   textShadowColor: 'rgba(0, 0, 0, 0.25)',
   textShadowOffset: { width: 0.5, height: 0.5 },
@@ -270,9 +270,14 @@ export default function NarrativePager({
           style={styles.pageBackground}
           imageStyle={{ borderRadius: blockRadius }}
         >
-          {/* Gradient overlay for readability: transparent top → dark bottom */}
+          {/* Light overlay to brighten the paper texture */}
+          <View
+            style={[styles.lightenOverlay, { borderRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+          {/* Subtle gradient for text readability at bottom */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.5)']}
+            colors={['transparent', 'rgba(0,0,0,0.2)']}
             style={[styles.gradientOverlay, { borderRadius: blockRadius }]}
             pointerEvents="none"
           />
@@ -468,6 +473,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+  },
+  lightenOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
