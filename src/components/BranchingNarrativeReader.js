@@ -28,8 +28,8 @@ const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jp
 const NOIR_TYPOGRAPHY = {
   fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   color: '#1a1a1a',
-  fontSize: 16,
-  lineHeight: 28,
+  fontSize: 14,
+  lineHeight: 22,
   textShadowColor: 'rgba(0, 0, 0, 0.25)',
   textShadowOffset: { width: 0.5, height: 0.5 },
   textShadowRadius: 1,
@@ -370,7 +370,7 @@ export default function BranchingNarrativeReader({
     lineHeight: NOIR_TYPOGRAPHY.lineHeight,
     verticalPadding: NOIR_PADDING.vertical * 2,
     labelHeight: 24,
-    bottomReserved: scaleSpacing(SPACING.lg) + 20,
+    bottomReserved: scaleSpacing(SPACING.lg) + 36,
   }), [pageHeight, pageWidth, scaleSpacing]);
 
   // Normalize path key
@@ -641,8 +641,14 @@ export default function BranchingNarrativeReader({
           style={styles.pageBackground}
           imageStyle={{ borderRadius: blockRadius }}
         >
+          {/* Light overlay to brighten the paper texture */}
+          <View
+            style={[styles.lightenOverlay, { borderRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+          {/* Subtle gradient for text readability at bottom */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.5)']}
+            colors={['transparent', 'rgba(0,0,0,0.2)']}
             style={[styles.gradientOverlay, { borderRadius: blockRadius }]}
             pointerEvents="none"
           />
@@ -863,6 +869,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+  },
+  lightenOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
