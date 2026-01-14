@@ -37,7 +37,7 @@ const NOIR_TYPOGRAPHY = {
 
 // Heavy internal padding for paper margins
 const NOIR_PADDING = {
-  horizontal: 32,
+  horizontal: 24,
   vertical: 48,
 };
 
@@ -370,7 +370,7 @@ export default function BranchingNarrativeReader({
     lineHeight: NOIR_TYPOGRAPHY.lineHeight,
     verticalPadding: NOIR_PADDING.vertical * 2,
     labelHeight: 24,
-    bottomReserved: scaleSpacing(SPACING.lg) + 36,
+    bottomReserved: scaleSpacing(SPACING.lg) + 48,
   }), [pageHeight, pageWidth, scaleSpacing]);
 
   // Normalize path key

@@ -1,6 +1,6 @@
 // Default fallback values (will be overridden by dynamic calculation)
 const DEFAULT_MAX_LINES = 12;
-const DEFAULT_CHARS_PER_LINE = 30;
+const DEFAULT_CHARS_PER_LINE = 40;
 
 // Monospace font character width is approximately 0.6x the font size
 const MONOSPACE_CHAR_WIDTH_RATIO = 0.6;
@@ -36,59 +36,27 @@ export function calculatePaginationParams({
 
   // Calculate characters per line based on available width and monospace font
   const charWidth = fontSize * MONOSPACE_CHAR_WIDTH_RATIO;
-  // Account for some horizontal padding and binder ring area
-  const effectiveWidth = pageWidth * 0.88;
-  const charsPerLine = Math.max(20, Math.floor(effectiveWidth / charWidth));
+  // Use full width - React Native will handle actual wrapping
+  const effectiveWidth = pageWidth * 0.95;
+  const charsPerLine = Math.max(30, Math.floor(effectiveWidth / charWidth));
 
   return { maxLinesPerPage, charsPerLine };
 }
 
 /**
- * Wraps text into visual lines based on available width.
- * Returns an array of line strings.
+ * Estimates how many visual lines a paragraph will take when rendered.
+ * This is an approximation - React Native does the actual wrapping.
  */
-function wrapTextToLines(text, charsPerLine) {
-  if (!text || charsPerLine <= 0) return [''];
-
-  const words = text.split(/\s+/).filter(Boolean);
-  if (!words.length) return [''];
-
-  const lines = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    // Handle words longer than line width
-    if (word.length > charsPerLine) {
-      if (currentLine) {
-        lines.push(currentLine);
-        currentLine = '';
-      }
-      // Break long word across lines
-      let remaining = word;
-      while (remaining.length > charsPerLine) {
-        lines.push(remaining.slice(0, charsPerLine));
-        remaining = remaining.slice(charsPerLine);
-      }
-      currentLine = remaining;
-      continue;
-    }
-
-    const separator = currentLine ? ' ' : '';
-    if ((currentLine + separator + word).length <= charsPerLine) {
-      currentLine += separator + word;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-
-  if (currentLine) lines.push(currentLine);
-  return lines.length ? lines : [''];
+function estimateParagraphLines(paragraph, charsPerLine) {
+  if (!paragraph || charsPerLine <= 0) return 1;
+  // Estimate lines based on character count, rounding up
+  return Math.max(1, Math.ceil(paragraph.length / charsPerLine));
 }
 
 /**
  * Paginates narrative segments by filling pages to capacity.
- * Breaks mid-paragraph when needed to ensure pages are well-filled.
+ * Does NOT manually wrap text - lets React Native handle line breaks naturally.
+ * Only splits on paragraph boundaries when possible.
  *
  * @param {string[]} segments - Array of narrative text segments
  * @param {Object} options - Pagination options
@@ -111,7 +79,7 @@ export function paginateNarrativeSegments(
       return;
     }
 
-    // Parse paragraphs
+    // Parse paragraphs - keep them intact, don't wrap manually
     const paragraphs = rawSegment
       .replace(/\\n/g, "\n")
       .replace(/\r/g, "")
@@ -123,81 +91,62 @@ export function paginateNarrativeSegments(
       return;
     }
 
-    // Convert all paragraphs to wrapped lines with paragraph markers
-    const allLines = [];
-    paragraphs.forEach((para, idx) => {
-      if (idx > 0) {
-        // Add blank line between paragraphs
-        allLines.push({ type: 'blank', text: '' });
-      }
-      const wrappedLines = wrapTextToLines(para, charsPerLine);
-      wrappedLines.forEach((line) => {
-        allLines.push({ type: 'text', text: line });
-      });
-    });
-
-    // Now paginate by filling each page to capacity
+    // Build pages by fitting whole paragraphs when possible
     const segmentPages = [];
-    let currentPageLines = [];
+    let currentPageParagraphs = [];
+    let currentPageLineCount = 0;
 
-    for (let i = 0; i < allLines.length; i++) {
-      const line = allLines[i];
+    for (let i = 0; i < paragraphs.length; i++) {
+      const para = paragraphs[i];
+      const paraLines = estimateParagraphLines(para, charsPerLine);
+      // Add 1 for paragraph spacing (blank line between paragraphs)
+      const linesNeeded = currentPageParagraphs.length > 0 ? paraLines + 1 : paraLines;
 
-      // Check if adding this line would exceed capacity
-      if (currentPageLines.length >= maxLinesPerPage) {
-        // Flush current page
-        segmentPages.push(currentPageLines);
-        currentPageLines = [];
-      }
+      // Check if this paragraph fits on current page
+      if (currentPageLineCount + linesNeeded <= maxLinesPerPage) {
+        currentPageParagraphs.push(para);
+        currentPageLineCount += linesNeeded;
+      } else {
+        // Paragraph doesn't fit - need to handle overflow
+        if (currentPageParagraphs.length > 0) {
+          // Flush current page first
+          segmentPages.push(currentPageParagraphs.join('\n\n'));
+          currentPageParagraphs = [];
+          currentPageLineCount = 0;
+        }
 
-      // Skip leading blank lines on a new page
-      if (currentPageLines.length === 0 && line.type === 'blank') {
-        continue;
-      }
-
-      // Skip trailing blank line if it would be the last line and we're near capacity
-      if (line.type === 'blank' && currentPageLines.length >= maxLinesPerPage - 1) {
-        continue;
-      }
-
-      currentPageLines.push(line);
-    }
-
-    // Flush remaining lines
-    if (currentPageLines.length > 0) {
-      // Remove trailing blank lines from last page
-      while (currentPageLines.length > 0 && currentPageLines[currentPageLines.length - 1].type === 'blank') {
-        currentPageLines.pop();
-      }
-      if (currentPageLines.length > 0) {
-        segmentPages.push(currentPageLines);
-      }
-    }
-
-    // Convert line arrays back to text for each page
-    segmentPages.forEach((pageLines, pageIndex) => {
-      // Build text, converting blank lines to paragraph breaks
-      let text = '';
-      let prevWasBlank = false;
-
-      for (const line of pageLines) {
-        if (line.type === 'blank') {
-          prevWasBlank = true;
+        // Check if paragraph is too long for a single page
+        if (paraLines > maxLinesPerPage) {
+          // Split long paragraph by sentences or chunks
+          const chunks = splitLongParagraph(para, charsPerLine, maxLinesPerPage);
+          chunks.forEach((chunk, chunkIdx) => {
+            if (chunkIdx === chunks.length - 1) {
+              // Last chunk - add to current page for next paragraph
+              currentPageParagraphs.push(chunk);
+              currentPageLineCount = estimateParagraphLines(chunk, charsPerLine);
+            } else {
+              // Full chunk - make its own page
+              segmentPages.push(chunk);
+            }
+          });
         } else {
-          if (text && prevWasBlank) {
-            text += '\n\n' + line.text;
-          } else if (text) {
-            text += '\n' + line.text;
-          } else {
-            text = line.text;
-          }
-          prevWasBlank = false;
+          // Paragraph fits on a fresh page
+          currentPageParagraphs.push(para);
+          currentPageLineCount = paraLines;
         }
       }
+    }
 
+    // Flush remaining paragraphs
+    if (currentPageParagraphs.length > 0) {
+      segmentPages.push(currentPageParagraphs.join('\n\n'));
+    }
+
+    // Convert to page objects
+    segmentPages.forEach((pageText, pageIndex) => {
       pages.push({
         key: `${segmentIndex}-${pageIndex}`,
-        text,
+        text: pageText,
         segmentIndex,
         pageIndex,
         totalPagesForSegment: segmentPages.length,
@@ -206,4 +155,56 @@ export function paginateNarrativeSegments(
   });
 
   return pages;
+}
+
+/**
+ * Splits a long paragraph into chunks that fit on pages.
+ * Tries to split on sentence boundaries when possible.
+ */
+function splitLongParagraph(paragraph, charsPerLine, maxLinesPerPage) {
+  const maxCharsPerPage = charsPerLine * maxLinesPerPage;
+  const chunks = [];
+
+  // Try to split on sentence boundaries (. ! ?)
+  const sentences = paragraph.match(/[^.!?]+[.!?]+\s*/g) || [paragraph];
+
+  let currentChunk = '';
+
+  for (const sentence of sentences) {
+    const potentialChunk = currentChunk + sentence;
+
+    if (potentialChunk.length <= maxCharsPerPage) {
+      currentChunk = potentialChunk;
+    } else {
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+      }
+
+      // If single sentence is too long, split by character count
+      if (sentence.length > maxCharsPerPage) {
+        let remaining = sentence;
+        while (remaining.length > maxCharsPerPage) {
+          // Find a good break point (space) near the limit
+          let breakPoint = maxCharsPerPage;
+          while (breakPoint > maxCharsPerPage * 0.7 && remaining[breakPoint] !== ' ') {
+            breakPoint--;
+          }
+          if (remaining[breakPoint] !== ' ') {
+            breakPoint = maxCharsPerPage; // No good break point, just cut
+          }
+          chunks.push(remaining.slice(0, breakPoint).trim());
+          remaining = remaining.slice(breakPoint).trim();
+        }
+        currentChunk = remaining;
+      } else {
+        currentChunk = sentence;
+      }
+    }
+  }
+
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks.length > 0 ? chunks : [paragraph];
 }
