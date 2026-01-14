@@ -35,7 +35,7 @@ const NOIR_TYPOGRAPHY = {
 
 // Heavy internal padding for paper margins
 const NOIR_PADDING = {
-  horizontal: 32,
+  horizontal: 24,
   vertical: 48,
 };
 
