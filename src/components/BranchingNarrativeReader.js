@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   Easing,
+  FlatList,
   ImageBackground,
   Modal,
   Platform,
@@ -10,7 +11,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Vibration,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -19,6 +19,7 @@ import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
+import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
 
 // Noir/Detective paper texture background
 const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jpg");
@@ -26,10 +27,9 @@ const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jp
 // Noir aesthetic constants - "Dirty Typewriter" look
 const NOIR_TYPOGRAPHY = {
   fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  color: '#1a1a1a', // Off-black for ink
+  color: '#1a1a1a',
   fontSize: 16,
   lineHeight: 28,
-  // Ink bleed effect via text shadow
   textShadowColor: 'rgba(0, 0, 0, 0.25)',
   textShadowOffset: { width: 0.5, height: 0.5 },
   textShadowRadius: 1,
@@ -41,31 +41,25 @@ const NOIR_PADDING = {
   vertical: 48,
 };
 
-/**
- * BranchingNarrativeReader - Interactive story component with choices and tappable details
- *
- * Structure:
- * - Opening segment (shared)
- * - First choice (3 options)
- * - Middle segment (based on first choice)
- * - Second choice (3 options)
- * - Ending segment (based on both choices)
- *
- * Features:
- * - Typewriter text effect
- * - Tappable detail phrases that reveal Jack's observations
- * - Choice buttons with smooth transitions
- * - Evidence collection from details
- */
-
-// Segment states
-const SEGMENT_STATES = {
-  HIDDEN: 'hidden',
-  TYPING: 'typing',
-  COMPLETE: 'complete',
+// Page types for the paginated narrative
+const PAGE_TYPES = {
+  NARRATIVE: 'narrative',
+  CHOICE: 'choice',
 };
 
-// Inline tappable phrase component - renders within the narrative text flow
+/**
+ * BranchingNarrativeReader - Paginated interactive story with choices
+ *
+ * Now uses fixed-height pages to prevent the background from resizing.
+ * Structure:
+ * - Opening pages (paginated text)
+ * - First choice page
+ * - Middle pages (paginated text based on first choice)
+ * - Second choice page
+ * - Ending pages (paginated text based on both choices)
+ */
+
+// Inline tappable phrase component
 const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   phrase,
   note,
@@ -74,7 +68,6 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   isRevealed,
 }) {
   const handlePress = useCallback(() => {
-    // Lighter haptic for re-reading, stronger for first discovery
     Haptics.impactAsync(
       isRevealed ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
     );
@@ -94,13 +87,12 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   );
 });
 
-// Parse narrative text and create segments with inline tappable phrases
+// Parse narrative text for tappable phrases
 function parseTextWithDetails(text, details) {
   if (!details || details.length === 0) {
     return [{ type: 'text', content: text }];
   }
 
-  // Find all phrase positions in the text (case-insensitive search)
   const phrasePositions = [];
   for (const detail of details) {
     const lowerText = text.toLowerCase();
@@ -110,22 +102,18 @@ function parseTextWithDetails(text, details) {
     while (true) {
       const pos = lowerText.indexOf(lowerPhrase, startIndex);
       if (pos === -1) break;
-
       phrasePositions.push({
         start: pos,
         end: pos + detail.phrase.length,
         detail: detail,
-        // Use the actual text from the narrative to preserve case
         actualPhrase: text.substring(pos, pos + detail.phrase.length),
       });
       startIndex = pos + 1;
     }
   }
 
-  // Sort by position
   phrasePositions.sort((a, b) => a.start - b.start);
 
-  // Remove overlapping phrases (keep first occurrence)
   const filtered = [];
   let lastEnd = 0;
   for (const pos of phrasePositions) {
@@ -135,33 +123,19 @@ function parseTextWithDetails(text, details) {
     }
   }
 
-  // Build segments
   const segments = [];
   let currentPos = 0;
 
   for (const pos of filtered) {
-    // Add text before the phrase
     if (pos.start > currentPos) {
-      segments.push({
-        type: 'text',
-        content: text.substring(currentPos, pos.start),
-      });
+      segments.push({ type: 'text', content: text.substring(currentPos, pos.start) });
     }
-    // Add the tappable phrase
-    segments.push({
-      type: 'tappable',
-      content: pos.actualPhrase,
-      detail: pos.detail,
-    });
+    segments.push({ type: 'tappable', content: pos.actualPhrase, detail: pos.detail });
     currentPos = pos.end;
   }
 
-  // Add remaining text after last phrase
   if (currentPos < text.length) {
-    segments.push({
-      type: 'text',
-      content: text.substring(currentPos),
-    });
+    segments.push({ type: 'text', content: text.substring(currentPos) });
   }
 
   return segments;
@@ -199,11 +173,10 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   );
 });
 
-// Observation popup when detail is tapped - uses Modal for proper screen centering
+// Observation popup
 const ObservationPopup = React.memo(function ObservationPopup({
   detail,
   onDismiss,
-  palette,
 }) {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -224,13 +197,7 @@ const ObservationPopup = React.memo(function ObservationPopup({
   }, [onDismiss, slideAnim, opacityAnim]);
 
   return (
-    <Modal
-      visible={true}
-      transparent={true}
-      animationType="none"
-      statusBarTranslucent={true}
-      onRequestClose={handleDismiss}
-    >
+    <Modal visible={true} transparent={true} animationType="none" statusBarTranslucent={true} onRequestClose={handleDismiss}>
       <Pressable style={styles.popupOverlay} onPress={handleDismiss}>
         <Animated.View
           style={[
@@ -265,14 +232,12 @@ const ChoiceButton = React.memo(function ChoiceButton({
   isSelected,
   isDisabled,
   index,
-  palette,
 }) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const { moderateScale, scaleSpacing, scaleRadius, sizeClass } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
 
   useEffect(() => {
-    // Stagger animation for buttons appearing
     Animated.spring(scaleAnim, {
       toValue: 1,
       friction: 8,
@@ -318,112 +283,30 @@ const ChoiceButton = React.memo(function ChoiceButton({
   );
 });
 
-// Choice prompt component
-const ChoicePrompt = React.memo(function ChoicePrompt({
-  prompt,
-  options,
-  onSelect,
-  selectedKey,
-  palette,
-}) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { moderateScale, scaleSpacing } = useResponsiveLayout();
+// Pulsing arrow for page navigation cue
+const PulsingArrow = React.memo(function PulsingArrow() {
+  const opacity = useRef(new Animated.Value(0.2)).current;
+  const loopRef = useRef(null);
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, []);
+    loopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.2, duration: 800, useNativeDriver: true })
+      ])
+    );
+    loopRef.current.start();
+
+    return () => {
+      if (loopRef.current) loopRef.current.stop();
+      opacity.stopAnimation();
+    };
+  }, [opacity]);
 
   return (
-    <Animated.View style={[styles.choicePromptContainer, { opacity: fadeAnim }]}>
-      <Text style={[styles.choicePromptText, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
-        {prompt}
-      </Text>
-      <View style={[styles.choiceButtonsRow, { gap: scaleSpacing(SPACING.sm) }]}>
-        {options.map((option, index) => (
-          <ChoiceButton
-            key={option.key}
-            option={option}
-            onSelect={onSelect}
-            isSelected={selectedKey === option.key}
-            isDisabled={selectedKey && selectedKey !== option.key}
-            index={index}
-            palette={palette}
-          />
-        ))}
-      </View>
-    </Animated.View>
-  );
-});
-
-// Narrative segment with typewriter effect and inline tappable details
-const NarrativeSegment = React.memo(function NarrativeSegment({
-  text,
-  details = [],
-  state,
-  onComplete,
-  onDetailTap,
-  revealedDetails,
-  palette,
-}) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (state !== SEGMENT_STATES.HIDDEN) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [state]);
-
-  // Noir "Dirty Typewriter" text style
-  const textStyle = useMemo(() => ({
-    fontSize: NOIR_TYPOGRAPHY.fontSize,
-    lineHeight: NOIR_TYPOGRAPHY.lineHeight,
-    fontFamily: NOIR_TYPOGRAPHY.fontFamily,
-    color: NOIR_TYPOGRAPHY.color,
-    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
-    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
-    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
-  }), []);
-
-  if (state === SEGMENT_STATES.HIDDEN) {
-    return null;
-  }
-
-  return (
-    <Animated.View style={[styles.segmentContainer, { opacity: fadeAnim }]}>
-      {/* During typing, show plain text with typewriter effect */}
-      {state === SEGMENT_STATES.TYPING && (
-        <TypewriterText
-          text={text}
-          speed={8}
-          delay={100}
-          isActive={true}
-          isFinished={false}
-          onComplete={onComplete}
-          style={textStyle}
-        />
-      )}
-
-      {/* After typing complete, show text with inline tappable phrases */}
-      {state === SEGMENT_STATES.COMPLETE && (
-        <Pressable onPress={() => {}}>
-          <NarrativeTextWithDetails
-            text={text}
-            details={details}
-            onDetailTap={onDetailTap}
-            revealedDetails={revealedDetails}
-            textStyle={textStyle}
-          />
-        </Pressable>
-      )}
-    </Animated.View>
+    <Animated.Text style={[styles.nextPageCue, { opacity }]}>
+      &gt;&gt;
+    </Animated.Text>
   );
 });
 
@@ -434,24 +317,63 @@ export default function BranchingNarrativeReader({
   branchingNarrative,
   palette,
   onComplete,
-  onFirstChoice, // TRUE INFINITE BRANCHING: Called when player makes first choice (for prefetching)
+  onFirstChoice,
   onEvidenceCollected,
   style,
 }) {
-  const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
+  const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
-  const scrollRef = useRef(null);
 
-  // State for tracking progress through the branching narrative
-  const [openingState, setOpeningState] = useState(SEGMENT_STATES.TYPING);
+  // Refs
+  const listRef = useRef(null);
+  const flipAnim = useRef(new Animated.Value(0)).current;
+  const flipLockRef = useRef(false);
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 60 });
+
+  // State
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [activePage, setActivePage] = useState(0);
+  const [completedPages, setCompletedPages] = useState(new Set());
   const [firstChoiceMade, setFirstChoiceMade] = useState(null);
-  const [middleState, setMiddleState] = useState(SEGMENT_STATES.HIDDEN);
   const [secondChoiceMade, setSecondChoiceMade] = useState(null);
-  const [endingState, setEndingState] = useState(SEGMENT_STATES.HIDDEN);
+  const [revealedDetails, setRevealedDetails] = useState(new Set());
+  const [collectedEvidence, setCollectedEvidence] = useState([]);
+  const [activePopup, setActivePopup] = useState(null);
 
-  // Normalize second choice keys to a full path key.
-  // Some generated content may incorrectly return keys like "2C" instead of "1B-2C".
-  // We always persist + emit full keys so pathDecisions lookup is stable.
+  // Layout constants
+  const blockRadius = scaleRadius(RADIUS.lg);
+  const sectionPaddingH = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
+  const sectionPaddingV = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const pageGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const arrowSize = Math.max(40, Math.round(scaleSpacing(compact ? SPACING.xl : SPACING.xxl)));
+  const arrowFontSize = Math.round(arrowSize * 0.48);
+  const pageHeight = Math.round(moderateScale(compact ? 450 : 540));
+
+  const handleLayout = useCallback((event) => {
+    const { width } = event.nativeEvent.layout;
+    if (width && Math.abs(width - containerWidth) > 2) {
+      setContainerWidth(width);
+    }
+  }, [containerWidth]);
+
+  const pageWidth = useMemo(() => {
+    if (!containerWidth) return 0;
+    const w = containerWidth - sectionPaddingH * 2;
+    return w > 0 ? w : 0;
+  }, [containerWidth, sectionPaddingH]);
+
+  // Pagination parameters
+  const paginationParams = useMemo(() => calculatePaginationParams({
+    pageHeight,
+    pageWidth: pageWidth || 300,
+    fontSize: NOIR_TYPOGRAPHY.fontSize,
+    lineHeight: NOIR_TYPOGRAPHY.lineHeight,
+    verticalPadding: NOIR_PADDING.vertical * 2,
+    labelHeight: 24,
+    bottomReserved: scaleSpacing(SPACING.lg) + 20,
+  }), [pageHeight, pageWidth, scaleSpacing]);
+
+  // Normalize path key
   const normalizePathKey = useCallback((firstKey, secondKey) => {
     const fk = String(firstKey || '').trim();
     const sk = String(secondKey || '').trim();
@@ -460,11 +382,6 @@ export default function BranchingNarrativeReader({
     if (/^2[ABC]$/i.test(sk) && /^1[ABC]$/i.test(fk)) return `${fk.toUpperCase()}-${sk.toUpperCase()}`;
     return sk.toUpperCase();
   }, []);
-
-  // Track revealed details and collected evidence
-  const [revealedDetails, setRevealedDetails] = useState(new Set());
-  const [collectedEvidence, setCollectedEvidence] = useState([]);
-  const [activePopup, setActivePopup] = useState(null);
 
   // Get current segments based on choices
   const currentMiddleSegment = useMemo(() => {
@@ -485,71 +402,151 @@ export default function BranchingNarrativeReader({
     }) || null;
   }, [secondChoiceMade, currentSecondChoice, firstChoiceMade, normalizePathKey]);
 
-  // Handle opening complete
-  const handleOpeningComplete = useCallback(() => {
-    setOpeningState(SEGMENT_STATES.COMPLETE);
-  }, []);
+  // Build paginated pages array
+  const pages = useMemo(() => {
+    if (!branchingNarrative) return [];
 
-  // Handle first choice selection
+    const result = [];
+    let pageIndex = 0;
+
+    // Opening pages
+    const openingText = branchingNarrative.opening?.text || '';
+    const openingDetails = branchingNarrative.opening?.details || [];
+    const openingPages = paginateNarrativeSegments([openingText], paginationParams);
+
+    openingPages.forEach((page, idx) => {
+      result.push({
+        key: `opening-${idx}`,
+        type: PAGE_TYPES.NARRATIVE,
+        segment: 'opening',
+        text: page.text,
+        details: openingDetails,
+        isLastOfSegment: idx === openingPages.length - 1,
+        globalIndex: pageIndex++,
+      });
+    });
+
+    // First choice page (only if opening is complete and no choice made)
+    if (!firstChoiceMade) {
+      result.push({
+        key: 'first-choice',
+        type: PAGE_TYPES.CHOICE,
+        segment: 'firstChoice',
+        prompt: branchingNarrative.firstChoice?.prompt || "What does Jack do?",
+        options: branchingNarrative.firstChoice?.options || [],
+        globalIndex: pageIndex++,
+      });
+    } else {
+      // Middle pages (based on first choice)
+      if (currentMiddleSegment) {
+        const middleText = currentMiddleSegment.response || '';
+        const middleDetails = currentMiddleSegment.details || [];
+        const middlePages = paginateNarrativeSegments([middleText], paginationParams);
+
+        middlePages.forEach((page, idx) => {
+          result.push({
+            key: `middle-${idx}`,
+            type: PAGE_TYPES.NARRATIVE,
+            segment: 'middle',
+            text: page.text,
+            details: middleDetails,
+            isLastOfSegment: idx === middlePages.length - 1,
+            globalIndex: pageIndex++,
+          });
+        });
+      }
+
+      // Second choice page (only if middle is complete and no second choice made)
+      if (!secondChoiceMade && currentSecondChoice) {
+        result.push({
+          key: 'second-choice',
+          type: PAGE_TYPES.CHOICE,
+          segment: 'secondChoice',
+          prompt: currentSecondChoice.prompt || "What does Jack focus on?",
+          options: currentSecondChoice.options || [],
+          globalIndex: pageIndex++,
+        });
+      } else if (secondChoiceMade && currentEndingSegment) {
+        // Ending pages (based on both choices)
+        const endingText = currentEndingSegment.response || '';
+        const endingDetails = currentEndingSegment.details || [];
+        const endingPages = paginateNarrativeSegments([endingText], paginationParams);
+
+        endingPages.forEach((page, idx) => {
+          result.push({
+            key: `ending-${idx}`,
+            type: PAGE_TYPES.NARRATIVE,
+            segment: 'ending',
+            text: page.text,
+            details: endingDetails,
+            isLastOfSegment: idx === endingPages.length - 1,
+            isLastPage: idx === endingPages.length - 1,
+            globalIndex: pageIndex++,
+          });
+        });
+      }
+    }
+
+    return result;
+  }, [branchingNarrative, firstChoiceMade, secondChoiceMade, currentMiddleSegment, currentSecondChoice, currentEndingSegment, paginationParams]);
+
+  // Handle first choice
   const handleFirstChoice = useCallback((option) => {
     setFirstChoiceMade(option.key);
-    setMiddleState(SEGMENT_STATES.TYPING);
-
-    // TRUE INFINITE BRANCHING: Notify parent of first choice for prefetching
-    // This allows generating the 3 possible second-choice paths while player reads
     if (onFirstChoice) {
       onFirstChoice(option.key);
     }
-
-    // Scroll to show new content
+    // Navigate to next page after choice
     setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [onFirstChoice]);
+      if (listRef.current) {
+        const nextIndex = activePage + 1;
+        listRef.current.scrollToIndex({ index: Math.min(nextIndex, pages.length - 1), animated: true });
+      }
+    }, 300);
+  }, [onFirstChoice, activePage, pages.length]);
 
-  // Handle middle segment complete
-  const handleMiddleComplete = useCallback(() => {
-    setMiddleState(SEGMENT_STATES.COMPLETE);
-  }, []);
-
-  // Handle second choice selection
+  // Handle second choice
   const handleSecondChoice = useCallback((option) => {
     const normalized = normalizePathKey(firstChoiceMade, option.key);
     setSecondChoiceMade(normalized);
-    setEndingState(SEGMENT_STATES.TYPING);
-
-    // Scroll to show new content
+    // Navigate to next page after choice
     setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [firstChoiceMade, normalizePathKey]);
+      if (listRef.current) {
+        const nextIndex = activePage + 1;
+        listRef.current.scrollToIndex({ index: Math.min(nextIndex, pages.length - 1), animated: true });
+      }
+    }, 300);
+  }, [firstChoiceMade, normalizePathKey, activePage, pages.length]);
 
-  // Handle ending complete
-  const handleEndingComplete = useCallback(() => {
-    setEndingState(SEGMENT_STATES.COMPLETE);
-    onComplete?.({
-      // Always emit a stable full path key like "1B-2C"
-      path: secondChoiceMade,
-      firstChoice: firstChoiceMade,
-      secondChoice: secondChoiceMade,
-      evidence: collectedEvidence,
-    });
-  }, [secondChoiceMade, firstChoiceMade, collectedEvidence, onComplete]);
+  // Handle narrative complete (when reaching last page of ending)
+  const onCompleteCalledRef = useRef(false);
+  useEffect(() => {
+    if (
+      onComplete &&
+      !onCompleteCalledRef.current &&
+      pages.length > 0 &&
+      secondChoiceMade
+    ) {
+      const lastPage = pages[pages.length - 1];
+      if (lastPage?.isLastPage && completedPages.has(lastPage.globalIndex)) {
+        onCompleteCalledRef.current = true;
+        onComplete({
+          path: secondChoiceMade,
+          firstChoice: firstChoiceMade,
+          secondChoice: secondChoiceMade,
+          evidence: collectedEvidence,
+        });
+      }
+    }
+  }, [pages, completedPages, secondChoiceMade, firstChoiceMade, collectedEvidence, onComplete]);
 
-  // Handle detail tap - allows re-tapping to re-read, but only collects evidence once
+  // Handle detail tap
   const handleDetailTap = useCallback((detail) => {
     setActivePopup(detail);
-
-    // Only mark as revealed and collect evidence on first tap
     if (!detail.isRevealed) {
       setRevealedDetails(prev => new Set(prev).add(detail.phrase));
-
       if (detail.evidenceCard) {
-        const newEvidence = {
-          label: detail.evidenceCard,
-          phrase: detail.phrase,
-          note: detail.note,
-        };
+        const newEvidence = { label: detail.evidenceCard, phrase: detail.phrase, note: detail.note };
         setCollectedEvidence(prev => [...prev, newEvidence]);
         onEvidenceCollected?.(newEvidence);
       }
@@ -561,6 +558,207 @@ export default function BranchingNarrativeReader({
     setActivePopup(null);
   }, []);
 
+  // Page flip animation
+  const triggerPageFlip = useCallback((direction) => {
+    if (!direction || flipLockRef.current) return;
+    const targetIndex = activePage + direction;
+    if (targetIndex < 0 || targetIndex > pages.length - 1) return;
+
+    flipLockRef.current = true;
+    flipAnim.setValue(0);
+
+    Animated.sequence([
+      Animated.timing(flipAnim, {
+        toValue: direction > 0 ? -1 : 1,
+        duration: 160,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(flipAnim, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      flipLockRef.current = false;
+    });
+
+    if (listRef.current) {
+      try {
+        listRef.current.scrollToIndex({ index: targetIndex, animated: true });
+      } catch (e) {
+        if (pageWidth) {
+          listRef.current.scrollToOffset({ offset: targetIndex * (pageWidth + pageGap), animated: true });
+        }
+      }
+    }
+    setActivePage(targetIndex);
+  }, [activePage, pages.length, flipAnim, pageWidth, pageGap]);
+
+  const flipRotation = flipAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ["6deg", "0deg", "-6deg"],
+  });
+
+  const perspective = Math.max(620, Math.round((pageWidth || scaleSpacing(SPACING.xl)) * 1.6));
+
+  const handleViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems?.length) {
+      const nextIndex = viewableItems[0]?.index ?? 0;
+      if (typeof nextIndex === "number") {
+        setActivePage(nextIndex);
+      }
+    }
+  });
+
+  // Render individual page
+  const renderItem = useCallback(({ item, index }) => {
+    const isLastPage = index === pages.length - 1;
+    const isActive = index === activePage;
+    const isPageCompleted = completedPages.has(item.globalIndex);
+
+    // For choice pages, check if preceding narrative segment is complete
+    const canShowChoice = item.type === PAGE_TYPES.CHOICE && (
+      index === 0 || completedPages.has(pages[index - 1]?.globalIndex)
+    );
+
+    return (
+      <View
+        style={[
+          styles.page,
+          {
+            width: pageWidth || "100%",
+            height: pageHeight,
+            borderRadius: blockRadius,
+            marginRight: isLastPage ? 0 : pageGap,
+          },
+        ]}
+      >
+        <ImageBackground
+          source={CASE_FILE_BG}
+          resizeMode="cover"
+          style={styles.pageBackground}
+          imageStyle={{ borderRadius: blockRadius }}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.5)']}
+            style={[styles.gradientOverlay, { borderRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+
+          {/* Tap Zones for navigation */}
+          <Pressable
+            style={[styles.tapZone, styles.tapZoneLeft]}
+            disabled={index === 0}
+            onPress={() => triggerPageFlip(-1)}
+          />
+          <Pressable
+            style={[styles.tapZone, styles.tapZoneRight]}
+            disabled={isLastPage || item.type === PAGE_TYPES.CHOICE}
+            onPress={() => triggerPageFlip(1)}
+          />
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: NOIR_PADDING.horizontal,
+              paddingVertical: NOIR_PADDING.vertical,
+              flexGrow: 1,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {item.type === PAGE_TYPES.NARRATIVE ? (
+              <>
+                <Text style={[styles.noirLabel, { letterSpacing: compact ? 1.8 : 2.4 }]}>
+                  {item.segment === 'opening' ? 'CASE FILE' :
+                   item.segment === 'middle' ? 'INVESTIGATION' : 'CONCLUSION'}
+                </Text>
+
+                {isActive && !isPageCompleted ? (
+                  <TypewriterText
+                    text={item.text}
+                    speed={8}
+                    delay={100}
+                    isActive={true}
+                    isFinished={false}
+                    onComplete={() => setCompletedPages(prev => new Set(prev).add(item.globalIndex))}
+                    style={styles.noirText}
+                  />
+                ) : (
+                  <NarrativeTextWithDetails
+                    text={item.text}
+                    details={item.details}
+                    onDetailTap={handleDetailTap}
+                    revealedDetails={revealedDetails}
+                    textStyle={styles.noirText}
+                  />
+                )}
+
+                {isPageCompleted && !isLastPage && item.isLastOfSegment && (
+                  <View style={styles.nextPageCueContainer}>
+                    <PulsingArrow />
+                  </View>
+                )}
+              </>
+            ) : (
+              // Choice page
+              <View style={styles.choicePageContainer}>
+                <Text style={[styles.noirLabel, { letterSpacing: compact ? 1.8 : 2.4, marginBottom: 16 }]}>
+                  {item.segment === 'firstChoice' ? 'DECISION POINT' : 'FINAL DECISION'}
+                </Text>
+                <Text style={[styles.choicePromptText, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
+                  {item.prompt}
+                </Text>
+                <View style={[styles.choiceButtonsRow, { gap: scaleSpacing(SPACING.sm) }]}>
+                  {item.options.map((option, optIndex) => (
+                    <ChoiceButton
+                      key={option.key}
+                      option={option}
+                      onSelect={item.segment === 'firstChoice' ? handleFirstChoice : handleSecondChoice}
+                      isSelected={item.segment === 'firstChoice' ? firstChoiceMade === option.key : secondChoiceMade === normalizePathKey(firstChoiceMade, option.key)}
+                      isDisabled={
+                        (item.segment === 'firstChoice' && firstChoiceMade && firstChoiceMade !== option.key) ||
+                        (item.segment === 'secondChoice' && secondChoiceMade && secondChoiceMade !== normalizePathKey(firstChoiceMade, option.key))
+                      }
+                      index={optIndex}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Page indicator */}
+          <View style={styles.pageStamp} pointerEvents="none">
+            <Text style={styles.noirPageStampText}>
+              {`PAGE ${String(index + 1).padStart(2, "0")}`}
+            </Text>
+          </View>
+        </ImageBackground>
+      </View>
+    );
+  }, [
+    pages,
+    activePage,
+    completedPages,
+    pageWidth,
+    pageHeight,
+    blockRadius,
+    pageGap,
+    compact,
+    moderateScale,
+    scaleSpacing,
+    triggerPageFlip,
+    handleDetailTap,
+    revealedDetails,
+    handleFirstChoice,
+    handleSecondChoice,
+    firstChoiceMade,
+    secondChoiceMade,
+    normalizePathKey,
+  ]);
+
   if (!branchingNarrative) {
     return (
       <View style={[styles.container, style]}>
@@ -570,114 +768,77 @@ export default function BranchingNarrativeReader({
   }
 
   return (
-    <View style={[styles.container, style]}>
-      {/* Noir/Detective paper texture background */}
-      <ImageBackground
-        source={CASE_FILE_BG}
-        resizeMode="cover"
-        style={styles.noirBackground}
+    <View onLayout={handleLayout} style={[styles.container, style, { borderRadius: blockRadius, borderColor: palette?.border }]}>
+      <Animated.View
+        style={{
+          transform: [{ perspective }, { rotateY: flipRotation }],
+          width: '100%',
+        }}
       >
-        {/* Gradient overlay for readability: transparent top → dark bottom */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.5)']}
-          style={styles.gradientOverlay}
-          pointerEvents="none"
+        <FlatList
+          ref={listRef}
+          data={pages}
+          keyExtractor={(item) => item.key}
+          horizontal
+          pagingEnabled
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          snapToAlignment="center"
+          decelerationRate="fast"
+          renderItem={renderItem}
+          viewabilityConfig={viewabilityConfig.current}
+          onViewableItemsChanged={handleViewableItemsChanged.current}
+          initialNumToRender={1}
+          maxToRenderPerBatch={1}
+          windowSize={3}
+          removeClippedSubviews={true}
+          contentContainerStyle={{
+            paddingHorizontal: sectionPaddingH,
+            paddingVertical: sectionPaddingV,
+          }}
         />
+      </Animated.View>
 
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingHorizontal: NOIR_PADDING.horizontal,
-              paddingVertical: NOIR_PADDING.vertical,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-        {/* Opening Segment */}
-        <NarrativeSegment
-          text={branchingNarrative.opening?.text || ''}
-          details={branchingNarrative.opening?.details || []}
-          state={openingState}
-          onComplete={handleOpeningComplete}
-          onDetailTap={handleDetailTap}
-          revealedDetails={revealedDetails}
-          palette={palette}
-        />
+      {/* Navigation Arrows */}
+      <Pressable
+        style={[
+          styles.arrow,
+          styles.arrowLeft,
+          {
+            width: arrowSize,
+            height: arrowSize,
+            borderRadius: arrowSize / 2,
+            transform: [{ translateY: -arrowSize / 2 }],
+          },
+          activePage === 0 && styles.arrowDisabled
+        ]}
+        onPress={() => triggerPageFlip(-1)}
+        disabled={activePage === 0}
+      >
+        <Text style={[styles.arrowLabel, { fontSize: arrowFontSize }]}>{"<"}</Text>
+      </Pressable>
 
-        {/* First Choice */}
-        {openingState === SEGMENT_STATES.COMPLETE && !firstChoiceMade && (
-          <ChoicePrompt
-            prompt={branchingNarrative.firstChoice?.prompt || "What does Jack do?"}
-            options={branchingNarrative.firstChoice?.options || []}
-            onSelect={handleFirstChoice}
-            selectedKey={firstChoiceMade}
-            palette={palette}
-          />
-        )}
-
-        {/* Middle Segment (after first choice) */}
-        {currentMiddleSegment && (
-          <NarrativeSegment
-            text={currentMiddleSegment.response}
-            details={currentMiddleSegment.details || []}
-            state={middleState}
-            onComplete={handleMiddleComplete}
-            onDetailTap={handleDetailTap}
-            revealedDetails={revealedDetails}
-            palette={palette}
-          />
-        )}
-
-        {/* Second Choice */}
-        {middleState === SEGMENT_STATES.COMPLETE && !secondChoiceMade && currentSecondChoice && (
-          <ChoicePrompt
-            prompt={currentSecondChoice.prompt || "What does Jack focus on?"}
-            options={currentSecondChoice.options || []}
-            onSelect={handleSecondChoice}
-            selectedKey={secondChoiceMade}
-            palette={palette}
-          />
-        )}
-
-        {/* Ending Segment (after second choice) */}
-        {currentEndingSegment && (
-          <NarrativeSegment
-            text={currentEndingSegment.response}
-            details={currentEndingSegment.details || []}
-            state={endingState}
-            onComplete={handleEndingComplete}
-            onDetailTap={handleDetailTap}
-            revealedDetails={revealedDetails}
-            palette={palette}
-          />
-        )}
-
-        {/* Evidence tray */}
-        {collectedEvidence.length > 0 && (
-          <View style={[styles.evidenceTray, { marginTop: scaleSpacing(SPACING.lg) }]}>
-            <Text style={styles.evidenceTrayLabel}>EVIDENCE COLLECTED</Text>
-            <View style={styles.evidenceCards}>
-              {collectedEvidence.map((evidence, index) => (
-                <View key={index} style={styles.evidenceCard}>
-                  <Text style={styles.evidenceCardLabel}>{evidence.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-        </ScrollView>
-      </ImageBackground>
+      <Pressable
+        style={[
+          styles.arrow,
+          styles.arrowRight,
+          {
+            width: arrowSize,
+            height: arrowSize,
+            borderRadius: arrowSize / 2,
+            transform: [{ translateY: -arrowSize / 2 }],
+          },
+          (activePage === pages.length - 1 || pages[activePage]?.type === PAGE_TYPES.CHOICE) && styles.arrowDisabled
+        ]}
+        onPress={() => triggerPageFlip(1)}
+        disabled={activePage === pages.length - 1 || pages[activePage]?.type === PAGE_TYPES.CHOICE}
+      >
+        <Text style={[styles.arrowLabel, { fontSize: arrowFontSize }]}>{">"}</Text>
+      </Pressable>
 
       {/* Observation Popup */}
       {activePopup && (
-        <ObservationPopup
-          detail={activePopup}
-          onDismiss={handlePopupDismiss}
-          palette={palette}
-        />
+        <ObservationPopup detail={activePopup} onDismiss={handlePopupDismiss} />
       )}
     </View>
   );
@@ -685,66 +846,123 @@ export default function BranchingNarrativeReader({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    overflow: 'hidden',
+    width: "100%",
+    position: "relative",
   },
-  noirBackground: {
+  page: {
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(40, 30, 20, 0.6)",
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 4, height: 6 },
+    elevation: 6,
+  },
+  pageBackground: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
-  scrollView: {
+  tapZone: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "20%",
+    zIndex: 10,
+  },
+  tapZoneLeft: { left: 0 },
+  tapZoneRight: { right: 0 },
+  noirLabel: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 12,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+    opacity: 0.7,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  noirText: {
+    fontFamily: NOIR_TYPOGRAPHY.fontFamily,
+    fontSize: NOIR_TYPOGRAPHY.fontSize,
+    lineHeight: NOIR_TYPOGRAPHY.lineHeight,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+  },
+  pageStamp: {
+    position: "absolute",
+    bottom: 16,
+    alignSelf: "center",
+    opacity: 0.5,
+  },
+  noirPageStampText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 11,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+    fontWeight: 'bold',
+    letterSpacing: 1.5,
+  },
+  arrow: {
+    position: "absolute",
+    top: "50%",
+    backgroundColor: "#1a120b",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#3a2515",
+  },
+  arrowLeft: { left: -18 },
+  arrowRight: { right: -18 },
+  arrowDisabled: { opacity: 0 },
+  arrowLabel: {
+    color: "#f8d8a8",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  nextPageCueContainer: {
+    alignItems: 'flex-end',
+    marginTop: 8,
+    marginRight: 12,
+  },
+  nextPageCue: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+    fontSize: 18,
+    color: NOIR_TYPOGRAPHY.color,
+    textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
+    textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
+    textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+  },
+  choicePageContainer: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  segmentContainer: {
-    marginBottom: 16,
-  },
-  detailsContainer: {
-    marginTop: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tappableText: {
-    backgroundColor: 'rgba(139, 90, 43, 0.1)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  tappableTextRevealed: {
-    backgroundColor: 'rgba(139, 90, 43, 0.25)',
-    textDecorationLine: 'none',
-  },
-  // Inline tappable phrase styles (embedded within narrative text)
-  inlineTappable: {
-    // Base styles applied to all inline tappable phrases
-  },
-  inlineTappableUnrevealed: {
-    backgroundColor: 'rgba(139, 90, 43, 0.15)',
-    textDecorationLine: 'underline',
-    textDecorationStyle: 'dotted',
-    textDecorationColor: '#8b5a2b',
-  },
-  inlineTappableRevealed: {
-    backgroundColor: 'rgba(139, 90, 43, 0.3)',
-    textDecorationLine: 'none',
-  },
-  choicePromptContainer: {
-    marginVertical: 24,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   choicePromptText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     color: NOIR_TYPOGRAPHY.color,
-    marginBottom: 16,
+    marginBottom: 24,
     fontStyle: 'italic',
     fontWeight: '600',
+    textAlign: 'center',
     textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
     textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
     textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
@@ -784,6 +1002,17 @@ const styles = StyleSheet.create({
   },
   choiceLabelSelected: {
     color: '#fff',
+  },
+  inlineTappable: {},
+  inlineTappableUnrevealed: {
+    backgroundColor: 'rgba(139, 90, 43, 0.15)',
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'dotted',
+    textDecorationColor: '#8b5a2b',
+  },
+  inlineTappableRevealed: {
+    backgroundColor: 'rgba(139, 90, 43, 0.3)',
+    textDecorationLine: 'none',
   },
   popupOverlay: {
     flex: 1,
@@ -833,49 +1062,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 1,
-  },
-  evidenceTray: {
-    backgroundColor: 'rgba(26, 18, 11, 0.9)',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#3a2515',
-  },
-  evidenceTrayLabel: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontWeight: 'bold',
-    color: '#8a6a4b',
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0.5, height: 0.5 },
-    textShadowRadius: 1,
-  },
-  evidenceCards: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  evidenceCard: {
-    backgroundColor: '#f8d8a8',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  evidenceCardLabel: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontWeight: 'bold',
-    color: '#1a120b',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   errorText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
