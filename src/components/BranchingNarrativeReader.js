@@ -370,8 +370,8 @@ export default function BranchingNarrativeReader({
     lineHeight: NOIR_TYPOGRAPHY.lineHeight,
     verticalPadding: NOIR_PADDING.vertical * 2,
     labelHeight: 24,
-    bottomReserved: scaleSpacing(SPACING.lg) + 48,
-  }), [pageHeight, pageWidth, scaleSpacing]);
+    bottomReserved: 32, // Just enough for page number
+  }), [pageHeight, pageWidth]);
 
   // Normalize path key
   const normalizePathKey = useCallback((firstKey, secondKey) => {
