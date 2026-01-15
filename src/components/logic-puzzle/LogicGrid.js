@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, PanResponder } from 'react-native';
 import { FONTS } from '../../constants/typography';
 
 const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
@@ -25,10 +25,13 @@ export default function LogicGrid({
   activeItemId,
   isPencilMode,
   onCellPress,
+  onPencilAction,
   cellSize,
   labelSize,
 }) {
   const gridSize = grid?.length || 0;
+  const dragActionRef = useRef(null);
+  const lastCellRef = useRef(null);
 
   const placedLookup = useMemo(() => {
     const lookup = {};
@@ -39,13 +42,66 @@ export default function LogicGrid({
   }, [placedItems]);
 
   const candidateLookup = candidates || {};
+  const padding = Math.max(6, Math.floor(cellSize * 0.08));
+  const cellPitch = cellSize + 2;
+
+  const resolveCellFromEvent = (event) => {
+    if (!grid?.length) return null;
+    const { locationX, locationY } = event.nativeEvent;
+    const localX = locationX - padding - labelSize;
+    const localY = locationY - padding - labelSize;
+    if (localX < 0 || localY < 0) return null;
+    const col = Math.floor(localX / cellPitch);
+    const row = Math.floor(localY / cellPitch);
+    if (row < 0 || col < 0 || row >= grid.length || col >= grid.length) return null;
+    const cell = grid[row][col];
+    if (!cell || cell.terrain === 'fog' || cell.staticObject !== 'none') return null;
+    return { row, col };
+  };
+
+  const handlePencilDrag = (row, col) => {
+    if (!onPencilAction || !activeItemId) return;
+    if (lastCellRef.current && lastCellRef.current.row === row && lastCellRef.current.col === col) return;
+    lastCellRef.current = { row, col };
+
+    const key = `${row}-${col}`;
+    const currentCandidates = candidateLookup[key] || [];
+    if (!dragActionRef.current) {
+      dragActionRef.current = currentCandidates.includes(activeItemId) ? 'remove' : 'add';
+    }
+    onPencilAction(row, col, dragActionRef.current);
+  };
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId),
+    onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId),
+    onPanResponderGrant: (event) => {
+      dragActionRef.current = null;
+      lastCellRef.current = null;
+      const cell = resolveCellFromEvent(event);
+      if (cell) handlePencilDrag(cell.row, cell.col);
+    },
+    onPanResponderMove: (event) => {
+      const cell = resolveCellFromEvent(event);
+      if (cell) handlePencilDrag(cell.row, cell.col);
+    },
+    onPanResponderRelease: () => {
+      dragActionRef.current = null;
+      lastCellRef.current = null;
+    },
+    onPanResponderTerminationRequest: () => true,
+    onPanResponderTerminate: () => {
+      dragActionRef.current = null;
+      lastCellRef.current = null;
+    },
+  }), [isPencilMode, activeItemId, candidateLookup, cellSize, labelSize, grid]);
 
   if (!gridSize) {
     return null;
   }
 
   return (
-    <View style={[styles.gridContainer, { padding: Math.max(6, Math.floor(cellSize * 0.08)) }]}>
+    <View style={[styles.gridContainer, { padding }]} {...(isPencilMode ? panResponder.panHandlers : {})}>
       <View style={styles.row}>
         <View style={{ width: labelSize, height: labelSize }} />
         {grid[0].map((_, colIndex) => (
@@ -72,8 +128,10 @@ export default function LogicGrid({
             return (
               <Pressable
                 key={key}
-                onPress={() => onCellPress(cell.row, cell.col)}
-                disabled={!isActionable && !(isPencilMode && activeItemId)}
+                onPress={() => {
+                  if (!isPencilMode) onCellPress(cell.row, cell.col);
+                }}
+                disabled={!isActionable}
                 style={[
                   styles.cell,
                   {

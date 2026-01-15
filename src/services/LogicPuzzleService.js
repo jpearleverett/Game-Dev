@@ -426,27 +426,41 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
     cluesByRelation[clue.relation].push(clue);
   });
 
+  const shuffle = (list) => {
+    const copy = [...list];
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
+
   const selectedClues = [];
   const selectedKeys = new Set();
   const targetCount = size + Math.floor(size / 2) + 2;
+  let activeRelations = shuffle(Object.keys(cluesByRelation));
 
-  while (selectedClues.length < targetCount) {
-    const availableRelations = Object.keys(cluesByRelation).filter(
-      (rel) => cluesByRelation[rel].length > 0,
-    );
-    if (!availableRelations.length) break;
-    const chosenRelation = availableRelations[Math.floor(Math.random() * availableRelations.length)];
-    const cluesInRel = cluesByRelation[chosenRelation];
-    const randomClueIndex = Math.floor(Math.random() * cluesInRel.length);
-    const clue = cluesInRel[randomClueIndex];
+  while (selectedClues.length < targetCount && activeRelations.length) {
+    const nextRelations = [];
+    activeRelations.forEach((relation) => {
+      const bucket = cluesByRelation[relation];
+      if (!bucket || !bucket.length) return;
+      const randomClueIndex = Math.floor(Math.random() * bucket.length);
+      const clue = bucket[randomClueIndex];
 
-    const uniqueKey = clue.item1 + clue.relation + clue.item2;
-    if (!selectedKeys.has(uniqueKey)) {
-      clue.id = nextId();
-      selectedClues.push(clue);
-      selectedKeys.add(uniqueKey);
-    }
-    cluesInRel.splice(randomClueIndex, 1);
+      const uniqueKey = clue.item1 + clue.relation + clue.item2;
+      if (!selectedKeys.has(uniqueKey)) {
+        clue.id = nextId();
+        selectedClues.push(clue);
+        selectedKeys.add(uniqueKey);
+      }
+
+      bucket.splice(randomClueIndex, 1);
+      if (bucket.length) {
+        nextRelations.push(relation);
+      }
+    });
+    activeRelations = shuffle(nextRelations);
   }
 
   return selectedClues;
