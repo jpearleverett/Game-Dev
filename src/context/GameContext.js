@@ -460,6 +460,50 @@ export function GameProvider({
       }
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio]);
 
+  const completeLogicPuzzle = useCallback(({ caseId, caseNumber, mistakes: puzzleMistakes = 0 } = {}) => {
+      if (!caseId || !caseNumber) return;
+      if (mode !== 'story') return;
+
+      const nowIso = new Date().toISOString();
+      const pathKey = story.getCurrentPathKey(caseNumber);
+
+      analytics.logLevelComplete(caseId, mode, Math.max(1, puzzleMistakes + 1), true, pathKey);
+      notificationHaptic(Haptics.NotificationFeedbackType.Success);
+      audio.playVictory();
+
+      const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
+      const isStoryCase = caseNumber === currentStory.activeCaseNumber;
+      if (!isStoryCase) return;
+
+      const completedCaseNumbers = Array.from(
+        new Set([...(currentStory.completedCaseNumbers || []), caseNumber]),
+      );
+
+      const isFinalSubchapter = currentStory.subchapter >= 3;
+      let updatedStory = {
+        ...currentStory,
+        completedCaseNumbers,
+        startedAt: currentStory.startedAt || nowIso,
+      };
+
+      if (!isFinalSubchapter) {
+        const nextSubchapter = currentStory.subchapter + 1;
+        const nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
+        updatedStory = {
+          ...updatedStory,
+          subchapter: nextSubchapter,
+          activeCaseNumber: nextCaseNumber,
+          awaitingDecision: false,
+          pendingDecisionCase: null,
+        };
+      }
+
+      updateProgress({
+        storyCampaign: updatedStory,
+        nextUnlockAt: updatedStory.nextStoryUnlockAt,
+      });
+  }, [mode, progress.storyCampaign, updateProgress, story, audio]);
+
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
   const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
@@ -696,6 +740,7 @@ export function GameProvider({
     cancelGeneration: story.cancelGeneration,
     clearGenerationError: story.clearGenerationError,
     clearAutoRetry: story.clearAutoRetry, // Clear auto-retry flag after handling
+    completeLogicPuzzle,
     // Endings & Achievements
     unlockEnding,
     unlockAchievement,
@@ -728,6 +773,7 @@ export function GameProvider({
     saveChapterCheckpoint,
     startFromChapter,
     updateGameplayStats,
+    completeLogicPuzzle,
   ]);
 
   return (

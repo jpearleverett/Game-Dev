@@ -34,6 +34,7 @@ import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
 import { getStoryEntry, ROOT_PATH_KEY } from "../data/storyContent";
+import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import {
   formatCountdown,
   parseDailyIntro,
@@ -279,6 +280,8 @@ export default function CaseFileScreen({
   const chapter = chapterStr ? parseInt(chapterStr, 10) : 1;
   const subchapterLetter = caseNumber?.slice(3, 4);
   const isSubchapterC = subchapterLetter === 'C';
+  const puzzleMode = useMemo(() => getPuzzleMode(caseNumber, isStoryMode), [caseNumber, isStoryMode]);
+  const puzzleActionLabel = getPuzzleActionLabel(puzzleMode);
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
@@ -616,7 +619,7 @@ export default function CaseFileScreen({
             title: "Path Chosen",
             body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
             hint: "The puzzle awaits to complete this chapter.",
-            actionLabel: "Solve Evidence Board",
+            actionLabel: puzzleActionLabel,
             actionIcon: "🔍",
             onPress: onProceedToPuzzle,
           };
@@ -625,10 +628,12 @@ export default function CaseFileScreen({
       } else if (narrativeReadyForPuzzle) {
         // A/B subchapter: Show puzzle after narrative is complete (branching choices made)
         return {
-          title: "Evidence Board Ready",
-          body: "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
+          title: puzzleMode === PUZZLE_MODE.LOGIC ? "Logic Grid Ready" : "Evidence Board Ready",
+          body: puzzleMode === PUZZLE_MODE.LOGIC
+            ? "The narrative threads are woven. Now solve the logic grid to unlock your next move."
+            : "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
           hint: "Solve the puzzle to continue the investigation.",
-          actionLabel: "Solve Evidence Board",
+          actionLabel: puzzleActionLabel,
           actionIcon: "🔍",
           onPress: onProceedToPuzzle,
         };
@@ -656,7 +661,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option) return;

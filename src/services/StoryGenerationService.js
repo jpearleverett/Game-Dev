@@ -462,6 +462,17 @@ const STORY_CONTENT_SCHEMA = {
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
 };
 
+const STORY_CONTENT_SCHEMA_AB = (() => {
+  const cloned = JSON.parse(JSON.stringify(STORY_CONTENT_SCHEMA));
+  if (cloned?.properties?.puzzleCandidates) {
+    delete cloned.properties.puzzleCandidates;
+  }
+  if (Array.isArray(cloned?.required)) {
+    cloned.required = cloned.required.filter((key) => key !== 'puzzleCandidates');
+  }
+  return cloned;
+})();
+
 /**
  * Schema for decision-only generation (first pass of two-pass decision generation)
  * This ensures the decision structure is always complete before narrative generation
@@ -7106,7 +7117,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Decision schema has decision field BEFORE narrative, so decision is generated first
         // This eliminates the need for two-pass generation while ensuring complete decisions
 
-        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
+        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA_AB;
         let response;
 
         // Try cached generation first (works in both proxy and direct mode)
@@ -7157,7 +7168,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cachingEnabled: true,
             dynamicPromptLength: dynamicPrompt?.length || 0,
             hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
-            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA_AB',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
               establishedFacts: context?.establishedFacts?.length || 0,
@@ -7220,7 +7231,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cachingEnabled: false,
             promptLength: prompt?.length || 0,
             hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
-            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA_AB',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
               establishedFacts: context?.establishedFacts?.length || 0,
@@ -7798,6 +7809,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Extract all text from branchingNarrative for board generation and word count
         const allNarrativeText = this._extractAllTextFromBranchingNarrative(generatedContent.branchingNarrative);
 
+        const shouldGenerateBoard = isDecisionPoint;
         const storyEntry = {
           chapter,
           subchapter,
@@ -7813,7 +7825,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           briefing: generatedContent.briefing || { summary: '', objectives: [] },
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
           decision: isDecisionPoint ? generatedContent.decision : null,
-          board: this._generateBoardData(allNarrativeText, isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision, generatedContent.puzzleCandidates, chapter),
+          board: shouldGenerateBoard
+            ? this._generateBoardData(
+              allNarrativeText,
+              isDecisionPoint,
+              generatedContent.pathDecisions || generatedContent.decision,
+              generatedContent.puzzleCandidates,
+              chapter,
+            )
+            : null,
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
           generatedAt: new Date().toISOString(),
           wordCount: allNarrativeText?.split(/\s+/).length || 0,
@@ -10338,7 +10358,7 @@ Rewrite the narrative to fix ALL issues while maintaining the story’s thriller
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
-      : STORY_CONTENT_SCHEMA;
+      : STORY_CONTENT_SCHEMA_AB;
 
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],

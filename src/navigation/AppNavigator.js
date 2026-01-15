@@ -4,12 +4,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useGame, GAME_STATUS } from '../context/GameContext';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { COLORS } from '../constants/colors';
+import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
 import PrologueScreen from '../screens/PrologueScreen';
 import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
+import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -154,6 +156,12 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
+      <Stack.Screen name="LogicPuzzle">
+        {({ navigation }) => (
+          <LogicPuzzleScreen navigation={navigation} />
+        )}
+      </Stack.Screen>
+
       <Stack.Screen name="Solved">
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
@@ -183,10 +191,12 @@ export default function AppNavigator({ fontsReady, audio }) {
 
           // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
           const handleProceedToPuzzle = () => {
-            if (activeCase?.id) {
+            const puzzleMode = getPuzzleMode(resolvedActiveCase?.caseNumber, effectivelyStoryMode);
+            const routeName = getPuzzleRouteName(puzzleMode);
+            if (routeName === 'Board' && activeCase?.id) {
               game.resetBoardForCase(activeCase.id);
             }
-            navigation.navigate('Board');
+            navigation.navigate(routeName);
           };
 
           // If navigation provided a specific case number, prefer that case's data.

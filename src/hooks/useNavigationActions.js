@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
+import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 import { Share } from 'react-native';
 
 export function useNavigationActions(navigation, game, audio) {
   const {
     status,
     activeCase,
+    cases,
     progress,
     resetBoardForCase,
     advanceToCase,
@@ -125,10 +127,12 @@ export function useNavigationActions(navigation, game, audio) {
         navigation.navigate('CaseFile');
       } else {
         // Narrative already read, go to puzzle
-        if (activeCase?.id) {
+        const puzzleMode = getPuzzleMode(targetCaseNumber, effectivelyStoryMode);
+        const routeName = getPuzzleRouteName(puzzleMode);
+        if (routeName === 'Board' && activeCase?.id) {
           resetBoardForCase(activeCase.id);
         }
-        navigation.navigate('Board');
+        navigation.navigate(routeName);
       }
     }
   }, [
@@ -210,7 +214,9 @@ export function useNavigationActions(navigation, game, audio) {
         console.log('[Navigation] Narrative-first flow - showing narrative before puzzle');
         navigation.navigate('CaseFile');
       } else {
-        navigation.navigate('Board');
+        const puzzleMode = getPuzzleMode(targetCaseNumber, true);
+        const routeName = getPuzzleRouteName(puzzleMode);
+        navigation.navigate(routeName);
       }
     }
     // If not ok, the overlay will show the error/not-configured state
@@ -248,9 +254,12 @@ export function useNavigationActions(navigation, game, audio) {
   const handleStorySelectCase = useCallback(async (caseId) => {
     const opened = await openStoryCase(caseId);
     if (opened) {
-      navigation.navigate('Board');
+      const targetCaseNumber = cases?.find((c) => c.id === caseId)?.caseNumber;
+      const puzzleMode = getPuzzleMode(targetCaseNumber, true);
+      const routeName = getPuzzleRouteName(puzzleMode);
+      navigation.navigate(routeName);
     }
-  }, [openStoryCase, navigation]);
+  }, [openStoryCase, navigation, cases]);
 
   const handleExitStory = useCallback(() => {
     exitStoryCampaign();
