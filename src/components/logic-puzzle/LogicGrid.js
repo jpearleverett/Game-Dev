@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, PanResponder } from 'react-native';
 import { FONTS } from '../../constants/typography';
 
 const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+const CELL_MARGIN = 1;
 
 const terrainStyles = {
   street: { backgroundColor: '#607d8b', borderColor: '#455a64', icon: '🛣️' },
@@ -43,17 +44,18 @@ export default function LogicGrid({
 
   const candidateLookup = candidates || {};
   const padding = Math.max(6, Math.floor(cellSize * 0.08));
-  const cellPitch = cellSize + 2;
+  const cellPitch = cellSize + CELL_MARGIN * 2;
 
   const resolveCellFromEvent = (event) => {
     if (!grid?.length) return null;
     const { locationX, locationY } = event.nativeEvent;
-    const localX = locationX - padding - labelSize;
-    const localY = locationY - padding - labelSize;
+    const localX = locationX - padding - labelSize - CELL_MARGIN;
+    const localY = locationY - padding - labelSize - CELL_MARGIN;
     if (localX < 0 || localY < 0) return null;
     const col = Math.floor(localX / cellPitch);
     const row = Math.floor(localY / cellPitch);
-    if (row < 0 || col < 0 || row >= grid.length || col >= grid.length) return null;
+    const colCount = grid[0]?.length || 0;
+    if (row < 0 || col < 0 || row >= grid.length || col >= colCount) return null;
     const cell = grid[row][col];
     if (!cell || cell.terrain === 'fog' || cell.staticObject !== 'none') return null;
     return { row, col };
@@ -75,6 +77,8 @@ export default function LogicGrid({
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId),
     onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId),
+    onStartShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId),
+    onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId),
     onPanResponderGrant: (event) => {
       dragActionRef.current = null;
       lastCellRef.current = null;
@@ -207,7 +211,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   cell: {
-    margin: 1,
+    margin: CELL_MARGIN,
     borderWidth: 1,
     borderRadius: 4,
     alignItems: 'center',
