@@ -33,8 +33,6 @@ export default function LogicGrid({
   const gridSize = grid?.length || 0;
   const dragActionRef = useRef(null);
   const lastCellRef = useRef(null);
-  const gridRef = useRef(null);
-  const gridOffsetRef = useRef({ pageX: 0, pageY: 0 });
 
   const placedLookup = useMemo(() => {
     const lookup = {};
@@ -48,18 +46,11 @@ export default function LogicGrid({
   const padding = Math.max(6, Math.floor(cellSize * 0.08));
   const cellPitch = cellSize + CELL_MARGIN * 2;
 
-  const measureGridOffset = () => {
-    if (!gridRef.current?.measureInWindow) return;
-    gridRef.current.measureInWindow((pageX, pageY) => {
-      gridOffsetRef.current = { pageX, pageY };
-    });
-  };
-
-  const resolveCellFromPoint = (x, y) => {
+  const resolveCellFromEvent = (event) => {
     if (!grid?.length) return null;
-    const { pageX, pageY } = gridOffsetRef.current;
-    const localX = x - pageX - padding - labelSize - CELL_MARGIN;
-    const localY = y - pageY - padding - labelSize - CELL_MARGIN;
+    const { locationX, locationY } = event.nativeEvent;
+    const localX = locationX - padding - labelSize - CELL_MARGIN;
+    const localY = locationY - padding - labelSize - CELL_MARGIN;
     if (localX < 0 || localY < 0) return null;
     const col = Math.floor(localX / cellPitch);
     const row = Math.floor(localY / cellPitch);
@@ -84,18 +75,12 @@ export default function LogicGrid({
   };
 
   const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId),
-    onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId),
-    onStartShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId),
-    onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId),
-    onPanResponderGrant: (_, gestureState) => {
-      dragActionRef.current = null;
-      lastCellRef.current = null;
-      const cell = resolveCellFromPoint(gestureState.x0, gestureState.y0);
-      if (cell) handlePencilDrag(cell.row, cell.col);
-    },
-    onPanResponderMove: (_, gestureState) => {
-      const cell = resolveCellFromPoint(gestureState.moveX, gestureState.moveY);
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
+    onStartShouldSetPanResponderCapture: () => false,
+    onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
+    onPanResponderMove: (event) => {
+      const cell = resolveCellFromEvent(event);
       if (cell) handlePencilDrag(cell.row, cell.col);
     },
     onPanResponderRelease: () => {
@@ -115,9 +100,7 @@ export default function LogicGrid({
 
   return (
     <View
-      ref={gridRef}
       style={[styles.gridContainer, { padding }]}
-      onLayout={measureGridOffset}
       {...(isPencilMode ? panResponder.panHandlers : {})}
     >
       <View style={styles.row}>
@@ -146,6 +129,14 @@ export default function LogicGrid({
             return (
               <Pressable
                 key={key}
+                onPressIn={() => {
+                  if (!isPencilMode || !activeItemId || !onPencilAction) return;
+                  const currentCandidates = candidateLookup[key] || [];
+                  const action = currentCandidates.includes(activeItemId) ? 'remove' : 'add';
+                  dragActionRef.current = action;
+                  lastCellRef.current = { row: cell.row, col: cell.col };
+                  onPencilAction(cell.row, cell.col, action);
+                }}
                 onPress={() => {
                   if (!isPencilMode) onCellPress(cell.row, cell.col);
                 }}
