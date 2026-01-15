@@ -189,6 +189,8 @@ const styles = StyleSheet.create({
   },
   clueIcon: {
     fontSize: 18,
+    color: '#f4e6d4',
+    fontFamily: FONTS.monoBold,
   },
   relationBadge: {
     paddingHorizontal: 8,

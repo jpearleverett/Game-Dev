@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
@@ -494,41 +495,52 @@ export default function LogicPuzzleScreen({ navigation }) {
                 <Text style={styles.toastText}>{errorMsg}</Text>
               </View>
             ) : null}
-            <LogicGrid
-              grid={puzzle.grid}
-              placedItems={placedItems}
-              candidates={candidates}
-              itemsConfig={puzzle.items}
-              activeItemId={activeItemId}
-              isPencilMode={isPencilMode}
-              onCellPress={handleCellPress}
-              onPencilAction={handlePencilAction}
-              cellSize={cellSize}
-              labelSize={labelSize}
-            />
+            <View style={styles.gridWrap}>
+              <LogicGrid
+                grid={puzzle.grid}
+                placedItems={placedItems}
+                candidates={candidates}
+                itemsConfig={puzzle.items}
+                activeItemId={activeItemId}
+                isPencilMode={isPencilMode}
+                onCellPress={handleCellPress}
+                onPencilAction={handlePencilAction}
+                cellSize={cellSize}
+                labelSize={labelSize}
+              />
+              <View style={styles.gridControls}>
+                <Pressable onPress={performUndo} style={styles.iconButton}>
+                  <MaterialCommunityIcons name="undo-variant" size={18} color="#f4e6d4" />
+                </Pressable>
+                <Pressable
+                  onPress={() => setIsPencilMode(false)}
+                  style={[styles.iconButton, !isPencilMode && styles.iconButtonActive]}
+                >
+                  <MaterialCommunityIcons name="stamp" size={18} color={isPencilMode ? '#bfae9b' : '#1a120b'} />
+                </Pressable>
+                <Pressable
+                  onPress={() => setIsPencilMode(true)}
+                  style={[styles.iconButton, isPencilMode && styles.iconButtonActive]}
+                >
+                  <MaterialCommunityIcons name="pencil" size={18} color={isPencilMode ? '#1a120b' : '#bfae9b'} />
+                </Pressable>
+              </View>
+            </View>
             <View style={styles.actionRow}>
               <PrimaryButton label="Check Solution" onPress={checkSolution} fullWidth />
-            </View>
-            <LogicClueDrawer
-              clues={puzzle.clues}
-              clueStatuses={clueStatuses}
-              violatedClueId={violatedClueId}
-              expanded={cluesExpanded}
-              onToggle={() => setCluesExpanded((prev) => !prev)}
-            />
-            <View style={styles.toolbar}>
-              <SecondaryButton
-                label={isPencilMode ? 'Note Mode' : 'Place Mode'}
-                onPress={() => setIsPencilMode((prev) => !prev)}
-                size="compact"
-              />
-              <SecondaryButton label="Undo" onPress={performUndo} size="compact" />
             </View>
             <LogicItemTray
               items={puzzle.items}
               activeItemId={activeItemId}
               onSelectItem={setActiveItemId}
               placedCounts={placedCounts}
+            />
+            <LogicClueDrawer
+              clues={puzzle.clues}
+              clueStatuses={clueStatuses}
+              violatedClueId={violatedClueId}
+              expanded={cluesExpanded}
+              onToggle={() => setCluesExpanded((prev) => !prev)}
             />
           </>
         )}
@@ -632,14 +644,30 @@ const styles = StyleSheet.create({
   actionRow: {
     paddingVertical: SPACING.xs,
   },
-  toolbar: {
+  gridWrap: {
+    alignSelf: 'center',
+    position: 'relative',
+  },
+  gridControls: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    backgroundColor: '#1b1410',
-    borderTopWidth: 1,
+    gap: 6,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#2a1d15',
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconButtonActive: {
+    backgroundColor: '#d7ccc8',
+    borderColor: '#f4e6d4',
   },
   solvedOverlay: {
     ...StyleSheet.absoluteFillObject,
