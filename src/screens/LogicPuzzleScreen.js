@@ -198,13 +198,18 @@ export default function LogicPuzzleScreen({ navigation }) {
     });
   }, [pushHistory, placedItems, candidates]);
 
-  const performNote = useCallback((row, col, itemId) => {
+  const performNote = useCallback((row, col, itemId, forceAction = null) => {
     setCandidates((prev) => {
       const key = `${row}-${col}`;
       const currentCandidates = prev[key] || [];
-      const shouldAdd = !currentCandidates.includes(itemId);
-      const nextHistory = pushHistory({ placedItems, candidates: prev, history });
-      setHistory(nextHistory);
+      const hasItem = currentCandidates.includes(itemId);
+      const shouldAdd = forceAction ? forceAction === 'add' : !hasItem;
+      if ((shouldAdd && hasItem) || (!shouldAdd && !hasItem)) {
+        return prev;
+      }
+
+      setHistory((prevHistory) => pushHistory({ placedItems, candidates: prev, history: prevHistory }));
+
       if (shouldAdd) {
         return { ...prev, [key]: [...currentCandidates, itemId] };
       }
@@ -216,7 +221,7 @@ export default function LogicPuzzleScreen({ navigation }) {
       }
       return { ...prev, [key]: newList };
     });
-  }, [pushHistory, placedItems, history]);
+  }, [pushHistory, placedItems]);
 
   const handleCellPress = useCallback((row, col) => {
     if (status !== STATUS.PLAYING || !puzzle) return;
@@ -242,6 +247,11 @@ export default function LogicPuzzleScreen({ navigation }) {
       performPlacement(row, col, activeItemId);
     }
   }, [status, puzzle, activeItemId, isPencilMode, performNote, placedItems, performPlacement, performRemoval]);
+
+  const handlePencilAction = useCallback((row, col, action) => {
+    if (!activeItemId) return;
+    performNote(row, col, activeItemId, action);
+  }, [activeItemId, performNote]);
 
   const checkClue = useCallback((clue, placements, grid) => {
     const p1 = placements[clue.item1];
@@ -492,6 +502,7 @@ export default function LogicPuzzleScreen({ navigation }) {
               activeItemId={activeItemId}
               isPencilMode={isPencilMode}
               onCellPress={handleCellPress}
+              onPencilAction={handlePencilAction}
               cellSize={cellSize}
               labelSize={labelSize}
             />

@@ -13,14 +13,79 @@ const RELATION_ICONS = {
   LEFT_OF_ANY_ROW: '←',
   ABOVE: '↑',
   ABOVE_ANY_COL: '↑',
-  ADJ_HORIZONTAL: '⇆',
-  ADJ_VERTICAL: '⇅',
-  ADJ_DIAGONAL: '⤡',
-  ADJ_ORTHOGONAL: '+',
-  ADJ_ANY: '✚',
-  NOT_ADJACENT: '⊘',
-  NOT_ADJ_ORTHOGONAL: '⊘',
-  NOT_ADJ_DIAGONAL: '⊘',
+};
+
+const GRID_RELATIONS = new Set([
+  'ADJ_HORIZONTAL',
+  'ADJ_VERTICAL',
+  'ADJ_DIAGONAL',
+  'ADJ_ORTHOGONAL',
+  'ADJ_ANY',
+  'NOT_ADJACENT',
+  'NOT_ADJ_ORTHOGONAL',
+  'NOT_ADJ_DIAGONAL',
+]);
+
+const buildGridMask = (relation) => {
+  const active = new Set();
+  const mark = (r, c) => active.add(`${r}-${c}`);
+  if (relation === 'ADJ_HORIZONTAL') {
+    mark(1, 0); mark(1, 2);
+  } else if (relation === 'ADJ_VERTICAL') {
+    mark(0, 1); mark(2, 1);
+  } else if (relation === 'ADJ_DIAGONAL') {
+    mark(0, 0); mark(0, 2); mark(2, 0); mark(2, 2);
+  } else if (relation === 'ADJ_ORTHOGONAL') {
+    mark(0, 1); mark(1, 0); mark(1, 2); mark(2, 1);
+  } else if (relation === 'ADJ_ANY') {
+    for (let r = 0; r < 3; r += 1) {
+      for (let c = 0; c < 3; c += 1) {
+        if (r === 1 && c === 1) continue;
+        mark(r, c);
+      }
+    }
+  } else if (relation === 'NOT_ADJACENT') {
+    for (let r = 0; r < 3; r += 1) {
+      for (let c = 0; c < 3; c += 1) {
+        if (r === 1 && c === 1) continue;
+        mark(r, c);
+      }
+    }
+  } else if (relation === 'NOT_ADJ_ORTHOGONAL') {
+    mark(0, 1); mark(1, 0); mark(1, 2); mark(2, 1);
+  } else if (relation === 'NOT_ADJ_DIAGONAL') {
+    mark(0, 0); mark(0, 2); mark(2, 0); mark(2, 2);
+  }
+  return active;
+};
+
+const RelationGrid = ({ relation, status }) => {
+  const active = buildGridMask(relation);
+  const isNegative = relation.startsWith('NOT_');
+  return (
+    <View style={styles.gridIcon}>
+      {[0, 1, 2].map((r) => (
+        <View key={`r-${r}`} style={styles.gridRow}>
+          {[0, 1, 2].map((c) => {
+            const key = `${r}-${c}`;
+            const isCenter = r === 1 && c === 1;
+            const isActive = active.has(key);
+            const baseStyle = [styles.gridCell];
+            if (isCenter) {
+              baseStyle.push(styles.gridCellCenter);
+            } else if (isActive) {
+              if (status === 'satisfied') baseStyle.push(styles.gridCellActiveGood);
+              else if (status === 'violated' && isNegative) baseStyle.push(styles.gridCellActiveBad);
+              else baseStyle.push(styles.gridCellActive);
+            } else {
+              baseStyle.push(styles.gridCellInactive);
+            }
+            return <View key={key} style={baseStyle} />;
+          })}
+        </View>
+      ))}
+    </View>
+  );
 };
 
 export default function LogicClueDrawer({
@@ -55,7 +120,9 @@ export default function LogicClueDrawer({
                 <View style={styles.clueRow}>
                   <Text style={styles.clueIcon}>{clue.icon1}</Text>
                 <View style={styles.relationBadge}>
-                    <Text style={styles.relationText}>{RELATION_ICONS[clue.relation] || '?'}</Text>
+                    {GRID_RELATIONS.has(clue.relation)
+                      ? <RelationGrid relation={clue.relation} status={status} />
+                      : <Text style={styles.relationText}>{RELATION_ICONS[clue.relation] || '?'}</Text>}
                 </View>
                   <Text style={styles.clueIcon}>{clue.icon2}</Text>
                 </View>
@@ -128,12 +195,44 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     backgroundColor: '#3c2a1e',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   relationText: {
     fontFamily: FONTS.monoBold,
     fontSize: 14,
     letterSpacing: 1.2,
     color: '#f4e6d4',
+  },
+  gridIcon: {
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridRow: {
+    flexDirection: 'row',
+  },
+  gridCell: {
+    width: 6,
+    height: 6,
+    margin: 1,
+    borderRadius: 1,
+  },
+  gridCellCenter: {
+    backgroundColor: '#f4e6d4',
+  },
+  gridCellActive: {
+    backgroundColor: '#cfd8dc',
+  },
+  gridCellActiveGood: {
+    backgroundColor: '#66bb6a',
+  },
+  gridCellActiveBad: {
+    backgroundColor: '#ef5350',
+  },
+  gridCellInactive: {
+    backgroundColor: '#5a4a3d',
   },
   statusBadge: {
     position: 'absolute',
