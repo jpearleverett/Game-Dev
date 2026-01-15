@@ -18,6 +18,7 @@ const ROUTE_TO_AUDIO_KEY = {
   Prologue: 'prologue',
   Desk: 'desk',
   Board: 'board',
+  LogicPuzzle: 'board',
   Solved: 'solved',
   CaseFile: 'caseFile',
   Archive: 'archive',
