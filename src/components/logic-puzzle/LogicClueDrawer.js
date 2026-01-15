@@ -2,25 +2,25 @@ import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { FONTS } from '../../constants/typography';
 
-const RELATION_LABELS = {
+const RELATION_ICONS = {
   ON: '=',
   NOT_ON: '≠',
-  ROW: 'Row',
-  COL: 'Col',
-  SAME_ROW: 'Same Row',
-  SAME_COL: 'Same Col',
-  LEFT_OF: 'Left of',
-  LEFT_OF_ANY_ROW: 'Left of',
-  ABOVE: 'Above',
-  ABOVE_ANY_COL: 'Above',
-  ADJ_HORIZONTAL: 'Adj (H)',
-  ADJ_VERTICAL: 'Adj (V)',
-  ADJ_DIAGONAL: 'Adj (D)',
-  ADJ_ORTHOGONAL: 'Adj (+)',
-  ADJ_ANY: 'Adj',
-  NOT_ADJACENT: 'Not Adj',
-  NOT_ADJ_ORTHOGONAL: 'Not Adj (+)',
-  NOT_ADJ_DIAGONAL: 'Not Adj (D)',
+  ROW: '=',
+  COL: '=',
+  SAME_ROW: '↔',
+  SAME_COL: '↕',
+  LEFT_OF: '←',
+  LEFT_OF_ANY_ROW: '←',
+  ABOVE: '↑',
+  ABOVE_ANY_COL: '↑',
+  ADJ_HORIZONTAL: '⇆',
+  ADJ_VERTICAL: '⇅',
+  ADJ_DIAGONAL: '⤡',
+  ADJ_ORTHOGONAL: '+',
+  ADJ_ANY: '✚',
+  NOT_ADJACENT: '⊘',
+  NOT_ADJ_ORTHOGONAL: '⊘',
+  NOT_ADJ_DIAGONAL: '⊘',
 };
 
 export default function LogicClueDrawer({
@@ -54,9 +54,9 @@ export default function LogicClueDrawer({
               >
                 <View style={styles.clueRow}>
                   <Text style={styles.clueIcon}>{clue.icon1}</Text>
-                  <View style={styles.relationBadge}>
-                    <Text style={styles.relationText}>{RELATION_LABELS[clue.relation] || clue.relation}</Text>
-                  </View>
+                <View style={styles.relationBadge}>
+                    <Text style={styles.relationText}>{RELATION_ICONS[clue.relation] || '?'}</Text>
+                </View>
                   <Text style={styles.clueIcon}>{clue.icon2}</Text>
                 </View>
                 {badge ? <Text style={styles.statusBadge}>{badge}</Text> : null}
@@ -93,7 +93,9 @@ const styles = StyleSheet.create({
   },
   clueList: {
     padding: 12,
-    gap: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   clueCard: {
     backgroundColor: '#2a1d15',
@@ -102,6 +104,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     padding: 10,
     position: 'relative',
+    width: '31%',
+    marginBottom: 10,
   },
   clueSatisfied: {
     borderColor: '#4caf50',
@@ -127,9 +131,8 @@ const styles = StyleSheet.create({
   },
   relationText: {
     fontFamily: FONTS.monoBold,
-    fontSize: 10,
+    fontSize: 14,
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
     color: '#f4e6d4',
   },
   statusBadge: {

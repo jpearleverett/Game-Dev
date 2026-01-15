@@ -14,6 +14,8 @@ import { FONTS, FONT_SIZES } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
+const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+
 const STATUS = {
   LOADING: 'loading',
   PLAYING: 'playing',
