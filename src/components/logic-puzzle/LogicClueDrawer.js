@@ -74,9 +74,14 @@ const RelationGrid = ({ relation, status }) => {
             if (isCenter) {
               baseStyle.push(styles.gridCellCenter);
             } else if (isActive) {
-              if (status === 'satisfied') baseStyle.push(styles.gridCellActiveGood);
-              else if (status === 'violated' && isNegative) baseStyle.push(styles.gridCellActiveBad);
-              else baseStyle.push(styles.gridCellActive);
+              if (isNegative) {
+                if (status === 'violated') baseStyle.push(styles.gridCellActiveBad);
+                else baseStyle.push(styles.gridCellActiveNegative);
+              } else if (status === 'satisfied') {
+                baseStyle.push(styles.gridCellActiveGood);
+              } else {
+                baseStyle.push(styles.gridCellActivePositive);
+              }
             } else {
               baseStyle.push(styles.gridCellInactive);
             }
@@ -226,6 +231,12 @@ const styles = StyleSheet.create({
   },
   gridCellActive: {
     backgroundColor: '#cfd8dc',
+  },
+  gridCellActivePositive: {
+    backgroundColor: '#7db4ff',
+  },
+  gridCellActiveNegative: {
+    backgroundColor: '#ef5350',
   },
   gridCellActiveGood: {
     backgroundColor: '#66bb6a',
