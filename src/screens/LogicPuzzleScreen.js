@@ -255,6 +255,18 @@ export default function LogicPuzzleScreen({ navigation }) {
       if (!p2) return 'neutral';
     }
 
+    const checkStaticNeighbor = (neighbors, target) => {
+      for (const { r, c } of neighbors) {
+        if (r < 0 || r >= grid.length || c < 0 || c >= grid[0].length) continue;
+        const nCell = grid[r][c];
+        if (target === 'Lamp' && nCell.staticObject === 'lamp') return true;
+        if (target === 'Bench' && nCell.staticObject === 'bench') return true;
+        if (target === 'Hydrant' && nCell.staticObject === 'hydrant') return true;
+        if (target === 'Fog' && nCell.terrain === 'fog') return true;
+      }
+      return false;
+    };
+
     let satisfied = false;
     switch (clue.relation) {
       case 'ON': {
@@ -313,12 +325,22 @@ export default function LogicPuzzleScreen({ navigation }) {
         if (p2) {
           satisfied = (p1.row === p2.row && Math.abs(p1.col - p2.col) === 1)
             || (p1.col === p2.col && Math.abs(p1.row - p2.row) === 1);
+        } else if (isStatic) {
+          const neighbors = [
+            { r: p1.row - 1, c: p1.col },
+            { r: p1.row + 1, c: p1.col },
+            { r: p1.row, c: p1.col - 1 },
+            { r: p1.row, c: p1.col + 1 },
+          ];
+          satisfied = checkStaticNeighbor(neighbors, clue.item2);
         }
         break;
       case 'NOT_ADJACENT':
         if (p2) {
           const touching = Math.abs(p1.row - p2.row) <= 1 && Math.abs(p1.col - p2.col) <= 1;
           satisfied = !touching;
+        } else if (isStatic) {
+          satisfied = true;
         }
         break;
       case 'NOT_ADJ_ORTHOGONAL':
@@ -339,6 +361,18 @@ export default function LogicPuzzleScreen({ navigation }) {
         if (p2) {
           satisfied = Math.abs(p1.row - p2.row) <= 1 && Math.abs(p1.col - p2.col) <= 1
             && !(p1.row === p2.row && p1.col === p2.col);
+        } else if (isStatic) {
+          const neighbors = [
+            { r: p1.row - 1, c: p1.col - 1 },
+            { r: p1.row - 1, c: p1.col },
+            { r: p1.row - 1, c: p1.col + 1 },
+            { r: p1.row, c: p1.col - 1 },
+            { r: p1.row, c: p1.col + 1 },
+            { r: p1.row + 1, c: p1.col - 1 },
+            { r: p1.row + 1, c: p1.col },
+            { r: p1.row + 1, c: p1.col + 1 },
+          ];
+          satisfied = checkStaticNeighbor(neighbors, clue.item2);
         }
         break;
     }
