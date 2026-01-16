@@ -404,7 +404,7 @@ export default function LogicPuzzleScreen({ navigation }) {
 
   const checkSolution = useCallback(async () => {
     if (!puzzle) return;
-    const { items, solution } = puzzle;
+    const { items } = puzzle;
 
     if (Object.keys(placedItems).length !== items.length) {
       setErrorMsg(`Place all ${items.length} items.`);
@@ -422,12 +422,7 @@ export default function LogicPuzzleScreen({ navigation }) {
       cols.add(col);
     });
 
-    const matchesSolution = Object.entries(solution).every(([itemId, pos]) => {
-      const placed = placedItems[itemId];
-      return placed && placed.row === pos.row && placed.col === pos.col;
-    });
-
-    if (violations.length > 0 || gridViolation || !matchesSolution) {
+    if (violations.length > 0 || gridViolation) {
       setMistakes((prev) => prev + 1);
       setViolatedClueId(violations[0] || null);
       setErrorMsg('Evidence contradicts logic.');
