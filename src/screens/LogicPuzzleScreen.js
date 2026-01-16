@@ -474,10 +474,7 @@ export default function LogicPuzzleScreen({ navigation }) {
       <View style={styles.container}>
         <View style={styles.header}>
           <SecondaryButton label="< Back" onPress={() => navigation.navigate('CaseFile')} size="compact" />
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerLabel}>Case File</Text>
-            <Text style={styles.headerTitleText}>{caseTitle}</Text>
-          </View>
+          <Text style={styles.headerTitle}>LOGIC GRID</Text>
           <View style={styles.headerRight}>
             <View style={styles.headerMeta}>
               <Text style={styles.metaLabel}>Mistakes</Text>
@@ -580,20 +577,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    paddingHorizontal: SPACING.sm,
-    alignItems: 'center',
-  },
-  headerLabel: {
     fontFamily: FONTS.mono,
-    fontSize: 10,
-    letterSpacing: 2,
+    fontSize: 12,
+    letterSpacing: 3,
     color: '#c0b0a0',
-    textTransform: 'uppercase',
-  },
-  headerTitleText: {
-    fontFamily: FONTS.secondaryBold,
-    fontSize: FONT_SIZES.lg,
-    color: '#f4e6d4',
+    textAlign: 'center',
   },
   headerRight: {
     flexDirection: 'row',
