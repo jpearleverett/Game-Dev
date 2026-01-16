@@ -438,9 +438,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * This ensures that after the player completes their branching narrative path,
    * we immediately start generating the next subchapter with their realized narrative.
    */
-  const saveBranchingChoiceAndPrefetch = useCallback((caseNumber, firstChoice, secondChoice) => {
+  const saveBranchingChoiceAndPrefetch = useCallback((caseNumber, firstChoice, secondChoice, options = {}) => {
+    const isComplete = options?.isComplete !== false;
     // Save the branching choice to storyCampaign
-    saveBranchingChoice(caseNumber, firstChoice, secondChoice);
+    saveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete });
 
     // Get current state for prefetching
     const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
@@ -453,8 +454,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
       firstChoice,
       secondChoice,
       completedAt: new Date().toISOString(),
+      isComplete,
     };
-    const branchingChoices = [...(currentCampaign.branchingChoices || []), newChoice];
+    const filteredChoices = (currentCampaign.branchingChoices || []).filter(
+      (choice) => choice.caseNumber !== caseNumber,
+    );
+    const branchingChoices = [...filteredChoices, newChoice];
 
     // Trigger prefetch for next subchapter with the updated branchingChoices
     if (isLLMConfigured) {

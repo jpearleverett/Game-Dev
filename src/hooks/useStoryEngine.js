@@ -243,11 +243,12 @@ export function useStoryEngine(progress, updateProgress) {
    * @param {string} firstChoice - The first choice key (e.g., "1A", "1B", "1C")
    * @param {string} secondChoice - The second choice key (e.g., "1A-2A", "1B-2C")
    */
-  const saveBranchingChoice = useCallback((caseNumber, firstChoice, secondChoice) => {
+  const saveBranchingChoice = useCallback((caseNumber, firstChoice, secondChoice, options = {}) => {
     if (!caseNumber || !firstChoice || !secondChoice) {
       console.warn('[useStoryEngine] saveBranchingChoice called with missing params:', { caseNumber, firstChoice, secondChoice });
       return;
     }
+    const isComplete = options?.isComplete !== false;
 
     // Normalize + validate choice keys.
     // Branching narrative keys are expected to be:
@@ -286,11 +287,42 @@ export function useStoryEngine(progress, updateProgress) {
     }
 
     const existingChoices = storyCampaign.branchingChoices || [];
-
-    // Check if we already have a choice for this case (shouldn't happen, but be safe)
-    const alreadyExists = existingChoices.some(bc => bc.caseNumber === caseNumber);
-    if (alreadyExists) {
-      console.log(`[useStoryEngine] Branching choice for ${caseNumber} already exists, skipping`);
+    const existingIndex = existingChoices.findIndex(bc => bc.caseNumber === caseNumber);
+    if (existingIndex >= 0) {
+      const existing = existingChoices[existingIndex];
+      const sameChoice = existing.firstChoice === fc && existing.secondChoice === sc;
+      if (!sameChoice) {
+        console.warn('[useStoryEngine] Branching choice mismatch - keeping existing choice:', {
+          caseNumber,
+          existingFirst: existing.firstChoice,
+          existingSecond: existing.secondChoice,
+          incomingFirst: fc,
+          incomingSecond: sc,
+        });
+        return;
+      }
+      if (existing.isComplete === false && isComplete) {
+        const updatedChoice = {
+          ...existing,
+          isComplete: true,
+          completedAt: new Date().toISOString(),
+        };
+        const updatedChoices = [...existingChoices];
+        updatedChoices[existingIndex] = updatedChoice;
+        const updatedStory = {
+          ...storyCampaign,
+          branchingChoices: updatedChoices,
+        };
+        updateProgress({
+          storyCampaign: updatedStory,
+        });
+        saveStoredProgress({
+          ...progress,
+          storyCampaign: updatedStory,
+        }).catch((err) => {
+          console.error('[useStoryEngine] Failed to persist branching choice update:', err);
+        });
+      }
       return;
     }
 
@@ -299,6 +331,7 @@ export function useStoryEngine(progress, updateProgress) {
       firstChoice: fc,
       secondChoice: sc,
       completedAt: new Date().toISOString(),
+      isComplete,
     };
 
     const updatedChoices = [...existingChoices, newChoice];

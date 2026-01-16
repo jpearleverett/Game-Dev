@@ -290,35 +290,50 @@ export default function CaseFileScreen({
     return branchingChoices.find(bc => bc.caseNumber === caseNumber);
   }, [hasBranchingNarrative, caseNumber, storyCampaign?.branchingChoices]);
 
+  const branchingChoiceComplete = Boolean(
+    existingBranchingChoice && existingBranchingChoice.isComplete !== false,
+  );
+
+  const normalizeBranchingPath = useCallback((path, firstChoiceHint) => {
+    const rawPath = String(path || '').trim();
+    const rawFirst = typeof firstChoiceHint === 'string' ? firstChoiceHint.trim() : '';
+    let normalized = rawPath;
+    if (rawPath && rawFirst && !rawPath.includes('-')) {
+      normalized = `${rawFirst}-${rawPath}`;
+    } else if (!rawPath && rawFirst) {
+      normalized = rawFirst;
+    }
+    const upper = String(normalized || '').toUpperCase();
+    const dupMatch = upper.match(/^(1[ABC])-(1[ABC]-2[ABC])$/);
+    const deduped = dupMatch ? dupMatch[2] : upper;
+    const parts = deduped.split('-');
+    const firstChoice = parts[0] || rawFirst.toUpperCase();
+    return { firstChoice, secondChoice: deduped };
+  }, []);
+
+  const persistBranchingChoice = useCallback((result, { isComplete = true } = {}) => {
+    if (!onSaveBranchingChoice || !caseNumber) return;
+    const rawPath = result?.path || result?.secondChoice || '';
+    const rawFirst = result?.firstChoice || '';
+    const { firstChoice, secondChoice } = normalizeBranchingPath(rawPath, rawFirst);
+    if (!firstChoice || !secondChoice) {
+      console.warn('[CaseFileScreen] Branching choice missing normalized keys:', {
+        caseNumber,
+        rawPath,
+        rawFirst,
+      });
+      return;
+    }
+    onSaveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete });
+  }, [onSaveBranchingChoice, caseNumber, normalizeBranchingPath]);
+
   const handleBranchingComplete = useCallback((result) => {
     setBranchingProgress(result);
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
-    if (onSaveBranchingChoice && caseNumber && result?.path) {
-      // Parse the path string to extract first and second choices.
-      // Expect full key like "1B-2C", but be resilient if older content returns "2C".
-      const rawPath = String(result.path || '').trim();
-      const rawFirst = typeof result.firstChoice === 'string' ? result.firstChoice.trim() : '';
-      const normalizedPath =
-        rawPath.includes('-')
-          ? rawPath
-          : rawFirst && rawPath
-            ? `${rawFirst}-${rawPath}`
-            : rawPath;
-
-      const parts = normalizedPath.split('-');
-      if (parts.length >= 2) {
-        const firstChoice = parts[0]; // e.g., "1B"
-        const secondChoice = normalizedPath; // e.g., "1B-2C"
-        onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
-      } else {
-        console.warn('[CaseFileScreen] Branching complete, but could not normalize path:', {
-          caseNumber,
-          rawPath,
-          rawFirst,
-        });
-      }
+    if (result?.path) {
+      persistBranchingChoice(result, { isComplete: true });
     }
 
     // NARRATIVE-FIRST FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
@@ -327,7 +342,18 @@ export default function CaseFileScreen({
     if (hasBranchingNarrative) {
       setNarrativeComplete(true);
     }
-  }, [onSaveBranchingChoice, caseNumber, hasBranchingNarrative]);
+  }, [hasBranchingNarrative, persistBranchingChoice]);
+
+  const handleSecondChoice = useCallback((result) => {
+    if (!result?.path) return;
+    persistBranchingChoice(result, { isComplete: false });
+  }, [persistBranchingChoice]);
+
+  useEffect(() => {
+    if (!branchingProgress?.path) return;
+    if (branchingChoiceComplete) return;
+    persistBranchingChoice(branchingProgress, { isComplete: true });
+  }, [branchingProgress?.path, branchingChoiceComplete, persistBranchingChoice]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);
@@ -407,6 +433,16 @@ export default function CaseFileScreen({
   // For subchapter C, we want the decision options to reflect the *player's realized path*
   // through the branching narrative immediately after the second choice is made, even before
   // persistence updates propagate back into `activeCase`.
+  const resolvedBranchingPath = useMemo(() => {
+    const fromSession = typeof branchingProgress?.path === 'string' && branchingProgress.path
+      ? branchingProgress.path
+      : null;
+    const fromStored = typeof existingBranchingChoice?.secondChoice === 'string' && existingBranchingChoice.secondChoice
+      ? existingBranchingChoice.secondChoice
+      : null;
+    return fromSession || fromStored || null;
+  }, [branchingProgress?.path, existingBranchingChoice?.secondChoice]);
+
   const storyDecision = useMemo(() => {
     const fallback = activeCase?.storyDecision || storyMeta?.decision || null;
 
@@ -417,13 +453,8 @@ export default function CaseFileScreen({
     if (subchapterLetter !== 'C') return fallback;
 
     // Prefer the in-session completed path; fall back to persisted branching choice; then default.
-    const completedPathKey =
-      (typeof branchingProgress?.path === 'string' && branchingProgress.path) ||
-      (typeof existingBranchingChoice?.secondChoice === 'string' && existingBranchingChoice.secondChoice) ||
-      null;
-
     const defaultPathKey = '1A-2A';
-    const pathKey = completedPathKey || defaultPathKey;
+    const pathKey = resolvedBranchingPath || defaultPathKey;
 
     if (Array.isArray(metaPathDecisions)) {
       const picked =
@@ -441,8 +472,7 @@ export default function CaseFileScreen({
     storyMeta?.decision,
     storyMeta?.pathDecisions,
     subchapterLetter,
-    branchingProgress?.path,
-    existingBranchingChoice?.secondChoice,
+    resolvedBranchingPath,
   ]);
   const awaitingDecision = Boolean(storyDecision && storyCampaign?.awaitingDecision && storyCampaign?.pendingDecisionCase === caseNumber);
   const storyLocked = Boolean(!awaitingDecision && storyUnlockAt);
@@ -482,7 +512,7 @@ export default function CaseFileScreen({
   // NARRATIVE-FIRST FLOW: Skip gating if player already read the narrative before the puzzle
   // For dynamic chapters: existingBranchingChoice means narrative was completed
   // For all chapters: isCaseSolved means they've returned after solving the puzzle
-  const narrativeAlreadyRead = Boolean(existingBranchingChoice) || isCaseSolved;
+  const narrativeAlreadyRead = Boolean(branchingChoiceComplete) || isCaseSolved;
   const shouldGateDecisionPanel = awaitingDecision && isThirdSubchapter && !narrativeAlreadyRead;
   const [decisionPanelRevealed, setDecisionPanelRevealed] = useState(!shouldGateDecisionPanel);
 
@@ -522,7 +552,7 @@ export default function CaseFileScreen({
   //    (existingBranchingChoice means player has made both sets of branching choices)
   // 3. For Chapter 1 (no branching narrative): show when in story mode C subchapter before puzzle
   const branchingDecisionReady = hasBranchingNarrative
-    ? Boolean(existingBranchingChoice) || Boolean(branchingProgress) || narrativeComplete
+    ? Boolean(branchingChoiceComplete) || Boolean(branchingProgress) || narrativeComplete
     : true;
   const showDecisionOptions = showDecision && (
     awaitingDecision ||
@@ -854,6 +884,7 @@ export default function CaseFileScreen({
                       palette={palette}
                       onComplete={handleBranchingComplete}
                       onFirstChoice={handleFirstChoice}
+                      onSecondChoice={handleSecondChoice}
                       onEvidenceCollected={handleEvidenceCollected}
                     />
                   </View>

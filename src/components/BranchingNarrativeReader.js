@@ -318,6 +318,7 @@ export default function BranchingNarrativeReader({
   palette,
   onComplete,
   onFirstChoice,
+  onSecondChoice,
   onEvidenceCollected,
   style,
 }) {
@@ -509,6 +510,14 @@ export default function BranchingNarrativeReader({
   const handleSecondChoice = useCallback((option) => {
     const normalized = normalizePathKey(firstChoiceMade, option.key);
     setSecondChoiceMade(normalized);
+    if (onSecondChoice) {
+      onSecondChoice({
+        path: normalized,
+        firstChoice: firstChoiceMade,
+        secondChoice: normalized,
+        rawSecondChoice: option?.key || null,
+      });
+    }
     // Navigate to next page after choice
     setTimeout(() => {
       if (listRef.current) {
@@ -516,7 +525,7 @@ export default function BranchingNarrativeReader({
         listRef.current.scrollToIndex({ index: Math.min(nextIndex, pages.length - 1), animated: true });
       }
     }, 300);
-  }, [firstChoiceMade, normalizePathKey, activePage, pages.length]);
+  }, [firstChoiceMade, normalizePathKey, activePage, pages.length, onSecondChoice]);
 
   // Handle narrative complete (when reaching last page of ending)
   const onCompleteCalledRef = useRef(false);
