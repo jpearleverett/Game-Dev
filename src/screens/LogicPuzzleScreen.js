@@ -507,18 +507,6 @@ export default function LogicPuzzleScreen({ navigation }) {
                 <Pressable onPress={performUndo} style={styles.iconButton}>
                   <MaterialCommunityIcons name="undo-variant" size={18} color="#f4e6d4" />
                 </Pressable>
-                <Pressable
-                  onPress={() => setIsPencilMode(false)}
-                  style={[styles.iconButton, !isPencilMode && styles.iconButtonActive]}
-                >
-                  <MaterialCommunityIcons name="stamp" size={18} color={isPencilMode ? '#bfae9b' : '#1a120b'} />
-                </Pressable>
-                <Pressable
-                  onPress={() => setIsPencilMode(true)}
-                  style={[styles.iconButton, isPencilMode && styles.iconButtonActive]}
-                >
-                  <MaterialCommunityIcons name="pencil" size={18} color={isPencilMode ? '#1a120b' : '#bfae9b'} />
-                </Pressable>
               </View>
             </View>
             <View style={styles.actionRow}>
@@ -536,6 +524,8 @@ export default function LogicPuzzleScreen({ navigation }) {
               violatedClueId={violatedClueId}
               expanded={cluesExpanded}
               onToggle={() => setCluesExpanded((prev) => !prev)}
+              isPencilMode={isPencilMode}
+              onToggleMode={setIsPencilMode}
             />
           </>
         )}

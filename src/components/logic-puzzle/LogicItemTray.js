@@ -39,21 +39,22 @@ export default function LogicItemTray({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    paddingTop: 10,
+    paddingBottom: 6,
     borderTopWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     backgroundColor: '#141010',
   },
   row: {
     paddingHorizontal: 12,
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
   },
   itemButton: {
-    width: 76,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: 10,
+    width: 64,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#2b211a',
     backgroundColor: '#2a1d15',
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
   itemButtonSelected: {
     borderColor: '#d7ccc8',
     backgroundColor: '#3b2a1e',
-    transform: [{ translateY: -2 }],
+    transform: [{ translateY: -3 }],
     shadowColor: '#000',
     shadowOpacity: 0.35,
     shadowRadius: 6,
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   itemEmoji: {
-    fontSize: 22,
+    fontSize: 18,
   },
   itemLabel: {
     fontFamily: FONTS.mono,
