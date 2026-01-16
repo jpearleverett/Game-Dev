@@ -99,18 +99,22 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
     if (storyMeta) {
         merged.storyMeta = storyMeta;
 
-        // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
+        // PATH-SPECIFIC DECISIONS: Look up decision based on player's branching path
         if (storyMeta.pathDecisions) {
             // Find the player's branching choice.
-            // The branching choice is made in the A subchapter, so for B or C subchapters,
-            // we need to look up the A subchapter's case number.
+            // Both A and B subchapters have branching narratives, so:
+            // - B uses A's choice for its pathDecisions
+            // - C uses B's choice for its pathDecisions
             const subchapterLetter = caseNumber?.slice(3, 4);
             const chapterSlice = caseNumber?.slice(0, 3);
 
-            // For B or C subchapters, look for the A subchapter's branching choice
-            const lookupCaseNumber = (subchapterLetter === 'B' || subchapterLetter === 'C')
-                ? `${chapterSlice}A`
-                : caseNumber;
+            // For B or C subchapters, look for the previous subchapter's branching choice
+            let lookupCaseNumber = caseNumber;
+            if (subchapterLetter === 'B') {
+                lookupCaseNumber = `${chapterSlice}A`;
+            } else if (subchapterLetter === 'C') {
+                lookupCaseNumber = `${chapterSlice}B`;
+            }
 
             const branchingChoice = storyCampaign?.branchingChoices?.find(
                 bc => bc.caseNumber === lookupCaseNumber
@@ -253,18 +257,22 @@ export async function mergeCaseWithStoryAsync(baseCase, storyCampaign, getStoryE
     if (storyMeta) {
         merged.storyMeta = storyMeta;
 
-        // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
+        // PATH-SPECIFIC DECISIONS: Look up decision based on player's branching path
         if (storyMeta.pathDecisions) {
             // Find the player's branching choice.
-            // The branching choice is made in the A subchapter, so for B or C subchapters,
-            // we need to look up the A subchapter's case number.
+            // Both A and B subchapters have branching narratives, so:
+            // - B uses A's choice for its pathDecisions
+            // - C uses B's choice for its pathDecisions
             const subchapterLetter = caseNumber?.slice(3, 4);
             const chapterSlice = caseNumber?.slice(0, 3);
 
-            // For B or C subchapters, look for the A subchapter's branching choice
-            const lookupCaseNumber = (subchapterLetter === 'B' || subchapterLetter === 'C')
-                ? `${chapterSlice}A`
-                : caseNumber;
+            // For B or C subchapters, look for the previous subchapter's branching choice
+            let lookupCaseNumber = caseNumber;
+            if (subchapterLetter === 'B') {
+                lookupCaseNumber = `${chapterSlice}A`;
+            } else if (subchapterLetter === 'C') {
+                lookupCaseNumber = `${chapterSlice}B`;
+            }
 
             const branchingChoice = storyCampaign?.branchingChoices?.find(
                 bc => bc.caseNumber === lookupCaseNumber
