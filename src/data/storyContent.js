@@ -457,6 +457,15 @@ export async function invalidateCacheEntry(caseNumber, pathKey) {
 export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secondChoiceKey) {
   if (!branchingNarrative) return '';
 
+  const normalizeBranchPath = (firstKey, secondKey) => {
+    const fk = String(firstKey || '').trim().toUpperCase();
+    const sk = String(secondKey || '').trim().toUpperCase();
+    if (!fk || !sk) return sk || fk || null;
+    if (/^1[ABC]-2[ABC]$/.test(sk)) return sk;
+    if (/^2[ABC]$/.test(sk) && /^1[ABC]$/.test(fk)) return `${fk}-${sk}`;
+    return sk;
+  };
+
   const parts = [];
 
   // Opening (shared by all paths)
@@ -477,7 +486,10 @@ export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secon
     // Find the secondChoice group that corresponds to the first choice
     const secondChoiceGroup = branchingNarrative.secondChoices.find(sc => sc.afterChoice === firstChoiceKey);
     if (secondChoiceGroup?.options) {
-      const secondOption = secondChoiceGroup.options.find(o => o.key === secondChoiceKey);
+      const normalizedSecond = normalizeBranchPath(firstChoiceKey, secondChoiceKey);
+      const secondOption = secondChoiceGroup.options.find((o) => (
+        normalizeBranchPath(firstChoiceKey, o?.key) === normalizedSecond
+      ));
       if (secondOption?.response) {
         parts.push(secondOption.response);
       }
