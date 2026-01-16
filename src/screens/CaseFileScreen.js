@@ -497,12 +497,14 @@ export default function CaseFileScreen({
   );
 
   // Check if narrative is currently in progress (not yet complete)
-  const narrativeInProgress = hasBranchingNarrative && !narrativeComplete && !existingBranchingChoice;
+  const hasNarrative = hasBranchingNarrative || narrativePages.length > 0;
+  const narrativeInProgress = Boolean(hasNarrative && !narrativeComplete && !existingBranchingChoice);
+  const hideContinueInvestigationCTA = narrativeInProgress || puzzlePhasePending;
 
   // Don't show "Continue Investigation" if:
   // - Puzzle is pending (narrative done, puzzle not done)
   // - Narrative is in progress (still reading)
-  const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision && !puzzlePhasePending && !narrativeInProgress);
+  const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision && !hideContinueInvestigationCTA);
   const nextStoryLabel = storyCampaign?.chapter != null && storyCampaign?.subchapter != null 
     ? `Chapter ${storyCampaign.chapter}.${storyCampaign.subchapter}` 
     : "the next chapter";
@@ -687,7 +689,7 @@ export default function CaseFileScreen({
       }
     }
 
-    if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked) {
+    if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked && !hideContinueInvestigationCTA) {
       return {
         title: "Next Chapter Ready",
         body: `${nextStoryLabel} is staged on the evidence board.`,
@@ -708,7 +710,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option) return;
