@@ -4231,41 +4231,44 @@ Generate realistic, specific consequences based on the actual narrative content.
 
     // Add Chapter 1B and 1C (dynamically generated) - FULL TEXT
     // These are loaded from generated storage just like chapters 2+
-    for (let sub = 2; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
-      const caseNum = formatCaseNumber(1, sub);
-      const entry = await this.getGeneratedEntryAsync(caseNum, 'ROOT');
-      if (entry) {
-        // Check if we have branching choices for this case - use REALIZED narrative
-        const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNum);
-        let narrativeText = entry.narrative; // Default to canonical
+    // IMPORTANT: Only include them when generating chapters AFTER Chapter 1.
+    // For Chapter 1 generation, current-chapter logic below handles prior subchapters.
+    if (targetChapter > 1) {
+      for (let sub = 2; sub <= SUBCHAPTERS_PER_CHAPTER; sub++) {
+        const caseNum = formatCaseNumber(1, sub);
+        const entry = await this.getGeneratedEntryAsync(caseNum, 'ROOT');
+        if (entry) {
+          // Check if we have branching choices for this case - use REALIZED narrative
+          const branchingChoice = branchingChoices.find(bc => bc.caseNumber === caseNum);
+          let narrativeText = entry.narrative; // Default to canonical
 
-        if (branchingChoice && entry.branchingNarrative) {
-          // Build the ACTUAL narrative the player experienced
-          narrativeText = buildRealizedNarrative(
-            entry.branchingNarrative,
-            branchingChoice.firstChoice,
-            branchingChoice.secondChoice
-          );
-          console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
-        }
+          if (branchingChoice && entry.branchingNarrative) {
+            // Build the ACTUAL narrative the player experienced
+            narrativeText = buildRealizedNarrative(
+              entry.branchingNarrative,
+              branchingChoice.firstChoice,
+              branchingChoice.secondChoice
+            );
+            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
+          }
 
-        if (narrativeText) {
-          context.previousChapters.push({
-            chapter: 1,
-            subchapter: sub,
-            pathKey: 'ROOT',
-            title: entry.title || `Chapter 1.${sub}`,
-            narrative: narrativeText,
-            decision: entry.decision || null,
-            pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
-            chapterSummary: entry.chapterSummary || null,
-            branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
-            isRecent: true, // Mark as recent to include full text
-          });
+          if (narrativeText) {
+            context.previousChapters.push({
+              chapter: 1,
+              subchapter: sub,
+              pathKey: 'ROOT',
+              title: entry.title || `Chapter 1.${sub}`,
+              narrative: narrativeText,
+              decision: entry.decision || null,
+              pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
+              chapterSummary: entry.chapterSummary || null,
+              branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
+              isRecent: true, // Mark as recent to include full text
+            });
+          }
+        } else {
+          console.warn(`[StoryGenerationService] Missing chapter 1.${sub} (${caseNum}) - may need to be generated`);
         }
-      } else if (targetChapter > 1 || (targetChapter === 1 && targetSubchapter > sub)) {
-        // Only warn if we're past Chapter 1 or generating a later subchapter of Chapter 1
-        console.warn(`[StoryGenerationService] Missing chapter 1.${sub} (${caseNum}) - may need to be generated`);
       }
     }
 
@@ -4320,13 +4323,11 @@ Generate realistic, specific consequences based on the actual narrative content.
       for (let sub = 1; sub < targetSubchapter; sub++) {
         const caseNum = formatCaseNumber(targetChapter, sub);
 
-        // For Chapter 1A, use static content; for all other subchapters, use generated
-        let entry;
+        // For Chapter 1A, use static content (already included above).
         if (targetChapter === 1 && sub === 1) {
-          entry = getStoryEntry(caseNum, 'ROOT');
-        } else {
-          entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
+          continue;
         }
+        const entry = await this.getGeneratedEntryAsync(caseNum, pathKey);
 
         if (entry) {
           // Check if we have branching choices for this case - use REALIZED narrative
