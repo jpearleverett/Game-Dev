@@ -8,7 +8,7 @@ import LogicGrid from '../components/logic-puzzle/LogicGrid';
 import LogicClueDrawer from '../components/logic-puzzle/LogicClueDrawer';
 import LogicItemTray from '../components/logic-puzzle/LogicItemTray';
 import { useGame } from '../context/GameContext';
-import { parseCaseNumber, resolveStoryPathKey } from '../data/storyContent';
+import { parseCaseNumber, resolveStoryPathKey, formatCaseNumber } from '../data/storyContent';
 import { generateLogicPuzzle, getLogicDifficultyForChapter } from '../services/LogicPuzzleService';
 import { clearLogicPuzzle, loadLogicPuzzle, saveLogicPuzzle } from '../storage/logicPuzzleStorage';
 import { FONTS, FONT_SIZES } from '../constants/typography';
@@ -31,7 +31,8 @@ export default function LogicPuzzleScreen({ navigation }) {
   const caseNumber = activeCase?.caseNumber;
   const storyCampaign = progress.storyCampaign;
   const pathKey = resolveStoryPathKey(caseNumber, storyCampaign);
-  const { chapter } = parseCaseNumber(caseNumber);
+  const { chapter, subchapter } = parseCaseNumber(caseNumber);
+  const nextCaseNumber = formatCaseNumber(chapter, subchapter + 1);
 
   const [status, setStatus] = useState(STATUS.LOADING);
   const [puzzle, setPuzzle] = useState(null);
@@ -541,7 +542,7 @@ export default function LogicPuzzleScreen({ navigation }) {
               <Text style={styles.solvedBody}>
                 The logic lines up. File the report and move to the next lead.
               </Text>
-              <PrimaryButton label="Continue Investigation" onPress={() => navigation.navigate('CaseFile')} fullWidth />
+              <PrimaryButton label="Continue Investigation" onPress={() => navigation.navigate('CaseFile', { caseNumber: nextCaseNumber })} fullWidth />
             </View>
           </View>
         )}
