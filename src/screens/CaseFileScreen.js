@@ -451,7 +451,23 @@ export default function CaseFileScreen({
   const isCaseSolved = completedCaseNumbers.includes(activeCase?.caseNumber) || solvedCaseIds.includes(activeCase?.id);
 
   const pendingStoryAdvance = Boolean(!awaitingDecision && storyActiveCaseNumber && caseNumber && storyActiveCaseNumber !== caseNumber);
-  const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision);
+
+  // NARRATIVE-FIRST FLOW: For C subchapters, check if pre-decision has already been made
+  // (Moved up to support puzzlePhasePending calculation)
+  const preDecision = storyCampaign?.preDecision;
+  const hasPreDecision = preDecision && preDecision.caseNumber === caseNumber;
+
+  // NARRATIVE-FIRST FIX: Check if puzzle phase is active (narrative complete but puzzle not solved)
+  // For A/B subchapters: puzzle is pending after narrative is read
+  // For C subchapters: puzzle is pending after decision is made
+  const narrativeReadyForPuzzleCheck = narrativeComplete || existingBranchingChoice;
+  const puzzlePhasePending = !isCaseSolved && (
+    (isSubchapterC && hasPreDecision) ||
+    (!isSubchapterC && narrativeReadyForPuzzleCheck)
+  );
+
+  // Don't show "Continue Investigation" if puzzle is pending for the current case
+  const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision && !puzzlePhasePending);
   const nextStoryLabel = storyCampaign?.chapter != null && storyCampaign?.subchapter != null 
     ? `Chapter ${storyCampaign.chapter}.${storyCampaign.subchapter}` 
     : "the next chapter";
@@ -503,12 +519,8 @@ export default function CaseFileScreen({
     if (Haptics?.selectionAsync) Haptics.selectionAsync().catch(() => {});
   }, [decisionPanelRevealed, showDecision]);
 
-  // NARRATIVE-FIRST FLOW: For C subchapters, show decision options BEFORE the puzzle
-  // Check if a pre-decision has already been made for this case
-  const preDecision = storyCampaign?.preDecision;
-  const hasPreDecision = preDecision && preDecision.caseNumber === caseNumber;
-
   // Include pre-decision as a "locked" decision for display purposes
+  // (preDecision and hasPreDecision are now defined earlier to support puzzlePhasePending)
   const hasLockedDecision = Boolean(
     (!awaitingDecision && selectedOptionKey && lastDecision?.caseNumber === caseNumber) ||
     hasPreDecision
