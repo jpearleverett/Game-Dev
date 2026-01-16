@@ -192,21 +192,22 @@ export default function CaseFileScreen({
     const pathKey = (chapterKey && storyCampaign?.pathHistory && storyCampaign.pathHistory[chapterKey]) ||
       storyCampaign?.currentPathKey || ROOT_PATH_KEY;
 
-    // TRUE INFINITE BRANCHING: Check if we have a branching choice from the previous subchapter
-    // If so, use it to look up speculatively cached content
+    // TRUE INFINITE BRANCHING: Check if we have a branching choice from the A subchapter
+    // If so, use it to look up speculatively cached content.
+    // The branching narrative choice (1A-2A, 1B-2C, etc.) is always made in the A subchapter,
+    // so both B and C need to look for A's choice.
     const subchapterLetter = caseNumber.slice(3, 4);
     let previousBranchingPath = null;
 
     if (subchapterLetter === 'B' || subchapterLetter === 'C') {
-      // Find the previous subchapter's case number
-      const prevLetter = subchapterLetter === 'B' ? 'A' : 'B';
-      const prevCaseNumber = `${chapterSlice}${prevLetter}`;
+      // Always look for the A subchapter's branching choice since that's where the choice is made
+      const aCaseNumber = `${chapterSlice}A`;
 
-      // Look for the branching choice from that case
+      // Look for the branching choice from the A subchapter
       const branchingChoices = storyCampaign?.branchingChoices || [];
-      const prevChoice = branchingChoices.find(bc => bc.caseNumber === prevCaseNumber);
-      if (prevChoice?.secondChoice) {
-        previousBranchingPath = prevChoice.secondChoice;
+      const aChoice = branchingChoices.find(bc => bc.caseNumber === aCaseNumber);
+      if (aChoice?.secondChoice) {
+        previousBranchingPath = aChoice.secondChoice;
         console.log(`[CaseFileScreen] Looking for speculative cache with path: ${previousBranchingPath}`);
       }
     }
@@ -298,17 +299,37 @@ export default function CaseFileScreen({
     if (onSaveBranchingChoice && caseNumber && result?.path) {
       // Parse the path string to extract first and second choices.
       // Expect full key like "1B-2C", but be resilient if older content returns "2C".
-      const rawPath = String(result.path || '').trim();
-      const rawFirst = typeof result.firstChoice === 'string' ? result.firstChoice.trim() : '';
-      const normalizedPath =
-        rawPath.includes('-')
-          ? rawPath
-          : rawFirst && rawPath
-            ? `${rawFirst}-${rawPath}`
-            : rawPath;
+      const rawPath = String(result.path || '').trim().toUpperCase();
+      const rawFirst = typeof result.firstChoice === 'string' ? result.firstChoice.trim().toUpperCase() : '';
+      // Also check result.secondChoice which may already be normalized by BranchingNarrativeReader
+      const rawSecond = typeof result.secondChoice === 'string' ? result.secondChoice.trim().toUpperCase() : '';
+
+      // Try multiple sources to get a valid full path key:
+      // 1. If rawPath already has dash, use it
+      // 2. If rawSecond has dash (already normalized), use it
+      // 3. If we have both first choice and a short-form path, construct it
+      let normalizedPath = '';
+      const fullKeyPattern = /^1[ABC]-2[ABC]$/;
+      const shortKeyPattern = /^2[ABC]$/;
+      const firstKeyPattern = /^1[ABC]$/;
+
+      if (fullKeyPattern.test(rawPath)) {
+        normalizedPath = rawPath;
+      } else if (fullKeyPattern.test(rawSecond)) {
+        normalizedPath = rawSecond;
+      } else if (firstKeyPattern.test(rawFirst) && shortKeyPattern.test(rawPath)) {
+        normalizedPath = `${rawFirst}-${rawPath}`;
+      } else if (firstKeyPattern.test(rawFirst) && shortKeyPattern.test(rawSecond)) {
+        normalizedPath = `${rawFirst}-${rawSecond}`;
+      } else {
+        // Last resort: try to extract from any available data
+        const pathMatch = rawPath.match(/1[ABC]-2[ABC]/);
+        const secondMatch = rawSecond.match(/1[ABC]-2[ABC]/);
+        normalizedPath = pathMatch?.[0] || secondMatch?.[0] || rawPath;
+      }
 
       const parts = normalizedPath.split('-');
-      if (parts.length >= 2) {
+      if (parts.length >= 2 && fullKeyPattern.test(normalizedPath)) {
         const firstChoice = parts[0]; // e.g., "1B"
         const secondChoice = normalizedPath; // e.g., "1B-2C"
         onSaveBranchingChoice(caseNumber, firstChoice, secondChoice);
@@ -317,6 +338,8 @@ export default function CaseFileScreen({
           caseNumber,
           rawPath,
           rawFirst,
+          rawSecond,
+          normalizedPath,
         });
       }
     }

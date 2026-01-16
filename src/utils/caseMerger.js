@@ -101,25 +101,35 @@ export function mergeCaseWithStory(baseCase, storyCampaign, getStoryEntryFn) {
 
         // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
         if (storyMeta.pathDecisions) {
-            // Find the player's branching choice for this case
+            // Find the player's branching choice.
+            // The branching choice is made in the A subchapter, so for B or C subchapters,
+            // we need to look up the A subchapter's case number.
+            const subchapterLetter = caseNumber?.slice(3, 4);
+            const chapterSlice = caseNumber?.slice(0, 3);
+
+            // For B or C subchapters, look for the A subchapter's branching choice
+            const lookupCaseNumber = (subchapterLetter === 'B' || subchapterLetter === 'C')
+                ? `${chapterSlice}A`
+                : caseNumber;
+
             const branchingChoice = storyCampaign?.branchingChoices?.find(
-                bc => bc.caseNumber === caseNumber
+                bc => bc.caseNumber === lookupCaseNumber
             );
 
             // Use the player's ending path key (e.g., "1B-2C") to get their specific decision
             // Fall back to "1A-2A" if no branching choice recorded yet (decision won't show until choices made)
-            const pathKey = branchingChoice?.secondChoice || '1A-2A';
+            const decisionPathKey = branchingChoice?.secondChoice || '1A-2A';
 
             // Support both array format (new) and object format (legacy)
             if (Array.isArray(storyMeta.pathDecisions)) {
                 // New array format: find by pathKey property
-                merged.storyDecision = storyMeta.pathDecisions.find(d => d.pathKey === pathKey)
+                merged.storyDecision = storyMeta.pathDecisions.find(d => d.pathKey === decisionPathKey)
                     || storyMeta.pathDecisions.find(d => d.pathKey === '1A-2A')
                     || storyMeta.pathDecisions[0]
                     || null;
             } else {
                 // Legacy object format: lookup by key
-                merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+                merged.storyDecision = storyMeta.pathDecisions[decisionPathKey] || storyMeta.pathDecisions['1A-2A'] || null;
             }
         } else {
             // Fallback for legacy single-decision format
@@ -245,25 +255,35 @@ export async function mergeCaseWithStoryAsync(baseCase, storyCampaign, getStoryE
 
         // PATH-SPECIFIC DECISIONS: For C subchapters, look up decision based on player's branching path
         if (storyMeta.pathDecisions) {
-            // Find the player's branching choice for this case
+            // Find the player's branching choice.
+            // The branching choice is made in the A subchapter, so for B or C subchapters,
+            // we need to look up the A subchapter's case number.
+            const subchapterLetter = caseNumber?.slice(3, 4);
+            const chapterSlice = caseNumber?.slice(0, 3);
+
+            // For B or C subchapters, look for the A subchapter's branching choice
+            const lookupCaseNumber = (subchapterLetter === 'B' || subchapterLetter === 'C')
+                ? `${chapterSlice}A`
+                : caseNumber;
+
             const branchingChoice = storyCampaign?.branchingChoices?.find(
-                bc => bc.caseNumber === caseNumber
+                bc => bc.caseNumber === lookupCaseNumber
             );
 
             // Use the player's ending path key (e.g., "1B-2C") to get their specific decision
             // Fall back to "1A-2A" if no branching choice recorded yet (decision won't show until choices made)
-            const pathKey = branchingChoice?.secondChoice || '1A-2A';
+            const decisionPathKey = branchingChoice?.secondChoice || '1A-2A';
 
             // Support both array format (new) and object format (legacy)
             if (Array.isArray(storyMeta.pathDecisions)) {
                 // New array format: find by pathKey property
-                merged.storyDecision = storyMeta.pathDecisions.find(d => d.pathKey === pathKey)
+                merged.storyDecision = storyMeta.pathDecisions.find(d => d.pathKey === decisionPathKey)
                     || storyMeta.pathDecisions.find(d => d.pathKey === '1A-2A')
                     || storyMeta.pathDecisions[0]
                     || null;
             } else {
                 // Legacy object format: lookup by key
-                merged.storyDecision = storyMeta.pathDecisions[pathKey] || storyMeta.pathDecisions['1A-2A'] || null;
+                merged.storyDecision = storyMeta.pathDecisions[decisionPathKey] || storyMeta.pathDecisions['1A-2A'] || null;
             }
         } else {
             // Fallback for legacy single-decision format

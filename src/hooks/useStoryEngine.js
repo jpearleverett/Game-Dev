@@ -255,32 +255,62 @@ export function useStoryEngine(progress, updateProgress) {
     // - secondChoice: "1A-2A" .. "1C-2C"
     //
     // We've seen malformed keys get persisted (e.g. "A-A-B" or "1B-1B-2C").
-    // Reject/normalize here so downstream story context and pathDecisions lookup stay correct.
-    const fc = String(firstChoice).trim().toUpperCase();
+    // Attempt aggressive normalization before rejecting.
+    let fc = String(firstChoice).trim().toUpperCase();
     let sc = String(secondChoice).trim().toUpperCase();
 
-    const firstOk = /^1[ABC]$/.test(fc);
-    const secondFullOk = /^1[ABC]-2[ABC]$/.test(sc);
-    const secondShortOk = /^2[ABC]$/.test(sc);
+    const firstKeyPattern = /^1[ABC]$/;
+    const fullKeyPattern = /^1[ABC]-2[ABC]$/;
+    const shortKeyPattern = /^2[ABC]$/;
 
-    if (firstOk && secondShortOk) {
-      sc = `${fc}-${sc}`;
+    // Try to extract valid first choice from malformed input
+    if (!firstKeyPattern.test(fc)) {
+      // Try to find a valid first choice pattern anywhere in the string
+      const fcMatch = fc.match(/1[ABC]/);
+      if (fcMatch) {
+        fc = fcMatch[0];
+      }
     }
 
-    // If caller passed a duplicated form like "1B-1B-2C", collapse it.
-    // Keep the trailing "1B-2C" segment.
-    const dupMatch = sc.match(/^(1[ABC])-(1[ABC]-2[ABC])$/);
-    if (dupMatch) {
-      sc = dupMatch[2];
+    // Handle various malformed second choice formats
+    if (!fullKeyPattern.test(sc)) {
+      // If short form "2A", expand using first choice
+      if (shortKeyPattern.test(sc) && firstKeyPattern.test(fc)) {
+        sc = `${fc}-${sc}`;
+      }
+      // If duplicated form like "1B-1B-2C", extract the trailing full key
+      else {
+        const dupMatch = sc.match(/^(1[ABC])-(1[ABC]-2[ABC])$/);
+        if (dupMatch) {
+          sc = dupMatch[2];
+        }
+        // Try to extract a valid full key from anywhere in the string
+        else {
+          const fullMatch = sc.match(/1[ABC]-2[ABC]/);
+          if (fullMatch) {
+            sc = fullMatch[0];
+            // Also infer first choice from the full key if needed
+            if (!firstKeyPattern.test(fc)) {
+              fc = sc.split('-')[0];
+            }
+          }
+        }
+      }
     }
 
-    if (!firstOk || !/^1[ABC]-2[ABC]$/.test(sc)) {
-      console.warn('[useStoryEngine] Rejecting malformed branching choice keys:', {
+    // Final validation after all normalization attempts
+    const firstOk = firstKeyPattern.test(fc);
+    const secondOk = fullKeyPattern.test(sc);
+
+    if (!firstOk || !secondOk) {
+      console.error('[useStoryEngine] CRITICAL: Rejecting malformed branching choice keys after normalization attempts:', {
         caseNumber,
-        firstChoice,
-        secondChoice,
+        originalFirst: firstChoice,
+        originalSecond: secondChoice,
         normalizedFirst: fc,
         normalizedSecond: sc,
+        firstOk,
+        secondOk,
       });
       return;
     }
