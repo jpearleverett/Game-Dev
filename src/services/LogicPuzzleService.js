@@ -570,6 +570,7 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
 
   const selectedClues = [];
   const selectedKeys = new Set();
+  const relationCounts = {};
 
   const addClue = (clue) => {
     const key = clue.item1 + clue.relation + clue.item2;
@@ -577,108 +578,84 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
     clue.id = nextId();
     selectedClues.push(clue);
     selectedKeys.add(key);
+    relationCounts[clue.relation] = (relationCounts[clue.relation] || 0) + 1;
     return true;
   };
 
-  const cluesByItem = {};
-  itemIds.forEach((id) => { cluesByItem[id] = { row: [], col: [], strong: [], other: [] }; });
+  const cluesByType = {
+    position: possibleClues.filter((c) => c.relation === 'ROW' || c.relation === 'COL'),
+    terrain: possibleClues.filter((c) => c.relation === 'ON'),
+    adjacency: possibleClues.filter((c) => ['ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'ADJ_ORTHOGONAL', 'ADJ_ANY'].includes(c.relation)),
+    direction: possibleClues.filter((c) => ['LEFT_OF', 'ABOVE', 'SAME_ROW', 'SAME_COL'].includes(c.relation)),
+    weak: possibleClues.filter((c) => ['LEFT_OF_ANY_ROW', 'ABOVE_ANY_COL', 'NOT_ON'].includes(c.relation)),
+  };
 
-  possibleClues.forEach((clue) => {
-    const bucket = cluesByItem[clue.item1];
-    if (!bucket) return;
-    if (clue.relation === 'ROW') bucket.row.push(clue);
-    else if (clue.relation === 'COL') bucket.col.push(clue);
-    else if (['ON', 'ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'ADJ_ORTHOGONAL', 'LEFT_OF', 'ABOVE'].includes(clue.relation)) {
-      bucket.strong.push(clue);
-    } else {
-      bucket.other.push(clue);
-    }
+  const anchorCount = Math.max(1, Math.ceil(itemIds.length / 3));
+  const anchorItems = shuffle(itemIds).slice(0, anchorCount);
+  anchorItems.forEach((itemId) => {
+    const posClues = shuffle(cluesByType.position.filter((c) => c.item1 === itemId));
+    if (posClues.length) addClue(posClues[0]);
   });
 
-  const itemsNeedingRow = new Set(itemIds);
-  const itemsNeedingCol = new Set(itemIds);
-
-  shuffle(itemIds).forEach((itemId) => {
-    const bucket = cluesByItem[itemId];
-    if (itemsNeedingRow.has(itemId) && bucket.row.length) {
-      const clue = bucket.row[Math.floor(Math.random() * bucket.row.length)];
-      if (addClue(clue)) itemsNeedingRow.delete(itemId);
-    }
-    if (itemsNeedingCol.has(itemId) && bucket.col.length) {
-      const clue = bucket.col[Math.floor(Math.random() * bucket.col.length)];
-      if (addClue(clue)) itemsNeedingCol.delete(itemId);
-    }
-  });
-
-  shuffle(itemIds).forEach((itemId) => {
-    const bucket = cluesByItem[itemId];
-    if (itemsNeedingRow.has(itemId) || itemsNeedingCol.has(itemId)) {
-      const strongClues = shuffle(bucket.strong);
-      for (const clue of strongClues) {
-        if (addClue(clue)) {
-          if (clue.relation === 'LEFT_OF' || clue.relation === 'ADJ_HORIZONTAL') {
-            itemsNeedingRow.delete(clue.item1);
-            itemsNeedingRow.delete(clue.item2);
-          }
-          if (clue.relation === 'ABOVE' || clue.relation === 'ADJ_VERTICAL') {
-            itemsNeedingCol.delete(clue.item1);
-            itemsNeedingCol.delete(clue.item2);
-          }
-          break;
-        }
-      }
-    }
-  });
-
-  let currentSolutions = countSolutions(selectedClues, 100);
-  let iterations = 0;
-  const maxIterations = 50;
-
-  while (currentSolutions > 1 && iterations < maxIterations) {
-    iterations += 1;
-
-    const candidateClues = possibleClues.filter((c) => !selectedKeys.has(c.item1 + c.relation + c.item2));
-    if (!candidateClues.length) break;
-
-    let bestClue = null;
-    let bestReduction = 0;
-    const samplesToTest = Math.min(candidateClues.length, 20);
-    const sample = shuffle(candidateClues).slice(0, samplesToTest);
-
-    for (const clue of sample) {
-      const testClues = [...selectedClues, clue];
-      const newCount = countSolutions(testClues, currentSolutions);
-      const reduction = currentSolutions - newCount;
-      if (reduction > bestReduction) {
-        bestReduction = reduction;
-        bestClue = clue;
-      }
-    }
-
-    if (bestClue && bestReduction > 0) {
-      addClue(bestClue);
-      currentSolutions -= bestReduction;
-    } else {
-      const fallback = sample.find((c) => ['ROW', 'COL', 'ON', 'ADJ_HORIZONTAL', 'ADJ_VERTICAL'].includes(c.relation))
-        || sample[0];
-      if (fallback) {
-        addClue(fallback);
-        currentSolutions = countSolutions(selectedClues, 100);
-      }
-    }
+  const terrainClues = shuffle(cluesByType.terrain);
+  const terrainCount = Math.max(1, Math.ceil(itemIds.length / 3));
+  for (let i = 0; i < terrainCount && i < terrainClues.length; i += 1) {
+    addClue(terrainClues[i]);
   }
 
-  if (countSolutions(selectedClues, 2) > 1) {
-    const remaining = possibleClues.filter((c) => !selectedKeys.has(c.item1 + c.relation + c.item2));
-    const prioritized = [
-      ...remaining.filter((c) => c.relation === 'ROW' || c.relation === 'COL'),
-      ...remaining.filter((c) => c.relation === 'ON'),
-      ...remaining.filter((c) => ['ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'LEFT_OF', 'ABOVE'].includes(c.relation)),
-      ...remaining,
+  const adjClues = shuffle(cluesByType.adjacency);
+  const adjCount = Math.max(2, Math.ceil(itemIds.length / 2));
+  for (let i = 0; i < adjCount && i < adjClues.length; i += 1) {
+    addClue(adjClues[i]);
+  }
+
+  const dirClues = shuffle(cluesByType.direction);
+  const dirCount = Math.max(1, Math.ceil(itemIds.length / 3));
+  for (let i = 0; i < dirCount && i < dirClues.length; i += 1) {
+    addClue(dirClues[i]);
+  }
+
+  let iterations = 0;
+  const maxIterations = 80;
+  const maxPositionClues = Math.ceil(itemIds.length / 2);
+
+  while (countSolutions(selectedClues, 2) > 1 && iterations < maxIterations) {
+    iterations += 1;
+
+    const available = possibleClues.filter((c) => {
+      const key = c.item1 + c.relation + c.item2;
+      if (selectedKeys.has(key)) return false;
+      if ((c.relation === 'ROW' || c.relation === 'COL') && (relationCounts.ROW || 0) + (relationCounts.COL || 0) >= maxPositionClues) {
+        return false;
+      }
+      return true;
+    });
+
+    if (!available.length) break;
+
+    const byType = [
+      ...shuffle(available.filter((c) => ['ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'ADJ_ORTHOGONAL'].includes(c.relation))),
+      ...shuffle(available.filter((c) => ['LEFT_OF', 'ABOVE', 'SAME_ROW', 'SAME_COL'].includes(c.relation))),
+      ...shuffle(available.filter((c) => c.relation === 'ON')),
+      ...shuffle(available.filter((c) => c.relation === 'ROW' || c.relation === 'COL')),
+      ...shuffle(available.filter((c) => ['ADJ_ANY', 'LEFT_OF_ANY_ROW', 'ABOVE_ANY_COL'].includes(c.relation))),
     ];
-    for (const clue of prioritized) {
-      if (countSolutions(selectedClues, 2) <= 1) break;
-      addClue(clue);
+
+    let added = false;
+    const solutionsBefore = countSolutions(selectedClues, 20);
+
+    for (const clue of byType.slice(0, 15)) {
+      const testClues = [...selectedClues, clue];
+      const solutionsAfter = countSolutions(testClues, solutionsBefore);
+      if (solutionsAfter < solutionsBefore) {
+        addClue(clue);
+        added = true;
+        break;
+      }
+    }
+
+    if (!added && byType.length) {
+      addClue(byType[0]);
     }
   }
 
