@@ -33,6 +33,9 @@ export default function LogicGrid({
   const gridSize = grid?.length || 0;
   const dragActionRef = useRef(null);
   const lastCellRef = useRef(null);
+  const rowOffsetsRef = useRef({});
+  const pendingCellLayoutsRef = useRef({});
+  const cellLayoutsRef = useRef({});
 
   const placedLookup = useMemo(() => {
     const lookup = {};
@@ -46,22 +49,56 @@ export default function LogicGrid({
   const padding = Math.max(6, Math.floor(cellSize * 0.08));
   const cellPitch = cellSize + CELL_MARGIN * 2;
 
+  const setCellLayout = (rowIndex, colIndex, layout) => {
+    const rowOffset = rowOffsetsRef.current[rowIndex];
+    if (!rowOffset) {
+      if (!pendingCellLayoutsRef.current[rowIndex]) pendingCellLayoutsRef.current[rowIndex] = {};
+      pendingCellLayoutsRef.current[rowIndex][colIndex] = layout;
+      return;
+    }
+    cellLayoutsRef.current[`${rowIndex}-${colIndex}`] = {
+      row: rowIndex,
+      col: colIndex,
+      x: rowOffset.x + layout.x,
+      y: rowOffset.y + layout.y,
+      width: layout.width,
+      height: layout.height,
+    };
+  };
+
+  const setRowLayout = (rowIndex, layout) => {
+    rowOffsetsRef.current[rowIndex] = { x: layout.x, y: layout.y };
+    const pending = pendingCellLayoutsRef.current[rowIndex];
+    if (pending) {
+      Object.entries(pending).forEach(([colIndex, cellLayout]) => {
+        setCellLayout(rowIndex, Number(colIndex), cellLayout);
+      });
+      delete pendingCellLayoutsRef.current[rowIndex];
+    }
+  };
+
   const resolveCellFromEvent = (event) => {
     if (!grid?.length) return null;
     const { locationX, locationY } = event.nativeEvent;
-    const localX = locationX - padding - labelSize - CELL_MARGIN;
-    const localY = locationY - padding - labelSize - CELL_MARGIN;
-    if (localX < 0 || localY < 0) return null;
-    const col = Math.floor(localX / cellPitch);
-    const row = Math.floor(localY / cellPitch);
-    const colCount = grid[0]?.length || 0;
-    if (row < 0 || col < 0 || row >= grid.length || col >= colCount) return null;
-    const cell = grid[row][col];
-    if (!cell || cell.terrain === 'fog' || cell.staticObject !== 'none') return null;
-    return { row, col };
+    const layouts = Object.values(cellLayoutsRef.current);
+    if (!layouts.length) return null;
+    for (const cell of layouts) {
+      const margin = CELL_MARGIN;
+      if (
+        locationX >= cell.x - margin &&
+        locationX <= cell.x + cell.width + margin &&
+        locationY >= cell.y - margin &&
+        locationY <= cell.y + cell.height + margin
+      ) {
+        const gridCell = grid[cell.row]?.[cell.col];
+        if (!gridCell || gridCell.terrain === 'fog' || gridCell.staticObject !== 'none') return null;
+        return { row: cell.row, col: cell.col };
+      }
+    }
+    return null;
   };
 
-  const handlePencilDrag = (row, col) => {
+  const applyPencilAtCell = (row, col) => {
     if (!onPencilAction || !activeItemId) return;
     if (lastCellRef.current && lastCellRef.current.row === row && lastCellRef.current.col === col) return;
     lastCellRef.current = { row, col };
@@ -74,6 +111,26 @@ export default function LogicGrid({
     onPencilAction(row, col, dragActionRef.current);
   };
 
+  const applyPencilAlongPath = (row, col) => {
+    if (!lastCellRef.current) {
+      applyPencilAtCell(row, col);
+      return;
+    }
+    const start = lastCellRef.current;
+    const dr = row - start.row;
+    const dc = col - start.col;
+    const steps = Math.max(Math.abs(dr), Math.abs(dc));
+    if (steps <= 1) {
+      applyPencilAtCell(row, col);
+      return;
+    }
+    for (let i = 1; i <= steps; i += 1) {
+      const nextRow = start.row + Math.round((dr * i) / steps);
+      const nextCol = start.col + Math.round((dc * i) / steps);
+      applyPencilAtCell(nextRow, nextCol);
+    }
+  };
+
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
@@ -81,7 +138,7 @@ export default function LogicGrid({
     onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
     onPanResponderMove: (event) => {
       const cell = resolveCellFromEvent(event);
-      if (cell) handlePencilDrag(cell.row, cell.col);
+      if (cell) applyPencilAlongPath(cell.row, cell.col);
     },
     onPanResponderRelease: () => {
       dragActionRef.current = null;
@@ -112,7 +169,11 @@ export default function LogicGrid({
         ))}
       </View>
       {grid.map((row, rowIndex) => (
-        <View key={`row-${rowIndex}`} style={styles.row}>
+        <View
+          key={`row-${rowIndex}`}
+          style={styles.row}
+          onLayout={({ nativeEvent: { layout } }) => setRowLayout(rowIndex, layout)}
+        >
           <View style={[styles.labelCell, { width: labelSize, height: cellSize }]}>
             <Text style={styles.labelText}>{rowIndex + 1}</Text>
           </View>
@@ -129,6 +190,7 @@ export default function LogicGrid({
             return (
               <Pressable
                 key={key}
+                onLayout={({ nativeEvent: { layout } }) => setCellLayout(cell.row, cell.col, layout)}
                 onPressIn={() => {
                   if (!isPencilMode || !activeItemId || !onPencilAction) return;
                   const currentCandidates = candidateLookup[key] || [];
