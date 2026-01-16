@@ -571,10 +571,22 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
   const selectedClues = [];
   const selectedKeys = new Set();
   const relationCounts = {};
+  const adjacencyPairs = new Set(); // Track item pairs that already have adjacency clues
+
+  // Adjacency relations where one is a subset of another - avoid having both
+  const ADJACENCY_RELATIONS = ['ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'ADJ_ORTHOGONAL', 'ADJ_ANY', 'ADJ_DIAGONAL'];
 
   const addClue = (clue) => {
     const key = clue.item1 + clue.relation + clue.item2;
     if (selectedKeys.has(key)) return false;
+
+    // Check for redundant adjacency clues (same pair with different adjacency type)
+    if (ADJACENCY_RELATIONS.includes(clue.relation)) {
+      const pairKey = [clue.item1, clue.item2].sort().join('-');
+      if (adjacencyPairs.has(pairKey)) return false; // Already have an adjacency clue for this pair
+      adjacencyPairs.add(pairKey);
+    }
+
     clue.id = nextId();
     selectedClues.push(clue);
     selectedKeys.add(key);

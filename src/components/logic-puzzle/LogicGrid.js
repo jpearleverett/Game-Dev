@@ -161,7 +161,8 @@ export default function LogicGrid({
       dragStartPosRef.current = { x: pageX, y: pageY };
       if (gridRef.current) {
         gridRef.current.measureInWindow((x, y) => {
-          containerPositionRef.current = { x, y };
+          // Add padding to account for content area offset
+          containerPositionRef.current = { x: x + padding, y: y + padding };
           measurementReadyRef.current = true;
         });
       }
@@ -205,7 +206,8 @@ export default function LogicGrid({
       onLayout={() => {
         if (gridRef.current) {
           gridRef.current.measureInWindow((x, y) => {
-            containerPositionRef.current = { x, y };
+            // Add padding to account for content area offset
+            containerPositionRef.current = { x: x + padding, y: y + padding };
           });
         }
       }}
