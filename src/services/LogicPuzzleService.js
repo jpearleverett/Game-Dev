@@ -420,12 +420,6 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
     });
   });
 
-  const cluesByRelation = {};
-  possibleClues.forEach((clue) => {
-    if (!cluesByRelation[clue.relation]) cluesByRelation[clue.relation] = [];
-    cluesByRelation[clue.relation].push(clue);
-  });
-
   const shuffle = (list) => {
     const copy = [...list];
     for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -435,32 +429,200 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
     return copy;
   };
 
+  const checkClueSatisfied = (clue, placement) => {
+    const p1 = placement[clue.item1];
+    if (!p1) return false;
+
+    const isStatic = ['Lamp', 'Bench', 'Hydrant', 'Fog', 'Street', 'Park', 'Building'].includes(clue.item2)
+      || !Number.isNaN(Number(clue.item2)) || COL_LABELS.includes(clue.item2);
+
+    let p2 = null;
+    if (!isStatic) {
+      p2 = placement[clue.item2];
+      if (!p2) return false;
+    }
+
+    switch (clue.relation) {
+      case 'ON': {
+        const cell = grid[p1.row][p1.col];
+        if (clue.item2 === 'Street') return cell.terrain === 'street';
+        if (clue.item2 === 'Park') return cell.terrain === 'park';
+        if (clue.item2 === 'Building') return cell.terrain === 'building';
+        if (clue.item2 === 'Lamp') return cell.staticObject === 'lamp';
+        if (clue.item2 === 'Bench') return cell.staticObject === 'bench';
+        if (clue.item2 === 'Hydrant') return cell.staticObject === 'hydrant';
+        return false;
+      }
+      case 'NOT_ON': {
+        const cell = grid[p1.row][p1.col];
+        if (clue.item2 === 'Street') return cell.terrain !== 'street';
+        if (clue.item2 === 'Park') return cell.terrain !== 'park';
+        if (clue.item2 === 'Building') return cell.terrain !== 'building';
+        return true;
+      }
+      case 'ROW': return (p1.row + 1).toString() === clue.item2;
+      case 'COL': return COL_LABELS[p1.col] === clue.item2;
+      case 'SAME_ROW': return p2 && p1.row === p2.row;
+      case 'SAME_COL': return p2 && p1.col === p2.col;
+      case 'LEFT_OF': return p2 && p1.row === p2.row && p1.col < p2.col;
+      case 'LEFT_OF_ANY_ROW': return p2 && p1.col < p2.col;
+      case 'ABOVE': return p2 && p1.col === p2.col && p1.row < p2.row;
+      case 'ABOVE_ANY_COL': return p2 && p1.row < p2.row;
+      case 'ADJ_HORIZONTAL': return p2 && p1.row === p2.row && Math.abs(p1.col - p2.col) === 1;
+      case 'ADJ_VERTICAL': return p2 && p1.col === p2.col && Math.abs(p1.row - p2.row) === 1;
+      case 'ADJ_DIAGONAL': return p2 && Math.abs(p1.row - p2.row) === 1 && Math.abs(p1.col - p2.col) === 1;
+      case 'ADJ_ORTHOGONAL': {
+        if (p2) {
+          return (p1.row === p2.row && Math.abs(p1.col - p2.col) === 1)
+            || (p1.col === p2.col && Math.abs(p1.row - p2.row) === 1);
+        }
+        const neighbors = [
+          { r: p1.row - 1, c: p1.col }, { r: p1.row + 1, c: p1.col },
+          { r: p1.row, c: p1.col - 1 }, { r: p1.row, c: p1.col + 1 },
+        ];
+        for (const { r, c } of neighbors) {
+          if (r >= 0 && r < size && c >= 0 && c < size) {
+            const cell = grid[r][c];
+            if (clue.item2 === 'Lamp' && cell.staticObject === 'lamp') return true;
+            if (clue.item2 === 'Bench' && cell.staticObject === 'bench') return true;
+            if (clue.item2 === 'Hydrant' && cell.staticObject === 'hydrant') return true;
+          }
+        }
+        return false;
+      }
+      case 'ADJ_ANY': {
+        if (p2) {
+          return Math.abs(p1.row - p2.row) <= 1 && Math.abs(p1.col - p2.col) <= 1 && !(p1.row === p2.row && p1.col === p2.col);
+        }
+        const neighbors = [
+          { r: p1.row - 1, c: p1.col - 1 }, { r: p1.row - 1, c: p1.col }, { r: p1.row - 1, c: p1.col + 1 },
+          { r: p1.row, c: p1.col - 1 }, { r: p1.row, c: p1.col + 1 },
+          { r: p1.row + 1, c: p1.col - 1 }, { r: p1.row + 1, c: p1.col }, { r: p1.row + 1, c: p1.col + 1 },
+        ];
+        for (const { r, c } of neighbors) {
+          if (r >= 0 && r < size && c >= 0 && c < size) {
+            const cell = grid[r][c];
+            if (clue.item2 === 'Lamp' && cell.staticObject === 'lamp') return true;
+            if (clue.item2 === 'Bench' && cell.staticObject === 'bench') return true;
+            if (clue.item2 === 'Hydrant' && cell.staticObject === 'hydrant') return true;
+          }
+        }
+        return false;
+      }
+      case 'NOT_ADJACENT':
+        return p2 && !(Math.abs(p1.row - p2.row) <= 1 && Math.abs(p1.col - p2.col) <= 1);
+      case 'NOT_ADJ_ORTHOGONAL':
+        return p2 && !((p1.row === p2.row && Math.abs(p1.col - p2.col) === 1) || (p1.col === p2.col && Math.abs(p1.row - p2.row) === 1));
+      case 'NOT_ADJ_DIAGONAL':
+        return p2 && !(Math.abs(p1.row - p2.row) === 1 && Math.abs(p1.col - p2.col) === 1);
+      default:
+        return true;
+    }
+  };
+
+  const countSolutions = (clues, maxCount = 2) => {
+    const validCells = [];
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
+        if (grid[r][c].terrain !== 'fog' && grid[r][c].staticObject === 'none') {
+          validCells.push({ row: r, col: c });
+        }
+      }
+    }
+
+    let count = 0;
+    const solve = (index, placement, usedRows, usedCols) => {
+      if (count >= maxCount) return;
+      if (index === itemIds.length) {
+        const allSatisfied = clues.every((clue) => checkClueSatisfied(clue, placement));
+        if (allSatisfied) count += 1;
+        return;
+      }
+
+      const itemId = itemIds[index];
+      for (const cell of validCells) {
+        if (usedRows.has(cell.row) || usedCols.has(cell.col)) continue;
+
+        const newPlacement = { ...placement, [itemId]: cell };
+        const partialOk = clues.every((clue) => {
+          if (clue.item1 !== itemId && clue.item2 !== itemId) return true;
+          const p1 = newPlacement[clue.item1];
+          const p2 = newPlacement[clue.item2];
+          if (!p1) return true;
+          if (!['Lamp', 'Bench', 'Hydrant', 'Fog', 'Street', 'Park', 'Building'].includes(clue.item2)
+              && !Number.isNaN(Number(clue.item2)) && !COL_LABELS.includes(clue.item2) && !p2) return true;
+          return checkClueSatisfied(clue, newPlacement);
+        });
+
+        if (partialOk) {
+          usedRows.add(cell.row);
+          usedCols.add(cell.col);
+          solve(index + 1, newPlacement, usedRows, usedCols);
+          usedRows.delete(cell.row);
+          usedCols.delete(cell.col);
+        }
+      }
+    };
+
+    solve(0, {}, new Set(), new Set());
+    return count;
+  };
+
+  const itemCoverage = {};
+  itemIds.forEach((id) => { itemCoverage[id] = []; });
+  possibleClues.forEach((clue) => {
+    if (itemCoverage[clue.item1]) itemCoverage[clue.item1].push(clue);
+    if (itemCoverage[clue.item2]) itemCoverage[clue.item2].push(clue);
+  });
+
   const selectedClues = [];
   const selectedKeys = new Set();
-  const targetCount = size + Math.floor(size / 2) + 2;
-  let activeRelations = shuffle(Object.keys(cluesByRelation));
 
-  while (selectedClues.length < targetCount && activeRelations.length) {
-    const nextRelations = [];
-    activeRelations.forEach((relation) => {
-      const bucket = cluesByRelation[relation];
-      if (!bucket || !bucket.length) return;
-      const randomClueIndex = Math.floor(Math.random() * bucket.length);
-      const clue = bucket[randomClueIndex];
+  const addClue = (clue) => {
+    const key = clue.item1 + clue.relation + clue.item2;
+    if (selectedKeys.has(key)) return false;
+    clue.id = nextId();
+    selectedClues.push(clue);
+    selectedKeys.add(key);
+    return true;
+  };
 
-      const uniqueKey = clue.item1 + clue.relation + clue.item2;
-      if (!selectedKeys.has(uniqueKey)) {
-        clue.id = nextId();
-        selectedClues.push(clue);
-        selectedKeys.add(uniqueKey);
-      }
+  const strongRelations = ['ROW', 'COL', 'ON', 'ADJ_ORTHOGONAL', 'ADJ_HORIZONTAL', 'ADJ_VERTICAL'];
+  const uncoveredItems = new Set(itemIds);
 
-      bucket.splice(randomClueIndex, 1);
-      if (bucket.length) {
-        nextRelations.push(relation);
-      }
+  shuffle(itemIds).forEach((itemId) => {
+    if (!uncoveredItems.has(itemId)) return;
+    const cluesForItem = shuffle(itemCoverage[itemId] || []);
+    const strongClue = cluesForItem.find((c) => strongRelations.includes(c.relation));
+    if (strongClue && addClue(strongClue)) {
+      uncoveredItems.delete(strongClue.item1);
+      if (itemCoverage[strongClue.item2]) uncoveredItems.delete(strongClue.item2);
+    } else if (cluesForItem.length && addClue(cluesForItem[0])) {
+      uncoveredItems.delete(cluesForItem[0].item1);
+      if (itemCoverage[cluesForItem[0].item2]) uncoveredItems.delete(cluesForItem[0].item2);
+    }
+  });
+
+  const shuffledClues = shuffle(possibleClues);
+  let iterations = 0;
+  const maxIterations = 200;
+
+  while (countSolutions(selectedClues, 2) > 1 && iterations < maxIterations) {
+    iterations += 1;
+    const clueToAdd = shuffledClues.find((c) => {
+      const key = c.item1 + c.relation + c.item2;
+      return !selectedKeys.has(key);
     });
-    activeRelations = shuffle(nextRelations);
+    if (!clueToAdd) break;
+    addClue(clueToAdd);
+    shuffledClues.splice(shuffledClues.indexOf(clueToAdd), 1);
+  }
+
+  if (selectedClues.length < size) {
+    const extraClues = shuffle(possibleClues.filter((c) => !selectedKeys.has(c.item1 + c.relation + c.item2)));
+    for (let i = 0; i < Math.min(2, extraClues.length) && selectedClues.length < size + 2; i += 1) {
+      addClue(extraClues[i]);
+    }
   }
 
   return selectedClues;

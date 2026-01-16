@@ -39,16 +39,16 @@ export default function LogicItemTray({
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 10,
     paddingBottom: 6,
     borderTopWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     backgroundColor: '#141010',
   },
   row: {
+    paddingTop: 14,
     paddingHorizontal: 12,
     gap: 8,
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   itemButton: {
     width: 64,

@@ -38,6 +38,11 @@ export default function LogicGrid({
   const cellLayoutsRef = useRef({});
   const gridRef = useRef(null);
   const containerPositionRef = useRef({ x: 0, y: 0 });
+  const measurementReadyRef = useRef(false);
+  const dragStartPosRef = useRef(null);
+  const isDraggingRef = useRef(false);
+
+  const MIN_DRAG_DISTANCE = 8;
 
   const placedLookup = useMemo(() => {
     const lookup = {};
@@ -87,7 +92,7 @@ export default function LogicGrid({
     const layouts = Object.values(cellLayoutsRef.current);
     if (!layouts.length) return null;
     for (const cell of layouts) {
-      const margin = CELL_MARGIN;
+      const margin = 4;
       if (
         relX >= cell.x - margin &&
         relX <= cell.x + cell.width + margin &&
@@ -140,25 +145,43 @@ export default function LogicGrid({
     onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
     onStartShouldSetPanResponderCapture: () => false,
     onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
-    onPanResponderGrant: () => {
+    onPanResponderGrant: (event) => {
+      measurementReadyRef.current = false;
+      isDraggingRef.current = false;
+      const { pageX, pageY } = event.nativeEvent;
+      dragStartPosRef.current = { x: pageX, y: pageY };
       if (gridRef.current) {
         gridRef.current.measureInWindow((x, y) => {
           containerPositionRef.current = { x, y };
+          measurementReadyRef.current = true;
         });
       }
     },
     onPanResponderMove: (event) => {
+      if (!measurementReadyRef.current) return;
+      const { pageX, pageY } = event.nativeEvent;
+      if (!isDraggingRef.current && dragStartPosRef.current) {
+        const dx = pageX - dragStartPosRef.current.x;
+        const dy = pageY - dragStartPosRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < MIN_DRAG_DISTANCE) return;
+        isDraggingRef.current = true;
+      }
       const cell = resolveCellFromEvent(event);
       if (cell) applyPencilAlongPath(cell.row, cell.col);
     },
     onPanResponderRelease: () => {
       dragActionRef.current = null;
       lastCellRef.current = null;
+      isDraggingRef.current = false;
+      dragStartPosRef.current = null;
     },
     onPanResponderTerminationRequest: () => true,
     onPanResponderTerminate: () => {
       dragActionRef.current = null;
       lastCellRef.current = null;
+      isDraggingRef.current = false;
+      dragStartPosRef.current = null;
     },
   }), [isPencilMode, activeItemId, candidateLookup, cellSize, labelSize, grid]);
 
