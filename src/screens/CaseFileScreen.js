@@ -466,8 +466,13 @@ export default function CaseFileScreen({
     (!isSubchapterC && narrativeReadyForPuzzleCheck)
   );
 
-  // Don't show "Continue Investigation" if puzzle is pending for the current case
-  const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision && !puzzlePhasePending);
+  // Check if narrative is currently in progress (not yet complete)
+  const narrativeInProgress = hasBranchingNarrative && !narrativeComplete && !existingBranchingChoice;
+
+  // Don't show "Continue Investigation" if:
+  // - Puzzle is pending (narrative done, puzzle not done)
+  // - Narrative is in progress (still reading)
+  const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision && !puzzlePhasePending && !narrativeInProgress);
   const nextStoryLabel = storyCampaign?.chapter != null && storyCampaign?.subchapter != null 
     ? `Chapter ${storyCampaign.chapter}.${storyCampaign.subchapter}` 
     : "the next chapter";
