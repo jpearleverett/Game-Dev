@@ -485,10 +485,11 @@ export function GameProvider({
         completedCaseNumbers,
         startedAt: currentStory.startedAt || nowIso,
       };
+      let nextCaseNumber = null;
 
       if (!isFinalSubchapter) {
         const nextSubchapter = currentStory.subchapter + 1;
-        const nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
+        nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
         updatedStory = {
           ...updatedStory,
           subchapter: nextSubchapter,
@@ -502,7 +503,14 @@ export function GameProvider({
         storyCampaign: updatedStory,
         nextUnlockAt: updatedStory.nextStoryUnlockAt,
       });
-  }, [mode, progress.storyCampaign, updateProgress, story, audio]);
+
+      if (nextCaseNumber) {
+        const nextCase = getCaseByNumber(nextCaseNumber);
+        if (nextCase?.id) {
+          setActiveCaseInternal(nextCase.id);
+        }
+      }
+  }, [mode, progress.storyCampaign, updateProgress, story, audio, setActiveCaseInternal]);
 
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
