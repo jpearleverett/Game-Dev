@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FONTS } from '../../constants/typography';
 
 const RELATION_ICONS = {
@@ -99,14 +100,41 @@ export default function LogicClueDrawer({
   violatedClueId,
   expanded,
   onToggle,
+  isPencilMode,
+  onToggleMode,
 }) {
   const sortedClues = useMemo(() => clues || [], [clues]);
 
   return (
     <View style={[styles.container, expanded && styles.containerExpanded]}>
-      <Pressable onPress={onToggle} style={styles.handle}>
-        <Text style={styles.handleLabel}>{expanded ? 'Hide Clues' : 'Clue File'}</Text>
-      </Pressable>
+      <View style={styles.handle}>
+        <View style={styles.modeButtons}>
+          <Pressable
+            onPress={() => onToggleMode?.(false)}
+            style={[styles.modeButton, !isPencilMode && styles.modeButtonActive]}
+          >
+            <MaterialCommunityIcons
+              name="stamp"
+              size={16}
+              color={isPencilMode ? '#8a7a6a' : '#1a120b'}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => onToggleMode?.(true)}
+            style={[styles.modeButton, isPencilMode && styles.modeButtonActive]}
+          >
+            <MaterialCommunityIcons
+              name="pencil"
+              size={16}
+              color={isPencilMode ? '#1a120b' : '#8a7a6a'}
+            />
+          </Pressable>
+        </View>
+        <Pressable onPress={onToggle} style={styles.handleTouchable}>
+          <Text style={styles.handleLabel}>{expanded ? 'Hide Clues' : 'Clue File'}</Text>
+        </Pressable>
+        <View style={styles.handleSpacer} />
+      </View>
       {expanded && (
         <ScrollView contentContainerStyle={styles.clueList} showsVerticalScrollIndicator={false}>
           {sortedClues.map((clue) => {
@@ -151,10 +179,38 @@ const styles = StyleSheet.create({
     maxHeight: 220,
   },
   handle: {
-    paddingVertical: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+  },
+  modeButtons: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  modeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#2a1d15',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeButtonActive: {
+    backgroundColor: '#d7ccc8',
+    borderColor: '#e8ddd4',
+  },
+  handleTouchable: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  handleSpacer: {
+    width: 60,
   },
   handleLabel: {
     fontFamily: FONTS.monoBold,

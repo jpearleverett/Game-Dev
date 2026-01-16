@@ -36,6 +36,8 @@ export default function LogicGrid({
   const rowOffsetsRef = useRef({});
   const pendingCellLayoutsRef = useRef({});
   const cellLayoutsRef = useRef({});
+  const gridRef = useRef(null);
+  const containerPositionRef = useRef({ x: 0, y: 0 });
 
   const placedLookup = useMemo(() => {
     const lookup = {};
@@ -79,16 +81,18 @@ export default function LogicGrid({
 
   const resolveCellFromEvent = (event) => {
     if (!grid?.length) return null;
-    const { locationX, locationY } = event.nativeEvent;
+    const { pageX, pageY } = event.nativeEvent;
+    const relX = pageX - containerPositionRef.current.x;
+    const relY = pageY - containerPositionRef.current.y;
     const layouts = Object.values(cellLayoutsRef.current);
     if (!layouts.length) return null;
     for (const cell of layouts) {
       const margin = CELL_MARGIN;
       if (
-        locationX >= cell.x - margin &&
-        locationX <= cell.x + cell.width + margin &&
-        locationY >= cell.y - margin &&
-        locationY <= cell.y + cell.height + margin
+        relX >= cell.x - margin &&
+        relX <= cell.x + cell.width + margin &&
+        relY >= cell.y - margin &&
+        relY <= cell.y + cell.height + margin
       ) {
         const gridCell = grid[cell.row]?.[cell.col];
         if (!gridCell || gridCell.terrain === 'fog' || gridCell.staticObject !== 'none') return null;
@@ -136,6 +140,13 @@ export default function LogicGrid({
     onMoveShouldSetPanResponder: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
     onStartShouldSetPanResponderCapture: () => false,
     onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
+    onPanResponderGrant: () => {
+      if (gridRef.current) {
+        gridRef.current.measureInWindow((x, y) => {
+          containerPositionRef.current = { x, y };
+        });
+      }
+    },
     onPanResponderMove: (event) => {
       const cell = resolveCellFromEvent(event);
       if (cell) applyPencilAlongPath(cell.row, cell.col);
@@ -157,7 +168,15 @@ export default function LogicGrid({
 
   return (
     <View
+      ref={gridRef}
       style={[styles.gridContainer, { padding }]}
+      onLayout={() => {
+        if (gridRef.current) {
+          gridRef.current.measureInWindow((x, y) => {
+            containerPositionRef.current = { x, y };
+          });
+        }
+      }}
       {...(isPencilMode ? panResponder.panHandlers : {})}
     >
       <View style={styles.row}>
