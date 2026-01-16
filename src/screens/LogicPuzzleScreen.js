@@ -46,8 +46,21 @@ export default function LogicPuzzleScreen({ navigation }) {
   const [activeItemId, setActiveItemId] = useState(null);
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [cluesExpanded, setCluesExpanded] = useState(false);
+  const [checkedClues, setCheckedClues] = useState(new Set());
 
   const saveTimerRef = useRef(null);
+
+  const handleToggleClueCheck = useCallback((clueId) => {
+    setCheckedClues((prev) => {
+      const next = new Set(prev);
+      if (next.has(clueId)) {
+        next.delete(clueId);
+      } else {
+        next.add(clueId);
+      }
+      return next;
+    });
+  }, []);
 
   const caseTitle = activeCase?.title || puzzle?.story || 'Unsolved Mystery';
   const summary = activeCase?.briefing?.summary || activeCase?.storyMeta?.bridgeText || null;
@@ -531,6 +544,8 @@ export default function LogicPuzzleScreen({ navigation }) {
               onToggle={() => setCluesExpanded((prev) => !prev)}
               isPencilMode={isPencilMode}
               onToggleMode={setIsPencilMode}
+              checkedClues={checkedClues}
+              onToggleClueCheck={handleToggleClueCheck}
             />
           </>
         )}

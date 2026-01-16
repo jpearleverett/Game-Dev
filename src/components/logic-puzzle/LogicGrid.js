@@ -91,20 +91,29 @@ export default function LogicGrid({
     const relY = pageY - containerPositionRef.current.y;
     const layouts = Object.values(cellLayoutsRef.current);
     if (!layouts.length) return null;
+
+    // Find the cell whose center is closest to the touch point
+    let bestCell = null;
+    let bestDistance = Infinity;
+    const maxDistance = cellSize * 0.75; // Only match if within 75% of cell size
+
     for (const cell of layouts) {
-      const margin = 4;
-      if (
-        relX >= cell.x - margin &&
-        relX <= cell.x + cell.width + margin &&
-        relY >= cell.y - margin &&
-        relY <= cell.y + cell.height + margin
-      ) {
+      const centerX = cell.x + cell.width / 2;
+      const centerY = cell.y + cell.height / 2;
+      const dx = relX - centerX;
+      const dy = relY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < bestDistance && distance < maxDistance) {
         const gridCell = grid[cell.row]?.[cell.col];
-        if (!gridCell || gridCell.terrain === 'fog' || gridCell.staticObject !== 'none') return null;
-        return { row: cell.row, col: cell.col };
+        if (gridCell && gridCell.terrain !== 'fog' && gridCell.staticObject === 'none') {
+          bestDistance = distance;
+          bestCell = { row: cell.row, col: cell.col };
+        }
       }
     }
-    return null;
+
+    return bestCell;
   };
 
   const applyPencilAtCell = (row, col) => {

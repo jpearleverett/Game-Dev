@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FONTS } from '../../constants/typography';
 
@@ -63,8 +64,9 @@ const buildGridMask = (relation) => {
 const RelationGrid = ({ relation, status }) => {
   const active = buildGridMask(relation);
   const isNegative = relation.startsWith('NOT_');
+  const isChecked = status === 'checked';
   return (
-    <View style={styles.gridIcon}>
+    <View style={[styles.gridIcon, isChecked && styles.gridIconChecked]}>
       {[0, 1, 2].map((r) => (
         <View key={`r-${r}`} style={styles.gridRow}>
           {[0, 1, 2].map((c) => {
@@ -73,9 +75,11 @@ const RelationGrid = ({ relation, status }) => {
             const isActive = active.has(key);
             const baseStyle = [styles.gridCell];
             if (isCenter) {
-              baseStyle.push(styles.gridCellCenter);
+              baseStyle.push(isChecked ? styles.gridCellCenterChecked : styles.gridCellCenter);
             } else if (isActive) {
-              if (isNegative) {
+              if (isChecked) {
+                baseStyle.push(styles.gridCellActiveChecked);
+              } else if (isNegative) {
                 if (status === 'violated') baseStyle.push(styles.gridCellActiveBad);
                 else baseStyle.push(styles.gridCellActiveNegative);
               } else if (status === 'satisfied') {
@@ -84,7 +88,7 @@ const RelationGrid = ({ relation, status }) => {
                 baseStyle.push(styles.gridCellActivePositive);
               }
             } else {
-              baseStyle.push(styles.gridCellInactive);
+              baseStyle.push(isChecked ? styles.gridCellInactiveChecked : styles.gridCellInactive);
             }
             return <View key={key} style={baseStyle} />;
           })}
@@ -102,8 +106,17 @@ export default function LogicClueDrawer({
   onToggle,
   isPencilMode,
   onToggleMode,
+  checkedClues,
+  onToggleClueCheck,
 }) {
   const sortedClues = useMemo(() => clues || [], [clues]);
+
+  const handleLongPress = (clueId) => {
+    if (onToggleClueCheck) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      onToggleClueCheck(clueId);
+    }
+  };
 
   return (
     <View style={[styles.container, expanded && styles.containerExpanded]}>
@@ -140,27 +153,35 @@ export default function LogicClueDrawer({
           {sortedClues.map((clue) => {
             const status = clueStatuses?.[clue.id] || 'neutral';
             const isViolated = violatedClueId === clue.id || status === 'violated';
-            const badge = status === 'satisfied' ? '✓' : isViolated ? '!' : '';
+            const isChecked = checkedClues?.has(clue.id) && status !== 'satisfied';
+            const badge = status === 'satisfied' ? '✓' : isViolated ? '!' : isChecked ? '✓' : '';
             return (
-              <View
+              <Pressable
                 key={clue.id}
+                onLongPress={() => handleLongPress(clue.id)}
+                delayLongPress={500}
                 style={[
                   styles.clueCard,
                   status === 'satisfied' && styles.clueSatisfied,
                   isViolated && styles.clueViolated,
+                  isChecked && styles.clueChecked,
                 ]}
               >
                 <View style={styles.clueRow}>
-                  <Text style={styles.clueIcon}>{clue.icon1}</Text>
-                <View style={styles.relationBadge}>
+                  <Text style={[styles.clueIcon, isChecked && styles.clueIconChecked]}>{clue.icon1}</Text>
+                  <View style={[styles.relationBadge, isChecked && styles.relationBadgeChecked]}>
                     {GRID_RELATIONS.has(clue.relation)
-                      ? <RelationGrid relation={clue.relation} status={status} />
-                      : <Text style={styles.relationText}>{RELATION_ICONS[clue.relation] || '?'}</Text>}
+                      ? <RelationGrid relation={clue.relation} status={isChecked ? 'checked' : status} />
+                      : <Text style={[styles.relationText, isChecked && styles.relationTextChecked]}>{RELATION_ICONS[clue.relation] || '?'}</Text>}
+                  </View>
+                  <Text style={[styles.clueIcon, isChecked && styles.clueIconChecked]}>{clue.icon2}</Text>
                 </View>
-                  <Text style={styles.clueIcon}>{clue.icon2}</Text>
-                </View>
-                {badge ? <Text style={styles.statusBadge}>{badge}</Text> : null}
-              </View>
+                {badge ? (
+                  <View style={[styles.statusBadgeContainer, isChecked && styles.statusBadgeChecked]}>
+                    <Text style={[styles.statusBadge, isChecked && styles.statusBadgeTextChecked]}>{badge}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -243,6 +264,11 @@ const styles = StyleSheet.create({
     borderColor: '#ef5350',
     backgroundColor: 'rgba(239,83,80,0.12)',
   },
+  clueChecked: {
+    opacity: 0.5,
+    borderColor: '#8d6e63',
+    backgroundColor: '#1a1410',
+  },
   clueRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -253,6 +279,9 @@ const styles = StyleSheet.create({
     color: '#f4e6d4',
     fontFamily: FONTS.monoBold,
   },
+  clueIconChecked: {
+    opacity: 0.6,
+  },
   relationBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -261,17 +290,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  relationBadgeChecked: {
+    backgroundColor: '#2a1d15',
+  },
   relationText: {
     fontFamily: FONTS.monoBold,
     fontSize: 14,
     letterSpacing: 1.2,
     color: '#f4e6d4',
   },
+  relationTextChecked: {
+    opacity: 0.6,
+  },
   gridIcon: {
     width: 22,
     height: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  gridIconChecked: {
+    opacity: 0.6,
   },
   gridRow: {
     flexDirection: 'row',
@@ -285,8 +323,14 @@ const styles = StyleSheet.create({
   gridCellCenter: {
     backgroundColor: '#f4e6d4',
   },
+  gridCellCenterChecked: {
+    backgroundColor: '#8a7a6a',
+  },
   gridCellActive: {
     backgroundColor: '#cfd8dc',
+  },
+  gridCellActiveChecked: {
+    backgroundColor: '#6a5a4a',
   },
   gridCellActivePositive: {
     backgroundColor: '#7db4ff',
@@ -303,11 +347,28 @@ const styles = StyleSheet.create({
   gridCellInactive: {
     backgroundColor: '#5a4a3d',
   },
-  statusBadge: {
+  gridCellInactiveChecked: {
+    backgroundColor: '#3a3025',
+  },
+  statusBadgeContainer: {
     position: 'absolute',
-    top: 6,
-    right: 10,
+    top: 0,
+    right: 0,
+  },
+  statusBadge: {
     fontFamily: FONTS.monoBold,
+    fontSize: 12,
     color: '#f4e6d4',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  statusBadgeChecked: {
+    backgroundColor: '#5d4037',
+    borderBottomLeftRadius: 6,
+    borderTopRightRadius: 7,
+  },
+  statusBadgeTextChecked: {
+    color: '#ffffff',
+    fontSize: 10,
   },
 });
