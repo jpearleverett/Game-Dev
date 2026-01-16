@@ -464,9 +464,16 @@ export default function LogicPuzzleScreen({ navigation }) {
             <Text style={styles.headerLabel}>Case File</Text>
             <Text style={styles.headerTitleText}>{caseTitle}</Text>
           </View>
-          <View style={styles.headerMeta}>
-            <Text style={styles.metaLabel}>Mistakes</Text>
-            <Text style={styles.metaValue}>{mistakes}</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.headerMeta}>
+              <Text style={styles.metaLabel}>Mistakes</Text>
+              <Text style={styles.metaValue}>{mistakes}</Text>
+            </View>
+            {puzzle && (
+              <Pressable onPress={checkSolution} style={styles.checkButton}>
+                <Text style={styles.checkButtonText}>Solve</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -485,11 +492,6 @@ export default function LogicPuzzleScreen({ navigation }) {
 
         {status !== STATUS.ERROR && puzzle && (
           <>
-            {errorMsg ? (
-              <View style={styles.toast}>
-                <Text style={styles.toastText}>{errorMsg}</Text>
-              </View>
-            ) : null}
             <View style={styles.gridWrap}>
               <LogicGrid
                 grid={puzzle.grid}
@@ -508,9 +510,11 @@ export default function LogicPuzzleScreen({ navigation }) {
                   <MaterialCommunityIcons name="undo-variant" size={18} color="#f4e6d4" />
                 </Pressable>
               </View>
-            </View>
-            <View style={styles.actionRow}>
-              <PrimaryButton label="Check Solution" onPress={checkSolution} fullWidth />
+              {errorMsg ? (
+                <View style={styles.gridToast}>
+                  <Text style={styles.toastText}>{errorMsg}</Text>
+                </View>
+              ) : null}
             </View>
             <LogicItemTray
               items={puzzle.items}
@@ -575,9 +579,26 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     color: '#f4e6d4',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   headerMeta: {
-    minWidth: 60,
     alignItems: 'flex-end',
+  },
+  checkButton: {
+    backgroundColor: '#d7ccc8',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  checkButtonText: {
+    fontFamily: FONTS.monoBold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: '#1a120b',
   },
   metaLabel: {
     fontFamily: FONTS.mono,
@@ -614,20 +635,24 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary,
     color: '#ffb4a2',
   },
-  toast: {
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(33,33,33,0.92)',
+  gridToast: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    transform: [{ translateY: -20 }],
+    alignItems: 'center',
   },
   toastText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.monoBold,
+    fontSize: 12,
+    letterSpacing: 1.5,
     color: '#ffb4a2',
-    letterSpacing: 1.2,
-  },
-  actionRow: {
-    paddingVertical: SPACING.xs,
+    backgroundColor: 'rgba(33,33,33,0.95)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
   },
   gridWrap: {
     alignSelf: 'center',
