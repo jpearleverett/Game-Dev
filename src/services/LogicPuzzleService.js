@@ -568,13 +568,6 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
     return count;
   };
 
-  const itemCoverage = {};
-  itemIds.forEach((id) => { itemCoverage[id] = []; });
-  possibleClues.forEach((clue) => {
-    if (itemCoverage[clue.item1]) itemCoverage[clue.item1].push(clue);
-    if (itemCoverage[clue.item2]) itemCoverage[clue.item2].push(clue);
-  });
-
   const selectedClues = [];
   const selectedKeys = new Set();
 
@@ -587,41 +580,105 @@ const generateCluesAlgorithmic = (grid, solution, items) => {
     return true;
   };
 
-  const strongRelations = ['ROW', 'COL', 'ON', 'ADJ_ORTHOGONAL', 'ADJ_HORIZONTAL', 'ADJ_VERTICAL'];
-  const uncoveredItems = new Set(itemIds);
+  const cluesByItem = {};
+  itemIds.forEach((id) => { cluesByItem[id] = { row: [], col: [], strong: [], other: [] }; });
 
-  shuffle(itemIds).forEach((itemId) => {
-    if (!uncoveredItems.has(itemId)) return;
-    const cluesForItem = shuffle(itemCoverage[itemId] || []);
-    const strongClue = cluesForItem.find((c) => strongRelations.includes(c.relation));
-    if (strongClue && addClue(strongClue)) {
-      uncoveredItems.delete(strongClue.item1);
-      if (itemCoverage[strongClue.item2]) uncoveredItems.delete(strongClue.item2);
-    } else if (cluesForItem.length && addClue(cluesForItem[0])) {
-      uncoveredItems.delete(cluesForItem[0].item1);
-      if (itemCoverage[cluesForItem[0].item2]) uncoveredItems.delete(cluesForItem[0].item2);
+  possibleClues.forEach((clue) => {
+    const bucket = cluesByItem[clue.item1];
+    if (!bucket) return;
+    if (clue.relation === 'ROW') bucket.row.push(clue);
+    else if (clue.relation === 'COL') bucket.col.push(clue);
+    else if (['ON', 'ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'ADJ_ORTHOGONAL', 'LEFT_OF', 'ABOVE'].includes(clue.relation)) {
+      bucket.strong.push(clue);
+    } else {
+      bucket.other.push(clue);
     }
   });
 
-  const shuffledClues = shuffle(possibleClues);
-  let iterations = 0;
-  const maxIterations = 200;
+  const itemsNeedingRow = new Set(itemIds);
+  const itemsNeedingCol = new Set(itemIds);
 
-  while (countSolutions(selectedClues, 2) > 1 && iterations < maxIterations) {
+  shuffle(itemIds).forEach((itemId) => {
+    const bucket = cluesByItem[itemId];
+    if (itemsNeedingRow.has(itemId) && bucket.row.length) {
+      const clue = bucket.row[Math.floor(Math.random() * bucket.row.length)];
+      if (addClue(clue)) itemsNeedingRow.delete(itemId);
+    }
+    if (itemsNeedingCol.has(itemId) && bucket.col.length) {
+      const clue = bucket.col[Math.floor(Math.random() * bucket.col.length)];
+      if (addClue(clue)) itemsNeedingCol.delete(itemId);
+    }
+  });
+
+  shuffle(itemIds).forEach((itemId) => {
+    const bucket = cluesByItem[itemId];
+    if (itemsNeedingRow.has(itemId) || itemsNeedingCol.has(itemId)) {
+      const strongClues = shuffle(bucket.strong);
+      for (const clue of strongClues) {
+        if (addClue(clue)) {
+          if (clue.relation === 'LEFT_OF' || clue.relation === 'ADJ_HORIZONTAL') {
+            itemsNeedingRow.delete(clue.item1);
+            itemsNeedingRow.delete(clue.item2);
+          }
+          if (clue.relation === 'ABOVE' || clue.relation === 'ADJ_VERTICAL') {
+            itemsNeedingCol.delete(clue.item1);
+            itemsNeedingCol.delete(clue.item2);
+          }
+          break;
+        }
+      }
+    }
+  });
+
+  let currentSolutions = countSolutions(selectedClues, 100);
+  let iterations = 0;
+  const maxIterations = 50;
+
+  while (currentSolutions > 1 && iterations < maxIterations) {
     iterations += 1;
-    const clueToAdd = shuffledClues.find((c) => {
-      const key = c.item1 + c.relation + c.item2;
-      return !selectedKeys.has(key);
-    });
-    if (!clueToAdd) break;
-    addClue(clueToAdd);
-    shuffledClues.splice(shuffledClues.indexOf(clueToAdd), 1);
+
+    const candidateClues = possibleClues.filter((c) => !selectedKeys.has(c.item1 + c.relation + c.item2));
+    if (!candidateClues.length) break;
+
+    let bestClue = null;
+    let bestReduction = 0;
+    const samplesToTest = Math.min(candidateClues.length, 20);
+    const sample = shuffle(candidateClues).slice(0, samplesToTest);
+
+    for (const clue of sample) {
+      const testClues = [...selectedClues, clue];
+      const newCount = countSolutions(testClues, currentSolutions);
+      const reduction = currentSolutions - newCount;
+      if (reduction > bestReduction) {
+        bestReduction = reduction;
+        bestClue = clue;
+      }
+    }
+
+    if (bestClue && bestReduction > 0) {
+      addClue(bestClue);
+      currentSolutions -= bestReduction;
+    } else {
+      const fallback = sample.find((c) => ['ROW', 'COL', 'ON', 'ADJ_HORIZONTAL', 'ADJ_VERTICAL'].includes(c.relation))
+        || sample[0];
+      if (fallback) {
+        addClue(fallback);
+        currentSolutions = countSolutions(selectedClues, 100);
+      }
+    }
   }
 
-  if (selectedClues.length < size) {
-    const extraClues = shuffle(possibleClues.filter((c) => !selectedKeys.has(c.item1 + c.relation + c.item2)));
-    for (let i = 0; i < Math.min(2, extraClues.length) && selectedClues.length < size + 2; i += 1) {
-      addClue(extraClues[i]);
+  if (countSolutions(selectedClues, 2) > 1) {
+    const remaining = possibleClues.filter((c) => !selectedKeys.has(c.item1 + c.relation + c.item2));
+    const prioritized = [
+      ...remaining.filter((c) => c.relation === 'ROW' || c.relation === 'COL'),
+      ...remaining.filter((c) => c.relation === 'ON'),
+      ...remaining.filter((c) => ['ADJ_HORIZONTAL', 'ADJ_VERTICAL', 'LEFT_OF', 'ABOVE'].includes(c.relation)),
+      ...remaining,
+    ];
+    for (const clue of prioritized) {
+      if (countSolutions(selectedClues, 2) <= 1) break;
+      addClue(clue);
     }
   }
 
