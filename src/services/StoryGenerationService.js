@@ -46,10 +46,16 @@ import {
 // Story configuration
 const TOTAL_CHAPTERS = 12;
 const SUBCHAPTERS_PER_CHAPTER = 3;
-const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // e.g. 450
-const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // e.g. 500
+const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 800 words
+const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 900 words
 const DECISION_SUBCHAPTER = 3;
-const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 2;
+const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 1;
+
+// Text truncation lengths for prompts and logging (in characters)
+const TRUNCATE_SUMMARY = 500;       // For brief narrative summaries in prompts
+const TRUNCATE_VALIDATION = 3000;  // For full narrative in validation contexts
+const TRUNCATE_DESCRIPTION = 300;  // For thread/choice descriptions
+const TRUNCATE_PREVIEW = 100;      // For short previews/logging
 
 // ============================================================================
 // PATH PERSONALITY SYSTEM - Tracks cumulative player behavior for coherent narrative
@@ -1831,7 +1837,7 @@ Respond with a JSON object containing:
         [{ role: 'user', content: classificationPrompt }],
         {
           systemPrompt: 'You are an expert at analyzing player behavior in narrative games. Provide concise, insightful classifications.',
-          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget even at 'low' level
+          maxTokens: GENERATION_CONFIG.maxTokens.classification,
           responseSchema: {
             type: 'object',
             properties: {
@@ -2063,7 +2069,8 @@ Jack sat with that until the jukebox downstairs switched songs. Then he gathered
         }
       }
     } catch (e) {
-      // Best-effort only. Never block initialization.
+      // Best-effort only. Never block initialization, but log for debugging.
+      console.warn('[StoryGenerationService] Failed to normalize fallback templates:', e.message);
     }
   }
 
@@ -2732,7 +2739,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       [{ role: 'user', content: arcPrompt }],
       {
         systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive mystery thriller with a hidden fantasy layer.',
-        maxTokens: 4000,
+        maxTokens: GENERATION_CONFIG.maxTokens.arcPlanning,
         responseSchema: arcSchema,
       }
     );
@@ -2952,7 +2959,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       [{ role: 'user', content: outlinePrompt }],
       {
         systemPrompt: 'You are outlining a single chapter of an interactive mystery thriller. Ensure the three subchapters flow as one seamless narrative.',
-        maxTokens: 2000,
+        maxTokens: GENERATION_CONFIG.maxTokens.outline,
         responseSchema: outlineSchema,
       }
     );
@@ -3043,7 +3050,8 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     try {
       const data = await AsyncStorage.getItem(`story_arc_${arcKey}`);
       return data ? JSON.parse(data) : null;
-    } catch {
+    } catch (error) {
+      console.warn('[StoryGenerationService] Failed to load story arc:', error.message);
       return null;
     }
   }
@@ -3282,7 +3290,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         [{ role: 'user', content: consequencePrompt }],
         {
           systemPrompt: 'You are generating narrative consequences for player choices in a mystery thriller with a hidden fantasy layer.',
-          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
+          maxTokens: GENERATION_CONFIG.maxTokens.consequences,
           responseSchema: consequenceSchema,
         }
       );
@@ -3541,7 +3549,8 @@ Generate realistic, specific consequences based on the actual narrative content.
             null;
 
           alignment = opt?.personalityAlignment || null;
-        } catch {
+        } catch (error) {
+          console.warn('[StoryGenerationService] Failed to get personality alignment:', error.message);
           alignment = null;
         }
 
@@ -6182,7 +6191,7 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           const overdueTag = t.isOverdue ? '⚠️ OVERDUE' : '';
           const priorityTag = t.urgency === 'critical' ? '🔴 CRITICAL' : '🟡 URGENT';
           const desc = t.description || t.excerpt || '';
-          const truncatedDesc = desc.length > 400 ? desc.slice(0, 400) + '...' : desc;
+          const truncatedDesc = desc.length > TRUNCATE_DESCRIPTION ? desc.slice(0, TRUNCATE_DESCRIPTION) + '...' : desc;
 
           section += `\n${idx + 1}. [${priorityTag}${overdueTag ? ' ' + overdueTag : ''}] ${t.type.toUpperCase()}`;
           section += `\n   "${truncatedDesc}"`;
@@ -6213,7 +6222,7 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           section += `\n**${type.toUpperCase()}:**`;
           threadsByType[type].forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > 300 ? desc.slice(0, 300) + '...' : desc;
+            const truncatedDesc = desc.length > TRUNCATE_DESCRIPTION ? desc.slice(0, TRUNCATE_DESCRIPTION) + '...' : desc;
             section += `\n- Ch${t.chapter || '?'}: "${truncatedDesc}"`;
           });
         });
@@ -6335,7 +6344,7 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
       [{ role: 'user', content: decisionPrompt }],
       {
         systemPrompt: 'You are a narrative designer creating morally complex choices for a mystery thriller. Every decision must have real stakes and no clear "correct" answer.',
-        maxTokens: 2000,
+        maxTokens: GENERATION_CONFIG.maxTokens.outline,
         responseSchema: DECISION_ONLY_SCHEMA,
       }
     );
@@ -6800,7 +6809,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     for (const thread of toArchive) {
       const compressedThread = {
         type: thread.type,
-        description: thread.description?.slice(0, 100), // Truncate description
+        description: thread.description?.slice(0, TRUNCATE_PREVIEW), // Truncate for context
         status: thread.status,
         resolvedChapter: thread.resolvedChapter || currentChapter,
         characters: thread.characters?.slice(0, 3) || [], // Keep max 3 characters
@@ -7153,7 +7162,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           if (prevThoughtSignature && context.previousChapters?.length > 0) {
             const lastChapter = context.previousChapters[context.previousChapters.length - 1];
             const prevNarrativeSummary = lastChapter?.narrative
-              ? `Previous scene summary: ${lastChapter.narrative.slice(0, 500)}...`
+              ? `Previous scene summary: ${lastChapter.narrative.slice(0, TRUNCATE_SUMMARY)}...`
               : 'Continuing the story...';
             priorMessages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
           }
@@ -7217,7 +7226,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Get a summary of the previous narrative for context
             const lastChapter = context.previousChapters[context.previousChapters.length - 1];
             const prevNarrativeSummary = lastChapter?.narrative
-              ? `Previous scene summary: ${lastChapter.narrative.slice(0, 500)}...`
+              ? `Previous scene summary: ${lastChapter.narrative.slice(0, TRUNCATE_SUMMARY)}...`
               : 'Continuing the story...';
             messages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
           }
@@ -7912,10 +7921,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     this.pendingGenerations.set(generationKey, generationPromise);
 
     // Create a timeout promise to prevent indefinite hangs
-    // IMPORTANT: This must be longer than LLMService timeout (180s) * max retries (3)
-    // to allow retries to complete. Adding 60s buffer for network delays.
-    // Formula: (180s * 3 attempts) + 60s buffer = 600s = 10 minutes
-    const GENERATION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes (allows for 3 retries @ 180s each)
+    // IMPORTANT: Must be longer than LLMService timeout (300s) * max retries (2)
+    // to allow retries to complete. Adding buffer for network delays.
+    // Formula: (300s * 2 attempts) + 60s buffer = 660s ≈ 11 minutes
+    const GENERATION_TIMEOUT_MS = 11 * 60 * 1000; // 11 minutes (allows for 2 retries @ 300s each)
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error(`Generation timeout after ${GENERATION_TIMEOUT_MS / 1000}s for ${generationKey}`));
@@ -8906,7 +8915,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     const bn = content.branchingNarrative;
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
-      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (300-350 target, allow some flexibility)
+      const MIN_SEGMENT_WORDS = 270;  // Minimum per segment (300-350 target). 3×270=810 exceeds 800 word path minimum.
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
 
       // Validate opening
@@ -9806,7 +9815,7 @@ Check if each critical thread above is addressed through dialogue or action (not
 - Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 2A, not earlier
 ${threadSection}
 ## NARRATIVE TO CHECK:
-${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
+${narrative.slice(0, TRUNCATE_VALIDATION)}${narrative.length > 3000 ? '\n[truncated]' : ''}
 
 ## INSTRUCTIONS:
 1. Look for ANY factual contradictions (wrong years, wrong relationships, wrong names)
@@ -9830,7 +9839,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         [{ role: 'user', content: validationPrompt }],
         {
           systemPrompt: 'You are a meticulous continuity editor. Find factual errors and unaddressed plot threads. Be specific. No false positives.',
-          maxTokens: 10000, // Increased from 1000 - validation needs space for structured output
+          maxTokens: GENERATION_CONFIG.maxTokens.llmValidation,
           responseSchema: {
             type: 'object',
             properties: {
@@ -11364,7 +11373,7 @@ If no conflicts, return: {"conflicts": []}`;
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
+          maxTokens: GENERATION_CONFIG.maxTokens.validation,
           responseSchema: {
             type: 'object',
             properties: {

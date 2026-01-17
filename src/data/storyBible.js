@@ -677,9 +677,14 @@ export const GENERATION_CONFIG = {
   // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
   maxTokens: {
     subchapter: 65536,    // Gemini 3 Flash Preview max output (64k tokens)
-    expansion: 8000,      // For expansion requests
+    expansion: 8000,      // For expansion requests (currently disabled)
     validation: 1000,     // For validation passes
     pathDecisions: 65536, // Same as subchapter - no reason to limit (pay for actual tokens only)
+    classification: 1000, // For personality classification (thinking tokens consume budget)
+    arcPlanning: 4000,    // For story arc planning
+    outline: 2000,        // For chapter outlines and decision generation
+    consequences: 1000,   // For consequence generation
+    llmValidation: 10000, // For LLM-based semantic validation (needs space for structured output)
   },
 
   // Word count requirements - optimized for fast background generation
