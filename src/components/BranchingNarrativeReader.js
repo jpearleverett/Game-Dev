@@ -320,6 +320,7 @@ export default function BranchingNarrativeReader({
   onFirstChoice,
   onSecondChoice,
   onEvidenceCollected,
+  initialChoice,
   style,
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
@@ -383,6 +384,18 @@ export default function BranchingNarrativeReader({
     if (/^2[ABC]$/i.test(sk) && /^1[ABC]$/i.test(fk)) return `${fk.toUpperCase()}-${sk.toUpperCase()}`;
     return sk.toUpperCase();
   }, []);
+
+  useEffect(() => {
+    if (!initialChoice) return;
+    const initialFirst = String(initialChoice.firstChoice || '').trim().toUpperCase();
+    const initialSecondRaw = initialChoice.secondChoice || initialChoice.path || '';
+    const normalizedSecond = normalizePathKey(initialFirst, initialSecondRaw);
+    const inferredFirst = initialFirst || (normalizedSecond ? normalizedSecond.split('-')[0] : '');
+
+    if (!inferredFirst || !normalizedSecond) return;
+    if (!firstChoiceMade) setFirstChoiceMade(inferredFirst);
+    if (!secondChoiceMade) setSecondChoiceMade(normalizedSecond);
+  }, [initialChoice, normalizePathKey, firstChoiceMade, secondChoiceMade]);
 
   // Get current segments based on choices
   const currentMiddleSegment = useMemo(() => {
