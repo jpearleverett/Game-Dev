@@ -447,15 +447,20 @@ Pruning priority:
 
 These are identified gaps or important notes about the current code:
 
-1. **LogicPuzzleScreen navigation race condition (FIXED)**
-   - Previously, `targetCaseNumber` was calculated using async-updated state
-     (`progress.storyCampaign.activeCaseNumber`) which could be stale.
-   - Fix: Use `nextCaseNumber` directly calculated from chapter/subchapter.
+1. **LogicPuzzleScreen navigation flow (FIXED)**
+   - Previously, direct navigation bypassed the proper case activation flow,
+     causing missing narrative content after puzzle completion.
+   - Fix: Use `handleStoryContinue` from `useNavigationActions` hook instead
+     of direct `navigation.replace()` calls.
    - File: `src/screens/LogicPuzzleScreen.js`
 
-2. **Undefined `hasFirstDecision` in GameContext**
-   - `GameContext.js` references `hasFirstDecision` without defining it.
-   - This is likely a bug and may break chapter advancement logic.
+2. **Undefined `hasFirstDecision` in GameContext (FIXED)**
+   - `GameContext.js` referenced `hasFirstDecision` without defining it.
+   - This caused "Property 'hasFirstDecision' doesn't exist" errors that broke
+     story progression and displayed empty narrative screens.
+   - Fix: Removed the undefined variable check entirely. Background generation
+     now triggers based solely on chapter number (`chapter < 12`).
+   - File: `src/context/GameContext.js`
 
 3. **Large docs and prompt artifacts**
    - Files like `docs/storyreference.txt` and prompt dumps are large.
