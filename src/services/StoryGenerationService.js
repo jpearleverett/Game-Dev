@@ -7610,37 +7610,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           generatedContent.narrative = parts.join('\n\n');
         }
 
-        // Validate word count - only expand if significantly short
-        let wordCount = generatedContent.narrative?.split(/\s+/).length || 0;
-        let expansionAttempts = 0;
-        const MAX_EXPANSION_ATTEMPTS = 1; // Reduced to minimize API calls
-
-        while (wordCount < MIN_WORDS_PER_SUBCHAPTER && expansionAttempts < MAX_EXPANSION_ATTEMPTS) {
-          expansionAttempts++;
-          console.log(`[StoryGenerationService] Word count ${wordCount} below minimum ${MIN_WORDS_PER_SUBCHAPTER}, expansion attempt ${expansionAttempts}/${MAX_EXPANSION_ATTEMPTS}`);
-
-          const expandedNarrative = await this._expandNarrative(
-            generatedContent.narrative,
-            context,
-            TARGET_WORDS - wordCount
-          );
-
-          const expandedWordCount = expandedNarrative.split(/\s+/).length;
-
-          // Only accept expansion if it actually increased word count
-          if (expandedWordCount > wordCount) {
-            generatedContent.narrative = expandedNarrative;
-            wordCount = expandedWordCount;
-            console.log(`[StoryGenerationService] Expansion successful: ${wordCount} words`);
-          } else {
-            console.warn(`[StoryGenerationService] Expansion did not increase word count (${expandedWordCount} <= ${wordCount})`);
-            break;
-          }
-        }
-
-        // If still under minimum after retries, log warning but continue
+        // Word count check - log but DO NOT expand
+        // Expansion was causing text corruption (duplicate content, mid-word cuts like "ike taffy")
+        // Shorter stories are preferable to corrupted text
+        const wordCount = generatedContent.narrative?.split(/\s+/).length || 0;
         if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-          console.warn(`[StoryGenerationService] Word count ${wordCount} still below minimum after ${expansionAttempts} expansion attempts. Proceeding with validation.`);
+          console.log(`[StoryGenerationService] Word count ${wordCount} below minimum ${MIN_WORDS_PER_SUBCHAPTER}, proceeding without expansion (expansion disabled)`);
         }
 
         // Validate consistency (check for obvious violations)
@@ -7749,20 +7724,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           try {
             generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
 
-            // Re-validate word count for the fixed content with verification
-            let fixedWordCount = generatedContent.narrative.split(/\s+/).length;
+            // Log word count after fix (expansion disabled to prevent text corruption)
+            const fixedWordCount = generatedContent.narrative.split(/\s+/).length;
             if (fixedWordCount < MIN_WORDS_PER_SUBCHAPTER) {
-              const expandedNarrative = await this._expandNarrative(
-                generatedContent.narrative,
-                context,
-                TARGET_WORDS - fixedWordCount
-              );
-              const newWordCount = expandedNarrative.split(/\s+/).length;
-              // Only accept if expansion actually helped
-              if (newWordCount > fixedWordCount) {
-                generatedContent.narrative = expandedNarrative;
-                console.log(`[StoryGenerationService] Post-fix expansion: ${fixedWordCount} -> ${newWordCount} words`);
-              }
+              console.log(`[StoryGenerationService] Post-fix word count ${fixedWordCount} below minimum, proceeding without expansion`);
             }
 
             validationResult = this._validateConsistency(generatedContent, context);
@@ -8918,11 +8883,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     });
 
     // =========================================================================
-    // CATEGORY 8: WORD COUNT VALIDATION
+    // CATEGORY 8: WORD COUNT VALIDATION (WARNINGS ONLY)
+    // Expansion was causing text corruption so short narratives are now accepted
     // =========================================================================
     const wordCount = narrativeOriginal.split(/\s+/).filter(w => w.length > 0).length;
     if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-      issues.push(`Narrative too short: ${wordCount} words (minimum ${MIN_WORDS_PER_SUBCHAPTER} required)`);
+      warnings.push(`Narrative shorter than minimum: ${wordCount} words (minimum ${MIN_WORDS_PER_SUBCHAPTER})`);
     } else if (wordCount < TARGET_WORDS * 0.85) {
       warnings.push(`Narrative shorter than target: ${wordCount} words (target ${TARGET_WORDS})`);
     }
