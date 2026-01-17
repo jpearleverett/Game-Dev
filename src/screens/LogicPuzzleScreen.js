@@ -8,12 +8,13 @@ import LogicGrid from '../components/logic-puzzle/LogicGrid';
 import LogicClueDrawer from '../components/logic-puzzle/LogicClueDrawer';
 import LogicItemTray from '../components/logic-puzzle/LogicItemTray';
 import { useGame } from '../context/GameContext';
-import { parseCaseNumber, resolveStoryPathKey, formatCaseNumber } from '../data/storyContent';
+import { parseCaseNumber, resolveStoryPathKey } from '../data/storyContent';
 import { generateLogicPuzzle, getLogicDifficultyForChapter } from '../services/LogicPuzzleService';
 import { clearLogicPuzzle, loadLogicPuzzle, saveLogicPuzzle } from '../storage/logicPuzzleStorage';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
+import useNavigationActions from '../hooks/useNavigationActions';
 
 const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
@@ -27,12 +28,12 @@ const STATUS = {
 export default function LogicPuzzleScreen({ navigation }) {
   const { activeCase, progress, completeLogicPuzzle } = useGame();
   const { width, moderateScale, scaleSpacing } = useResponsiveLayout();
+  const { handleStoryContinue } = useNavigationActions();
 
   const caseNumber = activeCase?.caseNumber;
   const storyCampaign = progress.storyCampaign;
   const pathKey = resolveStoryPathKey(caseNumber, storyCampaign);
-  const { chapter, subchapter } = parseCaseNumber(caseNumber);
-  const nextCaseNumber = formatCaseNumber(chapter, subchapter + 1);
+  const { chapter } = parseCaseNumber(caseNumber);
 
   const [status, setStatus] = useState(STATUS.LOADING);
   const [puzzle, setPuzzle] = useState(null);
@@ -557,7 +558,7 @@ export default function LogicPuzzleScreen({ navigation }) {
               <Text style={styles.solvedBody}>
                 The logic lines up. File the report and move to the next lead.
               </Text>
-              <PrimaryButton label="Continue Investigation" onPress={() => navigation.replace('CaseFile', { caseNumber: nextCaseNumber })} fullWidth />
+              <PrimaryButton label="Continue Investigation" onPress={handleStoryContinue} fullWidth />
             </View>
           </View>
         )}

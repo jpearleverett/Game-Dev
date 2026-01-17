@@ -141,7 +141,7 @@ export function GameProvider({
           // Trigger background generation via StoryContext
           // Now handles all subchapters robustly, not just subchapter 1
           const { chapter } = parseCaseNumber(caseNumber);
-          if (chapter < 12 && hasFirstDecision) {
+          if (chapter < 12) {
             story.handleBackgroundGeneration(caseNumber, pathKey);
           }
 
