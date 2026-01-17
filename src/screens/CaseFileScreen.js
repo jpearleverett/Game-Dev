@@ -294,6 +294,20 @@ export default function CaseFileScreen({
     existingBranchingChoice && existingBranchingChoice.isComplete !== false,
   );
 
+  useEffect(() => {
+    setBranchingProgress(null);
+    setCollectedEvidence([]);
+    setNarrativeComplete(false);
+  }, [caseNumber]);
+
+  const branchingChoiceSeed = useMemo(() => {
+    if (!existingBranchingChoice) return null;
+    return {
+      firstChoice: existingBranchingChoice.firstChoice,
+      secondChoice: existingBranchingChoice.secondChoice,
+    };
+  }, [existingBranchingChoice]);
+
   const normalizeBranchingPath = useCallback((path, firstChoiceHint) => {
     const rawPath = String(path || '').trim();
     const rawFirst = typeof firstChoiceHint === 'string' ? firstChoiceHint.trim() : '';
@@ -332,7 +346,7 @@ export default function CaseFileScreen({
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
-    if (result?.path) {
+    if (result?.path && !branchingChoiceComplete) {
       persistBranchingChoice(result, { isComplete: true });
     }
 
@@ -342,12 +356,13 @@ export default function CaseFileScreen({
     if (hasBranchingNarrative) {
       setNarrativeComplete(true);
     }
-  }, [hasBranchingNarrative, persistBranchingChoice]);
+  }, [hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
+    if (branchingChoiceComplete) return;
     persistBranchingChoice(result, { isComplete: false });
-  }, [persistBranchingChoice]);
+  }, [persistBranchingChoice, branchingChoiceComplete]);
 
   useEffect(() => {
     if (!branchingProgress?.path) return;
@@ -899,12 +914,14 @@ export default function CaseFileScreen({
                 {hasBranchingNarrative ? (
                   <View style={styles.narrativeSection}>
                     <BranchingNarrativeReader
+                      key={caseNumber || 'branching-narrative'}
                       branchingNarrative={branchingNarrative}
                       palette={palette}
                       onComplete={handleBranchingComplete}
                       onFirstChoice={handleFirstChoice}
                       onSecondChoice={handleSecondChoice}
                       onEvidenceCollected={handleEvidenceCollected}
+                      initialChoice={branchingChoiceSeed}
                     />
                   </View>
                 ) : narrativePages.length > 0 && (

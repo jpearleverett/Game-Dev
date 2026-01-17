@@ -214,6 +214,9 @@ export default function LogicPuzzleScreen({ navigation }) {
   }, [pushHistory, placedItems, candidates]);
 
   const performNote = useCallback((row, col, itemId, forceAction = null) => {
+    const cell = puzzle?.grid?.[row]?.[col];
+    if (!cell || cell.terrain === 'fog' || cell.staticObject !== 'none') return;
+
     setCandidates((prev) => {
       const key = `${row}-${col}`;
       const currentCandidates = prev[key] || [];
@@ -236,7 +239,7 @@ export default function LogicPuzzleScreen({ navigation }) {
       }
       return { ...prev, [key]: newList };
     });
-  }, [pushHistory, placedItems]);
+  }, [pushHistory, placedItems, puzzle]);
 
   const handleCellPress = useCallback((row, col) => {
     if (status !== STATUS.PLAYING || !puzzle) return;
