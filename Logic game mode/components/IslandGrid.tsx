@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GridCell, Item } from '../types';
 
 interface IslandGridProps {
@@ -26,9 +26,32 @@ const IslandGrid: React.FC<IslandGridProps> = ({
 }) => {
   const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
   const [dragAction, setDragAction] = useState<'add' | 'remove' | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
+  const lastDragCellRef = useRef<string | null>(null);
+
+  const isCellBlocked = (row: number, col: number) => {
+    const cell = grid[row]?.[col];
+    return !cell || cell.terrain === 'fog' || cell.staticObject !== 'none';
+  };
+
+  const applyDragAction = (row: number, col: number) => {
+    if (!dragAction || !isPencilMode || !activeItemId || !onPencilAction) return;
+    if (isCellBlocked(row, col)) return;
+
+    const key = `${row}-${col}`;
+    if (lastDragCellRef.current === key) return;
+
+    lastDragCellRef.current = key;
+    onPencilAction(row, col, dragAction);
+  };
 
   useEffect(() => {
-    const handleGlobalUp = () => setDragAction(null);
+    const handleGlobalUp = (event: PointerEvent) => {
+      if (activePointerIdRef.current !== null && event.pointerId !== activePointerIdRef.current) return;
+      setDragAction(null);
+      activePointerIdRef.current = null;
+      lastDragCellRef.current = null;
+    };
     window.addEventListener('pointerup', handleGlobalUp);
     window.addEventListener('pointercancel', handleGlobalUp);
     return () => {
@@ -42,10 +65,7 @@ const IslandGrid: React.FC<IslandGridProps> = ({
           e.preventDefault();
       }
 
-      const cell = grid[r][c];
-      const isVoid = cell.terrain === 'fog';
-      const isBlocked = cell.staticObject !== 'none';
-      if (isVoid || isBlocked) return;
+      if (isCellBlocked(r, c)) return;
 
       if (isPencilMode && activeItemId && onPencilAction) {
           const key = `${r}-${c}`;
@@ -54,23 +74,33 @@ const IslandGrid: React.FC<IslandGridProps> = ({
           const action = hasItem ? 'remove' : 'add';
           
           setDragAction(action);
+          activePointerIdRef.current = e.pointerId;
+          lastDragCellRef.current = key;
           onPencilAction(r, c, action);
 
-          if (e.target instanceof HTMLElement) {
-             e.target.releasePointerCapture(e.pointerId);
+          if (e.currentTarget instanceof HTMLElement) {
+             e.currentTarget.setPointerCapture(e.pointerId);
           }
       } else {
           onCellTap(r, c);
       }
   };
 
-  const handlePointerEnter = (r: number, c: number) => {
-      if (dragAction && isPencilMode && activeItemId && onPencilAction) {
-          const cell = grid[r][c];
-          if (cell.terrain === 'fog' || cell.staticObject !== 'none') return;
-          
-          onPencilAction(r, c, dragAction);
-      }
+  const handlePointerMove = (e: React.PointerEvent) => {
+      if (!dragAction || !isPencilMode || !activeItemId || !onPencilAction) return;
+      if (activePointerIdRef.current === null) return;
+      if (e.pointerId !== activePointerIdRef.current) return;
+
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      if (!(target instanceof HTMLElement)) return;
+      const cellEl = target.closest('[data-grid-cell="true"]') as HTMLElement | null;
+      if (!cellEl) return;
+
+      const row = Number(cellEl.dataset.row);
+      const col = Number(cellEl.dataset.col);
+      if (!Number.isFinite(row) || !Number.isFinite(col)) return;
+
+      applyDragAction(row, col);
   };
 
   const getCellContent = (r: number, c: number) => {
@@ -99,6 +129,7 @@ const IslandGrid: React.FC<IslandGridProps> = ({
         style={{ 
           gridTemplateColumns: `auto repeat(${grid[0].length}, minmax(36px, 48px))` 
         }}
+        onPointerMove={handlePointerMove}
       >
         {/* Header Row */}
         <div className="h-4"></div>
@@ -181,7 +212,9 @@ const IslandGrid: React.FC<IslandGridProps> = ({
                 <div
                   key={`${cell.row}-${cell.col}`}
                   onPointerDown={(e) => handlePointerDown(cell.row, cell.col, e)}
-                  onPointerEnter={() => handlePointerEnter(cell.row, cell.col)}
+                  data-grid-cell="true"
+                  data-row={cell.row}
+                  data-col={cell.col}
                   className={`
                     w-full h-10 md:h-12 rounded-sm relative transition-all duration-100 overflow-hidden
                     border-b-[2px]

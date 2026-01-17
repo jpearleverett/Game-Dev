@@ -125,6 +125,9 @@ const App: React.FC = () => {
 
   const performNote = (row: number, col: number, itemId: string, forceAction?: 'add' | 'remove') => {
       setGameState(prev => {
+         const cell = prev.puzzle?.grid?.[row]?.[col];
+         if (!cell || cell.terrain === 'fog' || cell.staticObject !== 'none') return prev;
+
          const key = `${row}-${col}`;
          const currentCandidates = prev.candidates[key] || [];
          
