@@ -110,7 +110,7 @@ const DECISION_CONSEQUENCES = {
 // ============================================================================
 // Structure: Opening -> Choice1 (3 options) -> Middle branches (3) -> Choice2 (3 each) -> Endings (9 total)
 // Total paths: 9 unique experiences per subchapter
-// Word budget: 280-320 words per segment, ~4000+ words total per subchapter
+// Word budget: 300-350 words per segment (3 segments = 900-1050 per path), ~4500+ words total per subchapter
 
 /**
  * Schema for a single tappable detail within narrative text
@@ -150,7 +150,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     response: {
       type: 'string',
-      description: 'The narrative response when player selects this option (280-320 words minimum). Continue the scene based on this choice.',
+      description: 'The narrative response when player selects this option (300-350 words). Continue the scene based on this choice.',
     },
     summary: {
       type: 'string',
@@ -215,7 +215,7 @@ const SECOND_CHOICE_SCHEMA = {
           },
           response: {
             type: 'string',
-            description: 'The ending narrative segment (280-320 words minimum). Conclude this path of the subchapter.',
+            description: 'The ending narrative segment (300-350 words). Conclude this path of the subchapter.',
           },
           summary: {
             type: 'string',
@@ -244,11 +244,11 @@ const BRANCHING_NARRATIVE_SCHEMA = {
   properties: {
     opening: {
       type: 'object',
-      description: 'The opening segment, shared by all paths (280-320 words minimum)',
+      description: 'The opening segment, shared by all paths (300-350 words)',
       properties: {
         text: {
           type: 'string',
-          description: 'Opening narrative that sets the scene and leads to the first choice (280-320 words minimum)',
+          description: 'Opening narrative that sets the scene and leads to the first choice (300-350 words)',
         },
         details: {
           type: 'array',
@@ -292,7 +292,7 @@ const STORY_CONTENT_SCHEMA = {
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), third-person past tense.',
     },
     // BRANCHING NARRATIVE - Interactive story with player choices
-    // Structure: Opening (280-320w) -> Choice1 (3 opts) -> Middles (3x 280-320w) -> Choice2 (3 each) -> Endings (9x 280-320w)
+    // Structure: Opening (300-350w) -> Choice1 (3 opts) -> Middles (3x 300-350w) -> Choice2 (3 each) -> Endings (9x 300-350w)
     // Total: ~4000+ words generated, player experiences 850-950 words per path
     branchingNarrative: {
       type: 'object',
@@ -303,7 +303,7 @@ const STORY_CONTENT_SCHEMA = {
           properties: {
             text: {
               type: 'string',
-              description: 'Opening scene shared by all paths (280-320 words minimum). Set the scene, build to first choice.',
+              description: 'Opening scene shared by all paths (300-350 words). Set the scene, build to first choice.',
             },
             details: {
               type: 'array',
@@ -333,7 +333,7 @@ const STORY_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
                   label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity. NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
+                  response: { type: 'string', description: 'Narrative response (300-350 words)' },
                   details: {
                     type: 'array',
                     items: {
@@ -372,7 +372,7 @@ const STORY_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
                     label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options. NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude this path.' },
+                    response: { type: 'string', description: 'Ending segment (300-350 words). Conclude this path.' },
                     details: {
                       type: 'array',
                       items: {
@@ -604,7 +604,7 @@ const DECISION_CONTENT_SCHEMA = {
         opening: {
           type: 'object',
           properties: {
-            text: { type: 'string', description: 'Opening scene (280-320 words minimum). Build tension toward the decision.' },
+            text: { type: 'string', description: 'Opening scene (300-350 words). Build tension toward the decision.' },
             details: {
               type: 'array',
               items: {
@@ -633,7 +633,7 @@ const DECISION_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string' },
                   label: { type: 'string', description: 'Action label (2-5 words). NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
+                  response: { type: 'string', description: 'Narrative response (300-350 words)' },
                   summary: { type: 'string', description: 'One-sentence summary of what happens (15-25 words). Used for decision context.' },
                   details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                 },
@@ -661,7 +661,7 @@ const DECISION_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string' },
                     label: { type: 'string', description: 'Action label (2-5 words). NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude at the decision moment.' },
+                    response: { type: 'string', description: 'Ending segment (300-350 words). Conclude at the decision moment.' },
                     summary: { type: 'string', description: 'One-sentence summary of this path ending (15-25 words). Used for decision context.' },
                     details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                   },
@@ -8899,14 +8899,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION (WARNINGS ONLY)
-    // Each player path should meet the target word count (850-950 words)
-    // Structure: opening (280-320) + firstChoice response (280-320) + secondChoice response (280-320)
+    // Each player path should meet the target word count (900-1050 words)
+    // Structure: opening (300-350) + firstChoice response (300-350) + secondChoice response (300-350)
     // NOTE: These are warnings, not errors - schema instructs correct lengths, retries are wasteful
     // =========================================================================
     const bn = content.branchingNarrative;
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
-      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (280-320 target, allow some flexibility)
+      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (300-350 target, allow some flexibility)
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
 
       // Validate opening
