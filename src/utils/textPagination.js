@@ -53,22 +53,107 @@ function estimateLines(text, charsPerLine) {
 }
 
 /**
+ * Detects and removes duplicate content from text.
+ * Handles patterns like: "...sentence. ike taffy. Jack... sentence. Jack..."
+ * where "ike taffy" is a corrupted fragment (missing "l" from "like taffy")
+ * followed by duplicate sentences.
+ */
+function removeDuplicateContent(text) {
+  if (!text || text.length < 100) return text;
+
+  // Look for repeated sentence patterns - a sentence appearing twice indicates duplication
+  const sentences = text.match(/[^.!?]*[.!?]+/g);
+  if (!sentences || sentences.length < 4) return text;
+
+  // Check each sentence to see if it appears more than once
+  const seen = new Map();
+  for (const sentence of sentences) {
+    const normalized = sentence.trim().toLowerCase();
+    if (normalized.length > 20) { // Only check substantial sentences
+      if (seen.has(normalized)) {
+        // Found duplicate - find where duplication starts and truncate
+        const trimmedSentence = sentence.trim();
+        const firstOccurrence = text.indexOf(trimmedSentence);
+        const secondOccurrence = text.indexOf(trimmedSentence, firstOccurrence + trimmedSentence.length);
+
+        if (secondOccurrence > firstOccurrence) {
+          // Look backwards from secondOccurrence to find the last complete sentence
+          // This catches corrupted fragments like "ike taffy." before the duplicate
+          const textBeforeDupe = text.slice(0, secondOccurrence);
+
+          // Find the last sentence ending that's part of the ORIGINAL content
+          // (not a corrupted fragment). We identify this by finding the last
+          // sentence ending that's followed by a word that appears naturally
+          // in the first half of the text.
+          //
+          // Simple heuristic: find the last ". " or "! " or "? " and check if
+          // what follows could be a corrupted start
+          let truncateAt = secondOccurrence;
+
+          // Look for sentence endings in the ~100 chars before the duplicate
+          const searchStart = Math.max(0, secondOccurrence - 100);
+          const searchRegion = text.slice(searchStart, secondOccurrence);
+
+          // Find all sentence endings in this region
+          const endingMatches = [...searchRegion.matchAll(/[.!?]\s+/g)];
+
+          if (endingMatches.length > 0) {
+            // Check the last few sentence endings
+            for (let i = endingMatches.length - 1; i >= 0; i--) {
+              const match = endingMatches[i];
+              const endPos = searchStart + match.index + 1; // Position after the punctuation
+
+              // Check what comes after this ending
+              const afterEnding = text.slice(endPos, secondOccurrence).trim();
+
+              // If what comes after is short (< 50 chars) and contains a period,
+              // it's likely a corrupted fragment like "ike taffy."
+              if (afterEnding.length < 50 && afterEnding.includes('.')) {
+                // This looks like: "good sentence. corrupted fragment. Duplicate..."
+                // Truncate after the good sentence
+                truncateAt = endPos;
+                break;
+              }
+
+              // If what comes after doesn't start with a capital letter (corrupted),
+              // truncate here
+              if (afterEnding.length > 0 && !/^[A-Z]/.test(afterEnding)) {
+                truncateAt = endPos;
+                break;
+              }
+            }
+          }
+
+          return text.slice(0, truncateAt).trim();
+        }
+      }
+      seen.set(normalized, true);
+    }
+  }
+
+  return text;
+}
+
+/**
  * Splits text into sentences, preserving the sentence endings.
  */
 function splitIntoSentences(text) {
+  // First, remove any duplicate content that may have been introduced
+  const cleanedText = removeDuplicateContent(text);
+
   // Match sentences ending with . ! ? followed by space or end of string
   const sentenceRegex = /[^.!?]*[.!?]+(?:\s+|$)/g;
-  const sentences = text.match(sentenceRegex);
+  const sentences = cleanedText.match(sentenceRegex);
 
   if (!sentences) {
     // No sentence endings found, return the whole text
-    return [text];
+    return [cleanedText];
   }
 
   // Check if there's remaining text after the last sentence
   const matched = sentences.join('');
-  if (matched.length < text.length) {
-    const remainder = text.slice(matched.length).trim();
+  if (matched.length < cleanedText.length) {
+    const remainder = cleanedText.slice(matched.length).trim();
     if (remainder) {
       sentences.push(remainder);
     }
@@ -237,13 +322,14 @@ export function paginateNarrativeSegments(
 /**
  * Finds a good break point in text near the target character count.
  * Prefers breaking at sentence boundaries, then word boundaries.
+ * NEVER cuts in the middle of a word - will expand search range if needed.
  */
 function findBreakPoint(text, targetChars) {
   if (text.length <= targetChars) {
     return text.length;
   }
 
-  // Look for sentence break near target
+  // Look for sentence break near target (70% to 100% of target)
   const searchStart = Math.floor(targetChars * 0.7);
   const searchEnd = Math.min(targetChars, text.length);
 
@@ -255,13 +341,29 @@ function findBreakPoint(text, targetChars) {
     }
   }
 
-  // No sentence break - find a word boundary (space)
+  // No sentence break in preferred range - find a word boundary (space)
+  // First try within the preferred range
   for (let i = searchEnd; i >= searchStart; i--) {
     if (text[i] === ' ') {
       return i;
     }
   }
 
-  // No good break point - just cut at target
+  // No space in preferred range - expand search to find ANY word boundary
+  // Search backward from searchStart to find the nearest space
+  for (let i = searchStart - 1; i >= 0; i--) {
+    if (text[i] === ' ') {
+      return i;
+    }
+  }
+
+  // Search forward from searchEnd to find the nearest space
+  for (let i = searchEnd + 1; i < text.length; i++) {
+    if (text[i] === ' ') {
+      return i;
+    }
+  }
+
+  // Absolute last resort - cut at target (should rarely happen with normal text)
   return targetChars;
 }

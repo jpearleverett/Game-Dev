@@ -46,10 +46,16 @@ import {
 // Story configuration
 const TOTAL_CHAPTERS = 12;
 const SUBCHAPTERS_PER_CHAPTER = 3;
-const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // e.g. 450
-const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // e.g. 500
+const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 800 words
+const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 900 words
 const DECISION_SUBCHAPTER = 3;
-const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 2;
+const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 1;
+
+// Text truncation lengths for prompts and logging (in characters)
+const TRUNCATE_SUMMARY = 500;       // For brief narrative summaries in prompts
+const TRUNCATE_VALIDATION = 3000;  // For full narrative in validation contexts
+const TRUNCATE_DESCRIPTION = 300;  // For thread/choice descriptions
+const TRUNCATE_PREVIEW = 100;      // For short previews/logging
 
 // ============================================================================
 // PATH PERSONALITY SYSTEM - Tracks cumulative player behavior for coherent narrative
@@ -110,7 +116,7 @@ const DECISION_CONSEQUENCES = {
 // ============================================================================
 // Structure: Opening -> Choice1 (3 options) -> Middle branches (3) -> Choice2 (3 each) -> Endings (9 total)
 // Total paths: 9 unique experiences per subchapter
-// Word budget: 280-320 words per segment, ~4000+ words total per subchapter
+// Word budget: 300-350 words per segment (3 segments = 900-1050 per path), ~4500+ words total per subchapter
 
 /**
  * Schema for a single tappable detail within narrative text
@@ -150,7 +156,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     response: {
       type: 'string',
-      description: 'The narrative response when player selects this option (280-320 words minimum). Continue the scene based on this choice.',
+      description: 'The narrative response when player selects this option (300-350 words). Continue the scene based on this choice.',
     },
     summary: {
       type: 'string',
@@ -215,7 +221,7 @@ const SECOND_CHOICE_SCHEMA = {
           },
           response: {
             type: 'string',
-            description: 'The ending narrative segment (280-320 words minimum). Conclude this path of the subchapter.',
+            description: 'The ending narrative segment (300-350 words). Conclude this path of the subchapter.',
           },
           summary: {
             type: 'string',
@@ -244,11 +250,11 @@ const BRANCHING_NARRATIVE_SCHEMA = {
   properties: {
     opening: {
       type: 'object',
-      description: 'The opening segment, shared by all paths (280-320 words minimum)',
+      description: 'The opening segment, shared by all paths (300-350 words)',
       properties: {
         text: {
           type: 'string',
-          description: 'Opening narrative that sets the scene and leads to the first choice (280-320 words minimum)',
+          description: 'Opening narrative that sets the scene and leads to the first choice (300-350 words)',
         },
         details: {
           type: 'array',
@@ -292,7 +298,7 @@ const STORY_CONTENT_SCHEMA = {
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), third-person past tense.',
     },
     // BRANCHING NARRATIVE - Interactive story with player choices
-    // Structure: Opening (280-320w) -> Choice1 (3 opts) -> Middles (3x 280-320w) -> Choice2 (3 each) -> Endings (9x 280-320w)
+    // Structure: Opening (300-350w) -> Choice1 (3 opts) -> Middles (3x 300-350w) -> Choice2 (3 each) -> Endings (9x 300-350w)
     // Total: ~4000+ words generated, player experiences 850-950 words per path
     branchingNarrative: {
       type: 'object',
@@ -303,7 +309,7 @@ const STORY_CONTENT_SCHEMA = {
           properties: {
             text: {
               type: 'string',
-              description: 'Opening scene shared by all paths (280-320 words minimum). Set the scene, build to first choice.',
+              description: 'Opening scene shared by all paths (300-350 words). Set the scene, build to first choice.',
             },
             details: {
               type: 'array',
@@ -333,7 +339,7 @@ const STORY_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
                   label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity. NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
+                  response: { type: 'string', description: 'Narrative response (300-350 words)' },
                   details: {
                     type: 'array',
                     items: {
@@ -372,7 +378,7 @@ const STORY_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
                     label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options. NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude this path.' },
+                    response: { type: 'string', description: 'Ending segment (300-350 words). Conclude this path.' },
                     details: {
                       type: 'array',
                       items: {
@@ -604,7 +610,7 @@ const DECISION_CONTENT_SCHEMA = {
         opening: {
           type: 'object',
           properties: {
-            text: { type: 'string', description: 'Opening scene (280-320 words minimum). Build tension toward the decision.' },
+            text: { type: 'string', description: 'Opening scene (300-350 words). Build tension toward the decision.' },
             details: {
               type: 'array',
               items: {
@@ -633,7 +639,7 @@ const DECISION_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string' },
                   label: { type: 'string', description: 'Action label (2-5 words). NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                  response: { type: 'string', description: 'Narrative response (280-320 words minimum)' },
+                  response: { type: 'string', description: 'Narrative response (300-350 words)' },
                   summary: { type: 'string', description: 'One-sentence summary of what happens (15-25 words). Used for decision context.' },
                   details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                 },
@@ -661,7 +667,7 @@ const DECISION_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string' },
                     label: { type: 'string', description: 'Action label (2-5 words). NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                    response: { type: 'string', description: 'Ending segment (280-320 words minimum). Conclude at the decision moment.' },
+                    response: { type: 'string', description: 'Ending segment (300-350 words). Conclude at the decision moment.' },
                     summary: { type: 'string', description: 'One-sentence summary of this path ending (15-25 words). Used for decision context.' },
                     details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                   },
@@ -1831,7 +1837,7 @@ Respond with a JSON object containing:
         [{ role: 'user', content: classificationPrompt }],
         {
           systemPrompt: 'You are an expert at analyzing player behavior in narrative games. Provide concise, insightful classifications.',
-          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget even at 'low' level
+          maxTokens: GENERATION_CONFIG.maxTokens.classification,
           responseSchema: {
             type: 'object',
             properties: {
@@ -2063,7 +2069,8 @@ Jack sat with that until the jukebox downstairs switched songs. Then he gathered
         }
       }
     } catch (e) {
-      // Best-effort only. Never block initialization.
+      // Best-effort only. Never block initialization, but log for debugging.
+      console.warn('[StoryGenerationService] Failed to normalize fallback templates:', e.message);
     }
   }
 
@@ -2732,7 +2739,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       [{ role: 'user', content: arcPrompt }],
       {
         systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive mystery thriller with a hidden fantasy layer.',
-        maxTokens: 4000,
+        maxTokens: GENERATION_CONFIG.maxTokens.arcPlanning,
         responseSchema: arcSchema,
       }
     );
@@ -2952,7 +2959,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       [{ role: 'user', content: outlinePrompt }],
       {
         systemPrompt: 'You are outlining a single chapter of an interactive mystery thriller. Ensure the three subchapters flow as one seamless narrative.',
-        maxTokens: 2000,
+        maxTokens: GENERATION_CONFIG.maxTokens.outline,
         responseSchema: outlineSchema,
       }
     );
@@ -3043,7 +3050,8 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     try {
       const data = await AsyncStorage.getItem(`story_arc_${arcKey}`);
       return data ? JSON.parse(data) : null;
-    } catch {
+    } catch (error) {
+      console.warn('[StoryGenerationService] Failed to load story arc:', error.message);
       return null;
     }
   }
@@ -3282,7 +3290,7 @@ Generate realistic, specific consequences based on the actual narrative content.
         [{ role: 'user', content: consequencePrompt }],
         {
           systemPrompt: 'You are generating narrative consequences for player choices in a mystery thriller with a hidden fantasy layer.',
-          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
+          maxTokens: GENERATION_CONFIG.maxTokens.consequences,
           responseSchema: consequenceSchema,
         }
       );
@@ -3541,7 +3549,8 @@ Generate realistic, specific consequences based on the actual narrative content.
             null;
 
           alignment = opt?.personalityAlignment || null;
-        } catch {
+        } catch (error) {
+          console.warn('[StoryGenerationService] Failed to get personality alignment:', error.message);
           alignment = null;
         }
 
@@ -6182,7 +6191,7 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           const overdueTag = t.isOverdue ? '⚠️ OVERDUE' : '';
           const priorityTag = t.urgency === 'critical' ? '🔴 CRITICAL' : '🟡 URGENT';
           const desc = t.description || t.excerpt || '';
-          const truncatedDesc = desc.length > 400 ? desc.slice(0, 400) + '...' : desc;
+          const truncatedDesc = desc.length > TRUNCATE_DESCRIPTION ? desc.slice(0, TRUNCATE_DESCRIPTION) + '...' : desc;
 
           section += `\n${idx + 1}. [${priorityTag}${overdueTag ? ' ' + overdueTag : ''}] ${t.type.toUpperCase()}`;
           section += `\n   "${truncatedDesc}"`;
@@ -6213,7 +6222,7 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           section += `\n**${type.toUpperCase()}:**`;
           threadsByType[type].forEach(t => {
             const desc = t.description || t.excerpt || '';
-            const truncatedDesc = desc.length > 300 ? desc.slice(0, 300) + '...' : desc;
+            const truncatedDesc = desc.length > TRUNCATE_DESCRIPTION ? desc.slice(0, TRUNCATE_DESCRIPTION) + '...' : desc;
             section += `\n- Ch${t.chapter || '?'}: "${truncatedDesc}"`;
           });
         });
@@ -6335,7 +6344,7 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
       [{ role: 'user', content: decisionPrompt }],
       {
         systemPrompt: 'You are a narrative designer creating morally complex choices for a mystery thriller. Every decision must have real stakes and no clear "correct" answer.',
-        maxTokens: 2000,
+        maxTokens: GENERATION_CONFIG.maxTokens.outline,
         responseSchema: DECISION_ONLY_SCHEMA,
       }
     );
@@ -6800,7 +6809,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     for (const thread of toArchive) {
       const compressedThread = {
         type: thread.type,
-        description: thread.description?.slice(0, 100), // Truncate description
+        description: thread.description?.slice(0, TRUNCATE_PREVIEW), // Truncate for context
         status: thread.status,
         resolvedChapter: thread.resolvedChapter || currentChapter,
         characters: thread.characters?.slice(0, 3) || [], // Keep max 3 characters
@@ -7153,7 +7162,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           if (prevThoughtSignature && context.previousChapters?.length > 0) {
             const lastChapter = context.previousChapters[context.previousChapters.length - 1];
             const prevNarrativeSummary = lastChapter?.narrative
-              ? `Previous scene summary: ${lastChapter.narrative.slice(0, 500)}...`
+              ? `Previous scene summary: ${lastChapter.narrative.slice(0, TRUNCATE_SUMMARY)}...`
               : 'Continuing the story...';
             priorMessages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
           }
@@ -7217,7 +7226,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             // Get a summary of the previous narrative for context
             const lastChapter = context.previousChapters[context.previousChapters.length - 1];
             const prevNarrativeSummary = lastChapter?.narrative
-              ? `Previous scene summary: ${lastChapter.narrative.slice(0, 500)}...`
+              ? `Previous scene summary: ${lastChapter.narrative.slice(0, TRUNCATE_SUMMARY)}...`
               : 'Continuing the story...';
             messages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
           }
@@ -7610,37 +7619,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           generatedContent.narrative = parts.join('\n\n');
         }
 
-        // Validate word count - only expand if significantly short
-        let wordCount = generatedContent.narrative?.split(/\s+/).length || 0;
-        let expansionAttempts = 0;
-        const MAX_EXPANSION_ATTEMPTS = 1; // Reduced to minimize API calls
-
-        while (wordCount < MIN_WORDS_PER_SUBCHAPTER && expansionAttempts < MAX_EXPANSION_ATTEMPTS) {
-          expansionAttempts++;
-          console.log(`[StoryGenerationService] Word count ${wordCount} below minimum ${MIN_WORDS_PER_SUBCHAPTER}, expansion attempt ${expansionAttempts}/${MAX_EXPANSION_ATTEMPTS}`);
-
-          const expandedNarrative = await this._expandNarrative(
-            generatedContent.narrative,
-            context,
-            TARGET_WORDS - wordCount
-          );
-
-          const expandedWordCount = expandedNarrative.split(/\s+/).length;
-
-          // Only accept expansion if it actually increased word count
-          if (expandedWordCount > wordCount) {
-            generatedContent.narrative = expandedNarrative;
-            wordCount = expandedWordCount;
-            console.log(`[StoryGenerationService] Expansion successful: ${wordCount} words`);
-          } else {
-            console.warn(`[StoryGenerationService] Expansion did not increase word count (${expandedWordCount} <= ${wordCount})`);
-            break;
-          }
-        }
-
-        // If still under minimum after retries, log warning but continue
+        // Word count check - log but DO NOT expand
+        // Expansion was causing text corruption (duplicate content, mid-word cuts like "ike taffy")
+        // Shorter stories are preferable to corrupted text
+        const wordCount = generatedContent.narrative?.split(/\s+/).length || 0;
         if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-          console.warn(`[StoryGenerationService] Word count ${wordCount} still below minimum after ${expansionAttempts} expansion attempts. Proceeding with validation.`);
+          console.log(`[StoryGenerationService] Word count ${wordCount} below minimum ${MIN_WORDS_PER_SUBCHAPTER}, proceeding without expansion (expansion disabled)`);
         }
 
         // Validate consistency (check for obvious violations)
@@ -7749,20 +7733,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           try {
             generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
 
-            // Re-validate word count for the fixed content with verification
-            let fixedWordCount = generatedContent.narrative.split(/\s+/).length;
+            // Log word count after fix (expansion disabled to prevent text corruption)
+            const fixedWordCount = generatedContent.narrative.split(/\s+/).length;
             if (fixedWordCount < MIN_WORDS_PER_SUBCHAPTER) {
-              const expandedNarrative = await this._expandNarrative(
-                generatedContent.narrative,
-                context,
-                TARGET_WORDS - fixedWordCount
-              );
-              const newWordCount = expandedNarrative.split(/\s+/).length;
-              // Only accept if expansion actually helped
-              if (newWordCount > fixedWordCount) {
-                generatedContent.narrative = expandedNarrative;
-                console.log(`[StoryGenerationService] Post-fix expansion: ${fixedWordCount} -> ${newWordCount} words`);
-              }
+              console.log(`[StoryGenerationService] Post-fix word count ${fixedWordCount} below minimum, proceeding without expansion`);
             }
 
             validationResult = this._validateConsistency(generatedContent, context);
@@ -7947,10 +7921,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     this.pendingGenerations.set(generationKey, generationPromise);
 
     // Create a timeout promise to prevent indefinite hangs
-    // IMPORTANT: This must be longer than LLMService timeout (180s) * max retries (3)
-    // to allow retries to complete. Adding 60s buffer for network delays.
-    // Formula: (180s * 3 attempts) + 60s buffer = 600s = 10 minutes
-    const GENERATION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes (allows for 3 retries @ 180s each)
+    // IMPORTANT: Must be longer than LLMService timeout (300s) * max retries (2)
+    // to allow retries to complete. Adding buffer for network delays.
+    // Formula: (300s * 2 attempts) + 60s buffer = 660s ≈ 11 minutes
+    const GENERATION_TIMEOUT_MS = 11 * 60 * 1000; // 11 minutes (allows for 2 retries @ 300s each)
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error(`Generation timeout after ${GENERATION_TIMEOUT_MS / 1000}s for ${generationKey}`));
@@ -8918,11 +8892,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     });
 
     // =========================================================================
-    // CATEGORY 8: WORD COUNT VALIDATION
+    // CATEGORY 8: WORD COUNT VALIDATION (WARNINGS ONLY)
+    // Expansion was causing text corruption so short narratives are now accepted
     // =========================================================================
     const wordCount = narrativeOriginal.split(/\s+/).filter(w => w.length > 0).length;
     if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
-      issues.push(`Narrative too short: ${wordCount} words (minimum ${MIN_WORDS_PER_SUBCHAPTER} required)`);
+      warnings.push(`Narrative shorter than minimum: ${wordCount} words (minimum ${MIN_WORDS_PER_SUBCHAPTER})`);
     } else if (wordCount < TARGET_WORDS * 0.85) {
       warnings.push(`Narrative shorter than target: ${wordCount} words (target ${TARGET_WORDS})`);
     }
@@ -8933,14 +8908,14 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // =========================================================================
     // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION (WARNINGS ONLY)
-    // Each player path should meet the target word count (850-950 words)
-    // Structure: opening (280-320) + firstChoice response (280-320) + secondChoice response (280-320)
+    // Each player path should meet the target word count (900-1050 words)
+    // Structure: opening (300-350) + firstChoice response (300-350) + secondChoice response (300-350)
     // NOTE: These are warnings, not errors - schema instructs correct lengths, retries are wasteful
     // =========================================================================
     const bn = content.branchingNarrative;
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
-      const MIN_SEGMENT_WORDS = 200;  // Minimum per segment (280-320 target, allow some flexibility)
+      const MIN_SEGMENT_WORDS = 270;  // Minimum per segment (300-350 target). 3×270=810 exceeds 800 word path minimum.
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
 
       // Validate opening
@@ -9840,7 +9815,7 @@ Check if each critical thread above is addressed through dialogue or action (not
 - Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 2A, not earlier
 ${threadSection}
 ## NARRATIVE TO CHECK:
-${narrative.slice(0, 3000)}${narrative.length > 3000 ? '\n[truncated]' : ''}
+${narrative.slice(0, TRUNCATE_VALIDATION)}${narrative.length > 3000 ? '\n[truncated]' : ''}
 
 ## INSTRUCTIONS:
 1. Look for ANY factual contradictions (wrong years, wrong relationships, wrong names)
@@ -9864,7 +9839,7 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         [{ role: 'user', content: validationPrompt }],
         {
           systemPrompt: 'You are a meticulous continuity editor. Find factual errors and unaddressed plot threads. Be specific. No false positives.',
-          maxTokens: 10000, // Increased from 1000 - validation needs space for structured output
+          maxTokens: GENERATION_CONFIG.maxTokens.llmValidation,
           responseSchema: {
             type: 'object',
             properties: {
@@ -11398,7 +11373,7 @@ If no conflicts, return: {"conflicts": []}`;
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          maxTokens: 1000, // Increased from 500 - thinking tokens consume budget
+          maxTokens: GENERATION_CONFIG.maxTokens.validation,
           responseSchema: {
             type: 'object',
             properties: {
