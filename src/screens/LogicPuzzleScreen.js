@@ -33,6 +33,10 @@ export default function LogicPuzzleScreen({ navigation }) {
   const pathKey = resolveStoryPathKey(caseNumber, storyCampaign);
   const { chapter, subchapter } = parseCaseNumber(caseNumber);
   const nextCaseNumber = formatCaseNumber(chapter, subchapter + 1);
+  const storyNextCaseNumber = progress?.storyCampaign?.activeCaseNumber;
+  const targetCaseNumber = storyNextCaseNumber && storyNextCaseNumber !== caseNumber
+    ? storyNextCaseNumber
+    : nextCaseNumber;
 
   const [status, setStatus] = useState(STATUS.LOADING);
   const [puzzle, setPuzzle] = useState(null);
@@ -557,7 +561,7 @@ export default function LogicPuzzleScreen({ navigation }) {
               <Text style={styles.solvedBody}>
                 The logic lines up. File the report and move to the next lead.
               </Text>
-              <PrimaryButton label="Continue Investigation" onPress={() => navigation.navigate('CaseFile', { caseNumber: nextCaseNumber })} fullWidth />
+              <PrimaryButton label="Continue Investigation" onPress={() => navigation.replace('CaseFile', { caseNumber: targetCaseNumber })} fullWidth />
             </View>
           </View>
         )}

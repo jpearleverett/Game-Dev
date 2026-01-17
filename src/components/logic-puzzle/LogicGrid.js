@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, PanResponder } from 'react-native';
 import { FONTS } from '../../constants/typography';
 
@@ -36,6 +36,9 @@ export default function LogicGrid({
   const rowOffsetsRef = useRef({});
   const pendingCellLayoutsRef = useRef({});
   const cellLayoutsRef = useRef({});
+  const gridRef = useRef(null);
+  const containerPositionRef = useRef({ x: 0, y: 0 });
+  const measurementReadyRef = useRef(false);
   const dragStartPosRef = useRef(null);
   const isDraggingRef = useRef(false);
 
@@ -56,6 +59,14 @@ export default function LogicGrid({
     const cell = grid?.[row]?.[col];
     return !cell || cell.terrain === 'fog' || cell.staticObject !== 'none';
   };
+
+  const updateContainerPosition = useCallback(() => {
+    if (!gridRef.current) return;
+    gridRef.current.measureInWindow((x, y) => {
+      containerPositionRef.current = { x: x + padding, y: y + padding };
+      measurementReadyRef.current = true;
+    });
+  }, [padding]);
 
   const setCellLayout = (rowIndex, colIndex, layout) => {
     const rowOffset = rowOffsetsRef.current[rowIndex];
@@ -87,10 +98,20 @@ export default function LogicGrid({
 
   const resolveCellFromEvent = (event) => {
     if (!grid?.length) return null;
-    const { locationX, locationY } = event.nativeEvent;
-    if (!Number.isFinite(locationX) || !Number.isFinite(locationY)) return null;
-    const relX = locationX - padding;
-    const relY = locationY - padding;
+    const { pageX, pageY, locationX, locationY } = event.nativeEvent;
+    let relX;
+    let relY;
+
+    if (measurementReadyRef.current && Number.isFinite(pageX) && Number.isFinite(pageY)) {
+      relX = pageX - containerPositionRef.current.x;
+      relY = pageY - containerPositionRef.current.y;
+    } else if (Number.isFinite(locationX) && Number.isFinite(locationY)) {
+      relX = locationX - padding;
+      relY = locationY - padding;
+    } else {
+      return null;
+    }
+
     const layouts = Object.values(cellLayoutsRef.current);
     if (!layouts.length) return null;
 
@@ -145,6 +166,7 @@ export default function LogicGrid({
     onStartShouldSetPanResponderCapture: () => false,
     onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
     onPanResponderGrant: (event) => {
+      updateContainerPosition();
       isDraggingRef.current = false;
       const { pageX, pageY } = event.nativeEvent;
       dragStartPosRef.current = { x: pageX, y: pageY };
@@ -174,7 +196,7 @@ export default function LogicGrid({
       isDraggingRef.current = false;
       dragStartPosRef.current = null;
     },
-  }), [isPencilMode, activeItemId, candidateLookup, cellSize, labelSize, grid]);
+  }), [isPencilMode, activeItemId, candidateLookup, cellSize, labelSize, grid, updateContainerPosition]);
 
   if (!gridSize) {
     return null;
@@ -182,7 +204,9 @@ export default function LogicGrid({
 
   return (
     <View
+      ref={gridRef}
       style={[styles.gridContainer, { padding }]}
+      onLayout={updateContainerPosition}
       {...(isPencilMode ? panResponder.panHandlers : {})}
     >
       <View style={styles.row}>
