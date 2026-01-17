@@ -53,22 +53,70 @@ function estimateLines(text, charsPerLine) {
 }
 
 /**
+ * Detects and removes duplicate content from text.
+ * Looks for patterns where text is repeated (possibly with corruption like missing first char).
+ */
+function removeDuplicateContent(text) {
+  if (!text || text.length < 100) return text;
+
+  // Look for repeated sentence patterns - a sentence appearing twice indicates duplication
+  const sentences = text.match(/[^.!?]*[.!?]+/g);
+  if (!sentences || sentences.length < 4) return text;
+
+  // Check each sentence to see if it appears more than once
+  const seen = new Map();
+  for (const sentence of sentences) {
+    const normalized = sentence.trim().toLowerCase();
+    if (normalized.length > 20) { // Only check substantial sentences
+      if (seen.has(normalized)) {
+        // Found duplicate - find where duplication starts and truncate
+        const firstOccurrence = text.indexOf(sentence.trim());
+        const secondOccurrence = text.indexOf(sentence.trim(), firstOccurrence + 1);
+        if (secondOccurrence > firstOccurrence) {
+          // Also check for corrupted start (missing first char) before the duplicate
+          let truncateAt = secondOccurrence;
+          // Look back a bit to catch any corrupted fragment
+          const lookBack = Math.min(30, secondOccurrence);
+          const beforeDupe = text.slice(secondOccurrence - lookBack, secondOccurrence);
+          // If there's a partial word fragment right before, include it in truncation
+          const lastSpace = beforeDupe.lastIndexOf(' ');
+          if (lastSpace >= 0 && lastSpace < lookBack - 1) {
+            const fragment = beforeDupe.slice(lastSpace + 1);
+            // Check if fragment looks like a corrupted word (short, no punctuation start)
+            if (fragment.length > 0 && fragment.length < 15 && !/^[.!?,]/.test(fragment)) {
+              truncateAt = secondOccurrence - (lookBack - lastSpace - 1);
+            }
+          }
+          return text.slice(0, truncateAt).trim();
+        }
+      }
+      seen.set(normalized, true);
+    }
+  }
+
+  return text;
+}
+
+/**
  * Splits text into sentences, preserving the sentence endings.
  */
 function splitIntoSentences(text) {
+  // First, remove any duplicate content that may have been introduced
+  const cleanedText = removeDuplicateContent(text);
+
   // Match sentences ending with . ! ? followed by space or end of string
   const sentenceRegex = /[^.!?]*[.!?]+(?:\s+|$)/g;
-  const sentences = text.match(sentenceRegex);
+  const sentences = cleanedText.match(sentenceRegex);
 
   if (!sentences) {
     // No sentence endings found, return the whole text
-    return [text];
+    return [cleanedText];
   }
 
   // Check if there's remaining text after the last sentence
   const matched = sentences.join('');
-  if (matched.length < text.length) {
-    const remainder = text.slice(matched.length).trim();
+  if (matched.length < cleanedText.length) {
+    const remainder = cleanedText.slice(matched.length).trim();
     if (remainder) {
       sentences.push(remainder);
     }
@@ -237,13 +285,14 @@ export function paginateNarrativeSegments(
 /**
  * Finds a good break point in text near the target character count.
  * Prefers breaking at sentence boundaries, then word boundaries.
+ * NEVER cuts in the middle of a word - will expand search range if needed.
  */
 function findBreakPoint(text, targetChars) {
   if (text.length <= targetChars) {
     return text.length;
   }
 
-  // Look for sentence break near target
+  // Look for sentence break near target (70% to 100% of target)
   const searchStart = Math.floor(targetChars * 0.7);
   const searchEnd = Math.min(targetChars, text.length);
 
@@ -255,13 +304,29 @@ function findBreakPoint(text, targetChars) {
     }
   }
 
-  // No sentence break - find a word boundary (space)
+  // No sentence break in preferred range - find a word boundary (space)
+  // First try within the preferred range
   for (let i = searchEnd; i >= searchStart; i--) {
     if (text[i] === ' ') {
       return i;
     }
   }
 
-  // No good break point - just cut at target
+  // No space in preferred range - expand search to find ANY word boundary
+  // Search backward from searchStart to find the nearest space
+  for (let i = searchStart - 1; i >= 0; i--) {
+    if (text[i] === ' ') {
+      return i;
+    }
+  }
+
+  // Search forward from searchEnd to find the nearest space
+  for (let i = searchEnd + 1; i < text.length; i++) {
+    if (text[i] === ' ') {
+      return i;
+    }
+  }
+
+  // Absolute last resort - cut at target (should rarely happen with normal text)
   return targetChars;
 }
