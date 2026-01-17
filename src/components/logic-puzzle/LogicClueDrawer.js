@@ -127,7 +127,7 @@ export default function LogicClueDrawer({
             style={[styles.modeButton, !isPencilMode && styles.modeButtonActive]}
           >
             <MaterialCommunityIcons
-              name="stamp"
+              name="check-decagram"
               size={16}
               color={isPencilMode ? '#8a7a6a' : '#1a120b'}
             />
