@@ -36,9 +36,6 @@ export default function LogicGrid({
   const rowOffsetsRef = useRef({});
   const pendingCellLayoutsRef = useRef({});
   const cellLayoutsRef = useRef({});
-  const gridRef = useRef(null);
-  const containerPositionRef = useRef({ x: 0, y: 0 });
-  const measurementReadyRef = useRef(false);
   const dragStartPosRef = useRef(null);
   const isDraggingRef = useRef(false);
 
@@ -54,7 +51,11 @@ export default function LogicGrid({
 
   const candidateLookup = candidates || {};
   const padding = Math.max(6, Math.floor(cellSize * 0.08));
-  const cellPitch = cellSize + CELL_MARGIN * 2;
+
+  const isCellBlocked = (row, col) => {
+    const cell = grid?.[row]?.[col];
+    return !cell || cell.terrain === 'fog' || cell.staticObject !== 'none';
+  };
 
   const setCellLayout = (rowIndex, colIndex, layout) => {
     const rowOffset = rowOffsetsRef.current[rowIndex];
@@ -86,38 +87,27 @@ export default function LogicGrid({
 
   const resolveCellFromEvent = (event) => {
     if (!grid?.length) return null;
-    const { pageX, pageY } = event.nativeEvent;
-    const relX = pageX - containerPositionRef.current.x;
-    const relY = pageY - containerPositionRef.current.y;
+    const { locationX, locationY } = event.nativeEvent;
+    if (!Number.isFinite(locationX) || !Number.isFinite(locationY)) return null;
+    const relX = locationX - padding;
+    const relY = locationY - padding;
     const layouts = Object.values(cellLayoutsRef.current);
     if (!layouts.length) return null;
 
-    // Find the cell whose center is closest to the touch point
-    let bestCell = null;
-    let bestDistance = Infinity;
-    const maxDistance = cellSize * 0.75; // Only match if within 75% of cell size
-
     for (const cell of layouts) {
-      const centerX = cell.x + cell.width / 2;
-      const centerY = cell.y + cell.height / 2;
-      const dx = relX - centerX;
-      const dy = relY - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < bestDistance && distance < maxDistance) {
-        const gridCell = grid[cell.row]?.[cell.col];
-        if (gridCell && gridCell.terrain !== 'fog' && gridCell.staticObject === 'none') {
-          bestDistance = distance;
-          bestCell = { row: cell.row, col: cell.col };
-        }
+      const withinX = relX >= cell.x && relX <= cell.x + cell.width;
+      const withinY = relY >= cell.y && relY <= cell.y + cell.height;
+      if (withinX && withinY && !isCellBlocked(cell.row, cell.col)) {
+        return { row: cell.row, col: cell.col };
       }
     }
 
-    return bestCell;
+    return null;
   };
 
   const applyPencilAtCell = (row, col) => {
     if (!onPencilAction || !activeItemId) return;
+    if (isCellBlocked(row, col)) return;
     if (lastCellRef.current && lastCellRef.current.row === row && lastCellRef.current.col === col) return;
     lastCellRef.current = { row, col };
 
@@ -155,20 +145,11 @@ export default function LogicGrid({
     onStartShouldSetPanResponderCapture: () => false,
     onMoveShouldSetPanResponderCapture: () => Boolean(isPencilMode && activeItemId && dragActionRef.current),
     onPanResponderGrant: (event) => {
-      measurementReadyRef.current = false;
       isDraggingRef.current = false;
       const { pageX, pageY } = event.nativeEvent;
       dragStartPosRef.current = { x: pageX, y: pageY };
-      if (gridRef.current) {
-        gridRef.current.measureInWindow((x, y) => {
-          // Add padding to account for content area offset
-          containerPositionRef.current = { x: x + padding, y: y + padding };
-          measurementReadyRef.current = true;
-        });
-      }
     },
     onPanResponderMove: (event) => {
-      if (!measurementReadyRef.current) return;
       const { pageX, pageY } = event.nativeEvent;
       if (!isDraggingRef.current && dragStartPosRef.current) {
         const dx = pageX - dragStartPosRef.current.x;
@@ -201,16 +182,7 @@ export default function LogicGrid({
 
   return (
     <View
-      ref={gridRef}
       style={[styles.gridContainer, { padding }]}
-      onLayout={() => {
-        if (gridRef.current) {
-          gridRef.current.measureInWindow((x, y) => {
-            // Add padding to account for content area offset
-            containerPositionRef.current = { x: x + padding, y: y + padding };
-          });
-        }
-      }}
       {...(isPencilMode ? panResponder.panHandlers : {})}
     >
       <View style={styles.row}>

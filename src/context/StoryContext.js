@@ -441,7 +441,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
   const saveBranchingChoiceAndPrefetch = useCallback((caseNumber, firstChoice, secondChoice, options = {}) => {
     const isComplete = options?.isComplete !== false;
     // Save the branching choice to storyCampaign
-    saveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete });
+    const didSave = saveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete });
+    if (!didSave) {
+      return;
+    }
 
     // Get current state for prefetching
     const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);

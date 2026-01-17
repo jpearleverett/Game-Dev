@@ -246,7 +246,7 @@ export function useStoryEngine(progress, updateProgress) {
   const saveBranchingChoice = useCallback((caseNumber, firstChoice, secondChoice, options = {}) => {
     if (!caseNumber || !firstChoice || !secondChoice) {
       console.warn('[useStoryEngine] saveBranchingChoice called with missing params:', { caseNumber, firstChoice, secondChoice });
-      return;
+      return false;
     }
     const isComplete = options?.isComplete !== false;
 
@@ -283,7 +283,7 @@ export function useStoryEngine(progress, updateProgress) {
         normalizedFirst: fc,
         normalizedSecond: sc,
       });
-      return;
+      return false;
     }
 
     const existingChoices = storyCampaign.branchingChoices || [];
@@ -299,7 +299,7 @@ export function useStoryEngine(progress, updateProgress) {
           incomingFirst: fc,
           incomingSecond: sc,
         });
-        return;
+        return false;
       }
       if (existing.isComplete === false && isComplete) {
         const updatedChoice = {
@@ -322,8 +322,9 @@ export function useStoryEngine(progress, updateProgress) {
         }).catch((err) => {
           console.error('[useStoryEngine] Failed to persist branching choice update:', err);
         });
+        return true;
       }
-      return;
+      return false;
     }
 
     const newChoice = {
@@ -355,6 +356,7 @@ export function useStoryEngine(progress, updateProgress) {
       console.error('[useStoryEngine] Failed to persist branching choice:', err);
     });
 
+    return true;
   }, [storyCampaign, updateProgress, progress]);
 
   // This logic was previously in 'activateStoryCase'
