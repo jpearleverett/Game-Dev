@@ -210,18 +210,31 @@ LLM outputs a structured JSON payload. For C subchapters:
 At runtime, the game selects the decision that matches the player's actual
 branching choices within the subchapter.
 
-### 6.5 Validation and repair
+### 6.5 Validation and word count
 - LLM responses are validated with a secondary LLM pass.
 - JSON repair attempts are applied when output is truncated.
 - Regex validation checks POV, forbidden phrases, and structural consistency.
-- Validation is warnings-only for word count issues (no automatic retry).
+- **Word count validation is warnings-only** (no automatic retry or expansion).
+- Word count configuration (see `GENERATION_CONFIG.wordCount` in storyBible.js):
+  - `minimum`: 800 words (allows 3×270=810 word paths to pass)
+  - `target`: 900 words (3×300=900 expected per path)
+  - `maximum`: 1,200 words
+- Segment validation minimum: 270 words (ensures 3 segments exceed 800 total).
 
-### 6.6 Path personality
+### 6.6 Narrative expansion (DISABLED)
+- The `_expandNarrative()` function previously attempted to expand short narratives.
+- **This feature is disabled** because it caused text corruption:
+  - LLM would start mid-word (e.g., "ike taffy" instead of "like taffy")
+  - LLM would include partial duplicate sentences
+- Shorter stories are now accepted rather than risking corrupted text.
+- The function remains in code but is not called.
+
+### 6.7 Path personality
 The player's choice history (A=methodical, B=aggressive) produces a path
 personality profile. This feeds prompt instructions to align Jack's dialogue
 and risk tolerance with the player's choices.
 
-### 6.7 Background generation and prefetching
+### 6.8 Background generation and prefetching
 `useStoryGeneration.js` supports:
 - Pre-generating upcoming subchapters and branches.
 - A narrative-first flow where C-subchapter decisions trigger next chapter
@@ -243,8 +256,22 @@ LLMService manages:
   - Direct mode (dev) using embedded API key.
 - **Temperature**:
   - Gemini 3 temperature is forced to 1.0 (regardless of caller input).
+  - Setting below 1.0 causes looping or degraded performance on complex tasks.
 - **Thinking**:
   - `thinkingLevel` defaults to high, can be overridden for specific tasks.
+  - **Important:** Thinking tokens consume output budget. With "high" thinking,
+    50-80% of `maxTokens` may go to reasoning before actual output.
+  - Use `thinkingLevel: 'low'` for simple tasks (classification, validation).
+  - Use `thinkingLevel: 'high'` for complex reasoning (narrative generation).
+- **Token budgets** (see `GENERATION_CONFIG.maxTokens` in storyBible.js):
+  - `subchapter`: 65,536 (Gemini 3 max output)
+  - `pathDecisions`: 65,536
+  - `arcPlanning`: 16,000 (complex multi-chapter planning)
+  - `outline`: 8,000 (chapter outlines)
+  - `consequences`: 4,000
+  - `llmValidation`: 16,000
+  - `classification`: 2,000 (uses low thinking)
+  - `validation`: 2,000 (uses low thinking)
 - **Streaming**:
   - Priority: react-native-sse -> expo/fetch streaming -> response.text().
   - Heartbeats prevent mobile timeouts during Gemini thinking phase.
@@ -350,9 +377,18 @@ Key components:
 
 ### 10.1 UI utilities and helpers
 - `textPagination.js` splits narrative into pages with sentence-aware breaks.
+  - `findBreakPoint()` finds word boundaries, expanding search to avoid mid-word cuts.
+  - `removeDuplicateContent()` detects and removes duplicate sentences.
 - `caseFileHelpers.js` parses daily intros and summary lines.
 - `boardUtils.js` builds polaroid labels and thumbtack placement metrics.
 - `useCachedResources` preloads fonts and critical images before showing UI.
+
+### 10.2 Text truncation constants
+StoryGenerationService uses named constants for consistent truncation:
+- `TRUNCATE_SUMMARY`: 500 chars (brief narrative summaries in prompts)
+- `TRUNCATE_VALIDATION`: 3,000 chars (full narrative for validation)
+- `TRUNCATE_DESCRIPTION`: 300 chars (thread/choice descriptions)
+- `TRUNCATE_PREVIEW`: 100 chars (short previews in logs)
 
 ---
 
@@ -414,14 +450,13 @@ Pruning priority:
 
 ## 15) Known issues and discrepancies (important for agents)
 
-These are identified gaps between current code and documented fixes:
+These are identified gaps or important notes about the current code:
 
-1. **CaseSolvedScreen preserveStatus fix is missing**
-   - Session summary documents a fix that preserves status during navigation to
-     avoid "Retry Case" flicker. This fix does not appear in the current code.
-   - If you are troubleshooting CaseSolvedScreen behavior, re-apply the
-     `preserveStatus` chain (gameReducer -> useGameLogic -> GameContext
-     -> useNavigationActions).
+1. **LogicPuzzleScreen navigation race condition (FIXED)**
+   - Previously, `targetCaseNumber` was calculated using async-updated state
+     (`progress.storyCampaign.activeCaseNumber`) which could be stale.
+   - Fix: Use `nextCaseNumber` directly calculated from chapter/subchapter.
+   - File: `src/screens/LogicPuzzleScreen.js`
 
 2. **Undefined `hasFirstDecision` in GameContext**
    - `GameContext.js` references `hasFirstDecision` without defining it.
@@ -430,6 +465,15 @@ These are identified gaps between current code and documented fixes:
 3. **Large docs and prompt artifacts**
    - Files like `docs/storyreference.txt` and prompt dumps are large.
    - When updating them, use chunked reads/writes to avoid tool limits.
+
+4. **Narrative expansion is disabled**
+   - `_expandNarrative()` caused text corruption (duplicate/cut text).
+   - Function exists but is not called. Do not re-enable without fixing root cause.
+
+5. **Two prompt building paths**
+   - Cached (84%): `_buildDynamicPrompt()` builds inline.
+   - Uncached (16%): `_buildGenerationPrompt()` → `_buildStyleSection()`.
+   - When adding optimizations, **both paths must be updated**.
 
 ---
 
@@ -449,6 +493,14 @@ When adding features or modifying behavior, maintain these invariants:
     and recommended for continuity between text calls.
 - Avoid changing prompt constraints without updating validation logic and
   schemas in tandem.
+- When changing word count targets:
+  - Ensure segment targets (3×N) exceed the minimum word count.
+  - Update both `GENERATION_CONFIG.wordCount` and schema descriptions.
+  - Do not re-enable `_expandNarrative()` - it causes text corruption.
+- When changing maxTokens:
+  - Account for thinking token overhead (50-80% with high thinking).
+  - Use generous values for complex tasks (arc planning, outlines).
+- Always log errors in catch blocks - never silently swallow exceptions.
 
 ---
 
