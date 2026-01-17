@@ -22,7 +22,7 @@ it aligned with implementation details and constraints.
   - `screens/`: UI screens for story, puzzles, menus, archive, settings.
   - `components/`: Narrative readers, decision panels, puzzle UI, overlays.
   - `utils/`: Case merge helpers, text pagination, board helpers, tracing.
-- `proxy/`: Cloudflare Worker and Vercel Edge proxies for Gemini API.
+- `proxy/`: Vercel Edge proxy for Gemini API.
 - `scripts/`: Many-shot extraction and categorization pipeline for Mystic River.
 - `docs/`: Gemini API docs, prompts, session summaries, story reference text.
 
@@ -252,7 +252,7 @@ and risk tolerance with the player's choices.
 LLMService manages:
 
 - **Configuration**:
-  - Proxy mode (production) via Cloudflare/Vercel.
+  - Proxy mode (production) via Vercel Edge Function.
   - Direct mode (dev) using embedded API key.
 - **Temperature**:
   - Gemini 3 temperature is forced to 1.0 (regardless of caller input).
@@ -288,22 +288,17 @@ cache listing/deletion for cost optimization.
 
 ---
 
-## 8) Proxy services (Gemini API)
+## 8) Proxy service (Gemini API)
 
-Two proxy implementations exist:
+The game uses a **Vercel Edge Function** (`proxy/api/gemini.js`) to proxy Gemini API requests:
 
-1. **Cloudflare Worker** (`proxy/index.js`)
-   - Secure API key in secrets.
-   - Rate limiting per IP.
-   - Optional app token verification.
-   - Non-streaming JSON responses.
+- Secure API key storage in Vercel environment variables.
+- True streaming with SSE heartbeats.
+- Supports cached content creation and generation.
+- Returns thought signatures for Gemini 3 reasoning continuity.
+- Rate limiting and request validation.
 
-2. **Vercel Edge Function** (`proxy/api/gemini.js`)
-   - True streaming with SSE heartbeats.
-   - Supports cached content creation and generation.
-   - Returns thought signatures for Gemini 3 reasoning continuity.
-
-The app can target either proxy URL via `app.config.js` and `.env`.
+The proxy URL is configured via `GEMINI_PROXY_URL` in `app.config.js` and `.env`.
 
 ---
 
@@ -452,15 +447,20 @@ Pruning priority:
 
 These are identified gaps or important notes about the current code:
 
-1. **LogicPuzzleScreen navigation race condition (FIXED)**
-   - Previously, `targetCaseNumber` was calculated using async-updated state
-     (`progress.storyCampaign.activeCaseNumber`) which could be stale.
-   - Fix: Use `nextCaseNumber` directly calculated from chapter/subchapter.
+1. **LogicPuzzleScreen navigation flow (FIXED)**
+   - Previously, direct navigation bypassed the proper case activation flow,
+     causing missing narrative content after puzzle completion.
+   - Fix: Use `handleStoryContinue` from `useNavigationActions` hook instead
+     of direct `navigation.replace()` calls.
    - File: `src/screens/LogicPuzzleScreen.js`
 
-2. **Undefined `hasFirstDecision` in GameContext**
-   - `GameContext.js` references `hasFirstDecision` without defining it.
-   - This is likely a bug and may break chapter advancement logic.
+2. **Undefined `hasFirstDecision` in GameContext (FIXED)**
+   - `GameContext.js` referenced `hasFirstDecision` without defining it.
+   - This caused "Property 'hasFirstDecision' doesn't exist" errors that broke
+     story progression and displayed empty narrative screens.
+   - Fix: Removed the undefined variable check entirely. Background generation
+     now triggers based solely on chapter number (`chapter < 12`).
+   - File: `src/context/GameContext.js`
 
 3. **Large docs and prompt artifacts**
    - Files like `docs/storyreference.txt` and prompt dumps are large.
