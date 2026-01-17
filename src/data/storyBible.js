@@ -673,18 +673,20 @@ export const GENERATION_CONFIG = {
   },
 
   // Token limits - Gemini 3 Flash Preview supports up to 65,536 tokens output (64k)
-  // 500-1000 words ≈ 700-1400 tokens + JSON structure overhead
+  // IMPORTANT: Thinking tokens consume output budget! With default 'high' thinking,
+  // the model may use 50-80% of tokens for reasoning before generating output.
+  // Values below are generous to ensure quality output with full reasoning depth.
   // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
   maxTokens: {
-    subchapter: 65536,    // Gemini 3 Flash Preview max output (64k tokens)
+    subchapter: 65536,    // Gemini 3 max output - main narrative generation
     expansion: 8000,      // For expansion requests (currently disabled)
-    validation: 1000,     // For validation passes
-    pathDecisions: 65536, // Same as subchapter - no reason to limit (pay for actual tokens only)
-    classification: 1000, // For personality classification (thinking tokens consume budget)
-    arcPlanning: 4000,    // For story arc planning
-    outline: 2000,        // For chapter outlines and decision generation
-    consequences: 1000,   // For consequence generation
-    llmValidation: 10000, // For LLM-based semantic validation (needs space for structured output)
+    validation: 2000,     // For simple validation passes (uses 'low' thinking)
+    pathDecisions: 65536, // Same as subchapter - complex multi-path generation
+    classification: 2000, // For personality classification (uses 'low' thinking)
+    arcPlanning: 16000,   // Complex multi-chapter arc planning (uses 'high' thinking)
+    outline: 8000,        // Chapter outlines and decision generation (uses 'high' thinking)
+    consequences: 4000,   // Consequence generation (uses 'high' thinking by default)
+    llmValidation: 16000, // LLM-based semantic validation (uses 'low' thinking, but structured output)
   },
 
   // Word count requirements - optimized for fast background generation
