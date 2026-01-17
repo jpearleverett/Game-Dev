@@ -54,7 +54,9 @@ function estimateLines(text, charsPerLine) {
 
 /**
  * Detects and removes duplicate content from text.
- * Looks for patterns where text is repeated (possibly with corruption like missing first char).
+ * Handles patterns like: "...sentence. ike taffy. Jack... sentence. Jack..."
+ * where "ike taffy" is a corrupted fragment (missing "l" from "like taffy")
+ * followed by duplicate sentences.
  */
 function removeDuplicateContent(text) {
   if (!text || text.length < 100) return text;
@@ -70,23 +72,58 @@ function removeDuplicateContent(text) {
     if (normalized.length > 20) { // Only check substantial sentences
       if (seen.has(normalized)) {
         // Found duplicate - find where duplication starts and truncate
-        const firstOccurrence = text.indexOf(sentence.trim());
-        const secondOccurrence = text.indexOf(sentence.trim(), firstOccurrence + 1);
+        const trimmedSentence = sentence.trim();
+        const firstOccurrence = text.indexOf(trimmedSentence);
+        const secondOccurrence = text.indexOf(trimmedSentence, firstOccurrence + trimmedSentence.length);
+
         if (secondOccurrence > firstOccurrence) {
-          // Also check for corrupted start (missing first char) before the duplicate
+          // Look backwards from secondOccurrence to find the last complete sentence
+          // This catches corrupted fragments like "ike taffy." before the duplicate
+          const textBeforeDupe = text.slice(0, secondOccurrence);
+
+          // Find the last sentence ending that's part of the ORIGINAL content
+          // (not a corrupted fragment). We identify this by finding the last
+          // sentence ending that's followed by a word that appears naturally
+          // in the first half of the text.
+          //
+          // Simple heuristic: find the last ". " or "! " or "? " and check if
+          // what follows could be a corrupted start
           let truncateAt = secondOccurrence;
-          // Look back a bit to catch any corrupted fragment
-          const lookBack = Math.min(30, secondOccurrence);
-          const beforeDupe = text.slice(secondOccurrence - lookBack, secondOccurrence);
-          // If there's a partial word fragment right before, include it in truncation
-          const lastSpace = beforeDupe.lastIndexOf(' ');
-          if (lastSpace >= 0 && lastSpace < lookBack - 1) {
-            const fragment = beforeDupe.slice(lastSpace + 1);
-            // Check if fragment looks like a corrupted word (short, no punctuation start)
-            if (fragment.length > 0 && fragment.length < 15 && !/^[.!?,]/.test(fragment)) {
-              truncateAt = secondOccurrence - (lookBack - lastSpace - 1);
+
+          // Look for sentence endings in the ~100 chars before the duplicate
+          const searchStart = Math.max(0, secondOccurrence - 100);
+          const searchRegion = text.slice(searchStart, secondOccurrence);
+
+          // Find all sentence endings in this region
+          const endingMatches = [...searchRegion.matchAll(/[.!?]\s+/g)];
+
+          if (endingMatches.length > 0) {
+            // Check the last few sentence endings
+            for (let i = endingMatches.length - 1; i >= 0; i--) {
+              const match = endingMatches[i];
+              const endPos = searchStart + match.index + 1; // Position after the punctuation
+
+              // Check what comes after this ending
+              const afterEnding = text.slice(endPos, secondOccurrence).trim();
+
+              // If what comes after is short (< 50 chars) and contains a period,
+              // it's likely a corrupted fragment like "ike taffy."
+              if (afterEnding.length < 50 && afterEnding.includes('.')) {
+                // This looks like: "good sentence. corrupted fragment. Duplicate..."
+                // Truncate after the good sentence
+                truncateAt = endPos;
+                break;
+              }
+
+              // If what comes after doesn't start with a capital letter (corrupted),
+              // truncate here
+              if (afterEnding.length > 0 && !/^[A-Z]/.test(afterEnding)) {
+                truncateAt = endPos;
+                break;
+              }
             }
           }
+
           return text.slice(0, truncateAt).trim();
         }
       }
