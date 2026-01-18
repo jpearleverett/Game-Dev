@@ -487,7 +487,48 @@ export function GameProvider({
       };
       let nextCaseNumber = null;
 
-      if (!isFinalSubchapter) {
+      if (isFinalSubchapter) {
+        // C subchapter: Check for pre-decision (narrative-first flow)
+        const preDecision = currentStory.preDecision;
+        if (preDecision && preDecision.caseNumber === caseNumber) {
+          console.log(`[GameContext] C subchapter logic puzzle solved with pre-decision: applying Option ${preDecision.optionKey}`);
+          story.applyPreDecision();
+          return;
+        }
+
+        // No pre-decision: show decision panel after puzzle
+        // Store decision options for LLM context
+        const pendingDecisionOptions = {};
+        if (activeCase?.storyDecision?.optionA) {
+          pendingDecisionOptions.A = {
+            title: activeCase.storyDecision.optionA.title,
+            focus: activeCase.storyDecision.optionA.focus,
+          };
+        }
+        if (activeCase?.storyDecision?.optionB) {
+          pendingDecisionOptions.B = {
+            title: activeCase.storyDecision.optionB.title,
+            focus: activeCase.storyDecision.optionB.focus,
+          };
+        }
+        // Fallback to options[] array
+        if (!pendingDecisionOptions.A && activeCase?.storyDecision?.options?.[0]) {
+          const opt = activeCase.storyDecision.options[0];
+          pendingDecisionOptions[opt.key || 'A'] = { title: opt.title, focus: opt.focus };
+        }
+        if (!pendingDecisionOptions.B && activeCase?.storyDecision?.options?.[1]) {
+          const opt = activeCase.storyDecision.options[1];
+          pendingDecisionOptions[opt.key || 'B'] = { title: opt.title, focus: opt.focus };
+        }
+
+        updatedStory = {
+          ...updatedStory,
+          awaitingDecision: true,
+          pendingDecisionCase: caseNumber,
+          pendingDecisionOptions,
+          lastDecision: null,
+        };
+      } else {
         const nextSubchapter = currentStory.subchapter + 1;
         nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
         updatedStory = {
@@ -510,7 +551,7 @@ export function GameProvider({
           setActiveCaseInternal(nextCase.id);
         }
       }
-  }, [mode, progress.storyCampaign, updateProgress, story, audio, setActiveCaseInternal]);
+  }, [mode, progress.storyCampaign, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
 
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 

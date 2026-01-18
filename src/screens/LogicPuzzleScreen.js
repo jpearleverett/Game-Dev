@@ -473,21 +473,22 @@ export default function LogicPuzzleScreen({ navigation }) {
   // This avoids race conditions with async state updates
   const handleContinueAfterSolve = useCallback(async () => {
     try {
-      // Use the pre-computed next case number, or fall back to handleStoryContinue
       if (nextCaseNumber) {
-        // Still call continueStoryCampaign for its side effects (analytics, content loading, etc.)
-        // but navigate to the known correct case number
-        await game.continueStoryCampaign?.();
+        // Ensure content is generated for the NEXT case (not current case from stale state)
+        // This fixes the race condition where continueStoryCampaign reads old state
+        const nextPathKey = storyCampaign?.currentPathKey || 'ROOT';
+        console.log(`[LogicPuzzleScreen] Ensuring content for ${nextCaseNumber} (path: ${nextPathKey})`);
+        await game.ensureStoryContent?.(nextCaseNumber, nextPathKey);
         navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
       } else {
-        // Final subchapter or no next case - use regular flow
-        handleStoryContinue();
+        // Final subchapter (C) - go back to CaseFile to show decision panel
+        navigation.replace('CaseFile');
       }
     } catch (error) {
       console.warn('[LogicPuzzleScreen] Continue failed, navigating to CaseFile:', error?.message);
       navigation.replace('CaseFile', nextCaseNumber ? { caseNumber: nextCaseNumber } : undefined);
     }
-  }, [nextCaseNumber, game, navigation, handleStoryContinue]);
+  }, [nextCaseNumber, game, navigation, storyCampaign?.currentPathKey]);
 
   const placedCounts = useMemo(() => {
     const counts = {};
