@@ -14,7 +14,8 @@ import { clearLogicPuzzle, loadLogicPuzzle, saveLogicPuzzle } from '../storage/l
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
-import useNavigationActions from '../hooks/useNavigationActions';
+import { useNavigationActions } from '../hooks/useNavigationActions';
+import { useAudio } from '../context/AudioContext';
 
 const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
@@ -26,9 +27,11 @@ const STATUS = {
 };
 
 export default function LogicPuzzleScreen({ navigation }) {
-  const { activeCase, progress, completeLogicPuzzle } = useGame();
+  const game = useGame();
+  const { activeCase, progress, completeLogicPuzzle } = game;
   const { width, moderateScale, scaleSpacing } = useResponsiveLayout();
-  const { handleStoryContinue } = useNavigationActions();
+  const audio = useAudio();
+  const { handleStoryContinue } = useNavigationActions(navigation, game, audio);
 
   const caseNumber = activeCase?.caseNumber;
   const storyCampaign = progress.storyCampaign;
