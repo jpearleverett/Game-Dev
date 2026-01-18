@@ -447,11 +447,16 @@ Pruning priority:
 
 These are identified gaps or important notes about the current code:
 
-1. **LogicPuzzleScreen navigation flow (FIXED)**
-   - Previously, direct navigation bypassed the proper case activation flow,
-     causing missing narrative content after puzzle completion.
-   - Fix: Use `handleStoryContinue` from `useNavigationActions` hook instead
-     of direct `navigation.replace()` calls.
+1. **LogicPuzzleScreen navigation after puzzle completion (FIXED)**
+   - After solving a logic puzzle (A/B subchapters), the player must advance to
+     the next subchapter (e.g., 1B → 1C).
+   - **Problem**: Various race conditions with React state caused navigation to
+     go back to the same subchapter instead of advancing.
+   - **Solution**: Compute the next case number directly inside the callback
+     (`handleContinueAfterSolve`) using `activeCase.caseNumber` at click time,
+     rather than relying on pre-computed state variables.
+   - The callback uses `parseCaseNumber()` and `formatCaseNumber()` to compute
+     the next case, then calls `ensureStoryContent()` before navigating.
    - File: `src/screens/LogicPuzzleScreen.js`
 
 2. **Undefined `hasFirstDecision` in GameContext (FIXED)**
@@ -462,15 +467,27 @@ These are identified gaps or important notes about the current code:
      now triggers based solely on chapter number (`chapter < 12`).
    - File: `src/context/GameContext.js`
 
-3. **Large docs and prompt artifacts**
+3. **C subchapter decision handling in completeLogicPuzzle (FIXED)**
+   - For C subchapters (final subchapter with chapter decision), the puzzle
+     completion must set `awaitingDecision: true` so the decision panel appears.
+   - `completeLogicPuzzle` in GameContext now properly handles both:
+     - A/B subchapters: advances `activeCaseNumber` to next subchapter
+     - C subchapters: sets `awaitingDecision: true` and `pendingDecisionCase`
+   - This mirrors the Evidence Board completion flow.
+   - File: `src/context/GameContext.js`
+
+4. **Large docs and prompt artifacts**
    - Files like `docs/storyreference.txt` and prompt dumps are large.
    - When updating them, use chunked reads/writes to avoid tool limits.
 
-4. **Narrative expansion is disabled**
+5. **Narrative expansion is disabled**
    - `_expandNarrative()` caused text corruption (duplicate/cut text).
    - Function exists but is not called. Do not re-enable without fixing root cause.
+   - Duplicate text from LLM output is partially handled by `removeDuplicateContent()`
+     in textPagination.js, but only catches exact sentence duplicates, not
+     mid-sentence phrase duplications.
 
-5. **Two prompt building paths**
+6. **Two prompt building paths**
    - Cached (84%): `_buildDynamicPrompt()` builds inline.
    - Uncached (16%): `_buildGenerationPrompt()` → `_buildStyleSection()`.
    - When adding optimizations, **both paths must be updated**.
