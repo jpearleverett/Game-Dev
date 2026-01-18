@@ -45,6 +45,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
     unlockNextCaseIfReady,
+    openStoryCase,
     mode,
     purchaseBribe,
     purchaseFullUnlock,
@@ -193,8 +194,8 @@ export default function AppNavigator({ fontsReady, audio }) {
           const handleProceedToPuzzle = () => {
             const puzzleMode = getPuzzleMode(resolvedActiveCase?.caseNumber, effectivelyStoryMode);
             const routeName = getPuzzleRouteName(puzzleMode);
-            if (routeName === 'Board' && activeCase?.id) {
-              game.resetBoardForCase(activeCase.id);
+            if (routeName === 'Board' && resolvedActiveCase?.id) {
+              game.resetBoardForCase(resolvedActiveCase.id);
             }
             navigation.navigate(routeName);
           };
@@ -207,6 +208,13 @@ export default function AppNavigator({ fontsReady, audio }) {
             ? cases.find((c) => c.caseNumber === targetCaseNumber)
             : null;
           const resolvedActiveCase = caseFromParams || activeCase;
+
+          // Keep game state aligned with explicit navigation params.
+          React.useEffect(() => {
+            if (!caseFromParams?.id) return;
+            if (activeCase?.caseNumber === caseFromParams.caseNumber) return;
+            openStoryCase?.(caseFromParams.id);
+          }, [caseFromParams?.id, caseFromParams?.caseNumber, activeCase?.caseNumber, openStoryCase]);
 
           // NARRATIVE-FIRST FIX: Check if user has story progress even if not in explicit story mode
           // This ensures the "Solve Puzzle" button appears correctly for all story chapters
