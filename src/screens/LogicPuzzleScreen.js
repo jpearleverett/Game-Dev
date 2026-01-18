@@ -51,7 +51,6 @@ export default function LogicPuzzleScreen({ navigation }) {
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [cluesExpanded, setCluesExpanded] = useState(false);
   const [checkedClues, setCheckedClues] = useState(new Set());
-  const [nextCaseNumber, setNextCaseNumber] = useState(null);
 
   const saveTimerRef = useRef(null);
 
@@ -455,19 +454,8 @@ export default function LogicPuzzleScreen({ navigation }) {
       return;
     }
 
-    // Compute next case number FIRST, before any async operations or state updates
-    // This ensures the nextCaseNumber state is set in the same batch as the SOLVED status
-    const { chapter: currentChapter, subchapter: currentSubchapter } = parseCaseNumber(caseNumber);
-    const isFinalSubchapter = currentSubchapter >= 3;
-    console.log(`[LogicPuzzleScreen] checkSolution: caseNumber=${caseNumber}, chapter=${currentChapter}, subchapter=${currentSubchapter}, isFinal=${isFinalSubchapter}`);
-
-    // Set both status and nextCaseNumber together before any await
-    // React will batch these updates, ensuring the button has the correct nextCaseNumber
-    if (!isFinalSubchapter) {
-      const computedNextCase = formatCaseNumber(currentChapter, currentSubchapter + 1);
-      console.log(`[LogicPuzzleScreen] Setting nextCaseNumber to ${computedNextCase}`);
-      setNextCaseNumber(computedNextCase);
-    }
+    // Mark puzzle as solved - next case is computed directly in handleContinueAfterSolve
+    console.log(`[LogicPuzzleScreen] checkSolution: puzzle solved for ${caseNumber}`);
     setStatus(STATUS.SOLVED);
 
     // Now do async cleanup and completion - button already has correct state
@@ -475,29 +463,37 @@ export default function LogicPuzzleScreen({ navigation }) {
     completeLogicPuzzle?.({ caseId: activeCase?.id, caseNumber, mistakes });
   }, [puzzle, placedItems, clueStatuses, caseNumber, pathKey, mistakes, completeLogicPuzzle, activeCase?.id]);
 
-  // Custom continue handler that uses the pre-computed next case number
-  // This avoids race conditions with async state updates
+  // Custom continue handler that computes the next case number directly
+  // This avoids any potential state sync issues with React's batching
   const handleContinueAfterSolve = useCallback(async () => {
-    console.log(`[LogicPuzzleScreen] handleContinueAfterSolve called, nextCaseNumber=${nextCaseNumber}`);
+    // Compute next case directly from activeCase to avoid stale state issues
+    const currentCaseNumber = activeCase?.caseNumber;
+    const { chapter: currentChapter, subchapter: currentSubchapter } = parseCaseNumber(currentCaseNumber);
+    const isFinalSubchapter = currentSubchapter >= 3;
+    const computedNextCase = !isFinalSubchapter
+      ? formatCaseNumber(currentChapter, currentSubchapter + 1)
+      : null;
+
+    console.log(`[LogicPuzzleScreen] handleContinueAfterSolve: currentCase=${currentCaseNumber}, nextCase=${computedNextCase}`);
+
     try {
-      if (nextCaseNumber) {
-        // Ensure content is generated for the NEXT case (not current case from stale state)
-        // This fixes the race condition where continueStoryCampaign reads old state
+      if (computedNextCase) {
+        // Ensure content is generated for the NEXT case
         const nextPathKey = storyCampaign?.currentPathKey || 'ROOT';
-        console.log(`[LogicPuzzleScreen] Ensuring content for ${nextCaseNumber} (path: ${nextPathKey})`);
-        await game.ensureStoryContent?.(nextCaseNumber, nextPathKey);
-        console.log(`[LogicPuzzleScreen] Navigating to CaseFile with caseNumber=${nextCaseNumber}`);
-        navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
+        console.log(`[LogicPuzzleScreen] Ensuring content for ${computedNextCase} (path: ${nextPathKey})`);
+        await game.ensureStoryContent?.(computedNextCase, nextPathKey);
+        console.log(`[LogicPuzzleScreen] Navigating to CaseFile with caseNumber=${computedNextCase}`);
+        navigation.replace('CaseFile', { caseNumber: computedNextCase });
       } else {
         // Final subchapter (C) - go back to CaseFile to show decision panel
-        console.log(`[LogicPuzzleScreen] No nextCaseNumber, navigating to CaseFile without param`);
+        console.log(`[LogicPuzzleScreen] Final subchapter, navigating to CaseFile without param`);
         navigation.replace('CaseFile');
       }
     } catch (error) {
       console.warn('[LogicPuzzleScreen] Continue failed, navigating to CaseFile:', error?.message);
-      navigation.replace('CaseFile', nextCaseNumber ? { caseNumber: nextCaseNumber } : undefined);
+      navigation.replace('CaseFile', computedNextCase ? { caseNumber: computedNextCase } : undefined);
     }
-  }, [nextCaseNumber, game, navigation, storyCampaign?.currentPathKey]);
+  }, [activeCase?.caseNumber, game, navigation, storyCampaign?.currentPathKey]);
 
   const placedCounts = useMemo(() => {
     const counts = {};
