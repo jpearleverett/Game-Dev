@@ -342,7 +342,7 @@ export default function CaseFileScreen({
   }, [onSaveBranchingChoice, caseNumber, normalizeBranchingPath]);
 
   const handleBranchingComplete = useCallback((result) => {
-    setBranchingProgress(result);
+    setBranchingProgress(result ? { ...result, caseNumber } : result);
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
@@ -356,7 +356,7 @@ export default function CaseFileScreen({
     if (hasBranchingNarrative) {
       setNarrativeComplete(true);
     }
-  }, [hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete]);
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
@@ -367,8 +367,9 @@ export default function CaseFileScreen({
   useEffect(() => {
     if (!branchingProgress?.path) return;
     if (branchingChoiceComplete) return;
+    if (branchingProgress?.caseNumber && branchingProgress.caseNumber !== caseNumber) return;
     persistBranchingChoice(branchingProgress, { isComplete: true });
-  }, [branchingProgress?.path, branchingChoiceComplete, persistBranchingChoice]);
+  }, [branchingProgress?.path, branchingProgress?.caseNumber, branchingChoiceComplete, persistBranchingChoice, caseNumber]);
 
   const handleEvidenceCollected = useCallback((evidence) => {
     setCollectedEvidence(prev => [...prev, evidence]);
@@ -585,8 +586,11 @@ export default function CaseFileScreen({
   // 2. Narrative-first C subchapter: before puzzle, but ONLY after branching narrative is complete
   //    (existingBranchingChoice means player has made both sets of branching choices)
   // 3. For Chapter 1 (no branching narrative): show when in story mode C subchapter before puzzle
+  const branchingProgressForCase = branchingProgress && (
+    !branchingProgress.caseNumber || branchingProgress.caseNumber === caseNumber
+  );
   const branchingDecisionReady = hasBranchingNarrative
-    ? Boolean(branchingChoiceComplete) || Boolean(branchingProgress) || narrativeComplete
+    ? Boolean(branchingChoiceComplete) || Boolean(branchingProgressForCase) || narrativeComplete
     : true;
   const showDecisionOptions = showDecision && (
     awaitingDecision ||
