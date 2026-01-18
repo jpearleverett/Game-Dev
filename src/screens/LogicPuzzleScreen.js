@@ -8,7 +8,7 @@ import LogicGrid from '../components/logic-puzzle/LogicGrid';
 import LogicClueDrawer from '../components/logic-puzzle/LogicClueDrawer';
 import LogicItemTray from '../components/logic-puzzle/LogicItemTray';
 import { useGame } from '../context/GameContext';
-import { parseCaseNumber, resolveStoryPathKey } from '../data/storyContent';
+import { parseCaseNumber, resolveStoryPathKey, formatCaseNumber } from '../data/storyContent';
 import { generateLogicPuzzle, getLogicDifficultyForChapter } from '../services/LogicPuzzleService';
 import { clearLogicPuzzle, loadLogicPuzzle, saveLogicPuzzle } from '../storage/logicPuzzleStorage';
 import { FONTS, FONT_SIZES } from '../constants/typography';
@@ -51,6 +51,7 @@ export default function LogicPuzzleScreen({ navigation }) {
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [cluesExpanded, setCluesExpanded] = useState(false);
   const [checkedClues, setCheckedClues] = useState(new Set());
+  const [nextCaseNumber, setNextCaseNumber] = useState(null);
 
   const saveTimerRef = useRef(null);
 
@@ -456,8 +457,37 @@ export default function LogicPuzzleScreen({ navigation }) {
 
     setStatus(STATUS.SOLVED);
     await clearLogicPuzzle(caseNumber, pathKey);
+
+    // Compute next case number BEFORE calling completeLogicPuzzle to avoid race conditions
+    const { chapter: currentChapter, subchapter: currentSubchapter } = parseCaseNumber(caseNumber);
+    const isFinalSubchapter = currentSubchapter >= 3;
+    if (!isFinalSubchapter) {
+      const computedNextCase = formatCaseNumber(currentChapter, currentSubchapter + 1);
+      setNextCaseNumber(computedNextCase);
+    }
+
     completeLogicPuzzle?.({ caseId: activeCase?.id, caseNumber, mistakes });
   }, [puzzle, placedItems, clueStatuses, caseNumber, pathKey, mistakes, completeLogicPuzzle, activeCase?.id]);
+
+  // Custom continue handler that uses the pre-computed next case number
+  // This avoids race conditions with async state updates
+  const handleContinueAfterSolve = useCallback(async () => {
+    try {
+      // Use the pre-computed next case number, or fall back to handleStoryContinue
+      if (nextCaseNumber) {
+        // Still call continueStoryCampaign for its side effects (analytics, content loading, etc.)
+        // but navigate to the known correct case number
+        await game.continueStoryCampaign?.();
+        navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
+      } else {
+        // Final subchapter or no next case - use regular flow
+        handleStoryContinue();
+      }
+    } catch (error) {
+      console.warn('[LogicPuzzleScreen] Continue failed, navigating to CaseFile:', error?.message);
+      navigation.replace('CaseFile', nextCaseNumber ? { caseNumber: nextCaseNumber } : undefined);
+    }
+  }, [nextCaseNumber, game, navigation, handleStoryContinue]);
 
   const placedCounts = useMemo(() => {
     const counts = {};
@@ -561,7 +591,7 @@ export default function LogicPuzzleScreen({ navigation }) {
               <Text style={styles.solvedBody}>
                 The logic lines up. File the report and move to the next lead.
               </Text>
-              <PrimaryButton label="Continue Investigation" onPress={handleStoryContinue} fullWidth />
+              <PrimaryButton label="Continue Investigation" onPress={handleContinueAfterSolve} fullWidth />
             </View>
           </View>
         )}
