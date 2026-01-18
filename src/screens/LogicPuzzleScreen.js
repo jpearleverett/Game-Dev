@@ -455,19 +455,23 @@ export default function LogicPuzzleScreen({ navigation }) {
       return;
     }
 
-    setStatus(STATUS.SOLVED);
-    await clearLogicPuzzle(caseNumber, pathKey);
-
-    // Compute next case number BEFORE calling completeLogicPuzzle to avoid race conditions
+    // Compute next case number FIRST, before any async operations or state updates
+    // This ensures the nextCaseNumber state is set in the same batch as the SOLVED status
     const { chapter: currentChapter, subchapter: currentSubchapter } = parseCaseNumber(caseNumber);
     const isFinalSubchapter = currentSubchapter >= 3;
     console.log(`[LogicPuzzleScreen] checkSolution: caseNumber=${caseNumber}, chapter=${currentChapter}, subchapter=${currentSubchapter}, isFinal=${isFinalSubchapter}`);
+
+    // Set both status and nextCaseNumber together before any await
+    // React will batch these updates, ensuring the button has the correct nextCaseNumber
     if (!isFinalSubchapter) {
       const computedNextCase = formatCaseNumber(currentChapter, currentSubchapter + 1);
       console.log(`[LogicPuzzleScreen] Setting nextCaseNumber to ${computedNextCase}`);
       setNextCaseNumber(computedNextCase);
     }
+    setStatus(STATUS.SOLVED);
 
+    // Now do async cleanup and completion - button already has correct state
+    await clearLogicPuzzle(caseNumber, pathKey);
     completeLogicPuzzle?.({ caseId: activeCase?.id, caseNumber, mistakes });
   }, [puzzle, placedItems, clueStatuses, caseNumber, pathKey, mistakes, completeLogicPuzzle, activeCase?.id]);
 
