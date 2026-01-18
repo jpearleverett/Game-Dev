@@ -36,6 +36,7 @@ export default function DecisionPanel({
   
   const decisionSectionRef = useRef(null);
   const [confettiOrigin, setConfettiOrigin] = useState({ x: -10, y: 0 });
+  const lastOriginRef = useRef({ x: -10, y: 0 });
 
   // Layout Constants
   const blockRadius = scaleRadius(RADIUS.lg);
@@ -46,10 +47,17 @@ export default function DecisionPanel({
   const updateConfettiOrigin = useCallback(() => {
     if (decisionSectionRef.current && decisionSectionRef.current.measureInWindow) {
       decisionSectionRef.current.measureInWindow((x, y, width, height) => {
-        setConfettiOrigin({
+        const nextOrigin = {
           x: x + width / 2,
           y: y + height * 0.1,
-        });
+        };
+        const prevOrigin = lastOriginRef.current;
+        const deltaX = Math.abs(nextOrigin.x - prevOrigin.x);
+        const deltaY = Math.abs(nextOrigin.y - prevOrigin.y);
+        if (deltaX > 1 || deltaY > 1) {
+          lastOriginRef.current = nextOrigin;
+          setConfettiOrigin(nextOrigin);
+        }
       });
     }
   }, []);
