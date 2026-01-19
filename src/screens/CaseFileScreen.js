@@ -274,6 +274,12 @@ export default function CaseFileScreen({
   // Applies to ALL subchapters in chapters 2+ (not just C)
   const [narrativeComplete, setNarrativeComplete] = useState(false);
 
+  // LOCAL STATE FIX: Track pre-decision made in this session to avoid timing issues
+  // When onSelectDecisionBeforePuzzle is called, the prop `storyCampaign.preDecision`
+  // may not update immediately due to React's batched state updates. This local state
+  // ensures we immediately know we've made a decision without waiting for prop propagation.
+  const [localPreDecisionKey, setLocalPreDecisionKey] = useState(null);
+
   // Check chapter and subchapter info
   const caseNumber = activeCase?.caseNumber;
   const chapterStr = caseNumber?.slice(0, 3);
@@ -298,6 +304,7 @@ export default function CaseFileScreen({
     setBranchingProgress(null);
     setCollectedEvidence([]);
     setNarrativeComplete(false);
+    setLocalPreDecisionKey(null); // Reset local pre-decision tracking when case changes
   }, [caseNumber]);
 
   const branchingChoiceSeed = useMemo(() => {
@@ -500,8 +507,10 @@ export default function CaseFileScreen({
 
   // NARRATIVE-FIRST FLOW: For C subchapters, check if pre-decision has already been made
   // (Moved up to support puzzlePhasePending calculation)
+  // LOCAL STATE FIX: Also check localPreDecisionKey for immediate feedback before prop propagates
   const preDecision = storyCampaign?.preDecision;
-  const hasPreDecision = preDecision && preDecision.caseNumber === caseNumber;
+  const hasPreDecision = (preDecision && preDecision.caseNumber === caseNumber) ||
+                         (localPreDecisionKey && isSubchapterC);
 
   // NARRATIVE-FIRST FIX: Check if puzzle phase is active (narrative complete but puzzle not solved)
   // For A/B subchapters: puzzle is pending after narrative is read
@@ -601,8 +610,10 @@ export default function CaseFileScreen({
 
   const [localSelection, setLocalSelection] = useState(selectedOptionKey);
   useEffect(() => { setLocalSelection(selectedOptionKey); }, [selectedOptionKey]);
-  // Include pre-decision in resolved selection
-  const resolvedSelectionKey = localSelection || selectedOptionKey || (hasPreDecision ? preDecision.optionKey : null);
+  // Include pre-decision in resolved selection (using local state for immediate feedback)
+  const resolvedSelectionKey = localSelection || selectedOptionKey ||
+    (preDecision?.caseNumber === caseNumber ? preDecision.optionKey : null) ||
+    (localPreDecisionKey && isSubchapterC ? localPreDecisionKey : null);
   
   const selectedOptionDetails = useMemo(() => decisionOptions.find((o) => o.key === resolvedSelectionKey) || null, [decisionOptions, resolvedSelectionKey]);
   const [lockedOptionSnapshot, setLockedOptionSnapshot] = useState(null);
@@ -749,6 +760,9 @@ export default function CaseFileScreen({
     // NARRATIVE-FIRST FLOW: For C subchapters before puzzle, use pre-puzzle decision
     if (!awaitingDecision && isStoryMode && isSubchapterC && !isCaseSolved && onSelectDecisionBeforePuzzle) {
       console.log(`[CaseFileScreen] Pre-puzzle decision for ${caseNumber}: Option ${optionKey}`);
+      // LOCAL STATE FIX: Set local tracking BEFORE calling the prop function
+      // This ensures the UI updates immediately, even before the storyCampaign prop propagates
+      setLocalPreDecisionKey(optionKey);
       onSelectDecisionBeforePuzzle(optionKey, selectedOption || {});
       setCelebrationActive(true);
       if (Haptics?.notificationAsync) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

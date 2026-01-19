@@ -528,6 +528,41 @@ These are identified gaps or important notes about the current code:
      don't overlap with the branching outlier sets.
    - File: `src/data/cases.js`
 
+9. **CaseFile showing wrong case after pre-puzzle decision (FIXED)**
+   - After making a pre-puzzle decision on C subchapters (e.g., 001C), the screen
+     would sometimes show the wrong case (001A) instead of staying on 001C.
+   - **Root cause**: Two issues:
+     1. The `caseFromParams` could become stale during re-renders caused by
+        state updates (like setting `preDecision`).
+     2. The `openStoryCase` callback in useEffect dependencies would change
+        when state cascaded, causing the effect to re-run with potentially
+        stale closure values.
+   - **Solution**:
+     1. Store `caseFromParams` in a ref (`initialCaseRef`) on first load and
+        use `stableCaseFromParams` for computing `resolvedActiveCase`.
+     2. Store `openStoryCase` in a ref (`openStoryCaseRef`) and remove it from
+        the useEffect dependency array to prevent unnecessary effect runs.
+   - File: `src/navigation/AppNavigator.js`
+
+10. **Pre-puzzle decision shows "Continue Investigation" instead of puzzle button (FIXED)**
+    - After making a pre-puzzle decision on C subchapters, the screen would show
+      "Continue Investigation" button instead of "Solve Evidence Board" button.
+      Clicking it would incorrectly navigate to 001A.
+    - **Root cause**: React state timing issue. When `handleConfirmOption` called
+      `onSelectDecisionBeforePuzzle`, it immediately followed with `setCelebrationActive(true)`.
+      This local state change triggered a re-render BEFORE the `storyCampaign` prop
+      had propagated from the parent (React batches state updates asynchronously).
+      During that intermediate re-render, `preDecision` was still undefined, so
+      `hasPreDecision` was false, causing `storyPromptConfig` to fall through to
+      the "Continue Investigation" case based on `pendingStoryAdvance`.
+    - **Solution**: Added `localPreDecisionKey` local state in CaseFileScreen that
+      tracks when a pre-decision was made in the current session. This state is:
+      1. Set synchronously in `handleConfirmOption` BEFORE calling the async prop
+      2. Used in `hasPreDecision` calculation: `(preDecision?.caseNumber === caseNumber) || (localPreDecisionKey && isSubchapterC)`
+      3. Reset when `caseNumber` changes (via useEffect)
+      This ensures immediate UI feedback without waiting for prop propagation.
+    - File: `src/screens/CaseFileScreen.js`
+
 ---
 
 ## 16) Extending the system safely
