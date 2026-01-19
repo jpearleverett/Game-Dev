@@ -385,6 +385,18 @@ StoryGenerationService uses named constants for consistent truncation:
 - `TRUNCATE_DESCRIPTION`: 300 chars (thread/choice descriptions)
 - `TRUNCATE_PREVIEW`: 100 chars (short previews in logs)
 
+### 10.3 Recent navigation + branching fixes (Jan 2026)
+- `AppNavigator` now synchronizes `CaseFile` navigation params with `GameContext`
+  so `activeCase` matches the explicit `caseNumber` passed during story advances
+  (avoids stale case state during 001A → 001B → 001C transitions).
+- `CaseFileScreen` now tags branching progress with the current `caseNumber`
+  and ignores progress updates from prior cases. This prevents auto-saving a
+  previous subchapter’s branching path into the next case.
+- Decision readiness is scoped to branching progress for the current case only,
+  so the decision panel will not unlock based on stale progress.
+- `DecisionPanel` guards its `onLayout` measurement updates to avoid repeated
+  state churn that caused "Maximum update depth exceeded" and UI slowdowns on 001C.
+
 ---
 
 ## 11) Audio, haptics, and UI theming
