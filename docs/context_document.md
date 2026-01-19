@@ -528,6 +528,22 @@ These are identified gaps or important notes about the current code:
      don't overlap with the branching outlier sets.
    - File: `src/data/cases.js`
 
+9. **CaseFile showing wrong case after pre-puzzle decision (FIXED)**
+   - After making a pre-puzzle decision on C subchapters (e.g., 001C), the screen
+     would sometimes show the wrong case (001A) instead of staying on 001C.
+   - **Root cause**: Two issues:
+     1. The `caseFromParams` could become stale during re-renders caused by
+        state updates (like setting `preDecision`).
+     2. The `openStoryCase` callback in useEffect dependencies would change
+        when state cascaded, causing the effect to re-run with potentially
+        stale closure values.
+   - **Solution**:
+     1. Store `caseFromParams` in a ref (`initialCaseRef`) on first load and
+        use `stableCaseFromParams` for computing `resolvedActiveCase`.
+     2. Store `openStoryCase` in a ref (`openStoryCaseRef`) and remove it from
+        the useEffect dependency array to prevent unnecessary effect runs.
+   - File: `src/navigation/AppNavigator.js`
+
 ---
 
 ## 16) Extending the system safely

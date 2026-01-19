@@ -190,6 +190,26 @@ export default function AppNavigator({ fontsReady, audio }) {
         {({ navigation, route }) => {
           const actions = useNavigationActions(navigation, game, audio);
 
+          // If navigation provided a specific case number, prefer that case's data.
+          // This avoids a transient frame where `activeCase` is still the previous case
+          // right after advancing the story (e.g., 001A -> 001B).
+          const targetCaseNumber = route?.params?.caseNumber;
+          const caseFromParams = targetCaseNumber
+            ? cases.find((c) => c.caseNumber === targetCaseNumber)
+            : null;
+
+          // Store the initial caseFromParams in a ref to prevent losing it during re-renders.
+          // This is important because state updates (like preDecision) can cause re-renders,
+          // and we need to ensure the screen always shows the correct case.
+          const initialCaseRef = React.useRef(caseFromParams);
+          if (caseFromParams && (!initialCaseRef.current || initialCaseRef.current.caseNumber !== caseFromParams.caseNumber)) {
+            initialCaseRef.current = caseFromParams;
+          }
+
+          // Use the stored case to ensure stability across re-renders
+          const stableCaseFromParams = initialCaseRef.current;
+          const resolvedActiveCase = stableCaseFromParams || activeCase;
+
           // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
           const handleProceedToPuzzle = () => {
             const puzzleMode = getPuzzleMode(resolvedActiveCase?.caseNumber, effectivelyStoryMode);
@@ -200,15 +220,6 @@ export default function AppNavigator({ fontsReady, audio }) {
             navigation.navigate(routeName);
           };
 
-          // If navigation provided a specific case number, prefer that case's data.
-          // This avoids a transient frame where `activeCase` is still the previous case
-          // right after advancing the story (e.g., 001A -> 001B).
-          const targetCaseNumber = route?.params?.caseNumber;
-          const caseFromParams = targetCaseNumber
-            ? cases.find((c) => c.caseNumber === targetCaseNumber)
-            : null;
-          const resolvedActiveCase = caseFromParams || activeCase;
-
           // Track the last synced case to prevent infinite loop.
           // The issue: openStoryCase changes when boardLayouts changes (ADVANCE_CASE dispatch),
           // which would re-trigger this effect. Using a ref to track already-synced cases
@@ -216,14 +227,18 @@ export default function AppNavigator({ fontsReady, audio }) {
           const lastSyncedCaseRef = React.useRef(null);
 
           // Keep game state aligned with explicit navigation params.
+          // Use a ref for openStoryCase to avoid the effect depending on callback changes.
+          const openStoryCaseRef = React.useRef(openStoryCase);
+          openStoryCaseRef.current = openStoryCase;
+
           React.useEffect(() => {
-            if (!caseFromParams?.id) return;
-            if (activeCase?.caseNumber === caseFromParams.caseNumber) return;
+            if (!stableCaseFromParams?.id) return;
+            if (activeCase?.caseNumber === stableCaseFromParams.caseNumber) return;
             // Guard: Don't re-sync if we already synced this case
-            if (lastSyncedCaseRef.current === caseFromParams.caseNumber) return;
-            lastSyncedCaseRef.current = caseFromParams.caseNumber;
-            openStoryCase?.(caseFromParams.id);
-          }, [caseFromParams?.id, caseFromParams?.caseNumber, activeCase?.caseNumber, openStoryCase]);
+            if (lastSyncedCaseRef.current === stableCaseFromParams.caseNumber) return;
+            lastSyncedCaseRef.current = stableCaseFromParams.caseNumber;
+            openStoryCaseRef.current?.(stableCaseFromParams.id);
+          }, [stableCaseFromParams?.id, stableCaseFromParams?.caseNumber, activeCase?.caseNumber]);
 
           // NARRATIVE-FIRST FIX: Check if user has story progress even if not in explicit story mode
           // This ensures the "Solve Puzzle" button appears correctly for all story chapters
