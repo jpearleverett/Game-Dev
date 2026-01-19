@@ -563,6 +563,26 @@ These are identified gaps or important notes about the current code:
       This ensures immediate UI feedback without waiting for prop propagation.
     - File: `src/screens/CaseFileScreen.js`
 
+11. **selectDecisionBeforePuzzle uses stale activeCaseNumber (FIXED)**
+    - After making a pre-puzzle decision on C subchapters, the decision could be saved
+      against the wrong case number or rejected entirely.
+    - **Root cause**: Both `useStoryEngine.selectDecisionBeforePuzzle` and
+      `StoryContext.selectDecisionBeforePuzzleAndGenerate` read `storyCampaign.activeCaseNumber`
+      from state, which could be stale if React's state updates hadn't propagated yet.
+      The CaseFileScreen knew the correct case (from props), but the backend functions
+      used potentially outdated state.
+    - **Symptoms in logs**:
+      - `WARN [useStoryEngine] selectDecisionBeforePuzzle called on non-C subchapter: 001A`
+      - When the user was actually on 001C
+      - Generation triggered for wrong chapter context
+    - **Solution**: Added `explicitCaseNumber` parameter to both functions:
+      1. `CaseFileScreen` now passes `caseNumber` as third argument to `onSelectDecisionBeforePuzzle`
+      2. `selectDecisionBeforePuzzleAndGenerate` accepts and uses this explicit caseNumber
+      3. `useStoryEngine.selectDecisionBeforePuzzle` accepts and uses this explicit caseNumber
+      4. Both functions fall back to state if explicit caseNumber not provided (backward compatible)
+      5. Added C subchapter validation in StoryContext to catch mismatches early
+    - Files: `src/screens/CaseFileScreen.js`, `src/hooks/useStoryEngine.js`, `src/context/StoryContext.js`
+
 ---
 
 ## 16) Extending the system safely

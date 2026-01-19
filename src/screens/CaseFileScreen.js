@@ -763,7 +763,8 @@ export default function CaseFileScreen({
       // LOCAL STATE FIX: Set local tracking BEFORE calling the prop function
       // This ensures the UI updates immediately, even before the storyCampaign prop propagates
       setLocalPreDecisionKey(optionKey);
-      onSelectDecisionBeforePuzzle(optionKey, selectedOption || {});
+      // STALE STATE FIX: Pass caseNumber explicitly to avoid race conditions with storyCampaign state
+      onSelectDecisionBeforePuzzle(optionKey, selectedOption || {}, caseNumber);
       setCelebrationActive(true);
       if (Haptics?.notificationAsync) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;

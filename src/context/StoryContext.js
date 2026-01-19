@@ -475,18 +475,29 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * When player makes their decision at C subchapter (before solving puzzle), we immediately
    * start generating the next chapter in the background. This way, when the puzzle is solved,
    * the next chapter is already ready or nearly ready.
+   *
+   * @param {string} optionKey - The selected option ('A' or 'B')
+   * @param {object} optionDetails - Details about the selected option (title, focus, etc.)
+   * @param {string} explicitCaseNumber - The case number from the UI (to avoid stale state issues)
    */
-  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}) => {
+  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null) => {
     if (!optionKey) return;
 
-    // Store the decision
-    selectDecisionBeforePuzzle(optionKey, optionDetails);
-
-    // Get current state for generation
+    // STALE STATE FIX: Use explicit caseNumber from UI if provided, fall back to state
     const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
-    const caseNumber = currentCampaign.activeCaseNumber;
+    const caseNumber = explicitCaseNumber || currentCampaign.activeCaseNumber;
 
     if (!caseNumber) return;
+
+    // Validate this is a C subchapter before proceeding
+    const subchapterLetter = caseNumber.slice(-1);
+    if (subchapterLetter !== 'C') {
+      console.warn('[StoryContext] selectDecisionBeforePuzzleAndGenerate called on non-C subchapter:', caseNumber);
+      return;
+    }
+
+    // Store the decision (pass explicit caseNumber to avoid stale state)
+    selectDecisionBeforePuzzle(optionKey, optionDetails, caseNumber);
 
     // Calculate next chapter info
     const chapter = currentCampaign.chapter;

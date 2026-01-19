@@ -114,11 +114,13 @@ export function useStoryEngine(progress, updateProgress) {
    *
    * @param {string} optionKey - The selected option ('A' or 'B')
    * @param {object} optionDetails - Details about the selected option (title, focus, etc.)
+   * @param {string} explicitCaseNumber - The case number from the UI (to avoid stale state issues)
    */
-  const selectDecisionBeforePuzzle = useCallback((optionKey, optionDetails = {}) => {
+  const selectDecisionBeforePuzzle = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null) => {
     if (!optionKey) return;
 
-    const caseNumber = storyCampaign.activeCaseNumber;
+    // STALE STATE FIX: Use explicit caseNumber from UI if provided, fall back to state
+    const caseNumber = explicitCaseNumber || storyCampaign.activeCaseNumber;
     if (!caseNumber) return;
 
     // Check if this is actually a C subchapter
