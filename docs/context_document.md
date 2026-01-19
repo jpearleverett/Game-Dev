@@ -274,12 +274,13 @@ LLMService manages:
 - **Token budgets** (see `GENERATION_CONFIG.maxTokens` in storyBible.js):
   - `subchapter`: 65,536 (Gemini 3 max output)
   - `pathDecisions`: 65,536
-  - `arcPlanning`: 16,000 (complex multi-chapter planning)
-  - `outline`: 8,000 (chapter outlines)
-  - `consequences`: 4,000
-  - `llmValidation`: 16,000
-  - `classification`: 2,000 (uses low thinking)
-  - `validation`: 2,000 (uses low thinking)
+  - `arcPlanning`: 32,000 (complex multi-chapter planning)
+  - `outline`: 32,000 (chapter outlines)
+  - `consequences`: 16,000
+  - `llmValidation`: 32,000
+  - `expansion`: 32,000 (currently disabled)
+  - `classification`: 8,000 (uses low thinking)
+  - `validation`: 8,000 (uses low thinking)
 - **Streaming**:
   - Priority: react-native-sse -> expo/fetch streaming -> response.text().
   - Heartbeats prevent mobile timeouts during Gemini thinking phase.

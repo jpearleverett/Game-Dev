@@ -679,14 +679,14 @@ export const GENERATION_CONFIG = {
   // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
   maxTokens: {
     subchapter: 65536,    // Gemini 3 max output - main narrative generation
-    expansion: 8000,      // For expansion requests (currently disabled)
-    validation: 2000,     // For simple validation passes (uses 'low' thinking)
+    expansion: 32000,     // For expansion requests (currently disabled)
+    validation: 8000,     // For simple validation passes (uses 'low' thinking)
     pathDecisions: 65536, // Same as subchapter - complex multi-path generation
-    classification: 2000, // For personality classification (uses 'low' thinking)
-    arcPlanning: 16000,   // Complex multi-chapter arc planning (uses 'high' thinking)
-    outline: 8000,        // Chapter outlines and decision generation (uses 'high' thinking)
-    consequences: 4000,   // Consequence generation (uses 'high' thinking by default)
-    llmValidation: 16000, // LLM-based semantic validation (uses 'low' thinking, but structured output)
+    classification: 8000, // For personality classification (uses 'low' thinking)
+    arcPlanning: 32000,   // Complex multi-chapter arc planning (uses 'high' thinking)
+    outline: 32000,       // Chapter outlines and decision generation (uses 'high' thinking)
+    consequences: 16000,  // Consequence generation (uses 'high' thinking by default)
+    llmValidation: 32000, // LLM-based semantic validation (uses 'low' thinking, but structured output)
   },
 
   // Word count requirements - optimized for fast background generation
