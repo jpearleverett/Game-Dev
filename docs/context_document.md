@@ -224,10 +224,10 @@ branching choices within the subchapter.
 - Regex validation checks POV, forbidden phrases, and structural consistency.
 - **Word count validation is warnings-only** (no automatic retry or expansion).
 - Word count configuration (see `GENERATION_CONFIG.wordCount` in storyBible.js):
-  - `minimum`: 800 words (allows 3×270=810 word paths to pass)
-  - `target`: 900 words (3×300=900 expected per path)
-  - `maximum`: 1,200 words
-- Segment validation minimum: 270 words (ensures 3 segments exceed 800 total).
+  - `minimum`: 900 words (3×300=900 word paths)
+  - `target`: 1,050 words (3×350=1,050 expected per path)
+  - `maximum`: 1,400 words
+- Segment validation minimum: 300 words (ensures 3 segments meet 900 word path minimum).
 
 ### 6.6 Narrative expansion (DISABLED)
 - The `_expandNarrative()` function previously attempted to expand short narratives.
@@ -274,12 +274,13 @@ LLMService manages:
 - **Token budgets** (see `GENERATION_CONFIG.maxTokens` in storyBible.js):
   - `subchapter`: 65,536 (Gemini 3 max output)
   - `pathDecisions`: 65,536
-  - `arcPlanning`: 16,000 (complex multi-chapter planning)
-  - `outline`: 8,000 (chapter outlines)
-  - `consequences`: 4,000
-  - `llmValidation`: 16,000
-  - `classification`: 2,000 (uses low thinking)
-  - `validation`: 2,000 (uses low thinking)
+  - `arcPlanning`: 32,000 (complex multi-chapter planning)
+  - `outline`: 32,000 (chapter outlines)
+  - `consequences`: 16,000
+  - `llmValidation`: 32,000
+  - `expansion`: 32,000 (currently disabled)
+  - `classification`: 8,000 (uses low thinking)
+  - `validation`: 8,000 (uses low thinking)
 - **Streaming**:
   - Priority: react-native-sse -> expo/fetch streaming -> response.text().
   - Heartbeats prevent mobile timeouts during Gemini thinking phase.

@@ -679,23 +679,22 @@ export const GENERATION_CONFIG = {
   // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
   maxTokens: {
     subchapter: 65536,    // Gemini 3 max output - main narrative generation
-    expansion: 8000,      // For expansion requests (currently disabled)
-    validation: 2000,     // For simple validation passes (uses 'low' thinking)
+    expansion: 32000,     // For expansion requests (currently disabled)
+    validation: 8000,     // For simple validation passes (uses 'low' thinking)
     pathDecisions: 65536, // Same as subchapter - complex multi-path generation
-    classification: 2000, // For personality classification (uses 'low' thinking)
-    arcPlanning: 16000,   // Complex multi-chapter arc planning (uses 'high' thinking)
-    outline: 8000,        // Chapter outlines and decision generation (uses 'high' thinking)
-    consequences: 4000,   // Consequence generation (uses 'high' thinking by default)
-    llmValidation: 16000, // LLM-based semantic validation (uses 'low' thinking, but structured output)
+    classification: 8000, // For personality classification (uses 'low' thinking)
+    arcPlanning: 32000,   // Complex multi-chapter arc planning (uses 'high' thinking)
+    outline: 32000,       // Chapter outlines and decision generation (uses 'high' thinking)
+    consequences: 16000,  // Consequence generation (uses 'high' thinking by default)
+    llmValidation: 32000, // LLM-based semantic validation (uses 'low' thinking, but structured output)
   },
 
   // Word count requirements - optimized for fast background generation
-  // NOTE: 3 segments (opening + firstChoice + ending) at 280-320 words each = 840-960 words per path
-  // Minimum lowered to 800 to avoid triggering expansion for edge cases
+  // NOTE: 3 segments (opening + firstChoice + ending) at 300-350 words each = 900-1050 words per path
   wordCount: {
-    minimum: 800,         // ~1.5 pages, allows flexibility for 3x280 word segments
-    target: 900,          // Lean but quality-focused - faster generation
-    maximum: 1200,        // Cap to ensure fast generation
+    minimum: 900,         // 3×300 word segments minimum
+    target: 1050,         // 3×350 word segments target
+    maximum: 1400,        // Cap to ensure fast generation
   },
 
   // Quality assurance settings

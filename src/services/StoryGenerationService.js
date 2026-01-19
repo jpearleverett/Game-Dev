@@ -8909,7 +8909,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     const bn = content.branchingNarrative;
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
-      const MIN_SEGMENT_WORDS = 270;  // Minimum per segment (300-350 target). 3×270=810 exceeds 800 word path minimum.
+      const MIN_SEGMENT_WORDS = 300;  // Minimum per segment (300-350 target). 3×300=900 word path minimum.
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
 
       // Validate opening
