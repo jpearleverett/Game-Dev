@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
 import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../data/storyContent';
 import { saveStoredProgress } from '../storage/progressStorage';
+import { log } from '../utils/llmTrace';
 
 // Configurable unlock delay (24 hours default)
 const CHAPTER_UNLOCK_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -114,11 +115,13 @@ export function useStoryEngine(progress, updateProgress) {
    *
    * @param {string} optionKey - The selected option ('A' or 'B')
    * @param {object} optionDetails - Details about the selected option (title, focus, etc.)
+   * @param {string} explicitCaseNumber - The case number from the UI (to avoid stale state issues)
    */
-  const selectDecisionBeforePuzzle = useCallback((optionKey, optionDetails = {}) => {
+  const selectDecisionBeforePuzzle = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null) => {
     if (!optionKey) return;
 
-    const caseNumber = storyCampaign.activeCaseNumber;
+    // STALE STATE FIX: Use explicit caseNumber from UI if provided, fall back to state
+    const caseNumber = explicitCaseNumber || storyCampaign.activeCaseNumber;
     if (!caseNumber) return;
 
     // Check if this is actually a C subchapter
@@ -139,7 +142,7 @@ export function useStoryEngine(progress, updateProgress) {
       },
     };
 
-    console.log(`[useStoryEngine] Pre-puzzle decision stored for ${caseNumber}: Option ${optionKey}`);
+    log.debug('useStoryEngine', `Pre-puzzle decision stored for ${caseNumber}: Option ${optionKey}`);
 
     updateProgress({ storyCampaign: updatedStory });
 
@@ -216,7 +219,7 @@ export function useStoryEngine(progress, updateProgress) {
         : null
     };
 
-    console.log(`[useStoryEngine] Applied pre-decision for ${decisionCase}: advancing to Chapter ${nextChapter}`);
+    log.debug('useStoryEngine', `Applied pre-decision for ${decisionCase}: advancing to Chapter ${nextChapter}`);
 
     updateProgress({
       storyCampaign: updatedStory,
@@ -342,7 +345,7 @@ export function useStoryEngine(progress, updateProgress) {
       branchingChoices: updatedChoices,
     };
 
-    console.log(`[useStoryEngine] Saving branching choice for ${caseNumber}: ${fc} -> ${sc}`);
+    log.debug('useStoryEngine', `Saving branching choice for ${caseNumber}: ${fc} -> ${sc}`);
 
     updateProgress({
       storyCampaign: updatedStory,

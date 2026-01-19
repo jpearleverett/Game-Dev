@@ -14,7 +14,7 @@ import NetInfo from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
 import { fetch as expoFetch } from 'expo/fetch';
 import EventSource from 'react-native-sse';
-import { llmTrace } from '../utils/llmTrace';
+import { llmTrace, log } from '../utils/llmTrace';
 
 const LLM_CONFIG_KEY = 'dead_letters_llm_config';
 const OFFLINE_QUEUE_KEY = 'dead_letters_offline_queue';
@@ -774,8 +774,8 @@ class LLMService {
 
           if (parsed.type === 'heartbeat') {
             heartbeatCount++;
-            const elapsed = Date.now() - bodyReadStart;
-            console.log(`[LLMService] [${localRequestId}] Heartbeat via SSE at ${elapsed}ms`);
+            // Heartbeat logging is very spammy - only in verbose mode
+            log.debug('LLMService', `[${localRequestId}] Heartbeat via SSE (${heartbeatCount})`);
           } else if (parsed.type === 'response' || parsed.success !== undefined) {
             // This is the actual response - resolve immediately!
             const elapsed = Date.now() - bodyReadStart;
@@ -798,8 +798,8 @@ class LLMService {
             reject(new Error(parsed.error || 'Server returned error'));
           }
         } catch (parseErr) {
-          // Not JSON, just collect it
-          console.log(`[LLMService] [${localRequestId}] SSE raw data: ${data.substring(0, 100)}`);
+          // Not JSON, just collect it - only log in verbose mode
+          log.debug('LLMService', `[${localRequestId}] SSE raw data: ${data.substring(0, 100)}`);
         }
       });
 
@@ -889,16 +889,15 @@ class LLMService {
         const text = decoder.decode(value, { stream: true });
         chunks.push(text);
 
-        // Log heartbeats as they arrive
+        // Count heartbeats as they arrive (only log in verbose mode)
         if (text.includes('"type":"heartbeat"')) {
           heartbeatCount++;
-          const elapsed = Date.now() - bodyReadStart;
-          console.log(`[LLMService] [${localRequestId}] Heartbeat via expo/fetch at ${elapsed}ms`);
+          log.debug('LLMService', `[${localRequestId}] Heartbeat via expo/fetch (${heartbeatCount})`);
         }
       }
 
       const elapsed = Date.now() - bodyReadStart;
-      console.log(`[LLMService] [${localRequestId}] expo/fetch streaming complete: ${chunks.length} chunks, ${heartbeatCount} heartbeats in ${elapsed}ms`);
+      log.debug('LLMService', `[${localRequestId}] expo/fetch complete: ${chunks.length} chunks, ${heartbeatCount} heartbeats in ${elapsed}ms`);
 
       return {
         responseText: chunks.join(''),
@@ -1002,9 +1001,9 @@ class LLMService {
           clientRequestContext: requestContext || null,
         };
 
-        // Log request details for debugging
+        // Log request details for debugging (verbose mode only)
         const requestBodyStr = JSON.stringify(requestBody);
-        console.log(`[LLMService] [${localRequestId}] Request size: ${requestBodyStr.length} bytes, hasSchema: ${!!responseSchema}, hasCachedContent: ${!!cachedContent}`);
+        log.debug('LLMService', `[${localRequestId}] Request size: ${requestBodyStr.length} bytes, hasSchema: ${!!responseSchema}, hasCachedContent: ${!!cachedContent}`);
 
         // ========== STREAMING WITH HEARTBEATS ==========
         // Server sends SSE format with heartbeats every 10s to keep mobile connections alive.
@@ -1070,12 +1069,12 @@ class LLMService {
               throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            console.log(`[LLMService] [${localRequestId}] Response received (status=${response.status}), waiting for body...`);
+            log.debug('LLMService', `[${localRequestId}] Response received (status=${response.status}), waiting for body...`);
 
-            // Log progress while waiting for the full response
+            // Log progress while waiting for the full response (verbose mode only)
             const progressInterval = setInterval(() => {
               const elapsed = Date.now() - bodyReadStart;
-              console.log(`[LLMService] [${localRequestId}] Still waiting for response body... (${Math.round(elapsed/1000)}s elapsed)`);
+              log.debug('LLMService', `[${localRequestId}] Still waiting for response body... (${Math.round(elapsed/1000)}s elapsed)`);
             }, 10000);
 
             try {
@@ -1087,7 +1086,7 @@ class LLMService {
         }
 
         const networkTime = Date.now() - attemptStart;
-        console.log(`[LLMService] [${localRequestId}] Body read complete via ${streamingMethod}: ${responseText.length} bytes in ${networkTime}ms`);
+        log.debug('LLMService', `[${localRequestId}] Body read complete via ${streamingMethod}: ${responseText.length} bytes in ${networkTime}ms`);
 
         // Parse response - supports both SSE format (data: {...}\n\n) and NDJSON ({...}\n)
         let data = null;
@@ -1600,10 +1599,10 @@ class LLMService {
           if (expireTime > now) {
             this.caches.set(key, value);
           } else {
-            console.log(`[LLMService] Cache expired: ${key}`);
+            log.debug('LLMService', `Cache expired during load: ${key}`);
           }
         }
-        console.log(`[LLMService] Loaded ${this.caches.size} active caches from storage`);
+        log.debug('LLMService', `Loaded ${this.caches.size} active caches from storage`);
       }
     } catch (error) {
       console.warn('[LLMService] Failed to load cache storage:', error);
@@ -1643,21 +1642,21 @@ class LLMService {
     if (existing) {
       const expireTime = new Date(existing.expireTime).getTime();
       if (expireTime > Date.now()) {
-        console.log(`[LLMService] ♻️ Reusing existing cache: ${key} (expires: ${existing.expireTime})`);
+        log.debug('LLMService', `♻️ Reusing existing cache: ${key}`);
         return existing;
       } else {
-        console.log(`[LLMService] Cache expired, creating new: ${key}`);
+        log.debug('LLMService', `Cache expired, creating new: ${key}`);
       }
     }
 
-    console.log(`[LLMService] 🔧 Creating new cache: ${key} (ttl: ${ttl})`);
+    log.debug('LLMService', `🔧 Creating new cache: ${key} (ttl: ${ttl})`);
 
     try {
       let cache;
 
       // Use proxy if configured (production), otherwise direct API (dev)
       if (this.config.proxyUrl) {
-        console.log('[LLMService] Creating cache via proxy');
+        log.debug('LLMService', 'Creating cache via proxy');
 
         const headers = {
           'Content-Type': 'application/json',
@@ -1689,7 +1688,7 @@ class LLMService {
         cache = result.cache;
 
       } else {
-        console.log('[LLMService] Creating cache via direct API');
+        log.debug('LLMService', 'Creating cache via direct API');
 
         // Use the v1alpha endpoint for caching
         const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
@@ -1738,9 +1737,7 @@ class LLMService {
       this.caches.set(key, cacheInfo);
       await this._saveCacheStorage();
 
-      console.log(`[LLMService] ✅ Cache created: ${cache.name}`);
-      console.log(`[LLMService]    Expires: ${cache.expireTime}`);
-      console.log(`[LLMService]    Token count: ${cache.usageMetadata?.totalTokenCount || 'unknown'}`);
+      log.debug('LLMService', `✅ Cache created: ${cache.name} (expires: ${cache.expireTime}, tokens: ${cache.usageMetadata?.totalTokenCount || 'unknown'})`);
 
       return cacheInfo;
     } catch (error) {
@@ -1902,11 +1899,11 @@ class LLMService {
 
     const model = options.model || cache.model || this.config.model;
 
-    console.log(`[LLMService] 🎯 Generating with cache: ${cacheKey}`);
+    log.debug('LLMService', `🎯 Generating with cache: ${cacheKey}`);
 
     // Use proxy mode if configured (production), otherwise direct API call (dev)
     if (this.config.proxyUrl) {
-      console.log('[LLMService] Using proxy mode for cached generation');
+      log.debug('LLMService', 'Using proxy mode for cached generation');
 
       // Build messages with prior thought signatures if provided
       const messages = [...priorMessages, { role: 'user', content: dynamicPrompt }];
@@ -1938,7 +1935,7 @@ class LLMService {
     }
 
     // Direct mode (dev) - call Gemini API directly
-    console.log('[LLMService] Using direct mode for cached generation');
+    log.debug('LLMService', 'Using direct mode for cached generation');
 
     const isGemini3 = model.includes('gemini-3');
 
@@ -2086,21 +2083,8 @@ class LLMService {
     const savings = noCacheCost - totalCost;
     const savingsPercent = noCacheCost > 0 ? ((savings / noCacheCost) * 100).toFixed(1) : '0.0';
 
-    console.log(`[LLMService] 📊 Token Usage (Cache: ${cacheKey}):`);
-    console.log(`  Input Tokens: ${promptTokens.toLocaleString()}`);
-    console.log(`    ├─ Cached: ${cachedTokens.toLocaleString()} (${cacheHitRate}%)`);
-    console.log(`    └─ New: ${newTokens.toLocaleString()}`);
-    console.log(`  Output Tokens: ${outputTokens.toLocaleString()}`);
-    console.log(`  Total: ${totalTokens.toLocaleString()}`);
-    console.log(`  `);
-    console.log(`  💰 Cost Breakdown:`);
-    console.log(`    ├─ New tokens: $${newTokensCost.toFixed(6)}`);
-    console.log(`    ├─ Cached tokens: $${cachedTokensCost.toFixed(6)}`);
-    console.log(`    └─ Output tokens: $${outputTokensCost.toFixed(6)}`);
-    console.log(`  Total: $${totalCost.toFixed(6)}`);
-    console.log(`  `);
-    console.log(`  💵 Savings: $${savings.toFixed(6)} (${savingsPercent}% reduction)`);
-    console.log(`  Without cache: $${noCacheCost.toFixed(6)}`);
+    // Token usage details - only in verbose mode
+    log.debug('LLMService', `📊 Token Usage (Cache: ${cacheKey}): ${totalTokens.toLocaleString()} total, ${cacheHitRate}% cached, $${totalCost.toFixed(4)} cost, $${savings.toFixed(4)} saved`);
   }
 }
 

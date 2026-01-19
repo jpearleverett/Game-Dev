@@ -12,7 +12,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { llmService } from './LLMService';
-import { llmTrace, createTraceId } from '../utils/llmTrace';
+import { llmTrace, createTraceId, log } from '../utils/llmTrace';
 import {
   loadGeneratedStory,
   saveGeneratedChapter,
@@ -1720,11 +1720,8 @@ class StoryGenerationService {
     // Session duration
     const sessionMinutes = Math.round((Date.now() - this.tokenUsage.sessionStart) / 60000);
 
-    // Prominent console logging
-    console.log(`[StoryGen] 📊 Token Usage for ${context}:`);
-    console.log(`  Input: ${promptTokens.toLocaleString()} tokens (${cachedTokens.toLocaleString()} cached = ${cacheEfficiency}% cache hit)`);
-    console.log(`  Output: ${completionTokens.toLocaleString()} tokens`);
-    console.log(`  Cost: $${callCost.toFixed(4)} (session total: $${cumulativeCost.toFixed(4)} across ${this.tokenUsage.callCount} calls, ${sessionMinutes}min)`);
+    // Token usage logging - only in verbose mode
+    log.debug('StoryGen', `📊 ${context}: ${promptTokens.toLocaleString()} in (${cacheEfficiency}% cached), ${completionTokens.toLocaleString()} out, $${callCost.toFixed(4)}`);
   }
 
   /**
@@ -1797,11 +1794,11 @@ class StoryGenerationService {
     const currentHash = this._hashChoiceHistory(choiceHistory);
     if (this.dynamicPersonalityCache.choiceHistoryHash === currentHash &&
         this.dynamicPersonalityCache.personality) {
-      console.log(`[StoryGen] 🧠 Using cached personality classification`);
+      log.debug('StoryGen', '🧠 Using cached personality classification');
       return this.dynamicPersonalityCache.personality;
     }
 
-    console.log(`[StoryGen] 🧠 Classifying player personality dynamically (${choiceHistory.length} choices)...`);
+    log.debug('StoryGen', `🧠 Classifying player personality (${choiceHistory.length} choices)...`);
 
     try {
       // Build choice summary for LLM
@@ -1886,10 +1883,7 @@ Respond with a JSON object containing:
         timestamp: Date.now(),
       };
 
-      console.log(`[StoryGen] 🧠 Personality classified: ${personality.dominantStyle} - "${personality.narrativeStyle}"`);
-      if (personality.characterInsight) {
-        console.log(`[StoryGen] 💡 Insight: ${personality.characterInsight}`);
-      }
+      log.debug('StoryGen', `🧠 Personality: ${personality.dominantStyle} - "${personality.narrativeStyle}"${personality.characterInsight ? ` (${personality.characterInsight})` : ''}`);
 
       return personality;
 
@@ -2390,7 +2384,7 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
       const drift = this._detectPersonalityDrift(this.storyArc, currentPersonality, choiceHistory);
 
       if (drift.shouldAdapt) {
-        console.log(`[StoryGenerationService] Personality drift detected: ${drift.from} -> ${drift.to} (magnitude: ${drift.magnitude.toFixed(1)})`);
+        log.debug('StoryGenerationService', `Personality drift: ${drift.from} -> ${drift.to} (magnitude: ${drift.magnitude.toFixed(1)})`);
 
         // Adapt the arc for the new personality (only future chapters)
         const currentChapter = Math.max(2, choiceHistory.length + 2); // Estimate current chapter
@@ -2412,7 +2406,7 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
       // Check for drift against saved arc too
       const drift = this._detectPersonalityDrift(savedArc, currentPersonality, choiceHistory);
       if (drift.shouldAdapt) {
-        console.log(`[StoryGenerationService] Personality drift from saved arc: ${drift.from} -> ${drift.to}`);
+        log.debug('StoryGenerationService', `Personality drift from saved arc: ${drift.from} -> ${drift.to}`);
         const currentChapter = Math.max(2, choiceHistory.length + 2);
         const adaptedArc = await this._adaptStoryArcForDrift(savedArc, currentPersonality, currentChapter, choiceHistory);
         this.storyArc = adaptedArc;
@@ -2427,7 +2421,7 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
     // OPTIMIZATION: Skip LLM call for story arc generation.
     // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.
     // Using static fallback eliminates ~22s LLM call per path while maintaining narrative quality.
-    console.log('[StoryGenerationService] Using static story arc for super-path:', superPathKey);
+    log.debug('StoryGenerationService', `Using static story arc for super-path: ${superPathKey}`);
     const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
     fallbackArc.personalitySnapshot = {
       riskTolerance: currentPersonality.riskTolerance,
@@ -2550,7 +2544,7 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
       };
     }
 
-    console.log(`[StoryGenerationService] Arc adapted: ${originalArc.superPathKey} -> ${newSuperPathKey} (from chapter ${currentChapter})`);
+    log.debug('StoryGenerationService', `Arc adapted: ${originalArc.superPathKey} -> ${newSuperPathKey}`);
 
     return adaptedArc;
   }
@@ -4258,7 +4252,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               branchingChoice.firstChoice,
               branchingChoice.secondChoice
             );
-            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
+            log.debug('StoryGenerationService', `Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
           }
 
           if (narrativeText) {
@@ -4302,7 +4296,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               branchingChoice.firstChoice,
               branchingChoice.secondChoice
             );
-            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
+            log.debug('StoryGenerationService', `Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
           }
 
           if (narrativeText) {
@@ -4350,7 +4344,7 @@ Generate realistic, specific consequences based on the actual narrative content.
               branchingChoice.firstChoice,
               branchingChoice.secondChoice
             );
-            console.log(`[StoryGenerationService] Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
+            log.debug('StoryGenerationService', `Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
           }
 
           if (narrativeText) {
@@ -4377,7 +4371,7 @@ Generate realistic, specific consequences based on the actual narrative content.
     const totalNarrativeChars = context.previousChapters.reduce(
       (sum, ch) => sum + (ch.narrative?.length || 0), 0
     );
-    console.log(`[StoryGenerationService] Context built: ${context.previousChapters.length} subchapters, ${totalNarrativeChars} chars of narrative`);
+    log.debug('StoryGenerationService', `Context built: ${context.previousChapters.length} subchapters, ${totalNarrativeChars} chars`);
     if (context.previousChapters.length === 0) {
       console.warn('[StoryGenerationService] WARNING: No previous chapters found! Story context may be empty.');
     }
@@ -4874,7 +4868,7 @@ Generate realistic, specific consequences based on the actual narrative content.
     );
 
     if (matchingEntry?.thoughtSignature) {
-      console.log(`[StoryGenerationService] 🧠 Found thought signature from ${prevChapter}.${prevSubchapter} (${matchingEntry.pathKey})`);
+      log.debug('StoryGenerationService', `🧠 Found thought signature from ${prevChapter}.${prevSubchapter}`);
       return matchingEntry.thoughtSignature;
     }
 

@@ -21,7 +21,7 @@ it aligned with implementation details and constraints.
   - `storage/`: AsyncStorage helpers for progress, story, puzzle state.
   - `screens/`: UI screens for story, puzzles, menus, archive, settings.
   - `components/`: Narrative readers, decision panels, puzzle UI, overlays.
-  - `utils/`: Case merge helpers, text pagination, board helpers, tracing.
+  - `utils/`: Case merge helpers, text pagination, board helpers, logging (llmTrace.js).
 - `proxy/`: Vercel Edge proxy for Gemini API.
 - `scripts/`: Many-shot extraction and categorization pipeline for Mystic River.
 - `docs/`: Gemini API docs, prompts, session summaries, story reference text.
@@ -170,8 +170,16 @@ Stored in `generatedStoryStorage` as a separate story context:
 - `LLMService.js` handles direct or proxied Gemini calls, streaming, retries,
   and JSON repair.
 - `useStoryGeneration.js` coordinates generation in the UI layer.
-- `llmTrace` utility logs structured LLM events; verbose mode surfaces these
-  logs in `LLMDebugOverlay`.
+- `llmTrace.js` utility provides two logging systems:
+  - **llmTrace()**: Structured LLM event logging with correlation IDs and
+    subscriber support for `LLMDebugOverlay`.
+  - **log utility**: Simple logging functions that respect verbose mode:
+    - `log.error(scope, message, data?)` - Always logged
+    - `log.warn(scope, message, data?)` - Always logged
+    - `log.info(scope, message, data?)` - Always logged
+    - `log.debug(scope, message, data?)` - Only when verbose mode enabled
+  - Enable verbose mode in Settings to see debug logs (token usage, heartbeats,
+    cache operations, generation details).
 
 ### 6.2 Prompt construction
 
@@ -409,7 +417,63 @@ StoryGenerationService uses named constants for consistent truncation:
 
 ---
 
-## 12) Analytics and monetization
+## 12) Debugging and logging
+
+### 12.1 Logging utility (`src/utils/llmTrace.js`)
+
+The codebase uses a centralized logging utility with two systems:
+
+**Structured tracing (`llmTrace`):**
+- Used for LLM lifecycle events with correlation IDs
+- Supports subscribers for real-time UI display
+- Events are formatted with scope, traceId, and structured data
+
+**Simple logging (`log`):**
+- `log.error(scope, message, data?)` - Always logged (console.error)
+- `log.warn(scope, message, data?)` - Always logged (console.warn)
+- `log.info(scope, message, data?)` - Always logged (console.log)
+- `log.debug(scope, message, data?)` - Only when `verboseModeEnabled`
+
+### 12.2 Verbose mode
+
+Enable via Settings > Verbose Mode. When enabled:
+- `log.debug()` calls output to console
+- `LLMDebugOverlay` shows real-time generation progress
+- Token usage, cache operations, and streaming details are visible
+
+### 12.3 What's logged at each level
+
+**Always visible (errors, warnings, info):**
+- Generation failures and errors
+- CHAIN triggers (`🔗 CHAIN: 001A → 001B`)
+- CHAIN completions (`✅ CHAIN COMPLETE: 001B generated in 60.5s`)
+- Fallback content warnings
+- Network/connectivity issues
+
+**Debug-only (verbose mode):**
+- Token usage breakdowns (input/output/cost)
+- SSE heartbeats during streaming
+- Cache operations (create, reuse, expire)
+- Generation starts and cache hits
+- Speculative prefetch details
+- Personality classification details
+- Realized narrative path selections
+- Background generation attempt details
+- Pre-puzzle decision flow details
+
+### 12.4 Log scopes
+
+Common scopes used in logging:
+- `LLMService` - Network, streaming, caching
+- `StoryGenerationService` / `StoryGen` - Story generation, validation
+- `useStoryGeneration` - UI layer generation coordination
+- `GameContext` - Game state and case activation
+- `StoryContext` - Story campaign state and background generation
+- `useStoryEngine` - Choice history and branching decisions
+
+---
+
+## 13) Analytics and monetization
 
 - `AnalyticsService` queues events until initialized.
   - Tracks screen views, word selections, decisions, level start/complete.
@@ -419,7 +483,7 @@ StoryGenerationService uses named constants for consistent truncation:
 
 ---
 
-## 13) Many-shot scene pipeline (Mystic River)
+## 14) Many-shot scene pipeline (Mystic River)
 
 Purpose: Provide large sets of professional noir scenes for many-shot learning.
 
@@ -435,7 +499,7 @@ based on the current beat type.
 
 ---
 
-## 14) Storage strategy and pruning
+## 15) Storage strategy and pruning
 
 Generated story content is stored in AsyncStorage with:
 - In-memory cache for fast reads.
@@ -455,7 +519,7 @@ Pruning priority:
 
 ---
 
-## 15) Known issues and discrepancies (important for agents)
+## 16) Known issues and discrepancies (important for agents)
 
 These are identified gaps or important notes about the current code:
 
@@ -563,9 +627,48 @@ These are identified gaps or important notes about the current code:
       This ensures immediate UI feedback without waiting for prop propagation.
     - File: `src/screens/CaseFileScreen.js`
 
+11. **selectDecisionBeforePuzzle uses stale activeCaseNumber (FIXED)**
+    - After making a pre-puzzle decision on C subchapters, the decision could be saved
+      against the wrong case number or rejected entirely.
+    - **Root cause**: Both `useStoryEngine.selectDecisionBeforePuzzle` and
+      `StoryContext.selectDecisionBeforePuzzleAndGenerate` read `storyCampaign.activeCaseNumber`
+      from state, which could be stale if React's state updates hadn't propagated yet.
+      The CaseFileScreen knew the correct case (from props), but the backend functions
+      used potentially outdated state.
+    - **Symptoms in logs**:
+      - `WARN [useStoryEngine] selectDecisionBeforePuzzle called on non-C subchapter: 001A`
+      - When the user was actually on 001C
+      - Generation triggered for wrong chapter context
+    - **Solution**: Added `explicitCaseNumber` parameter to both functions:
+      1. `CaseFileScreen` now passes `caseNumber` as third argument to `onSelectDecisionBeforePuzzle`
+      2. `selectDecisionBeforePuzzleAndGenerate` accepts and uses this explicit caseNumber
+      3. `useStoryEngine.selectDecisionBeforePuzzle` accepts and uses this explicit caseNumber
+      4. Both functions fall back to state if explicit caseNumber not provided (backward compatible)
+      5. Added C subchapter validation in StoryContext to catch mismatches early
+    - Files: `src/screens/CaseFileScreen.js`, `src/hooks/useStoryEngine.js`, `src/context/StoryContext.js`
+
+12. **Duplicate "SUBCHAPTER CHAIN" triggers per subchapter (FIXED)**
+    - When completing a branching narrative, the chain generation was triggered twice,
+      causing duplicate "CHAIN COMPLETE" log messages.
+    - **Root cause**: `saveBranchingChoiceAndPrefetch` called `triggerPrefetchAfterBranchingComplete`
+      on every save that returned `true`. The branching flow calls save twice:
+      1. `handleSecondChoice` saves with `isComplete: false` (player made choice, still reading)
+      2. `handleBranchingComplete` saves with `isComplete: true` (finished reading)
+      Both calls returned `true` and both triggered the chain. The deduplication in
+      `StoryGenerationService` caught the second call ("Reusing pending generation"),
+      but both completion callbacks were still executed.
+    - **Symptoms in logs**:
+      - `[useStoryGeneration] ✅ CHAIN COMPLETE: 001B generated in 60.5s`
+      - `[useStoryGeneration] ✅ CHAIN COMPLETE: 001B generated in 62.3s`
+    - **Solution**: Only trigger `triggerPrefetchAfterBranchingComplete` when `isComplete: false`.
+      This ensures the chain is triggered once when the player makes their second choice,
+      giving maximum generation time while the player reads the narrative ending text.
+      Triggering on `isComplete: true` (finished reading) would waste valuable generation time.
+    - File: `src/context/StoryContext.js`
+
 ---
 
-## 16) Extending the system safely
+## 17) Extending the system safely
 
 When adding features or modifying behavior, maintain these invariants:
 
@@ -592,7 +695,7 @@ When adding features or modifying behavior, maintain these invariants:
 
 ---
 
-## 17) Environment configuration
+## 18) Environment configuration
 
 - `.env` and `app.config.js` control LLM access:
   - `GEMINI_PROXY_URL` (production proxy).
@@ -603,7 +706,7 @@ Use the proxy in production to keep API keys off-device.
 
 ---
 
-## 18) What to read first if you are new
+## 19) What to read first if you are new
 
 Recommended order for a fresh AI agent:
 

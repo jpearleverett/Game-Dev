@@ -11,7 +11,7 @@ import {
 } from '../data/storyContent';
 import { formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { analytics } from '../services/AnalyticsService';
-import { createTraceId, llmTrace } from '../utils/llmTrace';
+import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 
 const StoryStateContext = createContext(null);
 const StoryDispatchContext = createContext(null);
@@ -295,7 +295,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
       const maxAttempts = 3;
       const bgGenId = `bg_${Date.now().toString(36)}`;
 
-      console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${nextPathKey})`);
+      log.debug('StoryContext', `[${bgGenId}] Starting background generation for ${nextCaseNumber}`);
       llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.start', {
         nextCaseNumber,
         nextChapter,
@@ -305,7 +305,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
       const attemptGeneration = async (attempt = 1) => {
         const attemptStart = Date.now();
-        console.log(`[StoryContext] [${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}...`);
+        log.debug('StoryContext', `[${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}`);
 
         try {
           // CRITICAL: Flush any pending storage writes before generation
@@ -324,10 +324,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
             if (result.isFallback || result.isEmergencyFallback) {
               // Fallback was used - not ideal but game continues
-              console.warn(`[StoryContext] [${bgGenId}] Completed with FALLBACK content in ${attemptDuration}ms (attempt ${attempt})`);
+              console.warn(`[StoryContext] Completed with FALLBACK for ${nextCaseNumber}`);
             } else {
               // AI-generated content - ideal path
-              console.log(`[StoryContext] [${bgGenId}] SUCCESS with AI content in ${attemptDuration}ms (attempt ${attempt})`);
+              log.debug('StoryContext', `[${bgGenId}] SUCCESS for ${nextCaseNumber} (${attemptDuration}ms, attempt ${attempt})`);
             }
             llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
               ok: true,
@@ -446,6 +446,15 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return;
     }
 
+    // DUPLICATE CHAIN FIX: Only trigger prefetch when isComplete is false (second choice made).
+    // This prevents double chain triggers when:
+    // 1. handleSecondChoice saves with isComplete:false (player made choice, still reading) - TRIGGER HERE
+    // 2. handleBranchingComplete saves with isComplete:true (finished reading) - DON'T trigger again
+    // Triggering on the first call gives more generation time while player reads the ending text.
+    if (isComplete) {
+      return;
+    }
+
     // Get current state for prefetching
     const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
     const pathKey = resolveStoryPathKey(caseNumber, currentCampaign);
@@ -475,18 +484,29 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * When player makes their decision at C subchapter (before solving puzzle), we immediately
    * start generating the next chapter in the background. This way, when the puzzle is solved,
    * the next chapter is already ready or nearly ready.
+   *
+   * @param {string} optionKey - The selected option ('A' or 'B')
+   * @param {object} optionDetails - Details about the selected option (title, focus, etc.)
+   * @param {string} explicitCaseNumber - The case number from the UI (to avoid stale state issues)
    */
-  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}) => {
+  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null) => {
     if (!optionKey) return;
 
-    // Store the decision
-    selectDecisionBeforePuzzle(optionKey, optionDetails);
-
-    // Get current state for generation
+    // STALE STATE FIX: Use explicit caseNumber from UI if provided, fall back to state
     const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
-    const caseNumber = currentCampaign.activeCaseNumber;
+    const caseNumber = explicitCaseNumber || currentCampaign.activeCaseNumber;
 
     if (!caseNumber) return;
+
+    // Validate this is a C subchapter before proceeding
+    const subchapterLetter = caseNumber.slice(-1);
+    if (subchapterLetter !== 'C') {
+      console.warn('[StoryContext] selectDecisionBeforePuzzleAndGenerate called on non-C subchapter:', caseNumber);
+      return;
+    }
+
+    // Store the decision (pass explicit caseNumber to avoid stale state)
+    selectDecisionBeforePuzzle(optionKey, optionDetails, caseNumber);
 
     // Calculate next chapter info
     const chapter = currentCampaign.chapter;
@@ -513,14 +533,13 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Trigger generation for next chapter immediately
     if (isLLMConfigured && nextChapter <= 12) {
-      console.log(`[StoryContext] Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}`);
-      console.log(`[StoryContext] Immediately triggering generation for ${nextCaseNumber} (path: ${nextPathKey})`);
+      log.debug('StoryContext', `Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}, triggering ${nextCaseNumber}`);
 
       // Generate in background - don't await
       generateForCase(nextCaseNumber, nextPathKey, nextChoiceHistory, branchingChoices)
         .then((result) => {
           if (result) {
-            console.log(`[StoryContext] Pre-puzzle generation complete for ${nextCaseNumber}`);
+            log.debug('StoryContext', `Pre-puzzle generation complete for ${nextCaseNumber}`);
           }
         })
         .catch((err) => {

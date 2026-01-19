@@ -9,7 +9,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { storyGenerationService } from '../services/StoryGenerationService';
 import { llmService } from '../services/LLMService';
-import { createTraceId, llmTrace } from '../utils/llmTrace';
+import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 import {
   isDynamicChapter,
   hasStoryContent,
@@ -79,7 +79,7 @@ export function useStoryGeneration(storyCampaign) {
 
       // Went to background while generating
       if (wasActive && isNowBackground && status === GENERATION_STATUS.GENERATING) {
-        console.log('[useStoryGeneration] App backgrounded during generation - tracking for resilience');
+        log.debug('useStoryGeneration', 'App backgrounded during generation - tracking for resilience');
         wasBackgroundedDuringGenerationRef.current = true;
       }
 
@@ -89,12 +89,12 @@ export function useStoryGeneration(storyCampaign) {
           const elapsed = generationStartTimeRef.current
             ? Math.round((Date.now() - generationStartTimeRef.current) / 1000)
             : 0;
-          console.log(`[useStoryGeneration] App returned to foreground after ${elapsed}s - status: ${status}`);
+          log.debug('useStoryGeneration', `App returned to foreground after ${elapsed}s - status: ${status}`);
 
           // If we have an error and pending generation params, signal auto-retry
           // This handles the case where Android killed the network when we switched apps
           if (status === GENERATION_STATUS.ERROR && pendingGenerationRef.current) {
-            console.log('[useStoryGeneration] Error detected after backgrounding - will auto-retry');
+            console.log('[useStoryGeneration] Auto-retry after app backgrounded with error');
             setShouldAutoRetry(true);
           }
 
@@ -349,7 +349,7 @@ export function useStoryGeneration(storyCampaign) {
     const genId = `gen_${Date.now().toString(36)}`;
     const startTime = Date.now();
 
-    console.log(`[useStoryGeneration] [${genId}] generateForCase called: case=${caseNumber}, path=${pathKey}`);
+    log.debug('useStoryGeneration', `[${genId}] generateForCase called: case=${caseNumber}, path=${pathKey}`);
     const traceId = createTraceId(`case_${caseNumber}_${pathKey}`);
     llmTrace('useStoryGeneration', traceId, 'generateForCase.called', {
       caseNumber,
@@ -369,14 +369,14 @@ export function useStoryGeneration(storyCampaign) {
 
     // Skip if not dynamic
     if (!isDynamicChapter(caseNumber)) {
-      console.log(`[useStoryGeneration] [${genId}] Skipping - not a dynamic chapter`);
+      log.debug('useStoryGeneration', `[${genId}] Skipping - not a dynamic chapter`);
       return null;
     }
 
     // Check if already generated
     const hasContent = await hasStoryContent(caseNumber, canonicalPathKey);
     if (hasContent) {
-      console.log(`[useStoryGeneration] [${genId}] Content already exists in cache`);
+      log.debug('useStoryGeneration', `[${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
       llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.hit', {
         caseNumber,
@@ -407,7 +407,7 @@ export function useStoryGeneration(storyCampaign) {
     );
 
     if (wasCacheMiss) {
-      console.log(`[useStoryGeneration] [${genId}] CACHE MISS: predicted=${lastPredictionRef.current.primary}, actual=${pathKey}`);
+      log.debug('useStoryGeneration', `[${genId}] CACHE MISS: predicted=${lastPredictionRef.current.primary}, actual=${pathKey}`);
     }
 
     setStatus(GENERATION_STATUS.GENERATING);
@@ -420,7 +420,7 @@ export function useStoryGeneration(storyCampaign) {
     // Store params for auto-retry if app is backgrounded and connection is killed
     pendingGenerationRef.current = { chapter, subchapter, pathKey, choiceHistory, branchingChoices };
 
-    console.log(`[useStoryGeneration] [${genId}] Starting generation for Chapter ${chapter}.${subchapter} (path ${pathKey})...`);
+    log.debug('useStoryGeneration', `[${genId}] Starting generation for Chapter ${chapter}.${subchapter} (path ${pathKey})...`);
 
     try {
       generationRef.current = true;
@@ -447,7 +447,7 @@ export function useStoryGeneration(storyCampaign) {
 
       if (!generationRef.current) {
         // Generation was cancelled - but we still have the entry
-        console.log(`[useStoryGeneration] [${genId}] Generation cancelled after ${duration}ms, but caching entry`);
+        log.debug('useStoryGeneration', `[${genId}] Generation cancelled after ${duration}ms, but caching entry`);
         if (entry) {
           updateGeneratedCache(caseNumber, pathKey, entry);
         }
@@ -491,8 +491,7 @@ export function useStoryGeneration(storyCampaign) {
       // CRITICAL: For user-facing generation, we do NOT use fallback
       // The error state will trigger UI to show retry button
       // This ensures player NEVER sees generic fallback content
-      console.error(`[useStoryGeneration] [${genId}] Generation failed - no fallback for user-facing content`);
-      console.error(`[useStoryGeneration] [${genId}] Player must retry or check network connection`);
+      // (Player must retry or check network connection)
 
       return null; // UI will check for null and show error/retry screen
     } finally {
@@ -692,7 +691,7 @@ export function useStoryGeneration(storyCampaign) {
     // Wait for the player to make their chapter-level decision,
     // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
     if (subchapter === 3) {
-      console.log(`[useStoryGeneration] Subchapter C branching complete - waiting for player decision before generating next chapter`);
+      log.debug('useStoryGeneration', 'Subchapter C branching complete - waiting for player decision');
       return;
     }
 
@@ -706,8 +705,8 @@ export function useStoryGeneration(storyCampaign) {
     const nextSubIndex = subchapter === 1 ? 2 : 3;
     const nextCaseNumber = `${String(chapter).padStart(3, '0')}${nextSubLetter}`;
 
-    console.log(`[useStoryGeneration] 🔗 SUBCHAPTER CHAIN: ${caseNumber} complete → generating ${nextCaseNumber}`);
-    console.log(`[useStoryGeneration]   Branching choices for context:`, branchingChoices?.map(bc => `${bc.caseNumber}:${bc.firstChoice}->${bc.secondChoice}`) || '(none)');
+    console.log(`[useStoryGeneration] 🔗 CHAIN: ${caseNumber} → ${nextCaseNumber}`);
+    log.debug('useStoryGeneration', `Branching context: ${branchingChoices?.map(bc => `${bc.caseNumber}:${bc.firstChoice}->${bc.secondChoice}`).join(', ') || '(none)'}`);
 
     // Flush storage to ensure current content is available for context
     try {
@@ -745,7 +744,7 @@ export function useStoryGeneration(storyCampaign) {
         console.warn(`[useStoryGeneration] ❌ Generation failed for ${nextCaseNumber} after ${(genDuration/1000).toFixed(1)}s:`, err.message);
       }
     } else if (!needsGen) {
-      console.log(`[useStoryGeneration] ⏭️ ${nextCaseNumber} already exists, skipping generation`);
+      log.debug('useStoryGeneration', `⏭️ ${nextCaseNumber} already exists, skipping generation`);
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
 
@@ -792,8 +791,7 @@ export function useStoryGeneration(storyCampaign) {
       return;
     }
 
-    console.log(`[useStoryGeneration] Speculative prefetch: player chose ${firstChoiceKey} in ${caseNumber}`);
-    console.log(`[useStoryGeneration] Generating 3 versions of next subchapter for possible second choices`);
+    log.debug('useStoryGeneration', `Speculative prefetch: player chose ${firstChoiceKey} in ${caseNumber}, generating 3 versions`);
 
     // Determine the next subchapter
     const nextSubchapter = subchapter + 1;
@@ -828,7 +826,7 @@ export function useStoryGeneration(storyCampaign) {
         },
       ];
 
-      console.log(`[useStoryGeneration] Generating ${nextCaseNumber} for path ${speculativeSecondChoice}...`);
+      log.debug('useStoryGeneration', `Generating ${nextCaseNumber} for path ${speculativeSecondChoice}...`);
 
       try {
         setStatus(GENERATION_STATUS.GENERATING);
@@ -851,7 +849,7 @@ export function useStoryGeneration(storyCampaign) {
           // Store with the speculative branching path so we can retrieve it later
           // The cache key will be: ${nextCaseNumber}_${pathKey}_${speculativeSecondChoice}
           updateGeneratedCache(nextCaseNumber, pathKey, entry, speculativeSecondChoice);
-          console.log(`[useStoryGeneration] ✅ Cached ${nextCaseNumber} for ${speculativeSecondChoice}`);
+          log.debug('useStoryGeneration', `✅ Cached ${nextCaseNumber} for ${speculativeSecondChoice}`);
         }
       } catch (err) {
         console.warn(`[useStoryGeneration] Speculative prefetch failed for ${speculativeSecondChoice}:`, err.message);
@@ -859,7 +857,7 @@ export function useStoryGeneration(storyCampaign) {
       }
     }
 
-    console.log(`[useStoryGeneration] Speculative prefetch complete: 3 versions of ${nextCaseNumber} ready`);
+    log.debug('useStoryGeneration', `Speculative prefetch complete: 3 versions of ${nextCaseNumber} ready`);
   }, [isConfigured]);
 
   /**
@@ -1073,7 +1071,7 @@ export function useStoryGeneration(storyCampaign) {
     // ========== SEQUENTIAL GENERATION FOR BALANCED PLAYERS ==========
     // Mobile networks struggle with concurrent long-running requests, so we run them one at a time.
     if (isBalancedPlayer) {
-      console.log(`[useStoryGeneration] Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}, personality: ${prediction.playerPersonality}). Generating both paths sequentially.`);
+      log.debug('useStoryGeneration', `Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}). Generating both paths.`);
 
       setStatus(GENERATION_STATUS.GENERATING);
       setGenerationType(GENERATION_TYPE.PRELOAD);
