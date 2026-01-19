@@ -6,7 +6,7 @@ import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/st
 import { useGameLogic } from '../hooks/useGameLogic';
 import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { analytics } from '../services/AnalyticsService';
-import { createTraceId, llmTrace } from '../utils/llmTrace';
+import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 import { purchaseService } from '../services/PurchaseService';
 import { ACHIEVEMENTS } from '../data/achievementsData';
 import { useAudio } from './AudioContext';
@@ -85,7 +85,7 @@ export function GameProvider({
           // isDynamicChapter returns true for 1B, 1C, and all of chapters 2-12
           // (1A is static but has branching; its content is in storyNarrative.json)
           if (isDynamicChapter(caseNumber)) {
-            console.log(`[GameContext] Ensuring story content for ${caseNumber} (path: ${pathKey})...`);
+            log.debug('GameContext', `Ensuring story content for ${caseNumber} (path: ${pathKey})...`);
             const genStartTime = Date.now();
             const genResult = await story.ensureStoryContent(caseNumber, pathKey);
             const genDuration = Date.now() - genStartTime;
@@ -112,13 +112,13 @@ export function GameProvider({
                 caseNumber
               };
             } else {
-              // Log success details
+              // Log success details (verbose mode only for normal operation)
               if (genResult.isFallback || genResult.isEmergencyFallback) {
-                console.warn(`[GameContext] Using FALLBACK content for ${caseNumber} (generated in ${genDuration}ms)`);
+                console.warn(`[GameContext] Using FALLBACK content for ${caseNumber}`);
               } else if (genResult.generated) {
-                console.log(`[GameContext] AI content ready for ${caseNumber} (generated in ${genDuration}ms)`);
+                log.debug('GameContext', `AI content ready for ${caseNumber} (${genDuration}ms)`);
               } else {
-                console.log(`[GameContext] Content already cached for ${caseNumber}`);
+                log.debug('GameContext', `Content cached for ${caseNumber}`);
               }
             }
           }
@@ -371,7 +371,7 @@ export function GameProvider({
                   // If so, apply it now and advance to the next chapter
                   const preDecision = currentStory.preDecision;
                   if (preDecision && preDecision.caseNumber === activeCase.caseNumber) {
-                    console.log(`[GameContext] C subchapter solved with pre-decision: applying Option ${preDecision.optionKey}`);
+                    log.debug('GameContext', `C subchapter solved with pre-decision: applying Option ${preDecision.optionKey}`);
                     // Apply the pre-decision - this will update storyCampaign and advance
                     // We need to merge our completedCaseNumbers update with the apply
                     story.applyPreDecision();
@@ -491,7 +491,7 @@ export function GameProvider({
         // C subchapter: Check for pre-decision (narrative-first flow)
         const preDecision = currentStory.preDecision;
         if (preDecision && preDecision.caseNumber === caseNumber) {
-          console.log(`[GameContext] C subchapter logic puzzle solved with pre-decision: applying Option ${preDecision.optionKey}`);
+          log.debug('GameContext', `C subchapter logic puzzle solved with pre-decision: applying Option ${preDecision.optionKey}`);
           story.applyPreDecision();
           return;
         }

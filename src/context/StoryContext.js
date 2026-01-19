@@ -11,7 +11,7 @@ import {
 } from '../data/storyContent';
 import { formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { analytics } from '../services/AnalyticsService';
-import { createTraceId, llmTrace } from '../utils/llmTrace';
+import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 
 const StoryStateContext = createContext(null);
 const StoryDispatchContext = createContext(null);
@@ -295,7 +295,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
       const maxAttempts = 3;
       const bgGenId = `bg_${Date.now().toString(36)}`;
 
-      console.log(`[StoryContext] [${bgGenId}] Starting background generation for ${nextCaseNumber} (path: ${nextPathKey})`);
+      log.debug('StoryContext', `[${bgGenId}] Starting background generation for ${nextCaseNumber}`);
       llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.start', {
         nextCaseNumber,
         nextChapter,
@@ -305,7 +305,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
       const attemptGeneration = async (attempt = 1) => {
         const attemptStart = Date.now();
-        console.log(`[StoryContext] [${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}...`);
+        log.debug('StoryContext', `[${bgGenId}] Attempt ${attempt}/${maxAttempts} for ${nextCaseNumber}`);
 
         try {
           // CRITICAL: Flush any pending storage writes before generation
@@ -324,10 +324,10 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
             if (result.isFallback || result.isEmergencyFallback) {
               // Fallback was used - not ideal but game continues
-              console.warn(`[StoryContext] [${bgGenId}] Completed with FALLBACK content in ${attemptDuration}ms (attempt ${attempt})`);
+              console.warn(`[StoryContext] Completed with FALLBACK for ${nextCaseNumber}`);
             } else {
               // AI-generated content - ideal path
-              console.log(`[StoryContext] [${bgGenId}] SUCCESS with AI content in ${attemptDuration}ms (attempt ${attempt})`);
+              log.debug('StoryContext', `[${bgGenId}] SUCCESS for ${nextCaseNumber} (${attemptDuration}ms, attempt ${attempt})`);
             }
             llmTrace('StoryContext', traceId, 'decision.post.prefetchChosen.complete', {
               ok: true,
@@ -533,14 +533,13 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Trigger generation for next chapter immediately
     if (isLLMConfigured && nextChapter <= 12) {
-      console.log(`[StoryContext] Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}`);
-      console.log(`[StoryContext] Immediately triggering generation for ${nextCaseNumber} (path: ${nextPathKey})`);
+      log.debug('StoryContext', `Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}, triggering ${nextCaseNumber}`);
 
       // Generate in background - don't await
       generateForCase(nextCaseNumber, nextPathKey, nextChoiceHistory, branchingChoices)
         .then((result) => {
           if (result) {
-            console.log(`[StoryContext] Pre-puzzle generation complete for ${nextCaseNumber}`);
+            log.debug('StoryContext', `Pre-puzzle generation complete for ${nextCaseNumber}`);
           }
         })
         .catch((err) => {

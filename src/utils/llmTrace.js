@@ -149,6 +149,51 @@ export function llmTrace(scope, traceId, event, data = {}, level = 'info') {
 /**
  * Format a human-readable summary for display in the debug overlay
  */
+// =============================================================================
+// SIMPLE LOGGING API (for replacing scattered console.log calls)
+// =============================================================================
+
+/**
+ * Simple logging functions that respect verbose mode.
+ * Use these instead of console.log for controllable logging.
+ *
+ * - log.error(scope, message, data?) - Always logged (errors are always important)
+ * - log.warn(scope, message, data?)  - Always logged (warnings are always important)
+ * - log.info(scope, message, data?)  - Always logged (key milestones, state changes)
+ * - log.debug(scope, message, data?) - Only logged when verbose mode is enabled
+ *
+ * Examples:
+ *   log.info('StoryContext', 'Generation complete', { caseNumber, duration: '60.5s' });
+ *   log.debug('LLMService', 'Token usage', { input: 1000, output: 500 });
+ */
+export const log = {
+  error: (scope, message, data = null) => {
+    const prefix = `[${scope}]`;
+    const payload = data ? ` ${safeJson(data)}` : '';
+    console.error(`${prefix} ${message}${payload}`);
+  },
+
+  warn: (scope, message, data = null) => {
+    const prefix = `[${scope}]`;
+    const payload = data ? ` ${safeJson(data)}` : '';
+    console.warn(`${prefix} ${message}${payload}`);
+  },
+
+  info: (scope, message, data = null) => {
+    const prefix = `[${scope}]`;
+    const payload = data ? ` ${safeJson(data)}` : '';
+    console.log(`${prefix} ${message}${payload}`);
+  },
+
+  debug: (scope, message, data = null) => {
+    // Only log when verbose mode is enabled
+    if (!verboseModeEnabled) return;
+    const prefix = `[${scope}]`;
+    const payload = data ? ` ${safeJson(data)}` : '';
+    console.log(`${prefix} [DEBUG] ${message}${payload}`);
+  },
+};
+
 function formatEventSummary(scope, event, data, level) {
   // Extract key info based on event type
   const shortScope = scope.replace('Service', '').replace('Context', '');
