@@ -504,6 +504,30 @@ These are identified gaps or important notes about the current code:
    - Uncached (16%): `_buildGenerationPrompt()` → `_buildStyleSection()`.
    - When adding optimizations, **both paths must be updated**.
 
+7. **AppNavigator CaseFile infinite re-render loop (FIXED)**
+   - When navigating to CaseFile with a `caseNumber` param (e.g., after Logic Puzzle),
+     an infinite loop could occur causing "Maximum update depth exceeded" errors.
+   - **Root cause**: The `openStoryCase` callback was in the useEffect dependencies.
+     When `openStoryCase` dispatched `ADVANCE_CASE`, the reducer created a new
+     `boardLayouts` object, which cascaded through callback dependencies
+     (`assignBoardLayout` → `setActiveCaseInternal` → `openStoryCase`), causing
+     the callback to be recreated and the useEffect to re-run infinitely.
+   - **Solution**: Added a `lastSyncedCaseRef` ref to track already-synced cases.
+     The guard `if (lastSyncedCaseRef.current === caseFromParams.caseNumber) return;`
+     prevents the effect from re-running after the case has been synced once.
+   - File: `src/navigation/AppNavigator.js`
+
+8. **001C board word overlap causing "only 7 main words" warning (FIXED)**
+   - When loading 001C (subchapter C decision point), repeated warnings appeared:
+     "Case 3 has only 7 main words; expected 12".
+   - **Root cause**: The base case `mainWords` overlapped with `branchingOutlierSets`
+     words. The `extractMainWords` function filters out any mainWords that appear
+     in outlierWords, leaving insufficient unique main words.
+   - Overlapping words were: EVIDENCE, INVESTIGATE, CONFRONT, ACTION, RISK.
+   - **Solution**: Updated 001C `mainWords` in `cases.js` to use unique words that
+     don't overlap with the branching outlier sets.
+   - File: `src/data/cases.js`
+
 ---
 
 ## 16) Extending the system safely

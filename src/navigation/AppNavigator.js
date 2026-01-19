@@ -209,10 +209,19 @@ export default function AppNavigator({ fontsReady, audio }) {
             : null;
           const resolvedActiveCase = caseFromParams || activeCase;
 
+          // Track the last synced case to prevent infinite loop.
+          // The issue: openStoryCase changes when boardLayouts changes (ADVANCE_CASE dispatch),
+          // which would re-trigger this effect. Using a ref to track already-synced cases
+          // breaks the loop without removing necessary dependencies.
+          const lastSyncedCaseRef = React.useRef(null);
+
           // Keep game state aligned with explicit navigation params.
           React.useEffect(() => {
             if (!caseFromParams?.id) return;
             if (activeCase?.caseNumber === caseFromParams.caseNumber) return;
+            // Guard: Don't re-sync if we already synced this case
+            if (lastSyncedCaseRef.current === caseFromParams.caseNumber) return;
+            lastSyncedCaseRef.current = caseFromParams.caseNumber;
             openStoryCase?.(caseFromParams.id);
           }, [caseFromParams?.id, caseFromParams?.caseNumber, activeCase?.caseNumber, openStoryCase]);
 

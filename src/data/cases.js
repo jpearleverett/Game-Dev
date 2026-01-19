@@ -203,19 +203,21 @@ The investigation has led to a crossroads. Two paths forward, each with its own 
       },
       board: {
         // Placeholder - actual board data comes from generated content
+        // NOTE: mainWords must NOT overlap with branchingOutlierSets words (CAREFUL, EVIDENCE,
+        // THOROUGH, INVESTIGATE, DIRECT, CONFRONT, ACTION, RISK) to ensure 12 unique main words.
         mainWords: [
           'CHOICE',
           'PATH',
           'DECISION',
-          'EVIDENCE',
-          'RISK',
           'TRUTH',
-          'ACTION',
           'WAIT',
-          'CONFRONT',
-          'INVESTIGATE',
           'THRESHOLD',
-          'GLYPH'
+          'GLYPH',
+          'CLUE',
+          'MYSTERY',
+          'WITNESS',
+          'LETTER',
+          'PUZZLE'
         ],
         outlierWords: ['FORK', 'BRANCH', 'ROUTE', 'WAY']
       },
