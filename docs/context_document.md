@@ -596,9 +596,10 @@ These are identified gaps or important notes about the current code:
     - **Symptoms in logs**:
       - `[useStoryGeneration] ✅ CHAIN COMPLETE: 001B generated in 60.5s`
       - `[useStoryGeneration] ✅ CHAIN COMPLETE: 001B generated in 62.3s`
-    - **Solution**: Only trigger `triggerPrefetchAfterBranchingComplete` when `isComplete: true`.
-      This ensures the chain is triggered once when the player finishes reading the narrative,
-      not when they first make their choice.
+    - **Solution**: Only trigger `triggerPrefetchAfterBranchingComplete` when `isComplete: false`.
+      This ensures the chain is triggered once when the player makes their second choice,
+      giving maximum generation time while the player reads the narrative ending text.
+      Triggering on `isComplete: true` (finished reading) would waste valuable generation time.
     - File: `src/context/StoryContext.js`
 
 ---

@@ -446,12 +446,12 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return;
     }
 
-    // DUPLICATE CHAIN FIX: Only trigger prefetch when isComplete is true.
+    // DUPLICATE CHAIN FIX: Only trigger prefetch when isComplete is false (second choice made).
     // This prevents double chain triggers when:
-    // 1. handleSecondChoice saves with isComplete:false (player made choice, still reading)
-    // 2. handleBranchingComplete saves with isComplete:true (finished reading)
-    // Both calls would otherwise trigger the chain, causing duplicate generation attempts.
-    if (!isComplete) {
+    // 1. handleSecondChoice saves with isComplete:false (player made choice, still reading) - TRIGGER HERE
+    // 2. handleBranchingComplete saves with isComplete:true (finished reading) - DON'T trigger again
+    // Triggering on the first call gives more generation time while player reads the ending text.
+    if (isComplete) {
       return;
     }
 
