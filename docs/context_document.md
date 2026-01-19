@@ -583,6 +583,24 @@ These are identified gaps or important notes about the current code:
       5. Added C subchapter validation in StoryContext to catch mismatches early
     - Files: `src/screens/CaseFileScreen.js`, `src/hooks/useStoryEngine.js`, `src/context/StoryContext.js`
 
+12. **Duplicate "SUBCHAPTER CHAIN" triggers per subchapter (FIXED)**
+    - When completing a branching narrative, the chain generation was triggered twice,
+      causing duplicate "CHAIN COMPLETE" log messages.
+    - **Root cause**: `saveBranchingChoiceAndPrefetch` called `triggerPrefetchAfterBranchingComplete`
+      on every save that returned `true`. The branching flow calls save twice:
+      1. `handleSecondChoice` saves with `isComplete: false` (player made choice, still reading)
+      2. `handleBranchingComplete` saves with `isComplete: true` (finished reading)
+      Both calls returned `true` and both triggered the chain. The deduplication in
+      `StoryGenerationService` caught the second call ("Reusing pending generation"),
+      but both completion callbacks were still executed.
+    - **Symptoms in logs**:
+      - `[useStoryGeneration] ✅ CHAIN COMPLETE: 001B generated in 60.5s`
+      - `[useStoryGeneration] ✅ CHAIN COMPLETE: 001B generated in 62.3s`
+    - **Solution**: Only trigger `triggerPrefetchAfterBranchingComplete` when `isComplete: true`.
+      This ensures the chain is triggered once when the player finishes reading the narrative,
+      not when they first make their choice.
+    - File: `src/context/StoryContext.js`
+
 ---
 
 ## 16) Extending the system safely

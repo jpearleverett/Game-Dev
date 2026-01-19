@@ -446,6 +446,15 @@ export function StoryProvider({ children, progress, updateProgress }) {
       return;
     }
 
+    // DUPLICATE CHAIN FIX: Only trigger prefetch when isComplete is true.
+    // This prevents double chain triggers when:
+    // 1. handleSecondChoice saves with isComplete:false (player made choice, still reading)
+    // 2. handleBranchingComplete saves with isComplete:true (finished reading)
+    // Both calls would otherwise trigger the chain, causing duplicate generation attempts.
+    if (!isComplete) {
+      return;
+    }
+
     // Get current state for prefetching
     const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
     const pathKey = resolveStoryPathKey(caseNumber, currentCampaign);
