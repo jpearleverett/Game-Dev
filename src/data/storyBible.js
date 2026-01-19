@@ -690,12 +690,11 @@ export const GENERATION_CONFIG = {
   },
 
   // Word count requirements - optimized for fast background generation
-  // NOTE: 3 segments (opening + firstChoice + ending) at 280-320 words each = 840-960 words per path
-  // Minimum lowered to 800 to avoid triggering expansion for edge cases
+  // NOTE: 3 segments (opening + firstChoice + ending) at 300-350 words each = 900-1050 words per path
   wordCount: {
-    minimum: 800,         // ~1.5 pages, allows flexibility for 3x280 word segments
-    target: 900,          // Lean but quality-focused - faster generation
-    maximum: 1200,        // Cap to ensure fast generation
+    minimum: 900,         // 3×300 word segments minimum
+    target: 1050,         // 3×350 word segments target
+    maximum: 1400,        // Cap to ensure fast generation
   },
 
   // Quality assurance settings
