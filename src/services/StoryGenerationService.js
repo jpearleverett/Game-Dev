@@ -463,7 +463,6 @@ const STORY_CONTENT_SCHEMA = {
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
-})();
 
 /**
  * Schema for decision-only generation (first pass of two-pass decision generation)
@@ -2403,9 +2402,9 @@ Respond with a JSON object containing:
 
       const ongoing = [];
       if (typeof stats === 'string') {
-        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? 'Sarah's trust decreases' : 'Sarah's trust increases');
+        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? "Sarah's trust decreases" : "Sarah's trust increases");
         if (stats.toLowerCase().includes('investig')) ongoing.push('Jack gains better leads through evidence');
-        if (stats.toLowerCase().includes('aggress')) ongoing.push('Jack's approach grows more confrontational');
+        if (stats.toLowerCase().includes('aggress')) ongoing.push("Jack's approach grows more confrontational");
       }
       if (typeof focus === 'string' && focus.length > 0) {
         ongoing.unshift(`Tone shift: ${focus}`);
