@@ -378,14 +378,16 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         }, 'debug');
 
         // Log the complete prompt for debugging
-        this._logCompletePrompt({
-          caseNumber,
-          chapter,
-          subchapter,
-          cacheKey,
-          dynamicPrompt,
-          isCached: true,
-        });
+        if (this.fullPromptLoggingEnabled) {
+          this._logCompletePrompt({
+            caseNumber,
+            chapter,
+            subchapter,
+            cacheKey,
+            dynamicPrompt,
+            isCached: true,
+          });
+        }
 
         response = await llmService.completeWithCache({
           cacheKey,
@@ -451,13 +453,15 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         }, 'debug');
 
         // Log the complete prompt for debugging
-        this._logCompletePrompt({
-          caseNumber,
-          chapter,
-          subchapter,
-          fullPrompt: prompt,
-          isCached: false,
-        });
+        if (this.fullPromptLoggingEnabled) {
+          this._logCompletePrompt({
+            caseNumber,
+            chapter,
+            subchapter,
+            fullPrompt: prompt,
+            isCached: false,
+          });
+        }
 
         response = await llmService.complete(
           messages,

@@ -132,6 +132,16 @@ export default function SettingsScreen({
                 : 'Enable to see detailed LLM generation logs.'}
             </Text>
             <SettingToggle
+              label="Log Full LLM Prompts"
+              value={settings.logFullPrompts ?? false}
+              onToggle={handleToggle('logFullPrompts')}
+            />
+            <Text style={styles.metaText}>
+              {settings.logFullPrompts
+                ? 'Full prompts are printed to the console for subchapter generation.'
+                : 'Keep off unless you need to inspect the exact prompt sent to the LLM.'}
+            </Text>
+            <SettingToggle
               label="Prose Quality Checks"
               value={settings.enableProseQualityValidation ?? true}
               onToggle={handleToggle('enableProseQualityValidation')}

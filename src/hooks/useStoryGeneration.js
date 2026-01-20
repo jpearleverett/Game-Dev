@@ -82,6 +82,14 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     settings?.enableLLMValidation,
   ]);
 
+  useEffect(() => {
+    if (typeof storyGenerationService.setFullPromptLoggingEnabled === 'function') {
+      storyGenerationService.setFullPromptLoggingEnabled(!!settings?.logFullPrompts);
+    } else {
+      storyGenerationService.fullPromptLoggingEnabled = !!settings?.logFullPrompts;
+    }
+  }, [settings?.logFullPrompts]);
+
   const withQualitySettings = useCallback(
     (options = {}) => ({
       ...options,

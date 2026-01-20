@@ -99,6 +99,7 @@ class StoryGenerationService {
     // ========== PROMPT LOGGING FOR DEBUGGING ==========
     // Stores cache content locally so we can log the complete prompt sent to LLM
     this.chapterStartCacheContent = new Map(); // cacheKey -> { systemInstruction, content }
+    this.fullPromptLoggingEnabled = false; // Toggle full prompt logging
   }
 }
 
