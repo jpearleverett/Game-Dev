@@ -40,7 +40,10 @@ it aligned with implementation details and constraints.
   - Example: after 1C=B and 2C=A, cumulative key is `BA`.
 - Branching path key (within a subchapter):
   - Subchapter narrative has 2 choice points with 3 options each.
-  - Keys are `1A/1B/1C` for the first choice and `2A/2B/2C` for the second.
+  - First choice keys are `1A/1B/1C`.
+  - Second choice keys are normalized to full paths: `1A-2A` .. `1C-2C`.
+  - Short forms like `2A/2B/2C` may appear in raw LLM/UI output, but are
+    normalized before persistence and downstream use.
   - Combined path key is `1B-2C` (first choice B, second choice C).
 - `choiceHistory`: Chapter-level decisions (A/B at end of C subchapters).
 - `branchingChoices`: Per-subchapter branching path decisions inside A/B/C narrative.
@@ -74,6 +77,8 @@ Narrative-first flow:
 - Each subchapter uses a branching narrative with two choice points.
 - First choice: 3 options (1A, 1B, 1C).
 - Second choice: 3 options (2A, 2B, 2C) for each first choice.
+- All second-choice keys are normalized to full path keys (`1A-2A` .. `1C-2C`)
+  for persistence, decision lookup, and context building.
 - Total paths: 3 x 3 = 9 unique story endings per subchapter.
 - Each path has a separate decision bundle at the end of a C subchapter.
 
@@ -126,6 +131,8 @@ The final case used by the UI is produced by merging:
 - In-memory cache of generated story content.
 - AsyncStorage persistence keyed by `caseNumber_pathKey`.
 - Helpers to build the realized narrative from branching segments.
+- Realized narrative building is tolerant of legacy `2A/2B/2C` keys and
+  normalizes to canonical `1A-2A` style paths before selection.
 
 Generated entries include:
 - `title`, `narrative`, `branchingNarrative` (opening, choices, endings).
@@ -226,6 +233,8 @@ LLM outputs a structured JSON payload. For C subchapters:
 `pathDecisions` is keyed by branching path (`1A-2A`, `1A-2B`, ...).
 At runtime, the game selects the decision that matches the player's actual
 branching choices within the subchapter.
+Key normalization ensures any short `2A/2B/2C` outputs are converted to full
+path keys before lookup.
 
 ### 6.5 Validation and word count
 - LLM responses are validated with a secondary LLM pass (gated by config).
@@ -235,6 +244,7 @@ branching choices within the subchapter.
 - Word count configuration (see `GENERATION_CONFIG.wordCount` in storyBible.js):
   - `minimum`: 900 words (3×300=900 word paths)
   - `target`: 1,050 words (3×350=1,050 expected per path)
+  - `promptTargetMultiplier`: 1.1 (prompt asks for ~10% more than target)
   - `maximum`: 1,400 words
 - Segment validation minimum: 300 words (ensures 3 segments meet 900 word path minimum).
 - Validation gating flags (see `GENERATION_CONFIG.qualitySettings`):
@@ -684,7 +694,8 @@ When adding features or modifying behavior, maintain these invariants:
 
 - Always preserve the path key formats:
   - Chapter path key: cumulative A/B choices, like `BAA`.
-  - Branching path key: `1B-2C` style, do not prepend the first choice twice.
+  - Branching path key: `1B-2C` style; normalize any short `2A/2B/2C` keys.
+  - Do not prepend the first choice twice (avoid `1B-1B-2C`).
 - Keep two-call approach for `pathDecisions`.
   - Do not attempt to embed 9 decisions into a single schema.
 - Keep narrative-first flow for C subchapters.
@@ -697,6 +708,8 @@ When adding features or modifying behavior, maintain these invariants:
 - When changing word count targets:
   - Ensure segment targets (3×N) exceed the minimum word count.
   - Update both `GENERATION_CONFIG.wordCount` and schema descriptions.
+  - If you tune prompt output without changing validation, adjust
+    `promptTargetMultiplier` (prompt-only) instead of `minimum`.
   - Do not re-enable `_expandNarrative()` - it causes text corruption.
 - When changing maxTokens:
   - Account for thinking token overhead (50-80% with high thinking).
@@ -1107,6 +1120,33 @@ behavior is split into focused modules under `src/services/storyGeneration/`:
 Behavior is unchanged; this refactor improves maintainability and keeps prompt
 logging intact (`_logCompletePrompt()` still prints the full prompt for cached
 and non-cached calls).
+
+### 19.15 Branching key normalization + prompt target bump (Jan 2026)
+
+Mixed key formats were observed in production logs (LLM/UI emitting `2A/2B/2C`
+while downstream systems expected `1A-2A` style keys). This caused:
+- Canonical word counts to under-report (~600 words) when the ending segment
+  wasn't found.
+- Path-specific decision lookups to occasionally miss.
+
+Fixes implemented:
+- **Normalize LLM output**: `validation.js` now normalizes `branchingNarrative`
+  keys on parse (firstChoice keys, afterChoice, and secondChoice option keys).
+- **Normalize runtime context**: `generation.js` normalizes `branchingChoices`
+  before building story context or calculating path decisions.
+- **Robust realized narrative**: `storyContent.js` now compares keys
+  case-insensitively and normalizes short `2A` keys to full `1A-2A`.
+- **Prompt alignment**: `promptAssembly.js` now explicitly instructs second
+  choice keys to be `1A-2A` .. `1C-2C` (not just `2A/2B/2C`).
+
+Word count tuning:
+- Added `GENERATION_CONFIG.wordCount.promptTargetMultiplier` (1.1).
+- Prompts now ask for ~10% more words than the target (e.g., 1050 → 1155),
+  but validation **minimum remains 900**.
+
+Files touched: `src/data/storyBible.js`, `src/services/storyGeneration/promptAssembly.js`,
+`src/services/storyGeneration/validation.js`, `src/services/storyGeneration/generation.js`,
+`src/data/storyContent.js`.
 
 ---
 
