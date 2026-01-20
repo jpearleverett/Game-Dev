@@ -771,6 +771,37 @@ The `clearProgress()` callback now calls `clearGeneratedStory()` from
 - Player gets fresh LLM-generated content after reset
 - No stale narrative data persists across playthroughs
 
+### 19.5 Character reference cleanup
+
+**Only Jack and Victoria are defined characters.** The LLM has creative freedom
+to generate any supporting characters as the story requires.
+
+Removed from all LLM prompts:
+- Tom Wade, Sarah Reeves, Eleanor Bellamy, Silas Reed, Deputy Chief Grange
+- All pre-defined character arcs for non-protagonist/antagonist characters
+- Specific character names in examples and templates
+
+These characters may still appear in internal validation/processing code (for
+handling names if the LLM invents them), but they are NOT instructed to the LLM.
+
+### 19.6 Victoria alias removal
+
+Removed the "Midnight Cartographer" alias for Victoria Blackwell from all files.
+Victoria is now referred to simply by name. This matches `characterReference.js`
+and `storyBible.js` which have no alias defined.
+
+### 19.7 Reveal timing consistency
+
+Fixed inconsistent reveal timing references throughout the codebase:
+- **Correct timing**: First undeniable reveal occurs at END of Chapter 1C
+- Fixed multiple places that incorrectly said "end of 2A"
+
+### 19.8 Static 1A prose improvements
+
+Improved the static Chapter 1A content in `storyNarrative.json`:
+- Removed 3 instances of "somehow" (forbidden word per style guide)
+- Replaced with stronger, more specific prose
+
 ---
 
 ## 20) What to read first if you are new
