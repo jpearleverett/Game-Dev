@@ -804,6 +804,7 @@ export const GENERATION_CONFIG = {
   wordCount: {
     minimum: 900,         // 3×300 word segments minimum
     target: 1050,         // 3×350 word segments target
+    promptTargetMultiplier: 1.1, // Ask for ~10% more without raising validation minimum
     maximum: 1400,        // Cap to ensure fast generation
   },
 

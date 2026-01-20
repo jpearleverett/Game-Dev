@@ -23,6 +23,47 @@ import { saveGeneratedChapter } from '../../storage/generatedStoryStorage';
 // TWO-PASS DECISION GENERATION
 // ==========================================================================
 
+const normalizeBranchingChoice = (choice) => {
+  if (!choice || typeof choice !== 'object') return null;
+
+  let firstChoice = String(choice.firstChoice || '').trim().toUpperCase();
+  let secondChoice = String(choice.secondChoice || choice.path || '').trim().toUpperCase();
+
+  if (!firstChoice && /^1[ABC]-2[ABC]$/.test(secondChoice)) {
+    [firstChoice] = secondChoice.split('-');
+  }
+
+  if (/^2[ABC]$/.test(secondChoice) && /^1[ABC]$/.test(firstChoice)) {
+    secondChoice = `${firstChoice}-${secondChoice}`;
+  }
+
+  const dupMatch = secondChoice.match(/^(1[ABC])-(1[ABC]-2[ABC])$/);
+  if (dupMatch) {
+    secondChoice = dupMatch[2];
+  }
+
+  if (!/^1[ABC]$/.test(firstChoice) && /^1[ABC]-2[ABC]$/.test(secondChoice)) {
+    [firstChoice] = secondChoice.split('-');
+  }
+
+  if (!/^1[ABC]$/.test(firstChoice) || !/^1[ABC]-2[ABC]$/.test(secondChoice)) {
+    return null;
+  }
+
+  return {
+    ...choice,
+    firstChoice,
+    secondChoice,
+  };
+};
+
+const normalizeBranchingChoices = (choices = []) => {
+  if (!Array.isArray(choices)) return [];
+  return choices
+    .map(normalizeBranchingChoice)
+    .filter(Boolean);
+};
+
 /**
  * Generate decision structure first (Pass 1 of two-pass generation)
  * This ensures decisions are always complete and contextually appropriate,
@@ -197,7 +238,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // TRUE INFINITE BRANCHING: Get player's actual choices within subchapters
   // This tracks which path the player took through branching narratives (e.g., "1B" -> "1B-2C")
   // Used to build the "realized narrative" for context - what the player actually experienced
-  const branchingChoices = options?.branchingChoices || [];
+  const branchingChoices = normalizeBranchingChoices(options?.branchingChoices || []);
 
   // Store branchingChoices on instance so helper functions can access player's actual path
   // This enables _getPathDecisionData to look up path-specific decisions correctly
