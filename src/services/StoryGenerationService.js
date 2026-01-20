@@ -822,7 +822,7 @@ You understand that different player journeys through the branching narrative le
 </identity>
 
 <story_context>
-- PROTAGONIST: Jack Halloway, 29, burned-out freelance investigator. Former file clerk. Drinks too much. A missing persons case went wrong two years ago and he's never forgiven himself.
+- PROTAGONIST: Jack Halloway, 35, burned-out freelance investigator. Former file clerk. Drinks too much. A missing persons case went wrong two years ago and he's never forgiven himself.
 - SETTING: Ashport—rain-soaked, neon-lit, perpetually overcast. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
 - TONE: Modern mystery thriller that slowly reveals an original fantasy world. Noir-adjacent but not pastiche.
 - ANTAGONIST: Victoria Blackwell—information broker who communicates via black envelopes with silver ink. Her philosophy: "A map is a promise. Break it, and the city breaks back."
@@ -1675,6 +1675,10 @@ class StoryGenerationService {
     // This lets subchapters within a chapter send only the delta (current chapter so far).
     this.chapterStartCacheVersion = 1; // Increment when chapter cache format changes
     this.chapterStartCacheKeys = new Map(); // logicalKey -> cacheKey
+
+    // ========== PROMPT LOGGING FOR DEBUGGING ==========
+    // Stores cache content locally so we can log the complete prompt sent to LLM
+    this.chapterStartCacheContent = new Map(); // cacheKey -> { systemInstruction, content }
   }
 
   // ==========================================================================
@@ -2643,7 +2647,7 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
     const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter mystery thriller with an original hidden fantasy world.
 
 ## STORY PREMISE
-Jack Halloway (late 20s/early 30s) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of “dead letters” from Victoria Blackwell (“The Midnight Cartographer”) draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport’s infrastructure.
+Jack Halloway (35, burned-out freelance investigator) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of “dead letters” from Victoria Blackwell (“The Midnight Cartographer”) draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport’s infrastructure.
 
 CRITICAL REVEAL TIMING:
 - The FIRST undeniable reveal that “the world is not what it seems” occurs at the END of subchapter 2A (not earlier).
@@ -2790,7 +2794,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
         tomWade: 'Friend with access to records and secrets he doesn’t want named',
       },
       consistencyAnchors: [
-        'Jack Halloway is in his late 20s/early 30s and does NOT start with Under-Map knowledge',
+        'Jack Halloway is 35 years old and does NOT start with Under-Map knowledge',
         'Victoria Blackwell is the Midnight Cartographer (dead letters, silver ink, rules)',
         'The Under-Map is real; the first undeniable reveal happens at the end of 2A',
         'Glyphs behave like a language with constraints; do not “magic-system” explain—show',
@@ -5133,6 +5137,12 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
       },
     });
 
+    // Store cache content locally for prompt logging
+    this.chapterStartCacheContent.set(cacheKey, {
+      systemInstruction: MASTER_SYSTEM_PROMPT,
+      content: chapterCacheContent,
+    });
+
     this.chapterStartCacheKeys.set(logicalKey, cacheKey);
     console.log(`[StoryGenerationService] ✅ Chapter-start cache created: ${cacheKey}`);
     return cacheKey;
@@ -7182,6 +7192,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             reason,
           }, 'debug');
 
+          // Log the complete prompt for debugging
+          this._logCompletePrompt({
+            caseNumber,
+            chapter,
+            subchapter,
+            cacheKey,
+            dynamicPrompt,
+            isCached: true,
+          });
+
           response = await llmService.completeWithCache({
             cacheKey,
             dynamicPrompt,
@@ -7244,6 +7264,15 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             },
             reason,
           }, 'debug');
+
+          // Log the complete prompt for debugging
+          this._logCompletePrompt({
+            caseNumber,
+            chapter,
+            subchapter,
+            fullPrompt: prompt,
+            isCached: false,
+          });
 
           response = await llmService.complete(
             messages,
@@ -9801,7 +9830,7 @@ Check if each critical thread above is addressed through dialogue or action (not
       const validationPrompt = `You are a strict continuity editor for a modern mystery thriller with a hidden fantasy layer (the Under-Map). Check this narrative excerpt for FACTUAL ERRORS and THREAD VIOLATIONS.
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
-- Jack Halloway: 29 years old; burned out freelance investigator; former file clerk; avoids finding people after a case went bad; initially does NOT know the Under-Map is real
+- Jack Halloway: 35 years old; burned out freelance investigator; former file clerk; avoids finding people after a case went bad; initially does NOT know the Under-Map is real
 - Tom Wade: Jack's friend; knows more about city records/symbol reports than he admits
 - Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink, river-glass tokens); guides Jack via rules and routes
 - Deputy Chief Grange: runs suppression/containment around Under-Map incidents
@@ -11658,6 +11687,83 @@ If no conflicts, return: {"conflicts": []}`;
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
+  }
+
+  /**
+   * Log the complete prompt sent to the LLM for debugging.
+   * This outputs the EXACT prompt the LLM receives, including system instruction,
+   * cached content, and dynamic prompt.
+   *
+   * @param {Object} options - Logging options
+   * @param {string} options.caseNumber - Case being generated
+   * @param {number} options.chapter - Chapter number
+   * @param {number} options.subchapter - Subchapter number
+   * @param {string} options.cacheKey - Cache key if using cached generation
+   * @param {string} options.dynamicPrompt - Dynamic prompt content
+   * @param {string} options.fullPrompt - Full prompt for non-cached generation
+   * @param {boolean} options.isCached - Whether using cached generation
+   */
+  _logCompletePrompt({ caseNumber, chapter, subchapter, cacheKey, dynamicPrompt, fullPrompt, isCached }) {
+    const separator = '='.repeat(80);
+    const subSeparator = '-'.repeat(80);
+
+    console.log(`\n${separator}`);
+    console.log(`[FULL PROMPT] ${caseNumber} (Chapter ${chapter}.${subchapter}) - ${isCached ? 'CACHED' : 'NON-CACHED'} GENERATION`);
+    console.log(`${separator}\n`);
+
+    if (isCached && cacheKey) {
+      // For cached generation, retrieve and log the cache content
+      const cacheContent = this.chapterStartCacheContent.get(cacheKey);
+
+      console.log(`${subSeparator}`);
+      console.log('[PART 1: SYSTEM INSTRUCTION]');
+      console.log(`${subSeparator}`);
+      if (cacheContent?.systemInstruction) {
+        console.log(cacheContent.systemInstruction);
+      } else {
+        console.log('(System instruction from cache - content not available locally)');
+        console.log('Note: MASTER_SYSTEM_PROMPT is used as the system instruction.');
+      }
+
+      console.log(`\n${subSeparator}`);
+      console.log('[PART 2: CACHED CONTENT (Static + Story Context)]');
+      console.log(`${subSeparator}`);
+      if (cacheContent?.content) {
+        console.log(cacheContent.content);
+      } else {
+        console.log(`(Cached content not available locally - cache key: ${cacheKey})`);
+        console.log('Cache was created in a previous session or content was not stored.');
+      }
+
+      console.log(`\n${subSeparator}`);
+      console.log('[PART 3: DYNAMIC PROMPT (Sent with this request)]');
+      console.log(`${subSeparator}`);
+      if (dynamicPrompt) {
+        console.log(dynamicPrompt);
+      } else {
+        console.log('(No dynamic prompt)');
+      }
+
+    } else {
+      // For non-cached generation, log the system prompt and full prompt
+      console.log(`${subSeparator}`);
+      console.log('[PART 1: SYSTEM PROMPT]');
+      console.log(`${subSeparator}`);
+      console.log(MASTER_SYSTEM_PROMPT);
+
+      console.log(`\n${subSeparator}`);
+      console.log('[PART 2: USER PROMPT (Full generation prompt)]');
+      console.log(`${subSeparator}`);
+      if (fullPrompt) {
+        console.log(fullPrompt);
+      } else {
+        console.log('(No prompt content)');
+      }
+    }
+
+    console.log(`\n${separator}`);
+    console.log(`[END OF FULL PROMPT] ${caseNumber}`);
+    console.log(`${separator}\n`);
   }
 }
 
