@@ -1023,6 +1023,38 @@ Removed the entire fallback narrative system from `StoryGenerationService.js`:
 - Cleaner architecture: story bible is the single source of truth
 - No more duplicate character data in service file
 
+### 19.12 Case file screen UI simplification (Jan 2026)
+
+Simplified the CaseFileScreen UI for a cleaner, more immersive narrative experience:
+
+1. **Title section cleanup**
+   - Removed "CASE FILE #001A" label from hero section - title now stands alone
+   - Opening case (001A) renamed from "Dead Letter Office" to "The Visitor"
+   - Title font size reduced for better proportions
+   - Reduced padding throughout hero and content sections
+
+2. **Bridge text/summary changes**
+   - Chapter 1A (opening case) now skips the bridge text entirely
+   - Summary panel tape decorations removed to reduce visual clutter
+   - Spacing between title and content sections tightened
+
+3. **Narrative journal cleanup**
+   - Removed ALL segment labels from BranchingNarrativeReader
+   - Previously showed "CASE FILE", "INVESTIGATION", "CONCLUSION" on pages
+   - Now narrative starts cleanly without labels
+
+4. **Navigation button**
+   - Changed "Back to Results" to "Menu" - clearer for narrative-first flow
+   - The case file screen is now the entry point, not a post-puzzle screen
+
+#### Files modified
+
+- `src/data/cases.js` - Changed 001A title
+- `src/components/case-file/CaseHero.js` - Removed case number, reduced sizing
+- `src/components/case-file/CaseSummary.js` - Removed tape decorations
+- `src/components/BranchingNarrativeReader.js` - Removed segment labels
+- `src/screens/CaseFileScreen.js` - Skip summary for 001A, reduced spacing
+
 ---
 
 ## 20) What to read first if you are new
