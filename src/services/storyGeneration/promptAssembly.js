@@ -337,32 +337,65 @@ function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { ca
 
   // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
   const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
-  // Note: beatType already declared earlier for many-shot examples (line 5049)
+  // Note: beatType already declared earlier for many-shot examples
 
-  // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+  // Gemini 3 best practice: Context anchor + explicit planning + task at END
   parts.push(`
-<task>
-Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}).
+<context_anchor>
+Based on all the context blocks provided above (story_bible, character_reference, story_context, active_threads, scene_state, voice_dna, engagement_guidance), you now have everything needed to continue the story.
+</context_anchor>
 
-Before writing, plan:
-1. What narrative threads from ACTIVE_THREADS must be addressed?
-2. What is the emotional anchor for this subchapter?
-3. How does this advance the chapter beat (${beatType})?
+<pre_generation_plan>
+Before writing, you MUST internally plan (do NOT include this planning in your output):
+
+1. **SCENE CONTINUATION**: What is the exact last line from the previous scene? Start IMMEDIATELY after it.
+2. **THREAD AUDIT**: List the CRITICAL and HIGH urgency threads from <active_threads>. Which 2-3 must I address in this scene?
+3. **BEAT REQUIREMENTS**: This is a ${beatType} beat. What specific requirements does it have?
+4. **EMOTIONAL ARC**: What is Jack's emotional state entering? What shift should occur by scene end?
+5. **WORD COUNT TARGET**: 900-1200 words of narrative prose minimum. Do NOT be brief.
+6. **SENSORY ANCHOR**: What recurring sensory detail (sound, smell, texture, light) will ground this scene?
+
+Only after completing this internal plan should you begin writing.
+</pre_generation_plan>
+
+<task>
+Write subchapter ${chapter}.${subchapter} (${beatType} beat).
 
 ${taskSpec}
+
+CRITICAL REMINDERS:
+- Generate 900-1200 words of narrative prose (not less)
+- Use SINGLE QUOTES for all dialogue
+- Address at least 2 threads from ACTIVE_THREADS explicitly
+- End with a hook that creates forward momentum
+- Return valid JSON matching the schema exactly
 </task>
 
 <self_critique>
-After generating your narrative, review it against these quality gates:
+Before returning your response, review your generated output against these quality gates:
 
-1. **Intent Alignment**: Did I answer the beat requirements, not just write prose?
-2. **Thread Continuity**: Did I address at least 2 CRITICAL threads explicitly?
-3. **Emotional Authenticity**: Is there a genuine gut-punch moment, not just plot?
-4. **Timeline Precision**: Are all durations EXACT per ABSOLUTE_FACTS (never approximate)?
-5. **Hook Quality**: Does the final line create unbearable forward momentum?
-6. **Forbidden Patterns**: Did I avoid all forbidden phrases and constructions?
+**INTENT CHECK**:
+1. Did I answer the user's *intent* (write a compelling story scene), not just produce text?
+2. Is the tone authentic to noir detective fiction?
+3. Did I continue from the exact last line in scene_state (no recap, no restart)?
 
-If any check fails, revise before returning your response.
+**CONTINUITY CHECK**:
+1. Did I address at least 2 CRITICAL threads explicitly with visible character action?
+2. Are all names, dates, and facts consistent with ABSOLUTE_FACTS?
+3. Did I maintain Jack's established personality and the player's path style?
+
+**CRAFT CHECK**:
+1. Is there a genuine emotional peak (not just plot movement)?
+2. Does every paragraph have at least one micro-tension element?
+3. Does the final line create unbearable forward momentum?
+4. Is the narrative at least 900 words? (If not, expand key moments with sensory detail)
+
+**FORBIDDEN CHECK**:
+1. No first-person narration (must be third-person limited)
+2. No double-quotes for dialogue (single quotes only)
+3. No meta-commentary about being an AI or writing a story
+
+If ANY check fails, revise before returning your response.
 </self_critique>`);
 
   return parts.join('\n\n');
