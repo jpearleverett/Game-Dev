@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
@@ -8,10 +8,10 @@ import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING } from '../constants/layout';
 
 const MESSAGE = [
-  "You don't remember me, Detective? That's okay. I remember you.",
-  "Let's play a game. I'll send you cases from your past.",
-  "Cases you solved... and one you didn't.",
-  "Let's start with your first case.",
+  "You've read this before.",
+  "You just don't remember yet.",
+  "When the envelope arrives, it all begins.",
+  "When you write this letter, you'll remember.",
 ];
 
 const TYPE_DELAY = 28;
@@ -47,16 +47,17 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
       }
 
       const target = MESSAGE[paragraphIndex];
-      const nextSlice = target.slice(0, charIndex + 1);
-      setDisplayedParagraphs((prev) => prev.map((paragraph, idx) => (idx === paragraphIndex ? nextSlice : prev[idx])));
 
-      charIndex += 1;
-
-      if (charIndex <= target.length) {
+      if (charIndex < target.length) {
+        // Still typing current paragraph
+        const nextSlice = target.slice(0, charIndex + 1);
+        setDisplayedParagraphs((prev) =>
+          prev.map((p, idx) => (idx === paragraphIndex ? nextSlice : p))
+        );
+        charIndex += 1;
         schedule(typeNext, TYPE_DELAY);
-      }
-
-      if (charIndex > target.length) {
+      } else {
+        // Finished current paragraph, move to next
         paragraphIndex += 1;
         charIndex = 0;
         if (paragraphIndex < MESSAGE.length) {
@@ -73,8 +74,6 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
     };
   }, [reducedMotion]);
 
-  const paragraphs = useMemo(() => displayedParagraphs, [displayedParagraphs]);
-
   return (
     <ScreenSurface variant="default">
       <View style={styles.header}>
@@ -87,11 +86,13 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
         <Text style={styles.meta}>Subject: Remember?</Text>
       </View>
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        {paragraphs.map((paragraph, index) => (
-          <Text key={index} style={styles.paragraph}>
-            {paragraph}
-          </Text>
-        ))}
+        {displayedParagraphs.map((paragraph, index) =>
+          paragraph ? (
+            <Text key={index} style={styles.paragraph}>
+              {paragraph}
+            </Text>
+          ) : null
+        )}
       </ScrollView>
       <View style={styles.footer}>
         <PrimaryButton 
