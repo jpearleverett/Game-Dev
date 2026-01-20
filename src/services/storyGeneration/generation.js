@@ -827,14 +827,22 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
       // Build canonical narrative from branchingNarrative for validation/expansion
       // Uses opening + first choice (1A) + first ending (1A-2A) as the canonical path
-      if (!generatedContent.narrative && generatedContent.branchingNarrative) {
+      const hasNarrative = typeof generatedContent.narrative === 'string'
+        && generatedContent.narrative.trim().length > 0;
+      if (!hasNarrative && generatedContent.branchingNarrative) {
         const bn = generatedContent.branchingNarrative;
         const parts = [];
         if (bn.opening?.text) parts.push(bn.opening.text);
-        const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A');
+        const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A')
+          || bn.firstChoice?.options?.[0];
         if (firstOption?.response) parts.push(firstOption.response);
-        const secondGroup = bn.secondChoices?.find(sc => sc.afterChoice === '1A');
-        const secondOption = secondGroup?.options?.find(o => o.key === '1A-2A');
+        const firstKey = String(firstOption?.key || '1A').toUpperCase();
+        const secondGroup = bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === firstKey)
+          || bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === '1A')
+          || bn.secondChoices?.[0];
+        const secondOption = secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === `${firstKey}-2A`)
+          || secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === '2A')
+          || secondGroup?.options?.[0];
         if (secondOption?.response) parts.push(secondOption.response);
         generatedContent.narrative = parts.join('\n\n');
       }
