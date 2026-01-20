@@ -45,7 +45,7 @@ export default function CaseHero({ activeCase, compact }) {
         />
         <ImageBackground
           source={CASE_TITLE_BG}
-          resizeMode="cover"
+          resizeMode="stretch"
           style={[
             styles.heroLetterPaper,
             {
