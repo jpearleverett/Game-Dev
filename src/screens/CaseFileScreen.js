@@ -854,7 +854,7 @@ export default function CaseFileScreen({
             {/* Inner "Cork/Wood" Surface */}
             <ImageBackground
               source={CORKBOARD_BG}
-              resizeMode="cover"
+              resizeMode="repeat"
               style={[
                 styles.boardSurface,
                 {
