@@ -70,7 +70,7 @@ export const ABSOLUTE_FACTS = {
     formerTitle: 'Freelance investigator, former file clerk at Ashport City Records Office',
     currentStatus: 'Burned out and depressed; takes only simple jobs now, avoids anything that requires finding people',
     residence: 'A cramped office-sublet above Murphy\'s Bar (cheap rent, thin floorboards)',
-    careerLength: 'About 10 years in records and investigation work',
+    careerLength: '15 years in records and investigation work',
     reputation: 'Used to be good at finding information others missed; now just going through the motions',
     vices: ['Drinking too much', 'Insomnia', 'Compulsive note-taking'],
     physicalState: 'Worn down before his time; tired eyes, unshaven, clothes that haven\'t been washed in too long',
@@ -406,7 +406,6 @@ export const WRITING_STYLE = {
   ],
 
   absolutelyForbidden: [
-    'Em dashes (—) - use commas, periods, semicolons instead',
     '"X is not just Y, it\'s Z" constructions',
     'Constructions with the following sentence structure "The silver current didn\'t just move; it sang"',
     '"In a world where..." openings',
