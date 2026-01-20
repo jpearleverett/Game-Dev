@@ -57,7 +57,14 @@ export default function CaseHero({ activeCase, compact }) {
         >
           <Image
             source={CASE_TITLE_BG}
-            style={[StyleSheet.absoluteFill, { borderRadius: heroLetterRadius }]}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              borderRadius: heroLetterRadius,
+            }}
             resizeMode="stretch"
             pointerEvents="none"
           />
