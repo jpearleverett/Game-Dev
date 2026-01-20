@@ -51,11 +51,11 @@ export const TIMELINE = {
     ],
 
     // Present day
-    1: 'Jack is 29 years old, going through the motions; takes only simple jobs now, background checks and process serving, nothing that requires him to find anyone',
+    1: 'Jack is 35 years old, going through the motions; takes only simple jobs now, background checks and process serving, nothing that requires him to find anyone',
   },
   storyStart: {
     anchorDate: 'November 14, 2025', // Present day anchor - story begins on this date
-    jackAge: 29,
+    jackAge: 35,
     jackState: 'Burned out, depressed, scraping by on small jobs; still good at what he does but afraid of what happens when he actually finds something',
   },
 };
@@ -66,14 +66,14 @@ export const TIMELINE = {
 export const ABSOLUTE_FACTS = {
   protagonist: {
     fullName: 'Jack Halloway',
-    age: 29,
+    age: 35,
     formerTitle: 'Freelance investigator, former file clerk at Ashport City Records Office',
     currentStatus: 'Burned out and depressed; takes only simple jobs now, avoids anything that requires finding people',
     residence: 'A cramped office-sublet above Murphy\'s Bar (cheap rent, thin floorboards)',
     careerLength: 'About 10 years in records and investigation work',
     reputation: 'Used to be good at finding information others missed; now just going through the motions',
     vices: ['Drinking too much', 'Insomnia', 'Compulsive note-taking'],
-    physicalState: 'Young but worn down; tired eyes, unshaven, clothes that haven\'t been washed in too long',
+    physicalState: 'Worn down before his time; tired eyes, unshaven, clothes that haven\'t been washed in too long',
     burnout: 'A missing persons case ended badly two years ago; Jack found someone who didn\'t want to be found, and they died after he gave up the address',
   },
 

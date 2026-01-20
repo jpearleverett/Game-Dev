@@ -12,9 +12,9 @@ export const CHARACTER_REFERENCE = {
   protagonist: {
     name: 'Jack Halloway',
     role: 'Freelance investigator / former file clerk',
-    age: 29,
+    age: 35,
     physicalDescription: {
-      appearance: 'Young but worn down; tired eyes; unshaven; clothes that need washing',
+      appearance: 'Worn down before his time; tired eyes; unshaven; clothes that need washing',
       build: 'Lean, used to have restless energy, now just tired',
       distinctiveFeatures: 'Carries a battered notebook; habit of using paper maps instead of digital',
     },
