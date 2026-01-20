@@ -90,7 +90,7 @@ Narrative-first flow:
 Stored in AsyncStorage via `progressStorage.js` and managed by `usePersistence`.
 Important fields:
 
-- `progress.settings`: audio, accessibility, hints, verbose mode.
+- `progress.settings`: audio, accessibility, hints, verbose mode, and AI validation toggles.
 - `progress.storyCampaign`:
   - `chapter`, `subchapter`, `currentPathKey`, `activeCaseNumber`.
   - `choiceHistory`: chapter-level decisions with option details.
@@ -238,6 +238,7 @@ branching choices within the subchapter.
   - `enableProseQualityValidation`
   - `enableSentenceVarietyValidation`
   - `enableLLMValidation`
+- These toggles are exposed in Settings > AI Story Generation and stored in `progress.settings`.
 
 ### 6.6 Narrative expansion (REMOVED)
 - `_expandNarrative()` and its grounding helper were removed entirely.
@@ -361,7 +362,7 @@ Key screens:
 - `ChapterSelectScreen`: replay and branching tree visualization.
 - `EndingGalleryScreen`: endings collection.
 - `AchievementsScreen`: achievements and points.
-- `SettingsScreen`: audio, accessibility, purchases, LLM settings.
+- `SettingsScreen`: audio, accessibility, purchases, AI generation status, and validation toggles.
 - `MenuScreen`, `StatsScreen`.
 
 Screen behavior highlights:

@@ -6716,10 +6716,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         generatedContent = this._fixTyposLocally(generatedContent);
 
         let validationResult = this._validateConsistency(generatedContent, context);
-        const qualitySettings = GENERATION_CONFIG?.qualitySettings || {};
-        const enableProseQualityValidation = qualitySettings.enableProseQualityValidation !== false;
-        const enableSentenceVarietyValidation = qualitySettings.enableSentenceVarietyValidation !== false;
-        const enableLLMValidation = qualitySettings.enableLLMValidation !== false;
+        const baseQualitySettings = GENERATION_CONFIG?.qualitySettings || {};
+        const overrideQualitySettings = options?.qualitySettingsOverride || {};
+        const resolveQualityFlag = (key, fallback = true) => {
+          if (typeof overrideQualitySettings[key] === 'boolean') return overrideQualitySettings[key];
+          if (typeof baseQualitySettings[key] === 'boolean') return baseQualitySettings[key];
+          return fallback;
+        };
+        const enableProseQualityValidation = resolveQualityFlag('enableProseQualityValidation');
+        const enableSentenceVarietyValidation = resolveQualityFlag('enableSentenceVarietyValidation');
+        const enableLLMValidation = resolveQualityFlag('enableLLMValidation');
 
         // ========== A+ QUALITY VALIDATION (Warnings Only - Don't Block Generation) ==========
         // These validators provide feedback but should NOT cause generation failures.

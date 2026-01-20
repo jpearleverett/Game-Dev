@@ -113,12 +113,12 @@ export default function SettingsScreen({
             <Text style={styles.sectionTitle}>AI Story Generation</Text>
             <Text style={styles.metaText}>
               {llmConfigured
-                ? 'Gemini 3 Flash is configured and ready to generate dynamic story content for chapters 2-12.'
+                ? 'AI story generation is configured and ready to generate dynamic story content for chapters 2-12.'
                 : 'AI story generation is not configured. Please check your build configuration.'}
             </Text>
             <View style={[styles.llmStatus, !llmConfigured && styles.llmStatusError]}>
               <Text style={[styles.llmStatusText, !llmConfigured && styles.llmStatusTextError]}>
-                {llmConfigured ? 'Gemini 3 Flash Ready' : 'Not Configured'}
+                {llmConfigured ? 'AI Ready' : 'Not Configured'}
               </Text>
             </View>
             <SettingToggle
@@ -130,6 +130,24 @@ export default function SettingsScreen({
               {settings.verboseMode
                 ? 'Debug overlay active. Shows real-time LLM generation status.'
                 : 'Enable to see detailed LLM generation logs.'}
+            </Text>
+            <SettingToggle
+              label="Prose Quality Checks"
+              value={settings.enableProseQualityValidation ?? true}
+              onToggle={handleToggle('enableProseQualityValidation')}
+            />
+            <SettingToggle
+              label="Sentence Variety Checks"
+              value={settings.enableSentenceVarietyValidation ?? true}
+              onToggle={handleToggle('enableSentenceVarietyValidation')}
+            />
+            <SettingToggle
+              label="LLM Semantic Validation"
+              value={settings.enableLLMValidation ?? true}
+              onToggle={handleToggle('enableLLMValidation')}
+            />
+            <Text style={styles.metaText}>
+              Disable checks to reduce latency and LLM cost during story generation.
             </Text>
           </View>
 
