@@ -508,7 +508,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       // Track token usage for first call
       this._trackTokenUsage(response?.usage, `Chapter ${chapter}.${subchapter} (main content)`);
 
-      let generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+      generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
       llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
         hasTitle: !!generatedContent?.title,
         narrativeLength: generatedContent?.narrative?.length || 0,
