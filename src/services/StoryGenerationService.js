@@ -3690,32 +3690,52 @@ Generate realistic, specific consequences based on the actual narrative content.
       if (!ch.narrative) return;
 
       threadPatterns.forEach(({ pattern, type }) => {
-        const matches = ch.narrative.match(new RegExp(`.{0,50}${pattern.source}.{0,50}`, 'gi'));
-        if (matches) {
-          matches.forEach(match => {
-            const excerpt = match.trim();
-            const key = `${type}:${excerpt}`.toLowerCase();
+        const regex = new RegExp(`.{0,50}${pattern.source}.{0,50}`, 'gi');
+        const matchIterator = ch.narrative.matchAll(regex);
 
-            // Build candidate to check its normalized ID against resolved threads
-            const candidate = { type, description: excerpt };
-            const normalizedId = this._normalizeThreadId(candidate);
+        for (const match of matchIterator) {
+          let excerpt = match[0].trim();
+          const startIdx = match.index;
 
-            // Only add if not a duplicate AND not previously resolved (zombie prevention)
-            const isResolved = normalizedId && resolvedThreadIds.has(normalizedId);
-            if (!seenDescriptions.has(key) && !isResolved) {
-              seenDescriptions.add(key);
-              threads.push({
-                type,
-                chapter: ch.chapter,
-                subchapter: ch.subchapter,
-                description: excerpt,
-                excerpt, // Keep for backwards compatibility
-                status: 'active',
-                urgency: 'background',
-                source: 'regex', // Track that this came from regex fallback
-              });
+          // Fix: Trim to word boundaries to avoid "oria Blackwell" instead of "Victoria Blackwell"
+          // Check if we started mid-word (character before match is alphanumeric)
+          if (startIdx > 0 && /\w/.test(ch.narrative[startIdx - 1])) {
+            const firstSpace = excerpt.indexOf(' ');
+            if (firstSpace > 0 && firstSpace < 20) {
+              excerpt = excerpt.slice(firstSpace + 1).trim();
             }
-          });
+          }
+
+          // Check if we ended mid-word (character after match is alphanumeric)
+          const endIdx = startIdx + match[0].length;
+          if (endIdx < ch.narrative.length && /\w/.test(ch.narrative[endIdx])) {
+            const lastSpace = excerpt.lastIndexOf(' ');
+            if (lastSpace > excerpt.length - 20 && lastSpace > 0) {
+              excerpt = excerpt.slice(0, lastSpace).trim();
+            }
+          }
+
+          const key = `${type}:${excerpt}`.toLowerCase();
+
+          // Build candidate to check its normalized ID against resolved threads
+          const candidate = { type, description: excerpt };
+          const normalizedId = this._normalizeThreadId(candidate);
+
+          // Only add if not a duplicate AND not previously resolved (zombie prevention)
+          const isResolved = normalizedId && resolvedThreadIds.has(normalizedId);
+          if (!seenDescriptions.has(key) && !isResolved) {
+            seenDescriptions.add(key);
+            threads.push({
+              type,
+              chapter: ch.chapter,
+              subchapter: ch.subchapter,
+              description: excerpt,
+              excerpt, // Keep for backwards compatibility
+              status: 'active',
+              urgency: 'background',
+              source: 'regex', // Track that this came from regex fallback
+            });
+          }
         }
       });
     });
@@ -4517,22 +4537,29 @@ Generate realistic, specific consequences based on the actual narrative content.
     const lastSentence = sentences.slice(-1)[0]?.trim() || '';
 
     // Try to infer current location from narrative
+    // Fix: Collect ALL matches from ALL patterns, then take the one that appears LAST in the narrative
     const locationPatterns = [
-      /(?:at|in|inside|outside|near|entered|stepped into|arrived at)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street))?)/g,
+      /(?:at|in|inside|outside|near|entered|stepped into|arrived at|back to|returned to|reached|walked into|drove to)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street|Exchange))?)/g,
       /Murphy's Bar/gi,
       /Ashport Archive/gi,
       /Sentinel Library/gi,
       /Brineglass Viaduct/gi,
       /Victoria's building/gi,
+      /Harmon Exchange/gi,
+      /(?:the\s+)?(?:old\s+)?warehouse/gi,
     ];
 
     let currentLocation = 'Unknown location';
+    let latestPosition = -1;
+
+    // Collect matches from ALL patterns and find the one that appears LAST in the narrative
     for (const pattern of locationPatterns) {
       const matches = [...narrative.matchAll(pattern)];
-      if (matches.length > 0) {
-        const lastMatch = matches[matches.length - 1];
-        currentLocation = lastMatch[1] || lastMatch[0];
-        break;
+      for (const match of matches) {
+        if (match.index > latestPosition) {
+          latestPosition = match.index;
+          currentLocation = match[1] || match[0];
+        }
       }
     }
 
@@ -5629,6 +5656,11 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
   _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infinity } = {}) {
     const clampMin = Number.isFinite(minChapter) ? minChapter : 1;
     const clampMax = Number.isFinite(maxChapter) ? maxChapter : Infinity;
+
+    // Guard: If maxChapter < minChapter (e.g., chapter 1 with maxChapter=0), no previous story exists
+    if (clampMax < clampMin) {
+      return '## STORY CONTEXT\n\n**This is the beginning of the story. No previous chapters exist.**\n';
+    }
 
     const isFiltered = clampMin !== 1 || clampMax !== Infinity;
     const header = isFiltered
