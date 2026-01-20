@@ -17,6 +17,7 @@ it aligned with implementation details and constraints.
   - `context/`: Game, story, and audio contexts (global state, actions).
   - `hooks/`: Game logic, persistence, story generation, navigation helpers.
   - `services/`: LLMService, StoryGenerationService, Analytics, Purchases, LogicPuzzleService.
+    - `storyGeneration/`: Modular StoryGenerationService methods (context, prompts, validation, etc).
   - `data/`: Story bible, cases, endings, achievements, many-shot scenes.
   - `storage/`: AsyncStorage helpers for progress, story, puzzle state.
   - `screens/`: UI screens for story, puzzles, menus, archive, settings.
@@ -166,7 +167,9 @@ Stored in `generatedStoryStorage` as a separate story context:
 
 ### 6.1 Core services
 
-- `StoryGenerationService.js` is the main orchestrator.
+- `StoryGenerationService.js` is the main orchestrator (thin class + constructor).
+  - Implementation is modularized under `src/services/storyGeneration/` and
+    composed onto the service prototype via `Object.assign(...)`.
 - `LLMService.js` handles direct or proxied Gemini calls, streaming, retries,
   and JSON repair.
 - `useStoryGeneration.js` coordinates generation in the UI layer.
@@ -731,7 +734,8 @@ between the story bible and generation prompts.
 ### 19.2 Prompt logging system
 
 Added comprehensive prompt logging to see exactly what the LLM receives.
-New method `_logCompletePrompt()` in StoryGenerationService outputs:
+Method `_logCompletePrompt()` (implemented in `src/services/storyGeneration/promptAssembly.js`
+and wired into StoryGenerationService) outputs:
 
 - System instruction (calls `buildMasterSystemPrompt()` to show actual content)
 - Cached content (if using chapter-start cache)
@@ -1083,6 +1087,27 @@ Simplified the CaseFileScreen UI for a cleaner, more immersive narrative experie
 - Deleted unused fallback/expansion helpers (`_expandNarrative`,
   `_buildExpansionGrounding`, `getEmergencyFallback`, dramatic irony section).
 
+### 19.14 StoryGenerationService modularization (Jan 2026)
+
+`StoryGenerationService.js` is now a thin orchestrator that only defines the
+constructor and attaches method groups via `Object.assign(...)`. All major
+behavior is split into focused modules under `src/services/storyGeneration/`:
+
+- `lifecycle.js`: init, prune, destroy, entry retrieval
+- `tokenUsage.js`: token usage tracking + stats
+- `personality.js`: path personality analysis + LLM classification
+- `storyArc.js`: story arc + chapter outline planning
+- `decisionConsequences.js`: decision consequence hydration + generation
+- `context.js`: story context assembly and fact indexing
+- `promptAssembly.js`: prompt building, caching, and full prompt logging
+- `threads.js`: thread extraction, normalization, capping, archival
+- `generation.js`: concurrency control + generation pipeline
+- `validation.js`: parsing, validation, setup/payoff, board gen, persistence helpers
+
+Behavior is unchanged; this refactor improves maintainability and keeps prompt
+logging intact (`_logCompletePrompt()` still prints the full prompt for cached
+and non-cached calls).
+
 ---
 
 ## 20) What to read first if you are new
@@ -1090,15 +1115,19 @@ Simplified the CaseFileScreen UI for a cleaner, more immersive narrative experie
 Recommended order for a fresh AI agent:
 
 1. `src/services/StoryGenerationService.js`
-2. `src/services/LLMService.js`
-3. `src/data/storyBible.js`
-4. `src/data/storyContent.js`
-5. `src/context/StoryContext.js`
-6. `src/hooks/useStoryGeneration.js`
-7. `src/utils/caseMerger.js`
-8. `src/screens/CaseFileScreen.js`
-9. `src/components/BranchingNarrativeReader.js`
-10. `src/storage/generatedStoryStorage.js`
+2. `src/services/storyGeneration/generation.js`
+3. `src/services/storyGeneration/promptAssembly.js`
+4. `src/services/storyGeneration/context.js`
+5. `src/services/storyGeneration/validation.js`
+6. `src/services/LLMService.js`
+7. `src/data/storyBible.js`
+8. `src/data/storyContent.js`
+9. `src/context/StoryContext.js`
+10. `src/hooks/useStoryGeneration.js`
+11. `src/utils/caseMerger.js`
+12. `src/screens/CaseFileScreen.js`
+13. `src/components/BranchingNarrativeReader.js`
+14. `src/storage/generatedStoryStorage.js`
 
 This order gives you the full story system first, then UI and persistence.
 
