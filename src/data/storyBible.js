@@ -95,7 +95,7 @@ export const ABSOLUTE_FACTS = {
   setting: {
     city: 'Ashport',
     atmosphere: 'Rain-soaked, neon-lit, perpetually overcast; streetlight halos, wet concrete, and too many reflections',
-    tone: 'Modern mystery thriller that slowly reveals an original fantasy world threaded through the city’s infrastructure',
+    tone: 'Modern mystery thriller that slowly reveals an original fantasy world threaded through the city\'s infrastructure',
     coreMystery: 'Ashport has a second layer: a hidden topology (“the Under-Map”) accessed through symbol sequences and place-specific thresholds',
     keyLocations: {
       murphysBar: 'Bar beneath Jack\'s office',
