@@ -365,7 +365,7 @@ ${taskSpec}
 
 CRITICAL REMINDERS:
 - Generate 900-1200 words of narrative prose (not less)
-- Use SINGLE QUOTES for all dialogue
+- Use DOUBLE QUOTES for all dialogue
 - Address at least 2 threads from ACTIVE_THREADS explicitly
 - End with a hook that creates forward momentum
 - Return valid JSON matching the schema exactly
@@ -392,7 +392,7 @@ Before returning your response, review your generated output against these quali
 
 **FORBIDDEN CHECK**:
 1. No first-person narration (must be third-person limited)
-2. No double-quotes for dialogue (single quotes only)
+2. No single-quotes for dialogue (use double quotes only)
 3. No meta-commentary about being an AI or writing a story
 
 If ANY check fails, revise before returning your response.
@@ -404,22 +404,31 @@ If ANY check fails, revise before returning your response.
 /**
  * Build the complete generation prompt with all context
  * LEGACY METHOD - kept for backward compatibility, but now uses caching internally
+ * NOTE: Now uses XML tags for consistency with cached path (_buildDynamicPrompt)
  */
 function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   const parts = [];
 
   // Part 1: Story Bible Grounding (RAG)
   // Note: includeStyle=false because style is in Part 5 (_buildStyleSection)
+  parts.push('<story_bible>');
   parts.push(this._buildGroundingSection(context, { includeStyle: false }));
+  parts.push('</story_bible>');
 
   // Part 2: Complete Story So Far (FULL TEXT)
+  parts.push('<story_context>');
   parts.push(this._buildStorySummarySection(context));
+  parts.push('</story_context>');
 
   // Part 3: Character Reference
+  parts.push('<character_reference>');
   parts.push(this._buildCharacterSection());
+  parts.push('</character_reference>');
 
   // Part 4: Character Knowledge State (who knows what)
+  parts.push('<character_knowledge>');
   parts.push(this._buildKnowledgeSection(context));
+  parts.push('</character_knowledge>');
 
   // Part 5: Style Examples (Few-shot) with Voice DNA and Dramatic Irony
   // Determine which characters might be in this scene based on context
@@ -428,32 +437,44 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   const choiceHistory = context.playerChoices || [];
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+  parts.push('<style_examples>');
   parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType, context));
+  parts.push('</style_examples>');
 
   // Part 6: Consistency Checklist
+  parts.push('<active_threads>');
   parts.push(this._buildConsistencySection(context));
+  parts.push('</active_threads>');
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
   if (sceneState) {
+    parts.push('<scene_state>');
     parts.push(sceneState);
+    parts.push('</scene_state>');
   }
 
   // Part 8: Personal Stakes & Engagement Guidance (from story arc)
   const engagementGuidance = this._buildEngagementGuidanceSection(context, chapter, subchapter);
   if (engagementGuidance) {
+    parts.push('<engagement_guidance>');
     parts.push(engagementGuidance);
+    parts.push('</engagement_guidance>');
   }
 
   // Part 9: Craft Techniques (static storyBible reference)
+  parts.push('<craft_techniques>');
   parts.push(this._buildCraftTechniquesSection());
+  parts.push('</craft_techniques>');
 
   // Part 10: Current Task Specification (LAST for recency effect)
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
   const taskSection = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
+  parts.push('<task>');
   parts.push(`Based on all the context provided above, complete the following task:\n\n${taskSection}`);
+  parts.push('</task>');
 
-  return parts.join('\n\n---\n\n');
+  return parts.join('\n\n');
 }
 
 /**
@@ -1157,7 +1178,7 @@ ${context.lastDecision
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
-1. **PLAN FIRST:** Use the 'beatSheet' field to outline 3-5 major beats.
+1. **PLAN FIRST:** Internally outline 3-5 major beats before writing (this planning happens in your thinking, not in the output).
 2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** - AIM FOR ${targetWords}+ WORDS. Write generously. Do NOT stop short.
 3. Continue DIRECTLY from where the last subchapter ended
 4. Maintain third-person limited voice throughout (no first-person narration)
@@ -1196,37 +1217,29 @@ Example of CORRECT approach: "The salt wind cut through Jack's coat as he steppe
   if (isDecisionPoint) {
     task += `
 
-### DECISION POINT REQUIREMENTS - PATH-SPECIFIC DECISIONS
-This subchapter ends with a binary choice. The player will see different decision options depending on which branching path they took within this subchapter.
+### DECISION POINT REQUIREMENTS
+This subchapter ends with a binary choice that determines the direction of the next chapter.
 
-**CRITICAL: Generate 9 UNIQUE decisions in the "pathDecisions" object** - one for each ending path:
-- 1A-2A, 1A-2B, 1A-2C (paths starting with choice 1A)
-- 1B-2A, 1B-2B, 1B-2C (paths starting with choice 1B)
-- 1C-2A, 1C-2B, 1C-2C (paths starting with choice 1C)
-
-**WHY THIS MATTERS:**
-A player who took the aggressive path (e.g., 1A→1A-2A) should face decisions that reflect THEIR journey.
-A player who took the cautious path (e.g., 1C→1C-2C) should face decisions suited to THEIR situation.
-The narrative context differs by path, so the strategic options should differ too.
+**GENERATE THE BASE DECISION in the "decision" object:**
+The base decision serves as a foundation. Path-specific variations will be generated separately in a follow-up call.
 
 **DECISION DESIGN REQUIREMENTS:**
-1. Each of the 9 pathDecisions must present TWO distinct paths (Option A and Option B)
+1. Generate ONE decision with TWO distinct paths (Option A and Option B)
 2. Both options must be morally complex - NO obvious "right" answer
 3. Each choice should have CLEAR but DIFFERENT consequences
-4. The decision must feel EARNED by the specific path the player took
-5. Connect to the themes of wrongful conviction, certainty vs truth
-6. The intro should reference elements unique to that branching path
+4. The decision must feel EARNED by the narrative that precedes it
+5. Connect to the themes of the mystery and Jack's investigation
 
-**EXAMPLE of path-specific variation:**
-- Path 1A-2A (aggressive throughout): "After forcing Claire's hand, Jack now faces a riskier choice..."
-- Path 1C-2C (cautious throughout): "Having gathered the evidence methodically, Jack now sees two clear paths..."
-
-**For EACH decision in pathDecisions (all 9):**
-- intro: 1-2 sentences framing the choice, reflecting that specific path's context
-- optionA.title: Action statement in imperative mood
+**FOR THE BASE DECISION:**
+- intro: 1-2 sentences framing the impossible choice Jack faces
+- optionA.title: Action statement in imperative mood (e.g., "Confront Wade directly")
 - optionA.focus: What this path prioritizes and what it risks
-- optionB.title: Action statement in imperative mood
-- optionB.focus: What this path prioritizes and what it risks`;
+- optionA.personalityAlignment: "aggressive", "cautious", or "balanced"
+- optionB.title: Action statement in imperative mood (e.g., "Gather more evidence first")
+- optionB.focus: What this path prioritizes and what it risks
+- optionB.personalityAlignment: "aggressive", "cautious", or "balanced"
+
+NOTE: Path-specific decision variations (pathDecisions) will be generated in a separate call after this.`;
   }
 
   return task;
