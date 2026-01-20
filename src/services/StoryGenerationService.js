@@ -25,6 +25,8 @@ import {
   TIMELINE,
   ABSOLUTE_FACTS,
   STORY_STRUCTURE,
+  REVEAL_TIMING,
+  SETUP_PAYOFF_REGISTRY,
   WRITING_STYLE,
   EXAMPLE_PASSAGES,
   CONSISTENCY_RULES,
@@ -44,11 +46,11 @@ import {
 // Note: STORY_STRUCTURE.chapterBeatTypes is now used for tempo variation
 
 // Story configuration
-const TOTAL_CHAPTERS = 12;
-const SUBCHAPTERS_PER_CHAPTER = 3;
+const TOTAL_CHAPTERS = STORY_STRUCTURE?.totalChapters || 12;
+const SUBCHAPTERS_PER_CHAPTER = STORY_STRUCTURE?.subchaptersPerChapter || 3;
 const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 800 words
 const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 900 words
-const DECISION_SUBCHAPTER = 3;
+const DECISION_SUBCHAPTER = SUBCHAPTERS_PER_CHAPTER;
 const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 1;
 
 // Text truncation lengths for prompts and logging (in characters)
@@ -56,6 +58,27 @@ const TRUNCATE_SUMMARY = 500;       // For brief narrative summaries in prompts
 const TRUNCATE_VALIDATION = 3000;  // For full narrative in validation contexts
 const TRUNCATE_DESCRIPTION = 300;  // For thread/choice descriptions
 const TRUNCATE_PREVIEW = 100;      // For short previews/logging
+
+const formatSubchapterLabel = (subchapter) => ['A', 'B', 'C'][subchapter - 1] || String(subchapter);
+
+const fillTemplate = (template, replacements, { label } = {}) => {
+  let result = String(template || '');
+  for (const [key, value] of Object.entries(replacements || {})) {
+    const safeValue = value == null ? '' : String(value);
+    const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    result = result.replace(pattern, safeValue);
+  }
+
+  const unresolved = result.match(/\{\{[^}]+\}\}/g);
+  if (unresolved && unresolved.length > 0) {
+    const contextLabel = label ? ` (${label})` : '';
+    const message = `Unresolved template placeholders${contextLabel}: ${[...new Set(unresolved)].join(', ')}`;
+    console.error(`[StoryGenerationService] ${message}`);
+    throw new Error(message);
+  }
+
+  return result;
+};
 
 // ============================================================================
 // PATH PERSONALITY SYSTEM - Tracks cumulative player behavior for coherent narrative
@@ -971,8 +994,7 @@ const buildMasterSystemPrompt = () => {
   const { protagonist, setting } = ABSOLUTE_FACTS;
   const { voice } = WRITING_STYLE;
 
-  // Extract reveal timing rules from CONSISTENCY_RULES (indices 1-4)
-  const revealTimingRules = CONSISTENCY_RULES.slice(1, 5);
+  const revealTimingRules = REVEAL_TIMING?.rules || [];
 
   return `<identity>
 You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}, ${setting.coreMystery.toLowerCase()}.
@@ -2111,6 +2133,7 @@ Respond with a JSON object containing:
 
     // Helper to get beat type from STORY_STRUCTURE.chapterBeatTypes
     const getBeatType = (chapter) => chapterBeatTypes[chapter]?.type || 'INVESTIGATION';
+    const revealLabel = REVEAL_TIMING?.underMap?.firstUndeniable?.label || `1${formatSubchapterLabel(DECISION_SUBCHAPTER)}`;
 
     return {
       key: `arc_${superPathKey}`,
@@ -2137,7 +2160,7 @@ Respond with a JSON object containing:
       consistencyAnchors: [
         `${protagonist.fullName} is ${protagonist.age} years old and does NOT start with Under-Map knowledge`,
         `${antagonist.trueName} guides ${protagonist.fullName} via dead letters, silver ink, and rules`,
-        'The Under-Map is real; the first undeniable reveal happens at the end of 1C',
+        `The Under-Map is real; the first undeniable reveal happens at the end of ${revealLabel}`,
         'Glyphs behave like a language with constraints; do not "magic-system" explain - show',
         'Anchor disappearances form a deliberate pattern',
         `Only ${protagonist.fullName} and ${antagonist.trueName} are defined characters; LLM creates supporting characters as needed`,
@@ -3692,12 +3715,15 @@ Generate realistic, specific consequences based on the actual narrative content.
    * NOTE: Only Jack and Victoria are canonical - other characters are LLM-generated
    */
   _buildCharacterKnowledgeTracker(previousChapters) {
+    const revealChapter = REVEAL_TIMING?.underMap?.firstUndeniable?.chapter || 1;
+    const revealSubchapter = REVEAL_TIMING?.underMap?.firstUndeniable?.subchapter || DECISION_SUBCHAPTER;
+    const revealLabel = REVEAL_TIMING?.underMap?.firstUndeniable?.label || `${revealChapter}${formatSubchapterLabel(revealSubchapter)}`;
     const knowledge = {
       jack: {
         knows: [],
         suspects: [],
         doesNotKnow: [
-          'What the Under-Map truly is (first undeniable reveal at end of 1C)',
+          `What the Under-Map truly is (first undeniable reveal at end of ${revealLabel})`,
           'Victoria Blackwell\'s full agenda and constraints',
         ],
       },
@@ -6473,25 +6499,30 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               }).join('\n');
             }).join('\n');
 
-            const pathDecisionsPrompt = PATHDECISIONS_PROMPT_TEMPLATE
-              .replace('{{caseNumber}}', caseNumber || `${chapter}.${subchapter}`)
-              .replace('{{chapter}}', String(chapter))
-              .replace('{{subchapter}}', String(subchapter))
-              // First choice options with labels and summaries (not full narrative)
-              .replace('{{firstChoice1ALabel}}', firstChoiceOpts[0]?.label || 'Option 1A')
-              .replace('{{firstChoice1ASummary}}', firstChoiceOpts[0]?.summary || inferTone(firstChoiceOpts[0]?.label))
-              .replace('{{firstChoice1BLabel}}', firstChoiceOpts[1]?.label || 'Option 1B')
-              .replace('{{firstChoice1BSummary}}', firstChoiceOpts[1]?.summary || inferTone(firstChoiceOpts[1]?.label))
-              .replace('{{firstChoice1CLabel}}', firstChoiceOpts[2]?.label || 'Option 1C')
-              .replace('{{firstChoice1CSummary}}', firstChoiceOpts[2]?.summary || inferTone(firstChoiceOpts[2]?.label))
-              // Path summaries (15-25 words each, not full narrative content)
-              .replace('{{pathSummaries}}', pathSummaries || 'Not available')
-              .replace('{{pathStructuredNotes}}', pathStructuredNotes || 'Not available')
-              // Simple decision base
-              .replace('{{optionATitle}}', generatedContent.decision?.optionA?.title || 'Option A')
-              .replace('{{optionAFocus}}', generatedContent.decision?.optionA?.focus || 'Not specified')
-              .replace('{{optionBTitle}}', generatedContent.decision?.optionB?.title || 'Option B')
-              .replace('{{optionBFocus}}', generatedContent.decision?.optionB?.focus || 'Not specified');
+            const pathDecisionsPrompt = fillTemplate(
+              PATHDECISIONS_PROMPT_TEMPLATE,
+              {
+                caseNumber: caseNumber || `${chapter}.${subchapter}`,
+                chapter: String(chapter),
+                subchapter: String(subchapter),
+                // First choice options with labels and summaries (not full narrative)
+                firstChoice1ALabel: firstChoiceOpts[0]?.label || 'Option 1A',
+                firstChoice1ASummary: firstChoiceOpts[0]?.summary || inferTone(firstChoiceOpts[0]?.label),
+                firstChoice1BLabel: firstChoiceOpts[1]?.label || 'Option 1B',
+                firstChoice1BSummary: firstChoiceOpts[1]?.summary || inferTone(firstChoiceOpts[1]?.label),
+                firstChoice1CLabel: firstChoiceOpts[2]?.label || 'Option 1C',
+                firstChoice1CSummary: firstChoiceOpts[2]?.summary || inferTone(firstChoiceOpts[2]?.label),
+                // Path summaries (15-25 words each, not full narrative content)
+                pathSummaries: pathSummaries || 'Not available',
+                pathStructuredNotes: pathStructuredNotes || 'Not available',
+                // Simple decision base
+                optionATitle: generatedContent.decision?.optionA?.title || 'Option A',
+                optionAFocus: generatedContent.decision?.optionA?.focus || 'Not specified',
+                optionBTitle: generatedContent.decision?.optionB?.title || 'Option B',
+                optionBFocus: generatedContent.decision?.optionB?.focus || 'Not specified',
+              },
+              { label: 'PATHDECISIONS_PROMPT_TEMPLATE' }
+            );
 
             // Log what context we're sending
             console.log(`[StoryGenerationService] 📋 pathDecisions second call context:`);
@@ -6685,6 +6716,10 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         generatedContent = this._fixTyposLocally(generatedContent);
 
         let validationResult = this._validateConsistency(generatedContent, context);
+        const qualitySettings = GENERATION_CONFIG?.qualitySettings || {};
+        const enableProseQualityValidation = qualitySettings.enableProseQualityValidation !== false;
+        const enableSentenceVarietyValidation = qualitySettings.enableSentenceVarietyValidation !== false;
+        const enableLLMValidation = qualitySettings.enableLLMValidation !== false;
 
         // ========== A+ QUALITY VALIDATION (Warnings Only - Don't Block Generation) ==========
         // These validators provide feedback but should NOT cause generation failures.
@@ -6693,24 +6728,28 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Track setups for major revelations
         this._trackSetups(generatedContent.narrative, chapter, subchapter);
 
-        // Run prose quality validation - WARNINGS ONLY
-        const proseQuality = this._validateProseQuality(generatedContent.narrative);
-        if (proseQuality.warnings.length > 0) {
-          validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.warnings];
+        if (enableProseQualityValidation) {
+          // Run prose quality validation - WARNINGS ONLY
+          const proseQuality = this._validateProseQuality(generatedContent.narrative);
+          if (proseQuality.warnings.length > 0) {
+            validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.warnings];
+          }
+          // Convert issues to warnings - prose quality should not block generation
+          if (proseQuality.issues.length > 0) {
+            validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.issues.map(i => `[Style] ${i}`)];
+          }
+          console.log(`[A+Quality] Prose quality score: ${proseQuality.score}/100`);
         }
-        // Convert issues to warnings - prose quality should not block generation
-        if (proseQuality.issues.length > 0) {
-          validationResult.warnings = [...(validationResult.warnings || []), ...proseQuality.issues.map(i => `[Style] ${i}`)];
-        }
-        console.log(`[A+Quality] Prose quality score: ${proseQuality.score}/100`);
 
-        // Run sentence variety validation - WARNINGS ONLY
-        const sentenceVariety = this._validateSentenceVariety(generatedContent.narrative);
-        if (sentenceVariety.warnings.length > 0) {
-          validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.warnings];
-        }
-        if (sentenceVariety.issues.length > 0) {
-          validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.issues.map(i => `[Variety] ${i}`)];
+        if (enableSentenceVarietyValidation) {
+          // Run sentence variety validation - WARNINGS ONLY
+          const sentenceVariety = this._validateSentenceVariety(generatedContent.narrative);
+          if (sentenceVariety.warnings.length > 0) {
+            validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.warnings];
+          }
+          if (sentenceVariety.issues.length > 0) {
+            validationResult.warnings = [...(validationResult.warnings || []), ...sentenceVariety.issues.map(i => `[Variety] ${i}`)];
+          }
         }
 
         // Run character voice validation - WARNINGS ONLY
@@ -6743,7 +6782,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // ========== LLM-BASED VALIDATION (Semantic Understanding) ==========
         // This catches violations that regex can't detect (wrong years, subtle contradictions)
         // Only run if regex validation passed (to avoid wasting tokens on obviously broken content)
-        if (validationResult.issues.length === 0) {
+        if (enableLLMValidation && validationResult.issues.length === 0) {
           try {
             const llmValidation = await this._validateWithLLM(generatedContent, context);
             if (llmValidation.validated && llmValidation.issues.length > 0) {
@@ -8142,19 +8181,23 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // =========================================================================
     // CATEGORY 13: REVEAL TIMING (UNDER-MAP)
     // =========================================================================
-    // The first undeniable reveal that the Under-Map is real occurs at the END of Chapter 1C.
-    // Before that (1A, 1B, early 1C), the Under-Map must remain plausibly deniable.
     const currentChapter = context?.currentPosition?.chapter || 2;
     const currentSubchapter = context?.currentPosition?.subchapter || 1;
+    const revealChapter = REVEAL_TIMING?.underMap?.firstUndeniable?.chapter || 1;
+    const revealSubchapter = REVEAL_TIMING?.underMap?.firstUndeniable?.subchapter || DECISION_SUBCHAPTER;
+    const revealLabel = REVEAL_TIMING?.underMap?.firstUndeniable?.label || `${revealChapter}${formatSubchapterLabel(revealSubchapter)}`;
+    const isBeforeReveal = currentChapter < revealChapter ||
+      (currentChapter === revealChapter && currentSubchapter < revealSubchapter);
+    const isRevealSubchapter = currentChapter === revealChapter && currentSubchapter === revealSubchapter;
 
     const underMapExplicit = /\b(?:under-?map|threshold\s+(?:opened|gaped|unlatched)|the\s+city\s+rewrote\s+itself|map\s+that\s+wasn['']t\s+a\s+map)\b/i;
-    // Before chapter 1C ends, explicit Under-Map references are premature
-    if ((currentChapter === 1 && currentSubchapter < 3) && underMapExplicit.test(narrativeOriginal)) {
-      issues.push('PREMATURE REVEAL: The Under-Map must remain plausibly deniable before the end of Chapter 1C.');
+    // Before the reveal point, explicit Under-Map references are premature
+    if (isBeforeReveal && underMapExplicit.test(narrativeOriginal)) {
+      issues.push(`PREMATURE REVEAL: The Under-Map must remain plausibly deniable before the end of Chapter ${revealLabel}.`);
     }
-    // In Chapter 1C itself, only the ending should have the undeniable reveal
-    if (currentChapter === 1 && currentSubchapter === 3 && underMapExplicit.test(narrativeOriginal)) {
-      warnings.push('Reveal timing note: Under-Map appears explicit in 1C. Ensure this is at the END of the subchapter, not the beginning.');
+    // In the reveal subchapter itself, only the ending should have the undeniable reveal
+    if (isRevealSubchapter && underMapExplicit.test(narrativeOriginal)) {
+      warnings.push(`Reveal timing note: Under-Map appears explicit in ${revealLabel}. Ensure this is at the END of the subchapter, not the beginning.`);
     }
 
     // Log warnings but don't block on them
@@ -8473,6 +8516,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   async _validateWithLLM(content, context) {
     const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
     const narrative = content.narrative || '';
+    const revealLabel = REVEAL_TIMING?.underMap?.firstUndeniable?.label || `1${formatSubchapterLabel(DECISION_SUBCHAPTER)}`;
 
     // Skip for very short content
     if (narrative.length < 200) {
@@ -8508,7 +8552,7 @@ Check if each critical thread above is addressed through dialogue or action (not
 - ${protagonist.fullName}: ${protagonist.age} years old; ${protagonist.formerTitle.toLowerCase()}; ${protagonist.currentStatus.toLowerCase()}; initially does NOT know the Under-Map is real
 - ${antagonist.trueName}: sends dead letters with ${antagonist.communication.ink.toLowerCase()}; guides Jack via rules and routes
 - Setting: modern ${setting.city}; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
-- Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 1C, not earlier
+- Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of ${revealLabel}, not earlier
 - Other characters: The LLM has creative freedom to generate supporting characters as needed
 ${threadSection}
 ## NARRATIVE TO CHECK:
@@ -8720,73 +8764,11 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
    * Called once at the start of story generation
    */
   _initializeSetupPayoffRegistry() {
-    const { protagonist, antagonist } = ABSOLUTE_FACTS;
+    const registry = Array.isArray(SETUP_PAYOFF_REGISTRY) ? SETUP_PAYOFF_REGISTRY : [];
+    this._setupPayoffRegistry.clear();
 
-    // Major revelations that need proper setup before payoff
-    const majorRevelations = [
-      {
-        id: 'under_map_is_real',
-        payoff: 'The Under-Map is undeniably real (threshold / impossible map confirmed)',
-        requiredSetups: [
-          'Dead letter with glyph string and river-glass token',
-          'At least one repeating glyph observed in the environment (not just paper)',
-          'A "blank map" or missing-place anomaly is mentioned or witnessed',
-        ],
-        minSetupCount: 2,
-        earliestPayoffChapter: 2,
-        latestPayoffChapter: 2,
-      },
-      {
-        id: 'victoria_guide',
-        payoff: `${antagonist.trueName} is deliberately guiding ${protagonist.fullName} via symbols and thresholds`,
-        requiredSetups: [
-          'Signature / motif: silver ink, map-adjacent language, or rule-based instructions',
-          `${antagonist.trueName} demonstrates knowledge of ${protagonist.fullName}'s movements or choices`,
-          'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
-        ],
-        minSetupCount: 2,
-        earliestPayoffChapter: 3,
-        latestPayoffChapter: 8,
-      },
-      {
-        id: 'official_containment',
-        payoff: 'Someone in authority is running a containment/suppression operation around Under-Map incidents',
-        requiredSetups: [
-          'A site is quietly sealed or witnesses are warned off',
-          'Police/officials deny or erase reports that should exist',
-          'Someone disappears shortly after mentioning symbols',
-        ],
-        minSetupCount: 2,
-        earliestPayoffChapter: 4,
-        latestPayoffChapter: 10,
-      },
-      {
-        id: 'gatekeeper_blackmailed',
-        payoff: 'A gatekeeper character is being leveraged (blackmailed) into controlling access to a key location/person',
-        requiredSetups: [
-          'A character with access to restricted areas acting guilty or evasive',
-          'References to someone being forced to cooperate or hide something',
-          'A gatekeeper deflects questions about maps/archives/permits',
-        ],
-        minSetupCount: 2,
-        earliestPayoffChapter: 4,
-        latestPayoffChapter: 8,
-      },
-      {
-        id: 'five_anchors',
-        payoff: 'The five anchors (missing people / anchor points) are identified as a pattern',
-        requiredSetups: [
-          'At least two anchor-linked disappearances are named',
-          'A connecting symbol / motif repeats across sites',
-          'A hint that the pattern is deliberate (not random crime)',
-        ],
-        minSetupCount: 3,
-        earliestPayoffChapter: 5,
-        latestPayoffChapter: 11,
-      },
-    ];
-
-    for (const revelation of majorRevelations) {
+    for (const revelation of registry) {
+      if (!revelation?.id) continue;
       this._setupPayoffRegistry.set(revelation.id, {
         ...revelation,
         setupsFound: [],
@@ -8863,7 +8845,9 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
 
     for (const [id, revelation] of this._setupPayoffRegistry.entries()) {
       // Check if this narrative contains the payoff
-      const payoffPatterns = this._generatePayoffPatterns(id);
+      const payoffPatterns = Array.isArray(revelation.payoffPatterns)
+        ? revelation.payoffPatterns
+        : this._generatePayoffPatterns(id);
       const hasPayoff = payoffPatterns.some(p => p.test(narrative.toLowerCase()));
 
       if (hasPayoff) {
@@ -8894,33 +8878,14 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
 
   /**
    * Generate patterns to detect payoff delivery
-   * NOTE: Only canonical revelations (Under-Map, Victoria's role) are hardcoded.
-   * Other character-specific revelations are LLM-generated and not validated here.
+   * NOTE: Prefer data-driven patterns from SETUP_PAYOFF_REGISTRY.
    */
   _generatePayoffPatterns(revelationId) {
-    const patterns = {
-      // Canonical revelation: The Under-Map is real
-      under_map_is_real: [
-        /\bunder-?map\b/i,
-        /\bthreshold\b.*\b(?:opened|unlatched|yawned|gaped|split)\b/i,
-        /\bthe\s+map\s+(?:moved|shifted|changed)\b/i,
-        /\bstreet\s+signs?\b.*\b(?:rearranged|rewrote|changed)\b/i,
-      ],
-      // Canonical revelation: Victoria's role as guide/architect
-      victoria_role: [
-        /\bvictoria\b.*\b(?:mapped|mapping|two\s+maps|rules|architect|guide)\b/i,
-        /\bblackwell\b.*\b(?:map|glyph|curriculum|route)\b/i,
-        /\bdead\s+letters?\b.*\bvictoria\b/i,
-      ],
-      // Canonical revelation: The anchor system
-      five_anchors: [
-        /\bfive\s+anchors?\b/i,
-        /\ball\s+five\b.*\b(?:anchors?|missing|pattern)\b/i,
-        /\banchor\b.*\bglyph\b/i,
-      ],
-    };
-
-    return patterns[revelationId] || [];
+    const registryEntry = this._setupPayoffRegistry.get(revelationId);
+    if (Array.isArray(registryEntry?.payoffPatterns)) {
+      return registryEntry.payoffPatterns;
+    }
+    return [];
   }
 
   /**
