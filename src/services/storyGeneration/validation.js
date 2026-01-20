@@ -1778,6 +1778,9 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
    */
   _initializeSetupPayoffRegistry() {
     const registry = Array.isArray(SETUP_PAYOFF_REGISTRY) ? SETUP_PAYOFF_REGISTRY : [];
+    if (!this._setupPayoffRegistry) {
+      this._setupPayoffRegistry = new Map();
+    }
     this._setupPayoffRegistry.clear();
 
     for (const revelation of registry) {
