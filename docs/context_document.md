@@ -777,24 +777,69 @@ The `clearProgress()` callback now calls `clearGeneratedStory()` from
 - Player gets fresh LLM-generated content after reset
 - No stale narrative data persists across playthroughs
 
-### 19.5 Character reference cleanup
+### 19.5 Character reference cleanup (comprehensive)
 
-**Only Jack and Victoria are defined characters.** The LLM has creative freedom
-to generate any supporting characters as the story requires.
+**Only Jack Halloway and Victoria Blackwell are canonical characters.** The LLM
+has creative freedom to generate any supporting characters as the story requires.
+This is now enforced throughout the codebase.
 
-Removed from all LLM prompts:
-- Tom Wade, Sarah Reeves, Eleanor Bellamy, Silas Reed, Deputy Chief Grange
-- All pre-defined character arcs for non-protagonist/antagonist characters
-- Specific character names in examples and templates
+#### Removed from StoryGenerationService.js
 
-These characters may still appear in internal validation/processing code (for
-handling names if the LLM invents them), but they are NOT instructed to the LLM.
+**Timeline validations removed** (previously blocked generation):
+- Tom Wade friendship (30 years)
+- Sarah partnership (13 years)
+- Silas partnership (8 years)
+- Eleanor imprisonment (8 years)
+- Emily case (7 years ago)
+
+**Voice validation patterns removed**:
+- Voice signatures for Sarah, Eleanor, Silas, Tom, Grange
+- Now only validates Victoria's voice (must not sound casual)
+
+**Character tracking simplified**:
+- Character knowledge tracker: only tracks Jack and Victoria
+- Character dialogue history extraction: only extracts Victoria's dialogue
+- Voice DNA section: only includes Jack and Victoria
+- Character name variants: only Jack/Halloway and Victoria/Blackwell
+
+**Legacy lore removed**:
+- Victoria=Emily references and validation rules
+- "Midnight Cartographer" alias
+- "Confessor" alias
+
+**Character-specific mechanics removed**:
+- SarahTrust mechanics (trust increase/decrease)
+- Silas-specific foreshadowing hooks (now generic "gatekeeper" patterns)
+
+**Character lists simplified** (now only canonical characters):
+- Stopwords for keyword extraction
+- Thread normalization character detection
+- Thread similarity calculation
+- Fact indexing by character
+- Scene character extraction
+
+**Schema examples updated**:
+- Replaced "Mention Tom's name" with "Change the subject"
+- Replaced "meet Sarah at the docks" with "meet his contact at the docks"
+- Replaced "confront the confessor" with "investigate the warehouse"
+
+#### Removed from characterReference.js
+
+- Removed 'cartographer' from `getVoiceDNA()` lookup
+- Removed 'cartographer' from `getCharacter()` lookup
+
+#### What remains (for post-processing only)
+
+Name correction patterns for common LLM misspellings remain (e.g., "Silias" →
+"Silas", "Granges" → "Grange"). These help fix typos if the LLM generates
+characters with those names, but do NOT instruct the LLM to create them.
 
 ### 19.6 Victoria alias removal
 
-Removed the "Midnight Cartographer" alias for Victoria Blackwell from all files.
-Victoria is now referred to simply by name. This matches `characterReference.js`
-and `storyBible.js` which have no alias defined.
+(See section 19.5 for comprehensive details)
+
+Removed aliases: "Midnight Cartographer", "Confessor", and "Emily" (legacy lore).
+Victoria is now referred to only as "Victoria" or "Blackwell".
 
 ### 19.7 Reveal timing consistency
 

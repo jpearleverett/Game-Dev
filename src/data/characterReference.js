@@ -194,8 +194,7 @@ export function getVoiceDNA(name) {
   }
 
   // Check for Victoria
-  if (normalizedName.includes('victoria') ||
-      normalizedName.includes('cartographer') || normalizedName.includes('blackwell')) {
+  if (normalizedName.includes('victoria') || normalizedName.includes('blackwell')) {
     return VOICE_DNA.victoria;
   }
 
@@ -215,8 +214,7 @@ export function getCharacter(name) {
   }
 
   // Check antagonist
-  if (normalizedName.includes('victoria') ||
-      normalizedName.includes('cartographer') || normalizedName.includes('blackwell')) {
+  if (normalizedName.includes('victoria') || normalizedName.includes('blackwell')) {
     return CHARACTER_REFERENCE.antagonist;
   }
 
