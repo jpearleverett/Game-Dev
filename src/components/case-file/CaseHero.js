@@ -13,11 +13,11 @@ export default function CaseHero({ activeCase, compact }) {
   const { moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   
   // Layout Constants
-  const sectionGap = scaleSpacing(compact ? SPACING.md : SPACING.lg);
-  const heroLetterRadius = scaleRadius(RADIUS.xl);
-  const heroLetterPaddingV = scaleSpacing(compact ? SPACING.md : SPACING.lg);
-  const heroLetterPaddingH = scaleSpacing(compact ? SPACING.lg : SPACING.xl);
-  const heroLetterGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const sectionGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const heroLetterRadius = scaleRadius(RADIUS.lg);
+  const heroLetterPaddingV = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const heroLetterPaddingH = scaleSpacing(compact ? SPACING.md : SPACING.lg);
+  const heroLetterGap = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
   const heroLetterDividerThickness = Math.max(1, Math.round(scaleSpacing(1)));
   const heroLetterTapeWidth = Math.max(82, Math.round(scaleSpacing(compact ? SPACING.xxl : SPACING.xxl + SPACING.sm)));
   const heroLetterTapeHeight = Math.max(20, Math.round(scaleSpacing(SPACING.sm) + 4));
@@ -25,9 +25,7 @@ export default function CaseHero({ activeCase, compact }) {
   const heroLetterShadowOffset = Math.max(6, Math.round(scaleSpacing(compact ? SPACING.sm : SPACING.md)));
 
   // Typography Constants
-  const heroTitleSize = shrinkFont(moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display));
-  const heroNumberSize = shrinkFont(moderateScale(FONT_SIZES.sm));
-  const displayCaseNumber = activeCase?.caseNumber || "---";
+  const heroTitleSize = shrinkFont(moderateScale(compact ? FONT_SIZES.display : FONT_SIZES.display + 4));
 
   return (
     <View style={[styles.heroBlock, { gap: sectionGap }]}>
@@ -87,30 +85,18 @@ export default function CaseHero({ activeCase, compact }) {
 
           <Text
             style={[
-              styles.caseNumber,
-              {
-                fontSize: heroNumberSize,
-                color: "#5b3a24",
-                letterSpacing: compact ? 2.4 : 3.2,
-              },
-            ]}
-          >
-            {`Case File #${displayCaseNumber}`}
-          </Text>
-          <Text
-            style={[
               styles.caseTitle,
               {
                 fontSize: heroTitleSize,
                 color: "#27160c",
-                letterSpacing: compact ? 3 : 4.2,
-                lineHeight: Math.round(heroTitleSize * (compact ? 1.08 : 1.12)),
+                letterSpacing: compact ? 2 : 3,
+                lineHeight: Math.round(heroTitleSize * 1.1),
+                textAlign: "center",
               },
             ]}
-            numberOfLines={1}
+            numberOfLines={2}
             adjustsFontSizeToFit
-            minimumFontScale={0.45}
-            lineBreakStrategyIOS="hangul-word"
+            minimumFontScale={0.5}
           >
             {activeCase?.title}
           </Text>
@@ -194,10 +180,6 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "rgba(62, 40, 22, 0.3)",
     opacity: 0.9,
-  },
-  caseNumber: {
-    fontFamily: FONTS.monoBold,
-    textTransform: "uppercase",
   },
   caseTitle: {
     fontFamily: FONTS.secondaryBold,

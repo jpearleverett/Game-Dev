@@ -13,10 +13,10 @@ export default function CaseSummary({ content, compact }) {
   if (!content) return null;
 
   // Layout Constants
-  const sectionGap = scaleSpacing(compact ? SPACING.md : SPACING.lg);
-  const summaryPanelLift = Math.round(sectionGap * 0.4);
+  const sectionGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const summaryPanelLift = Math.round(sectionGap * 0.25);
   const summaryPanelPadding = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
-  const blockRadius = scaleRadius(RADIUS.lg);
+  const blockRadius = scaleRadius(RADIUS.md);
 
   // Typography Constants
   const slugSize = shrinkFont(moderateScale(FONT_SIZES.xs));
@@ -39,9 +39,6 @@ export default function CaseSummary({ content, compact }) {
         },
       ]}
     >
-      <View style={[styles.summaryTape, styles.summaryTapeLeft]} pointerEvents="none" />
-      <View style={[styles.summaryTape, styles.summaryTapeRight]} pointerEvents="none" />
-      
       {content.type === "dailyIntro" && content.showSlugSeparately && content.slug ? (
         <Text
           style={[
@@ -91,27 +88,6 @@ const styles = StyleSheet.create({
   summaryPanel: {
     position: "relative",
     borderWidth: 1,
-    overflow: "visible",
-  },
-  summaryTape: {
-    position: "absolute",
-    top: -18,
-    width: 84,
-    height: 22,
-    backgroundColor: "rgba(248, 230, 190, 0.9)",
-    borderRadius: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.24,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  summaryTapeLeft: {
-    left: "18%",
-    transform: [{ rotate: "-6deg" }],
-  },
-  summaryTapeRight: {
-    right: "18%",
-    transform: [{ rotate: "7deg" }],
   },
   summaryText: {
     fontFamily: FONTS.primary,
