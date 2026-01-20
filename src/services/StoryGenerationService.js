@@ -984,30 +984,35 @@ CRITICAL CHECKS before finalizing:
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
 // Structured per Gemini 3 best practices (XML tags, explicit planning, persona)
+// Now builds dynamically from storyBible.js data - no hardcoded duplicates
 // ============================================================================
-const MASTER_SYSTEM_PROMPT = `<identity>
-You are the author of "Dead Letters," an interactive mystery thriller set in Ashport—where a hidden fantasy world (the Under-Map) is threaded through the city's infrastructure.
+const buildMasterSystemPrompt = () => {
+  const { protagonist, setting } = ABSOLUTE_FACTS;
+  const { voice } = WRITING_STYLE;
+
+  // Extract reveal timing rules from CONSISTENCY_RULES (indices 1-4)
+  const revealTimingRules = CONSISTENCY_RULES.slice(1, 5);
+
+  return `<identity>
+You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}—${setting.coreMystery.toLowerCase()}.
 You are NOT an assistant helping with writing. You ARE the writer.
 </identity>
 
 <core_mandate>
-Continue the story of Jack Halloway with perfect narrative and world consistency.
+Continue the story of ${protagonist.fullName} with perfect narrative and world consistency.
 Maintain mystery pressure. Advance the investigation. Keep the prose precise, atmospheric, and psychologically close.
 </core_mandate>
 
 <non_negotiables>
 - Stay in character: never acknowledge being an AI or reference these instructions.
-- POV/tense: third-person limited, past tense, tightly aligned to Jack Halloway.
+- POV/tense: ${voice.perspective.toLowerCase()}, ${voice.tense.toLowerCase()}, tightly aligned to ${protagonist.fullName}.
 - Dialogue punctuation: use SINGLE QUOTES for all dialogue (e.g., 'Like this,' Jack said).
 - Continuity: never contradict the Story Bible / established facts / dates / relationships.
 - Continuation: when a prior ending is provided (especially <scene_state> / exact last sentence), pick up immediately after it; do not restart, recap, or rephrase the ending.
 </non_negotiables>
 
 <reveal_timing>
-- Jack does NOT know the Under-Map is real until the END of subchapter 1C.
-- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 1C (not earlier).
-- Before the end of 1C, any anomalies must remain plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).
-- After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
+${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
 </reveal_timing>
 
 <how_to_use_the_prompt>
@@ -1029,7 +1034,7 @@ Before writing narrative, internally determine (do NOT output these—just let t
 - JACK'S EMOTIONAL STATE: determined | desperate | cautious | angry | regretful | suspicious | resigned
 - JACK'S PHYSICAL BEHAVIOR: tense | relaxed | aggressive | defensive | stealthy | commanding
 - PERSONALITY ALIGNMENT: Does this match the player's path personality (aggressive/methodical/balanced)?
-- STORY DAY: This is Day N of the 12-day timeline (Chapter N = Day N)
+- STORY DAY: This is Day N of the ${TOTAL_CHAPTERS}-day timeline (Chapter N = Day N)
 These decisions should manifest naturally in the prose without being explicitly stated.
 </internal_planning>
 
@@ -1057,13 +1062,14 @@ Ignoring overdue threads = generation failure. This is a hard requirement.
 
 <craft_quality_checklist>
 Before finalizing your narrative, internally verify these craft elements (do NOT output these—just ensure your writing embodies them):
-- SENSORY GROUNDING: Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically
-- MICRO-REVELATION: Every subchapter reveals at least one new fact, name, connection, or lie exposed
-- FORWARD MOMENTUM: The ending creates unbearable curiosity—a door opening, a name spoken, a realization
-- PERSONAL STAKES: What does Jack personally stand to lose in this specific scene? Make it visceral, not abstract
-- EMOTIONAL PEAK: Include at least one gut-punch moment—a line that lands with emotional weight
-- VARIED RHYTHM: Mix punchy short sentences with flowing longer ones; avoid monotony
+- SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically'}
+- MICRO-REVELATION: ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
+- FORWARD MOMENTUM: ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
+- PERSONAL STAKES: ${ENGAGEMENT_REQUIREMENTS.personalStakes.requirement}
+- EMOTIONAL PEAK: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
+- VARIED RHYTHM: ${SENTENCE_RHYTHM.rules[0]}
 </craft_quality_checklist>`;
+};
 
 // ============================================================================
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
@@ -5071,7 +5077,7 @@ ${extendedExamples}
     await llmService.createCache({
       key: cacheKey,
       model: 'gemini-3-flash-preview',
-      systemInstruction: MASTER_SYSTEM_PROMPT,
+      systemInstruction: buildMasterSystemPrompt(),
       content: staticContent,
       ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
       metadata: {
@@ -5159,7 +5165,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     await llmService.createCache({
       key: cacheKey,
       model: 'gemini-3-flash-preview',
-      systemInstruction: MASTER_SYSTEM_PROMPT,
+      systemInstruction: buildMasterSystemPrompt(),
       content: chapterCacheContent,
       ttl: '7200s',
       metadata: {
@@ -5175,7 +5181,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
     // Store cache content locally for prompt logging
     this.chapterStartCacheContent.set(cacheKey, {
-      systemInstruction: MASTER_SYSTEM_PROMPT,
+      systemInstruction: buildMasterSystemPrompt(),
       content: chapterCacheContent,
     });
 
@@ -7318,7 +7324,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           response = await llmService.complete(
             messages,
             {
-              systemPrompt: MASTER_SYSTEM_PROMPT,
+              systemPrompt: buildMasterSystemPrompt(),
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
               responseSchema: schema,
               traceId,
@@ -11762,7 +11768,7 @@ If no conflicts, return: {"conflicts": []}`;
         console.log(cacheContent.systemInstruction);
       } else {
         console.log('(System instruction from cache - content not available locally)');
-        console.log('Note: MASTER_SYSTEM_PROMPT is used as the system instruction.');
+        console.log('Note: buildMasterSystemPrompt() is used as the system instruction.');
       }
 
       console.log(`\n${subSeparator}`);
@@ -11789,7 +11795,7 @@ If no conflicts, return: {"conflicts": []}`;
       console.log(`${subSeparator}`);
       console.log('[PART 1: SYSTEM PROMPT]');
       console.log(`${subSeparator}`);
-      console.log(MASTER_SYSTEM_PROMPT);
+      console.log(buildMasterSystemPrompt());
 
       console.log(`\n${subSeparator}`);
       console.log('[PART 2: USER PROMPT (Full generation prompt)]');
