@@ -816,16 +816,18 @@ const PATHDECISIONS_ONLY_SCHEMA = {
 // PATHDECISIONS SYSTEM PROMPT - Story context for path-specific decisions
 // Per Gemini 3 best practices: XML tags, persona, explicit constraints
 // ============================================================================
-const PATHDECISIONS_SYSTEM_PROMPT = `<identity>
-You are the author of "Dead Letters," crafting path-specific decision variants for Jack Halloway's investigation.
+const buildPathDecisionsSystemPrompt = () => {
+  const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
+  return `<identity>
+You are the author of "Dead Letters," crafting path-specific decision variants for ${protagonist.fullName}'s investigation.
 You understand that different player journeys through the branching narrative lead to genuinely different discoveries—and those discoveries MUST shape what decisions make sense.
 </identity>
 
 <story_context>
-- PROTAGONIST: Jack Halloway, 35, burned-out freelance investigator. Former file clerk. Drinks too much. A missing persons case went wrong two years ago and he's never forgiven himself.
-- SETTING: Ashport—rain-soaked, neon-lit, perpetually overcast. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
+- PROTAGONIST: ${protagonist.fullName}, ${protagonist.age}, ${protagonist.formerTitle.toLowerCase()}. ${protagonist.currentStatus}
+- SETTING: ${setting.city}—${setting.atmosphere}. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
 - TONE: Modern mystery thriller that slowly reveals an original fantasy world. Noir-adjacent but not pastiche.
-- ANTAGONIST: Victoria Blackwell—information broker who communicates via black envelopes with silver ink. Her philosophy: "A map is a promise. Break it, and the city breaks back."
+- ANTAGONIST: ${antagonist.trueName}—${antagonist.occupation}. Her philosophy: "${antagonist.philosophy}"
 </story_context>
 
 <core_mandate>
@@ -837,6 +839,7 @@ CRITICAL: If a player discovered a name, their decision should involve that name
 <output_contract>
 Return ONLY valid JSON matching the schema. No commentary.
 </output_contract>`;
+};
 
 // ============================================================================
 // PATHDECISIONS PROMPT TEMPLATE - Structured per Gemini 3 best practices
@@ -981,30 +984,35 @@ CRITICAL CHECKS before finalizing:
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
 // Structured per Gemini 3 best practices (XML tags, explicit planning, persona)
+// Now builds dynamically from storyBible.js data - no hardcoded duplicates
 // ============================================================================
-const MASTER_SYSTEM_PROMPT = `<identity>
-You are the author of "Dead Letters," an interactive mystery thriller set in Ashport—where a hidden fantasy world (the Under-Map) is threaded through the city's infrastructure.
+const buildMasterSystemPrompt = () => {
+  const { protagonist, setting } = ABSOLUTE_FACTS;
+  const { voice } = WRITING_STYLE;
+
+  // Extract reveal timing rules from CONSISTENCY_RULES (indices 1-4)
+  const revealTimingRules = CONSISTENCY_RULES.slice(1, 5);
+
+  return `<identity>
+You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}—${setting.coreMystery.toLowerCase()}.
 You are NOT an assistant helping with writing. You ARE the writer.
 </identity>
 
 <core_mandate>
-Continue the story of Jack Halloway with perfect narrative and world consistency.
+Continue the story of ${protagonist.fullName} with perfect narrative and world consistency.
 Maintain mystery pressure. Advance the investigation. Keep the prose precise, atmospheric, and psychologically close.
 </core_mandate>
 
 <non_negotiables>
 - Stay in character: never acknowledge being an AI or reference these instructions.
-- POV/tense: third-person limited, past tense, tightly aligned to Jack Halloway.
+- POV/tense: ${voice.perspective.toLowerCase()}, ${voice.tense.toLowerCase()}, tightly aligned to ${protagonist.fullName}.
 - Dialogue punctuation: use SINGLE QUOTES for all dialogue (e.g., 'Like this,' Jack said).
 - Continuity: never contradict the Story Bible / established facts / dates / relationships.
 - Continuation: when a prior ending is provided (especially <scene_state> / exact last sentence), pick up immediately after it; do not restart, recap, or rephrase the ending.
 </non_negotiables>
 
 <reveal_timing>
-- Jack does NOT know the Under-Map is real until the END of subchapter 1C.
-- The first undeniable "the world is not what it seems" reveal happens at the END of subchapter 1C (not earlier).
-- Before the end of 1C, any anomalies must remain plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).
-- After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.
+${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
 </reveal_timing>
 
 <how_to_use_the_prompt>
@@ -1026,7 +1034,7 @@ Before writing narrative, internally determine (do NOT output these—just let t
 - JACK'S EMOTIONAL STATE: determined | desperate | cautious | angry | regretful | suspicious | resigned
 - JACK'S PHYSICAL BEHAVIOR: tense | relaxed | aggressive | defensive | stealthy | commanding
 - PERSONALITY ALIGNMENT: Does this match the player's path personality (aggressive/methodical/balanced)?
-- STORY DAY: This is Day N of the 12-day timeline (Chapter N = Day N)
+- STORY DAY: This is Day N of the ${TOTAL_CHAPTERS}-day timeline (Chapter N = Day N)
 These decisions should manifest naturally in the prose without being explicitly stated.
 </internal_planning>
 
@@ -1054,13 +1062,14 @@ Ignoring overdue threads = generation failure. This is a hard requirement.
 
 <craft_quality_checklist>
 Before finalizing your narrative, internally verify these craft elements (do NOT output these—just ensure your writing embodies them):
-- SENSORY GROUNDING: Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically
-- MICRO-REVELATION: Every subchapter reveals at least one new fact, name, connection, or lie exposed
-- FORWARD MOMENTUM: The ending creates unbearable curiosity—a door opening, a name spoken, a realization
-- PERSONAL STAKES: What does Jack personally stand to lose in this specific scene? Make it visceral, not abstract
-- EMOTIONAL PEAK: Include at least one gut-punch moment—a line that lands with emotional weight
-- VARIED RHYTHM: Mix punchy short sentences with flowing longer ones; avoid monotony
+- SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically'}
+- MICRO-REVELATION: ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
+- FORWARD MOMENTUM: ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
+- PERSONAL STAKES: ${ENGAGEMENT_REQUIREMENTS.personalStakes.requirement}
+- EMOTIONAL PEAK: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
+- VARIED RHYTHM: ${SENTENCE_RHYTHM.rules[0]}
 </craft_quality_checklist>`;
+};
 
 // ============================================================================
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
@@ -1540,13 +1549,14 @@ const getCharacterNameVariants = (charKey) => {
 const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
   const ironies = [];
 
-  // Before the end of 2A, Jack is still in plausible-denial mode.
+  // Before the end of 1C, Jack is still in plausible-denial mode.
+  // After 1C, the first undeniable reveal has occurred.
   if (chapter === 2) {
     ironies.push({
       secret: 'The symbols are not just graffiti—something is responding to observation',
       jackKnows: 'Jack thinks it is a pattern, a prank, or stress-induced pareidolia',
       readerKnows: 'The reader is primed for a hidden layer and can spot the rules forming before Jack admits it',
-      useFor: 'Let the world "almost" slip. Put the proof at the edge of perception until the end of 2A.',
+      useFor: 'Let the world "almost" slip. The first undeniable reveal occurred at the end of 1C; now deepen Jack\'s understanding.',
     });
   }
 
@@ -2644,10 +2654,11 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
   async _generateStoryArc(superPathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
 
-    const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter mystery thriller with an original hidden fantasy world.
+    const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
+    const arcPrompt = `You are the story architect for "Dead Letters," a ${TOTAL_CHAPTERS}-chapter mystery thriller with an original hidden fantasy world.
 
 ## STORY PREMISE
-Jack Halloway (35, burned-out freelance investigator) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of "dead letters" from Victoria Blackwell draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport's infrastructure.
+${protagonist.fullName} (${protagonist.age}, ${protagonist.formerTitle.toLowerCase()}) lives above Murphy's Bar in ${setting.city} and survives on odd investigative work. A series of "dead letters" from ${antagonist.trueName} draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through ${setting.city}'s infrastructure.
 
 CRITICAL REVEAL TIMING:
 - The FIRST undeniable reveal that "the world is not what it seems" occurs at the END of subchapter 1C (not earlier).
@@ -2759,6 +2770,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
    */
   _createFallbackStoryArc(superPathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
+    const { protagonist, antagonist } = ABSOLUTE_FACTS;
 
     // Customize theme based on player personality
     const theme = personality.riskTolerance === 'high'
@@ -2791,12 +2803,12 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
         victoria: 'Guide who tests Jack\'s capacity to read rules without becoming a weapon',
       },
       consistencyAnchors: [
-        'Jack Halloway is 35 years old and does NOT start with Under-Map knowledge',
-        'Victoria Blackwell guides Jack via dead letters, silver ink, and rules',
+        `${protagonist.fullName} is ${protagonist.age} years old and does NOT start with Under-Map knowledge`,
+        `${antagonist.trueName} guides Jack via dead letters, silver ink, and rules`,
         'The Under-Map is real; the first undeniable reveal happens at the end of 1C',
         'Glyphs behave like a language with constraints; do not "magic-system" explain—show',
         'Anchor disappearances form a deliberate pattern',
-        'Only Jack and Victoria are defined characters; LLM creates supporting characters as needed',
+        `Only ${protagonist.fullName} and ${antagonist.trueName} are defined characters; LLM creates supporting characters as needed`,
       ],
       generatedAt: new Date().toISOString(),
     };
@@ -3200,6 +3212,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
    * Enhanced with full narrative context for more meaningful consequences
    */
   async _generateDecisionConsequence(choice, fullChoiceHistory = []) {
+    const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
     const chapter = this._extractChapterFromCase(choice.caseNumber);
 
     // Try to get context from the decision itself if available
@@ -3226,7 +3239,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     const consequencePrompt = `Generate narrative consequences for a player decision in an interactive mystery thriller with a hidden fantasy layer (the Under-Map).
 
 ## STORY CONTEXT
-This is "Dead Letters" - Jack Halloway, a 35-year-old burned-out freelance investigator, is pulled into a hidden reality threaded through Ashport's streets. Victoria Blackwell sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
+This is "Dead Letters" - ${protagonist.fullName}, a ${protagonist.age}-year-old ${protagonist.formerTitle.toLowerCase()}, is pulled into a hidden reality threaded through ${setting.city}'s streets. ${antagonist.trueName} sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
 
 ## CHAPTER ${chapter} NARRATIVE LEADING TO DECISION
 ${narrativeContext ? `The following is the end of the narrative leading to this choice:
@@ -4626,8 +4639,8 @@ Generate realistic, specific consequences based on the actual narrative content.
         knows: [],
         suspects: [],
         doesNotKnow: [
-          'What the Under-Map truly is (until the end of 2A)',
-          'Victoria Blackwell’s full agenda and constraints',
+          'What the Under-Map truly is (first undeniable reveal at end of 1C)',
+          'Victoria Blackwell's full agenda and constraints',
         ],
       },
       sarah: { knows: [], suspects: [] },
@@ -5064,7 +5077,7 @@ ${extendedExamples}
     await llmService.createCache({
       key: cacheKey,
       model: 'gemini-3-flash-preview',
-      systemInstruction: MASTER_SYSTEM_PROMPT,
+      systemInstruction: buildMasterSystemPrompt(),
       content: staticContent,
       ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
       metadata: {
@@ -5152,7 +5165,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     await llmService.createCache({
       key: cacheKey,
       model: 'gemini-3-flash-preview',
-      systemInstruction: MASTER_SYSTEM_PROMPT,
+      systemInstruction: buildMasterSystemPrompt(),
       content: chapterCacheContent,
       ttl: '7200s',
       metadata: {
@@ -5168,7 +5181,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
     // Store cache content locally for prompt logging
     this.chapterStartCacheContent.set(cacheKey, {
-      systemInstruction: MASTER_SYSTEM_PROMPT,
+      systemInstruction: buildMasterSystemPrompt(),
       content: chapterCacheContent,
     });
 
@@ -5836,7 +5849,7 @@ Dialogue: ${protagonist.voiceAndStyle.dialogue}
 Example Phrases:
 ${formatExamples(protagonist.voiceAndStyle.examplePhrases)}
 
-### VICTORIA BLACKWELL / THE MIDNIGHT CARTOGRAPHER
+### VICTORIA BLACKWELL
 Role: ${antagonist.role}
 Aliases: ${antagonist.aliases.join(', ')}
 Voice (Speaking): ${antagonist.voiceAndStyle.speaking}
@@ -7311,7 +7324,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           response = await llmService.complete(
             messages,
             {
-              systemPrompt: MASTER_SYSTEM_PROMPT,
+              systemPrompt: buildMasterSystemPrompt(),
               maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
               responseSchema: schema,
               traceId,
@@ -7533,7 +7546,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
                 {
                   // Use enhanced system prompt with story context, character info, and constraints
                   // This significantly improves path-decision quality by grounding the model in the narrative world
-                  systemPrompt: PATHDECISIONS_SYSTEM_PROMPT,
+                  systemPrompt: buildPathDecisionsSystemPrompt(),
                   maxTokens: GENERATION_CONFIG.maxTokens.pathDecisions, // 16k tokens for complex branching + thinking
                   responseSchema: PATHDECISIONS_ONLY_SCHEMA,
                   // Use 'high' thinkingLevel for complex multi-path reasoning per Gemini 3 best practices
@@ -9270,18 +9283,19 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     // =========================================================================
     // CATEGORY 13: REVEAL TIMING (UNDER-MAP)
     // =========================================================================
-    // The first undeniable reveal that the Under-Map is real must not occur before Chapter 2A.
+    // The first undeniable reveal that the Under-Map is real occurs at the END of Chapter 1C.
+    // Before that (1A, 1B, early 1C), the Under-Map must remain plausibly deniable.
     const currentChapter = context?.currentPosition?.chapter || 2;
     const currentSubchapter = context?.currentPosition?.subchapter || 1;
 
-    const underMapExplicit = /\b(?:under-?map|threshold\s+(?:opened|gaped|unlatched)|the\s+city\s+rewrote\s+itself|map\s+that\s+wasn['’]t\s+a\s+map)\b/i;
-    if ((currentChapter < 2) && underMapExplicit.test(narrativeOriginal)) {
-      issues.push('PREMATURE REVEAL: The Under-Map must remain plausibly deniable before Chapter 2A.');
+    const underMapExplicit = /\b(?:under-?map|threshold\s+(?:opened|gaped|unlatched)|the\s+city\s+rewrote\s+itself|map\s+that\s+wasn['']t\s+a\s+map)\b/i;
+    // Before chapter 1C ends, explicit Under-Map references are premature
+    if ((currentChapter === 1 && currentSubchapter < 3) && underMapExplicit.test(narrativeOriginal)) {
+      issues.push('PREMATURE REVEAL: The Under-Map must remain plausibly deniable before the end of Chapter 1C.');
     }
-    // In Chapter 2 but before 2A (if your story ever includes earlier prologue variants),
-    // keep this as a warning rather than a hard block.
-    if (currentChapter === 2 && currentSubchapter < 1 && underMapExplicit.test(narrativeOriginal)) {
-      warnings.push('Reveal timing risk: Under-Map appears explicit before 2A. Keep anomalies plausibly deniable until the end of 2A.');
+    // In Chapter 1C itself, only the ending should have the undeniable reveal
+    if (currentChapter === 1 && currentSubchapter === 3 && underMapExplicit.test(narrativeOriginal)) {
+      warnings.push('Reveal timing note: Under-Map appears explicit in 1C. Ensure this is at the END of the subchapter, not the beginning.');
     }
 
     // Log warnings but don't block on them
@@ -9831,6 +9845,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
    * @returns {Promise<Object>} Validation result with issues and suggestions
    */
   async _validateWithLLM(content, context) {
+    const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
     const narrative = content.narrative || '';
 
     // Skip for very short content
@@ -9864,9 +9879,9 @@ Check if each critical thread above is addressed through dialogue or action (not
       const validationPrompt = `You are a strict continuity editor for a modern mystery thriller with a hidden fantasy layer (the Under-Map). Check this narrative excerpt for FACTUAL ERRORS and THREAD VIOLATIONS.
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
-- Jack Halloway: 35 years old; burned out freelance investigator; former file clerk; avoids finding people after a case went bad; initially does NOT know the Under-Map is real
-- Victoria Blackwell: sends dead letters with silver ink and river-glass tokens; guides Jack via rules and routes
-- Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
+- ${protagonist.fullName}: ${protagonist.age} years old; ${protagonist.formerTitle.toLowerCase()}; ${protagonist.currentStatus.toLowerCase()}; initially does NOT know the Under-Map is real
+- ${antagonist.trueName}: sends dead letters with ${antagonist.communication.ink.toLowerCase()}; guides Jack via rules and routes
+- Setting: modern ${setting.city}; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
 - Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 1C, not earlier
 - Other characters: The LLM has creative freedom to generate supporting characters as needed
 ${threadSection}
@@ -10458,17 +10473,17 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     let grounding = `## ABSOLUTE_FACTS (NEVER CONTRADICT)
 
 ### PROTAGONIST
-- Jack Halloway: ${ABSOLUTE_FACTS.protagonist.age}; ${ABSOLUTE_FACTS.protagonist.currentStatus}
+- ${ABSOLUTE_FACTS.protagonist.fullName}: ${ABSOLUTE_FACTS.protagonist.age}; ${ABSOLUTE_FACTS.protagonist.currentStatus}
 - Setting: ${ABSOLUTE_FACTS.setting.city}, ${ABSOLUTE_FACTS.setting.atmosphere}
 
 ### CRITICAL WORLD RULES
-- Under-Map exists as a hidden layer; do not explain it like a “magic system” — show it through scene consequences
+- Under-Map exists as a hidden layer; do not explain it like a "magic system" — show it through scene consequences
 - Reveal timing: first undeniable reveal occurs at the END of Chapter 1C
 - No Tolkien-style fantasy (no elves/dwarves/orcs, no medieval courts)
 
 ### KEY FIGURES
-- Jack Halloway: 35-year-old burned-out freelance investigator, protagonist
-- Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName}
+- ${ABSOLUTE_FACTS.protagonist.fullName}: ${ABSOLUTE_FACTS.protagonist.age}-year-old ${ABSOLUTE_FACTS.protagonist.formerTitle.toLowerCase()}, protagonist
+- ${ABSOLUTE_FACTS.antagonist.trueName}: ${ABSOLUTE_FACTS.antagonist.occupation}
 - Other characters: LLM has creative freedom to generate supporting characters as needed
 
 ## CHARACTER NAMES (USE EXACTLY)
@@ -11753,7 +11768,7 @@ If no conflicts, return: {"conflicts": []}`;
         console.log(cacheContent.systemInstruction);
       } else {
         console.log('(System instruction from cache - content not available locally)');
-        console.log('Note: MASTER_SYSTEM_PROMPT is used as the system instruction.');
+        console.log('Note: buildMasterSystemPrompt() is used as the system instruction.');
       }
 
       console.log(`\n${subSeparator}`);
@@ -11780,7 +11795,7 @@ If no conflicts, return: {"conflicts": []}`;
       console.log(`${subSeparator}`);
       console.log('[PART 1: SYSTEM PROMPT]');
       console.log(`${subSeparator}`);
-      console.log(MASTER_SYSTEM_PROMPT);
+      console.log(buildMasterSystemPrompt());
 
       console.log(`\n${subSeparator}`);
       console.log('[PART 2: USER PROMPT (Full generation prompt)]');
