@@ -894,6 +894,90 @@ All prompt sections remain included:
 - ✅ Forbidden phrases (WRITING_STYLE.absolutelyForbidden)
 - ✅ Caching mechanism (uses buildMasterSystemPrompt() for systemInstruction)
 
+### 19.10 Puzzle system simplification (evidence board)
+
+**Major simplification** of the evidence board puzzle system in `StoryGenerationService.js`.
+The puzzle word generation has been replaced with a static word list, pending a puzzle redesign.
+
+#### Changes made
+
+1. **`_generateBoardData()` simplified**
+   - No longer uses narrative text for word generation
+   - Returns a static 16-word list that gets shuffled
+   - Still supports decision-point branching (splits into two sets of outliers)
+   - Words: SHADOW, TRUTH, GLYPH, SILVER, TOKEN, ANCHOR, THRESHOLD, PATTERN,
+     WITNESS, CIPHER, SIGNAL, TRACE, HIDDEN, PASSAGE, ARCHIVE, REFLECT
+
+2. **Removed `puzzleCandidates` from schemas**
+   - Removed from `STORY_CONTENT_SCHEMA` (properties and required array)
+   - Removed from `DECISION_CONTENT_SCHEMA` (properties and required array)
+   - LLM no longer generates puzzle word candidates
+
+3. **Removed puzzle helper methods (~700 lines)**
+   - `_extractKeywordsFromNarrative()` - keyword extraction from narrative text
+   - `_selectOutlierWords()` - outlier word selection with theming
+   - `_getSemanticClusters()` - 230+ line static semantic cluster definitions
+   - `_extractDynamicClusters()` - dynamic cluster extraction from narrative
+   - `_areSemanticallySimilar()` - semantic similarity checking
+   - `_validatePuzzleSemanticsSync()` - sync semantic validation
+   - `_validatePuzzleSemanticsWithLLM()` - async LLM-based validation
+   - `_selectThemedWords()` - themed word selection for decisions
+   - `_determineTheme()` - theme determination from outlier words
+
+4. **Fixed undefined method bug**
+   - `_extractAllTextFromBranchingNarrative()` was called but never defined
+   - Replaced with direct use of `generatedContent.narrative` for word count
+
+#### Result
+
+- StoryGenerationService.js reduced from ~11,800 lines to ~10,100 lines
+- Evidence board still functions with static words
+- LLM generation is faster (no puzzleCandidates in output)
+- Clean separation: puzzle will be redesigned separately from story generation
+
+#### Why this change
+
+The evidence board puzzle is being redesigned. Rather than maintain complex
+semantic clustering code that will be replaced, a static word list provides:
+- Consistent puzzle behavior during transition
+- Reduced LLM token usage
+- Simpler debugging
+- Clear separation of concerns
+
+### 19.11 Fallback narrative system removal
+
+Removed the entire fallback narrative system from `StoryGenerationService.js`:
+
+1. **Removed methods**
+   - `_initializeFallbackTemplates()` - 140+ lines of hardcoded story paragraphs
+   - `_normalizeFallbackTemplatesToThirdPerson()` - POV conversion
+   - `_getFallbackContent()` - fallback content retrieval
+   - `_generateMinimalFallback()` - minimal fallback generation
+   - `_buildContextAwareFallback()` - context-aware fallback building
+
+2. **Removed dead code**
+   - `_generateStoryArc()` - LLM-based arc generation (never called)
+   - `_generateChapterOutline()` - LLM-based outline generation (never called)
+   - These methods were defined but never invoked; the "fallback" methods
+     were actually the primary implementation
+
+3. **Refactored methods**
+   - `_createFallbackStoryArc` renamed to `_createStoryArc`
+   - `_createFallbackChapterOutline` renamed to `_createChapterOutline`
+   - Both now read from `STORY_STRUCTURE` in storyBible.js
+   - `_getPacingGuidance` now reads from `STORY_STRUCTURE.pacing`
+
+4. **Fixed hardcoded character references**
+   - Replaced 25+ hardcoded "Jack Halloway" / "Victoria Blackwell" references
+   - Now uses template literals with storyBible.js data
+   - Example: `${protagonist.fullName}` instead of `'Jack Halloway'`
+
+#### Result
+
+- ~840 lines of fallback code removed
+- Cleaner architecture: story bible is the single source of truth
+- No more duplicate character data in service file
+
 ---
 
 ## 20) What to read first if you are new

@@ -403,11 +403,7 @@ const STORY_CONTENT_SCHEMA = {
       required: ['opening', 'firstChoice', 'secondChoices'],
     },
     // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this; was never displayed
-    puzzleCandidates: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'List of 6-8 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
-    },
+    // NOTE: puzzleCandidates removed - puzzle uses static word list now
     briefing: {
       type: 'object',
       description: 'Mission briefing for the evidence board puzzle',
@@ -465,18 +461,8 @@ const STORY_CONTENT_SCHEMA = {
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
   },
-  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
-
-const STORY_CONTENT_SCHEMA_AB = (() => {
-  const cloned = JSON.parse(JSON.stringify(STORY_CONTENT_SCHEMA));
-  if (cloned?.properties?.puzzleCandidates) {
-    delete cloned.properties.puzzleCandidates;
-  }
-  if (Array.isArray(cloned?.required)) {
-    cloned.required = cloned.required.filter((key) => key !== 'puzzleCandidates');
-  }
-  return cloned;
 })();
 
 /**
@@ -682,14 +668,10 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['opening', 'firstChoice', 'secondChoices'],
     },
     // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this
-    puzzleCandidates: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'List of 10-12 distinct, evocative single words (nouns/verbs) from across ALL paths that would make good puzzle answers.',
-    },
+    // NOTE: puzzleCandidates removed - puzzle uses static word list now
     briefing: {
       type: 'object',
-      description: 'Mission briefing for the evidence board puzzle',
+      description: 'Mission briefing',
       properties: {
         summary: {
           type: 'string',
@@ -744,7 +726,7 @@ const DECISION_CONTENT_SCHEMA = {
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
   },
-  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
 
 // ============================================================================
@@ -820,14 +802,14 @@ const buildPathDecisionsSystemPrompt = () => {
   const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
   return `<identity>
 You are the author of "Dead Letters," crafting path-specific decision variants for ${protagonist.fullName}'s investigation.
-You understand that different player journeys through the branching narrative lead to genuinely different discoveries—and those discoveries MUST shape what decisions make sense.
+You understand that different player journeys through the branching narrative lead to genuinely different discoveries, and those discoveries MUST shape what decisions make sense.
 </identity>
 
 <story_context>
 - PROTAGONIST: ${protagonist.fullName}, ${protagonist.age}, ${protagonist.formerTitle.toLowerCase()}. ${protagonist.currentStatus}
-- SETTING: ${setting.city}—${setting.atmosphere}. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
+- SETTING: ${setting.city}, ${setting.atmosphere}. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
 - TONE: Modern mystery thriller that slowly reveals an original fantasy world. Noir-adjacent but not pastiche.
-- ANTAGONIST: ${antagonist.trueName}—${antagonist.occupation}. Her philosophy: "${antagonist.philosophy}"
+- ANTAGONIST: ${antagonist.trueName}, ${antagonist.occupation}. Her philosophy: "${antagonist.philosophy}"
 </story_context>
 
 <core_mandate>
@@ -849,7 +831,7 @@ Return ONLY valid JSON matching the schema. No commentary.
 // ============================================================================
 const PATHDECISIONS_PROMPT_TEMPLATE = `<task>
 Generate 9 UNIQUE path-specific decision variants for Chapter 1C of "Dead Letters."
-Each path represents a different player journey—different discoveries require different decisions.
+Each path represents a different player journey. Different discoveries require different decisions.
 </task>
 
 <path_structure>
@@ -873,7 +855,7 @@ These are what each path discovered (the ending they experienced):
 </path_discoveries>
 
 <path_details>
-Detailed notes for each path (use these to stay grounded—do not invent entities not mentioned):
+Detailed notes for each path (use these to stay grounded; do not invent entities not mentioned):
 {{pathStructuredNotes}}
 </path_details>
 
@@ -914,7 +896,7 @@ Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marke
   "optionA": {
     "key": "A",
     "title": "Follow the courier to Blackwell",
-    "focus": "Use this connection to trace Blackwell's location directly—aggressive but potentially revealing.",
+    "focus": "Use this connection to trace Blackwell's location directly, aggressive but potentially revealing.",
     "personalityAlignment": "aggressive"
   },
   "optionB": {
@@ -928,11 +910,11 @@ Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marke
 Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the name aloud)
 {
   "pathKey": "1B-2C",
-  "intro": "The threshold responded to the name—proof that the Under-Map isn't just symbols, it's listening.",
+  "intro": "The threshold responded to the name. Proof that the Under-Map is not just symbols; it is listening.",
   "optionA": {
     "key": "A",
     "title": "Speak the name again and step through",
-    "focus": "Test whether the threshold will open fully—risk everything to see what's on the other side.",
+    "focus": "Test whether the threshold will open fully. Risk everything to see what is on the other side.",
     "personalityAlignment": "aggressive"
   },
   "optionB": {
@@ -950,21 +932,21 @@ Example 3 - Path 1C-2B (Discovery: Found a ledger with names of the disappeared,
   "optionA": {
     "key": "A",
     "title": "Confront Blackwell with the ledger",
-    "focus": "Force a direct confrontation—Jack needs answers about what really happened two years ago.",
+    "focus": "Force a direct confrontation. Jack needs answers about what really happened two years ago.",
     "personalityAlignment": "aggressive"
   },
   "optionB": {
     "key": "B",
     "title": "Cross-reference the names with city records",
-    "focus": "Verify the ledger's claims before revealing that Jack has it—knowledge is leverage.",
+    "focus": "Verify the ledger's claims before revealing that Jack has it. Knowledge is leverage.",
     "personalityAlignment": "cautious"
   }
 }
 
 BAD examples (generic, not path-specific):
-❌ "Investigate further" vs "Wait and see" — Too vague, could apply to any path
-❌ "Take action" vs "Be careful" — No connection to what was discovered
-❌ Same titles across multiple paths — Defeats the purpose of branching narratives
+❌ "Investigate further" vs "Wait and see": Too vague, could apply to any path
+❌ "Take action" vs "Be careful": No connection to what was discovered
+❌ Same titles across multiple paths: Defeats the purpose of branching narratives
 </few_shot_examples>
 
 <output_requirements>
@@ -994,7 +976,7 @@ const buildMasterSystemPrompt = () => {
   const revealTimingRules = CONSISTENCY_RULES.slice(1, 5);
 
   return `<identity>
-You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}—${setting.coreMystery.toLowerCase()}.
+You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}, ${setting.coreMystery.toLowerCase()}.
 You are NOT an assistant helping with writing. You ARE the writer.
 </identity>
 
@@ -1027,7 +1009,7 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 </output_contract>
 
 <internal_planning>
-Before writing narrative, internally determine (do NOT output these—just let them guide your writing):
+Before writing narrative, internally determine (do NOT output these; just let them guide your writing):
 - BEAT STRUCTURE: What are the 3-5 major plot beats for this scene?
 - JACK'S PRIMARY ACTION: investigate | confront | observe | negotiate | flee | wait | interrogate | follow
 - JACK'S DIALOGUE APPROACH: aggressive | measured | evasive | empathetic | threatening | pleading
@@ -1061,7 +1043,7 @@ Ignoring overdue threads = generation failure. This is a hard requirement.
 </thread_escalation_rule>
 
 <craft_quality_checklist>
-Before finalizing your narrative, internally verify these craft elements (do NOT output these—just ensure your writing embodies them):
+Before finalizing your narrative, internally verify these craft elements (do NOT output these; just ensure your writing embodies them):
 - SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically'}
 - MICRO-REVELATION: ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
 - FORWARD MOMENTUM: ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
@@ -1553,14 +1535,14 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
   // After 1C, the first undeniable reveal has occurred.
   if (chapter === 2) {
     ironies.push({
-      secret: 'The symbols are not just graffiti—something is responding to observation',
+      secret: 'The symbols are not just graffiti; something is responding to observation',
       jackKnows: 'Jack thinks it is a pattern, a prank, or stress-induced pareidolia',
       readerKnows: 'The reader is primed for a hidden layer and can spot the rules forming before Jack admits it',
       useFor: 'Let the world "almost" slip. The first undeniable reveal occurred at the end of 1C; now deepen Jack\'s understanding.',
     });
   }
 
-  // Victoria’s role is clearer to the reader earlier than Jack wants to admit.
+  // Victoria's role is clearer to the reader earlier than Jack wants to admit.
   if (chapter >= 2 && chapter <= 8) {
     ironies.push({
       secret: 'Victoria Blackwell is guiding the investigation through dead letters and rules',
@@ -1602,7 +1584,7 @@ The reader knows things Jack doesn't. USE THIS for tension:
 `;
   });
 
-  section += `Write scenes that let readers CRINGE at Jack's ignorance. Let them see the trap closing. The tension between what we know and what Jack knows is incredibly powerful.`;
+  section += `Write scenes that let readers CRINGE at the protagonist's ignorance. Let them see the trap closing. The tension between what we know and what ${ABSOLUTE_FACTS.protagonist.fullName} knows is incredibly powerful.`;
 
   return section;
 };
@@ -1657,13 +1639,9 @@ class StoryGenerationService {
     this.maxArchivedThreads = 50; // Cap on archived thread storage
     this.archiveChapterRetention = 3; // Keep archived threads for N chapters after resolution
 
-    // ========== NEW: Fallback Content System for Graceful Degradation ==========
-    this.fallbackTemplates = this._initializeFallbackTemplates();
-    // Normalize fallback templates to third-person limited narration (dialogue may remain first-person).
-    // This prevents immersion breaks if a template accidentally includes first-person narration.
-    this._normalizeFallbackTemplatesToThirdPerson();
+    // ========== Generation Retry Tracking ==========
     this.generationAttempts = new Map(); // Track retry attempts per content
-    this.maxGenerationAttempts = 3; // Max attempts before using fallback
+    this.maxGenerationAttempts = 3; // Max attempts before failing
 
     // ========== Generation Concurrency Limiter ==========
     // Sequential only - no concurrent LLM requests
@@ -1912,469 +1890,6 @@ Respond with a JSON object containing:
   }
 
   // ==========================================================================
-  // FALLBACK CONTENT SYSTEM - Graceful degradation when generation fails
-  // ==========================================================================
-
-  /**
-   * Initialize fallback narrative templates for each story phase
-   * These provide meaningful content when LLM generation completely fails
-   */
-  _initializeFallbackTemplates() {
-    return {
-      risingAction: {
-        subchapterA: {
-          title: 'Dead Letter, Fresh Ink',
-          narrative: `Ashport never quite dried. Jack stood in the narrow office-sublet above Murphy's Bar, listening to the jukebox leak through the floorboards like a memory he didn't order. On his desk: an envelope that felt wrong in the hands—heavy paper, river-glass token, silver ink that refused to look the same twice.
-
-He told himself it was a stunt. Someone’s idea of theater. But the glyph string inside wasn’t random. It had cadence. Repetition with intent. A pattern pretending to be graffiti.
-
-Outside, the street sign across the way gleamed wet under a flickering light. For a moment—just long enough to make doubt expensive—Jack could have sworn the paint on it had been retouched into the same angular curve as the letter’s first mark.
-
-He pocketed the river-glass. Grabbed his coat. Whatever this was, it wanted him moving. And the city, as always, was willing to be used.`,
-          bridgeText: 'The investigation deepens.',
-        },
-        subchapterB: {
-          title: 'The Map That Misbehaves',
-          narrative: `The address in the dead letter led Jack to a service alley behind a shuttered print shop. The kind of place that collected broken pallets, old posters, and secrets that didn't want daylight.
-
-He found the mark exactly where the ink implied it would be—etched into a brick like it had always been there. Same angles. Same “split-eye” geometry. He photographed it once. Twice. The second photo was subtly wrong, as if the camera had flinched.
-
-Footsteps sounded, then stopped. Not close enough to be a threat—close enough to be a choice. Jack didn’t turn right away. He let the silence ask its question first.
-
-When he finally looked, there was no one. Just a thin strip of reflective tape on the ground, placed like an arrow. And on the tape: a second glyph, smaller, newly drawn, still damp.`,
-          bridgeText: 'The city answers back.',
-        },
-        subchapterC: {
-          title: 'Two Routes, One Pattern',
-          narrative: `Back upstairs, Jack spread printouts and photos across the desk. The glyphs weren’t art. They were instructions—or warnings—written in a language that only worked if you stood where it wanted you to stand.
-
-He could chase the next mark immediately, follow the tape-arrow deeper into the night, and risk whatever waited at the end of that line.
-
-Or he could do the boring thing: call Tom, pull municipal records, compare old signage catalogs, and see if the city had ever worn these shapes before anyone started leaving dead letters.
-
-Either way, the river-glass token warmed in his pocket as if it remembered a hand that wasn’t his.`,
-          bridgeText: 'A crucial decision awaits.',
-        },
-      },
-      complications: {
-        subchapterA: {
-          title: 'The Quiet Seal',
-          narrative: `By the third day, the pattern had a heartbeat. Jack started noticing where the city tried to look normal—fresh paint on old concrete, new “No Trespassing” signs that didn’t match the city’s standard fonts, officers lingering at intersections as if they were waiting for someone to notice the wrong thing.
-
-He reached the next site and found it already sealed: tape, temporary fencing, and a pair of uniforms pretending not to watch him. The air smelled like wet metal and ozone, the way it did after a transformer blew.
-
-Jack didn’t have proof. Not yet. But he had the feeling of being gently herded, like a coin rolling toward a gutter.`,
-          bridgeText: 'The stakes rise.',
-        },
-        subchapterB: {
-          title: 'Someone Else Holds the Key',
-          narrative: `The man answered Jack's questions with jokes that landed too quickly. Every deflection was polished. Every laugh was a door closing.
-
-'You're chasing a doodle,' he said, eyes flicking to the folder before Jack even opened it. 'Let it go.'
-
-Jack watched the flick—small, automatic, practiced. The kind of tell you only have if you've been trained to hide a bigger one. The kind of tell you only have if someone taught you what happens when you don't.`,
-          bridgeText: 'Pressure tightens.',
-        },
-        subchapterC: {
-          title: 'Name the Thing, Lose It',
-          narrative: `That night, the dead letter arrived without a knock. It was simply there, as if the building itself had delivered it.
-
-Silver ink. Two lines this time. The first was a question Jack refused to answer out loud. The second was a rule:
-
-'Do not name it yet.'
-
-Jack stared at the words until the paper felt like it might blink. Then he wrote the glyphs again, slower, careful, like copying someone else’s handwriting in a language that could punish mistakes.`,
-          bridgeText: 'A defining choice emerges.',
-        },
-      },
-      confrontations: {
-        subchapterA: {
-          title: 'The Woman Who Maps the Dark',
-          narrative: `Victoria Blackwell’s building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
-
-She received him as if he were expected, because he was. No handshake. No small talk. Just a calm, observant gaze and a folder of photos that Jack had never shown anyone.
-
-'You followed the line,' she said. Not praise. Not accusation. Fact.
-
-Jack set the river-glass on her table. 'Tell me what this is.'
-
-Victoria’s fingers hovered over it, not touching. 'A proof. And a leash, if you let it be.'
-
-Jack didn’t like the certainty in her voice. It sounded like someone who had already seen where his choices went.`,
-          bridgeText: 'The confrontation begins.',
-        },
-        subchapterB: {
-          title: 'Rules With Teeth',
-          narrative: `Victoria didn’t explain. She demonstrated.
-
-She slid a sheet of paper toward Jack: a map of a block he knew. He’d walked it. It had a grocery store, a bank, a bus stop. Victoria’s version had something else—a narrow line between two buildings that, on any normal map, simply didn’t exist.
-
-'Two maps,' she said. 'One you’re allowed to believe. One that keeps breaking your attention.'
-
-Jack forced himself to breathe. He could still tell himself it was a con. A hallucination. A clever edit.
-
-Then the silver ink shifted under the light like it was trying to align with something outside the room.`,
-          bridgeText: 'The rules surface.',
-        },
-        subchapterC: {
-          title: 'Cross or Retreat',
-          narrative: `Victoria gave him a choice, because she understood the psychology of cages.
-
-She could take him to a threshold—show him something he couldn’t unsee—and in exchange, he would owe her. Not money. Movement. Compliance. The shape of his next week.
-
-Or she could let him leave with nothing but the paper and his doubts, and the city would keep answering him in glitches and near-misses until he either broke the pattern or it broke him.
-
-Jack looked at the river-glass. Then at the map that wasn’t a map. He hated that both felt heavier than any weapon.`,
-          bridgeText: 'The decisive moment arrives.',
-        },
-      },
-      resolution: {
-        subchapterA: {
-          title: 'Anchor Names',
-          narrative: `The pattern finally spoke in proper nouns. Names that weren’t on the news. Names that didn’t belong together.
-
-Jack read them in a low voice, as if the building might be listening: people who vanished near sites marked by the same glyph family. Different lives. Same absence. Same geometry.
-
-He didn’t have a neat answer. But he had direction. And direction, in a city built to mislead, was its own kind of miracle.`,
-          bridgeText: 'The pattern clarifies.',
-        },
-        subchapterB: {
-          title: 'The City Remembers',
-          narrative: `Ashport began to feel less like a backdrop and more like a participant. Streetlights timed themselves to his approach. Construction fences shifted overnight. A mural gained a new line, then lost it again.
-
-Jack stopped pretending the anomalies were nothing. He started treating them like witnesses: unreliable, frightened, and telling the truth sideways.`,
-          bridgeText: 'A new understanding forms.',
-        },
-        subchapterC: {
-          title: 'Keep the Line',
-          narrative: `Another dead letter. No wax this time. Just silver ink and the river-glass token, returned as if the city itself had decided he’d earned it.
-
-'You have choices,' the note read. 'But you don’t have infinity.'
-
-Jack sat with that until the jukebox downstairs switched songs. Then he gathered his papers, his photos, his half-maps, and stepped back into the damp streets—ready to follow a line that might not want to be followed.`,
-          bridgeText: 'The journey continues.',
-        },
-      },
-    };
-  }
-
-  /**
-   * Ensure all fallback template narratives adhere to global POV rules (third-person limited).
-   * Dialogue inside quotes is preserved as-is.
-   */
-  _normalizeFallbackTemplatesToThirdPerson() {
-    try {
-      const phases = this.fallbackTemplates || {};
-      for (const phaseKey of Object.keys(phases)) {
-        const phase = phases[phaseKey];
-        if (!phase || typeof phase !== 'object') continue;
-        for (const subKey of Object.keys(phase)) {
-          const tpl = phase[subKey];
-          if (!tpl || typeof tpl !== 'object') continue;
-          if (typeof tpl.narrative === 'string' && tpl.narrative.length > 0) {
-            tpl.narrative = this._sanitizeNarrativeToThirdPerson(tpl.narrative);
-          }
-        }
-      }
-    } catch (e) {
-      // Best-effort only. Never block initialization, but log for debugging.
-      console.warn('[StoryGenerationService] Failed to normalize fallback templates:', e.message);
-    }
-  }
-
-  /**
-   * Get appropriate fallback content based on chapter and subchapter
-   */
-  _getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint) {
-    // Determine story phase
-    let phase;
-    if (chapter <= 4) phase = 'risingAction';
-    else if (chapter <= 7) phase = 'complications';
-    else if (chapter <= 10) phase = 'confrontations';
-    else phase = 'resolution';
-
-    // Get subchapter key
-    const subKey = ['subchapterA', 'subchapterB', 'subchapterC'][subchapter - 1];
-
-    const template = this.fallbackTemplates[phase]?.[subKey];
-    if (!template) {
-      // Ultimate fallback
-      return this._generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint);
-    }
-
-    // Adapt the template with path-specific details
-    const adapted = {
-      title: template.title,
-      bridgeText: template.bridgeText,
-      previously: `The investigation continued through Ashport's rain-soaked streets.`,
-      narrative: template.narrative,
-      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: ${template.bridgeText}`,
-      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
-      puzzleCandidates: this._extractKeywordsFromNarrative(template.narrative).slice(0, 8),
-      briefing: {
-        summary: 'Continue the investigation.',
-        objectives: ['Follow the leads', 'Uncover the truth', 'Make your choice'],
-      },
-      consistencyFacts: [
-        `Chapter ${chapter}.${subchapter} was generated using fallback content due to generation failure.`,
-      ],
-      previousThreadsAddressed: [],
-      narrativeThreads: [],
-      decision: null,
-    };
-
-    // Add decision for subchapter C
-    if (isDecisionPoint) {
-      adapted.decision = {
-        intro: ['Two paths lie before you. Each leads to different truths, different consequences.'],
-        options: [
-          {
-            key: 'A',
-            title: 'Take direct action',
-            focus: 'Confront the situation head-on, accepting the risks',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'A',
-            details: [],
-          },
-          {
-            key: 'B',
-            title: 'Proceed with caution',
-            focus: 'Gather more information before committing to action',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'B',
-            details: [],
-          },
-        ],
-      };
-    }
-
-    // Ensure fallback narration matches global POV rules (third-person limited).
-    if (adapted?.narrative) {
-      adapted.narrative = this._sanitizeNarrativeToThirdPerson(adapted.narrative);
-    }
-    return adapted;
-  }
-
-  /**
-   * Generate minimal fallback when no template is available
-   */
-  _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
-    const minimalNarrative = `Ashport held onto moisture and reflected light in the cracks of its streets. Jack stood at the window above Murphy's Bar, watching the city pretend it was only a city.
-
-Another day, another piece of the pattern. The dead letters and their silver ink kept arriving like punctuation, forcing him to look twice at things he used to pass without thinking.
-
-Tomorrow would bring new challenges. New choices. New opportunities to follow the line—or break it on purpose.
-
-For now, Jack let himself breathe. He gathered his notes, pocketed the river-glass token if it was still with him, and tried not to give the darkness a name it could remember.
-
-Whatever the morning brought, he'd meet it with open eyes. That was all he could promise himself.`;
-
-    const result = {
-      title: 'The Investigation Continues',
-      bridgeText: 'The journey continues.',
-      previously: 'Jack continued his investigation through the rain-soaked streets of Ashport.',
-      narrative: minimalNarrative,
-      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: The investigation continues through Ashport.`,
-      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
-      puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'PATTERN', 'SILVER', 'GLASS', 'LINE'],
-      briefing: {
-        summary: 'Continue the investigation.',
-        objectives: ['Follow available leads', 'Consider your options'],
-      },
-      consistencyFacts: [
-        `Chapter ${chapter}.${subchapter} was generated using minimal fallback content.`,
-      ],
-      previousThreadsAddressed: [],
-      narrativeThreads: [],
-      decision: isDecisionPoint ? {
-        intro: ['A choice presents itself.'],
-        options: [
-          {
-            key: 'A',
-            title: 'Take action',
-            focus: 'Move forward directly',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'A',
-            details: [],
-          },
-          {
-            key: 'B',
-            title: 'Wait and observe',
-            focus: 'Gather more information',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'B',
-            details: [],
-          },
-        ],
-      } : null,
-    };
-
-    // Enforce global POV rules (third-person limited) for minimal fallback too.
-    // This prevents immersion-breaking first-person narration during worst-case degradation.
-    if (result?.narrative) {
-      result.narrative = this._sanitizeNarrativeToThirdPerson(result.narrative);
-    }
-
-    return result;
-  }
-
-  /**
-   * Build context-aware fallback content that maintains story continuity
-   * This is used when LLM generation fails but we still have story context available
-   *
-   * Key improvements over generic fallback:
-   * 1. References player's path personality (aggressive/methodical/balanced)
-   * 2. Acknowledges critical threads from previous chapters
-   * 3. Uses phase-appropriate narrative tone
-   * 4. Includes "previously" recap based on actual previous content
-   */
-  _buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context) {
-    // Determine story phase
-    let phase, phaseTone;
-    if (chapter <= 4) {
-      phase = 'risingAction';
-      phaseTone = 'building mystery and gathering clues';
-    } else if (chapter <= 7) {
-      phase = 'complications';
-      phaseTone = 'facing betrayals and escalating stakes';
-    } else if (chapter <= 10) {
-      phase = 'confrontations';
-      phaseTone = 'confronting difficult truths';
-    } else {
-      phase = 'resolution';
-      phaseTone = 'reaching the final reckoning';
-    }
-
-    // Get path personality for Jack's behavior
-    const personality = context?.pathPersonality || { narrativeStyle: 'Jack balances intuition with evidence', riskTolerance: 'moderate' };
-    const jackApproach = personality.riskTolerance === 'high' ? 'directly, without hesitation' :
-                         personality.riskTolerance === 'low' ? 'carefully, gathering every detail' :
-                         'with measured determination';
-
-    // Extract critical threads that need acknowledgment
-    const criticalThreads = (context?.narrativeThreads || [])
-      .filter(t => t.urgency === 'critical' && t.status === 'active')
-      .slice(0, 3); // Limit to 3 most important
-
-    // Build thread acknowledgment paragraph
-    let threadAcknowledgment = '';
-    if (criticalThreads.length > 0) {
-      const threadDescriptions = criticalThreads.map(t => {
-        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on Jack's mind`;
-        if (t.type === 'promise') return `Jack remembered the promise he had made`;
-        if (t.type === 'threat') return `The threat still hung in the air`;
-        return `Unfinished business demanded attention`;
-      });
-      threadAcknowledgment = `\n\n${threadDescriptions.join('. ')}. These matters would need resolution, one way or another.`;
-    }
-
-    // Get a recap from the most recent chapter
-    let previousRecap = 'The investigation continued through Ashport\'s rain-soaked streets.';
-    if (context?.previousChapters?.length > 0) {
-      const lastChapter = context.previousChapters[context.previousChapters.length - 1];
-      if (lastChapter.chapterSummary) {
-        previousRecap = lastChapter.chapterSummary.split('.')[0] + '.';
-      } else if (lastChapter.narrative) {
-        // Extract first sentence
-        const firstSentence = lastChapter.narrative.match(/[^.!?]+[.!?]+/)?.[0]?.trim();
-        if (firstSentence) previousRecap = firstSentence;
-      }
-    }
-
-    // Build phase-appropriate narrative (modern mystery thriller + Under-Map)
-    const narrative = `Ashport held onto moisture like it held onto secrets. Jack paused at the top of the stairs above Murphy's Bar, the jukebox downstairs switching tracks mid-chorus as if it had noticed him listening.
-
-Day ${chapter} of a pattern that refused to stay on paper. The dead letters and their silver ink had pulled Jack into questions he couldn’t un-ask. Every glyph he traced seemed to anticipate him—waiting in alleys, on signage, in places that should have been blank.${threadAcknowledgment}
-
-Jack moved ${jackApproach}. There was no clean way through this, only decisions with costs. The city’s official story was smooth; the other story was jagged, written in angles and omissions. Somewhere out there, Victoria Blackwell was shaping the route—if not his thoughts, then at least his steps.
-
-He checked the time without meaning to. Not for punctuality—for proof that time still behaved. It did. Mostly.
-
-Jack set his hand on the door handle, feeling the cold bite of metal through his palm. Whatever waited on the other side, he would meet it with open eyes, even if he couldn’t yet name what he was seeing.`;
-
-    // Build the fallback entry
-    const adapted = {
-      title: phase === 'resolution' ? 'The Reckoning' :
-             phase === 'confrontations' ? 'Truth Unveiled' :
-             phase === 'complications' ? 'Shadows Deepen' : 'Following the Trail',
-      bridgeText: `Jack faces the consequences of ${phaseTone}.`,
-      previously: previousRecap,
-      narrative: narrative,
-      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The pattern tightened and demanded a response.`,
-      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
-      puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'SILVER', 'GLASS', 'ANCHOR', 'PATTERN'],
-      briefing: {
-        summary: `Continue the investigation through this critical phase.`,
-        objectives: ['Process the latest revelations', 'Decide on next steps', 'Face the consequences'],
-      },
-      consistencyFacts: [
-        `Chapter ${chapter}.${subchapter} used context-aware fallback content.`,
-        `Jack approached this chapter ${jackApproach}.`,
-      ],
-      // Acknowledge threads in previousThreadsAddressed
-      previousThreadsAddressed: criticalThreads.map(thread => ({
-        originalThread: thread.description,
-        howAddressed: 'acknowledged',
-        narrativeReference: 'Jack reflected on pending matters that would need resolution.',
-      })),
-      narrativeThreads: [], // Fallback doesn't create new threads
-      decision: null,
-    };
-
-    // Add decision for subchapter C
-    if (isDecisionPoint) {
-      const aggressiveOption = personality.riskTolerance === 'high' ? 'A' : 'B';
-      adapted.decision = {
-        intro: ['Two paths diverged before Jack, each leading to different truths, different costs.'],
-        options: [
-          {
-            key: 'A',
-            title: 'Confront the situation directly',
-            focus: 'Take immediate action, accepting the risks. This path prioritizes speed and decisive resolution.',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'A',
-            details: [],
-          },
-          {
-            key: 'B',
-            title: 'Gather more evidence first',
-            focus: 'Proceed with caution, building a stronger case. This path prioritizes thoroughness over speed.',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'B',
-            details: [],
-          },
-        ],
-      };
-    }
-
-    // Ensure fallback narration matches global POV rules (third-person limited).
-    if (adapted?.narrative) {
-      adapted.narrative = this._sanitizeNarrativeToThirdPerson(adapted.narrative);
-    }
-    return adapted;
-  }
-
   // ==========================================================================
   // STORY ARC PLANNING - Generates high-level outline for 100% consistency
   // ==========================================================================
@@ -2432,19 +1947,17 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
       return savedArc;
     }
 
-    // OPTIMIZATION: Skip LLM call for story arc generation.
-    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.
-    // Using static fallback eliminates ~22s LLM call per path while maintaining narrative quality.
-    log.debug('StoryGenerationService', `Using static story arc for super-path: ${superPathKey}`);
-    const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
-    fallbackArc.personalitySnapshot = {
+    // Build story arc from STORY_STRUCTURE data (no LLM call needed)
+    log.debug('StoryGenerationService', `Building story arc for super-path: ${superPathKey}`);
+    const storyArc = this._createStoryArc(superPathKey, choiceHistory);
+    storyArc.personalitySnapshot = {
       riskTolerance: currentPersonality.riskTolerance,
       scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
       choiceCount: choiceHistory.length,
     };
-    this.storyArc = fallbackArc;
-    await this._saveStoryArc(arcKey, fallbackArc);
-    return fallbackArc;
+    this.storyArc = storyArc;
+    await this._saveStoryArc(arcKey, storyArc);
+    return storyArc;
   }
 
   /**
@@ -2649,128 +2162,13 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
   }
 
   /**
-   * Generate the master story arc that guides all chapter generation
+   * Create story arc structure for consistent chapter generation.
+   * Uses STORY_STRUCTURE from storyBible.js for phases and beat types.
    */
-  async _generateStoryArc(superPathKey, choiceHistory) {
-    const personality = this._analyzePathPersonality(choiceHistory);
-
-    const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
-    const arcPrompt = `You are the story architect for "Dead Letters," a ${TOTAL_CHAPTERS}-chapter mystery thriller with an original hidden fantasy world.
-
-## STORY PREMISE
-${protagonist.fullName} (${protagonist.age}, ${protagonist.formerTitle.toLowerCase()}) lives above Murphy's Bar in ${setting.city} and survives on odd investigative work. A series of "dead letters" from ${antagonist.trueName} draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through ${setting.city}'s infrastructure.
-
-CRITICAL REVEAL TIMING:
-- The FIRST undeniable reveal that "the world is not what it seems" occurs at the END of subchapter 1C (not earlier).
-
-## PLAYER SUPER-PATH: "${superPathKey}"
-Player personality: ${personality.narrativeStyle}
-Risk tolerance: ${personality.riskTolerance}
-
-## YOUR TASK
-Create a high-level story arc outline for Chapters 2-12 that:
-1. Maintains PERFECT narrative consistency across all chapters
-2. Builds appropriate tension per story phase
-3. Ensures each chapter has a clear purpose advancing the mystery
-4. Creates meaningful decision points that reflect player personality
-5. Weaves the five missing anchors (each tied to a glyph) into the unfolding mystery
-6. CRITICAL: Defines what Jack PERSONALLY STANDS TO LOSE in each chapter
-7. CRITICAL: Includes an EMOTIONAL ANCHOR moment for each chapter
-
-## STORY PHASES
-- Chapters 2-4: RISING ACTION (pattern recognition, deniable anomalies, then first threshold-crossing)
-  * Personal stakes focus: Jack's sanity, stability, and what he believes about the city
-- Chapters 5-7: COMPLICATIONS (the Under-Map has rules; allies compromise; the city “pushes back”)
-  * Personal stakes focus: Jack's relationships (Tom, Sarah) and his ability to trust
-- Chapters 8-10: CONFRONTATIONS (direct encounters with Under-Map forces; truth of Victoria’s role sharpens)
-  * Personal stakes focus: Jack's autonomy and physical safety across both layers of the city
-- Chapters 11-12: RESOLUTION (the choice: seal, reshape, or surrender the map; consequences lock in)
-  * Personal stakes focus: who Jack becomes and what Ashport is allowed to be
-
-## ENGAGEMENT REQUIREMENTS FOR EACH CHAPTER
-For each chapter, you MUST provide:
-1. **personalStakes**: What Jack personally loses if he fails THIS chapter. Be viscerally specific.
-   - NOT "his reputation" → "the last colleague who still respects him"
-   - NOT "his safety" → "the ability to walk into Murphy's without checking the door"
-2. **emotionalAnchor**: The gut-punch moment for this chapter. Not plot, but FEELING.
-   - A face, a memory, a realization that hits the reader in the chest
-   - Examples: "Seeing a witness's hands aged from years of hiding", "Reading his own signature on a warrant that destroyed someone's life"
-3. **microRevelationHint**: What small truth should be revealed in each subchapter
-
-Provide a structured arc ensuring each innocent's story gets proper attention and EVERY chapter has personal stakes that escalate.`;
-
-    const arcSchema = {
-      type: 'object',
-      properties: {
-        overallTheme: {
-          type: 'string',
-          description: 'The central thematic throughline for this playthrough',
-        },
-        chapterArcs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              chapter: { type: 'number' },
-              phase: { type: 'string' },
-              primaryFocus: { type: 'string', description: 'Main narrative focus for this chapter' },
-              innocentFeatured: { type: 'string', description: 'Which innocent is featured (if any)' },
-              keyRevelation: { type: 'string', description: 'What major truth is revealed' },
-              tensionLevel: { type: 'number', description: '1-10 tension scale' },
-              endingHook: { type: 'string', description: 'How this chapter should end to hook into the next' },
-              decisionTheme: { type: 'string', description: 'What kind of choice the player faces' },
-              personalStakes: { type: 'string', description: 'What Jack personally stands to lose in this chapter. Be viscerally specific: Ch2-4=self-image/reputation, Ch5-7=relationships, Ch8-10=freedom/safety, Ch11-12=redemption/legacy' },
-              emotionalAnchor: { type: 'string', description: 'The gut-punch emotional moment for this chapter. Not plot, but FEELING.' },
-              microRevelationHint: { type: 'string', description: 'The small truth that should be revealed in each subchapter of this chapter' },
-            },
-            required: ['chapter', 'phase', 'primaryFocus', 'tensionLevel', 'endingHook', 'personalStakes'],
-          },
-        },
-        characterArcs: {
-          type: 'object',
-          properties: {
-            jack: { type: 'string', description: 'Jack\'s emotional journey across chapters' },
-            victoria: { type: 'string', description: 'How Victoria\'s presence evolves' },
-          },
-          description: 'Only Jack and Victoria are defined characters. LLM has freedom to create supporting characters.',
-        },
-        consistencyAnchors: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Key facts that MUST remain consistent across all chapters',
-        },
-      },
-      required: ['overallTheme', 'chapterArcs', 'characterArcs', 'consistencyAnchors'],
-    };
-
-    const response = await llmService.complete(
-      [{ role: 'user', content: arcPrompt }],
-      {
-        systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive mystery thriller with a hidden fantasy layer.',
-        maxTokens: GENERATION_CONFIG.maxTokens.arcPlanning,
-        responseSchema: arcSchema,
-      }
-    );
-
-    const arc = typeof response.content === 'string'
-      ? JSON.parse(response.content)
-      : response.content;
-
-    return {
-      key: `arc_${superPathKey}`,
-      superPathKey,
-      ...arc,
-      generatedAt: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * Create a fallback story arc when LLM generation fails
-   * Provides a coherent structure for story generation to continue
-   */
-  _createFallbackStoryArc(superPathKey, choiceHistory) {
+  _createStoryArc(superPathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
     const { protagonist, antagonist } = ABSOLUTE_FACTS;
+    const { pacing, chapterBeatTypes } = STORY_STRUCTURE;
 
     // Customize theme based on player personality
     const theme = personality.riskTolerance === 'high'
@@ -2779,34 +2177,44 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
         ? 'Redemption through patient investigation and truth-seeking'
         : 'Redemption through confronting past mistakes';
 
+    // Helper to get phase from STORY_STRUCTURE.pacing
+    const getPhase = (chapter) => {
+      if (chapter <= 4) return pacing.chapters2to4.phase;
+      if (chapter <= 7) return pacing.chapters5to7.phase;
+      if (chapter <= 10) return pacing.chapters8to10.phase;
+      return pacing.chapters11to12.phase;
+    };
+
+    // Helper to get beat type from STORY_STRUCTURE.chapterBeatTypes
+    const getBeatType = (chapter) => chapterBeatTypes[chapter]?.type || 'INVESTIGATION';
+
     return {
       key: `arc_${superPathKey}`,
       superPathKey,
-      isFallback: true,
       playerPersonality: personality.riskTolerance || 'balanced',
       overallTheme: theme,
       chapterArcs: [
-        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: 'Jack\'s grip on “normal” reality', emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
-        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria’s rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack’s trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
-        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack’s ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
-        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn\'t exist', personalStakes: 'Jack\'s relationship with his allies and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
-        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack’s safety', emotionalAnchor: 'Crossing a line he can’t uncross' },
-        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Containment forces tighten', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack\'s moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
-        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria’s agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack’s autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
-        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack’s life and someone else’s', emotionalAnchor: 'A rescue attempt goes wrong' },
-        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: 'What Jack is willing to break', emotionalAnchor: 'Accepting that rules can be weaponized' },
-        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city’s shape', personalStakes: 'Jack’s identity: observer or participant', emotionalAnchor: 'Owning the choice that changes everything' },
-        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: 'Jack’s legacy and what he leaves open', emotionalAnchor: 'A quiet cost paid in full' },
+        { chapter: 2, phase: getPhase(2), beatType: getBeatType(2), primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: `${protagonist.fullName}'s grip on "normal" reality`, emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
+        { chapter: 3, phase: getPhase(3), beatType: getBeatType(3), primaryFocus: `Second anchor thread; ${antagonist.trueName}'s rules sharpen`, tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: `${protagonist.fullName}'s trust in his own senses`, emotionalAnchor: 'Realizing someone is guiding his route' },
+        { chapter: 4, phase: getPhase(4), beatType: getBeatType(4), primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: `${protagonist.fullName}'s ability to keep working openly`, emotionalAnchor: 'Watching denial happen in real time' },
+        { chapter: 5, phase: getPhase(5), beatType: getBeatType(5), primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that should not exist', personalStakes: `${protagonist.fullName}'s relationship with allies and with the city itself`, emotionalAnchor: 'A friend dodges the wrong question' },
+        { chapter: 6, phase: getPhase(6), beatType: getBeatType(6), primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: `${protagonist.fullName}'s safety`, emotionalAnchor: 'Crossing a line that cannot be uncrossed' },
+        { chapter: 7, phase: getPhase(7), beatType: getBeatType(7), primaryFocus: 'Containment forces tighten', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: `${protagonist.fullName}'s moral line: protect a person vs chase a clue`, emotionalAnchor: 'Choosing what to save' },
+        { chapter: 8, phase: getPhase(8), beatType: getBeatType(8), primaryFocus: `${antagonist.trueName}'s agenda surfaces`, tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: `${protagonist.fullName}'s autonomy`, emotionalAnchor: 'Realizing the "help" is also a trap' },
+        { chapter: 9, phase: getPhase(9), beatType: getBeatType(9), primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: `${protagonist.fullName}'s life and someone else's`, emotionalAnchor: 'A rescue attempt goes wrong' },
+        { chapter: 10, phase: getPhase(10), beatType: getBeatType(10), primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: `What ${protagonist.fullName} is willing to break`, emotionalAnchor: 'Accepting that rules can be weaponized' },
+        { chapter: 11, phase: getPhase(11), beatType: getBeatType(11), primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city\'s shape', personalStakes: `${protagonist.fullName}'s identity: observer or participant`, emotionalAnchor: 'Owning the choice that changes everything' },
+        { chapter: 12, phase: getPhase(12), beatType: getBeatType(12), primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: `${protagonist.fullName}'s legacy and what he leaves open`, emotionalAnchor: 'A quiet cost paid in full' },
       ],
       characterArcs: {
-        jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
-        victoria: 'Guide who tests Jack\'s capacity to read rules without becoming a weapon',
+        protagonist: `From skeptical pattern-hunter to Under-Map-literate investigator`,
+        antagonist: `Guide who tests ${protagonist.fullName}'s capacity to read rules without becoming a weapon`,
       },
       consistencyAnchors: [
         `${protagonist.fullName} is ${protagonist.age} years old and does NOT start with Under-Map knowledge`,
-        `${antagonist.trueName} guides Jack via dead letters, silver ink, and rules`,
+        `${antagonist.trueName} guides ${protagonist.fullName} via dead letters, silver ink, and rules`,
         'The Under-Map is real; the first undeniable reveal happens at the end of 1C',
-        'Glyphs behave like a language with constraints; do not "magic-system" explain—show',
+        'Glyphs behave like a language with constraints; do not "magic-system" explain - show',
         'Anchor disappearances form a deliberate pattern',
         `Only ${protagonist.fullName} and ${antagonist.trueName} are defined characters; LLM creates supporting characters as needed`,
       ],
@@ -2841,185 +2249,43 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
     // Ensure we have the story arc first
     await this.ensureStoryArc(choiceHistory);
 
-    // OPTIMIZATION: Skip LLM call for chapter outline generation.
-    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.chapterBeatTypes.
-    // Using static fallback eliminates ~10s LLM call per chapter while maintaining narrative structure.
-    console.log(`[StoryGenerationService] Using static chapter outline for Chapter ${chapter}`);
-    const fallbackOutline = this._createFallbackChapterOutline(chapter, chapterPathKey);
-    this.chapterOutlines.set(outlineKey, fallbackOutline);
-    return fallbackOutline;
+    // Build chapter outline from STORY_STRUCTURE data (no LLM call needed)
+    console.log(`[StoryGenerationService] Building chapter outline for Chapter ${chapter}`);
+    const chapterOutline = this._createChapterOutline(chapter, chapterPathKey);
+    this.chapterOutlines.set(outlineKey, chapterOutline);
+    return chapterOutline;
   }
 
-  /**
-   * Generate detailed outline for a single chapter
-   */
-  async _generateChapterOutline(chapter, pathKey, choiceHistory) {
-    const chapterArc = this.storyArc?.chapterArcs?.find(c => c.chapter === chapter);
-    const previousOutlines = [];
-
-    // Gather previous chapter outlines for continuity
-    for (let i = 2; i < chapter; i++) {
-      const prevKey = `outline_${i}_${this._getPathKeyForChapter(i, choiceHistory)}`;
-      if (this.chapterOutlines.has(prevKey)) {
-        previousOutlines.push(this.chapterOutlines.get(prevKey));
-      }
-    }
-
-    // Include the most recent decision that affects THIS chapter, so the outline enforces causality.
-    const last = [...(choiceHistory || [])].reverse().find((c) => this._extractChapterFromCase(c?.caseNumber) === chapter - 1);
-    const lastDecision = last
-      ? {
-        caseNumber: last.caseNumber,
-        chapter: chapter - 1,
-        optionKey: last.optionKey,
-        consequence: DECISION_CONSEQUENCES[last.caseNumber]?.[last.optionKey] || null,
-      }
-      : null;
-
-    const outlinePrompt = `Generate a detailed outline for Chapter ${chapter} of "Dead Letters."
-
-## STORY ARC GUIDANCE
-${chapterArc ? `
-- Phase: ${chapterArc.phase}
-- Primary Focus: ${chapterArc.primaryFocus}
-- Featured Innocent: ${chapterArc.innocentFeatured || 'None specifically'}
-- Key Revelation: ${chapterArc.keyRevelation || 'Building tension'}
-- Tension Level: ${chapterArc.tensionLevel}/10
-- Ending Hook: ${chapterArc.endingHook}
-- Decision Theme: ${chapterArc.decisionTheme || 'Moral complexity'}
-` : `Chapter ${chapter} - Continue building the mystery`}
-
-## PREVIOUS CHAPTERS SUMMARY
-${previousOutlines.map(o => `Chapter ${o.chapter}: ${o.summary}`).join('\n') || 'Starting fresh from Chapter 1'}
-
-## MOST RECENT PLAYER DECISION (MUST DRIVE CHAPTER ${chapter} OPENING)
-${lastDecision
-  ? `Decision from Chapter ${lastDecision.chapter} (${lastDecision.caseNumber}) => Option "${lastDecision.optionKey}"
-Immediate consequence to open on: ${lastDecision.consequence?.immediate || '(derive from choice)'}
-Ongoing effects: ${(lastDecision.consequence?.ongoing || []).slice(0, 4).join(' | ') || '(none tracked)'}`
-  : 'None'}
-
-## REQUIREMENTS
-Create a 3-part outline (Subchapters A, B, C) that:
-1. Flows seamlessly as ONE coherent chapter experience
-2. Subchapter A: Opens with atmosphere AND shows concrete causality from the most recent player decision
-3. Subchapter B: Develops the investigation/revelation
-4. Subchapter C: Builds to decision point with genuine moral complexity
-
-Each subchapter should feel like a natural continuation, not a separate scene.
-
-## OUTPUT RULES (IMPORTANT)
-- Include an explicit "openingCausality" field that states what changes because of the last decision.
-- Include a short "mustReference" list (2-4 items) of specific details that MUST appear in the prose (locations, objects, names, actions).`;
-
-    const outlineSchema = {
-      type: 'object',
-      properties: {
-        chapter: { type: 'number' },
-        summary: { type: 'string', description: 'One sentence summary of the entire chapter' },
-        openingMood: { type: 'string', description: 'Atmospheric tone for chapter opening' },
-        openingCausality: { type: 'string', description: 'One sentence: what is different because of the last player choice, and how the chapter opens on that consequence.' },
-        mustReference: { type: 'array', items: { type: 'string' }, description: '2-4 concrete details that MUST appear in the prose for this chapter.' },
-        subchapterA: {
-          type: 'object',
-          properties: {
-            focus: { type: 'string' },
-            keyBeats: { type: 'array', items: { type: 'string' } },
-            endingTransition: { type: 'string', description: 'How A flows into B' },
-          },
-          required: ['focus', 'keyBeats', 'endingTransition'],
-        },
-        subchapterB: {
-          type: 'object',
-          properties: {
-            focus: { type: 'string' },
-            keyBeats: { type: 'array', items: { type: 'string' } },
-            endingTransition: { type: 'string', description: 'How B flows into C' },
-          },
-          required: ['focus', 'keyBeats', 'endingTransition'],
-        },
-        subchapterC: {
-          type: 'object',
-          properties: {
-            focus: { type: 'string' },
-            keyBeats: { type: 'array', items: { type: 'string' } },
-            decisionSetup: { type: 'string', description: 'How the narrative builds to the choice' },
-            optionADirection: { type: 'string', description: 'What Option A represents' },
-            optionBDirection: { type: 'string', description: 'What Option B represents' },
-          },
-          required: ['focus', 'keyBeats', 'decisionSetup', 'optionADirection', 'optionBDirection'],
-        },
-        narrativeThreads: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Threads to weave through all three subchapters',
-        },
-        consistencyRequirements: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Facts that must be maintained across this chapter',
-        },
-      },
-      required: ['chapter', 'summary', 'openingCausality', 'mustReference', 'subchapterA', 'subchapterB', 'subchapterC'],
-    };
-
-    const response = await llmService.complete(
-      [{ role: 'user', content: outlinePrompt }],
-      {
-        systemPrompt: 'You are outlining a single chapter of an interactive mystery thriller. Ensure the three subchapters flow as one seamless narrative.',
-        maxTokens: GENERATION_CONFIG.maxTokens.outline,
-        responseSchema: outlineSchema,
-      }
-    );
-
-    const outline = typeof response.content === 'string'
-      ? JSON.parse(response.content)
-      : response.content;
-
-    return {
-      ...outline,
-      pathKey,
-      generatedAt: new Date().toISOString(),
-    };
-  }
 
   /**
-   * Create a fallback chapter outline when LLM generation fails
-   * Provides a basic structure for story generation to continue
+   * Create chapter outline structure using STORY_STRUCTURE from storyBible.js.
+   * Provides consistent structure for story generation.
    */
-  _createFallbackChapterOutline(chapter, pathKey) {
-    // Determine story phase based on chapter number
-    let phase, tensionLevel, focus;
-    if (chapter <= 4) {
-      phase = 'RISING_ACTION';
-      tensionLevel = 4 + (chapter - 2);
-      focus = 'Investigation deepens';
-    } else if (chapter <= 7) {
-      phase = 'COMPLICATIONS';
-      tensionLevel = 6 + (chapter - 5);
-      focus = 'Betrayals and revelations';
-    } else if (chapter <= 10) {
-      phase = 'CONFRONTATIONS';
-      tensionLevel = 8;
-      focus = 'Direct confrontations';
-    } else {
-      phase = 'RESOLUTION';
-      tensionLevel = 9;
-      focus = 'Final reckoning';
-    }
+  _createChapterOutline(chapter, pathKey) {
+    const { protagonist, setting } = ABSOLUTE_FACTS;
+    const { pacing, chapterBeatTypes } = STORY_STRUCTURE;
+
+    // Get phase and beat type from STORY_STRUCTURE
+    let pacingData;
+    if (chapter <= 4) pacingData = pacing.chapters2to4;
+    else if (chapter <= 7) pacingData = pacing.chapters5to7;
+    else if (chapter <= 10) pacingData = pacing.chapters8to10;
+    else pacingData = pacing.chapters11to12;
+
+    const beatType = chapterBeatTypes[chapter] || { type: 'INVESTIGATION', description: 'Methodical evidence gathering' };
+    const tensionLevel = Math.min(10, 4 + Math.floor(chapter / 2));
 
     return {
       chapter,
       pathKey,
-      isFallback: true,
-      summary: `Chapter ${chapter}: Jack continues his investigation into the symbols and the hidden layer beneath Ashport.`,
+      summary: `Chapter ${chapter}: ${protagonist.fullName} continues the investigation into the symbols and the hidden layer beneath ${setting.city}.`,
       openingMood: 'Mystery-thriller atmosphere with building unease',
-      openingCausality: 'The chapter opens by showing the immediate consequence of the player’s last decision (location, character reaction, and next action).',
-      mustReference: ['Ashport damp/reflections', "Murphy's jukebox below Jack’s office", 'A dead letter with silver ink', 'One named character from the current investigation'],
+      openingCausality: 'The chapter opens by showing the immediate consequence of the player\'s last decision (location, character reaction, and next action).',
+      mustReference: [`${setting.city} damp/reflections`, `The jukebox below ${protagonist.fullName}'s office`, 'A dead letter with silver ink', 'One named character from the current investigation'],
       subchapterA: {
-        focus: `Opening: ${focus}`,
+        focus: `Opening: ${beatType.description}`,
         keyBeats: [
-          'Jack reflects on recent discoveries',
+          `${protagonist.fullName} reflects on recent discoveries`,
           'New information comes to light',
           'The investigation takes a turn',
         ],
@@ -3028,25 +2294,26 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       subchapterB: {
         focus: `Development: The mystery deepens`,
         keyBeats: [
-          'Jack pursues the new lead',
+          `${protagonist.fullName} pursues the new lead`,
           'Unexpected obstacles arise',
           'A piece of the puzzle falls into place',
         ],
-        endingTransition: 'Jack faces a difficult choice',
+        endingTransition: `${protagonist.fullName} faces a difficult choice`,
       },
       subchapterC: {
         focus: `Climax: Decision point`,
         keyBeats: [
           'Tensions reach a breaking point',
           'The truth demands a response',
-          'Jack must choose his path forward',
+          `${protagonist.fullName} must choose the path forward`,
         ],
         decisionSetup: 'A choice between two difficult paths',
       },
       tensionLevel,
-      phase,
+      phase: pacingData.phase,
+      beatType: beatType.type,
       consistencyAnchors: [
-        'Jack Halloway seeks the truth',
+        `${protagonist.fullName} seeks the truth`,
         'The conspiracy runs deep',
         'Every choice has consequences',
       ],
@@ -3136,9 +2403,9 @@ Each subchapter should feel like a natural continuation, not a separate scene.
 
       const ongoing = [];
       if (typeof stats === 'string') {
-        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? 'Sarah’s trust decreases' : 'Sarah’s trust increases');
+        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? 'Sarah's trust decreases' : 'Sarah's trust increases');
         if (stats.toLowerCase().includes('investig')) ongoing.push('Jack gains better leads through evidence');
-        if (stats.toLowerCase().includes('aggress')) ongoing.push('Jack’s approach grows more confrontational');
+        if (stats.toLowerCase().includes('aggress')) ongoing.push('Jack's approach grows more confrontational');
       }
       if (typeof focus === 'string' && focus.length > 0) {
         ongoing.unshift(`Tone shift: ${focus}`);
@@ -3837,116 +3104,6 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
-   * Clean up all stored data for a fresh start
-   * Removes generated story, story arcs, chapter outlines, and resets service state
-   */
-  async cleanupAllStoredData() {
-    console.log('[StoryGenerationService] Starting full storage cleanup...');
-
-    try {
-      // Get all AsyncStorage keys to find story-related ones
-      const allKeys = await AsyncStorage.getAllKeys();
-
-      // Keys to remove: story arcs, chapter outlines, offline queue
-      const keysToRemove = allKeys.filter(key =>
-        key.startsWith('story_arc_') ||
-        key.startsWith('chapter_outline_') ||
-        // Clear offline queue key(s) (legacy + current).
-        key === 'detective_portrait_offline_queue' ||
-        key === 'dead_letters_offline_queue'
-      );
-
-      // Remove story arc keys
-      if (keysToRemove.length > 0) {
-        await AsyncStorage.multiRemove(keysToRemove);
-        console.log(`[StoryGenerationService] Removed ${keysToRemove.length} auxiliary storage keys`);
-      }
-
-      // Clear generated story and context via storage module
-      const { clearGeneratedStory } = await import('../storage/generatedStoryStorage');
-      await clearGeneratedStory();
-
-      // Reset service state
-      this.generatedStory = null;
-      this.storyContext = null;
-      this.storyArc = null;
-      this.chapterOutlines.clear();
-      this.consistencyCheckpoints.clear();
-      this.generatedConsequences.clear();
-      this.pendingGenerations.clear();
-      this.threadAcknowledgmentCounts.clear();
-      this.generationAttempts.clear();
-      this.pathPersonality = null;
-      this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
-      this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
-      this.consistencyLog = [];
-      this.narrativeThreads = [];
-
-      console.log('[StoryGenerationService] Full cleanup complete');
-      return { success: true, keysRemoved: keysToRemove.length + 2 }; // +2 for story and context
-    } catch (error) {
-      console.error('[StoryGenerationService] Cleanup failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Get storage usage statistics
-   */
-  async getStorageStats() {
-    try {
-      const { getStorageSize, getGenerationStats } = await import('../storage/generatedStoryStorage');
-
-      const sizeInfo = await getStorageSize();
-      const genStats = await getGenerationStats();
-
-      // Count story arcs
-      const allKeys = await AsyncStorage.getAllKeys();
-      const arcKeys = allKeys.filter(k => k.startsWith('story_arc_'));
-      const outlineKeys = allKeys.filter(k => k.startsWith('chapter_outline_'));
-
-      return {
-        ...sizeInfo,
-        ...genStats,
-        storyArcCount: arcKeys.length,
-        chapterOutlineCount: outlineKeys.length,
-        totalKeysUsed: arcKeys.length + outlineKeys.length + 2, // +2 for main story and context
-      };
-    } catch (error) {
-      console.warn('[StoryGenerationService] Failed to get storage stats:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Force prune storage to free up space
-   * @param {string} currentPathKey - Player's current path
-   * @param {number} currentChapter - Player's current chapter
-   */
-  async forcePruneStorage(currentPathKey, currentChapter) {
-    try {
-      const { pruneOldGenerations } = await import('../storage/generatedStoryStorage');
-
-      // Target 50% of max storage
-      const targetSize = 2 * 1024 * 1024; // 2MB target
-      const result = await pruneOldGenerations(currentPathKey, currentChapter, targetSize);
-
-      // Story arcs are keyed by SUPER-PATH (AGGRESSIVE/METHODICAL/BALANCED),
-      // not by the cumulative branch key. Do not attempt to prune arcs based on currentPathKey.
-      // Arcs are small, and incorrect pruning can cause unnecessary re-planning churn.
-      const arcKeys = [];
-
-      return {
-        ...result,
-        arcsRemoved: arcKeys.length,
-      };
-    } catch (error) {
-      console.error('[StoryGenerationService] Force prune failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
    * Prune stale in-memory Map entries to prevent memory leaks in long sessions
    * Called periodically during generation to clean up abandoned paths
    *
@@ -4105,29 +3262,6 @@ Generate realistic, specific consequences based on the actual narrative content.
     this.archivedThreads = [];
 
     console.log('[StoryGenerationService] Cleanup complete');
-  }
-
-  /**
-   * Get memory usage statistics for debugging
-   */
-  getMemoryStats() {
-    return {
-      pendingGenerations: this.pendingGenerations.size,
-      decisionConsequences: this.decisionConsequences.size,
-      characterStates: this.characterStates.size,
-      threadAcknowledgmentCounts: this.threadAcknowledgmentCounts.size,
-      chapterOutlines: this.chapterOutlines.size,
-      consistencyCheckpoints: this.consistencyCheckpoints.size,
-      generatedConsequences: this.generatedConsequences.size,
-      generationAttempts: this.generationAttempts.size,
-      narrativeThreads: this.narrativeThreads?.length || 0,
-      archivedThreads: this.archivedThreads?.length || 0,
-      consistencyLog: this.consistencyLog?.length || 0,
-      generationQueue: {
-        active: this.activeGenerationCount,
-        waiting: this.generationWaitQueue.length,
-      },
-    };
   }
 
   /**
@@ -4640,11 +3774,11 @@ Generate realistic, specific consequences based on the actual narrative content.
         suspects: [],
         doesNotKnow: [
           'What the Under-Map truly is (first undeniable reveal at end of 1C)',
-          'Victoria Blackwell's full agenda and constraints',
+          'Victoria Blackwell\'s full agenda and constraints',
         ],
       },
       sarah: { knows: [], suspects: [] },
-      victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack’s likely routes and choices'], suspects: [] },
+      victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack\'s likely routes and choices'], suspects: [] },
     };
 
     // Scan narratives for revelation patterns
@@ -5815,7 +4949,7 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
     if (context.playerChoices.length > 0) {
       summary += '\n### PLAYER CHOICE HISTORY (All decisions made)\n';
       context.playerChoices.forEach(choice => {
-        const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
+        const title = choice.optionTitle ? `: "${choice.optionTitle}"` : '';
         const focus = choice.optionFocus ? ` (${choice.optionFocus})` : '';
         summary += `- Chapter ${choice.chapter} Decision: Option ${choice.optionKey}${title}${focus}\n`;
       });
@@ -6000,12 +5134,12 @@ ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
     task += `
 
 ### PLAYER PATH PERSONALITY (CRITICAL FOR CONSISTENCY)
-Based on player's choices, Jack's behavior pattern is: **${personality.narrativeStyle}**
+Based on player's choices, the protagonist's behavior pattern is: **${personality.narrativeStyle}**
 - Dialogue tone should be ${personality.dialogueTone}
 - Risk tolerance: ${personality.riskTolerance}
 ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.aggressive.toFixed(0)}, Methodical=${personality.scores.methodical.toFixed(0)}` : ''}
 
-**IMPORTANT:** Jack's actions and dialogue MUST reflect this established personality pattern.`;
+**IMPORTANT:** ${ABSOLUTE_FACTS.protagonist.fullName}'s actions and dialogue MUST reflect this established personality pattern.`;
 
     // Add personality-specific voice examples
     if (personality.riskTolerance === 'high') {
@@ -6025,14 +5159,14 @@ Same scene, written for aggressive Jack:
 Same scene, written for methodical Jack:
 - Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
 - Confronting a suspect: "'I've got some questions,' Jack said, keeping his voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
-- Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He’d gotten good at waiting."
+- Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He'd gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
     } else {
       task += `
 
 **BALANCED JACK VOICE NOTE:**
-Jack adapts his approach to the situation. He can be patient when it serves him, aggressive when pushed. Match the narrative moment—if stakes are high and time is short, he acts; if information is needed, he investigates.`;
+Jack adapts his approach to the situation. He can be patient when it serves him, aggressive when pushed. Match the narrative moment: if stakes are high and time is short, he acts; if information is needed, he investigates.`;
     }
 
     task += `
@@ -6062,7 +5196,7 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 5. Reference specific events from previous chapters (show continuity)
 6. Include: atmospheric description, internal monologue, dialogue
 7. Build tension appropriate to ${pacing.phase} phase
-8. **ENSURE Jack's behavior matches the path personality above**
+8. **ENSURE the protagonist's behavior matches the path personality above**
 9. **FOLLOW the story arc and chapter outline guidance above**`;
 
     // Add emphasis on recent decision if applicable (beginning of new chapter)
@@ -6304,51 +5438,52 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
   }
 
   _getPacingGuidance(chapter) {
-    if (chapter <= 4) {
-      return {
-        phase: 'RISING ACTION',
-        requirements: [
-          'Continue establishing the mystery',
-          'Introduce new suspects or complications',
-          'Jack should be actively investigating',
-          'Build relationships with allies/adversaries',
-          'Plant seeds for later revelations',
-        ],
-      };
-    } else if (chapter <= 7) {
-      return {
-        phase: 'COMPLICATIONS',
-        requirements: [
-          'Escalate stakes significantly',
-          'Reveal betrayals or hidden connections',
-          'Jack faces increasing danger and doubt',
-          'Moral dilemmas become more complex',
-          'Victoria\'s guidance and rules become clearer',
-        ],
-      };
-    } else if (chapter <= 10) {
-      return {
-        phase: 'CONFRONTATIONS',
-        requirements: [
-          'Major revelations about the pattern and the forces shaping it',
-          'Jack must confront what the city is doing—and what he is willing to do back',
-          'Allies may be lost or trust shattered',
-          'The full shape of the pattern emerges',
-          'Personal cost to Jack escalates dramatically',
-        ],
-      };
-    } else {
-      return {
-        phase: 'RESOLUTION',
-        requirements: [
-          'Final confrontation approaching or occurring',
-          'All narrative threads coming together',
-          'Jack must make impossible, defining choices',
-          'The full scope of everything is revealed',
-          'Consequences of all player choices manifest',
-        ],
-      };
-    }
+    const { protagonist, antagonist } = ABSOLUTE_FACTS;
+    const { pacing } = STORY_STRUCTURE;
+
+    // Get pacing data from STORY_STRUCTURE
+    let pacingData;
+    if (chapter <= 4) pacingData = pacing.chapters2to4;
+    else if (chapter <= 7) pacingData = pacing.chapters5to7;
+    else if (chapter <= 10) pacingData = pacing.chapters8to10;
+    else pacingData = pacing.chapters11to12;
+
+    // Build requirements based on phase
+    const phaseRequirements = {
+      'RISING ACTION': [
+        'Continue establishing the mystery',
+        'Introduce new suspects or complications',
+        `${protagonist.fullName} should be actively investigating`,
+        'Build relationships with allies/adversaries',
+        'Plant seeds for later revelations',
+      ],
+      'COMPLICATIONS': [
+        'Escalate stakes significantly',
+        'Reveal betrayals or hidden connections',
+        `${protagonist.fullName} faces increasing danger and doubt`,
+        'Moral dilemmas become more complex',
+        `${antagonist.trueName}'s guidance and rules become clearer`,
+      ],
+      'CONFRONTATIONS': [
+        'Major revelations about the pattern and the forces shaping it',
+        `${protagonist.fullName} must confront what the city is doing - and what to do back`,
+        'Allies may be lost or trust shattered',
+        'The full shape of the pattern emerges',
+        `Personal cost to ${protagonist.fullName} escalates dramatically`,
+      ],
+      'RESOLUTION': [
+        'Final confrontation approaching or occurring',
+        'All narrative threads coming together',
+        `${protagonist.fullName} must make impossible, defining choices`,
+        'The full scope of everything is revealed',
+        'Consequences of all player choices manifest',
+      ],
+    };
+
+    return {
+      phase: pacingData.phase,
+      requirements: phaseRequirements[pacingData.phase] || phaseRequirements['RISING ACTION'],
+    };
   }
 
   // ==========================================================================
@@ -6361,19 +5496,20 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
    * preventing truncation from producing generic placeholder choices
    */
   async _generateDecisionStructure(context, chapter) {
+    const { protagonist, setting } = ABSOLUTE_FACTS;
     const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "Dead Letters."
 
 ## CURRENT STORY STATE
-${context.storySummary || 'Jack Halloway is investigating a pattern of symbols and disappearances in Ashport.'}
+${context.storySummary || `${protagonist.fullName} is investigating a pattern of symbols and disappearances in ${setting.city}.`}
 
 ## RECENT EVENTS
-${context.previousChapterSummary || 'Jack received another dead letter with an impossible glyph string.'}
+${context.previousChapterSummary || `${protagonist.fullName} received another dead letter with an impossible glyph string.`}
 
 ## ACTIVE NARRATIVE THREADS
 ${context.narrativeThreads?.filter(t => t.status === 'active').slice(0, 5).map(t => `- [${t.urgency}] ${t.description}`).join('\n') || '- No active threads'}
 
 ## PATH PERSONALITY
-Jack has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
+${protagonist.fullName} has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
 Risk tolerance: ${context.pathPersonality?.riskTolerance || 'moderate'}
 
 ## CHAPTER BEAT TYPE
@@ -6914,47 +6050,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
   }
 
-  /**
-   * Get archived threads for potential callbacks or references
-   * @param {string} type - Optional thread type filter
-   * @param {Array} characters - Optional character filter
-   */
-  getArchivedThreads(type = null, characters = null) {
-    let results = [...this.archivedThreads];
-
-    if (type) {
-      results = results.filter(t => t.type === type);
-    }
-
-    if (characters && characters.length > 0) {
-      const charLower = characters.map(c => c.toLowerCase());
-      results = results.filter(t =>
-        t.characters?.some(c => charLower.includes(c.toLowerCase()))
-      );
-    }
-
-    return results;
-  }
-
-  /**
-   * Get thread archive statistics
-   */
-  getThreadArchiveStats() {
-    const byType = {};
-    for (const thread of this.archivedThreads) {
-      byType[thread.type] = (byType[thread.type] || 0) + 1;
-    }
-
-    return {
-      totalArchived: this.archivedThreads.length,
-      maxArchived: this.maxArchivedThreads,
-      byType,
-      oldestChapter: this.archivedThreads.length > 0
-        ? Math.min(...this.archivedThreads.map(t => t.resolvedChapter || 0))
-        : null,
-    };
-  }
-
   // ==========================================================================
   // GENERATION CONCURRENCY CONTROL
   // ==========================================================================
@@ -7008,18 +6103,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       console.log(`[StoryGenerationService] Unblocking queued generation: ${next.key}`);
       next.resolve();
     }
-  }
-
-  /**
-   * Get current generation queue status (for debugging/monitoring)
-   */
-  getGenerationQueueStatus() {
-    return {
-      activeGenerations: this.activeGenerationCount,
-      maxConcurrent: this.maxConcurrentGenerations,
-      queuedCount: this.generationWaitQueue.length,
-      pendingKeys: Array.from(this.pendingGenerations.keys()),
-    };
   }
 
   // ==========================================================================
@@ -7178,7 +6261,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Decision schema has decision field BEFORE narrative, so decision is generated first
         // This eliminates the need for two-pass generation while ensuring complete decisions
 
-        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA_AB;
+        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
         let response;
 
         // Try cached generation first (works in both proxy and direct mode)
@@ -7229,7 +6312,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cachingEnabled: true,
             dynamicPromptLength: dynamicPrompt?.length || 0,
             hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
-            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA_AB',
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
               establishedFacts: context?.establishedFacts?.length || 0,
@@ -7302,7 +6385,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cachingEnabled: false,
             promptLength: prompt?.length || 0,
             hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
-            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA_AB',
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
               establishedFacts: context?.establishedFacts?.length || 0,
@@ -7624,7 +6707,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               }
 
               // No clamping/fallback here: per-path pathDecisions are authoritative by design.
-              // If the model drifts, we allow it — this is still better than collapsing to one decision.
+              // If the model drifts, we allow it. This is still better than collapsing to one decision.
 
               llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
                 pathCount: Object.keys(pathDecisionsObj).length,
@@ -7851,9 +6934,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // NOTE: Schema was slimmed down - beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration,
         // storyDay, chapterSummary, consistencyFacts, previousThreadsAddressed were removed from output.
         // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking handles internally).
-        // Extract all text from branchingNarrative for board generation and word count
-        const allNarrativeText = this._extractAllTextFromBranchingNarrative(generatedContent.branchingNarrative);
-
         const shouldGenerateBoard = isDecisionPoint;
         const storyEntry = {
           chapter,
@@ -7871,17 +6951,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
           decision: isDecisionPoint ? generatedContent.decision : null,
           board: shouldGenerateBoard
-            ? this._generateBoardData(
-              allNarrativeText,
-              isDecisionPoint,
-              generatedContent.pathDecisions || generatedContent.decision,
-              generatedContent.puzzleCandidates,
-              chapter,
-            )
+            ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
             : null,
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
           generatedAt: new Date().toISOString(),
-          wordCount: allNarrativeText?.split(/\s+/).length || 0,
+          wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
           // Thought signature for multi-chapter reasoning continuity (Gemini 3)
           // Persisted and passed to next chapter generation to maintain reasoning chain
           thoughtSignature: firstCallThoughtSignature || null,
@@ -9688,150 +8762,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   // PROMPT DIAGNOSTICS - Verify all components are being included
   // ==========================================================================
 
-  /**
-   * Diagnose prompt building to verify all components are included correctly
-   * Call this to debug issues with missing prompt content
-   * @returns {Object} Diagnostic report
-   */
-  diagnosePromptContent() {
-    const report = {
-      timestamp: new Date().toISOString(),
-      components: {},
-      issues: [],
-      summary: '',
-    };
-
-    // Check extended examples
-    try {
-      const extended = buildExtendedStyleExamples();
-      report.components.extendedExamples = {
-        length: extended?.length || 0,
-        hasContent: !!extended && extended.length > 1000,
-        preview: extended?.slice(0, 200) || 'EMPTY',
-      };
-      if (!extended || extended.length < 1000) {
-        report.issues.push('Extended examples missing or too short');
-      }
-    } catch (e) {
-      report.components.extendedExamples = { error: e.message };
-      report.issues.push(`Extended examples FAILED: ${e.message}`);
-    }
-
-    // Check EXAMPLE_PASSAGES
-    try {
-      const passageCount = Object.keys(EXAMPLE_PASSAGES).length;
-      report.components.examplePassages = {
-        count: passageCount,
-        keys: Object.keys(EXAMPLE_PASSAGES),
-        hasContent: passageCount > 5,
-      };
-      if (passageCount < 5) {
-        report.issues.push('EXAMPLE_PASSAGES has fewer than expected entries');
-      }
-    } catch (e) {
-      report.components.examplePassages = { error: e.message };
-      report.issues.push(`EXAMPLE_PASSAGES check failed: ${e.message}`);
-    }
-
-    // Check STYLE_EXAMPLES
-    try {
-      report.components.styleExamples = {
-        length: STYLE_EXAMPLES?.length || 0,
-        hasContent: !!STYLE_EXAMPLES && STYLE_EXAMPLES.length > 500,
-        preview: STYLE_EXAMPLES?.slice(0, 200) || 'EMPTY',
-      };
-      if (!STYLE_EXAMPLES || STYLE_EXAMPLES.length < 500) {
-        report.issues.push('STYLE_EXAMPLES missing or too short');
-      }
-    } catch (e) {
-      report.components.styleExamples = { error: e.message };
-      report.issues.push(`STYLE_EXAMPLES check failed: ${e.message}`);
-    }
-
-    // NOTE: Dramatic irony check removed - feature disabled
-
-    // Check voice DNA builder
-    try {
-      const voiceDNA = buildVoiceDNASection(['victoria', 'sarah']);
-      report.components.voiceDNA = {
-        length: voiceDNA?.length || 0,
-        hasContent: !!voiceDNA && voiceDNA.length > 200,
-        preview: voiceDNA?.slice(0, 200) || 'EMPTY',
-      };
-      if (!voiceDNA || voiceDNA.length < 200) {
-        report.issues.push('Voice DNA section empty for test characters');
-      }
-    } catch (e) {
-      report.components.voiceDNA = { error: e.message };
-      report.issues.push(`Voice DNA FAILED: ${e.message}`);
-    }
-
-    // Check many-shot examples
-    try {
-      const manyShotA = buildManyShotExamples('Opening/Hook (A)', null, 15);
-      const manyShotB = buildManyShotExamples('Development/Conflict (B)', null, 15);
-      const manyShotC = buildManyShotExamples('Resolution/Decision (C)', null, 15);
-      report.components.manyShotExamples = {
-        openingHook: { length: manyShotA?.length || 0, hasContent: manyShotA?.length > 1000 },
-        developmentConflict: { length: manyShotB?.length || 0, hasContent: manyShotB?.length > 1000 },
-        resolutionDecision: { length: manyShotC?.length || 0, hasContent: manyShotC?.length > 1000 },
-        previewB: manyShotB?.slice(0, 300) || 'EMPTY',
-      };
-      if (!manyShotA || manyShotA.length < 1000) {
-        report.issues.push('Many-shot examples for Opening/Hook (A) missing or too short');
-      }
-      if (!manyShotB || manyShotB.length < 1000) {
-        report.issues.push('Many-shot examples for Development/Conflict (B) missing or too short');
-      }
-    } catch (e) {
-      report.components.manyShotExamples = { error: e.message };
-      report.issues.push(`Many-shot examples FAILED: ${e.message}`);
-    }
-
-    // Check WRITING_STYLE
-    try {
-      report.components.writingStyle = {
-        hasVoice: !!WRITING_STYLE?.voice,
-        hasInfluences: Array.isArray(WRITING_STYLE?.influences),
-        hasForbidden: Array.isArray(WRITING_STYLE?.absolutelyForbidden),
-        hasMustInclude: Array.isArray(WRITING_STYLE?.mustInclude),
-      };
-      if (!WRITING_STYLE?.voice || !WRITING_STYLE?.influences) {
-        report.issues.push('WRITING_STYLE missing key properties');
-      }
-    } catch (e) {
-      report.components.writingStyle = { error: e.message };
-      report.issues.push(`WRITING_STYLE check failed: ${e.message}`);
-    }
-
-    // Check CONSISTENCY_RULES
-    try {
-      report.components.consistencyRules = {
-        count: CONSISTENCY_RULES?.length || 0,
-        hasContent: CONSISTENCY_RULES?.length > 5,
-      };
-      if (!CONSISTENCY_RULES || CONSISTENCY_RULES.length < 5) {
-        report.issues.push('CONSISTENCY_RULES missing or too few');
-      }
-    } catch (e) {
-      report.components.consistencyRules = { error: e.message };
-      report.issues.push(`CONSISTENCY_RULES check failed: ${e.message}`);
-    }
-
-    // Summary
-    const totalIssues = report.issues.length;
-    if (totalIssues === 0) {
-      report.summary = '✅ All prompt components verified successfully';
-    } else {
-      report.summary = `❌ ${totalIssues} issue(s) found with prompt components`;
-    }
-
-    console.log('[StoryGen] Prompt Diagnostic Report:');
-    console.log(JSON.stringify(report, null, 2));
-
-    return report;
-  }
-
   // ==========================================================================
   // LLM-BASED VALIDATION - Semantic understanding of rule violations
   // ==========================================================================
@@ -10094,6 +9024,8 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
    * Called once at the start of story generation
    */
   _initializeSetupPayoffRegistry() {
+    const { protagonist, antagonist } = ABSOLUTE_FACTS;
+
     // Major revelations that need proper setup before payoff
     const majorRevelations = [
       {
@@ -10110,10 +9042,10 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       },
       {
         id: 'victoria_guide',
-        payoff: 'Victoria Blackwell is deliberately guiding Jack via symbols and thresholds',
+        payoff: `${antagonist.trueName} is deliberately guiding ${protagonist.fullName} via symbols and thresholds`,
         requiredSetups: [
           'Signature / motif: silver ink, map-adjacent language, or rule-based instructions',
-          'Victoria demonstrates knowledge of Jack\'s movements or choices',
+          `${antagonist.trueName} demonstrates knowledge of ${protagonist.fullName}'s movements or choices`,
           'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
         ],
         minSetupCount: 2,
@@ -10382,7 +9314,7 @@ To fix these:
 6. **Dialogue**: Break up exchanges with action beats (what characters DO while talking)
 
 Example texture to emulate:
-"Ashport looked ordinary until you stared long enough. Reflections didn’t match their sources. A street sign held a curve that belonged on paper, not metal. The city kept pretending nothing was happening."
+"Ashport looked ordinary until you stared long enough. Reflections didn't match their sources. A street sign held a curve that belonged on paper, not metal. The city kept pretending nothing was happening."
 ` : '';
 
     const fixPrompt = `The following generated story content contains violations that must be fixed.
@@ -10401,11 +9333,11 @@ ${proseGuidance}
 ## ORIGINAL CONTENT:
 ${JSON.stringify(content, null, 2)}
 
-Rewrite the narrative to fix ALL issues while maintaining the story’s thriller tone and progression.`;
+Rewrite the narrative to fix ALL issues while maintaining the story's thriller tone and progression.`;
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
-      : STORY_CONTENT_SCHEMA_AB;
+      : STORY_CONTENT_SCHEMA;
 
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],
@@ -10436,12 +9368,12 @@ ${narrative}
 
 REQUIREMENTS:
 1. Add atmospheric description (urban texture, reflections, ambient sound)
-2. Expand Jack's internal monologue with self-reflection
+2. Expand the protagonist's internal monologue with self-reflection
 3. Add sensory details and physical grounding
 4. Include additional dialogue if characters are present
 5. DO NOT change the plot or ending
 6. DO NOT add new major events
-7. Maintain Jack Halloway's established voice and POV (third-person limited)
+7. Maintain ${ABSOLUTE_FACTS.protagonist.fullName}'s established voice and POV (third-person limited)
 8. CRITICAL: Do not contradict ANY facts from the ABSOLUTE_FACTS section above
 9. Use ONLY the correct character names as specified
 10. Maintain the timeline and canon from ABSOLUTE_FACTS
@@ -10477,7 +9409,7 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 - Setting: ${ABSOLUTE_FACTS.setting.city}, ${ABSOLUTE_FACTS.setting.atmosphere}
 
 ### CRITICAL WORLD RULES
-- Under-Map exists as a hidden layer; do not explain it like a "magic system" — show it through scene consequences
+- Under-Map exists as a hidden layer; do not explain it like a "magic system", show it through scene consequences
 - Reveal timing: first undeniable reveal occurs at the END of Chapter 1C
 - No Tolkien-style fantasy (no elves/dwarves/orcs, no medieval courts)
 
@@ -10519,1019 +9451,72 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
   /**
    * Generate board data for the puzzle
-   * Now includes chapter-based difficulty scaling
+   * Now uses static word list (puzzle redesign pending)
    *
-   * @param {string} narrative - The narrative text to extract words from
    * @param {boolean} isDecisionPoint - Whether this is a decision subchapter
    * @param {object} decision - Decision data for decision points
-   * @param {string[]} puzzleCandidates - LLM-suggested puzzle words
-   * @param {number} chapter - Current chapter (2-12) for difficulty scaling
    */
-  _generateBoardData(narrative, isDecisionPoint, decision, puzzleCandidates = [], chapter = 2) {
-    // Combine LLM candidates with regex extraction, prioritizing LLM candidates
-    const regexWords = this._extractKeywordsFromNarrative(narrative);
-    const narrativeUpperWordSet = new Set(
-      String(narrative || '')
-        .toUpperCase()
-        .replace(/[^A-Z\s]/g, ' ')
-        .split(/\s+/)
-        .filter(Boolean)
-    );
-
-    // ========== DIFFICULTY SCALING BASED ON CHAPTER ==========
-    // Early chapters (2-4): Easier puzzles with more obvious words
-    // Mid chapters (5-8): Standard difficulty
-    // Late chapters (9-12): Harder puzzles with more outliers and larger grids
-
-    // Calculate difficulty tier (0 = easy, 1 = medium, 2 = hard)
-    const difficultyTier = chapter <= 4 ? 0 : chapter <= 8 ? 1 : 2;
-
-    // Calculate progressive difficulty multiplier (10% harder per chapter after 2)
-    const chapterProgression = Math.max(0, (chapter - 2) * 0.1);
-
-    // Word length requirements scale with difficulty
-    const minWordLength = 4; // Always 4
-    const maxWordLength = difficultyTier === 0 ? 8 : difficultyTier === 1 ? 9 : 10;
-
-    // Semantic distance requirement scales with chapter
-    // Later chapters require more semantic distinction to prevent "lucky guesses"
-    // Stored for use in semantic validation
-    this._currentSemanticDistanceRequirement = Math.min(3, Math.floor(chapter / 4) + 1);
-
-    // ========== WORD QUALITY FILTER ==========
-    // Exclude boring/common words that don't make good puzzle words
-    const boringWords = new Set([
-      // Common verbs that aren't evocative
-      'JUST', 'SAID', 'THEN', 'WHEN', 'THAT', 'THIS', 'FROM', 'HAVE', 'WERE', 'BEEN',
-      'INTO', 'OVER', 'VERY', 'MUCH', 'SOME', 'LIKE', 'WHAT', 'THAN', 'THEM', 'ONLY',
-      'COME', 'CAME', 'MADE', 'MAKE', 'TAKE', 'TOOK', 'GOES', 'GONE', 'WENT', 'KNOW',
-      'KNEW', 'THINK', 'FELT', 'FEEL', 'SEEM', 'LOOK', 'TURN', 'BACK', 'DOWN', 'AWAY',
-      'WILL', 'WOULD', 'COULD', 'SHOULD', 'MIGHT', 'MUST', 'SHALL', 'NEED', 'WANT',
-      // Articles and prepositions that might slip through
-      'WITH', 'ABOUT', 'AFTER', 'BEFORE', 'THROUGH', 'UNDER', 'BETWEEN', 'AROUND',
-      // Common pronouns and determiners
-      'THEIR', 'THERE', 'WHERE', 'WHICH', 'OTHER', 'THESE', 'THOSE', 'EVERY', 'BEING',
-      // Generic time words
-      'TIME', 'TIMES', 'YEAR', 'YEARS', 'LATER', 'STILL', 'AGAIN', 'NEVER', 'ALWAYS',
-      // Common but uninteresting nouns
-      'THING', 'THINGS', 'PLACE', 'WAY', 'WAYS', 'PART', 'PARTS', 'KIND', 'SORT',
-      'SAME', 'SUCH', 'EACH', 'BOTH', 'ELSE', 'EVEN', 'ALSO', 'MOST', 'MANY', 'MORE',
-      // Weak adjectives
-      'GOOD', 'WELL', 'LONG', 'LITTLE', 'GREAT', 'HIGH', 'SMALL', 'LARGE', 'YOUNG',
-      // Common story-telling transitions
-      'FIRST', 'LAST', 'NEXT', 'ANOTHER', 'WHOLE', 'HALF', 'REAL', 'SURE', 'TRUE',
-    ]);
-
-    // Filter LLM candidates for validity (length, structure, quality) with difficulty-based length
-    const validCandidates = (puzzleCandidates || [])
-      .map(w => w.toUpperCase().trim())
-      .filter(w => {
-        // Basic structure checks
-        if (w.length < minWordLength || w.length > maxWordLength) return false;
-        if (!/^[A-Z]+$/.test(w)) return false;
-        // Quality filter
-        if (boringWords.has(w)) return false;
-        // Fairness: keep candidates grounded in the actual narrative text.
-        // (The generator already asks for words "directly from your narrative", but enforce it here.)
-        if (!narrativeUpperWordSet.has(w)) return false;
-        return true;
-      });
-
-    // Also filter regex words for quality
-    const qualityRegexWords = regexWords.filter(w => !boringWords.has(w.toUpperCase()));
-
-    // Combine lists: Candidates first, then regex words (deduplicated)
-    const allWords = [...new Set([...validCandidates, ...qualityRegexWords])];
-
-    // Outlier count scales with difficulty and decision status
-    // Easy: 4 outliers (6 for decisions), Medium: 4-5 (7-8), Hard: 5-6 (8)
-    let outlierCount;
-    if (isDecisionPoint) {
-      outlierCount = difficultyTier === 0 ? 6 : difficultyTier === 1 ? 7 : 8;
-    } else {
-      outlierCount = difficultyTier === 0 ? 4 : difficultyTier === 1 ? 5 : 6;
-    }
-
-    let outlierWords = this._selectOutlierWords(allWords, outlierCount, isDecisionPoint, decision);
-
-    // Grid size scales with difficulty
-    // Easy: 4x4, Medium: 4x4 or 5x4 for decisions, Hard: 5x4
-    let gridRows;
-    if (isDecisionPoint) {
-      gridRows = 5; // Always 5 for decisions
-    } else {
-      gridRows = difficultyTier === 2 ? 5 : 4;
-    }
-    const gridCols = 4;
-    const gridSize = gridRows * gridCols;
-
-    const usedWords = new Set(outlierWords.map(w => w.toUpperCase()));
-    const gridWords = [...outlierWords];
-
-    // Fill remaining spots with other relevant words from narrative
-    for (const word of allWords) {
-      if (gridWords.length >= gridSize) break;
-      const upperWord = word.toUpperCase();
-      if (!usedWords.has(upperWord)) {
-        gridWords.push(upperWord);
-        usedWords.add(upperWord);
-      }
-    }
-
-    const fillerWords = [
-      'SHADOW', 'TRUTH', 'LIE', 'NIGHT', 'RAIN', 'SMOKE', 'BLOOD', 'DEATH',
-      'GUILT', 'ALIBI', 'CRIME', 'BADGE', 'CLUE', 'FEAR', 'DARK', 'NOIR',
-      'VICE', 'DREAD', 'KNIFE', 'GLASS', 'BOOZE', 'DAME', 'GRIFT', 'HEIST',
-      'MOTIVE', 'CORPSE', 'VAULT', 'CHASE', 'BLIND', 'TRAIL', 'MARK',
-      'SNITCH', 'BRASS', 'STREET', 'ALLEY', 'DOCK', 'PIER', 'WHARF', 'TORCH',
+  _generateBoardData(isDecisionPoint, decision) {
+    // Static word list for evidence board puzzle (puzzle redesign pending)
+    const staticWords = [
+      'SHADOW', 'TRUTH', 'GLYPH', 'SILVER', 'TOKEN', 'ANCHOR',
+      'THRESHOLD', 'PATTERN', 'WITNESS', 'CIPHER', 'SIGNAL', 'TRACE',
+      'HIDDEN', 'PASSAGE', 'ARCHIVE', 'REFLECT'
     ];
 
-    const shuffledFillers = this._shuffleArray([...fillerWords]);
-    for (const filler of shuffledFillers) {
-      if (gridWords.length >= gridSize) break;
-      const upperFiller = filler.toUpperCase();
-      if (!usedWords.has(upperFiller)) {
-        gridWords.push(upperFiller);
-        usedWords.add(upperFiller);
-      }
-    }
+    // Shuffle the static words
+    const shuffledWords = this._shuffleArray([...staticWords]);
 
-    const uniqueGridWords = [...new Set(gridWords)].slice(0, gridSize);
-
-    while (uniqueGridWords.length < gridSize) {
-      const fallback = `CASE${uniqueGridWords.length}`;
-      if (!usedWords.has(fallback)) {
-        uniqueGridWords.push(fallback);
-        usedWords.add(fallback);
-      }
-    }
-
-    // ========== SEMANTIC VALIDATION ==========
-    // Ensure outlier words are semantically distinct from main grid words
-    const mainGridWords = uniqueGridWords.filter(w => !outlierWords.includes(w));
-    const availableReplacements = allWords.filter(w =>
-      !uniqueGridWords.includes(w.toUpperCase()) &&
-      !outlierWords.includes(w.toUpperCase())
-    );
-
-    // Extract dynamic semantic clusters from this specific narrative
-    // This catches story-specific terms like poison types, unique locations, etc.
-    this._extractDynamicClusters(narrative);
-
-    // Run synchronous semantic validation (now uses both static AND dynamic clusters)
-    outlierWords = this._validatePuzzleSemanticsSync(
-      outlierWords,
-      mainGridWords,
-      // IMPORTANT: Do NOT use filler words as outlier replacements.
-      // Replacements must remain grounded in the narrative-derived pools for puzzle fairness.
-      availableReplacements
-    );
-
-    // Update grid with validated outliers
-    const finalGridWords = [...outlierWords, ...mainGridWords].slice(0, gridSize);
-    while (finalGridWords.length < gridSize) {
-      const fallback = `CASE${finalGridWords.length}`;
-      finalGridWords.push(fallback);
-    }
-
-    const shuffledWords = this._shuffleArray(finalGridWords);
-
+    // Build 4x4 grid
     const grid = [];
-    for (let row = 0; row < gridRows; row++) {
-      grid.push(shuffledWords.slice(row * gridCols, (row + 1) * gridCols));
+    for (let row = 0; row < 4; row++) {
+      grid.push(shuffledWords.slice(row * 4, (row + 1) * 4));
     }
+
+    // First 4 words are "outliers" (placeholder until puzzle redesign)
+    const outlierWords = shuffledWords.slice(0, 4);
 
     const boardResult = {
-      outlierWords: outlierWords.slice(0, isDecisionPoint ? 8 : 4),
+      outlierWords,
       grid,
       outlierTheme: {
-        name: this._determineTheme(outlierWords),
+        name: 'INVESTIGATION',
         icon: '\ud83d\udd0e',
-        summary: narrative.substring(0, 100) + '...',
+        summary: 'Follow the clues...',
       },
     };
 
+    // For decision points, split outliers into two sets
     if (isDecisionPoint && decision?.options?.length >= 2) {
-      const set1Words = outlierWords.slice(0, 4);
-      const set2Words = outlierWords.slice(4, 8);
-
       boardResult.branchingOutlierSets = [
         {
           optionKey: decision.options[0].key || 'A',
           key: decision.options[0].key || 'A',
           label: decision.options[0].key || 'A',
           theme: {
-            name: this._truncateThemeName(decision.options[0].title) || 'PATH A',
+            name: 'PATH A',
             icon: '\ud83d\udd34',
-            summary: decision.options[0].focus || decision.options[0].title || 'Option A',
+            summary: decision.options[0].focus || 'Option A',
           },
-          words: set1Words,
-          descriptions: set1Words.reduce((acc, word) => {
-            acc[word] = `Related to: ${decision.options[0].title || 'Path A'}`;
-            return acc;
-          }, {}),
+          words: outlierWords.slice(0, 2),
+          descriptions: {},
         },
         {
           optionKey: decision.options[1].key || 'B',
           key: decision.options[1].key || 'B',
           label: decision.options[1].key || 'B',
           theme: {
-            name: this._truncateThemeName(decision.options[1].title) || 'PATH B',
+            name: 'PATH B',
             icon: '\ud83d\udd35',
-            summary: decision.options[1].focus || decision.options[1].title || 'Option B',
+            summary: decision.options[1].focus || 'Option B',
           },
-          words: set2Words,
-          descriptions: set2Words.reduce((acc, word) => {
-            acc[word] = `Related to: ${decision.options[1].title || 'Path B'}`;
-            return acc;
-          }, {}),
+          words: outlierWords.slice(2, 4),
+          descriptions: {},
         },
       ];
     }
 
     return boardResult;
-  }
-
-  _truncateThemeName(title) {
-    if (!title) return null;
-    const words = title.split(/\s+/).slice(0, 2).join(' ');
-    return words.length > 12 ? words.slice(0, 12).toUpperCase() : words.toUpperCase();
-  }
-
-  /**
-   * Extract all text content from a branchingNarrative object.
-   * Combines opening + all first choice responses + all second choice responses.
-   * Used for puzzle keyword extraction where we want words from any possible path.
-   * @param {object} branchingNarrative - The branching narrative object
-   * @returns {string} Combined text from all narrative segments
-   */
-  _extractAllTextFromBranchingNarrative(branchingNarrative) {
-    if (!branchingNarrative) return '';
-
-    const parts = [];
-
-    // Opening (shared by all paths)
-    if (branchingNarrative.opening?.text) {
-      parts.push(branchingNarrative.opening.text);
-    }
-
-    // All first choice responses
-    if (branchingNarrative.firstChoice?.options) {
-      for (const option of branchingNarrative.firstChoice.options) {
-        if (option?.response) {
-          parts.push(option.response);
-        }
-      }
-    }
-
-    // All second choice responses
-    if (branchingNarrative.secondChoices) {
-      for (const secondChoiceGroup of branchingNarrative.secondChoices) {
-        if (secondChoiceGroup?.options) {
-          for (const option of secondChoiceGroup.options) {
-            if (option?.response) {
-              parts.push(option.response);
-            }
-          }
-        }
-      }
-    }
-
-    return parts.join('\n\n');
-  }
-
-  _extractKeywordsFromNarrative(narrative) {
-    const stopWords = new Set([
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-      'of', 'with', 'by', 'from', 'as', 'into', 'through', 'during', 'before',
-      'after', 'above', 'below', 'between', 'under', 'over', 'out', 'off',
-      'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us',
-      'them', 'my', 'your', 'his', 'its', 'our', 'their', 'mine', 'yours',
-      'this', 'that', 'these', 'those', 'who', 'whom', 'which', 'what',
-      'is', 'was', 'are', 'were', 'been', 'be', 'being', 'have', 'has', 'had',
-      'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
-      'must', 'shall', 'can', 'get', 'got', 'getting', 'let', 'make', 'made',
-      'say', 'said', 'says', 'tell', 'told', 'ask', 'asked', 'know', 'knew',
-      'think', 'thought', 'see', 'saw', 'seen', 'look', 'looked', 'looking',
-      'come', 'came', 'coming', 'go', 'went', 'gone', 'going', 'take', 'took',
-      'want', 'wanted', 'need', 'needed', 'seem', 'seemed', 'keep', 'kept',
-      'very', 'really', 'quite', 'just', 'only', 'even', 'also', 'too', 'so',
-      'now', 'then', 'here', 'there', 'when', 'where', 'why', 'how', 'well',
-      'still', 'already', 'always', 'never', 'ever', 'often', 'sometimes',
-      'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
-      'such', 'no', 'not', 'any', 'many', 'much', 'own', 'same', 'than',
-      'good', 'bad', 'new', 'old', 'first', 'last', 'long', 'great', 'little',
-      'time', 'year', 'day', 'way', 'thing', 'man', 'woman', 'life', 'world',
-      'like', 'back', 'about', 'again', 'against', 'because', 'down', 'find',
-      'found', 'give', 'gave', 'hand', 'head', 'eyes', 'face', 'voice', 'room',
-      'door', 'turn', 'turned', 'jack', 'halloway', 'detective', 'case', 'chapter',
-    ]);
-
-    const words = narrative
-      .toUpperCase()
-      .replace(/[^A-Z\s]/g, ' ')
-      .split(/\s+/)
-      .filter(word => {
-        const lowerWord = word.toLowerCase();
-        return word.length >= 4 &&
-               word.length <= 10 &&
-               !stopWords.has(lowerWord) &&
-               !/^[AEIOU]+$/.test(word) &&
-               !/(.)\1{2,}/.test(word);
-      });
-
-    const frequency = {};
-    const firstOccurrence = {};
-    words.forEach((word, index) => {
-      if (!frequency[word]) {
-        frequency[word] = 0;
-        firstOccurrence[word] = index;
-      }
-      frequency[word]++;
-    });
-
-    const scored = Object.entries(frequency).map(([word, freq]) => {
-      const positionBonus = 1 - (firstOccurrence[word] / words.length) * 0.5;
-      const lengthBonus = Math.min(word.length / 8, 1) * 0.3;
-      const score = freq * (1 + positionBonus + lengthBonus);
-      return { word, score };
-    });
-
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .map(({ word }) => word)
-      .slice(0, 60);
-  }
-
-  _selectOutlierWords(availableWords, count, isDecisionPoint, decision) {
-    const usedWords = new Set();
-
-    if (isDecisionPoint && decision?.options) {
-      const setA = this._selectThemedWords(availableWords, 4, decision.options[0]?.focus, usedWords);
-      setA.forEach(w => usedWords.add(w.toUpperCase()));
-
-      const remainingWords = availableWords.filter(w => !usedWords.has(w.toUpperCase()));
-      const setB = this._selectThemedWords(remainingWords, 4, decision.options[1]?.focus, usedWords);
-
-      const combined = [...setA, ...setB];
-      const uniqueCombined = [...new Set(combined.map(w => w.toUpperCase()))];
-
-      const stillAvailable = availableWords.filter(w => !uniqueCombined.includes(w.toUpperCase()));
-      while (uniqueCombined.length < 8 && stillAvailable.length > 0) {
-        uniqueCombined.push(stillAvailable.shift().toUpperCase());
-      }
-
-      return uniqueCombined.slice(0, 8);
-    }
-
-    const uniqueWords = [];
-    for (const word of availableWords) {
-      const upperWord = word.toUpperCase();
-      if (!usedWords.has(upperWord)) {
-        uniqueWords.push(upperWord);
-        usedWords.add(upperWord);
-        if (uniqueWords.length >= count) break;
-      }
-    }
-    return uniqueWords;
-  }
-
-  // ==========================================================================
-  // SEMANTIC OVERLAP DETECTION - Prevents unfair puzzles
-  // ==========================================================================
-
-  /**
-   * Known semantic clusters - words that are too closely related to appear
-   * as both outliers and main words in the same puzzle
-   *
-   * NOTE: Cached on first access to avoid recreating this large array on every call
-   */
-  _getSemanticClusters() {
-    // Return cached clusters if available
-    if (StoryGenerationService._cachedSemanticClusters) {
-      return StoryGenerationService._cachedSemanticClusters;
-    }
-
-    // Create and cache clusters on first call
-    StoryGenerationService._cachedSemanticClusters = [
-      // Weather/Temperature
-      ['COLD', 'ICE', 'FROST', 'FREEZE', 'CHILL', 'WINTER', 'SNOW', 'FROZEN', 'FRIGID'],
-      ['WIND', 'BREEZE', 'GUST', 'STORM', 'GALE', 'BLOW', 'AIR', 'TEMPEST'],
-      ['RAIN', 'WATER', 'WET', 'DAMP', 'MOIST', 'DRENCH', 'SOAK', 'FLOOD', 'POUR', 'DOWNPOUR', 'STORM'],
-      ['FIRE', 'FLAME', 'BURN', 'HEAT', 'HOT', 'BLAZE', 'EMBER', 'SCORCH', 'INFERNO'],
-
-      // Light/Dark
-      ['DARK', 'SHADOW', 'BLACK', 'NIGHT', 'GLOOM', 'DIM', 'MURKY', 'SHADE', 'DUSK'],
-      ['LIGHT', 'BRIGHT', 'SHINE', 'GLOW', 'GLEAM', 'FLASH', 'BEAM', 'LAMP', 'NEON'],
-
-      // Death/Violence
-      ['DEATH', 'DEAD', 'DIE', 'KILL', 'MURDER', 'SLAY', 'FATAL', 'CORPSE', 'BODY', 'MORGUE'],
-      ['BLOOD', 'BLEED', 'WOUND', 'CUT', 'STAB', 'SLASH', 'GASH', 'INJURY', 'HURT'],
-      ['GUN', 'SHOOT', 'SHOT', 'BULLET', 'PISTOL', 'WEAPON', 'RIFLE', 'REVOLVER', 'FIREARM'],
-      ['KNIFE', 'BLADE', 'SHARP', 'CUT', 'STAB', 'DAGGER', 'RAZOR'],
-
-      // Truth/Lies
-      ['TRUTH', 'TRUE', 'HONEST', 'REAL', 'FACT', 'GENUINE', 'SINCERE', 'CANDID'],
-      ['LIE', 'FALSE', 'FAKE', 'DECEIT', 'FRAUD', 'CHEAT', 'TRICK', 'DECEIVE', 'BETRAY'],
-      ['SECRET', 'HIDE', 'HIDDEN', 'CONCEAL', 'COVERT', 'COVER', 'BURY', 'SUPPRESS'],
-
-      // Fear/Emotion
-      ['FEAR', 'AFRAID', 'TERROR', 'DREAD', 'PANIC', 'SCARED', 'FRIGHT', 'HORROR'],
-      ['ANGER', 'ANGRY', 'RAGE', 'FURY', 'MAD', 'WRATH', 'HATE', 'HOSTILE'],
-      ['GUILT', 'SHAME', 'REGRET', 'REMORSE', 'SORRY', 'BLAME', 'FAULT'],
-      ['GRIEF', 'SORROW', 'MOURN', 'LOSS', 'SADNESS', 'DESPAIR', 'ANGUISH'],
-
-      // Crime/Law
-      ['CRIME', 'CRIMINAL', 'CROOK', 'THIEF', 'STEAL', 'ROB', 'HEIST', 'FELON', 'CONVICT'],
-      ['POLICE', 'COP', 'BADGE', 'OFFICER', 'DETECTIVE', 'PATROL', 'PRECINCT', 'SQUAD'],
-      ['JAIL', 'PRISON', 'CELL', 'LOCK', 'CAGE', 'CAPTIVE', 'TRAPPED', 'BARS', 'INMATE'],
-      ['COURT', 'TRIAL', 'JUDGE', 'JURY', 'LAWYER', 'VERDICT', 'SENTENCE', 'PROSECUTE'],
-      ['EVIDENCE', 'PROOF', 'CLUE', 'WITNESS', 'TESTIMONY', 'ALIBI', 'FORENSIC'],
-
-      // Body parts
-      ['HAND', 'FIST', 'GRIP', 'GRASP', 'HOLD', 'GRAB', 'CLUTCH', 'FINGER'],
-      ['EYE', 'EYES', 'LOOK', 'GAZE', 'STARE', 'WATCH', 'SEE', 'SIGHT', 'VISION'],
-      ['FACE', 'EXPRESSION', 'FEATURES', 'VISAGE', 'COUNTENANCE'],
-
-      // Money
-      ['MONEY', 'CASH', 'DOLLAR', 'WEALTH', 'RICH', 'GOLD', 'FORTUNE', 'FUNDS'],
-      ['PAY', 'PAID', 'BRIBE', 'DEBT', 'OWE', 'COST', 'PRICE', 'FEE'],
-      ['STEAL', 'ROB', 'THEFT', 'EMBEZZLE', 'FRAUD', 'SWINDLE', 'LAUNDER'],
-
-      // Time
-      ['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK', 'DARK', 'LATE', 'NOCTURNAL'],
-      ['PAST', 'MEMORY', 'REMEMBER', 'FORGOT', 'HISTORY', 'BEFORE', 'YESTERDAY', 'YEARS'],
-      ['WAIT', 'PATIENT', 'TIME', 'CLOCK', 'HOUR', 'MINUTE', 'SECOND'],
-
-      // ========== NEW NOIR-SPECIFIC CLUSTERS ==========
-
-      // Alcohol/Drinking (Critical for Jack's character)
-      ['WHISKEY', 'BOURBON', 'SCOTCH', 'DRINK', 'DRUNK', 'BOOZE', 'ALCOHOL', 'BOTTLE', 'BAR', 'JAMESON', 'GLASS', 'POUR', 'SIP'],
-
-      // Partners/Allies
-      ['PARTNER', 'ALLY', 'FRIEND', 'TRUST', 'LOYAL', 'COMPANION', 'COLLEAGUE'],
-      ['BETRAY', 'TRAITOR', 'TURNCOAT', 'BACKSTAB', 'DOUBLE-CROSS', 'DECEIVE'],
-
-      // Investigation
-      ['INVESTIGATE', 'SEARCH', 'HUNT', 'TRACK', 'PURSUE', 'FOLLOW', 'TRAIL', 'LEAD'],
-      ['CASE', 'FILE', 'RECORD', 'DOCUMENT', 'REPORT', 'DOSSIER'],
-      ['SUSPECT', 'ACCUSED', 'DEFENDANT', 'PERPETRATOR', 'CULPRIT'],
-
-      // Noir Locations
-      ['OFFICE', 'DESK', 'ROOM', 'SPACE', 'CHAMBER'],
-      ['ALLEY', 'STREET', 'ROAD', 'AVENUE', 'LANE', 'PATH'],
-      ['WAREHOUSE', 'BUILDING', 'FACTORY', 'PLANT', 'FACILITY'],
-      ['DOCKS', 'PIER', 'WHARF', 'HARBOR', 'PORT', 'WATERFRONT'],
-
-      // Noir Atmosphere
-      ['NEON', 'GLOW', 'SIGN', 'LIGHT', 'FLASH', 'FLICKER'],
-      ['SMOKE', 'FOG', 'MIST', 'HAZE', 'VAPOR', 'CLOUD'],
-      ['COAT', 'HAT', 'TRENCH', 'JACKET', 'COLLAR'],
-
-      // Noir emotional collocations (rain-as-grief, past-as-haunting, favors-as-debt, scars-as-history)
-      ['RAIN', 'TEARS', 'CRY', 'WEEP', 'GRIEF', 'MOURN', 'SOB'],
-      ['SHADOW', 'GHOST', 'PAST', 'MEMORY', 'HAUNT', 'HAUNTED', 'SPECTER', 'ECHO'],
-      ['DEBT', 'FAVOR', 'OWE', 'PRICE', 'COST', 'DUES', 'PAYBACK'],
-      ['SCAR', 'MARK', 'WOUND', 'BRAND', 'BURNED', 'STITCH', 'BRUISE'],
-
-      // Characters (Story-Specific)
-      ['VICTORIA', 'CONFESSOR', 'EMILY', 'BLACKWELL'],
-      ['SARAH', 'REEVES', 'PARTNER'],
-      ['TOM', 'WADE', 'FORENSIC'],
-      ['ELEANOR', 'BELLAMY', 'INNOCENT'],
-      ['GRANGE', 'DEPUTY', 'CHIEF'],
-
-      // Key Story Concepts
-      ['INNOCENT', 'WRONGFUL', 'FRAMED', 'CONVICTED', 'EXONERATE'],
-      ['CORRUPT', 'CORRUPTION', 'DIRTY', 'CROOKED', 'ROTTEN'],
-      ['JUSTICE', 'FAIR', 'RIGHT', 'WRONG', 'MORAL'],
-      ['CERTAINTY', 'CERTAIN', 'SURE', 'DOUBT', 'UNCERTAIN', 'QUESTION'],
-      ['REDEMPTION', 'ATONE', 'FORGIVE', 'REDEEM', 'SALVATION'],
-
-      // ========== NEW CLUSTERS: Vehicles, Communication, Documents ==========
-
-      // Vehicles (noir staple for chases, stakeouts, escapes)
-      ['CAR', 'DRIVE', 'DROVE', 'VEHICLE', 'AUTO', 'SEDAN', 'COUPE', 'WHEELS'],
-      ['ROAD', 'HIGHWAY', 'STREET', 'AVENUE', 'BOULEVARD', 'ROUTE', 'PATH'],
-      ['CHASE', 'PURSUE', 'TAIL', 'FOLLOW', 'TRACK', 'HUNT', 'FLEE', 'ESCAPE'],
-      ['TAXI', 'CAB', 'CABBIE', 'FARE', 'METER', 'PICKUP'],
-      ['GARAGE', 'PARKING', 'LOT', 'SPACE', 'SPOT'],
-
-      // Communication (phones, messages, interception)
-      ['PHONE', 'CALL', 'RING', 'DIAL', 'RECEIVER', 'LINE', 'BOOTH'],
-      ['MESSAGE', 'NOTE', 'LETTER', 'MAIL', 'POST', 'ENVELOPE', 'STAMP'],
-      ['WIRE', 'TAP', 'BUG', 'LISTEN', 'RECORD', 'INTERCEPT', 'EAVESDROP'],
-      ['TALK', 'SPEAK', 'SAY', 'SAID', 'TELL', 'TOLD', 'VOICE', 'WORD'],
-      ['SILENCE', 'QUIET', 'MUTE', 'HUSH', 'STILL', 'SILENT'],
-
-      // Documents (evidence, records, paperwork)
-      ['PAPER', 'DOCUMENT', 'FILE', 'FOLDER', 'BINDER', 'STACK'],
-      ['RECORD', 'REPORT', 'MEMO', 'NOTE', 'LOG', 'ENTRY', 'DOSSIER'],
-      ['SIGN', 'SIGNED', 'SIGNATURE', 'AUTOGRAPH', 'NAME', 'INITIAL'],
-      ['TYPE', 'TYPED', 'PRINT', 'CARBON', 'COPY', 'DUPLICATE'],
-      ['PHOTO', 'PICTURE', 'IMAGE', 'SNAPSHOT', 'FRAME', 'NEGATIVE'],
-      ['MAP', 'CHART', 'DIAGRAM', 'LAYOUT', 'PLAN', 'BLUEPRINT'],
-
-      // Money/Finance (bribes, debts, motives)
-      ['BANK', 'VAULT', 'SAFE', 'DEPOSIT', 'ACCOUNT', 'SAVINGS'],
-      ['CHECK', 'CHEQUE', 'CASH', 'BILL', 'COIN', 'CHANGE'],
-      ['BRIBE', 'PAYOFF', 'KICKBACK', 'GREASE', 'PALM', 'CUT'],
-
-      // Actions/Movement (common noir verbs)
-      ['WALK', 'STEP', 'PACE', 'STRIDE', 'STROLL', 'MARCH'],
-      ['RUN', 'SPRINT', 'DASH', 'BOLT', 'RACE', 'RUSH'],
-      ['WAIT', 'WATCH', 'OBSERVE', 'STAKE', 'SURVEIL', 'MONITOR'],
-      ['ENTER', 'EXIT', 'LEAVE', 'ARRIVE', 'DEPART', 'RETURN'],
-      ['OPEN', 'CLOSE', 'SHUT', 'LOCK', 'UNLOCK', 'BOLT'],
-
-      // ========== STORY-CRITICAL CLUSTERS (Prevent unfair puzzles) ==========
-
-      // Confession/Confessor (The antagonist's title - critical overlap risk)
-      ['CONFESSION', 'CONFESS', 'CONFESSIONAL', 'CONFESSOR', 'ADMIT', 'ADMISSION', 'ACKNOWLEDGE'],
-
-      // Guilt/Justice expanded (central theme of wrongful convictions)
-      ['GUILT', 'GUILTY', 'INNOCENT', 'INNOCENCE', 'CONVICT', 'CONVICTION', 'SENTENCE', 'SENTENCED'],
-      ['WRONGFUL', 'UNJUST', 'UNFAIR', 'MISTAKEN', 'ERROR', 'MISTAKE'],
-
-      // Frame/Forge (evidence tampering theme)
-      ['FRAME', 'FRAMED', 'SETUP', 'PLANT', 'PLANTED', 'STAGE', 'STAGED'],
-      ['FORGE', 'FORGED', 'FAKE', 'FALSIFY', 'FABRICATE', 'FABRICATED', 'TAMPER', 'TAMPERED'],
-      ['MANUFACTURE', 'MANUFACTURED', 'CREATE', 'CREATED', 'MAKE', 'MADE'],
-
-      // Partner/Detective relationships
-      ['PARTNER', 'DETECTIVE', 'COP', 'OFFICER', 'INVESTIGATOR', 'BADGE', 'FORCE', 'PRECINCT'],
-
-      // Prison/Incarceration (Eleanor's 8 years)
-      ['PRISON', 'JAIL', 'INMATE', 'PRISONER', 'GREYSTONE', 'CELL', 'BARS', 'LOCKED', 'CONFINED'],
-
-      // Betrayal/Trust (Tom Wade's 30-year betrayal)
-      ['BETRAY', 'BETRAYAL', 'BETRAYED', 'TRUST', 'TRUSTED', 'FAITH', 'FAITHFUL', 'LOYAL', 'LOYALTY'],
-
-      // ========== ADDITIONAL STORY-CRITICAL CLUSTERS ==========
-
-      // Memory/Recall (Jack's recollections, flashbacks)
-      ['RECALL', 'RECOLLECT', 'NOSTALGIA', 'FLASHBACK', 'MEMORY', 'MEMORIES', 'REMEMBER', 'REMEMBERED'],
-
-      // Victim/Survivor (The Five Innocents are victims)
-      ['VICTIM', 'VICTIMS', 'SURVIVOR', 'SURVIVORS', 'SUFFERER', 'TARGET', 'PREY'],
-
-      // Appeal/Exoneration (Eleanor's appeal, wrongful conviction theme)
-      ['APPEAL', 'APPEALS', 'EXONERATE', 'EXONERATION', 'OVERTURN', 'REVERSAL', 'PARDON', 'RELEASE'],
-
-      // Midnight/Night (Victoria's timing, noir atmosphere)
-      ['MIDNIGHT', 'MIDNIGHTS', 'CONFESSOR', 'CONFESSION', 'WITCHING', 'TWELVE', 'STROKE'],
-
-      // Evidence types (Tom's manufactured evidence)
-      ['FINGERPRINT', 'FINGERPRINTS', 'DNA', 'FIBER', 'FIBERS', 'TRACE', 'SAMPLE', 'SPECIMEN'],
-      ['AUTOPSY', 'POSTMORTEM', 'CORONER', 'MEDICAL', 'EXAMINER', 'FORENSICS'],
-
-      // Confession variants (The Midnight Confessor's letters)
-      ['LETTER', 'LETTERS', 'ENVELOPE', 'ENVELOPES', 'MISSIVE', 'CORRESPONDENCE', 'MAIL'],
-
-      // Watching/Surveillance (Jack's investigation methods)
-      ['STAKEOUT', 'SURVEILLANCE', 'WATCHING', 'OBSERVING', 'TAILING', 'SHADOWING', 'SPYING'],
-
-      // Old/Past (30 years of friendship, 8 years in prison)
-      ['YEARS', 'DECADES', 'ANCIENT', 'FORMER', 'PREVIOUS', 'PRIOR', 'OLD', 'AGED'],
-
-      // Five Innocents names (prevent character name overlap issues)
-      ['MARCUS', 'THORNHILL', 'ACCOUNTANT', 'EMBEZZLER'],
-      ['LISA', 'CHEN', 'DOCTOR', 'PHYSICIAN'],
-      ['JAMES', 'SULLIVAN', 'MECHANIC', 'GARAGE'],
-      ['TERESA', 'WADE', 'TOM', 'WIFE'],
-
-      // Silas Reed (Jack's former partner)
-      ['SILAS', 'REED', 'RECLUSE', 'HERMIT', 'FORMER'],
-
-      // ========== COLOR CLUSTERS (Visual descriptions) ==========
-      ['RED', 'CRIMSON', 'SCARLET', 'RUBY', 'MAROON', 'BURGUNDY', 'CHERRY', 'BLOOD-RED'],
-      ['BLUE', 'AZURE', 'NAVY', 'COBALT', 'INDIGO', 'SAPPHIRE', 'CERULEAN', 'MIDNIGHT-BLUE'],
-      ['GREEN', 'EMERALD', 'JADE', 'OLIVE', 'FOREST', 'MOSS', 'VIRIDIAN'],
-      ['BLACK', 'EBONY', 'ONYX', 'JET', 'OBSIDIAN', 'PITCH', 'INKY', 'COAL'],
-      ['WHITE', 'IVORY', 'PEARL', 'ALABASTER', 'SNOW', 'PALE', 'PALLID', 'ASHEN'],
-      ['GREY', 'GRAY', 'SILVER', 'ASH', 'SLATE', 'STEEL', 'CHARCOAL', 'GUNMETAL'],
-      ['GOLD', 'GOLDEN', 'AMBER', 'BRONZE', 'BRASS', 'COPPER', 'TAWNY'],
-
-      // ========== SOUND CLUSTERS (Auditory descriptions) ==========
-      ['WHISPER', 'MURMUR', 'HUSH', 'MUTTER', 'MUMBLE', 'BREATHE', 'SIGH'],
-      ['SCREAM', 'SHOUT', 'YELL', 'CRY', 'SHRIEK', 'HOWL', 'WAIL', 'SCREECH'],
-      ['BANG', 'CRASH', 'SLAM', 'THUD', 'BOOM', 'BLAST', 'CRACK', 'POP'],
-      ['CREAK', 'GROAN', 'SQUEAK', 'SQUEAL', 'SCRAPE', 'SCRATCH', 'RASP'],
-      ['HISS', 'SIZZLE', 'FIZZ', 'BUZZ', 'HUM', 'DRONE', 'WHIR'],
-      ['RUMBLE', 'THUNDER', 'ROAR', 'GROWL', 'SNARL', 'GRUMBLE'],
-      ['CLICK', 'CLACK', 'TAP', 'KNOCK', 'RAP', 'TICK', 'TOCK'],
-      ['RING', 'CHIME', 'TOLL', 'BELL', 'DING', 'CLANG', 'JINGLE'],
-
-      // ========== SYNONYM EXPANSIONS (Common noir words) ==========
-      ['SHADOW', 'SILHOUETTE', 'OUTLINE', 'SHAPE', 'FIGURE', 'FORM', 'PROFILE'],
-      ['STARE', 'GLARE', 'GAWK', 'OGLE', 'PEER', 'SQUINT', 'SCRUTINIZE'],
-      ['WHISKEY', 'BOURBON', 'SCOTCH', 'RYE', 'BRANDY', 'COGNAC', 'LIQUOR'],
-      ['CIGARETTE', 'SMOKE', 'CIGAR', 'TOBACCO', 'ASH', 'BUTT', 'DRAG', 'PUFF'],
-      ['TIRED', 'WEARY', 'EXHAUSTED', 'FATIGUED', 'WORN', 'DRAINED', 'SPENT'],
-      ['OLD', 'AGED', 'WORN', 'WEATHERED', 'BATTERED', 'SHABBY', 'DECREPIT'],
-
-      // ========== BODY/PHYSICAL EXPANSIONS ==========
-      ['LEG', 'FOOT', 'FEET', 'KNEE', 'ANKLE', 'THIGH', 'CALF', 'TOE'],
-      ['ARM', 'ELBOW', 'WRIST', 'SHOULDER', 'BICEP', 'FOREARM'],
-      ['CHEST', 'TORSO', 'RIBS', 'HEART', 'LUNGS', 'STOMACH', 'GUT'],
-      ['HEAD', 'SKULL', 'BRAIN', 'TEMPLE', 'FOREHEAD', 'BROW', 'SCALP'],
-      ['NECK', 'THROAT', 'JAW', 'CHIN', 'CHEEK', 'MOUTH', 'LIPS'],
-    ];
-
-    return StoryGenerationService._cachedSemanticClusters;
-  }
-
-  /**
-   * Extract dynamic semantic clusters from narrative context
-   *
-   * Analyzes the current narrative to find story-specific terms that should
-   * be clustered together to prevent unfair puzzle overlaps.
-   *
-   * Examples of dynamic clusters:
-   * - If narrative mentions "arsenic poisoning", creates [ARSENIC, POISON, TOXIC, VENOM]
-   * - If narrative mentions a unique location "the old mill", creates [MILL, OLD, ABANDONED]
-   * - If narrative mentions a weapon "the bloodied hammer", creates [HAMMER, BLOOD, WEAPON]
-   *
-   * @param {string} narrative - The narrative text to analyze
-   * @returns {string[][]} Array of dynamic semantic clusters
-   */
-  _extractDynamicClusters(narrative) {
-    if (!narrative) return [];
-
-    const dynamicClusters = [];
-    const narrativeUpper = narrative.toUpperCase();
-    const narrativeLower = narrative.toLowerCase();
-
-    // ========== PATTERN 1: Method of Death/Violence ==========
-    // Detect specific methods mentioned and cluster related terms
-    const violencePatterns = [
-      { pattern: /\b(poison|poisoned|poisoning|arsenic|cyanide|toxic|venom)\b/gi,
-        cluster: ['POISON', 'POISONED', 'ARSENIC', 'CYANIDE', 'TOXIC', 'VENOM', 'DOSE', 'LETHAL'] },
-      { pattern: /\b(strangle|strangled|strangling|choke|choked|garrote|asphyxiate)\b/gi,
-        cluster: ['STRANGLE', 'CHOKE', 'GARROTE', 'THROAT', 'NECK', 'ASPHYXIATE', 'SUFFOCATE'] },
-      { pattern: /\b(drown|drowned|drowning|submerge|underwater)\b/gi,
-        cluster: ['DROWN', 'DROWNED', 'WATER', 'SUBMERGE', 'UNDERWATER', 'LUNGS', 'BREATHE'] },
-      { pattern: /\b(burn|burned|burning|arson|fire|immolate|torch)\b/gi,
-        cluster: ['BURN', 'BURNED', 'ARSON', 'FIRE', 'FLAME', 'TORCH', 'ASH', 'CHAR'] },
-      { pattern: /\b(bludgeon|bludgeoned|blunt|hammer|club|bat|beaten)\b/gi,
-        cluster: ['BLUDGEON', 'BLUNT', 'HAMMER', 'CLUB', 'BAT', 'BEATEN', 'SKULL', 'CRUSH'] },
-    ];
-
-    for (const { pattern, cluster } of violencePatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for violence method: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 2: Specific Locations/Places ==========
-    // Extract unique location names and create clusters
-    const locationPatterns = [
-      { pattern: /\b(mill|old mill|abandoned mill|watermill)\b/gi,
-        cluster: ['MILL', 'ABANDONED', 'WATERMILL', 'GRAIN', 'WHEEL'] },
-      { pattern: /\b(lighthouse|beacon|tower light)\b/gi,
-        cluster: ['LIGHTHOUSE', 'BEACON', 'TOWER', 'LIGHT', 'COAST', 'ROCKS'] },
-      { pattern: /\b(church|chapel|cathedral|sanctuary|steeple)\b/gi,
-        cluster: ['CHURCH', 'CHAPEL', 'CATHEDRAL', 'SANCTUARY', 'STEEPLE', 'PEWS', 'ALTAR'] },
-      { pattern: /\b(cemetery|graveyard|tomb|crypt|mausoleum)\b/gi,
-        cluster: ['CEMETERY', 'GRAVEYARD', 'TOMB', 'CRYPT', 'GRAVE', 'BURIAL', 'HEADSTONE'] },
-      { pattern: /\b(casino|gambling|poker|roulette|blackjack)\b/gi,
-        cluster: ['CASINO', 'GAMBLING', 'POKER', 'CARDS', 'CHIPS', 'BET', 'STAKES'] },
-      { pattern: /\b(hospital|clinic|ward|medical center|emergency room)\b/gi,
-        cluster: ['HOSPITAL', 'CLINIC', 'WARD', 'MEDICAL', 'DOCTOR', 'NURSE', 'PATIENT'] },
-    ];
-
-    for (const { pattern, cluster } of locationPatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for location: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 3: Evidence/Objects Mentioned ==========
-    // Extract specific objects that could be evidence
-    const evidencePatterns = [
-      { pattern: /\b(ring|wedding ring|diamond ring|signet ring)\b/gi,
-        cluster: ['RING', 'DIAMOND', 'WEDDING', 'GOLD', 'BAND', 'FINGER', 'JEWELRY'] },
-      { pattern: /\b(watch|wristwatch|pocket watch|timepiece)\b/gi,
-        cluster: ['WATCH', 'WRISTWATCH', 'TIMEPIECE', 'CLOCK', 'HANDS', 'TICK'] },
-      { pattern: /\b(photograph|photo|picture|snapshot|polaroid)\b/gi,
-        cluster: ['PHOTO', 'PHOTOGRAPH', 'PICTURE', 'SNAPSHOT', 'IMAGE', 'FRAME'] },
-      { pattern: /\b(diary|journal|notebook|ledger|log book)\b/gi,
-        cluster: ['DIARY', 'JOURNAL', 'NOTEBOOK', 'LEDGER', 'PAGES', 'ENTRIES', 'WRITING'] },
-      { pattern: /\b(tape|cassette|recording|audio|reel)\b/gi,
-        cluster: ['TAPE', 'CASSETTE', 'RECORDING', 'AUDIO', 'REEL', 'VOICE', 'PLAY'] },
-      { pattern: /\b(syringe|needle|injection|hypodermic)\b/gi,
-        cluster: ['SYRINGE', 'NEEDLE', 'INJECTION', 'HYPODERMIC', 'DOSE', 'INJECT'] },
-    ];
-
-    for (const { pattern, cluster } of evidencePatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for evidence: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 4: Profession/Role Mentioned ==========
-    // If narrative introduces specific professions, cluster related terms
-    const professionPatterns = [
-      { pattern: /\b(doctor|surgeon|physician|medical)\b/gi,
-        cluster: ['DOCTOR', 'SURGEON', 'PHYSICIAN', 'MEDICAL', 'SCALPEL', 'PATIENT', 'SURGERY'] },
-      { pattern: /\b(lawyer|attorney|counsel|legal|barrister)\b/gi,
-        cluster: ['LAWYER', 'ATTORNEY', 'COUNSEL', 'LEGAL', 'COURT', 'CASE', 'CLIENT'] },
-      { pattern: /\b(priest|father|clergy|reverend|minister)\b/gi,
-        cluster: ['PRIEST', 'FATHER', 'CLERGY', 'REVEREND', 'CHURCH', 'HOLY', 'CONFESS'] },
-      { pattern: /\b(reporter|journalist|press|newspaper|editor)\b/gi,
-        cluster: ['REPORTER', 'JOURNALIST', 'PRESS', 'NEWSPAPER', 'EDITOR', 'STORY', 'HEADLINE'] },
-      { pattern: /\b(nurse|orderly|caretaker|aide)\b/gi,
-        cluster: ['NURSE', 'ORDERLY', 'CARETAKER', 'AIDE', 'PATIENT', 'CARE', 'WARD'] },
-    ];
-
-    for (const { pattern, cluster } of professionPatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for profession: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 5: Extract Repeated Significant Nouns ==========
-    // Find nouns that appear 3+ times - they're likely thematically important
-    const nounPattern = /\b([A-Z][a-z]{3,})\b/g;
-    const nounCounts = new Map();
-    let match;
-
-    while ((match = nounPattern.exec(narrative)) !== null) {
-      const noun = match[1].toUpperCase();
-      // Skip common words and character names
-      const skipWords = new Set([
-        'JACK', 'SARAH', 'VICTORIA', 'EMILY', 'WADE', 'ELEANOR', 'BELLAMY',
-        'THAT', 'THIS', 'THEN', 'WHEN', 'WERE', 'BEEN', 'HAVE', 'SAID',
-        'JUST', 'LIKE', 'BACK', 'DOWN', 'INTO', 'OVER', 'ONLY', 'EVEN'
-      ]);
-      if (!skipWords.has(noun) && noun.length >= 4) {
-        nounCounts.set(noun, (nounCounts.get(noun) || 0) + 1);
-      }
-    }
-
-    // Create clusters for frequently mentioned nouns
-    for (const [noun, count] of nounCounts.entries()) {
-      if (count >= 3) {
-        // Create a small cluster with variations
-        const cluster = [noun];
-        // Add common variations
-        if (noun.endsWith('S')) cluster.push(noun.slice(0, -1));
-        else cluster.push(noun + 'S');
-        if (noun.endsWith('ED')) cluster.push(noun.slice(0, -2));
-        if (noun.endsWith('ING')) cluster.push(noun.slice(0, -3));
-
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for repeated noun: ${noun} (${count} occurrences)`);
-      }
-    }
-
-    // Store for use in semantic validation
-    this._currentDynamicClusters = dynamicClusters;
-
-    return dynamicClusters;
-  }
-
-  /**
-   * Check if two words belong to the same semantic cluster
-   * Now checks both static clusters AND dynamic clusters extracted from narrative
-   */
-  _areSemanticallySimilar(word1, word2) {
-    const w1 = word1.toUpperCase();
-    const w2 = word2.toUpperCase();
-
-    // Same word
-    if (w1 === w2) return true;
-
-    // Check if one contains the other (KILL/KILLER, DEATH/DEAD)
-    if (w1.includes(w2) || w2.includes(w1)) return true;
-
-    // Check static semantic clusters
-    const staticClusters = this._getSemanticClusters();
-    for (const cluster of staticClusters) {
-      const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
-      const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
-      if (hasW1 && hasW2) return true;
-    }
-
-    // Check dynamic semantic clusters (extracted from current narrative)
-    const dynamicClusters = this._currentDynamicClusters || [];
-    for (const cluster of dynamicClusters) {
-      const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
-      const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
-      if (hasW1 && hasW2) {
-        console.log(`[StoryGenerationService] Dynamic cluster match: "${w1}" and "${w2}" in cluster [${cluster.slice(0, 3).join(', ')}...]`);
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Validate and fix puzzle board for semantic overlap
-   * Ensures outlier words are semantically distinct from main grid words
-   */
-  _validatePuzzleSemanticsSync(outlierWords, gridWords, availableReplacements) {
-    const validatedOutliers = [...outlierWords];
-    const gridSet = new Set(gridWords.map(w => w.toUpperCase()));
-    const usedWords = new Set([...outlierWords, ...gridWords].map(w => w.toUpperCase()));
-
-    // Get semantic distance requirement from difficulty scaling (default 1 if not set)
-    const minSemanticDistance = this._currentSemanticDistanceRequirement || 1;
-
-    // For higher difficulty chapters, we need stricter semantic separation
-    // minSemanticDistance 1 = basic cluster check
-    // minSemanticDistance 2 = also check for thematic similarity
-    // minSemanticDistance 3 = also check for letter pattern similarity (harder puzzles)
-
-    // Check each outlier against all grid words
-    for (let i = 0; i < validatedOutliers.length; i++) {
-      const outlier = validatedOutliers[i];
-      let needsReplacement = false;
-
-      for (const gridWord of gridWords) {
-        // Basic semantic cluster check (always performed)
-        if (this._areSemanticallySimilar(outlier, gridWord)) {
-          needsReplacement = true;
-          console.log(`[StoryGenerationService] Semantic overlap detected: outlier "${outlier}" ~ grid word "${gridWord}"`);
-          break;
-        }
-
-        // Additional checks for higher difficulty
-        if (minSemanticDistance >= 2) {
-          // Check for shared prefix/suffix (e.g., MURDER/MURDERER, INVEST/INVESTIGATE)
-          const outlierUpper = outlier.toUpperCase();
-          const gridUpper = gridWord.toUpperCase();
-          if (outlierUpper.length >= 4 && gridUpper.length >= 4) {
-            if (outlierUpper.startsWith(gridUpper.slice(0, 4)) ||
-                gridUpper.startsWith(outlierUpper.slice(0, 4))) {
-              needsReplacement = true;
-              console.log(`[StoryGenerationService] Prefix overlap detected: "${outlier}" ~ "${gridWord}"`);
-              break;
-            }
-          }
-        }
-
-        if (minSemanticDistance >= 3) {
-          // Check for anagram-like similarity (shared letters)
-          const outlierLetters = new Set(outlier.toUpperCase().split(''));
-          const gridLetters = new Set(gridWord.toUpperCase().split(''));
-          const sharedLetters = [...outlierLetters].filter(l => gridLetters.has(l)).length;
-          const maxLength = Math.max(outlier.length, gridWord.length);
-          // If more than 70% letters are shared, might be confusing
-          // Guard: short words have naturally high letter overlap and cause false positives (e.g., GUN/RUN).
-          if (maxLength > 4 && sharedLetters / maxLength > 0.7) {
-            needsReplacement = true;
-            console.log(`[StoryGenerationService] Letter overlap detected: "${outlier}" ~ "${gridWord}" (${Math.round(sharedLetters/maxLength*100)}% shared)`);
-            break;
-          }
-        }
-      }
-
-      if (needsReplacement) {
-        // Find a replacement from available words
-        const replacement = availableReplacements.find(w => {
-          const upper = w.toUpperCase();
-          if (usedWords.has(upper)) return false;
-          // Ensure replacement doesn't overlap with any grid word
-          return !gridWords.some(gw => this._areSemanticallySimilar(upper, gw));
-        });
-
-        if (replacement) {
-          console.log(`[StoryGenerationService] Replacing "${outlier}" with "${replacement}"`);
-          usedWords.delete(outlier.toUpperCase());
-          validatedOutliers[i] = replacement.toUpperCase();
-          usedWords.add(replacement.toUpperCase());
-        }
-      }
-    }
-
-    return validatedOutliers;
-  }
-
-  /**
-   * LLM-based semantic validation for puzzles (async, more thorough)
-   * Used as a secondary check for important decision-point puzzles
-   */
-  async _validatePuzzleSemanticsWithLLM(outlierWords, mainWords) {
-    const prompt = `You are a word puzzle validator. Given these two word lists, identify any pairs where a word from List A is semantically too similar to a word from List B to be fair in a puzzle where players must identify outliers.
-
-LIST A (Outlier words - players must find these): ${outlierWords.join(', ')}
-LIST B (Main grid words): ${mainWords.join(', ')}
-
-Semantic similarity means:
-- Synonyms (COLD/FREEZING)
-- Same category/theme (WIND/ICE both relate to cold weather)
-- One implies the other (BLOOD/WOUND)
-- Common collocations (NIGHT/DARK)
-
-Return a JSON object:
-{
-  "conflicts": [
-    {"outlier": "WORD1", "mainWord": "WORD2", "reason": "brief explanation"}
-  ]
-}
-
-If no conflicts, return: {"conflicts": []}`;
-
-    try {
-      const response = await llmService.complete(
-        [{ role: 'user', content: prompt }],
-        {
-          maxTokens: GENERATION_CONFIG.maxTokens.validation,
-          responseSchema: {
-            type: 'object',
-            properties: {
-              conflicts: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    outlier: { type: 'string' },
-                    mainWord: { type: 'string' },
-                    reason: { type: 'string' }
-                  },
-                  required: ['outlier', 'mainWord', 'reason']
-                }
-              }
-            },
-            required: ['conflicts']
-          }
-        }
-      );
-
-      const result = JSON.parse(response.content);
-      return result.conflicts || [];
-    } catch (error) {
-      console.warn('[StoryGenerationService] LLM semantic validation failed:', error.message);
-      return []; // Fail open - rely on sync validation
-    }
-  }
-
-  _selectThemedWords(words, count, themeFocus, excludeWords = new Set()) {
-    const availableWords = words.filter(w => !excludeWords.has(w.toUpperCase()));
-
-    if (!themeFocus || availableWords.length === 0) {
-      return availableWords.slice(0, count);
-    }
-
-    const themeWords = themeFocus
-      .toUpperCase()
-      .replace(/[^A-Z\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length >= 3);
-
-    const scored = availableWords.map(word => {
-      const upperWord = word.toUpperCase();
-      let score = 0;
-
-      for (const tw of themeWords) {
-        if (upperWord === tw) score += 3;
-        else if (upperWord.includes(tw)) score += 2;
-        else if (tw.includes(upperWord)) score += 1;
-      }
-
-      return { word: upperWord, score };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-
-    const result = [];
-    const seen = new Set();
-    for (const { word } of scored) {
-      if (!seen.has(word)) {
-        result.push(word);
-        seen.add(word);
-        if (result.length >= count) break;
-      }
-    }
-
-    return result;
-  }
-
-  _determineTheme(outlierWords) {
-    const themes = [
-      { pattern: /EVIDENCE|PROOF|CLUE|WITNESS/, name: 'INVESTIGATION' },
-      { pattern: /DEATH|KILL|MURDER|BLOOD/, name: 'VIOLENCE' },
-      { pattern: /TRUST|BETRAY|LIE|TRUTH/, name: 'DECEPTION' },
-      { pattern: /MONEY|WEALTH|RICH|GOLD/, name: 'GREED' },
-      { pattern: /LOVE|HEART|PASSION/, name: 'PASSION' },
-      { pattern: /POWER|CONTROL|FORCE/, name: 'POWER' },
-      { pattern: /SECRET|HIDDEN|MYSTERY/, name: 'SECRETS' },
-    ];
-
-    const joined = outlierWords.join(' ');
-    for (const theme of themes) {
-      if (theme.pattern.test(joined)) {
-        return theme.name;
-      }
-    }
-
-    return 'CLUES';
   }
 
   // ==========================================================================
