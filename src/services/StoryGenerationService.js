@@ -1553,7 +1553,7 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
   // Victoria’s role is clearer to the reader earlier than Jack wants to admit.
   if (chapter >= 2 && chapter <= 8) {
     ironies.push({
-      secret: 'Victoria Blackwell is guiding the investigation as the Midnight Cartographer',
+      secret: 'Victoria Blackwell is guiding the investigation through dead letters and rules',
       jackKnows: chapter < 4 ? 'Jack knows Victoria only as the sender of impossible dead letters' :
         'Jack suspects Victoria is shaping his route through the city on purpose',
       readerKnows: 'The reader recognizes her signatures (silver ink, rule-language, river-glass tokens) and intent',
@@ -1979,7 +1979,7 @@ Jack stared at the words until the paper felt like it might blink. Then he wrote
       },
       confrontations: {
         subchapterA: {
-          title: 'Cartographer at Midnight',
+          title: 'The Woman Who Maps the Dark',
           narrative: `Victoria Blackwell’s building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
 
 She received him as if he were expected, because he was. No handshake. No small talk. Just a calm, observant gaze and a folder of photos that Jack had never shown anyone.
@@ -2647,10 +2647,10 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
     const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter mystery thriller with an original hidden fantasy world.
 
 ## STORY PREMISE
-Jack Halloway (35, burned-out freelance investigator) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of “dead letters” from Victoria Blackwell (“The Midnight Cartographer”) draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport’s infrastructure.
+Jack Halloway (35, burned-out freelance investigator) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of "dead letters" from Victoria Blackwell draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport's infrastructure.
 
 CRITICAL REVEAL TIMING:
-- The FIRST undeniable reveal that “the world is not what it seems” occurs at the END of subchapter 2A (not earlier).
+- The FIRST undeniable reveal that "the world is not what it seems" occurs at the END of subchapter 1C (not earlier).
 
 ## PLAYER SUPER-PATH: "${superPathKey}"
 Player personality: ${personality.narrativeStyle}
@@ -2788,11 +2788,11 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       ],
       characterArcs: {
         jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
-        victoria: 'Cartographer who tests Jack's capacity to read rules without becoming a weapon',
+        victoria: 'Guide who tests Jack's capacity to read rules without becoming a weapon',
       },
       consistencyAnchors: [
         'Jack Halloway is 35 years old and does NOT start with Under-Map knowledge',
-        'Victoria Blackwell is the Midnight Cartographer (dead letters, silver ink, rules)',
+        'Victoria Blackwell guides Jack via dead letters, silver ink, and rules',
         'The Under-Map is real; the first undeniable reveal happens at the end of 1C',
         'Glyphs behave like a language with constraints; do not "magic-system" explain—show',
         'Anchor disappearances form a deliberate pattern',
@@ -3226,7 +3226,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     const consequencePrompt = `Generate narrative consequences for a player decision in an interactive mystery thriller with a hidden fantasy layer (the Under-Map).
 
 ## STORY CONTEXT
-This is "Dead Letters" - Jack Halloway, a young contract investigator/records-clerk-turned-gig-worker, is pulled into a hidden reality threaded through Ashport's streets. Victoria Blackwell ("The Midnight Cartographer") sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
+This is "Dead Letters" - Jack Halloway, a 35-year-old burned-out freelance investigator, is pulled into a hidden reality threaded through Ashport's streets. Victoria Blackwell sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
 
 ## CHAPTER ${chapter} NARRATIVE LEADING TO DECISION
 ${narrativeContext ? `The following is the end of the narrative leading to this choice:
@@ -4722,7 +4722,7 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Patterns to identify who is speaking
     const speakerPatterns = [
       { name: 'Tom Wade', patterns: [/(?:Tom|Wade)\s+said/gi, /"[^"]+"\s+Tom/gi, /Tom(?:'s|'d|'ll)/gi] },
-      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell|Cartographer)\s+said/gi, /"[^"]+"\s+Victoria/gi] },
+      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell)\s+said/gi, /"[^"]+"\s+Victoria/gi] },
       { name: 'Sarah', patterns: [/Sarah\s+said/gi, /"[^"]+"\s+Sarah/gi] },
       { name: 'Grange', patterns: [/(?:Grange|Deputy Chief)\s+said/gi, /"[^"]+"\s+Grange/gi] },
     ];
@@ -9865,7 +9865,7 @@ Check if each critical thread above is addressed through dialogue or action (not
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
 - Jack Halloway: 35 years old; burned out freelance investigator; former file clerk; avoids finding people after a case went bad; initially does NOT know the Under-Map is real
-- Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink, river-glass tokens); guides Jack via rules and routes
+- Victoria Blackwell: sends dead letters with silver ink and river-glass tokens; guides Jack via rules and routes
 - Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
 - Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 1C, not earlier
 - Other characters: The LLM has creative freedom to generate supporting characters as needed
@@ -10094,10 +10094,10 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         latestPayoffChapter: 2,
       },
       {
-        id: 'victoria_cartographer',
-        payoff: 'Victoria Blackwell is (or works as) the Midnight Cartographer, guiding Jack via symbols and thresholds',
+        id: 'victoria_guide',
+        payoff: 'Victoria Blackwell is deliberately guiding Jack via symbols and thresholds',
         requiredSetups: [
-          'Signature / motif: silver ink, map-adjacent language, or cartography metaphors',
+          'Signature / motif: silver ink, map-adjacent language, or rule-based instructions',
           'Victoria demonstrates knowledge of Jack\'s movements or choices',
           'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
         ],
@@ -10468,7 +10468,7 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
 ### KEY FIGURES
 - Jack Halloway: 35-year-old burned-out freelance investigator, protagonist
-- Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName} ("The Midnight Cartographer")
+- Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName}
 - Other characters: LLM has creative freedom to generate supporting characters as needed
 
 ## CHARACTER NAMES (USE EXACTLY)
@@ -10478,7 +10478,7 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
     // Only Jack and Victoria are defined - LLM has freedom to create others
     const keyCharacters = [
       { name: protagonist?.name || 'Jack Halloway', role: 'protagonist' },
-      { name: antagonist?.name || 'Victoria Blackwell', alias: 'The Midnight Cartographer' },
+      { name: antagonist?.name || 'Victoria Blackwell', role: 'antagonist/guide' },
     ];
 
     for (const char of keyCharacters) {
