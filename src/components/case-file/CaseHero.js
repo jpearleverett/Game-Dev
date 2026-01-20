@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, FONT_SIZES } from '../../constants/typography';
 import { SPACING, RADIUS } from '../../constants/layout';
 import useResponsiveLayout from '../../hooks/useResponsiveLayout';
 
 const NOISE_TEXTURE = require("../../../assets/images/ui/backgrounds/noise-texture.png");
+const CASE_TITLE_BG = require("../../../assets/images/ui/backgrounds/casetitlebg.jpg");
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
@@ -42,7 +43,9 @@ export default function CaseHero({ activeCase, compact }) {
             },
           ]}
         />
-        <View
+        <ImageBackground
+          source={CASE_TITLE_BG}
+          resizeMode="cover"
           style={[
             styles.heroLetterPaper,
             {
@@ -53,6 +56,7 @@ export default function CaseHero({ activeCase, compact }) {
               transform: [{ rotate: compact ? "-0.8deg" : "-0.5deg" }],
             },
           ]}
+          imageStyle={{ borderRadius: heroLetterRadius }}
         >
           <Image
             source={NOISE_TEXTURE}
@@ -107,7 +111,7 @@ export default function CaseHero({ activeCase, compact }) {
               { height: heroLetterDividerThickness },
             ]}
           />
-        </View>
+        </ImageBackground>
       </View>
     </View>
   );
