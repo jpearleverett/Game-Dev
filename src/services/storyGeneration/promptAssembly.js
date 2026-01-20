@@ -492,7 +492,7 @@ ${SUBTEXT_REQUIREMENTS.examples.map(e => `"${e.surface}" → Subtext: "${e.subte
 
 ### BRANCHING CHOICE DESIGN (For Interactive Narratives)
 
-When generating branching choices (firstChoice options 1A/1B/1C and secondChoices options 2A/2B/2C):
+When generating branching choices (firstChoice options 1A/1B/1C and secondChoices options 1A-2A/1A-2B/1A-2C, 1B-2A/1B-2B/1B-2C, 1C-2A/1C-2B/1C-2C):
 
 **Options A and B (Standard Choices):**
 - Two distinct, logical approaches to the situation
@@ -1059,7 +1059,12 @@ ${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
 ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
   }
 
-  const targetWords = GENERATION_CONFIG?.wordCount?.target || MIN_WORDS_PER_SUBCHAPTER;
+  const baseTargetWords = GENERATION_CONFIG?.wordCount?.target || MIN_WORDS_PER_SUBCHAPTER;
+  const promptTargetMultiplier = GENERATION_CONFIG?.wordCount?.promptTargetMultiplier || 1;
+  const targetWords = Math.max(
+    baseTargetWords,
+    Math.round(baseTargetWords * promptTargetMultiplier)
+  );
 
   task += `
 

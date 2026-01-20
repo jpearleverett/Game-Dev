@@ -23,6 +23,47 @@ import { saveGeneratedChapter } from '../../storage/generatedStoryStorage';
 // TWO-PASS DECISION GENERATION
 // ==========================================================================
 
+const normalizeBranchingChoice = (choice) => {
+  if (!choice || typeof choice !== 'object') return null;
+
+  let firstChoice = String(choice.firstChoice || '').trim().toUpperCase();
+  let secondChoice = String(choice.secondChoice || choice.path || '').trim().toUpperCase();
+
+  if (!firstChoice && /^1[ABC]-2[ABC]$/.test(secondChoice)) {
+    [firstChoice] = secondChoice.split('-');
+  }
+
+  if (/^2[ABC]$/.test(secondChoice) && /^1[ABC]$/.test(firstChoice)) {
+    secondChoice = `${firstChoice}-${secondChoice}`;
+  }
+
+  const dupMatch = secondChoice.match(/^(1[ABC])-(1[ABC]-2[ABC])$/);
+  if (dupMatch) {
+    secondChoice = dupMatch[2];
+  }
+
+  if (!/^1[ABC]$/.test(firstChoice) && /^1[ABC]-2[ABC]$/.test(secondChoice)) {
+    [firstChoice] = secondChoice.split('-');
+  }
+
+  if (!/^1[ABC]$/.test(firstChoice) || !/^1[ABC]-2[ABC]$/.test(secondChoice)) {
+    return null;
+  }
+
+  return {
+    ...choice,
+    firstChoice,
+    secondChoice,
+  };
+};
+
+const normalizeBranchingChoices = (choices = []) => {
+  if (!Array.isArray(choices)) return [];
+  return choices
+    .map(normalizeBranchingChoice)
+    .filter(Boolean);
+};
+
 /**
  * Generate decision structure first (Pass 1 of two-pass generation)
  * This ensures decisions are always complete and contextually appropriate,
@@ -197,7 +238,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // TRUE INFINITE BRANCHING: Get player's actual choices within subchapters
   // This tracks which path the player took through branching narratives (e.g., "1B" -> "1B-2C")
   // Used to build the "realized narrative" for context - what the player actually experienced
-  const branchingChoices = options?.branchingChoices || [];
+  const branchingChoices = normalizeBranchingChoices(options?.branchingChoices || []);
 
   // Store branchingChoices on instance so helper functions can access player's actual path
   // This enables _getPathDecisionData to look up path-specific decisions correctly
@@ -827,14 +868,22 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
       // Build canonical narrative from branchingNarrative for validation/expansion
       // Uses opening + first choice (1A) + first ending (1A-2A) as the canonical path
-      if (!generatedContent.narrative && generatedContent.branchingNarrative) {
+      const hasNarrative = typeof generatedContent.narrative === 'string'
+        && generatedContent.narrative.trim().length > 0;
+      if (!hasNarrative && generatedContent.branchingNarrative) {
         const bn = generatedContent.branchingNarrative;
         const parts = [];
         if (bn.opening?.text) parts.push(bn.opening.text);
-        const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A');
+        const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A')
+          || bn.firstChoice?.options?.[0];
         if (firstOption?.response) parts.push(firstOption.response);
-        const secondGroup = bn.secondChoices?.find(sc => sc.afterChoice === '1A');
-        const secondOption = secondGroup?.options?.find(o => o.key === '1A-2A');
+        const firstKey = String(firstOption?.key || '1A').toUpperCase();
+        const secondGroup = bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === firstKey)
+          || bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === '1A')
+          || bn.secondChoices?.[0];
+        const secondOption = secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === `${firstKey}-2A`)
+          || secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === '2A')
+          || secondGroup?.options?.[0];
         if (secondOption?.response) parts.push(secondOption.response);
         generatedContent.narrative = parts.join('\n\n');
       }

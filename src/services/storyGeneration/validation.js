@@ -105,7 +105,7 @@ class ValidationMethods {
         narrative: this._cleanNarrative(parsed.narrative || ''),
         // BRANCHING NARRATIVE: The interactive story structure with 9 paths
         // Contains: opening, firstChoice, secondChoices (each with options array)
-        branchingNarrative: parsed.branchingNarrative || null,
+        branchingNarrative: this._normalizeBranchingNarrative(parsed.branchingNarrative || null),
         chapterSummary: parsed.chapterSummary || '', // High-quality summary
         puzzleCandidates: parsed.puzzleCandidates || [], // LLM suggested puzzle words
         briefing: parsed.briefing || { summary: '', objectives: [] },
@@ -200,6 +200,59 @@ class ValidationMethods {
         decision: null,
       };
     }
+  }
+
+  _normalizeBranchingNarrative(branchingNarrative) {
+    if (!branchingNarrative || typeof branchingNarrative !== 'object') return branchingNarrative;
+
+    const FIRST_KEYS = ['1A', '1B', '1C'];
+    const SECOND_KEYS = ['2A', '2B', '2C'];
+
+    const normalizeFirstKey = (key, idx = 0) => {
+      const raw = String(key || '').trim().toUpperCase();
+      if (/^1[ABC]$/.test(raw)) return raw;
+      return FIRST_KEYS[idx] || '1A';
+    };
+
+    const normalizeSecondKey = (firstKey, key, idx = 0) => {
+      const fk = normalizeFirstKey(firstKey, 0);
+      const raw = String(key || '').trim().toUpperCase();
+      if (/^1[ABC]-2[ABC]$/.test(raw)) return raw;
+      if (/^2[ABC]$/.test(raw)) return `${fk}-${raw}`;
+      const fallback = SECOND_KEYS[idx] || '2A';
+      return `${fk}-${fallback}`;
+    };
+
+    const firstChoice = branchingNarrative.firstChoice || {};
+    const firstOptions = Array.isArray(firstChoice.options) ? firstChoice.options : [];
+    const normalizedFirstOptions = firstOptions.map((opt, idx) => ({
+      ...opt,
+      key: normalizeFirstKey(opt?.key, idx),
+    }));
+
+    const secondChoices = Array.isArray(branchingNarrative.secondChoices) ? branchingNarrative.secondChoices : [];
+    const normalizedSecondChoices = secondChoices.map((sc, scIdx) => {
+      const afterChoice = normalizeFirstKey(sc?.afterChoice, scIdx);
+      const options = Array.isArray(sc?.options) ? sc.options : [];
+      const normalizedOptions = options.map((opt, optIdx) => ({
+        ...opt,
+        key: normalizeSecondKey(afterChoice, opt?.key, optIdx),
+      }));
+      return {
+        ...sc,
+        afterChoice,
+        options: normalizedOptions,
+      };
+    });
+
+    return {
+      ...branchingNarrative,
+      firstChoice: {
+        ...firstChoice,
+        options: normalizedFirstOptions,
+      },
+      secondChoices: normalizedSecondChoices,
+    };
   }
 
   /**

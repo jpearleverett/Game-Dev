@@ -466,6 +466,9 @@ export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secon
     return sk;
   };
 
+  const normalizedFirst = String(firstChoiceKey || '').trim().toUpperCase();
+  const normalizedSecond = normalizeBranchPath(normalizedFirst, secondChoiceKey);
+
   const parts = [];
 
   // Opening (shared by all paths)
@@ -474,21 +477,24 @@ export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secon
   }
 
   // First choice response
-  if (branchingNarrative.firstChoice?.options && firstChoiceKey) {
-    const firstOption = branchingNarrative.firstChoice.options.find(o => o.key === firstChoiceKey);
+  if (branchingNarrative.firstChoice?.options && normalizedFirst) {
+    const firstOption = branchingNarrative.firstChoice.options.find((o) => (
+      String(o?.key || '').trim().toUpperCase() === normalizedFirst
+    ));
     if (firstOption?.response) {
       parts.push(firstOption.response);
     }
   }
 
   // Second choice response (ending)
-  if (branchingNarrative.secondChoices && firstChoiceKey && secondChoiceKey) {
+  if (branchingNarrative.secondChoices && normalizedFirst && normalizedSecond) {
     // Find the secondChoice group that corresponds to the first choice
-    const secondChoiceGroup = branchingNarrative.secondChoices.find(sc => sc.afterChoice === firstChoiceKey);
+    const secondChoiceGroup = branchingNarrative.secondChoices.find((sc) => (
+      String(sc?.afterChoice || '').trim().toUpperCase() === normalizedFirst
+    ));
     if (secondChoiceGroup?.options) {
-      const normalizedSecond = normalizeBranchPath(firstChoiceKey, secondChoiceKey);
       const secondOption = secondChoiceGroup.options.find((o) => (
-        normalizeBranchPath(firstChoiceKey, o?.key) === normalizedSecond
+        normalizeBranchPath(normalizedFirst, o?.key) === normalizedSecond
       ));
       if (secondOption?.response) {
         parts.push(secondOption.response);
