@@ -8,6 +8,7 @@ import React, {
 import {
   Animated,
   Easing,
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +44,7 @@ import {
 import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
 
 const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
+const CORKBOARD_BG = require("../../assets/images/ui/backgrounds/corkboardbg.jpg");
 const BOARD_CORNER_TL = require("../../assets/images/ui/decorative/corner-ornament-tl.png");
 const BOARD_CORNER_TR = require("../../assets/images/ui/decorative/corner-ornament-tr.png");
 const BOARD_CORNER_BL = require("../../assets/images/ui/decorative/corner-ornament-bl.png");
@@ -850,18 +852,17 @@ export default function CaseFileScreen({
             style={[styles.boardFrame, { borderRadius: boardFrameRadius }]}
           >
             {/* Inner "Cork/Wood" Surface */}
-            <LinearGradient
-              colors={["#e6cca5", "#d4b080", "#b08656"]}
-              locations={[0, 0.4, 1]}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
+            <ImageBackground
+              source={CORKBOARD_BG}
+              resizeMode="cover"
               style={[
-                styles.boardSurface, 
-                { 
+                styles.boardSurface,
+                {
                   borderRadius: boardRadius,
                   margin: 2, // Slight inset to show the frame
                 }
               ]}
+              imageStyle={{ borderRadius: boardRadius }}
             >
               {/* Board Visuals - Atmospheric Layers */}
               <View pointerEvents="none" style={[styles.boardGlow, { width: boardGlowSize, height: boardGlowSize, borderRadius: boardGlowSize, backgroundColor: palette.glow }]} />
@@ -1088,7 +1089,7 @@ export default function CaseFileScreen({
                   </View>
                 )}
               </View>
-            </LinearGradient>
+            </ImageBackground>
           </LinearGradient>
         </View>
       </ScrollView>
