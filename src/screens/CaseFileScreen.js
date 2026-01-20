@@ -826,7 +826,7 @@ export default function CaseFileScreen({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <SecondaryButton label="Back to Results" arrow onPress={onBack} style={styles.backButton} />
+        <SecondaryButton label="Menu" arrow onPress={onBack} style={styles.backButton} />
 
         <View
           style={[
