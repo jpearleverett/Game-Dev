@@ -152,6 +152,7 @@ export const createBlankProgress = () => ({
     highContrast: false,
     hintsEnabled: false,
     verboseMode: false,
+    logFullPrompts: false,
     enableProseQualityValidation: true,
     enableSentenceVarietyValidation: true,
     enableLLMValidation: true,

@@ -1530,6 +1530,9 @@ function _logCompletePrompt({ caseNumber, chapter, subchapter, cacheKey, dynamic
 }
 
 export const promptAssemblyMethods = {
+  setFullPromptLoggingEnabled(enabled = false) {
+    this.fullPromptLoggingEnabled = Boolean(enabled);
+  },
   _buildExtendedStyleExamplesForCache,
   _buildStaticCacheContent,
   _ensureStaticCache,
