@@ -13,10 +13,10 @@ export default function CaseSummary({ content, compact }) {
   if (!content) return null;
 
   // Layout Constants
-  const sectionGap = scaleSpacing(compact ? SPACING.md : SPACING.lg);
-  const summaryPanelLift = Math.round(sectionGap * 0.4);
+  const sectionGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
+  const summaryPanelLift = Math.round(sectionGap * 0.25);
   const summaryPanelPadding = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
-  const blockRadius = scaleRadius(RADIUS.lg);
+  const blockRadius = scaleRadius(RADIUS.md);
 
   // Typography Constants
   const slugSize = shrinkFont(moderateScale(FONT_SIZES.xs));

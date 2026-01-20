@@ -148,14 +148,14 @@ export default function CaseFileScreen({
   // Layout Metrics
   const horizontalPadding = scaleSpacing(compact ? 0 : medium ? SPACING.xs : SPACING.sm);
   const verticalPadding = scaleSpacing(compact ? SPACING.lg : SPACING.xl);
-  const contentGap = scaleSpacing(compact ? SPACING.lg : SPACING.xl);
+  const contentGap = scaleSpacing(compact ? SPACING.md : SPACING.lg);
   const boardFrameRadius = scaleRadius(RADIUS.xl + 6);
   const boardRadius = scaleRadius(RADIUS.xl);
   const boardContentPaddingH = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
   const boardContentPaddingV = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
   const boardShadowRadius = Math.max(18, scaleSpacing(SPACING.xl));
   const boardShadowOffsetY = scaleSpacing(SPACING.md);
-  const sectionGap = scaleSpacing(compact ? SPACING.md : SPACING.lg);
+  const sectionGap = scaleSpacing(compact ? SPACING.sm : SPACING.md);
   
   const boardGlowSize = Math.max(220, Math.round(scaleSpacing(compact ? SPACING.xxl : SPACING.xxl + SPACING.sm)));
   const pinSize = Math.max(14, Math.round(moderateScale(compact ? 18 : 22)));
@@ -903,7 +903,7 @@ export default function CaseFileScreen({
                 {/* Hero Section */}
                 <CaseHero activeCase={activeCase} compact={compact} />
 
-                <View style={[styles.heroDivider, { height: 1, backgroundColor: "rgba(248, 216, 168, 0.16)" }]} />
+                <View style={[styles.heroDivider, { height: 1, backgroundColor: "rgba(248, 216, 168, 0.12)", marginVertical: scaleSpacing(compact ? SPACING.xs : SPACING.sm) }]} />
 
                 {/* Summary Section */}
                 <CaseSummary content={summaryContent} compact={compact} />
