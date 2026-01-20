@@ -711,11 +711,11 @@ export default function CaseFileScreen({
       } else if (narrativeReadyForPuzzle) {
         // A/B subchapter: Show puzzle after narrative is complete (branching choices made)
         return {
-          title: puzzleMode === PUZZLE_MODE.LOGIC ? "Logic Grid Ready" : "Evidence Board Ready",
+          title: "Ready to Investigate",
           body: puzzleMode === PUZZLE_MODE.LOGIC
-            ? "The narrative threads are woven. Now solve the logic grid to unlock your next move."
-            : "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
-          hint: "Solve the puzzle to continue the investigation.",
+            ? "The clues are laid out. Solve the logic grid to piece together what happened."
+            : "The evidence awaits. Connect the dots to uncover the truth.",
+          hint: null,
           actionLabel: puzzleActionLabel,
           actionIcon: "🔍",
           onPress: onProceedToPuzzle,
@@ -994,26 +994,31 @@ export default function CaseFileScreen({
                       styles.storyPromptCard,
                       {
                         borderRadius: scaleRadius(RADIUS.lg),
-                        borderColor: palette.border,
+                        borderColor: palette.accent,
                         padding: scaleSpacing(SPACING.md),
-                        gap: scaleSpacing(SPACING.xs),
+                        gap: scaleSpacing(SPACING.sm),
                       },
                     ]}
                   >
-                    <Text style={[styles.storyPromptLabel, { color: palette.accent, fontSize: slugSize }]}>{storyPromptConfig.title}</Text>
-                    <Text style={[styles.storyPromptBody, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
+                    <View style={styles.storyPromptHeader}>
+                      <View style={[styles.storyPromptAccent, { backgroundColor: palette.accent }]} />
+                      <Text style={[styles.storyPromptLabel, { color: palette.accent, fontSize: slugSize + 1 }]}>{storyPromptConfig.title}</Text>
+                    </View>
+                    <Text style={[styles.storyPromptBody, { color: palette.highlightText, fontSize: narrativeSize }]}>
                       {storyPromptConfig.body}
                     </Text>
                     {storyPromptConfig.hint && (
                       <Text style={[styles.storyPromptHint, { color: palette.badgeText, fontSize: slugSize }]}>{storyPromptConfig.hint}</Text>
                     )}
-                    <PrimaryButton
-                      label={storyPromptConfig.actionLabel}
-                      icon={storyPromptConfig.actionIcon}
-                      onPress={storyPromptConfig.onPress}
-                      disabled={!storyPromptConfig.onPress}
-                      fullWidth
-                    />
+                    <View style={{ marginTop: scaleSpacing(SPACING.xs) }}>
+                      <PrimaryButton
+                        label={storyPromptConfig.actionLabel}
+                        icon={storyPromptConfig.actionIcon}
+                        onPress={storyPromptConfig.onPress}
+                        disabled={!storyPromptConfig.onPress}
+                        fullWidth
+                      />
+                    </View>
                   </View>
                 )}
 
@@ -1099,7 +1104,10 @@ export default function CaseFileScreen({
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  backButton: { alignSelf: "flex-start" },
+  backButton: {
+    alignSelf: "flex-start",
+    opacity: 0.9,
+  },
   boardWrapper: {
     position: "relative",
     overflow: "visible",
@@ -1124,14 +1132,14 @@ const styles = StyleSheet.create({
   boardContent: { position: "relative", width: "100%" },
   boardPin: {
     position: "absolute",
-    backgroundColor: "#7a2e24",
+    backgroundColor: "#8b7355",  // Antique brass - subtler than red
     borderWidth: 1,
-    borderColor: "#4a150f",
+    borderColor: "#5a4a3a",
     shadowColor: "#000",
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
     shadowOffset: { width: 1, height: 2 },
-    elevation: 8,
+    elevation: 6,
     zIndex: 4,
   },
   boardPinLeft: { left: "22%" },
@@ -1166,10 +1174,43 @@ const styles = StyleSheet.create({
   choiceSignalLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   choiceSignalBody: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.6 },
   narrativeSection: { position: "relative", overflow: "visible" },
-  storyPromptCard: { borderWidth: 1, backgroundColor: "rgba(8, 4, 2, 0.86)" },
-  storyPromptLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
-  storyPromptBody: { fontFamily: FONTS.primary, letterSpacing: 0.6 },
-  storyPromptHint: { fontFamily: FONTS.mono, letterSpacing: 1.4 },
+  storyPromptCard: {
+    borderWidth: 2,
+    backgroundColor: "rgba(26, 18, 11, 0.95)",
+    // Subtle inner glow effect via shadow
+    shadowColor: "#d4a574",
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+  storyPromptLabel: {
+    fontFamily: FONTS.monoBold,
+    letterSpacing: 2.5,
+    textTransform: "uppercase",
+    fontWeight: "700",
+  },
+  storyPromptBody: {
+    fontFamily: FONTS.primary,
+    letterSpacing: 0.4,
+    lineHeight: 24,
+  },
+  storyPromptHint: {
+    fontFamily: FONTS.mono,
+    letterSpacing: 1.2,
+    fontStyle: "italic",
+    opacity: 0.8,
+  },
+  storyPromptHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  storyPromptAccent: {
+    width: 3,
+    height: 16,
+    borderRadius: 2,
+  },
   footerRow: { width: "100%" },
   footerRowSplit: { flexDirection: "row", flexWrap: "wrap", alignItems: "stretch" },
   footerRibbon: { borderWidth: 1, gap: 4, alignItems: "flex-start" },

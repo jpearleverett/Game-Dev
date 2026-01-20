@@ -28,11 +28,11 @@ const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jp
 const NOIR_TYPOGRAPHY = {
   fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   color: '#1a1a1a',
-  fontSize: 14,
-  lineHeight: 22,
-  textShadowColor: 'rgba(0, 0, 0, 0.25)',
+  fontSize: 15,
+  lineHeight: 25,  // 1.67 ratio for comfortable reading
+  textShadowColor: 'rgba(0, 0, 0, 0.2)',
   textShadowOffset: { width: 0.5, height: 0.5 },
-  textShadowRadius: 1,
+  textShadowRadius: 0.5,
 };
 
 // Heavy internal padding for paper margins
@@ -859,6 +859,17 @@ export default function BranchingNarrativeReader({
         <Text style={[styles.arrowLabel, { fontSize: arrowFontSize }]}>{">"}</Text>
       </Pressable>
 
+      {/* Page Progress Indicator */}
+      {pages.length > 1 && (
+        <View style={styles.pageProgressContainer} pointerEvents="none">
+          <View style={styles.pageProgressPill}>
+            <Text style={styles.pageProgressText}>
+              {activePage + 1} / {pages.length}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Observation Popup */}
       {activePopup && (
         <ObservationPopup detail={activePopup} onDismiss={handlePopupDismiss} />
@@ -875,12 +886,13 @@ const styles = StyleSheet.create({
   page: {
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(40, 30, 20, 0.6)",
+    borderColor: "rgba(60, 45, 30, 0.7)",
+    // Multi-layered shadow for realistic paper depth
     shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 4, height: 6 },
-    elevation: 6,
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    shadowOffset: { width: 2, height: 8 },
+    elevation: 10,
   },
   pageBackground: {
     flex: 1,
@@ -889,7 +901,7 @@ const styles = StyleSheet.create({
   },
   lightenOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 252, 245, 0.22)',
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -922,12 +934,13 @@ const styles = StyleSheet.create({
     textShadowColor: NOIR_TYPOGRAPHY.textShadowColor,
     textShadowOffset: NOIR_TYPOGRAPHY.textShadowOffset,
     textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
+    letterSpacing: 0.3,  // Slight letter spacing for readability
   },
   pageStamp: {
     position: "absolute",
-    bottom: 16,
+    bottom: 12,
     alignSelf: "center",
-    opacity: 0.5,
+    opacity: 0.4,
   },
   noirPageStampText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
@@ -957,6 +970,28 @@ const styles = StyleSheet.create({
   arrowLeft: { left: -18 },
   arrowRight: { right: -18 },
   arrowDisabled: { opacity: 0 },
+  pageProgressContainer: {
+    position: "absolute",
+    bottom: -28,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  pageProgressPill: {
+    backgroundColor: "rgba(26, 18, 11, 0.9)",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(248, 216, 168, 0.2)",
+  },
+  pageProgressText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#f8d8a8",
+    letterSpacing: 1,
+  },
   arrowLabel: {
     color: "#f8d8a8",
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
