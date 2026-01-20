@@ -209,7 +209,7 @@ Story bible (`storyBible.js`) is the **single source of truth** for:
 - Voice DNA and example passages.
 - Engagement requirements and micro-tension techniques.
 - Annotated examples, negative examples, extended style grounding.
-- Consistency rules and reveal timing.
+- Consistency rules, reveal timing, and setup/payoff registry.
 
 All prompt-building methods read from storyBible.js - no hardcoded duplicates.
 
@@ -225,7 +225,7 @@ At runtime, the game selects the decision that matches the player's actual
 branching choices within the subchapter.
 
 ### 6.5 Validation and word count
-- LLM responses are validated with a secondary LLM pass.
+- LLM responses are validated with a secondary LLM pass (gated by config).
 - JSON repair attempts are applied when output is truncated.
 - Regex validation checks POV, forbidden phrases, and structural consistency.
 - **Word count validation is warnings-only** (no automatic retry or expansion).
@@ -234,14 +234,14 @@ branching choices within the subchapter.
   - `target`: 1,050 words (3×350=1,050 expected per path)
   - `maximum`: 1,400 words
 - Segment validation minimum: 300 words (ensures 3 segments meet 900 word path minimum).
+- Validation gating flags (see `GENERATION_CONFIG.qualitySettings`):
+  - `enableProseQualityValidation`
+  - `enableSentenceVarietyValidation`
+  - `enableLLMValidation`
 
-### 6.6 Narrative expansion (DISABLED)
-- The `_expandNarrative()` function previously attempted to expand short narratives.
-- **This feature is disabled** because it caused text corruption:
-  - LLM would start mid-word (e.g., "ike taffy" instead of "like taffy")
-  - LLM would include partial duplicate sentences
-- Shorter stories are now accepted rather than risking corrupted text.
-- The function remains in code but is not called.
+### 6.6 Narrative expansion (REMOVED)
+- `_expandNarrative()` and its grounding helper were removed entirely.
+- Shorter stories are accepted rather than risking corrupted text.
 
 ### 6.7 Path personality
 The player's choice history (A=methodical, B=aggressive) produces a path
@@ -450,11 +450,10 @@ Enable via Settings > Verbose Mode. When enabled:
 
 ### 12.3 What's logged at each level
 
-**Always visible (errors, warnings, info):**
+- **Always visible (errors, warnings, info):**
 - Generation failures and errors
 - CHAIN triggers (`🔗 CHAIN: 001A → 001B`)
 - CHAIN completions (`✅ CHAIN COMPLETE: 001B generated in 60.5s`)
-- Fallback content warnings
 - Network/connectivity issues
 
 **Debug-only (verbose mode):**
@@ -516,8 +515,8 @@ Generated story content is stored in AsyncStorage with:
   storage limits.
 - Entry optimization before save (strip consistency facts, trim threads, drop
   derived summaries) to reduce storage size.
-- Late-arriving generations do not overwrite emergency fallback content if the
-  player already started reading the fallback.
+- Late-arriving generations do not overwrite story entries the player has
+  already started reading (no fallback narratives are used).
 
 Pruning priority:
 - Keep the current path and recent chapters.
@@ -830,9 +829,9 @@ This is now enforced throughout the codebase.
 
 #### What remains (for post-processing only)
 
-Name correction patterns for common LLM misspellings remain (e.g., "Silias" →
-"Silas", "Granges" → "Grange"). These help fix typos if the LLM generates
-characters with those names, but do NOT instruct the LLM to create them.
+Name correction patterns now only target canonical names (Jack/Victoria) and
+the canonical city name (Ashport). Non-canonical character misspellings were
+removed to avoid implicitly legitimizing them in validation.
 
 ### 19.6 Victoria alias removal
 
@@ -1022,6 +1021,66 @@ Removed the entire fallback narrative system from `StoryGenerationService.js`:
 - ~840 lines of fallback code removed
 - Cleaner architecture: story bible is the single source of truth
 - No more duplicate character data in service file
+
+### 19.12 Case file screen UI simplification (Jan 2026)
+
+Simplified the CaseFileScreen UI for a cleaner, more immersive narrative experience:
+
+1. **Title section cleanup**
+   - Removed "CASE FILE #001A" label from hero section - title now stands alone
+   - Opening case (001A) renamed from "Dead Letter Office" to "The Visitor"
+   - Title font size reduced for better proportions
+   - Reduced padding throughout hero and content sections
+
+2. **Bridge text/summary changes**
+   - Chapter 1A (opening case) now skips the bridge text entirely
+   - Summary panel tape decorations removed to reduce visual clutter
+   - Spacing between title and content sections tightened
+
+3. **Narrative journal cleanup**
+   - Removed ALL segment labels from BranchingNarrativeReader
+   - Previously showed "CASE FILE", "INVESTIGATION", "CONCLUSION" on pages
+   - Now narrative starts cleanly without labels
+
+4. **Navigation button**
+   - Changed "Back to Results" to "Menu" - clearer for narrative-first flow
+   - The case file screen is now the entry point, not a post-puzzle screen
+
+#### Files modified
+
+- `src/data/cases.js` - Changed 001A title
+- `src/components/case-file/CaseHero.js` - Removed case number, reduced sizing
+- `src/components/case-file/CaseSummary.js` - Removed tape decorations
+- `src/components/BranchingNarrativeReader.js` - Removed segment labels
+- `src/screens/CaseFileScreen.js` - Skip summary for 001A, reduced spacing
+
+### 19.13 Story bible alignment + validation gating (Jan 2026)
+
+**Story structure now drives runtime constants**
+- `StoryGenerationService` derives chapter count, subchapter count, and the
+  decision subchapter from `STORY_STRUCTURE` (no hardcoded 12/3/3).
+
+**Reveal timing + setup/payoff moved to storyBible**
+- Added `REVEAL_TIMING` and `SETUP_PAYOFF_REGISTRY` to `storyBible.js`.
+- `StoryGenerationService` now uses these for:
+  - Reveal timing checks (premature Under-Map exposure).
+  - Setup/payoff validation (including payoff regex patterns).
+
+**Path decision prompt safety**
+- Template replacement now enforces all placeholders are filled.
+- Unresolved placeholders throw with a clear error to avoid silent prompt
+  corruption.
+
+**Validation gating**
+- New config toggles in `GENERATION_CONFIG.qualitySettings`:
+  - `enableProseQualityValidation`
+  - `enableSentenceVarietyValidation`
+  - `enableLLMValidation`
+- Defaults are `true`; can be disabled for low-latency gameplay.
+
+**Removed unused helpers**
+- Deleted unused fallback/expansion helpers (`_expandNarrative`,
+  `_buildExpansionGrounding`, `getEmergencyFallback`, dramatic irony section).
 
 ---
 
