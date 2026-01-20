@@ -1602,7 +1602,7 @@ The reader knows things Jack doesn't. USE THIS for tension:
 `;
   });
 
-  section += `Write scenes that let readers CRINGE at Jack's ignorance. Let them see the trap closing. The tension between what we know and what Jack knows is incredibly powerful.`;
+  section += `Write scenes that let readers CRINGE at the protagonist's ignorance. Let them see the trap closing. The tension between what we know and what ${ABSOLUTE_FACTS.protagonist.fullName} knows is incredibly powerful.`;
 
   return section;
 };
@@ -1657,13 +1657,9 @@ class StoryGenerationService {
     this.maxArchivedThreads = 50; // Cap on archived thread storage
     this.archiveChapterRetention = 3; // Keep archived threads for N chapters after resolution
 
-    // ========== NEW: Fallback Content System for Graceful Degradation ==========
-    this.fallbackTemplates = this._initializeFallbackTemplates();
-    // Normalize fallback templates to third-person limited narration (dialogue may remain first-person).
-    // This prevents immersion breaks if a template accidentally includes first-person narration.
-    this._normalizeFallbackTemplatesToThirdPerson();
+    // ========== Generation Retry Tracking ==========
     this.generationAttempts = new Map(); // Track retry attempts per content
-    this.maxGenerationAttempts = 3; // Max attempts before using fallback
+    this.maxGenerationAttempts = 3; // Max attempts before failing
 
     // ========== Generation Concurrency Limiter ==========
     // Sequential only - no concurrent LLM requests
@@ -1912,469 +1908,6 @@ Respond with a JSON object containing:
   }
 
   // ==========================================================================
-  // FALLBACK CONTENT SYSTEM - Graceful degradation when generation fails
-  // ==========================================================================
-
-  /**
-   * Initialize fallback narrative templates for each story phase
-   * These provide meaningful content when LLM generation completely fails
-   */
-  _initializeFallbackTemplates() {
-    return {
-      risingAction: {
-        subchapterA: {
-          title: 'Dead Letter, Fresh Ink',
-          narrative: `Ashport never quite dried. Jack stood in the narrow office-sublet above Murphy's Bar, listening to the jukebox leak through the floorboards like a memory he didn't order. On his desk: an envelope that felt wrong in the hands—heavy paper, river-glass token, silver ink that refused to look the same twice.
-
-He told himself it was a stunt. Someone's idea of theater. But the glyph string inside wasn't random. It had cadence. Repetition with intent. A pattern pretending to be graffiti.
-
-Outside, the street sign across the way gleamed wet under a flickering light. For a moment—just long enough to make doubt expensive—Jack could have sworn the paint on it had been retouched into the same angular curve as the letter's first mark.
-
-He pocketed the river-glass. Grabbed his coat. Whatever this was, it wanted him moving. And the city, as always, was willing to be used.`,
-          bridgeText: 'The investigation deepens.',
-        },
-        subchapterB: {
-          title: 'The Map That Misbehaves',
-          narrative: `The address in the dead letter led Jack to a service alley behind a shuttered print shop. The kind of place that collected broken pallets, old posters, and secrets that didn't want daylight.
-
-He found the mark exactly where the ink implied it would be—etched into a brick like it had always been there. Same angles. Same “split-eye” geometry. He photographed it once. Twice. The second photo was subtly wrong, as if the camera had flinched.
-
-Footsteps sounded, then stopped. Not close enough to be a threat—close enough to be a choice. Jack didn't turn right away. He let the silence ask its question first.
-
-When he finally looked, there was no one. Just a thin strip of reflective tape on the ground, placed like an arrow. And on the tape: a second glyph, smaller, newly drawn, still damp.`,
-          bridgeText: 'The city answers back.',
-        },
-        subchapterC: {
-          title: 'Two Routes, One Pattern',
-          narrative: `Back upstairs, Jack spread printouts and photos across the desk. The glyphs weren't art. They were instructions—or warnings—written in a language that only worked if you stood where it wanted you to stand.
-
-He could chase the next mark immediately, follow the tape-arrow deeper into the night, and risk whatever waited at the end of that line.
-
-Or he could do the boring thing: call Tom, pull municipal records, compare old signage catalogs, and see if the city had ever worn these shapes before anyone started leaving dead letters.
-
-Either way, the river-glass token warmed in his pocket as if it remembered a hand that wasn't his.`,
-          bridgeText: 'A crucial decision awaits.',
-        },
-      },
-      complications: {
-        subchapterA: {
-          title: 'The Quiet Seal',
-          narrative: `By the third day, the pattern had a heartbeat. Jack started noticing where the city tried to look normal—fresh paint on old concrete, new “No Trespassing” signs that didn't match the city's standard fonts, officers lingering at intersections as if they were waiting for someone to notice the wrong thing.
-
-He reached the next site and found it already sealed: tape, temporary fencing, and a pair of uniforms pretending not to watch him. The air smelled like wet metal and ozone, the way it did after a transformer blew.
-
-Jack didn't have proof. Not yet. But he had the feeling of being gently herded, like a coin rolling toward a gutter.`,
-          bridgeText: 'The stakes rise.',
-        },
-        subchapterB: {
-          title: 'Someone Else Holds the Key',
-          narrative: `The man answered Jack's questions with jokes that landed too quickly. Every deflection was polished. Every laugh was a door closing.
-
-'You're chasing a doodle,' he said, eyes flicking to the folder before Jack even opened it. 'Let it go.'
-
-Jack watched the flick—small, automatic, practiced. The kind of tell you only have if you've been trained to hide a bigger one. The kind of tell you only have if someone taught you what happens when you don't.`,
-          bridgeText: 'Pressure tightens.',
-        },
-        subchapterC: {
-          title: 'Name the Thing, Lose It',
-          narrative: `That night, the dead letter arrived without a knock. It was simply there, as if the building itself had delivered it.
-
-Silver ink. Two lines this time. The first was a question Jack refused to answer out loud. The second was a rule:
-
-'Do not name it yet.'
-
-Jack stared at the words until the paper felt like it might blink. Then he wrote the glyphs again, slower, careful, like copying someone else's handwriting in a language that could punish mistakes.`,
-          bridgeText: 'A defining choice emerges.',
-        },
-      },
-      confrontations: {
-        subchapterA: {
-          title: 'The Woman Who Maps the Dark',
-          narrative: `Victoria Blackwell's building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
-
-She received him as if he were expected, because he was. No handshake. No small talk. Just a calm, observant gaze and a folder of photos that Jack had never shown anyone.
-
-'You followed the line,' she said. Not praise. Not accusation. Fact.
-
-Jack set the river-glass on her table. 'Tell me what this is.'
-
-Victoria's fingers hovered over it, not touching. 'A proof. And a leash, if you let it be.'
-
-Jack didn't like the certainty in her voice. It sounded like someone who had already seen where his choices went.`,
-          bridgeText: 'The confrontation begins.',
-        },
-        subchapterB: {
-          title: 'Rules With Teeth',
-          narrative: `Victoria didn't explain. She demonstrated.
-
-She slid a sheet of paper toward Jack: a map of a block he knew. He'd walked it. It had a grocery store, a bank, a bus stop. Victoria's version had something else—a narrow line between two buildings that, on any normal map, simply didn't exist.
-
-'Two maps,' she said. 'One you're allowed to believe. One that keeps breaking your attention.'
-
-Jack forced himself to breathe. He could still tell himself it was a con. A hallucination. A clever edit.
-
-Then the silver ink shifted under the light like it was trying to align with something outside the room.`,
-          bridgeText: 'The rules surface.',
-        },
-        subchapterC: {
-          title: 'Cross or Retreat',
-          narrative: `Victoria gave him a choice, because she understood the psychology of cages.
-
-She could take him to a threshold—show him something he couldn't unsee—and in exchange, he would owe her. Not money. Movement. Compliance. The shape of his next week.
-
-Or she could let him leave with nothing but the paper and his doubts, and the city would keep answering him in glitches and near-misses until he either broke the pattern or it broke him.
-
-Jack looked at the river-glass. Then at the map that wasn't a map. He hated that both felt heavier than any weapon.`,
-          bridgeText: 'The decisive moment arrives.',
-        },
-      },
-      resolution: {
-        subchapterA: {
-          title: 'Anchor Names',
-          narrative: `The pattern finally spoke in proper nouns. Names that weren't on the news. Names that didn't belong together.
-
-Jack read them in a low voice, as if the building might be listening: people who vanished near sites marked by the same glyph family. Different lives. Same absence. Same geometry.
-
-He didn't have a neat answer. But he had direction. And direction, in a city built to mislead, was its own kind of miracle.`,
-          bridgeText: 'The pattern clarifies.',
-        },
-        subchapterB: {
-          title: 'The City Remembers',
-          narrative: `Ashport began to feel less like a backdrop and more like a participant. Streetlights timed themselves to his approach. Construction fences shifted overnight. A mural gained a new line, then lost it again.
-
-Jack stopped pretending the anomalies were nothing. He started treating them like witnesses: unreliable, frightened, and telling the truth sideways.`,
-          bridgeText: 'A new understanding forms.',
-        },
-        subchapterC: {
-          title: 'Keep the Line',
-          narrative: `Another dead letter. No wax this time. Just silver ink and the river-glass token, returned as if the city itself had decided he'd earned it.
-
-'You have choices,' the note read. 'But you don't have infinity.'
-
-Jack sat with that until the jukebox downstairs switched songs. Then he gathered his papers, his photos, his half-maps, and stepped back into the damp streets—ready to follow a line that might not want to be followed.`,
-          bridgeText: 'The journey continues.',
-        },
-      },
-    };
-  }
-
-  /**
-   * Ensure all fallback template narratives adhere to global POV rules (third-person limited).
-   * Dialogue inside quotes is preserved as-is.
-   */
-  _normalizeFallbackTemplatesToThirdPerson() {
-    try {
-      const phases = this.fallbackTemplates || {};
-      for (const phaseKey of Object.keys(phases)) {
-        const phase = phases[phaseKey];
-        if (!phase || typeof phase !== 'object') continue;
-        for (const subKey of Object.keys(phase)) {
-          const tpl = phase[subKey];
-          if (!tpl || typeof tpl !== 'object') continue;
-          if (typeof tpl.narrative === 'string' && tpl.narrative.length > 0) {
-            tpl.narrative = this._sanitizeNarrativeToThirdPerson(tpl.narrative);
-          }
-        }
-      }
-    } catch (e) {
-      // Best-effort only. Never block initialization, but log for debugging.
-      console.warn('[StoryGenerationService] Failed to normalize fallback templates:', e.message);
-    }
-  }
-
-  /**
-   * Get appropriate fallback content based on chapter and subchapter
-   */
-  _getFallbackContent(chapter, subchapter, pathKey, isDecisionPoint) {
-    // Determine story phase
-    let phase;
-    if (chapter <= 4) phase = 'risingAction';
-    else if (chapter <= 7) phase = 'complications';
-    else if (chapter <= 10) phase = 'confrontations';
-    else phase = 'resolution';
-
-    // Get subchapter key
-    const subKey = ['subchapterA', 'subchapterB', 'subchapterC'][subchapter - 1];
-
-    const template = this.fallbackTemplates[phase]?.[subKey];
-    if (!template) {
-      // Ultimate fallback
-      return this._generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint);
-    }
-
-    // Adapt the template with path-specific details
-    const adapted = {
-      title: template.title,
-      bridgeText: template.bridgeText,
-      previously: `The investigation continued through Ashport's rain-soaked streets.`,
-      narrative: template.narrative,
-      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: ${template.bridgeText}`,
-      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
-      puzzleCandidates: this._extractKeywordsFromNarrative(template.narrative).slice(0, 8),
-      briefing: {
-        summary: 'Continue the investigation.',
-        objectives: ['Follow the leads', 'Uncover the truth', 'Make your choice'],
-      },
-      consistencyFacts: [
-        `Chapter ${chapter}.${subchapter} was generated using fallback content due to generation failure.`,
-      ],
-      previousThreadsAddressed: [],
-      narrativeThreads: [],
-      decision: null,
-    };
-
-    // Add decision for subchapter C
-    if (isDecisionPoint) {
-      adapted.decision = {
-        intro: ['Two paths lie before you. Each leads to different truths, different consequences.'],
-        options: [
-          {
-            key: 'A',
-            title: 'Take direct action',
-            focus: 'Confront the situation head-on, accepting the risks',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'A',
-            details: [],
-          },
-          {
-            key: 'B',
-            title: 'Proceed with caution',
-            focus: 'Gather more information before committing to action',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'B',
-            details: [],
-          },
-        ],
-      };
-    }
-
-    // Ensure fallback narration matches global POV rules (third-person limited).
-    if (adapted?.narrative) {
-      adapted.narrative = this._sanitizeNarrativeToThirdPerson(adapted.narrative);
-    }
-    return adapted;
-  }
-
-  /**
-   * Generate minimal fallback when no template is available
-   */
-  _generateMinimalFallback(chapter, subchapter, pathKey, isDecisionPoint) {
-    const minimalNarrative = `Ashport held onto moisture and reflected light in the cracks of its streets. Jack stood at the window above Murphy's Bar, watching the city pretend it was only a city.
-
-Another day, another piece of the pattern. The dead letters and their silver ink kept arriving like punctuation, forcing him to look twice at things he used to pass without thinking.
-
-Tomorrow would bring new challenges. New choices. New opportunities to follow the line—or break it on purpose.
-
-For now, Jack let himself breathe. He gathered his notes, pocketed the river-glass token if it was still with him, and tried not to give the darkness a name it could remember.
-
-Whatever the morning brought, he'd meet it with open eyes. That was all he could promise himself.`;
-
-    const result = {
-      title: 'The Investigation Continues',
-      bridgeText: 'The journey continues.',
-      previously: 'Jack continued his investigation through the rain-soaked streets of Ashport.',
-      narrative: minimalNarrative,
-      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: The investigation continues through Ashport.`,
-      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
-      puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'PATTERN', 'SILVER', 'GLASS', 'LINE'],
-      briefing: {
-        summary: 'Continue the investigation.',
-        objectives: ['Follow available leads', 'Consider your options'],
-      },
-      consistencyFacts: [
-        `Chapter ${chapter}.${subchapter} was generated using minimal fallback content.`,
-      ],
-      previousThreadsAddressed: [],
-      narrativeThreads: [],
-      decision: isDecisionPoint ? {
-        intro: ['A choice presents itself.'],
-        options: [
-          {
-            key: 'A',
-            title: 'Take action',
-            focus: 'Move forward directly',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'A',
-            details: [],
-          },
-          {
-            key: 'B',
-            title: 'Wait and observe',
-            focus: 'Gather more information',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'B',
-            details: [],
-          },
-        ],
-      } : null,
-    };
-
-    // Enforce global POV rules (third-person limited) for minimal fallback too.
-    // This prevents immersion-breaking first-person narration during worst-case degradation.
-    if (result?.narrative) {
-      result.narrative = this._sanitizeNarrativeToThirdPerson(result.narrative);
-    }
-
-    return result;
-  }
-
-  /**
-   * Build context-aware fallback content that maintains story continuity
-   * This is used when LLM generation fails but we still have story context available
-   *
-   * Key improvements over generic fallback:
-   * 1. References player's path personality (aggressive/methodical/balanced)
-   * 2. Acknowledges critical threads from previous chapters
-   * 3. Uses phase-appropriate narrative tone
-   * 4. Includes "previously" recap based on actual previous content
-   */
-  _buildContextAwareFallback(chapter, subchapter, pathKey, isDecisionPoint, context) {
-    // Determine story phase
-    let phase, phaseTone;
-    if (chapter <= 4) {
-      phase = 'risingAction';
-      phaseTone = 'building mystery and gathering clues';
-    } else if (chapter <= 7) {
-      phase = 'complications';
-      phaseTone = 'facing betrayals and escalating stakes';
-    } else if (chapter <= 10) {
-      phase = 'confrontations';
-      phaseTone = 'confronting difficult truths';
-    } else {
-      phase = 'resolution';
-      phaseTone = 'reaching the final reckoning';
-    }
-
-    // Get path personality for Jack's behavior
-    const personality = context?.pathPersonality || { narrativeStyle: 'Jack balances intuition with evidence', riskTolerance: 'moderate' };
-    const jackApproach = personality.riskTolerance === 'high' ? 'directly, without hesitation' :
-                         personality.riskTolerance === 'low' ? 'carefully, gathering every detail' :
-                         'with measured determination';
-
-    // Extract critical threads that need acknowledgment
-    const criticalThreads = (context?.narrativeThreads || [])
-      .filter(t => t.urgency === 'critical' && t.status === 'active')
-      .slice(0, 3); // Limit to 3 most important
-
-    // Build thread acknowledgment paragraph
-    let threadAcknowledgment = '';
-    if (criticalThreads.length > 0) {
-      const threadDescriptions = criticalThreads.map(t => {
-        if (t.type === 'appointment') return `The meeting${t.deadline ? ` at ${t.deadline}` : ''} weighed on Jack's mind`;
-        if (t.type === 'promise') return `Jack remembered the promise he had made`;
-        if (t.type === 'threat') return `The threat still hung in the air`;
-        return `Unfinished business demanded attention`;
-      });
-      threadAcknowledgment = `\n\n${threadDescriptions.join('. ')}. These matters would need resolution, one way or another.`;
-    }
-
-    // Get a recap from the most recent chapter
-    let previousRecap = 'The investigation continued through Ashport\'s rain-soaked streets.';
-    if (context?.previousChapters?.length > 0) {
-      const lastChapter = context.previousChapters[context.previousChapters.length - 1];
-      if (lastChapter.chapterSummary) {
-        previousRecap = lastChapter.chapterSummary.split('.')[0] + '.';
-      } else if (lastChapter.narrative) {
-        // Extract first sentence
-        const firstSentence = lastChapter.narrative.match(/[^.!?]+[.!?]+/)?.[0]?.trim();
-        if (firstSentence) previousRecap = firstSentence;
-      }
-    }
-
-    // Build phase-appropriate narrative (modern mystery thriller + Under-Map)
-    const narrative = `Ashport held onto moisture like it held onto secrets. Jack paused at the top of the stairs above Murphy's Bar, the jukebox downstairs switching tracks mid-chorus as if it had noticed him listening.
-
-Day ${chapter} of a pattern that refused to stay on paper. The dead letters and their silver ink had pulled Jack into questions he couldn't un-ask. Every glyph he traced seemed to anticipate him—waiting in alleys, on signage, in places that should have been blank.${threadAcknowledgment}
-
-Jack moved ${jackApproach}. There was no clean way through this, only decisions with costs. The city's official story was smooth; the other story was jagged, written in angles and omissions. Somewhere out there, Victoria Blackwell was shaping the route—if not his thoughts, then at least his steps.
-
-He checked the time without meaning to. Not for punctuality—for proof that time still behaved. It did. Mostly.
-
-Jack set his hand on the door handle, feeling the cold bite of metal through his palm. Whatever waited on the other side, he would meet it with open eyes, even if he couldn't yet name what he was seeing.`;
-
-    // Build the fallback entry
-    const adapted = {
-      title: phase === 'resolution' ? 'The Reckoning' :
-             phase === 'confrontations' ? 'Truth Unveiled' :
-             phase === 'complications' ? 'Shadows Deepen' : 'Following the Trail',
-      bridgeText: `Jack faces the consequences of ${phaseTone}.`,
-      previously: previousRecap,
-      narrative: narrative,
-      branchingNarrative: null, // Fallback doesn't support branching - uses linear narrative
-      chapterSummary: `Chapter ${chapter}.${subchapter}: Jack continued his investigation, ${phaseTone}. The pattern tightened and demanded a response.`,
-      // NOTE: jackActionStyle, jackRiskLevel removed - now in <internal_planning>
-      puzzleCandidates: ['GLYPH', 'TOKEN', 'THRESHOLD', 'MAP', 'SILVER', 'GLASS', 'ANCHOR', 'PATTERN'],
-      briefing: {
-        summary: `Continue the investigation through this critical phase.`,
-        objectives: ['Process the latest revelations', 'Decide on next steps', 'Face the consequences'],
-      },
-      consistencyFacts: [
-        `Chapter ${chapter}.${subchapter} used context-aware fallback content.`,
-        `Jack approached this chapter ${jackApproach}.`,
-      ],
-      // Acknowledge threads in previousThreadsAddressed
-      previousThreadsAddressed: criticalThreads.map(thread => ({
-        originalThread: thread.description,
-        howAddressed: 'acknowledged',
-        narrativeReference: 'Jack reflected on pending matters that would need resolution.',
-      })),
-      narrativeThreads: [], // Fallback doesn't create new threads
-      decision: null,
-    };
-
-    // Add decision for subchapter C
-    if (isDecisionPoint) {
-      const aggressiveOption = personality.riskTolerance === 'high' ? 'A' : 'B';
-      adapted.decision = {
-        intro: ['Two paths diverged before Jack, each leading to different truths, different costs.'],
-        options: [
-          {
-            key: 'A',
-            title: 'Confront the situation directly',
-            focus: 'Take immediate action, accepting the risks. This path prioritizes speed and decisive resolution.',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'A',
-            details: [],
-          },
-          {
-            key: 'B',
-            title: 'Gather more evidence first',
-            focus: 'Proceed with caution, building a stronger case. This path prioritizes thoroughness over speed.',
-            consequence: null,
-            stats: null,
-            outcome: null,
-            nextChapter: null,
-            nextPathKey: 'B',
-            details: [],
-          },
-        ],
-      };
-    }
-
-    // Ensure fallback narration matches global POV rules (third-person limited).
-    if (adapted?.narrative) {
-      adapted.narrative = this._sanitizeNarrativeToThirdPerson(adapted.narrative);
-    }
-    return adapted;
-  }
-
   // ==========================================================================
   // STORY ARC PLANNING - Generates high-level outline for 100% consistency
   // ==========================================================================
@@ -2432,19 +1965,17 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
       return savedArc;
     }
 
-    // OPTIMIZATION: Skip LLM call for story arc generation.
-    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.
-    // Using static fallback eliminates ~22s LLM call per path while maintaining narrative quality.
-    log.debug('StoryGenerationService', `Using static story arc for super-path: ${superPathKey}`);
-    const fallbackArc = this._createFallbackStoryArc(superPathKey, choiceHistory);
-    fallbackArc.personalitySnapshot = {
+    // Build story arc from STORY_STRUCTURE data (no LLM call needed)
+    log.debug('StoryGenerationService', `Building story arc for super-path: ${superPathKey}`);
+    const storyArc = this._createStoryArc(superPathKey, choiceHistory);
+    storyArc.personalitySnapshot = {
       riskTolerance: currentPersonality.riskTolerance,
       scores: currentPersonality.scores || { aggressive: 0, methodical: 0 },
       choiceCount: choiceHistory.length,
     };
-    this.storyArc = fallbackArc;
-    await this._saveStoryArc(arcKey, fallbackArc);
-    return fallbackArc;
+    this.storyArc = storyArc;
+    await this._saveStoryArc(arcKey, storyArc);
+    return storyArc;
   }
 
   /**
@@ -2649,128 +2180,13 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
   }
 
   /**
-   * Generate the master story arc that guides all chapter generation
+   * Create story arc structure for consistent chapter generation.
+   * Uses STORY_STRUCTURE from storyBible.js for phases and beat types.
    */
-  async _generateStoryArc(superPathKey, choiceHistory) {
-    const personality = this._analyzePathPersonality(choiceHistory);
-
-    const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
-    const arcPrompt = `You are the story architect for "Dead Letters," a ${TOTAL_CHAPTERS}-chapter mystery thriller with an original hidden fantasy world.
-
-## STORY PREMISE
-${protagonist.fullName} (${protagonist.age}, ${protagonist.formerTitle.toLowerCase()}) lives above Murphy's Bar in ${setting.city} and survives on odd investigative work. A series of "dead letters" from ${antagonist.trueName} draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through ${setting.city}'s infrastructure.
-
-CRITICAL REVEAL TIMING:
-- The FIRST undeniable reveal that "the world is not what it seems" occurs at the END of subchapter 1C (not earlier).
-
-## PLAYER SUPER-PATH: "${superPathKey}"
-Player personality: ${personality.narrativeStyle}
-Risk tolerance: ${personality.riskTolerance}
-
-## YOUR TASK
-Create a high-level story arc outline for Chapters 2-12 that:
-1. Maintains PERFECT narrative consistency across all chapters
-2. Builds appropriate tension per story phase
-3. Ensures each chapter has a clear purpose advancing the mystery
-4. Creates meaningful decision points that reflect player personality
-5. Weaves the five missing anchors (each tied to a glyph) into the unfolding mystery
-6. CRITICAL: Defines what Jack PERSONALLY STANDS TO LOSE in each chapter
-7. CRITICAL: Includes an EMOTIONAL ANCHOR moment for each chapter
-
-## STORY PHASES
-- Chapters 2-4: RISING ACTION (pattern recognition, deniable anomalies, then first threshold-crossing)
-  * Personal stakes focus: Jack's sanity, stability, and what he believes about the city
-- Chapters 5-7: COMPLICATIONS (the Under-Map has rules; allies compromise; the city “pushes back”)
-  * Personal stakes focus: Jack's relationships (Tom, Sarah) and his ability to trust
-- Chapters 8-10: CONFRONTATIONS (direct encounters with Under-Map forces; truth of Victoria's role sharpens)
-  * Personal stakes focus: Jack's autonomy and physical safety across both layers of the city
-- Chapters 11-12: RESOLUTION (the choice: seal, reshape, or surrender the map; consequences lock in)
-  * Personal stakes focus: who Jack becomes and what Ashport is allowed to be
-
-## ENGAGEMENT REQUIREMENTS FOR EACH CHAPTER
-For each chapter, you MUST provide:
-1. **personalStakes**: What Jack personally loses if he fails THIS chapter. Be viscerally specific.
-   - NOT "his reputation" → "the last colleague who still respects him"
-   - NOT "his safety" → "the ability to walk into Murphy's without checking the door"
-2. **emotionalAnchor**: The gut-punch moment for this chapter. Not plot, but FEELING.
-   - A face, a memory, a realization that hits the reader in the chest
-   - Examples: "Seeing a witness's hands aged from years of hiding", "Reading his own signature on a warrant that destroyed someone's life"
-3. **microRevelationHint**: What small truth should be revealed in each subchapter
-
-Provide a structured arc ensuring each innocent's story gets proper attention and EVERY chapter has personal stakes that escalate.`;
-
-    const arcSchema = {
-      type: 'object',
-      properties: {
-        overallTheme: {
-          type: 'string',
-          description: 'The central thematic throughline for this playthrough',
-        },
-        chapterArcs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              chapter: { type: 'number' },
-              phase: { type: 'string' },
-              primaryFocus: { type: 'string', description: 'Main narrative focus for this chapter' },
-              innocentFeatured: { type: 'string', description: 'Which innocent is featured (if any)' },
-              keyRevelation: { type: 'string', description: 'What major truth is revealed' },
-              tensionLevel: { type: 'number', description: '1-10 tension scale' },
-              endingHook: { type: 'string', description: 'How this chapter should end to hook into the next' },
-              decisionTheme: { type: 'string', description: 'What kind of choice the player faces' },
-              personalStakes: { type: 'string', description: 'What Jack personally stands to lose in this chapter. Be viscerally specific: Ch2-4=self-image/reputation, Ch5-7=relationships, Ch8-10=freedom/safety, Ch11-12=redemption/legacy' },
-              emotionalAnchor: { type: 'string', description: 'The gut-punch emotional moment for this chapter. Not plot, but FEELING.' },
-              microRevelationHint: { type: 'string', description: 'The small truth that should be revealed in each subchapter of this chapter' },
-            },
-            required: ['chapter', 'phase', 'primaryFocus', 'tensionLevel', 'endingHook', 'personalStakes'],
-          },
-        },
-        characterArcs: {
-          type: 'object',
-          properties: {
-            jack: { type: 'string', description: 'Jack\'s emotional journey across chapters' },
-            victoria: { type: 'string', description: 'How Victoria\'s presence evolves' },
-          },
-          description: 'Only Jack and Victoria are defined characters. LLM has freedom to create supporting characters.',
-        },
-        consistencyAnchors: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Key facts that MUST remain consistent across all chapters',
-        },
-      },
-      required: ['overallTheme', 'chapterArcs', 'characterArcs', 'consistencyAnchors'],
-    };
-
-    const response = await llmService.complete(
-      [{ role: 'user', content: arcPrompt }],
-      {
-        systemPrompt: 'You are a master story architect ensuring narrative coherence across a 12-chapter interactive mystery thriller with a hidden fantasy layer.',
-        maxTokens: GENERATION_CONFIG.maxTokens.arcPlanning,
-        responseSchema: arcSchema,
-      }
-    );
-
-    const arc = typeof response.content === 'string'
-      ? JSON.parse(response.content)
-      : response.content;
-
-    return {
-      key: `arc_${superPathKey}`,
-      superPathKey,
-      ...arc,
-      generatedAt: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * Create a fallback story arc when LLM generation fails
-   * Provides a coherent structure for story generation to continue
-   */
-  _createFallbackStoryArc(superPathKey, choiceHistory) {
+  _createStoryArc(superPathKey, choiceHistory) {
     const personality = this._analyzePathPersonality(choiceHistory);
     const { protagonist, antagonist } = ABSOLUTE_FACTS;
+    const { pacing, chapterBeatTypes } = STORY_STRUCTURE;
 
     // Customize theme based on player personality
     const theme = personality.riskTolerance === 'high'
@@ -2779,34 +2195,44 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
         ? 'Redemption through patient investigation and truth-seeking'
         : 'Redemption through confronting past mistakes';
 
+    // Helper to get phase from STORY_STRUCTURE.pacing
+    const getPhase = (chapter) => {
+      if (chapter <= 4) return pacing.chapters2to4.phase;
+      if (chapter <= 7) return pacing.chapters5to7.phase;
+      if (chapter <= 10) return pacing.chapters8to10.phase;
+      return pacing.chapters11to12.phase;
+    };
+
+    // Helper to get beat type from STORY_STRUCTURE.chapterBeatTypes
+    const getBeatType = (chapter) => chapterBeatTypes[chapter]?.type || 'INVESTIGATION';
+
     return {
       key: `arc_${superPathKey}`,
       superPathKey,
-      isFallback: true,
       playerPersonality: personality.riskTolerance || 'balanced',
       overallTheme: theme,
       chapterArcs: [
-        { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: 'Jack\'s grip on “normal” reality', emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
-        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria's rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack's trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
-        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack's ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
-        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn't exist', personalStakes: 'Jack's relationship with his allies and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
-        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack's safety', emotionalAnchor: 'Crossing a line he can't uncross' },
-        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Containment forces tighten', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack's moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
-        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria's agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack's autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
-        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack's life and someone else's', emotionalAnchor: 'A rescue attempt goes wrong' },
-        { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: 'What Jack is willing to break', emotionalAnchor: 'Accepting that rules can be weaponized' },
-        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city's shape', personalStakes: 'Jack's identity: observer or participant', emotionalAnchor: 'Owning the choice that changes everything' },
-        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: 'Jack's legacy and what he leaves open', emotionalAnchor: 'A quiet cost paid in full' },
+        { chapter: 2, phase: getPhase(2), beatType: getBeatType(2), primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: `${protagonist.fullName}'s grip on "normal" reality`, emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
+        { chapter: 3, phase: getPhase(3), beatType: getBeatType(3), primaryFocus: `Second anchor thread; ${antagonist.trueName}'s rules sharpen`, tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: `${protagonist.fullName}'s trust in his own senses`, emotionalAnchor: 'Realizing someone is guiding his route' },
+        { chapter: 4, phase: getPhase(4), beatType: getBeatType(4), primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: `${protagonist.fullName}'s ability to keep working openly`, emotionalAnchor: 'Watching denial happen in real time' },
+        { chapter: 5, phase: getPhase(5), beatType: getBeatType(5), primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that should not exist', personalStakes: `${protagonist.fullName}'s relationship with allies and with the city itself`, emotionalAnchor: 'A friend dodges the wrong question' },
+        { chapter: 6, phase: getPhase(6), beatType: getBeatType(6), primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: `${protagonist.fullName}'s safety`, emotionalAnchor: 'Crossing a line that cannot be uncrossed' },
+        { chapter: 7, phase: getPhase(7), beatType: getBeatType(7), primaryFocus: 'Containment forces tighten', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: `${protagonist.fullName}'s moral line: protect a person vs chase a clue`, emotionalAnchor: 'Choosing what to save' },
+        { chapter: 8, phase: getPhase(8), beatType: getBeatType(8), primaryFocus: `${antagonist.trueName}'s agenda surfaces`, tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: `${protagonist.fullName}'s autonomy`, emotionalAnchor: 'Realizing the "help" is also a trap' },
+        { chapter: 9, phase: getPhase(9), beatType: getBeatType(9), primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: `${protagonist.fullName}'s life and someone else's`, emotionalAnchor: 'A rescue attempt goes wrong' },
+        { chapter: 10, phase: getPhase(10), beatType: getBeatType(10), primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: `What ${protagonist.fullName} is willing to break`, emotionalAnchor: 'Accepting that rules can be weaponized' },
+        { chapter: 11, phase: getPhase(11), beatType: getBeatType(11), primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city\'s shape', personalStakes: `${protagonist.fullName}'s identity: observer or participant`, emotionalAnchor: 'Owning the choice that changes everything' },
+        { chapter: 12, phase: getPhase(12), beatType: getBeatType(12), primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: `${protagonist.fullName}'s legacy and what he leaves open`, emotionalAnchor: 'A quiet cost paid in full' },
       ],
       characterArcs: {
-        jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
-        victoria: 'Guide who tests Jack's capacity to read rules without becoming a weapon',
+        protagonist: `From skeptical pattern-hunter to Under-Map-literate investigator`,
+        antagonist: `Guide who tests ${protagonist.fullName}'s capacity to read rules without becoming a weapon`,
       },
       consistencyAnchors: [
         `${protagonist.fullName} is ${protagonist.age} years old and does NOT start with Under-Map knowledge`,
-        `${antagonist.trueName} guides Jack via dead letters, silver ink, and rules`,
+        `${antagonist.trueName} guides ${protagonist.fullName} via dead letters, silver ink, and rules`,
         'The Under-Map is real; the first undeniable reveal happens at the end of 1C',
-        'Glyphs behave like a language with constraints; do not "magic-system" explain—show',
+        'Glyphs behave like a language with constraints; do not "magic-system" explain - show',
         'Anchor disappearances form a deliberate pattern',
         `Only ${protagonist.fullName} and ${antagonist.trueName} are defined characters; LLM creates supporting characters as needed`,
       ],
@@ -2841,185 +2267,43 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
     // Ensure we have the story arc first
     await this.ensureStoryArc(choiceHistory);
 
-    // OPTIMIZATION: Skip LLM call for chapter outline generation.
-    // The storyBible.js already contains comprehensive chapter guidance via STORY_STRUCTURE.chapterBeatTypes.
-    // Using static fallback eliminates ~10s LLM call per chapter while maintaining narrative structure.
-    console.log(`[StoryGenerationService] Using static chapter outline for Chapter ${chapter}`);
-    const fallbackOutline = this._createFallbackChapterOutline(chapter, chapterPathKey);
-    this.chapterOutlines.set(outlineKey, fallbackOutline);
-    return fallbackOutline;
+    // Build chapter outline from STORY_STRUCTURE data (no LLM call needed)
+    console.log(`[StoryGenerationService] Building chapter outline for Chapter ${chapter}`);
+    const chapterOutline = this._createChapterOutline(chapter, chapterPathKey);
+    this.chapterOutlines.set(outlineKey, chapterOutline);
+    return chapterOutline;
   }
 
-  /**
-   * Generate detailed outline for a single chapter
-   */
-  async _generateChapterOutline(chapter, pathKey, choiceHistory) {
-    const chapterArc = this.storyArc?.chapterArcs?.find(c => c.chapter === chapter);
-    const previousOutlines = [];
-
-    // Gather previous chapter outlines for continuity
-    for (let i = 2; i < chapter; i++) {
-      const prevKey = `outline_${i}_${this._getPathKeyForChapter(i, choiceHistory)}`;
-      if (this.chapterOutlines.has(prevKey)) {
-        previousOutlines.push(this.chapterOutlines.get(prevKey));
-      }
-    }
-
-    // Include the most recent decision that affects THIS chapter, so the outline enforces causality.
-    const last = [...(choiceHistory || [])].reverse().find((c) => this._extractChapterFromCase(c?.caseNumber) === chapter - 1);
-    const lastDecision = last
-      ? {
-        caseNumber: last.caseNumber,
-        chapter: chapter - 1,
-        optionKey: last.optionKey,
-        consequence: DECISION_CONSEQUENCES[last.caseNumber]?.[last.optionKey] || null,
-      }
-      : null;
-
-    const outlinePrompt = `Generate a detailed outline for Chapter ${chapter} of "Dead Letters."
-
-## STORY ARC GUIDANCE
-${chapterArc ? `
-- Phase: ${chapterArc.phase}
-- Primary Focus: ${chapterArc.primaryFocus}
-- Featured Innocent: ${chapterArc.innocentFeatured || 'None specifically'}
-- Key Revelation: ${chapterArc.keyRevelation || 'Building tension'}
-- Tension Level: ${chapterArc.tensionLevel}/10
-- Ending Hook: ${chapterArc.endingHook}
-- Decision Theme: ${chapterArc.decisionTheme || 'Moral complexity'}
-` : `Chapter ${chapter} - Continue building the mystery`}
-
-## PREVIOUS CHAPTERS SUMMARY
-${previousOutlines.map(o => `Chapter ${o.chapter}: ${o.summary}`).join('\n') || 'Starting fresh from Chapter 1'}
-
-## MOST RECENT PLAYER DECISION (MUST DRIVE CHAPTER ${chapter} OPENING)
-${lastDecision
-  ? `Decision from Chapter ${lastDecision.chapter} (${lastDecision.caseNumber}) => Option "${lastDecision.optionKey}"
-Immediate consequence to open on: ${lastDecision.consequence?.immediate || '(derive from choice)'}
-Ongoing effects: ${(lastDecision.consequence?.ongoing || []).slice(0, 4).join(' | ') || '(none tracked)'}`
-  : 'None'}
-
-## REQUIREMENTS
-Create a 3-part outline (Subchapters A, B, C) that:
-1. Flows seamlessly as ONE coherent chapter experience
-2. Subchapter A: Opens with atmosphere AND shows concrete causality from the most recent player decision
-3. Subchapter B: Develops the investigation/revelation
-4. Subchapter C: Builds to decision point with genuine moral complexity
-
-Each subchapter should feel like a natural continuation, not a separate scene.
-
-## OUTPUT RULES (IMPORTANT)
-- Include an explicit "openingCausality" field that states what changes because of the last decision.
-- Include a short "mustReference" list (2-4 items) of specific details that MUST appear in the prose (locations, objects, names, actions).`;
-
-    const outlineSchema = {
-      type: 'object',
-      properties: {
-        chapter: { type: 'number' },
-        summary: { type: 'string', description: 'One sentence summary of the entire chapter' },
-        openingMood: { type: 'string', description: 'Atmospheric tone for chapter opening' },
-        openingCausality: { type: 'string', description: 'One sentence: what is different because of the last player choice, and how the chapter opens on that consequence.' },
-        mustReference: { type: 'array', items: { type: 'string' }, description: '2-4 concrete details that MUST appear in the prose for this chapter.' },
-        subchapterA: {
-          type: 'object',
-          properties: {
-            focus: { type: 'string' },
-            keyBeats: { type: 'array', items: { type: 'string' } },
-            endingTransition: { type: 'string', description: 'How A flows into B' },
-          },
-          required: ['focus', 'keyBeats', 'endingTransition'],
-        },
-        subchapterB: {
-          type: 'object',
-          properties: {
-            focus: { type: 'string' },
-            keyBeats: { type: 'array', items: { type: 'string' } },
-            endingTransition: { type: 'string', description: 'How B flows into C' },
-          },
-          required: ['focus', 'keyBeats', 'endingTransition'],
-        },
-        subchapterC: {
-          type: 'object',
-          properties: {
-            focus: { type: 'string' },
-            keyBeats: { type: 'array', items: { type: 'string' } },
-            decisionSetup: { type: 'string', description: 'How the narrative builds to the choice' },
-            optionADirection: { type: 'string', description: 'What Option A represents' },
-            optionBDirection: { type: 'string', description: 'What Option B represents' },
-          },
-          required: ['focus', 'keyBeats', 'decisionSetup', 'optionADirection', 'optionBDirection'],
-        },
-        narrativeThreads: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Threads to weave through all three subchapters',
-        },
-        consistencyRequirements: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Facts that must be maintained across this chapter',
-        },
-      },
-      required: ['chapter', 'summary', 'openingCausality', 'mustReference', 'subchapterA', 'subchapterB', 'subchapterC'],
-    };
-
-    const response = await llmService.complete(
-      [{ role: 'user', content: outlinePrompt }],
-      {
-        systemPrompt: 'You are outlining a single chapter of an interactive mystery thriller. Ensure the three subchapters flow as one seamless narrative.',
-        maxTokens: GENERATION_CONFIG.maxTokens.outline,
-        responseSchema: outlineSchema,
-      }
-    );
-
-    const outline = typeof response.content === 'string'
-      ? JSON.parse(response.content)
-      : response.content;
-
-    return {
-      ...outline,
-      pathKey,
-      generatedAt: new Date().toISOString(),
-    };
-  }
 
   /**
-   * Create a fallback chapter outline when LLM generation fails
-   * Provides a basic structure for story generation to continue
+   * Create chapter outline structure using STORY_STRUCTURE from storyBible.js.
+   * Provides consistent structure for story generation.
    */
-  _createFallbackChapterOutline(chapter, pathKey) {
-    // Determine story phase based on chapter number
-    let phase, tensionLevel, focus;
-    if (chapter <= 4) {
-      phase = 'RISING_ACTION';
-      tensionLevel = 4 + (chapter - 2);
-      focus = 'Investigation deepens';
-    } else if (chapter <= 7) {
-      phase = 'COMPLICATIONS';
-      tensionLevel = 6 + (chapter - 5);
-      focus = 'Betrayals and revelations';
-    } else if (chapter <= 10) {
-      phase = 'CONFRONTATIONS';
-      tensionLevel = 8;
-      focus = 'Direct confrontations';
-    } else {
-      phase = 'RESOLUTION';
-      tensionLevel = 9;
-      focus = 'Final reckoning';
-    }
+  _createChapterOutline(chapter, pathKey) {
+    const { protagonist, setting } = ABSOLUTE_FACTS;
+    const { pacing, chapterBeatTypes } = STORY_STRUCTURE;
+
+    // Get phase and beat type from STORY_STRUCTURE
+    let pacingData;
+    if (chapter <= 4) pacingData = pacing.chapters2to4;
+    else if (chapter <= 7) pacingData = pacing.chapters5to7;
+    else if (chapter <= 10) pacingData = pacing.chapters8to10;
+    else pacingData = pacing.chapters11to12;
+
+    const beatType = chapterBeatTypes[chapter] || { type: 'INVESTIGATION', description: 'Methodical evidence gathering' };
+    const tensionLevel = Math.min(10, 4 + Math.floor(chapter / 2));
 
     return {
       chapter,
       pathKey,
-      isFallback: true,
-      summary: `Chapter ${chapter}: Jack continues his investigation into the symbols and the hidden layer beneath Ashport.`,
+      summary: `Chapter ${chapter}: ${protagonist.fullName} continues the investigation into the symbols and the hidden layer beneath ${setting.city}.`,
       openingMood: 'Mystery-thriller atmosphere with building unease',
-      openingCausality: 'The chapter opens by showing the immediate consequence of the player's last decision (location, character reaction, and next action).',
-      mustReference: ['Ashport damp/reflections', "Murphy's jukebox below Jack's office", 'A dead letter with silver ink', 'One named character from the current investigation'],
+      openingCausality: 'The chapter opens by showing the immediate consequence of the player\'s last decision (location, character reaction, and next action).',
+      mustReference: [`${setting.city} damp/reflections`, `The jukebox below ${protagonist.fullName}'s office`, 'A dead letter with silver ink', 'One named character from the current investigation'],
       subchapterA: {
-        focus: `Opening: ${focus}`,
+        focus: `Opening: ${beatType.description}`,
         keyBeats: [
-          'Jack reflects on recent discoveries',
+          `${protagonist.fullName} reflects on recent discoveries`,
           'New information comes to light',
           'The investigation takes a turn',
         ],
@@ -3028,25 +2312,26 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       subchapterB: {
         focus: `Development: The mystery deepens`,
         keyBeats: [
-          'Jack pursues the new lead',
+          `${protagonist.fullName} pursues the new lead`,
           'Unexpected obstacles arise',
           'A piece of the puzzle falls into place',
         ],
-        endingTransition: 'Jack faces a difficult choice',
+        endingTransition: `${protagonist.fullName} faces a difficult choice`,
       },
       subchapterC: {
         focus: `Climax: Decision point`,
         keyBeats: [
           'Tensions reach a breaking point',
           'The truth demands a response',
-          'Jack must choose his path forward',
+          `${protagonist.fullName} must choose the path forward`,
         ],
         decisionSetup: 'A choice between two difficult paths',
       },
       tensionLevel,
-      phase,
+      phase: pacingData.phase,
+      beatType: beatType.type,
       consistencyAnchors: [
-        'Jack Halloway seeks the truth',
+        `${protagonist.fullName} seeks the truth`,
         'The conspiracy runs deep',
         'Every choice has consequences',
       ],
@@ -6000,12 +5285,12 @@ ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
     task += `
 
 ### PLAYER PATH PERSONALITY (CRITICAL FOR CONSISTENCY)
-Based on player's choices, Jack's behavior pattern is: **${personality.narrativeStyle}**
+Based on player's choices, the protagonist's behavior pattern is: **${personality.narrativeStyle}**
 - Dialogue tone should be ${personality.dialogueTone}
 - Risk tolerance: ${personality.riskTolerance}
 ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.aggressive.toFixed(0)}, Methodical=${personality.scores.methodical.toFixed(0)}` : ''}
 
-**IMPORTANT:** Jack's actions and dialogue MUST reflect this established personality pattern.`;
+**IMPORTANT:** ${ABSOLUTE_FACTS.protagonist.fullName}'s actions and dialogue MUST reflect this established personality pattern.`;
 
     // Add personality-specific voice examples
     if (personality.riskTolerance === 'high') {
@@ -6062,7 +5347,7 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 5. Reference specific events from previous chapters (show continuity)
 6. Include: atmospheric description, internal monologue, dialogue
 7. Build tension appropriate to ${pacing.phase} phase
-8. **ENSURE Jack's behavior matches the path personality above**
+8. **ENSURE the protagonist's behavior matches the path personality above**
 9. **FOLLOW the story arc and chapter outline guidance above**`;
 
     // Add emphasis on recent decision if applicable (beginning of new chapter)
@@ -6304,51 +5589,52 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
   }
 
   _getPacingGuidance(chapter) {
-    if (chapter <= 4) {
-      return {
-        phase: 'RISING ACTION',
-        requirements: [
-          'Continue establishing the mystery',
-          'Introduce new suspects or complications',
-          'Jack should be actively investigating',
-          'Build relationships with allies/adversaries',
-          'Plant seeds for later revelations',
-        ],
-      };
-    } else if (chapter <= 7) {
-      return {
-        phase: 'COMPLICATIONS',
-        requirements: [
-          'Escalate stakes significantly',
-          'Reveal betrayals or hidden connections',
-          'Jack faces increasing danger and doubt',
-          'Moral dilemmas become more complex',
-          'Victoria\'s guidance and rules become clearer',
-        ],
-      };
-    } else if (chapter <= 10) {
-      return {
-        phase: 'CONFRONTATIONS',
-        requirements: [
-          'Major revelations about the pattern and the forces shaping it',
-          'Jack must confront what the city is doing—and what he is willing to do back',
-          'Allies may be lost or trust shattered',
-          'The full shape of the pattern emerges',
-          'Personal cost to Jack escalates dramatically',
-        ],
-      };
-    } else {
-      return {
-        phase: 'RESOLUTION',
-        requirements: [
-          'Final confrontation approaching or occurring',
-          'All narrative threads coming together',
-          'Jack must make impossible, defining choices',
-          'The full scope of everything is revealed',
-          'Consequences of all player choices manifest',
-        ],
-      };
-    }
+    const { protagonist, antagonist } = ABSOLUTE_FACTS;
+    const { pacing } = STORY_STRUCTURE;
+
+    // Get pacing data from STORY_STRUCTURE
+    let pacingData;
+    if (chapter <= 4) pacingData = pacing.chapters2to4;
+    else if (chapter <= 7) pacingData = pacing.chapters5to7;
+    else if (chapter <= 10) pacingData = pacing.chapters8to10;
+    else pacingData = pacing.chapters11to12;
+
+    // Build requirements based on phase
+    const phaseRequirements = {
+      'RISING ACTION': [
+        'Continue establishing the mystery',
+        'Introduce new suspects or complications',
+        `${protagonist.fullName} should be actively investigating`,
+        'Build relationships with allies/adversaries',
+        'Plant seeds for later revelations',
+      ],
+      'COMPLICATIONS': [
+        'Escalate stakes significantly',
+        'Reveal betrayals or hidden connections',
+        `${protagonist.fullName} faces increasing danger and doubt`,
+        'Moral dilemmas become more complex',
+        `${antagonist.trueName}'s guidance and rules become clearer`,
+      ],
+      'CONFRONTATIONS': [
+        'Major revelations about the pattern and the forces shaping it',
+        `${protagonist.fullName} must confront what the city is doing - and what to do back`,
+        'Allies may be lost or trust shattered',
+        'The full shape of the pattern emerges',
+        `Personal cost to ${protagonist.fullName} escalates dramatically`,
+      ],
+      'RESOLUTION': [
+        'Final confrontation approaching or occurring',
+        'All narrative threads coming together',
+        `${protagonist.fullName} must make impossible, defining choices`,
+        'The full scope of everything is revealed',
+        'Consequences of all player choices manifest',
+      ],
+    };
+
+    return {
+      phase: pacingData.phase,
+      requirements: phaseRequirements[pacingData.phase] || phaseRequirements['RISING ACTION'],
+    };
   }
 
   // ==========================================================================
@@ -6361,19 +5647,20 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
    * preventing truncation from producing generic placeholder choices
    */
   async _generateDecisionStructure(context, chapter) {
+    const { protagonist, setting } = ABSOLUTE_FACTS;
     const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "Dead Letters."
 
 ## CURRENT STORY STATE
-${context.storySummary || 'Jack Halloway is investigating a pattern of symbols and disappearances in Ashport.'}
+${context.storySummary || `${protagonist.fullName} is investigating a pattern of symbols and disappearances in ${setting.city}.`}
 
 ## RECENT EVENTS
-${context.previousChapterSummary || 'Jack received another dead letter with an impossible glyph string.'}
+${context.previousChapterSummary || `${protagonist.fullName} received another dead letter with an impossible glyph string.`}
 
 ## ACTIVE NARRATIVE THREADS
 ${context.narrativeThreads?.filter(t => t.status === 'active').slice(0, 5).map(t => `- [${t.urgency}] ${t.description}`).join('\n') || '- No active threads'}
 
 ## PATH PERSONALITY
-Jack has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
+${protagonist.fullName} has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
 Risk tolerance: ${context.pathPersonality?.riskTolerance || 'moderate'}
 
 ## CHAPTER BEAT TYPE
@@ -10094,6 +9381,8 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
    * Called once at the start of story generation
    */
   _initializeSetupPayoffRegistry() {
+    const { protagonist, antagonist } = ABSOLUTE_FACTS;
+
     // Major revelations that need proper setup before payoff
     const majorRevelations = [
       {
@@ -10110,10 +9399,10 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       },
       {
         id: 'victoria_guide',
-        payoff: 'Victoria Blackwell is deliberately guiding Jack via symbols and thresholds',
+        payoff: `${antagonist.trueName} is deliberately guiding ${protagonist.fullName} via symbols and thresholds`,
         requiredSetups: [
           'Signature / motif: silver ink, map-adjacent language, or rule-based instructions',
-          'Victoria demonstrates knowledge of Jack\'s movements or choices',
+          `${antagonist.trueName} demonstrates knowledge of ${protagonist.fullName}'s movements or choices`,
           'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
         ],
         minSetupCount: 2,
@@ -10436,12 +9725,12 @@ ${narrative}
 
 REQUIREMENTS:
 1. Add atmospheric description (urban texture, reflections, ambient sound)
-2. Expand Jack's internal monologue with self-reflection
+2. Expand the protagonist's internal monologue with self-reflection
 3. Add sensory details and physical grounding
 4. Include additional dialogue if characters are present
 5. DO NOT change the plot or ending
 6. DO NOT add new major events
-7. Maintain Jack Halloway's established voice and POV (third-person limited)
+7. Maintain ${ABSOLUTE_FACTS.protagonist.fullName}'s established voice and POV (third-person limited)
 8. CRITICAL: Do not contradict ANY facts from the ABSOLUTE_FACTS section above
 9. Use ONLY the correct character names as specified
 10. Maintain the timeline and canon from ABSOLUTE_FACTS
