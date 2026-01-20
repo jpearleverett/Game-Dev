@@ -1560,7 +1560,7 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
     });
   }
 
-  // Victoria’s role is clearer to the reader earlier than Jack wants to admit.
+  // Victoria's role is clearer to the reader earlier than Jack wants to admit.
   if (chapter >= 2 && chapter <= 8) {
     ironies.push({
       secret: 'Victoria Blackwell is guiding the investigation through dead letters and rules',
@@ -1926,9 +1926,9 @@ Respond with a JSON object containing:
           title: 'Dead Letter, Fresh Ink',
           narrative: `Ashport never quite dried. Jack stood in the narrow office-sublet above Murphy's Bar, listening to the jukebox leak through the floorboards like a memory he didn't order. On his desk: an envelope that felt wrong in the hands—heavy paper, river-glass token, silver ink that refused to look the same twice.
 
-He told himself it was a stunt. Someone’s idea of theater. But the glyph string inside wasn’t random. It had cadence. Repetition with intent. A pattern pretending to be graffiti.
+He told himself it was a stunt. Someone's idea of theater. But the glyph string inside wasn't random. It had cadence. Repetition with intent. A pattern pretending to be graffiti.
 
-Outside, the street sign across the way gleamed wet under a flickering light. For a moment—just long enough to make doubt expensive—Jack could have sworn the paint on it had been retouched into the same angular curve as the letter’s first mark.
+Outside, the street sign across the way gleamed wet under a flickering light. For a moment—just long enough to make doubt expensive—Jack could have sworn the paint on it had been retouched into the same angular curve as the letter's first mark.
 
 He pocketed the river-glass. Grabbed his coat. Whatever this was, it wanted him moving. And the city, as always, was willing to be used.`,
           bridgeText: 'The investigation deepens.',
@@ -1939,31 +1939,31 @@ He pocketed the river-glass. Grabbed his coat. Whatever this was, it wanted him 
 
 He found the mark exactly where the ink implied it would be—etched into a brick like it had always been there. Same angles. Same “split-eye” geometry. He photographed it once. Twice. The second photo was subtly wrong, as if the camera had flinched.
 
-Footsteps sounded, then stopped. Not close enough to be a threat—close enough to be a choice. Jack didn’t turn right away. He let the silence ask its question first.
+Footsteps sounded, then stopped. Not close enough to be a threat—close enough to be a choice. Jack didn't turn right away. He let the silence ask its question first.
 
 When he finally looked, there was no one. Just a thin strip of reflective tape on the ground, placed like an arrow. And on the tape: a second glyph, smaller, newly drawn, still damp.`,
           bridgeText: 'The city answers back.',
         },
         subchapterC: {
           title: 'Two Routes, One Pattern',
-          narrative: `Back upstairs, Jack spread printouts and photos across the desk. The glyphs weren’t art. They were instructions—or warnings—written in a language that only worked if you stood where it wanted you to stand.
+          narrative: `Back upstairs, Jack spread printouts and photos across the desk. The glyphs weren't art. They were instructions—or warnings—written in a language that only worked if you stood where it wanted you to stand.
 
 He could chase the next mark immediately, follow the tape-arrow deeper into the night, and risk whatever waited at the end of that line.
 
 Or he could do the boring thing: call Tom, pull municipal records, compare old signage catalogs, and see if the city had ever worn these shapes before anyone started leaving dead letters.
 
-Either way, the river-glass token warmed in his pocket as if it remembered a hand that wasn’t his.`,
+Either way, the river-glass token warmed in his pocket as if it remembered a hand that wasn't his.`,
           bridgeText: 'A crucial decision awaits.',
         },
       },
       complications: {
         subchapterA: {
           title: 'The Quiet Seal',
-          narrative: `By the third day, the pattern had a heartbeat. Jack started noticing where the city tried to look normal—fresh paint on old concrete, new “No Trespassing” signs that didn’t match the city’s standard fonts, officers lingering at intersections as if they were waiting for someone to notice the wrong thing.
+          narrative: `By the third day, the pattern had a heartbeat. Jack started noticing where the city tried to look normal—fresh paint on old concrete, new “No Trespassing” signs that didn't match the city's standard fonts, officers lingering at intersections as if they were waiting for someone to notice the wrong thing.
 
 He reached the next site and found it already sealed: tape, temporary fencing, and a pair of uniforms pretending not to watch him. The air smelled like wet metal and ozone, the way it did after a transformer blew.
 
-Jack didn’t have proof. Not yet. But he had the feeling of being gently herded, like a coin rolling toward a gutter.`,
+Jack didn't have proof. Not yet. But he had the feeling of being gently herded, like a coin rolling toward a gutter.`,
           bridgeText: 'The stakes rise.',
         },
         subchapterB: {
@@ -1983,14 +1983,14 @@ Silver ink. Two lines this time. The first was a question Jack refused to answer
 
 'Do not name it yet.'
 
-Jack stared at the words until the paper felt like it might blink. Then he wrote the glyphs again, slower, careful, like copying someone else’s handwriting in a language that could punish mistakes.`,
+Jack stared at the words until the paper felt like it might blink. Then he wrote the glyphs again, slower, careful, like copying someone else's handwriting in a language that could punish mistakes.`,
           bridgeText: 'A defining choice emerges.',
         },
       },
       confrontations: {
         subchapterA: {
           title: 'The Woman Who Maps the Dark',
-          narrative: `Victoria Blackwell’s building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
+          narrative: `Victoria Blackwell's building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
 
 She received him as if he were expected, because he was. No handshake. No small talk. Just a calm, observant gaze and a folder of photos that Jack had never shown anyone.
 
@@ -1998,18 +1998,18 @@ She received him as if he were expected, because he was. No handshake. No small 
 
 Jack set the river-glass on her table. 'Tell me what this is.'
 
-Victoria’s fingers hovered over it, not touching. 'A proof. And a leash, if you let it be.'
+Victoria's fingers hovered over it, not touching. 'A proof. And a leash, if you let it be.'
 
-Jack didn’t like the certainty in her voice. It sounded like someone who had already seen where his choices went.`,
+Jack didn't like the certainty in her voice. It sounded like someone who had already seen where his choices went.`,
           bridgeText: 'The confrontation begins.',
         },
         subchapterB: {
           title: 'Rules With Teeth',
-          narrative: `Victoria didn’t explain. She demonstrated.
+          narrative: `Victoria didn't explain. She demonstrated.
 
-She slid a sheet of paper toward Jack: a map of a block he knew. He’d walked it. It had a grocery store, a bank, a bus stop. Victoria’s version had something else—a narrow line between two buildings that, on any normal map, simply didn’t exist.
+She slid a sheet of paper toward Jack: a map of a block he knew. He'd walked it. It had a grocery store, a bank, a bus stop. Victoria's version had something else—a narrow line between two buildings that, on any normal map, simply didn't exist.
 
-'Two maps,' she said. 'One you’re allowed to believe. One that keeps breaking your attention.'
+'Two maps,' she said. 'One you're allowed to believe. One that keeps breaking your attention.'
 
 Jack forced himself to breathe. He could still tell himself it was a con. A hallucination. A clever edit.
 
@@ -2020,22 +2020,22 @@ Then the silver ink shifted under the light like it was trying to align with som
           title: 'Cross or Retreat',
           narrative: `Victoria gave him a choice, because she understood the psychology of cages.
 
-She could take him to a threshold—show him something he couldn’t unsee—and in exchange, he would owe her. Not money. Movement. Compliance. The shape of his next week.
+She could take him to a threshold—show him something he couldn't unsee—and in exchange, he would owe her. Not money. Movement. Compliance. The shape of his next week.
 
 Or she could let him leave with nothing but the paper and his doubts, and the city would keep answering him in glitches and near-misses until he either broke the pattern or it broke him.
 
-Jack looked at the river-glass. Then at the map that wasn’t a map. He hated that both felt heavier than any weapon.`,
+Jack looked at the river-glass. Then at the map that wasn't a map. He hated that both felt heavier than any weapon.`,
           bridgeText: 'The decisive moment arrives.',
         },
       },
       resolution: {
         subchapterA: {
           title: 'Anchor Names',
-          narrative: `The pattern finally spoke in proper nouns. Names that weren’t on the news. Names that didn’t belong together.
+          narrative: `The pattern finally spoke in proper nouns. Names that weren't on the news. Names that didn't belong together.
 
 Jack read them in a low voice, as if the building might be listening: people who vanished near sites marked by the same glyph family. Different lives. Same absence. Same geometry.
 
-He didn’t have a neat answer. But he had direction. And direction, in a city built to mislead, was its own kind of miracle.`,
+He didn't have a neat answer. But he had direction. And direction, in a city built to mislead, was its own kind of miracle.`,
           bridgeText: 'The pattern clarifies.',
         },
         subchapterB: {
@@ -2047,9 +2047,9 @@ Jack stopped pretending the anomalies were nothing. He started treating them lik
         },
         subchapterC: {
           title: 'Keep the Line',
-          narrative: `Another dead letter. No wax this time. Just silver ink and the river-glass token, returned as if the city itself had decided he’d earned it.
+          narrative: `Another dead letter. No wax this time. Just silver ink and the river-glass token, returned as if the city itself had decided he'd earned it.
 
-'You have choices,' the note read. 'But you don’t have infinity.'
+'You have choices,' the note read. 'But you don't have infinity.'
 
 Jack sat with that until the jukebox downstairs switched songs. Then he gathered his papers, his photos, his half-maps, and stepped back into the damp streets—ready to follow a line that might not want to be followed.`,
           bridgeText: 'The journey continues.',
@@ -2298,13 +2298,13 @@ Whatever the morning brought, he'd meet it with open eyes. That was all he could
     // Build phase-appropriate narrative (modern mystery thriller + Under-Map)
     const narrative = `Ashport held onto moisture like it held onto secrets. Jack paused at the top of the stairs above Murphy's Bar, the jukebox downstairs switching tracks mid-chorus as if it had noticed him listening.
 
-Day ${chapter} of a pattern that refused to stay on paper. The dead letters and their silver ink had pulled Jack into questions he couldn’t un-ask. Every glyph he traced seemed to anticipate him—waiting in alleys, on signage, in places that should have been blank.${threadAcknowledgment}
+Day ${chapter} of a pattern that refused to stay on paper. The dead letters and their silver ink had pulled Jack into questions he couldn't un-ask. Every glyph he traced seemed to anticipate him—waiting in alleys, on signage, in places that should have been blank.${threadAcknowledgment}
 
-Jack moved ${jackApproach}. There was no clean way through this, only decisions with costs. The city’s official story was smooth; the other story was jagged, written in angles and omissions. Somewhere out there, Victoria Blackwell was shaping the route—if not his thoughts, then at least his steps.
+Jack moved ${jackApproach}. There was no clean way through this, only decisions with costs. The city's official story was smooth; the other story was jagged, written in angles and omissions. Somewhere out there, Victoria Blackwell was shaping the route—if not his thoughts, then at least his steps.
 
 He checked the time without meaning to. Not for punctuality—for proof that time still behaved. It did. Mostly.
 
-Jack set his hand on the door handle, feeling the cold bite of metal through his palm. Whatever waited on the other side, he would meet it with open eyes, even if he couldn’t yet name what he was seeing.`;
+Jack set his hand on the door handle, feeling the cold bite of metal through his palm. Whatever waited on the other side, he would meet it with open eyes, even if he couldn't yet name what he was seeing.`;
 
     // Build the fallback entry
     const adapted = {
@@ -2682,7 +2682,7 @@ Create a high-level story arc outline for Chapters 2-12 that:
   * Personal stakes focus: Jack's sanity, stability, and what he believes about the city
 - Chapters 5-7: COMPLICATIONS (the Under-Map has rules; allies compromise; the city “pushes back”)
   * Personal stakes focus: Jack's relationships (Tom, Sarah) and his ability to trust
-- Chapters 8-10: CONFRONTATIONS (direct encounters with Under-Map forces; truth of Victoria’s role sharpens)
+- Chapters 8-10: CONFRONTATIONS (direct encounters with Under-Map forces; truth of Victoria's role sharpens)
   * Personal stakes focus: Jack's autonomy and physical safety across both layers of the city
 - Chapters 11-12: RESOLUTION (the choice: seal, reshape, or surrender the map; consequences lock in)
   * Personal stakes focus: who Jack becomes and what Ashport is allowed to be
@@ -2787,16 +2787,16 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       overallTheme: theme,
       chapterArcs: [
         { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: 'Jack\'s grip on “normal” reality', emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
-        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria’s rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack’s trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
-        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack’s ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
+        { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria's rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack's trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
+        { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack's ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
         { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn't exist', personalStakes: 'Jack's relationship with his allies and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
-        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack’s safety', emotionalAnchor: 'Crossing a line he can’t uncross' },
+        { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack's safety', emotionalAnchor: 'Crossing a line he can't uncross' },
         { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Containment forces tighten', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack's moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
-        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria’s agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack’s autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
-        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack’s life and someone else’s', emotionalAnchor: 'A rescue attempt goes wrong' },
+        { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria's agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack's autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
+        { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack's life and someone else's', emotionalAnchor: 'A rescue attempt goes wrong' },
         { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: 'What Jack is willing to break', emotionalAnchor: 'Accepting that rules can be weaponized' },
-        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city’s shape', personalStakes: 'Jack’s identity: observer or participant', emotionalAnchor: 'Owning the choice that changes everything' },
-        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: 'Jack’s legacy and what he leaves open', emotionalAnchor: 'A quiet cost paid in full' },
+        { chapter: 11, phase: 'RESOLUTION', primaryFocus: 'Final confrontation with containment', tensionLevel: 10, endingHook: 'Choose the city's shape', personalStakes: 'Jack's identity: observer or participant', emotionalAnchor: 'Owning the choice that changes everything' },
+        { chapter: 12, phase: 'RESOLUTION', primaryFocus: 'Consequences manifest', tensionLevel: 9, endingHook: 'A new map begins', personalStakes: 'Jack's legacy and what he leaves open', emotionalAnchor: 'A quiet cost paid in full' },
       ],
       characterArcs: {
         jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
@@ -3014,8 +3014,8 @@ Each subchapter should feel like a natural continuation, not a separate scene.
       isFallback: true,
       summary: `Chapter ${chapter}: Jack continues his investigation into the symbols and the hidden layer beneath Ashport.`,
       openingMood: 'Mystery-thriller atmosphere with building unease',
-      openingCausality: 'The chapter opens by showing the immediate consequence of the player’s last decision (location, character reaction, and next action).',
-      mustReference: ['Ashport damp/reflections', "Murphy's jukebox below Jack’s office", 'A dead letter with silver ink', 'One named character from the current investigation'],
+      openingCausality: 'The chapter opens by showing the immediate consequence of the player's last decision (location, character reaction, and next action).',
+      mustReference: ['Ashport damp/reflections', "Murphy's jukebox below Jack's office", 'A dead letter with silver ink', 'One named character from the current investigation'],
       subchapterA: {
         focus: `Opening: ${focus}`,
         keyBeats: [
@@ -3136,9 +3136,9 @@ Each subchapter should feel like a natural continuation, not a separate scene.
 
       const ongoing = [];
       if (typeof stats === 'string') {
-        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? 'Sarah’s trust decreases' : 'Sarah’s trust increases');
+        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? 'Sarah's trust decreases' : 'Sarah's trust increases');
         if (stats.toLowerCase().includes('investig')) ongoing.push('Jack gains better leads through evidence');
-        if (stats.toLowerCase().includes('aggress')) ongoing.push('Jack’s approach grows more confrontational');
+        if (stats.toLowerCase().includes('aggress')) ongoing.push('Jack's approach grows more confrontational');
       }
       if (typeof focus === 'string' && focus.length > 0) {
         ongoing.unshift(`Tone shift: ${focus}`);
@@ -4640,11 +4640,11 @@ Generate realistic, specific consequences based on the actual narrative content.
         suspects: [],
         doesNotKnow: [
           'What the Under-Map truly is (first undeniable reveal at end of 1C)',
-          'Victoria Blackwell's full agenda and constraints',
+          'Victoria Blackwell\'s full agenda and constraints',
         ],
       },
       sarah: { knows: [], suspects: [] },
-      victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack’s likely routes and choices'], suspects: [] },
+      victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack\'s likely routes and choices'], suspects: [] },
     };
 
     // Scan narratives for revelation patterns
@@ -6025,7 +6025,7 @@ Same scene, written for aggressive Jack:
 Same scene, written for methodical Jack:
 - Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
 - Confronting a suspect: "'I've got some questions,' Jack said, keeping his voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
-- Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He’d gotten good at waiting."
+- Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He'd gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
     } else {
@@ -10382,7 +10382,7 @@ To fix these:
 6. **Dialogue**: Break up exchanges with action beats (what characters DO while talking)
 
 Example texture to emulate:
-"Ashport looked ordinary until you stared long enough. Reflections didn’t match their sources. A street sign held a curve that belonged on paper, not metal. The city kept pretending nothing was happening."
+"Ashport looked ordinary until you stared long enough. Reflections didn't match their sources. A street sign held a curve that belonged on paper, not metal. The city kept pretending nothing was happening."
 ` : '';
 
     const fixPrompt = `The following generated story content contains violations that must be fixed.
@@ -10401,7 +10401,7 @@ ${proseGuidance}
 ## ORIGINAL CONTENT:
 ${JSON.stringify(content, null, 2)}
 
-Rewrite the narrative to fix ALL issues while maintaining the story’s thriller tone and progression.`;
+Rewrite the narrative to fix ALL issues while maintaining the story's thriller tone and progression.`;
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
