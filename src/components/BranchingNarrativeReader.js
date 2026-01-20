@@ -698,11 +698,6 @@ export default function BranchingNarrativeReader({
           >
             {item.type === PAGE_TYPES.NARRATIVE ? (
               <>
-                <Text style={[styles.noirLabel, { letterSpacing: compact ? 1.8 : 2.4 }]}>
-                  {item.segment === 'opening' ? 'CASE FILE' :
-                   item.segment === 'middle' ? 'INVESTIGATION' : 'CONCLUSION'}
-                </Text>
-
                 {isActive && !isPageCompleted ? (
                   <TypewriterText
                     text={item.text}
