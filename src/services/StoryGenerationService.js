@@ -1553,7 +1553,7 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
   // Victoria’s role is clearer to the reader earlier than Jack wants to admit.
   if (chapter >= 2 && chapter <= 8) {
     ironies.push({
-      secret: 'Victoria Blackwell is guiding the investigation as the Midnight Cartographer',
+      secret: 'Victoria Blackwell is guiding the investigation through dead letters and rules',
       jackKnows: chapter < 4 ? 'Jack knows Victoria only as the sender of impossible dead letters' :
         'Jack suspects Victoria is shaping his route through the city on purpose',
       readerKnows: 'The reader recognizes her signatures (silver ink, rule-language, river-glass tokens) and intent',
@@ -1561,14 +1561,14 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
     });
   }
 
-  // Grange as containment operator (mid chapters)
+  // Containment operator (mid chapters) - LLM can name this character
   if (chapter >= 3 && chapter <= 10) {
     ironies.push({
-      secret: 'Deputy Chief Grange is suppressing Under-Map incidents and erasing witnesses',
-      jackKnows: chapter < 6 ? 'Jack sees Grange as an obstruction with too much reach' :
-        'Jack knows Grange is actively shutting sites down, but not the full mechanism',
-      readerKnows: 'Readers understand that “accidents” and missing reports are deliberate containment',
-      useFor: 'When Jack brushes against official denial, let readers see the pattern Jack doesn’t want to name.',
+      secret: 'Someone in authority is suppressing Under-Map incidents and erasing witnesses',
+      jackKnows: chapter < 6 ? 'Jack sees official obstruction with too much reach' :
+        'Jack knows someone is actively shutting sites down, but not the full mechanism',
+      readerKnows: 'Readers understand that "accidents" and missing reports are deliberate containment',
+      useFor: 'When Jack brushes against official denial, let readers see the pattern Jack doesn't want to name.',
     });
   }
 
@@ -1958,11 +1958,11 @@ Jack didn’t have proof. Not yet. But he had the feeling of being gently herded
         },
         subchapterB: {
           title: 'Someone Else Holds the Key',
-          narrative: `Silas Reed answered Jack’s questions with jokes that landed too quickly. Every deflection was polished. Every laugh was a door closing.
+          narrative: `The man answered Jack's questions with jokes that landed too quickly. Every deflection was polished. Every laugh was a door closing.
 
-'You’re chasing a doodle,' Silas said, eyes flicking to the folder before Jack even opened it. 'Let it go.'
+'You're chasing a doodle,' he said, eyes flicking to the folder before Jack even opened it. 'Let it go.'
 
-Jack watched the flick—small, automatic, practiced. The kind of tell you only have if you’ve been trained to hide a bigger one. The kind of tell you only have if someone taught you what happens when you don’t.`,
+Jack watched the flick—small, automatic, practiced. The kind of tell you only have if you've been trained to hide a bigger one. The kind of tell you only have if someone taught you what happens when you don't.`,
           bridgeText: 'Pressure tightens.',
         },
         subchapterC: {
@@ -1979,7 +1979,7 @@ Jack stared at the words until the paper felt like it might blink. Then he wrote
       },
       confrontations: {
         subchapterA: {
-          title: 'Cartographer at Midnight',
+          title: 'The Woman Who Maps the Dark',
           narrative: `Victoria Blackwell’s building looked like it had been designed to avoid ever being remembered. Glass. Clean lines. No character. A place to hide in plain sight.
 
 She received him as if he were expected, because he was. No handshake. No small talk. Just a calm, observant gaze and a folder of photos that Jack had never shown anyone.
@@ -2647,10 +2647,10 @@ Jack set his hand on the door handle, feeling the cold bite of metal through his
     const arcPrompt = `You are the story architect for "Dead Letters," a 12-chapter mystery thriller with an original hidden fantasy world.
 
 ## STORY PREMISE
-Jack Halloway (35, burned-out freelance investigator) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of “dead letters” from Victoria Blackwell (“The Midnight Cartographer”) draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport’s infrastructure.
+Jack Halloway (35, burned-out freelance investigator) lives above Murphy's Bar in Ashport and survives on odd investigative work. A series of "dead letters" from Victoria Blackwell draws him into a city-spanning pattern of glyphs and disappearances. The fantasy world is real but hidden: an Under-Map threaded through Ashport's infrastructure.
 
 CRITICAL REVEAL TIMING:
-- The FIRST undeniable reveal that “the world is not what it seems” occurs at the END of subchapter 2A (not earlier).
+- The FIRST undeniable reveal that "the world is not what it seems" occurs at the END of subchapter 1C (not earlier).
 
 ## PLAYER SUPER-PATH: "${superPathKey}"
 Player personality: ${personality.narrativeStyle}
@@ -2683,7 +2683,7 @@ For each chapter, you MUST provide:
    - NOT "his safety" → "the ability to walk into Murphy's without checking the door"
 2. **emotionalAnchor**: The gut-punch moment for this chapter. Not plot, but FEELING.
    - A face, a memory, a realization that hits the reader in the chest
-   - Examples: "Seeing Eleanor's hands aged from prison labor", "Reading his own signature on the warrant that destroyed Marcus"
+   - Examples: "Seeing a witness's hands aged from years of hiding", "Reading his own signature on a warrant that destroyed someone's life"
 3. **microRevelationHint**: What small truth should be revealed in each subchapter
 
 Provide a structured arc ensuring each innocent's story gets proper attention and EVERY chapter has personal stakes that escalate.`;
@@ -2720,9 +2720,8 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
           properties: {
             jack: { type: 'string', description: 'Jack\'s emotional journey across chapters' },
             victoria: { type: 'string', description: 'How Victoria\'s presence evolves' },
-            sarah: { type: 'string', description: 'Sarah Reeves\' arc' },
-            tomWade: { type: 'string', description: 'Tom Wade\'s betrayal arc' },
           },
+          description: 'Only Jack and Victoria are defined characters. LLM has freedom to create supporting characters.',
         },
         consistencyAnchors: {
           type: 'array',
@@ -2778,9 +2777,9 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
         { chapter: 2, phase: 'RISING_ACTION', primaryFocus: 'First threshold and first anchor thread', tensionLevel: 4, endingHook: 'A glyph behaves like a rule', personalStakes: 'Jack\'s grip on “normal” reality', emotionalAnchor: 'The moment an ordinary place stops behaving like a place' },
         { chapter: 3, phase: 'RISING_ACTION', primaryFocus: 'Second anchor thread; Victoria’s rules sharpen', tensionLevel: 5, endingHook: 'A warning arrives too soon', personalStakes: 'Jack’s trust in his own senses', emotionalAnchor: 'Realizing someone is guiding his route' },
         { chapter: 4, phase: 'RISING_ACTION', primaryFocus: 'Containment pressure appears', tensionLevel: 6, endingHook: 'A site is sealed', personalStakes: 'Jack’s ability to keep working openly', emotionalAnchor: 'Watching denial happen in real time' },
-        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn’t exist', personalStakes: 'Jack’s relationship with Tom and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
+        { chapter: 5, phase: 'COMPLICATIONS', primaryFocus: 'Pattern across anchors becomes undeniable', tensionLevel: 7, endingHook: 'A map that shouldn't exist', personalStakes: 'Jack's relationship with his allies and with the city itself', emotionalAnchor: 'A friend dodges the wrong question' },
         { chapter: 6, phase: 'COMPLICATIONS', primaryFocus: 'Under-Map navigation and consequences', tensionLevel: 7, endingHook: 'A shortcut takes a price', personalStakes: 'Jack’s safety', emotionalAnchor: 'Crossing a line he can’t uncross' },
-        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Grange tightens containment', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack’s moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
+        { chapter: 7, phase: 'COMPLICATIONS', primaryFocus: 'Containment forces tighten', tensionLevel: 8, endingHook: 'A witness vanishes', personalStakes: 'Jack's moral line: protect a person vs chase a clue', emotionalAnchor: 'Choosing what to save' },
         { chapter: 8, phase: 'CONFRONTATIONS', primaryFocus: 'Victoria’s agenda surfaces', tensionLevel: 8, endingHook: 'A demand, not a hint', personalStakes: 'Jack’s autonomy', emotionalAnchor: 'Realizing the “help” is also a trap' },
         { chapter: 9, phase: 'CONFRONTATIONS', primaryFocus: 'Anchor nexus; symbols collide', tensionLevel: 9, endingHook: 'A threshold fails', personalStakes: 'Jack’s life and someone else’s', emotionalAnchor: 'A rescue attempt goes wrong' },
         { chapter: 10, phase: 'CONFRONTATIONS', primaryFocus: 'The mechanism behind the anchors', tensionLevel: 9, endingHook: 'The pattern names a culprit', personalStakes: 'What Jack is willing to break', emotionalAnchor: 'Accepting that rules can be weaponized' },
@@ -2789,16 +2788,15 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       ],
       characterArcs: {
         jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
-        victoria: 'Cartographer who tests Jack’s capacity to read rules without becoming a weapon',
-        sarah: 'Pragmatic ally whose patience has limits',
-        tomWade: 'Friend with access to records and secrets he doesn’t want named',
+        victoria: 'Guide who tests Jack's capacity to read rules without becoming a weapon',
       },
       consistencyAnchors: [
         'Jack Halloway is 35 years old and does NOT start with Under-Map knowledge',
-        'Victoria Blackwell is the Midnight Cartographer (dead letters, silver ink, rules)',
-        'The Under-Map is real; the first undeniable reveal happens at the end of 2A',
-        'Glyphs behave like a language with constraints; do not “magic-system” explain—show',
+        'Victoria Blackwell guides Jack via dead letters, silver ink, and rules',
+        'The Under-Map is real; the first undeniable reveal happens at the end of 1C',
+        'Glyphs behave like a language with constraints; do not "magic-system" explain—show',
         'Anchor disappearances form a deliberate pattern',
+        'Only Jack and Victoria are defined characters; LLM creates supporting characters as needed',
       ],
       generatedAt: new Date().toISOString(),
     };
@@ -3228,7 +3226,7 @@ Each subchapter should feel like a natural continuation, not a separate scene.
     const consequencePrompt = `Generate narrative consequences for a player decision in an interactive mystery thriller with a hidden fantasy layer (the Under-Map).
 
 ## STORY CONTEXT
-This is "Dead Letters" - Jack Halloway, a young contract investigator/records-clerk-turned-gig-worker, is pulled into a hidden reality threaded through Ashport's streets. Victoria Blackwell ("The Midnight Cartographer") sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
+This is "Dead Letters" - Jack Halloway, a 35-year-old burned-out freelance investigator, is pulled into a hidden reality threaded through Ashport's streets. Victoria Blackwell sends dead letters with glyph strings and tokens that steer him toward thresholds and missing people.
 
 ## CHAPTER ${chapter} NARRATIVE LEADING TO DECISION
 ${narrativeContext ? `The following is the end of the narrative leading to this choice:
@@ -4539,7 +4537,11 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Try to infer current location from narrative
     // Fix: Collect ALL matches from ALL patterns, then take the one that appears LAST in the narrative
     const locationPatterns = [
-      /(?:at|in|inside|outside|near|entered|stepped into|arrived at|back to|returned to|reached|walked into|drove to)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street|Exchange))?)/g,
+      // Primary pattern: preposition/verb phrases before location
+      /(?:at|in|inside|outside|near|entered|stepped into|arrived at|back to|returned to|reached|walked into|drove to|pulled up to|stood (?:in|outside|at)|was (?:in|at)|found himself (?:in|at)|doors of|through the doors of)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street|Exchange|Cafe|Club|Hotel|Motel|Shop|Store|Market|Tavern|Pub|Restaurant|Garage|Lot|Plaza|Tower|Complex|Facility))?)/g,
+      // Fallback: Any capitalized name followed by a location-type word
+      /(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?)\s+(?:Bar|Office|Diner|Warehouse|Wharf|Penthouse|Estate|Cafe|Club|Tavern|Pub|Restaurant)/gi,
+      // Known locations
       /Murphy's Bar/gi,
       /Ashport Archive/gi,
       /Sentinel Library/gi,
@@ -4720,7 +4722,7 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Patterns to identify who is speaking
     const speakerPatterns = [
       { name: 'Tom Wade', patterns: [/(?:Tom|Wade)\s+said/gi, /"[^"]+"\s+Tom/gi, /Tom(?:'s|'d|'ll)/gi] },
-      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell|Cartographer)\s+said/gi, /"[^"]+"\s+Victoria/gi] },
+      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell)\s+said/gi, /"[^"]+"\s+Victoria/gi] },
       { name: 'Sarah', patterns: [/Sarah\s+said/gi, /"[^"]+"\s+Sarah/gi] },
       { name: 'Grange', patterns: [/(?:Grange|Deputy Chief)\s+said/gi, /"[^"]+"\s+Grange/gi] },
     ];
@@ -9863,11 +9865,10 @@ Check if each critical thread above is addressed through dialogue or action (not
 
 ## ABSOLUTE FACTS (Cannot be contradicted):
 - Jack Halloway: 35 years old; burned out freelance investigator; former file clerk; avoids finding people after a case went bad; initially does NOT know the Under-Map is real
-- Tom Wade: Jack's friend; knows more about city records/symbol reports than he admits
-- Victoria Blackwell: "The Midnight Cartographer" (dead letters, silver ink, river-glass tokens); guides Jack via rules and routes
-- Deputy Chief Grange: runs suppression/containment around Under-Map incidents
+- Victoria Blackwell: sends dead letters with silver ink and river-glass tokens; guides Jack via rules and routes
 - Setting: modern Ashport; hidden layer threaded through infrastructure; no Tolkien-style medieval fantasy
-- Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 2A, not earlier
+- Reveal timing: first undeniable "the world is not what it seems" reveal occurs at the END of 1C, not earlier
+- Other characters: The LLM has creative freedom to generate supporting characters as needed
 ${threadSection}
 ## NARRATIVE TO CHECK:
 ${narrative.slice(0, TRUNCATE_VALIDATION)}${narrative.length > 3000 ? '\n[truncated]' : ''}
@@ -10093,10 +10094,10 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         latestPayoffChapter: 2,
       },
       {
-        id: 'victoria_cartographer',
-        payoff: 'Victoria Blackwell is (or works as) the Midnight Cartographer, guiding Jack via symbols and thresholds',
+        id: 'victoria_guide',
+        payoff: 'Victoria Blackwell is deliberately guiding Jack via symbols and thresholds',
         requiredSetups: [
-          'Signature / motif: silver ink, map-adjacent language, or cartography metaphors',
+          'Signature / motif: silver ink, map-adjacent language, or rule-based instructions',
           'Victoria demonstrates knowledge of Jack\'s movements or choices',
           'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
         ],
@@ -10105,8 +10106,8 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         latestPayoffChapter: 8,
       },
       {
-        id: 'grange_containment',
-        payoff: 'Deputy Chief Grange is running a containment/suppression operation around Under-Map incidents',
+        id: 'official_containment',
+        payoff: 'Someone in authority is running a containment/suppression operation around Under-Map incidents',
         requiredSetups: [
           'A site is quietly sealed or witnesses are warned off',
           'Police/officials deny or erase reports that should exist',
@@ -10117,8 +10118,8 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         latestPayoffChapter: 10,
       },
       {
-        id: 'silas_blackmailed',
-        payoff: 'Silas Reed is being leveraged (blackmailed) into gatekeeping access to a key location/person',
+        id: 'gatekeeper_blackmailed',
+        payoff: 'A gatekeeper character is being leveraged (blackmailed) into controlling access to a key location/person',
         requiredSetups: [
           'Silas acting guilty or drinking heavily',
           'References to something Silas is hiding',
@@ -10462,24 +10463,22 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
 ### CRITICAL WORLD RULES
 - Under-Map exists as a hidden layer; do not explain it like a “magic system” — show it through scene consequences
-- Reveal timing: first undeniable reveal occurs at the END of Chapter 2A
+- Reveal timing: first undeniable reveal occurs at the END of Chapter 1C
 - No Tolkien-style fantasy (no elves/dwarves/orcs, no medieval courts)
 
 ### KEY FIGURES
-- Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName} (“The Midnight Cartographer”)
-- Tom Wade: Jack’s friend and map/symbol researcher; knows more than he says
-- Deputy Chief Grange: suppression/containment operator around Under-Map incidents
+- Jack Halloway: 35-year-old burned-out freelance investigator, protagonist
+- Victoria Blackwell: ${ABSOLUTE_FACTS.antagonist.trueName}
+- Other characters: LLM has creative freedom to generate supporting characters as needed
 
 ## CHARACTER NAMES (USE EXACTLY)
 `;
 
     // Add key character names from CHARACTER_REFERENCE
+    // Only Jack and Victoria are defined - LLM has freedom to create others
     const keyCharacters = [
       { name: protagonist?.name || 'Jack Halloway', role: 'protagonist' },
-      { name: antagonist?.name || 'Victoria Blackwell', alias: 'The Midnight Cartographer' },
-      { name: allies?.sarahReeves?.name || 'Sarah Reeves', role: 'former partner' },
-      { name: allies?.eleanorBellamy?.name || 'Eleanor Bellamy', role: 'wrongfully convicted' },
-      { name: villains?.tomWade?.name || 'Tom Wade', role: 'researcher / records contact' },
+      { name: antagonist?.name || 'Victoria Blackwell', role: 'antagonist/guide' },
     ];
 
     for (const char of keyCharacters) {

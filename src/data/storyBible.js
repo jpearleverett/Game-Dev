@@ -1199,7 +1199,7 @@ Downstairs, Murphy's jukebox changed songs without anyone touching it.`,
       'No physical action—talking heads',
       'Melodramatic phrasing ("everything we ever stood for")',
     ],
-    goodVersion: `"You're sure this is just graffiti?" Sarah asked.
+    goodVersion: `"You're sure this is just graffiti?" the woman asked.
 
 Jack kept his eyes on the photo. "It's paint. It's a marker. It's whatever it needs to be so I can sleep."
 
@@ -1207,7 +1207,7 @@ Jack kept his eyes on the photo. "It's paint. It's a marker. It's whatever it ne
 
 He swallowed. "If I say it out loud, then it's real."
 
-Sarah didn't argue. She only slid the second photo across the table, the one taken three blocks away, same symbol, same angle, same line weight, like the city had traced it with the same hand.`,
+She didn't argue. She only slid the second photo across the table, the one taken three blocks away, same symbol, same angle, same line weight, like the city had traced it with the same hand.`,
     whyItWorks: [
       'Minimal dialogue does more than speeches',
       'Physical grounding (hand on desk) shows need for stability',
