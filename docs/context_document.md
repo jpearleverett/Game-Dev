@@ -707,7 +707,73 @@ Use the proxy in production to keep API keys off-device.
 
 ---
 
-## 19) What to read first if you are new
+## 19) Recent changes (Jan 2026 - Prompt debugging session)
+
+### 19.1 Character age update
+
+Jack Halloway's age was changed from **29 to 35** across all files to fix
+mathematical inconsistencies (a 29-year-old with "10 years" of career experience
+was tight). Updated files:
+
+- `src/data/storyBible.js`: ABSOLUTE_FACTS.jackAge, timeline entries
+- `src/data/characterReference.js`: CHARACTERS.jackHalloway.age and appearance
+- `src/services/StoryGenerationService.js`: All prompt strings referencing Jack's age
+
+The change from "late 20s/early 30s" to explicit "35" improves consistency
+between the story bible and generation prompts.
+
+### 19.2 Prompt logging system
+
+Added comprehensive prompt logging to see exactly what the LLM receives.
+New method `_logCompletePrompt()` in StoryGenerationService outputs:
+
+- System instruction (MASTER_SYSTEM_PROMPT)
+- Cached content (if using chapter-start cache)
+- Dynamic prompt (story context, threads, task, etc.)
+
+Logs appear as `[FULL PROMPT] 001B (Chapter 1.2) - CACHED GENERATION` in console.
+This helps debug issues where the LLM receives unexpected context.
+
+### 19.3 Prompt construction bug fixes
+
+Three bugs in prompt construction were fixed:
+
+1. **Thread truncation (line 3693)**
+   - Bug: Regex `.{0,50}pattern.{0,50}` could start mid-word, causing
+     "Victoria Blackwell" to become "oria Blackwell"
+   - Fix: Use `matchAll()` to get position info, then trim to word boundaries
+     when the match starts or ends mid-word
+
+2. **Location detection (lines 4540-4565)**
+   - Bug: Loop broke on first pattern match, missing later locations
+   - Fix: Collect ALL matches from ALL patterns, track position with `match.index`,
+     return the location appearing LAST in the narrative
+   - Added more prepositions: "doors of", "stood in/at", "was in/at", etc.
+   - Added more location types: Cafe, Club, Hotel, Tavern, Pub, etc.
+   - Added fallback pattern for "[Name]'s [LocationType]" format
+
+3. **Chapter range display (line 5649)**
+   - Bug: When `chapter=1`, passing `maxChapter: 0` showed "Included chapters: 1 to 0"
+   - Fix: Added guard that returns "This is the beginning of the story" when
+     `maxChapter < minChapter`
+
+### 19.4 Reset Progress clears generated story
+
+The "Reset Progress" button in Settings now also clears generated story content.
+Previously it only reset progress state, leaving old LLM-generated narratives
+in AsyncStorage.
+
+Updated file: `src/hooks/usePersistence.js`
+
+The `clearProgress()` callback now calls `clearGeneratedStory()` from
+`generatedStoryStorage.js`, ensuring:
+- Story bible changes (like age updates) take effect on replay
+- Player gets fresh LLM-generated content after reset
+- No stale narrative data persists across playthroughs
+
+---
+
+## 20) What to read first if you are new
 
 Recommended order for a fresh AI agent:
 

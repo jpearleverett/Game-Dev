@@ -10,6 +10,7 @@ import {
   saveStoredProgress,
   migrateProgress,
 } from '../storage/progressStorage';
+import { clearGeneratedStory } from '../storage/generatedStoryStorage';
 import { normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { SEASON_ONE_CASES, SEASON_ONE_CASE_COUNT } from '../data/cases';
 import { getCaseByNumber } from '../utils/gameLogic';
@@ -170,6 +171,9 @@ export function usePersistence() {
   const clearProgress = useCallback(async () => {
     const blank = createBlankProgress();
     await saveStoredProgress(blank);
+    // Also clear generated story data so player gets fresh LLM-generated content
+    // This ensures age fix (29→35) and other story bible changes take effect
+    await clearGeneratedStory();
     setProgress(blank);
     return blank;
   }, []);
