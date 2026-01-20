@@ -1,6 +1,11 @@
 import { llmService } from '../LLMService';
 import { formatCaseNumber } from '../../data/storyContent';
-import { ABSOLUTE_FACTS, GENERATION_CONFIG, REVEAL_TIMING } from '../../data/storyBible';
+import {
+  ABSOLUTE_FACTS,
+  GENERATION_CONFIG,
+  REVEAL_TIMING,
+  SETUP_PAYOFF_REGISTRY,
+} from '../../data/storyBible';
 import { saveStoryContext } from '../../storage/generatedStoryStorage';
 import { DECISION_CONTENT_SCHEMA, STORY_CONTENT_SCHEMA } from './schemas';
 import { DECISION_SUBCHAPTER, MIN_WORDS_PER_SUBCHAPTER, TRUNCATE_VALIDATION } from './constants';
