@@ -1568,7 +1568,7 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
       jackKnows: chapter < 6 ? 'Jack sees official obstruction with too much reach' :
         'Jack knows someone is actively shutting sites down, but not the full mechanism',
       readerKnows: 'Readers understand that "accidents" and missing reports are deliberate containment',
-      useFor: 'When Jack brushes against official denial, let readers see the pattern Jack doesn't want to name.',
+      useFor: 'When Jack brushes against official denial, let readers see the pattern Jack doesn\'t want to name.',
     });
   }
 
