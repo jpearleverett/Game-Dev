@@ -185,7 +185,9 @@ Stored in `generatedStoryStorage` as a separate story context:
 
 StoryGenerationService builds prompts from multiple layers:
 
-1. **System prompt** (MASTER_SYSTEM_PROMPT)
+1. **System prompt** (`buildMasterSystemPrompt()`)
+   - Dynamically builds from storyBible.js data (ABSOLUTE_FACTS, WRITING_STYLE,
+     CONSISTENCY_RULES, ENGAGEMENT_REQUIREMENTS, etc.)
    - Defines writing identity, noir constraints, and non-negotiables.
    - Enforces close third-person POV, single quote dialogue, and style rules.
 2. **Static cache content**
@@ -201,11 +203,15 @@ StoryGenerationService builds prompts from multiple layers:
 
 Prompts use XML-like section tags to reduce context bleed.
 
-Story bible includes:
+Story bible (`storyBible.js`) is the **single source of truth** for:
 - Absolute facts (timeline, setting, core mystery).
 - Writing style constraints (POV, tense, forbidden phrases).
 - Voice DNA and example passages.
 - Engagement requirements and micro-tension techniques.
+- Annotated examples, negative examples, extended style grounding.
+- Consistency rules and reveal timing.
+
+All prompt-building methods read from storyBible.js - no hardcoded duplicates.
 
 ### 6.3 Branching narrative output
 LLM outputs a structured JSON payload. For C subchapters:
@@ -727,7 +733,7 @@ between the story bible and generation prompts.
 Added comprehensive prompt logging to see exactly what the LLM receives.
 New method `_logCompletePrompt()` in StoryGenerationService outputs:
 
-- System instruction (MASTER_SYSTEM_PROMPT)
+- System instruction (calls `buildMasterSystemPrompt()` to show actual content)
 - Cached content (if using chapter-start cache)
 - Dynamic prompt (story context, threads, task, etc.)
 
@@ -801,6 +807,92 @@ Fixed inconsistent reveal timing references throughout the codebase:
 Improved the static Chapter 1A content in `storyNarrative.json`:
 - Removed 3 instances of "somehow" (forbidden word per style guide)
 - Replaced with stronger, more specific prose
+
+### 19.9 Architecture refactor: Single source of truth
+
+**Major refactoring** of `StoryGenerationService.js` to eliminate hardcoded
+duplicates and establish `storyBible.js` as the single source of truth.
+
+#### Problem solved
+
+Previously, StoryGenerationService.js had hardcoded strings that duplicated
+content from storyBible.js:
+- Jack's age/description appeared in 6+ places as hardcoded strings
+- Reveal timing rules were duplicated
+- POV/tense rules were duplicated
+- Character details were inconsistent between files
+
+This caused sync issues when updating canonical data (e.g., changing Jack's age
+required updates in multiple places, some of which were missed).
+
+#### New architecture
+
+```
+storyBible.js (DATA)              StoryGenerationService.js (ASSEMBLY)
+┌──────────────────────────┐      ┌─────────────────────────────────────┐
+│ ABSOLUTE_FACTS           │─────▶│ buildMasterSystemPrompt()           │
+│ WRITING_STYLE            │─────▶│ buildPathDecisionsSystemPrompt()    │
+│ CONSISTENCY_RULES        │─────▶│ _buildGroundingSection()            │
+│ ENGAGEMENT_REQUIREMENTS  │─────▶│ _buildCraftTechniquesSection()      │
+│ MICRO_TENSION_TECHNIQUES │─────▶│ _buildStyleSection()                │
+│ SENTENCE_RHYTHM          │─────▶│ _buildCharacterSection()            │
+│ EXAMPLE_PASSAGES         │─────▶│ buildExtendedStyleExamples()        │
+│ ANNOTATED_EXAMPLES       │─────▶│ etc...                              │
+│ NEGATIVE_EXAMPLES        │      │                                     │
+└──────────────────────────┘      │ NO hardcoded prompt prose           │
+                                  └─────────────────────────────────────┘
+```
+
+#### Key changes
+
+1. **`MASTER_SYSTEM_PROMPT` → `buildMasterSystemPrompt()`**
+   - Converted from hardcoded 80-line const to dynamic builder function
+   - Now reads from: ABSOLUTE_FACTS, WRITING_STYLE, CONSISTENCY_RULES,
+     ENGAGEMENT_REQUIREMENTS, MICRO_TENSION_TECHNIQUES, SENTENCE_RHYTHM
+   - `<reveal_timing>` section pulls directly from CONSISTENCY_RULES[1-4]
+   - `<craft_quality_checklist>` references ENGAGEMENT_REQUIREMENTS
+   - All 6 usages updated to call the function
+
+2. **`buildPathDecisionsSystemPrompt()`**
+   - Already converted (earlier in session)
+   - Uses ABSOLUTE_FACTS.protagonist, antagonist, setting
+
+3. **Character details refactored**
+   - Replaced hardcoded "Jack Halloway, 35, burned-out freelance investigator"
+     with template literals using `ABSOLUTE_FACTS.protagonist.fullName`,
+     `protagonist.age`, `protagonist.formerTitle`, etc.
+   - Updated in: `_generateStoryArc()`, `_createFallbackStoryArc()`,
+     `_generateDecisionConsequence()`, `_validateWithLLM()`,
+     `_buildExpansionGrounding()`
+
+4. **Reveal timing fixed**
+   - All references to "2A" changed to "1C" to match CONSISTENCY_RULES
+   - First undeniable reveal happens at END of Chapter 1C
+
+#### Benefits
+
+- **Single source of truth**: Change data in storyBible.js, all prompts update
+- **No sync issues**: POV, tense, reveal timing, character details defined once
+- **Consistent pattern**: All `_build*Section()` methods now follow same pattern
+- **Easier maintenance**: Canonical data lives in one file
+- **Logging works**: `_logCompletePrompt()` calls `buildMasterSystemPrompt()`
+  to show actual prompt content during gameplay
+
+#### Verification checklist
+
+All prompt sections remain included:
+- ✅ System prompt (now dynamic via builder)
+- ✅ Story bible grounding (ABSOLUTE_FACTS)
+- ✅ Character reference (CHARACTER_REFERENCE)
+- ✅ Craft techniques (ENGAGEMENT_*, MICRO_TENSION, ICEBERG, SUBTEXT)
+- ✅ Style examples (EXAMPLE_PASSAGES - 10 examples)
+- ✅ Extended examples (EXTENDED_STYLE_GROUNDING - 4 scenes)
+- ✅ Annotated examples (ANNOTATED_EXAMPLES - 19 examples)
+- ✅ Negative examples (NEGATIVE_EXAMPLES - 4 examples)
+- ✅ Many-shot examples (manyShot/index)
+- ✅ Voice DNA (CHARACTER_REFERENCE)
+- ✅ Forbidden phrases (WRITING_STYLE.absolutelyForbidden)
+- ✅ Caching mechanism (uses buildMasterSystemPrompt() for systemInstruction)
 
 ---
 
