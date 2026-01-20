@@ -4539,7 +4539,11 @@ Generate realistic, specific consequences based on the actual narrative content.
     // Try to infer current location from narrative
     // Fix: Collect ALL matches from ALL patterns, then take the one that appears LAST in the narrative
     const locationPatterns = [
-      /(?:at|in|inside|outside|near|entered|stepped into|arrived at|back to|returned to|reached|walked into|drove to)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street|Exchange))?)/g,
+      // Primary pattern: preposition/verb phrases before location
+      /(?:at|in|inside|outside|near|entered|stepped into|arrived at|back to|returned to|reached|walked into|drove to|pulled up to|stood (?:in|outside|at)|was (?:in|at)|found himself (?:in|at)|doors of|through the doors of)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?(?:\s+(?:Bar|Office|Diner|House|Building|Station|Prison|Warehouse|Wharf|Docks|Penthouse|Estate|Alley|Street|Exchange|Cafe|Club|Hotel|Motel|Shop|Store|Market|Tavern|Pub|Restaurant|Garage|Lot|Plaza|Tower|Complex|Facility))?)/g,
+      // Fallback: Any capitalized name followed by a location-type word
+      /(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s)?)\s+(?:Bar|Office|Diner|Warehouse|Wharf|Penthouse|Estate|Cafe|Club|Tavern|Pub|Restaurant)/gi,
+      // Known locations
       /Murphy's Bar/gi,
       /Ashport Archive/gi,
       /Sentinel Library/gi,
