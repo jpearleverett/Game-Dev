@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, FONT_SIZES } from '../../constants/typography';
 import { SPACING, RADIUS } from '../../constants/layout';
@@ -43,9 +43,7 @@ export default function CaseHero({ activeCase, compact }) {
             },
           ]}
         />
-        <ImageBackground
-          source={CASE_TITLE_BG}
-          resizeMode="stretch"
+        <View
           style={[
             styles.heroLetterPaper,
             {
@@ -56,8 +54,13 @@ export default function CaseHero({ activeCase, compact }) {
               transform: [{ rotate: compact ? "-0.8deg" : "-0.5deg" }],
             },
           ]}
-          imageStyle={{ borderRadius: heroLetterRadius }}
         >
+          <Image
+            source={CASE_TITLE_BG}
+            style={[StyleSheet.absoluteFill, { borderRadius: heroLetterRadius }]}
+            resizeMode="stretch"
+            pointerEvents="none"
+          />
           <Image
             source={NOISE_TEXTURE}
             style={[styles.heroLetterNoise, { borderRadius: heroLetterRadius }]}
@@ -111,7 +114,7 @@ export default function CaseHero({ activeCase, compact }) {
               { height: heroLetterDividerThickness },
             ]}
           />
-        </ImageBackground>
+        </View>
       </View>
     </View>
   );
