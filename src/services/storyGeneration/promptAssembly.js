@@ -16,7 +16,6 @@ import {
 import {
   MIN_WORDS_PER_SUBCHAPTER,
   PATH_PERSONALITY_TRAITS,
-  TARGET_WORDS,
   TOTAL_CHAPTERS,
   TRUNCATE_DESCRIPTION,
 } from './constants';
@@ -1060,6 +1059,8 @@ ${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
 ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
   }
 
+  const targetWords = GENERATION_CONFIG?.wordCount?.target || MIN_WORDS_PER_SUBCHAPTER;
+
   task += `
 
 ### PLAYER PATH PERSONALITY (CRITICAL FOR CONSISTENCY)
@@ -1119,7 +1120,7 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
 1. **PLAN FIRST:** Use the 'beatSheet' field to outline 3-5 major beats.
-2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** - AIM FOR ${TARGET_WORDS}+ WORDS. Write generously. Do NOT stop short.
+2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** - AIM FOR ${targetWords}+ WORDS. Write generously. Do NOT stop short.
 3. Continue DIRECTLY from where the last subchapter ended
 4. Maintain third-person limited voice throughout (no first-person narration)
 5. Reference specific events from previous chapters (show continuity)
