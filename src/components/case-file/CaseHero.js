@@ -56,7 +56,7 @@ export default function CaseHero({ activeCase, compact }) {
               transform: [{ rotate: compact ? "-0.8deg" : "-0.5deg" }],
             },
           ]}
-          imageStyle={{ borderRadius: heroLetterRadius, width: '100%', height: '100%' }}
+          imageStyle={{ borderRadius: heroLetterRadius }}
         >
           <Image
             source={NOISE_TEXTURE}
