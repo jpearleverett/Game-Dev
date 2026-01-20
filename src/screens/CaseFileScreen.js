@@ -232,7 +232,8 @@ export default function CaseFileScreen({
 
   const summaryContent = useMemo(() => {
     // Skip summary for the opening case - let the narrative speak for itself
-    if (caseNumber === '001A') return null;
+    const currentCaseNumber = activeCase?.caseNumber;
+    if (currentCaseNumber === '001A') return null;
 
     if (storySummary?.lines?.length) {
       return {
@@ -260,7 +261,7 @@ export default function CaseFileScreen({
       return { type: "caseSummary", lines, focus: null };
     }
     return null;
-  }, [caseNumber, caseSummary, dailyIntro, storySummary]);
+  }, [activeCase?.caseNumber, caseSummary, dailyIntro, storySummary]);
 
   // Check if we have branching narrative (new interactive format)
   const branchingNarrative = useMemo(() => {

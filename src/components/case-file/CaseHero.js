@@ -25,7 +25,7 @@ export default function CaseHero({ activeCase, compact }) {
   const heroLetterShadowOffset = Math.max(6, Math.round(scaleSpacing(compact ? SPACING.sm : SPACING.md)));
 
   // Typography Constants
-  const heroTitleSize = shrinkFont(moderateScale(compact ? FONT_SIZES.display : FONT_SIZES.display + 4));
+  const heroTitleSize = shrinkFont(moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display));
 
   return (
     <View style={[styles.heroBlock, { gap: sectionGap }]}>
