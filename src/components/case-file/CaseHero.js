@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, FONT_SIZES } from '../../constants/typography';
 import { SPACING, RADIUS } from '../../constants/layout';
@@ -55,17 +56,10 @@ export default function CaseHero({ activeCase, compact }) {
             },
           ]}
         >
-          <Image
+          <ExpoImage
             source={CASE_TITLE_BG}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              borderRadius: heroLetterRadius,
-            }}
-            resizeMode="stretch"
+            style={[StyleSheet.absoluteFill, { borderRadius: heroLetterRadius }]}
+            contentFit="fill"
             pointerEvents="none"
           />
           <Image
