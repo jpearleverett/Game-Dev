@@ -463,9 +463,6 @@ const STORY_CONTENT_SCHEMA = {
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
-
-// STORY_CONTENT_SCHEMA_AB is the same as STORY_CONTENT_SCHEMA (puzzleCandidates already removed)
-const STORY_CONTENT_SCHEMA_AB = JSON.parse(JSON.stringify(STORY_CONTENT_SCHEMA));
 })();
 
 /**
@@ -805,14 +802,14 @@ const buildPathDecisionsSystemPrompt = () => {
   const { protagonist, antagonist, setting } = ABSOLUTE_FACTS;
   return `<identity>
 You are the author of "Dead Letters," crafting path-specific decision variants for ${protagonist.fullName}'s investigation.
-You understand that different player journeys through the branching narrative lead to genuinely different discoveries—and those discoveries MUST shape what decisions make sense.
+You understand that different player journeys through the branching narrative lead to genuinely different discoveries, and those discoveries MUST shape what decisions make sense.
 </identity>
 
 <story_context>
 - PROTAGONIST: ${protagonist.fullName}, ${protagonist.age}, ${protagonist.formerTitle.toLowerCase()}. ${protagonist.currentStatus}
-- SETTING: ${setting.city}—${setting.atmosphere}. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
+- SETTING: ${setting.city}, ${setting.atmosphere}. A city with a hidden second layer called "the Under-Map" threaded through its infrastructure.
 - TONE: Modern mystery thriller that slowly reveals an original fantasy world. Noir-adjacent but not pastiche.
-- ANTAGONIST: ${antagonist.trueName}—${antagonist.occupation}. Her philosophy: "${antagonist.philosophy}"
+- ANTAGONIST: ${antagonist.trueName}, ${antagonist.occupation}. Her philosophy: "${antagonist.philosophy}"
 </story_context>
 
 <core_mandate>
@@ -834,7 +831,7 @@ Return ONLY valid JSON matching the schema. No commentary.
 // ============================================================================
 const PATHDECISIONS_PROMPT_TEMPLATE = `<task>
 Generate 9 UNIQUE path-specific decision variants for Chapter 1C of "Dead Letters."
-Each path represents a different player journey—different discoveries require different decisions.
+Each path represents a different player journey. Different discoveries require different decisions.
 </task>
 
 <path_structure>
@@ -858,7 +855,7 @@ These are what each path discovered (the ending they experienced):
 </path_discoveries>
 
 <path_details>
-Detailed notes for each path (use these to stay grounded—do not invent entities not mentioned):
+Detailed notes for each path (use these to stay grounded; do not invent entities not mentioned):
 {{pathStructuredNotes}}
 </path_details>
 
@@ -899,7 +896,7 @@ Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marke
   "optionA": {
     "key": "A",
     "title": "Follow the courier to Blackwell",
-    "focus": "Use this connection to trace Blackwell's location directly—aggressive but potentially revealing.",
+    "focus": "Use this connection to trace Blackwell's location directly, aggressive but potentially revealing.",
     "personalityAlignment": "aggressive"
   },
   "optionB": {
@@ -913,11 +910,11 @@ Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marke
 Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the name aloud)
 {
   "pathKey": "1B-2C",
-  "intro": "The threshold responded to the name—proof that the Under-Map isn't just symbols, it's listening.",
+  "intro": "The threshold responded to the name. Proof that the Under-Map is not just symbols; it is listening.",
   "optionA": {
     "key": "A",
     "title": "Speak the name again and step through",
-    "focus": "Test whether the threshold will open fully—risk everything to see what's on the other side.",
+    "focus": "Test whether the threshold will open fully. Risk everything to see what is on the other side.",
     "personalityAlignment": "aggressive"
   },
   "optionB": {
@@ -935,21 +932,21 @@ Example 3 - Path 1C-2B (Discovery: Found a ledger with names of the disappeared,
   "optionA": {
     "key": "A",
     "title": "Confront Blackwell with the ledger",
-    "focus": "Force a direct confrontation—Jack needs answers about what really happened two years ago.",
+    "focus": "Force a direct confrontation. Jack needs answers about what really happened two years ago.",
     "personalityAlignment": "aggressive"
   },
   "optionB": {
     "key": "B",
     "title": "Cross-reference the names with city records",
-    "focus": "Verify the ledger's claims before revealing that Jack has it—knowledge is leverage.",
+    "focus": "Verify the ledger's claims before revealing that Jack has it. Knowledge is leverage.",
     "personalityAlignment": "cautious"
   }
 }
 
 BAD examples (generic, not path-specific):
-❌ "Investigate further" vs "Wait and see" — Too vague, could apply to any path
-❌ "Take action" vs "Be careful" — No connection to what was discovered
-❌ Same titles across multiple paths — Defeats the purpose of branching narratives
+❌ "Investigate further" vs "Wait and see": Too vague, could apply to any path
+❌ "Take action" vs "Be careful": No connection to what was discovered
+❌ Same titles across multiple paths: Defeats the purpose of branching narratives
 </few_shot_examples>
 
 <output_requirements>
@@ -979,7 +976,7 @@ const buildMasterSystemPrompt = () => {
   const revealTimingRules = CONSISTENCY_RULES.slice(1, 5);
 
   return `<identity>
-You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}—${setting.coreMystery.toLowerCase()}.
+You are the author of "Dead Letters," an interactive mystery thriller set in ${setting.city}, ${setting.coreMystery.toLowerCase()}.
 You are NOT an assistant helping with writing. You ARE the writer.
 </identity>
 
@@ -1012,7 +1009,7 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 </output_contract>
 
 <internal_planning>
-Before writing narrative, internally determine (do NOT output these—just let them guide your writing):
+Before writing narrative, internally determine (do NOT output these; just let them guide your writing):
 - BEAT STRUCTURE: What are the 3-5 major plot beats for this scene?
 - JACK'S PRIMARY ACTION: investigate | confront | observe | negotiate | flee | wait | interrogate | follow
 - JACK'S DIALOGUE APPROACH: aggressive | measured | evasive | empathetic | threatening | pleading
@@ -1046,7 +1043,7 @@ Ignoring overdue threads = generation failure. This is a hard requirement.
 </thread_escalation_rule>
 
 <craft_quality_checklist>
-Before finalizing your narrative, internally verify these craft elements (do NOT output these—just ensure your writing embodies them):
+Before finalizing your narrative, internally verify these craft elements (do NOT output these; just ensure your writing embodies them):
 - SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically'}
 - MICRO-REVELATION: ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
 - FORWARD MOMENTUM: ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
@@ -1538,7 +1535,7 @@ const buildDramaticIronySection = (chapter, pathKey, choiceHistory = []) => {
   // After 1C, the first undeniable reveal has occurred.
   if (chapter === 2) {
     ironies.push({
-      secret: 'The symbols are not just graffiti—something is responding to observation',
+      secret: 'The symbols are not just graffiti; something is responding to observation',
       jackKnows: 'Jack thinks it is a pattern, a prank, or stress-induced pareidolia',
       readerKnows: 'The reader is primed for a hidden layer and can spot the rules forming before Jack admits it',
       useFor: 'Let the world "almost" slip. The first undeniable reveal occurred at the end of 1C; now deepen Jack\'s understanding.',
@@ -3107,116 +3104,6 @@ Generate realistic, specific consequences based on the actual narrative content.
   }
 
   /**
-   * Clean up all stored data for a fresh start
-   * Removes generated story, story arcs, chapter outlines, and resets service state
-   */
-  async cleanupAllStoredData() {
-    console.log('[StoryGenerationService] Starting full storage cleanup...');
-
-    try {
-      // Get all AsyncStorage keys to find story-related ones
-      const allKeys = await AsyncStorage.getAllKeys();
-
-      // Keys to remove: story arcs, chapter outlines, offline queue
-      const keysToRemove = allKeys.filter(key =>
-        key.startsWith('story_arc_') ||
-        key.startsWith('chapter_outline_') ||
-        // Clear offline queue key(s) (legacy + current).
-        key === 'detective_portrait_offline_queue' ||
-        key === 'dead_letters_offline_queue'
-      );
-
-      // Remove story arc keys
-      if (keysToRemove.length > 0) {
-        await AsyncStorage.multiRemove(keysToRemove);
-        console.log(`[StoryGenerationService] Removed ${keysToRemove.length} auxiliary storage keys`);
-      }
-
-      // Clear generated story and context via storage module
-      const { clearGeneratedStory } = await import('../storage/generatedStoryStorage');
-      await clearGeneratedStory();
-
-      // Reset service state
-      this.generatedStory = null;
-      this.storyContext = null;
-      this.storyArc = null;
-      this.chapterOutlines.clear();
-      this.consistencyCheckpoints.clear();
-      this.generatedConsequences.clear();
-      this.pendingGenerations.clear();
-      this.threadAcknowledgmentCounts.clear();
-      this.generationAttempts.clear();
-      this.pathPersonality = null;
-      this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
-      this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
-      this.consistencyLog = [];
-      this.narrativeThreads = [];
-
-      console.log('[StoryGenerationService] Full cleanup complete');
-      return { success: true, keysRemoved: keysToRemove.length + 2 }; // +2 for story and context
-    } catch (error) {
-      console.error('[StoryGenerationService] Cleanup failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Get storage usage statistics
-   */
-  async getStorageStats() {
-    try {
-      const { getStorageSize, getGenerationStats } = await import('../storage/generatedStoryStorage');
-
-      const sizeInfo = await getStorageSize();
-      const genStats = await getGenerationStats();
-
-      // Count story arcs
-      const allKeys = await AsyncStorage.getAllKeys();
-      const arcKeys = allKeys.filter(k => k.startsWith('story_arc_'));
-      const outlineKeys = allKeys.filter(k => k.startsWith('chapter_outline_'));
-
-      return {
-        ...sizeInfo,
-        ...genStats,
-        storyArcCount: arcKeys.length,
-        chapterOutlineCount: outlineKeys.length,
-        totalKeysUsed: arcKeys.length + outlineKeys.length + 2, // +2 for main story and context
-      };
-    } catch (error) {
-      console.warn('[StoryGenerationService] Failed to get storage stats:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Force prune storage to free up space
-   * @param {string} currentPathKey - Player's current path
-   * @param {number} currentChapter - Player's current chapter
-   */
-  async forcePruneStorage(currentPathKey, currentChapter) {
-    try {
-      const { pruneOldGenerations } = await import('../storage/generatedStoryStorage');
-
-      // Target 50% of max storage
-      const targetSize = 2 * 1024 * 1024; // 2MB target
-      const result = await pruneOldGenerations(currentPathKey, currentChapter, targetSize);
-
-      // Story arcs are keyed by SUPER-PATH (AGGRESSIVE/METHODICAL/BALANCED),
-      // not by the cumulative branch key. Do not attempt to prune arcs based on currentPathKey.
-      // Arcs are small, and incorrect pruning can cause unnecessary re-planning churn.
-      const arcKeys = [];
-
-      return {
-        ...result,
-        arcsRemoved: arcKeys.length,
-      };
-    } catch (error) {
-      console.error('[StoryGenerationService] Force prune failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
    * Prune stale in-memory Map entries to prevent memory leaks in long sessions
    * Called periodically during generation to clean up abandoned paths
    *
@@ -3375,29 +3262,6 @@ Generate realistic, specific consequences based on the actual narrative content.
     this.archivedThreads = [];
 
     console.log('[StoryGenerationService] Cleanup complete');
-  }
-
-  /**
-   * Get memory usage statistics for debugging
-   */
-  getMemoryStats() {
-    return {
-      pendingGenerations: this.pendingGenerations.size,
-      decisionConsequences: this.decisionConsequences.size,
-      characterStates: this.characterStates.size,
-      threadAcknowledgmentCounts: this.threadAcknowledgmentCounts.size,
-      chapterOutlines: this.chapterOutlines.size,
-      consistencyCheckpoints: this.consistencyCheckpoints.size,
-      generatedConsequences: this.generatedConsequences.size,
-      generationAttempts: this.generationAttempts.size,
-      narrativeThreads: this.narrativeThreads?.length || 0,
-      archivedThreads: this.archivedThreads?.length || 0,
-      consistencyLog: this.consistencyLog?.length || 0,
-      generationQueue: {
-        active: this.activeGenerationCount,
-        waiting: this.generationWaitQueue.length,
-      },
-    };
   }
 
   /**
@@ -5085,7 +4949,7 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
     if (context.playerChoices.length > 0) {
       summary += '\n### PLAYER CHOICE HISTORY (All decisions made)\n';
       context.playerChoices.forEach(choice => {
-        const title = choice.optionTitle ? ` — "${choice.optionTitle}"` : '';
+        const title = choice.optionTitle ? `: "${choice.optionTitle}"` : '';
         const focus = choice.optionFocus ? ` (${choice.optionFocus})` : '';
         summary += `- Chapter ${choice.chapter} Decision: Option ${choice.optionKey}${title}${focus}\n`;
       });
@@ -5302,7 +5166,7 @@ Same scene, written for methodical Jack:
       task += `
 
 **BALANCED JACK VOICE NOTE:**
-Jack adapts his approach to the situation. He can be patient when it serves him, aggressive when pushed. Match the narrative moment—if stakes are high and time is short, he acts; if information is needed, he investigates.`;
+Jack adapts his approach to the situation. He can be patient when it serves him, aggressive when pushed. Match the narrative moment: if stakes are high and time is short, he acts; if information is needed, he investigates.`;
     }
 
     task += `
@@ -6186,47 +6050,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
   }
 
-  /**
-   * Get archived threads for potential callbacks or references
-   * @param {string} type - Optional thread type filter
-   * @param {Array} characters - Optional character filter
-   */
-  getArchivedThreads(type = null, characters = null) {
-    let results = [...this.archivedThreads];
-
-    if (type) {
-      results = results.filter(t => t.type === type);
-    }
-
-    if (characters && characters.length > 0) {
-      const charLower = characters.map(c => c.toLowerCase());
-      results = results.filter(t =>
-        t.characters?.some(c => charLower.includes(c.toLowerCase()))
-      );
-    }
-
-    return results;
-  }
-
-  /**
-   * Get thread archive statistics
-   */
-  getThreadArchiveStats() {
-    const byType = {};
-    for (const thread of this.archivedThreads) {
-      byType[thread.type] = (byType[thread.type] || 0) + 1;
-    }
-
-    return {
-      totalArchived: this.archivedThreads.length,
-      maxArchived: this.maxArchivedThreads,
-      byType,
-      oldestChapter: this.archivedThreads.length > 0
-        ? Math.min(...this.archivedThreads.map(t => t.resolvedChapter || 0))
-        : null,
-    };
-  }
-
   // ==========================================================================
   // GENERATION CONCURRENCY CONTROL
   // ==========================================================================
@@ -6280,18 +6103,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
       console.log(`[StoryGenerationService] Unblocking queued generation: ${next.key}`);
       next.resolve();
     }
-  }
-
-  /**
-   * Get current generation queue status (for debugging/monitoring)
-   */
-  getGenerationQueueStatus() {
-    return {
-      activeGenerations: this.activeGenerationCount,
-      maxConcurrent: this.maxConcurrentGenerations,
-      queuedCount: this.generationWaitQueue.length,
-      pendingKeys: Array.from(this.pendingGenerations.keys()),
-    };
   }
 
   // ==========================================================================
@@ -6450,7 +6261,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // Decision schema has decision field BEFORE narrative, so decision is generated first
         // This eliminates the need for two-pass generation while ensuring complete decisions
 
-        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA_AB;
+        const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
         let response;
 
         // Try cached generation first (works in both proxy and direct mode)
@@ -6501,7 +6312,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cachingEnabled: true,
             dynamicPromptLength: dynamicPrompt?.length || 0,
             hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
-            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA_AB',
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
               establishedFacts: context?.establishedFacts?.length || 0,
@@ -6574,7 +6385,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             cachingEnabled: false,
             promptLength: prompt?.length || 0,
             hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
-            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA_AB',
+            schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
             contextSummary: {
               previousChapters: context?.previousChapters?.length || 0,
               establishedFacts: context?.establishedFacts?.length || 0,
@@ -6896,7 +6707,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
               }
 
               // No clamping/fallback here: per-path pathDecisions are authoritative by design.
-              // If the model drifts, we allow it — this is still better than collapsing to one decision.
+              // If the model drifts, we allow it. This is still better than collapsing to one decision.
 
               llmTrace('StoryGenerationService', traceId, 'pathDecisions.secondCall.merged', {
                 pathCount: Object.keys(pathDecisionsObj).length,
@@ -8951,150 +8762,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
   // PROMPT DIAGNOSTICS - Verify all components are being included
   // ==========================================================================
 
-  /**
-   * Diagnose prompt building to verify all components are included correctly
-   * Call this to debug issues with missing prompt content
-   * @returns {Object} Diagnostic report
-   */
-  diagnosePromptContent() {
-    const report = {
-      timestamp: new Date().toISOString(),
-      components: {},
-      issues: [],
-      summary: '',
-    };
-
-    // Check extended examples
-    try {
-      const extended = buildExtendedStyleExamples();
-      report.components.extendedExamples = {
-        length: extended?.length || 0,
-        hasContent: !!extended && extended.length > 1000,
-        preview: extended?.slice(0, 200) || 'EMPTY',
-      };
-      if (!extended || extended.length < 1000) {
-        report.issues.push('Extended examples missing or too short');
-      }
-    } catch (e) {
-      report.components.extendedExamples = { error: e.message };
-      report.issues.push(`Extended examples FAILED: ${e.message}`);
-    }
-
-    // Check EXAMPLE_PASSAGES
-    try {
-      const passageCount = Object.keys(EXAMPLE_PASSAGES).length;
-      report.components.examplePassages = {
-        count: passageCount,
-        keys: Object.keys(EXAMPLE_PASSAGES),
-        hasContent: passageCount > 5,
-      };
-      if (passageCount < 5) {
-        report.issues.push('EXAMPLE_PASSAGES has fewer than expected entries');
-      }
-    } catch (e) {
-      report.components.examplePassages = { error: e.message };
-      report.issues.push(`EXAMPLE_PASSAGES check failed: ${e.message}`);
-    }
-
-    // Check STYLE_EXAMPLES
-    try {
-      report.components.styleExamples = {
-        length: STYLE_EXAMPLES?.length || 0,
-        hasContent: !!STYLE_EXAMPLES && STYLE_EXAMPLES.length > 500,
-        preview: STYLE_EXAMPLES?.slice(0, 200) || 'EMPTY',
-      };
-      if (!STYLE_EXAMPLES || STYLE_EXAMPLES.length < 500) {
-        report.issues.push('STYLE_EXAMPLES missing or too short');
-      }
-    } catch (e) {
-      report.components.styleExamples = { error: e.message };
-      report.issues.push(`STYLE_EXAMPLES check failed: ${e.message}`);
-    }
-
-    // NOTE: Dramatic irony check removed - feature disabled
-
-    // Check voice DNA builder
-    try {
-      const voiceDNA = buildVoiceDNASection(['victoria', 'sarah']);
-      report.components.voiceDNA = {
-        length: voiceDNA?.length || 0,
-        hasContent: !!voiceDNA && voiceDNA.length > 200,
-        preview: voiceDNA?.slice(0, 200) || 'EMPTY',
-      };
-      if (!voiceDNA || voiceDNA.length < 200) {
-        report.issues.push('Voice DNA section empty for test characters');
-      }
-    } catch (e) {
-      report.components.voiceDNA = { error: e.message };
-      report.issues.push(`Voice DNA FAILED: ${e.message}`);
-    }
-
-    // Check many-shot examples
-    try {
-      const manyShotA = buildManyShotExamples('Opening/Hook (A)', null, 15);
-      const manyShotB = buildManyShotExamples('Development/Conflict (B)', null, 15);
-      const manyShotC = buildManyShotExamples('Resolution/Decision (C)', null, 15);
-      report.components.manyShotExamples = {
-        openingHook: { length: manyShotA?.length || 0, hasContent: manyShotA?.length > 1000 },
-        developmentConflict: { length: manyShotB?.length || 0, hasContent: manyShotB?.length > 1000 },
-        resolutionDecision: { length: manyShotC?.length || 0, hasContent: manyShotC?.length > 1000 },
-        previewB: manyShotB?.slice(0, 300) || 'EMPTY',
-      };
-      if (!manyShotA || manyShotA.length < 1000) {
-        report.issues.push('Many-shot examples for Opening/Hook (A) missing or too short');
-      }
-      if (!manyShotB || manyShotB.length < 1000) {
-        report.issues.push('Many-shot examples for Development/Conflict (B) missing or too short');
-      }
-    } catch (e) {
-      report.components.manyShotExamples = { error: e.message };
-      report.issues.push(`Many-shot examples FAILED: ${e.message}`);
-    }
-
-    // Check WRITING_STYLE
-    try {
-      report.components.writingStyle = {
-        hasVoice: !!WRITING_STYLE?.voice,
-        hasInfluences: Array.isArray(WRITING_STYLE?.influences),
-        hasForbidden: Array.isArray(WRITING_STYLE?.absolutelyForbidden),
-        hasMustInclude: Array.isArray(WRITING_STYLE?.mustInclude),
-      };
-      if (!WRITING_STYLE?.voice || !WRITING_STYLE?.influences) {
-        report.issues.push('WRITING_STYLE missing key properties');
-      }
-    } catch (e) {
-      report.components.writingStyle = { error: e.message };
-      report.issues.push(`WRITING_STYLE check failed: ${e.message}`);
-    }
-
-    // Check CONSISTENCY_RULES
-    try {
-      report.components.consistencyRules = {
-        count: CONSISTENCY_RULES?.length || 0,
-        hasContent: CONSISTENCY_RULES?.length > 5,
-      };
-      if (!CONSISTENCY_RULES || CONSISTENCY_RULES.length < 5) {
-        report.issues.push('CONSISTENCY_RULES missing or too few');
-      }
-    } catch (e) {
-      report.components.consistencyRules = { error: e.message };
-      report.issues.push(`CONSISTENCY_RULES check failed: ${e.message}`);
-    }
-
-    // Summary
-    const totalIssues = report.issues.length;
-    if (totalIssues === 0) {
-      report.summary = '✅ All prompt components verified successfully';
-    } else {
-      report.summary = `❌ ${totalIssues} issue(s) found with prompt components`;
-    }
-
-    console.log('[StoryGen] Prompt Diagnostic Report:');
-    console.log(JSON.stringify(report, null, 2));
-
-    return report;
-  }
-
   // ==========================================================================
   // LLM-BASED VALIDATION - Semantic understanding of rule violations
   // ==========================================================================
@@ -9670,7 +9337,7 @@ Rewrite the narrative to fix ALL issues while maintaining the story's thriller t
 
     const responseSchema = isDecisionPoint
       ? DECISION_CONTENT_SCHEMA
-      : STORY_CONTENT_SCHEMA_AB;
+      : STORY_CONTENT_SCHEMA;
 
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],
@@ -9742,7 +9409,7 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 - Setting: ${ABSOLUTE_FACTS.setting.city}, ${ABSOLUTE_FACTS.setting.atmosphere}
 
 ### CRITICAL WORLD RULES
-- Under-Map exists as a hidden layer; do not explain it like a "magic system" — show it through scene consequences
+- Under-Map exists as a hidden layer; do not explain it like a "magic system", show it through scene consequences
 - Reveal timing: first undeniable reveal occurs at the END of Chapter 1C
 - No Tolkien-style fantasy (no elves/dwarves/orcs, no medieval courts)
 
