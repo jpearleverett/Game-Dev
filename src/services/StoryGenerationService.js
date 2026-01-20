@@ -152,7 +152,7 @@ const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Mention Tom\'s name". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Change the subject". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
     },
     response: {
       type: 'string',
@@ -434,7 +434,7 @@ const STORY_CONTENT_SCHEMA = {
           },
           description: {
             type: 'string',
-            description: 'Brief description of the thread (e.g., "Jack agreed to meet Sarah at the docks at midnight")'
+            description: 'Brief description of the thread (e.g., "Jack agreed to meet his contact at the docks at midnight")'
           },
           status: {
             type: 'string',
@@ -1370,22 +1370,14 @@ These scenes demonstrate the natural rhythm, dialogue patterns, and emotional be
 const buildVoiceDNASection = (charactersInScene = [], context = {}, currentChapter = 2) => {
   const { VOICE_DNA } = require('../data/characterReference');
 
-  // Always include Jack's voice
+  // Only Jack and Victoria have canonical voice DNA - LLM has freedom for other characters
   const voicesToInclude = ['jack'];
 
-  // Add any other characters specified
+  // Add Victoria if she's in the scene
   charactersInScene.forEach(char => {
     const normalizedChar = char.toLowerCase();
-    if (normalizedChar.includes('victoria') || normalizedChar.includes('emily')) {
+    if (normalizedChar.includes('victoria') || normalizedChar.includes('blackwell')) {
       voicesToInclude.push('victoria');
-    } else if (normalizedChar.includes('sarah')) {
-      voicesToInclude.push('sarah');
-    } else if (normalizedChar.includes('tom') || normalizedChar.includes('wade')) {
-      voicesToInclude.push('tomWade');
-    } else if (normalizedChar.includes('eleanor')) {
-      voicesToInclude.push('eleanor');
-    } else if (normalizedChar.includes('claire')) {
-      voicesToInclude.push('claire');
     }
   });
 
@@ -1511,15 +1503,12 @@ const extractRecentDialogue = (context, currentChapter, characterKeys) => {
 
 /**
  * Get name variants for character matching
+ * NOTE: Only Jack and Victoria are canonical - other characters are LLM-generated
  */
 const getCharacterNameVariants = (charKey) => {
   const variants = {
-    jack: ['Jack', 'Thornton'],
-    victoria: ['Victoria', 'Emily', 'Blackwell'],
-    sarah: ['Sarah', 'Reeves'],
-    tomWade: ['Tom', 'Wade', 'Thomas'],
-    eleanor: ['Eleanor', 'Cross'],
-    claire: ['Claire', 'Ashford'],
+    jack: ['Jack', 'Halloway'],
+    victoria: ['Victoria', 'Blackwell'],
   };
   return variants[charKey] || [charKey];
 };
@@ -2402,7 +2391,6 @@ Respond with a JSON object containing:
 
       const ongoing = [];
       if (typeof stats === 'string') {
-        if (stats.includes('SarahTrust')) ongoing.push(stats.includes('-SarahTrust') ? "Sarah's trust decreases" : "Sarah's trust increases");
         if (stats.toLowerCase().includes('investig')) ongoing.push('Jack gains better leads through evidence');
         if (stats.toLowerCase().includes('aggress')) ongoing.push("Jack's approach grows more confrontational");
       }
@@ -2410,8 +2398,8 @@ Respond with a JSON object containing:
         ongoing.unshift(`Tone shift: ${focus}`);
       }
 
+      // Character impact based on approach - not tied to specific non-canonical characters
       const characterImpact = {
-        trust: stats.includes('-SarahTrust') ? -10 : stats.includes('+SarahTrust') ? 10 : 0,
         aggression: focus.toLowerCase().includes('confront') ? 10 : focus.toLowerCase().includes('cautious') ? -5 : 0,
         thoroughness: focus.toLowerCase().includes('evidence') ? 10 : 0,
       };
@@ -2617,9 +2605,10 @@ Generate realistic, specific consequences based on the actual narrative content.
         }
         index.byChapter.get(ch.chapter).push(fact);
 
-        // Index by character mentioned
-        const characters = ['Jack', 'Victoria', 'Sarah', 'Eleanor', 'Silas', 'Tom', 'Wade', 'Grange', 'Thornhill', 'Chen', 'Sullivan', 'Teresa'];
-        characters.forEach(char => {
+        // Index by character mentioned - only canonical characters have static entries
+        // Other character names are dynamically discovered from generated content
+        const canonicalCharacters = ['Jack', 'Victoria', 'Blackwell'];
+        canonicalCharacters.forEach(char => {
           if (fact.toLowerCase().includes(char.toLowerCase())) {
             if (!index.byCharacter.has(char)) {
               index.byCharacter.set(char, []);
@@ -3548,7 +3537,7 @@ Generate realistic, specific consequences based on the actual narrative content.
     context.playerChoices = choiceHistory.map(choice => ({
       chapter: this._extractChapterFromCase(choice.caseNumber),
       optionKey: choice.optionKey,
-      optionTitle: choice.optionTitle || null,  // "Go to the wharf and confront the confessor"
+      optionTitle: choice.optionTitle || null,  // "Go to the wharf and investigate the warehouse"
       optionFocus: choice.optionFocus || null,  // "Prioritizes direct action over caution"
       timestamp: choice.timestamp,
     }));
@@ -3727,10 +3716,9 @@ Generate realistic, specific consequences based on the actual narrative content.
     }
 
     // Extract characters present in the final scene
-    const characterNames = [
-      'Jack', 'Tom', 'Victoria', 'Grange', 'Silas', 'Sarah', 'Maris', 'Niko', 'Saffron', 'Eleanor'
-    ];
-    const presentCharacters = characterNames.filter(name =>
+    // Only canonical characters are listed - LLM-generated characters detected dynamically
+    const canonicalCharacters = ['Jack', 'Victoria', 'Blackwell'];
+    const presentCharacters = canonicalCharacters.filter(name =>
       new RegExp(`\\b${name}\\b`, 'i').test(lastParagraphs)
     );
 
@@ -3765,6 +3753,7 @@ Generate realistic, specific consequences based on the actual narrative content.
 
   /**
    * Track what each character knows - prevents information leaks
+   * NOTE: Only Jack and Victoria are canonical - other characters are LLM-generated
    */
   _buildCharacterKnowledgeTracker(previousChapters) {
     const knowledge = {
@@ -3776,7 +3765,6 @@ Generate realistic, specific consequences based on the actual narrative content.
           'Victoria Blackwell\'s full agenda and constraints',
         ],
       },
-      sarah: { knows: [], suspects: [] },
       victoria: { knows: ['Far more about the Under-Map than Jack', 'Jack\'s likely routes and choices'], suspects: [] },
     };
 
@@ -3784,8 +3772,9 @@ Generate realistic, specific consequences based on the actual narrative content.
     const revelationPatterns = [
       { pattern: /Jack (?:learned|discovered|realized|found out|understood) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
       { pattern: /Jack (?:suspected|wondered if|began to think|considered) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'suspects' },
-      { pattern: /Sarah (?:told Jack|revealed|confessed|admitted) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
       { pattern: /Victoria (?:revealed|showed|told|exposed) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
+      // Generic pattern for any character revealing something to Jack
+      { pattern: /(?:told Jack|revealed to Jack|confessed to Jack|admitted to Jack) (?:that )?(.+?)[.!]/gi, target: 'jack', type: 'knows' },
     ];
 
     for (const ch of previousChapters) {
@@ -3854,23 +3843,19 @@ Generate realistic, specific consequences based on the actual narrative content.
    * Extract character dialogue history for voice consistency across chapters.
    * Per Gemini 3 best practices: track recent dialogue patterns per character
    * to maintain consistent voice across the 12-chapter arc.
+   * NOTE: Only Victoria Blackwell is tracked - she's the only canonical character besides Jack.
+   * Other characters are LLM-generated and don't need consistent voice tracking.
    * @param {Array} previousChapters - Previous chapter entries
    * @returns {Object} - Dialogue history per character
    */
   _extractCharacterDialogueHistory(previousChapters) {
     const characterDialogue = {
-      'Tom Wade': { lines: [], patterns: [], count: 0 },
       'Victoria Blackwell': { lines: [], patterns: [], count: 0 },
-      'Sarah': { lines: [], patterns: [], count: 0 },
-      'Grange': { lines: [], patterns: [], count: 0 },
     };
 
-    // Patterns to identify who is speaking
+    // Patterns to identify Victoria speaking
     const speakerPatterns = [
-      { name: 'Tom Wade', patterns: [/(?:Tom|Wade)\s+said/gi, /"[^"]+"\s+Tom/gi, /Tom(?:'s|'d|'ll)/gi] },
-      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell)\s+said/gi, /"[^"]+"\s+Victoria/gi] },
-      { name: 'Sarah', patterns: [/Sarah\s+said/gi, /"[^"]+"\s+Sarah/gi] },
-      { name: 'Grange', patterns: [/(?:Grange|Deputy Chief)\s+said/gi, /"[^"]+"\s+Grange/gi] },
+      { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell)\s+said/gi, /"[^"]+"\s+Victoria/gi, /"[^"]+"\s+Blackwell/gi] },
     ];
 
     // Extract dialogue from each chapter
@@ -3899,42 +3884,27 @@ Generate realistic, specific consequences based on the actual narrative content.
               subchapter: ch.subchapter,
             });
             characterDialogue[name].count++;
-            break; // Only attribute to one speaker
+            break;
           }
         }
       }
     }
 
-    // Extract speech patterns for each character
-    for (const [name, data] of Object.entries(characterDialogue)) {
-      if (data.lines.length >= 3) {
-        // Analyze patterns from dialogue
-        const allLines = data.lines.map(l => l.line).join(' ');
+    // Extract speech patterns for Victoria
+    const victoriaData = characterDialogue['Victoria Blackwell'];
+    if (victoriaData.lines.length >= 3) {
+      const allLines = victoriaData.lines.map(l => l.line).join(' ');
 
-        // Tom Wade patterns: questions, deflection, knowing more
-        if (name === 'Tom Wade') {
-          const questionCount = (allLines.match(/\?/g) || []).length;
-          if (questionCount / data.lines.length > 0.3) {
-            data.patterns.push('Frequently uses questions');
-          }
-          if (/you (?:sure|know|understand)/i.test(allLines)) {
-            data.patterns.push('Often deflects or challenges');
-          }
-        }
-
-        // Victoria patterns: cryptic, rule-bound
-        if (name === 'Victoria Blackwell') {
-          if (/rule|must|cannot|boundary/i.test(allLines)) {
-            data.patterns.push('References rules and boundaries');
-          }
-          if (/pattern|map|route|path/i.test(allLines)) {
-            data.patterns.push('Uses mapping/pattern metaphors');
-          }
-        }
-
-        // Keep only last 5 lines per character (most recent)
-        data.lines = data.lines.slice(-5);
+      // Victoria patterns: cryptic, rule-bound
+      if (/rule|must|cannot|boundary/i.test(allLines)) {
+        victoriaData.patterns.push('References rules and boundaries');
       }
+      if (/pattern|map|route|path/i.test(allLines)) {
+        victoriaData.patterns.push('Uses mapping/pattern metaphors');
+      }
+
+      // Keep only last 5 lines (most recent)
+      victoriaData.lines = victoriaData.lines.slice(-5);
     }
 
     return characterDialogue;
@@ -4612,15 +4582,13 @@ When generating branching choices (firstChoice options 1A/1B/1C and secondChoice
     }
 
     // Check recent narrative for character mentions
+    // Only check for Victoria - she's the only canonical character besides Jack who needs voice DNA
+    // Other characters are LLM-generated and don't have predefined voice patterns
     if (context.previousChapters?.length > 0) {
       const recentChapter = context.previousChapters[context.previousChapters.length - 1];
       if (recentChapter?.narrative) {
         const narrative = recentChapter.narrative.toLowerCase();
         if (narrative.includes('victoria') || narrative.includes('blackwell')) characters.push('Victoria');
-        if (narrative.includes('sarah') || narrative.includes('reeves')) characters.push('Sarah');
-        if (narrative.includes('tom') || narrative.includes('wade')) characters.push('Tom');
-        if (narrative.includes('eleanor') || narrative.includes('bellamy')) characters.push('Eleanor');
-        if (narrative.includes('claire') || narrative.includes('thornhill')) characters.push('Claire');
       }
     }
 
@@ -5712,14 +5680,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     const type = thread.type || 'unknown';
     const description = thread.description.toLowerCase();
 
-    // Extract character names mentioned in the thread
-    const knownCharacters = [
-      'jack', 'sarah', 'victoria', 'emily', 'tom', 'wade', 'eleanor',
-      'bellamy', 'silas', 'reed', 'grange', 'marcus', 'thornhill',
-      'lisa', 'chen', 'james', 'sullivan', 'teresa', 'reeves', 'confessor'
-    ];
+    // Extract canonical character names mentioned in the thread
+    // Only Jack and Victoria are canonical - other character names are LLM-generated
+    const canonicalCharacters = ['jack', 'victoria', 'blackwell'];
 
-    const mentionedCharacters = knownCharacters
+    const mentionedCharacters = canonicalCharacters
       .filter(name => description.includes(name))
       .sort();
 
@@ -5785,15 +5750,12 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     }
     factors += 0.3;
 
-    // Extract and compare characters
-    const knownCharacters = [
-      'jack', 'sarah', 'victoria', 'emily', 'tom', 'wade', 'eleanor',
-      'bellamy', 'silas', 'reed', 'grange', 'marcus', 'thornhill',
-      'lisa', 'chen', 'james', 'sullivan', 'teresa', 'reeves'
-    ];
+    // Extract and compare canonical characters
+    // Only Jack and Victoria are canonical - other character names are LLM-generated
+    const canonicalCharacters = ['jack', 'victoria', 'blackwell'];
 
-    const chars1 = new Set(knownCharacters.filter(c => desc1.includes(c)));
-    const chars2 = new Set(knownCharacters.filter(c => desc2.includes(c)));
+    const chars1 = new Set(canonicalCharacters.filter(c => desc1.includes(c)));
+    const chars2 = new Set(canonicalCharacters.filter(c => desc2.includes(c)));
     const charIntersection = [...chars1].filter(c => chars2.has(c)).length;
     const charUnion = new Set([...chars1, ...chars2]).size;
 
@@ -7679,40 +7641,16 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
     });
 
     // =========================================================================
-    // CATEGORY 2: TIMELINE CONSISTENCY
-    // =========================================================================
-    // NOTE: These patterns must be VERY specific to avoid false positives.
-    // The previous patterns used greedy `.*` which matched across the entire narrative,
-    // triggering false positives like "five years ago, [unrelated text], Silas walked in".
-    // Now we only match within the same sentence (no periods between) and limit to 60 chars.
-    const timelineChecks = [
-      // Match "twenty/20 years" + up to 60 chars (no period) + "tom wade/wade friend"
-      { pattern: /(?:twenty|20)\s*years[^.]{0,60}(?:tom\s*wade|wade[^.]{0,20}friend)/i, issue: 'Tom Wade friendship is 30 years, not 20' },
-      // Match "ten/10 years" + up to 60 chars (no period) + "sarah/reeves partner"
-      { pattern: /(?:ten|10)\s*years[^.]{0,60}(?:sarah[^.]{0,20}partner|reeves[^.]{0,20}partner)/i, issue: 'Sarah partnership is 13 years, not 10' },
-      // Match "five/5 years" + up to 60 chars (no period) + "silas partner/reed partner"
-      { pattern: /(?:five|5)\s*years[^.]{0,60}(?:silas[^.]{0,20}partner|reed[^.]{0,20}partner)/i, issue: 'Silas partnership is 8 years, not 5' },
-      // Match wrong year + up to 60 chars (no period) + emily case context
-      { pattern: /(?:five|5|ten|10)\s*years[^.]{0,60}(?:emily[^.]{0,30}(?:dead|case|closed)|closed[^.]{0,30}emily)/i, issue: 'Emily case was closed 7 years ago exactly' },
-      // Match wrong year + up to 60 chars (no period) + eleanor prison context
-      { pattern: /(?:five|5|ten|10)\s*years[^.]{0,60}(?:eleanor[^.]{0,30}prison|imprisoned[^.]{0,30}eleanor)/i, issue: 'Eleanor has been imprisoned for 8 years exactly' },
-    ];
-
-    timelineChecks.forEach(({ pattern, issue }) => {
-      if (pattern.test(narrativeOriginal)) {
-        issues.push(issue);
-      }
-    });
-
-    // =========================================================================
-    // CATEGORY 2.5: STORY DAY CONSISTENCY
+    // CATEGORY 2: STORY DAY CONSISTENCY
     // =========================================================================
     // NOTE: storyDay field was removed from schema - now handled via <internal_planning> in system prompt.
     // The LLM determines storyDay internally (Chapter N = Day N) without outputting it.
+    // NOTE: Character-specific timeline validations removed - only Jack and Victoria are canonical.
+    // The LLM has creative freedom to generate supporting characters with their own timelines.
 
     // Check for relative time references that could cause drift
     const relativeTimePatterns = [
-      { pattern: /(?:nearly|almost|about|roughly)\s+(?:a\s+)?decade/i, issue: 'Avoid vague time references like "nearly a decade" - use exact durations (8 years for Eleanor, 7 years for Emily)' },
+      { pattern: /(?:nearly|almost|about|roughly)\s+(?:a\s+)?decade/i, issue: 'Avoid vague time references like "nearly a decade" - use exact durations' },
       { pattern: /(?:many|several|countless)\s+years\s+(?:ago|since)/i, issue: 'Avoid vague "many/several years" - use exact durations from ABSOLUTE_FACTS' },
     ];
 
@@ -7741,8 +7679,9 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
       // Stopwords used for choice-causality keyword extraction.
       // Include common noir/setting tokens so we don't get false positives like "truth/rain/case".
+      // NOTE: Only includes canonical characters (Jack, Victoria/Blackwell) - others are LLM-generated.
       const stop = new Set([
-        'jack', 'halloway', 'ashport', 'sarah', 'victoria', 'cartographer', 'wade', 'tom',
+        'jack', 'halloway', 'ashport', 'victoria', 'blackwell',
         'said', 'the', 'and', 'that', 'with', 'from', 'into', 'then', 'over', 'under',
         'were', 'was', 'had', 'have', 'this', 'there', 'their', 'they', 'them', 'what',
         'when', 'where', 'which', 'while', 'because', 'before', 'after', 'could', 'would',
@@ -7908,7 +7847,7 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             if (currentCount >= 2) {
               // Use word-based prefix matching to find the corresponding critical thread
               // This handles LLM rewording (e.g., "promised to meet" → "meeting") while
-              // distinguishing similar threads (e.g., "meet Sarah" vs "call Sarah")
+              // distinguishing similar threads (e.g., "meet contact" vs "call contact")
               const threadIdWords = threadId.toLowerCase().match(/\b\w{4,}\b/g) || [];
               const wordsMatchFn = (a, b) => {
                 if (a.length < 4 || b.length < 4) return a === b;
@@ -7938,7 +7877,8 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
             const narrativeLower = narrative.toLowerCase();
 
             // Extract key nouns/names from the thread description
-            const keyWords = threadLower.match(/\b(?:jack|sarah|victoria|eleanor|silas|tom|wade|grange|meet|promise|call|contact|investigate|reveal)\b/g) || [];
+            // Only canonical character names are matched - other characters are LLM-generated
+            const keyWords = threadLower.match(/\b(?:jack|victoria|blackwell|meet|promise|call|contact|investigate|reveal)\b/g) || [];
 
             // Use prefix matching to allow word variations (meet/meeting, promise/promised)
             // but prevent false positives (case/showcase)
@@ -8435,18 +8375,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
     // Major revelations cannot be "re-discovered" - breaks mystery pacing
     if (s.includes('already revealed') && s.includes('re-discovers')) return true;
-    if (s.includes('Victoria is Emily') && s.includes('re-reveal')) return true;
 
-    // --- TIER 4: TIMELINE FACTS (Core relationship/event durations) ---
-    // These durations are emotionally significant - "30 years of friendship betrayed"
-    // is very different from "20 years". Players may notice inconsistencies.
-    if (s.includes('Tom Wade friendship is 30 years')) return true;
-    if (s.includes('Sarah partnership is 13 years')) return true;
-    if (s.includes('Silas partnership is 8 years')) return true;
-    if (s.includes('Emily case was closed 7 years ago')) return true;
-    if (s.includes('Eleanor has been imprisoned for 8 years')) return true;
+    // NOTE: Character-specific timeline blocking rules removed.
+    // Only Jack and Victoria are canonical - LLM has creative freedom for supporting characters.
 
-    // --- TIER 5: STORY DAY CONSISTENCY ---
+    // --- TIER 4: STORY DAY CONSISTENCY ---
     // The story spans exactly 12 days, one per chapter. Wrong day = confusion.
     if (s.startsWith('STORY DAY MISMATCH:')) return true;
 
@@ -8655,102 +8588,20 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
 
   /**
    * Validate character voice consistency in dialogue
-   * Ensures each character sounds distinct and matches their established voice
+   * Ensures Victoria sounds distinct and matches her established voice
+   * NOTE: Only Jack and Victoria are canonical characters - LLM has freedom for others
    */
   _validateCharacterVoices(narrative) {
     const issues = [];
     const warnings = [];
 
-    // Character voice signatures from characterReference.js
-    const voiceSignatures = {
-      victoria: {
-        patterns: [
-          /\b(?:education|curriculum|lesson|understand|certainty)\b/i,
-          /\b(?:twelve\s+days?|chess|game|move|piece)\b/i,
-          /\b(?:power|truth|noise|believe)\b/i,
-        ],
-        forbiddenPatterns: [
-          /\b(?:gonna|gotta|ain't|wanna)\b/i, // Too casual for Victoria
-          /\b(?:like,?\s+(?:you\s+know|whatever))\b/i, // Valley speak
-        ],
-        style: 'elegant, calculated, formal diction with sardonic edge',
-      },
-      sarah: {
-        patterns: [
-          /\b(?:partner|force|badge|case|evidence)\b/i,
-          /\b(?:done|finished|walk\s+away|my\s+own)\b/i,
-        ],
-        forbiddenPatterns: [
-          /\b(?:darling|dear|sweetheart)\b/i, // Too soft for Sarah
-        ],
-        style: 'direct, no-nonsense, increasingly independent',
-      },
-      eleanor: {
-        patterns: [
-          /\b(?:years?|prison|greystone|cell|innocent)\b/i,
-          /\b(?:daughter|maya|richard|husband)\b/i,
-        ],
-        forbiddenPatterns: [], // Eleanor can sound bitter in many ways
-        style: 'bitter, resilient, gravel and broken glass',
-      },
-      silas: {
-        patterns: [
-          /\b(?:blackmail|blood\s+money|penthouse|guilty|probably)\b/i,
-          /\b(?:sorry|forgive|mistake|wrong)\b/i,
-        ],
-        forbiddenPatterns: [
-          /\b(?:confident|sure|certain|definitely)\b/i, // Silas is defeated, not confident
-        ],
-        style: 'defeated, bourbon-soaked, confessional',
-      },
-      tom: {
-        patterns: [
-          /\b(?:evidence|forensic|lab|test|results?)\b/i,
-          /\b(?:friend|years?|college|trust)\b/i,
-        ],
-        forbiddenPatterns: [],
-        style: 'outwardly friendly and competent (before revelation)',
-      },
-    };
-
-    // Extract dialogue with speaker attribution
-    // Pattern: "dialogue" [optional: character said/spoke/etc]
-    // Support both ASCII quotes (") and curly/smart quotes (" ")
-    const dialogueWithAttribution = narrative.match(/[""\u201C][^""\u201C\u201D]+[""\u201D]\s*(?:[A-Za-z]+\s+(?:said|asked|replied|muttered|whispered|growled|snapped|hissed))?/g) || [];
-
-    // Check for dialogue that could be attributed to specific characters
-    const characterNames = ['victoria', 'sarah', 'eleanor', 'silas', 'tom', 'wade', 'reeves', 'bellamy', 'reed', 'confessor', 'blackwell'];
-
-    for (const dialogue of dialogueWithAttribution) {
-      // Extract text from either ASCII or curly quotes
-      const text = dialogue.match(/[""\u201C]([^""\u201C\u201D]+)[""\u201D]/)?.[1] || '';
-      const attribution = dialogue.toLowerCase();
-
-      for (const [character, signature] of Object.entries(voiceSignatures)) {
-        // Check if this dialogue is attributed to this character
-        const isThisCharacter = characterNames.some(name =>
-          attribution.includes(name) &&
-          (character === name || character === name.replace('wade', 'tom') || character === name.replace('reeves', 'sarah'))
-        );
-
-        if (isThisCharacter) {
-          // Check for forbidden patterns in this character's dialogue
-          for (const forbidden of signature.forbiddenPatterns) {
-            if (forbidden.test(text)) {
-              warnings.push(`Character voice violation: ${character.toUpperCase()} dialogue contains forbidden pattern. Style should be: ${signature.style}`);
-            }
-          }
-        }
-      }
-    }
-
-    // Cross-check: Victoria should never sound casual like a cop
-    // Support both ASCII quotes (") and curly/smart quotes (" ")
-    const victoriaDialogue = narrative.match(/(?:victoria|confessor|blackwell)\s+(?:said|spoke|replied|whispered)[^""\u201C\u201D]*[""\u201C]([^""\u201C\u201D]+)[""\u201D]/gi) || [];
+    // Only Victoria has canonical voice constraints - other characters are LLM-generated
+    // Victoria should never sound casual or use slang
+    const victoriaDialogue = narrative.match(/(?:victoria|blackwell)\s+(?:said|spoke|replied|whispered)[^""\u201C\u201D]*[""\u201C]([^""\u201C\u201D]+)[""\u201D]/gi) || [];
     for (const match of victoriaDialogue) {
       const text = match.match(/[""\u201C]([^""\u201C\u201D]+)[""\u201D]/)?.[1] || '';
-      if (/\b(?:gonna|gotta|ain't|ya|hey|buddy|pal)\b/i.test(text)) {
-        issues.push('Victoria/Confessor uses overly casual language - should be elegant and formal');
+      if (/\b(?:gonna|gotta|ain't|ya|hey|buddy|pal|like,?\s+you\s+know|whatever)\b/i.test(text)) {
+        issues.push('Victoria uses overly casual language - should be elegant and formal');
       }
     }
 
@@ -9067,9 +8918,9 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
         id: 'gatekeeper_blackmailed',
         payoff: 'A gatekeeper character is being leveraged (blackmailed) into controlling access to a key location/person',
         requiredSetups: [
-          'Silas acting guilty or drinking heavily',
-          'References to something Silas is hiding',
-          'Silas deflects questions about maps/archives/permits',
+          'A character with access to restricted areas acting guilty or evasive',
+          'References to someone being forced to cooperate or hide something',
+          'A gatekeeper deflects questions about maps/archives/permits',
         ],
         minSetupCount: 2,
         earliestPayoffChapter: 4,
@@ -9197,29 +9048,25 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
 
   /**
    * Generate patterns to detect payoff delivery
+   * NOTE: Only canonical revelations (Under-Map, Victoria's role) are hardcoded.
+   * Other character-specific revelations are LLM-generated and not validated here.
    */
   _generatePayoffPatterns(revelationId) {
     const patterns = {
+      // Canonical revelation: The Under-Map is real
       under_map_is_real: [
         /\bunder-?map\b/i,
         /\bthreshold\b.*\b(?:opened|unlatched|yawned|gaped|split)\b/i,
         /\bthe\s+map\s+(?:moved|shifted|changed)\b/i,
         /\bstreet\s+signs?\b.*\b(?:rearranged|rewrote|changed)\b/i,
       ],
-      victoria_cartographer: [
-        /\bmidnight\s+cartographer\b/i,
-        /\bvictoria\b.*\b(?:mapped|mapping|cartograph|two\s+maps|rules)\b/i,
-        /\bblackwell\b.*\b(?:cartograph|map|glyph)\b/i,
+      // Canonical revelation: Victoria's role as guide/architect
+      victoria_role: [
+        /\bvictoria\b.*\b(?:mapped|mapping|two\s+maps|rules|architect|guide)\b/i,
+        /\bblackwell\b.*\b(?:map|glyph|curriculum|route)\b/i,
+        /\bdead\s+letters?\b.*\bvictoria\b/i,
       ],
-      grange_containment: [
-        /\bgrange\b.*\b(?:contain|containment|sealed|suppressed|erased)\b/i,
-        /\bdeputy\s+chief\b.*\b(?:contain|sealed|suppressed)\b/i,
-      ],
-      silas_blackmailed: [
-        /silas.*(?:blackmailed|forced|made\s+to)/i,
-        /reed.*(?:blackmailed|forced|threaten)/i,
-        /silas.*(?:keys?|access|permits?|archive).*(?:blackmail|threaten)/i,
-      ],
+      // Canonical revelation: The anchor system
       five_anchors: [
         /\bfive\s+anchors?\b/i,
         /\ball\s+five\b.*\b(?:anchors?|missing|pattern)\b/i,
@@ -9270,15 +9117,14 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       }
     }
 
-    // Check that Victoria/Emily confrontation happens
+    // Check that Victoria confrontation happens
     if (chapter === 12) {
       const victoriaThread = context.narrativeThreads?.find(t =>
         t.description?.toLowerCase().includes('victoria') ||
-        t.description?.toLowerCase().includes('confessor') ||
-        t.description?.toLowerCase().includes('emily')
+        t.description?.toLowerCase().includes('blackwell')
       );
       if (!victoriaThread || victoriaThread.status !== 'resolved') {
-        warnings.push('Final chapter should include climactic confrontation involving Victoria and/or the containment forces shaping the Under-Map');
+        warnings.push('Final chapter should include climactic confrontation involving Victoria Blackwell');
       }
     }
 
