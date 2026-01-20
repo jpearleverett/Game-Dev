@@ -877,10 +877,11 @@ class ValidationMethods {
     // Expansion was causing text corruption so short narratives are now accepted
     // =========================================================================
     const wordCount = narrativeOriginal.split(/\s+/).filter(w => w.length > 0).length;
+    const targetWords = GENERATION_CONFIG?.wordCount?.target || MIN_WORDS_PER_SUBCHAPTER;
     if (wordCount < MIN_WORDS_PER_SUBCHAPTER) {
       warnings.push(`Narrative shorter than minimum: ${wordCount} words (minimum ${MIN_WORDS_PER_SUBCHAPTER})`);
-    } else if (wordCount < TARGET_WORDS * 0.85) {
-      warnings.push(`Narrative shorter than target: ${wordCount} words (target ${TARGET_WORDS})`);
+    } else if (wordCount < targetWords * 0.85) {
+      warnings.push(`Narrative shorter than target: ${wordCount} words (target ${targetWords})`);
     }
     const maxWords = GENERATION_CONFIG?.wordCount?.maximum;
     if (typeof maxWords === 'number' && wordCount > maxWords) {
@@ -931,9 +932,9 @@ class ValidationMethods {
           if (pathWords < MIN_PATH_WORDS) {
             const pathKey = opt.key || `${scIdx + 1}${String.fromCharCode(65 + optIdx)}`;
             warnings.push(`Path "${pathKey}" total too short: ${pathWords} words (minimum ${MIN_PATH_WORDS})`);
-          } else if (pathWords < TARGET_WORDS * 0.85) {
+          } else if (pathWords < targetWords * 0.85) {
             const pathKey = opt.key || `${scIdx + 1}${String.fromCharCode(65 + optIdx)}`;
-            warnings.push(`Path "${pathKey}" below target: ${pathWords} words (target ${TARGET_WORDS})`);
+            warnings.push(`Path "${pathKey}" below target: ${pathWords} words (target ${targetWords})`);
           }
         });
       });
