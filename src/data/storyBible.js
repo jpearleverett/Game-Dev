@@ -415,7 +415,7 @@ export const WRITING_STYLE = {
     'Flowery adverbs: "seemingly", "interestingly", "notably"',
     'The words "delve", "unravel", "tapestry"',
     '"A testament to" or "serves as a reminder"',
-    'Hedging: "It seems", "Perhaps", "Maybe"',
+    'Excessive hedging in narration (avoid stacking "it seems"/"perhaps"/"maybe")',
     'Overwrought or purple prose',
     'Breaking the fourth wall',
     'Summarizing instead of showing',

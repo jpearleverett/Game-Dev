@@ -3,8 +3,8 @@ import { GENERATION_CONFIG, STORY_STRUCTURE } from '../../data/storyBible';
 // Story configuration
 export const TOTAL_CHAPTERS = STORY_STRUCTURE?.totalChapters || 12;
 export const SUBCHAPTERS_PER_CHAPTER = STORY_STRUCTURE?.subchaptersPerChapter || 3;
-export const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 800 words
-export const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 900 words
+export const MIN_WORDS_PER_SUBCHAPTER = GENERATION_CONFIG.wordCount.minimum; // 900 words
+export const TARGET_WORDS = GENERATION_CONFIG.wordCount.target; // 1050 words
 export const DECISION_SUBCHAPTER = SUBCHAPTERS_PER_CHAPTER;
 export const MAX_RETRIES = GENERATION_CONFIG.qualitySettings?.maxRetries || 1;
 

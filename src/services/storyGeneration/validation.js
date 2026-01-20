@@ -1048,10 +1048,10 @@ class ValidationMethods {
       // to prevent apostrophes from closing double-quoted dialogue
       // - ASCII double quote: "
       // - Left/right curly double quotes: " " (U+201C, U+201D)
-      // - ASCII single quote: ' (used for dialogue in this story)
-      // - Left curly single quote: ' (U+2018) - used for dialogue
-      // - Right curly single quote: ' (U+2019) - used for dialogue AND apostrophes
-      // NOTE: We handle ASCII single quotes now by detecting apostrophes vs dialogue context
+      // - ASCII single quote: ' (mostly apostrophes; legacy dialogue in old content)
+      // - Left curly single quote: ' (U+2018) - legacy dialogue / stylized punctuation
+      // - Right curly single quote: ' (U+2019) - dialogue AND apostrophes
+      // NOTE: We detect apostrophes vs dialogue for robustness.
       const isOpeningDouble = (ch) => ch === '"' || ch === '\u201C';
       const isClosingDouble = (ch) => ch === '"' || ch === '\u201D';
       const isOpeningSingle = (ch) => ch === "'" || ch === '\u2018'; // ASCII or curly quote

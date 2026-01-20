@@ -219,6 +219,11 @@ Treat those blocks as authoritative.
 If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
 </how_to_use_the_prompt>
 
+<gemini_3_notes>
+- Gemini 3 defaults to concise output; still meet the narrative word count targets.
+- Anchor every choice and detail to the provided context blocks above.
+</gemini_3_notes>
+
 <output_contract>
 - Return ONLY valid JSON that matches the provided schema. No commentary, no markdown.
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
