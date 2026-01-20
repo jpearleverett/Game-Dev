@@ -403,11 +403,7 @@ const STORY_CONTENT_SCHEMA = {
       required: ['opening', 'firstChoice', 'secondChoices'],
     },
     // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this; was never displayed
-    puzzleCandidates: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'List of 6-8 distinct, evocative single words (nouns/verbs) directly from your narrative that would make good puzzle answers.',
-    },
+    // NOTE: puzzleCandidates removed - puzzle uses static word list now
     briefing: {
       type: 'object',
       description: 'Mission briefing for the evidence board puzzle',
@@ -465,18 +461,11 @@ const STORY_CONTENT_SCHEMA = {
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
   },
-  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
 
-const STORY_CONTENT_SCHEMA_AB = (() => {
-  const cloned = JSON.parse(JSON.stringify(STORY_CONTENT_SCHEMA));
-  if (cloned?.properties?.puzzleCandidates) {
-    delete cloned.properties.puzzleCandidates;
-  }
-  if (Array.isArray(cloned?.required)) {
-    cloned.required = cloned.required.filter((key) => key !== 'puzzleCandidates');
-  }
-  return cloned;
+// STORY_CONTENT_SCHEMA_AB is the same as STORY_CONTENT_SCHEMA (puzzleCandidates already removed)
+const STORY_CONTENT_SCHEMA_AB = JSON.parse(JSON.stringify(STORY_CONTENT_SCHEMA));
 })();
 
 /**
@@ -682,14 +671,10 @@ const DECISION_CONTENT_SCHEMA = {
       required: ['opening', 'firstChoice', 'secondChoices'],
     },
     // NOTE: chapterSummary removed - 'previously' + 'narrative' already provide this
-    puzzleCandidates: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'List of 10-12 distinct, evocative single words (nouns/verbs) from across ALL paths that would make good puzzle answers.',
-    },
+    // NOTE: puzzleCandidates removed - puzzle uses static word list now
     briefing: {
       type: 'object',
-      description: 'Mission briefing for the evidence board puzzle',
+      description: 'Mission briefing',
       properties: {
         summary: {
           type: 'string',
@@ -744,7 +729,7 @@ const DECISION_CONTENT_SCHEMA = {
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
   },
-  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'puzzleCandidates', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
 
 // ============================================================================
@@ -7138,9 +7123,6 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
         // NOTE: Schema was slimmed down - beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration,
         // storyDay, chapterSummary, consistencyFacts, previousThreadsAddressed were removed from output.
         // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking handles internally).
-        // Extract all text from branchingNarrative for board generation and word count
-        const allNarrativeText = this._extractAllTextFromBranchingNarrative(generatedContent.branchingNarrative);
-
         const shouldGenerateBoard = isDecisionPoint;
         const storyEntry = {
           chapter,
@@ -7158,17 +7140,11 @@ Copy the decision object EXACTLY as provided above into your response. Do not mo
           pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
           decision: isDecisionPoint ? generatedContent.decision : null,
           board: shouldGenerateBoard
-            ? this._generateBoardData(
-              allNarrativeText,
-              isDecisionPoint,
-              generatedContent.pathDecisions || generatedContent.decision,
-              generatedContent.puzzleCandidates,
-              chapter,
-            )
+            ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
             : null,
           narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
           generatedAt: new Date().toISOString(),
-          wordCount: allNarrativeText?.split(/\s+/).length || 0,
+          wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
           // Thought signature for multi-chapter reasoning continuity (Gemini 3)
           // Persisted and passed to next chapter generation to maintain reasoning chain
           thoughtSignature: firstCallThoughtSignature || null,
@@ -9808,1019 +9784,72 @@ Output ONLY the expanded narrative. No tags, no commentary.`;
 
   /**
    * Generate board data for the puzzle
-   * Now includes chapter-based difficulty scaling
+   * Now uses static word list (puzzle redesign pending)
    *
-   * @param {string} narrative - The narrative text to extract words from
    * @param {boolean} isDecisionPoint - Whether this is a decision subchapter
    * @param {object} decision - Decision data for decision points
-   * @param {string[]} puzzleCandidates - LLM-suggested puzzle words
-   * @param {number} chapter - Current chapter (2-12) for difficulty scaling
    */
-  _generateBoardData(narrative, isDecisionPoint, decision, puzzleCandidates = [], chapter = 2) {
-    // Combine LLM candidates with regex extraction, prioritizing LLM candidates
-    const regexWords = this._extractKeywordsFromNarrative(narrative);
-    const narrativeUpperWordSet = new Set(
-      String(narrative || '')
-        .toUpperCase()
-        .replace(/[^A-Z\s]/g, ' ')
-        .split(/\s+/)
-        .filter(Boolean)
-    );
-
-    // ========== DIFFICULTY SCALING BASED ON CHAPTER ==========
-    // Early chapters (2-4): Easier puzzles with more obvious words
-    // Mid chapters (5-8): Standard difficulty
-    // Late chapters (9-12): Harder puzzles with more outliers and larger grids
-
-    // Calculate difficulty tier (0 = easy, 1 = medium, 2 = hard)
-    const difficultyTier = chapter <= 4 ? 0 : chapter <= 8 ? 1 : 2;
-
-    // Calculate progressive difficulty multiplier (10% harder per chapter after 2)
-    const chapterProgression = Math.max(0, (chapter - 2) * 0.1);
-
-    // Word length requirements scale with difficulty
-    const minWordLength = 4; // Always 4
-    const maxWordLength = difficultyTier === 0 ? 8 : difficultyTier === 1 ? 9 : 10;
-
-    // Semantic distance requirement scales with chapter
-    // Later chapters require more semantic distinction to prevent "lucky guesses"
-    // Stored for use in semantic validation
-    this._currentSemanticDistanceRequirement = Math.min(3, Math.floor(chapter / 4) + 1);
-
-    // ========== WORD QUALITY FILTER ==========
-    // Exclude boring/common words that don't make good puzzle words
-    const boringWords = new Set([
-      // Common verbs that aren't evocative
-      'JUST', 'SAID', 'THEN', 'WHEN', 'THAT', 'THIS', 'FROM', 'HAVE', 'WERE', 'BEEN',
-      'INTO', 'OVER', 'VERY', 'MUCH', 'SOME', 'LIKE', 'WHAT', 'THAN', 'THEM', 'ONLY',
-      'COME', 'CAME', 'MADE', 'MAKE', 'TAKE', 'TOOK', 'GOES', 'GONE', 'WENT', 'KNOW',
-      'KNEW', 'THINK', 'FELT', 'FEEL', 'SEEM', 'LOOK', 'TURN', 'BACK', 'DOWN', 'AWAY',
-      'WILL', 'WOULD', 'COULD', 'SHOULD', 'MIGHT', 'MUST', 'SHALL', 'NEED', 'WANT',
-      // Articles and prepositions that might slip through
-      'WITH', 'ABOUT', 'AFTER', 'BEFORE', 'THROUGH', 'UNDER', 'BETWEEN', 'AROUND',
-      // Common pronouns and determiners
-      'THEIR', 'THERE', 'WHERE', 'WHICH', 'OTHER', 'THESE', 'THOSE', 'EVERY', 'BEING',
-      // Generic time words
-      'TIME', 'TIMES', 'YEAR', 'YEARS', 'LATER', 'STILL', 'AGAIN', 'NEVER', 'ALWAYS',
-      // Common but uninteresting nouns
-      'THING', 'THINGS', 'PLACE', 'WAY', 'WAYS', 'PART', 'PARTS', 'KIND', 'SORT',
-      'SAME', 'SUCH', 'EACH', 'BOTH', 'ELSE', 'EVEN', 'ALSO', 'MOST', 'MANY', 'MORE',
-      // Weak adjectives
-      'GOOD', 'WELL', 'LONG', 'LITTLE', 'GREAT', 'HIGH', 'SMALL', 'LARGE', 'YOUNG',
-      // Common story-telling transitions
-      'FIRST', 'LAST', 'NEXT', 'ANOTHER', 'WHOLE', 'HALF', 'REAL', 'SURE', 'TRUE',
-    ]);
-
-    // Filter LLM candidates for validity (length, structure, quality) with difficulty-based length
-    const validCandidates = (puzzleCandidates || [])
-      .map(w => w.toUpperCase().trim())
-      .filter(w => {
-        // Basic structure checks
-        if (w.length < minWordLength || w.length > maxWordLength) return false;
-        if (!/^[A-Z]+$/.test(w)) return false;
-        // Quality filter
-        if (boringWords.has(w)) return false;
-        // Fairness: keep candidates grounded in the actual narrative text.
-        // (The generator already asks for words "directly from your narrative", but enforce it here.)
-        if (!narrativeUpperWordSet.has(w)) return false;
-        return true;
-      });
-
-    // Also filter regex words for quality
-    const qualityRegexWords = regexWords.filter(w => !boringWords.has(w.toUpperCase()));
-
-    // Combine lists: Candidates first, then regex words (deduplicated)
-    const allWords = [...new Set([...validCandidates, ...qualityRegexWords])];
-
-    // Outlier count scales with difficulty and decision status
-    // Easy: 4 outliers (6 for decisions), Medium: 4-5 (7-8), Hard: 5-6 (8)
-    let outlierCount;
-    if (isDecisionPoint) {
-      outlierCount = difficultyTier === 0 ? 6 : difficultyTier === 1 ? 7 : 8;
-    } else {
-      outlierCount = difficultyTier === 0 ? 4 : difficultyTier === 1 ? 5 : 6;
-    }
-
-    let outlierWords = this._selectOutlierWords(allWords, outlierCount, isDecisionPoint, decision);
-
-    // Grid size scales with difficulty
-    // Easy: 4x4, Medium: 4x4 or 5x4 for decisions, Hard: 5x4
-    let gridRows;
-    if (isDecisionPoint) {
-      gridRows = 5; // Always 5 for decisions
-    } else {
-      gridRows = difficultyTier === 2 ? 5 : 4;
-    }
-    const gridCols = 4;
-    const gridSize = gridRows * gridCols;
-
-    const usedWords = new Set(outlierWords.map(w => w.toUpperCase()));
-    const gridWords = [...outlierWords];
-
-    // Fill remaining spots with other relevant words from narrative
-    for (const word of allWords) {
-      if (gridWords.length >= gridSize) break;
-      const upperWord = word.toUpperCase();
-      if (!usedWords.has(upperWord)) {
-        gridWords.push(upperWord);
-        usedWords.add(upperWord);
-      }
-    }
-
-    const fillerWords = [
-      'SHADOW', 'TRUTH', 'LIE', 'NIGHT', 'RAIN', 'SMOKE', 'BLOOD', 'DEATH',
-      'GUILT', 'ALIBI', 'CRIME', 'BADGE', 'CLUE', 'FEAR', 'DARK', 'NOIR',
-      'VICE', 'DREAD', 'KNIFE', 'GLASS', 'BOOZE', 'DAME', 'GRIFT', 'HEIST',
-      'MOTIVE', 'CORPSE', 'VAULT', 'CHASE', 'BLIND', 'TRAIL', 'MARK',
-      'SNITCH', 'BRASS', 'STREET', 'ALLEY', 'DOCK', 'PIER', 'WHARF', 'TORCH',
+  _generateBoardData(isDecisionPoint, decision) {
+    // Static word list for evidence board puzzle (puzzle redesign pending)
+    const staticWords = [
+      'SHADOW', 'TRUTH', 'GLYPH', 'SILVER', 'TOKEN', 'ANCHOR',
+      'THRESHOLD', 'PATTERN', 'WITNESS', 'CIPHER', 'SIGNAL', 'TRACE',
+      'HIDDEN', 'PASSAGE', 'ARCHIVE', 'REFLECT'
     ];
 
-    const shuffledFillers = this._shuffleArray([...fillerWords]);
-    for (const filler of shuffledFillers) {
-      if (gridWords.length >= gridSize) break;
-      const upperFiller = filler.toUpperCase();
-      if (!usedWords.has(upperFiller)) {
-        gridWords.push(upperFiller);
-        usedWords.add(upperFiller);
-      }
-    }
+    // Shuffle the static words
+    const shuffledWords = this._shuffleArray([...staticWords]);
 
-    const uniqueGridWords = [...new Set(gridWords)].slice(0, gridSize);
-
-    while (uniqueGridWords.length < gridSize) {
-      const fallback = `CASE${uniqueGridWords.length}`;
-      if (!usedWords.has(fallback)) {
-        uniqueGridWords.push(fallback);
-        usedWords.add(fallback);
-      }
-    }
-
-    // ========== SEMANTIC VALIDATION ==========
-    // Ensure outlier words are semantically distinct from main grid words
-    const mainGridWords = uniqueGridWords.filter(w => !outlierWords.includes(w));
-    const availableReplacements = allWords.filter(w =>
-      !uniqueGridWords.includes(w.toUpperCase()) &&
-      !outlierWords.includes(w.toUpperCase())
-    );
-
-    // Extract dynamic semantic clusters from this specific narrative
-    // This catches story-specific terms like poison types, unique locations, etc.
-    this._extractDynamicClusters(narrative);
-
-    // Run synchronous semantic validation (now uses both static AND dynamic clusters)
-    outlierWords = this._validatePuzzleSemanticsSync(
-      outlierWords,
-      mainGridWords,
-      // IMPORTANT: Do NOT use filler words as outlier replacements.
-      // Replacements must remain grounded in the narrative-derived pools for puzzle fairness.
-      availableReplacements
-    );
-
-    // Update grid with validated outliers
-    const finalGridWords = [...outlierWords, ...mainGridWords].slice(0, gridSize);
-    while (finalGridWords.length < gridSize) {
-      const fallback = `CASE${finalGridWords.length}`;
-      finalGridWords.push(fallback);
-    }
-
-    const shuffledWords = this._shuffleArray(finalGridWords);
-
+    // Build 4x4 grid
     const grid = [];
-    for (let row = 0; row < gridRows; row++) {
-      grid.push(shuffledWords.slice(row * gridCols, (row + 1) * gridCols));
+    for (let row = 0; row < 4; row++) {
+      grid.push(shuffledWords.slice(row * 4, (row + 1) * 4));
     }
+
+    // First 4 words are "outliers" (placeholder until puzzle redesign)
+    const outlierWords = shuffledWords.slice(0, 4);
 
     const boardResult = {
-      outlierWords: outlierWords.slice(0, isDecisionPoint ? 8 : 4),
+      outlierWords,
       grid,
       outlierTheme: {
-        name: this._determineTheme(outlierWords),
+        name: 'INVESTIGATION',
         icon: '\ud83d\udd0e',
-        summary: narrative.substring(0, 100) + '...',
+        summary: 'Follow the clues...',
       },
     };
 
+    // For decision points, split outliers into two sets
     if (isDecisionPoint && decision?.options?.length >= 2) {
-      const set1Words = outlierWords.slice(0, 4);
-      const set2Words = outlierWords.slice(4, 8);
-
       boardResult.branchingOutlierSets = [
         {
           optionKey: decision.options[0].key || 'A',
           key: decision.options[0].key || 'A',
           label: decision.options[0].key || 'A',
           theme: {
-            name: this._truncateThemeName(decision.options[0].title) || 'PATH A',
+            name: 'PATH A',
             icon: '\ud83d\udd34',
-            summary: decision.options[0].focus || decision.options[0].title || 'Option A',
+            summary: decision.options[0].focus || 'Option A',
           },
-          words: set1Words,
-          descriptions: set1Words.reduce((acc, word) => {
-            acc[word] = `Related to: ${decision.options[0].title || 'Path A'}`;
-            return acc;
-          }, {}),
+          words: outlierWords.slice(0, 2),
+          descriptions: {},
         },
         {
           optionKey: decision.options[1].key || 'B',
           key: decision.options[1].key || 'B',
           label: decision.options[1].key || 'B',
           theme: {
-            name: this._truncateThemeName(decision.options[1].title) || 'PATH B',
+            name: 'PATH B',
             icon: '\ud83d\udd35',
-            summary: decision.options[1].focus || decision.options[1].title || 'Option B',
+            summary: decision.options[1].focus || 'Option B',
           },
-          words: set2Words,
-          descriptions: set2Words.reduce((acc, word) => {
-            acc[word] = `Related to: ${decision.options[1].title || 'Path B'}`;
-            return acc;
-          }, {}),
+          words: outlierWords.slice(2, 4),
+          descriptions: {},
         },
       ];
     }
 
     return boardResult;
-  }
-
-  _truncateThemeName(title) {
-    if (!title) return null;
-    const words = title.split(/\s+/).slice(0, 2).join(' ');
-    return words.length > 12 ? words.slice(0, 12).toUpperCase() : words.toUpperCase();
-  }
-
-  /**
-   * Extract all text content from a branchingNarrative object.
-   * Combines opening + all first choice responses + all second choice responses.
-   * Used for puzzle keyword extraction where we want words from any possible path.
-   * @param {object} branchingNarrative - The branching narrative object
-   * @returns {string} Combined text from all narrative segments
-   */
-  _extractAllTextFromBranchingNarrative(branchingNarrative) {
-    if (!branchingNarrative) return '';
-
-    const parts = [];
-
-    // Opening (shared by all paths)
-    if (branchingNarrative.opening?.text) {
-      parts.push(branchingNarrative.opening.text);
-    }
-
-    // All first choice responses
-    if (branchingNarrative.firstChoice?.options) {
-      for (const option of branchingNarrative.firstChoice.options) {
-        if (option?.response) {
-          parts.push(option.response);
-        }
-      }
-    }
-
-    // All second choice responses
-    if (branchingNarrative.secondChoices) {
-      for (const secondChoiceGroup of branchingNarrative.secondChoices) {
-        if (secondChoiceGroup?.options) {
-          for (const option of secondChoiceGroup.options) {
-            if (option?.response) {
-              parts.push(option.response);
-            }
-          }
-        }
-      }
-    }
-
-    return parts.join('\n\n');
-  }
-
-  _extractKeywordsFromNarrative(narrative) {
-    const stopWords = new Set([
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-      'of', 'with', 'by', 'from', 'as', 'into', 'through', 'during', 'before',
-      'after', 'above', 'below', 'between', 'under', 'over', 'out', 'off',
-      'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us',
-      'them', 'my', 'your', 'his', 'its', 'our', 'their', 'mine', 'yours',
-      'this', 'that', 'these', 'those', 'who', 'whom', 'which', 'what',
-      'is', 'was', 'are', 'were', 'been', 'be', 'being', 'have', 'has', 'had',
-      'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
-      'must', 'shall', 'can', 'get', 'got', 'getting', 'let', 'make', 'made',
-      'say', 'said', 'says', 'tell', 'told', 'ask', 'asked', 'know', 'knew',
-      'think', 'thought', 'see', 'saw', 'seen', 'look', 'looked', 'looking',
-      'come', 'came', 'coming', 'go', 'went', 'gone', 'going', 'take', 'took',
-      'want', 'wanted', 'need', 'needed', 'seem', 'seemed', 'keep', 'kept',
-      'very', 'really', 'quite', 'just', 'only', 'even', 'also', 'too', 'so',
-      'now', 'then', 'here', 'there', 'when', 'where', 'why', 'how', 'well',
-      'still', 'already', 'always', 'never', 'ever', 'often', 'sometimes',
-      'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
-      'such', 'no', 'not', 'any', 'many', 'much', 'own', 'same', 'than',
-      'good', 'bad', 'new', 'old', 'first', 'last', 'long', 'great', 'little',
-      'time', 'year', 'day', 'way', 'thing', 'man', 'woman', 'life', 'world',
-      'like', 'back', 'about', 'again', 'against', 'because', 'down', 'find',
-      'found', 'give', 'gave', 'hand', 'head', 'eyes', 'face', 'voice', 'room',
-      'door', 'turn', 'turned', 'jack', 'halloway', 'detective', 'case', 'chapter',
-    ]);
-
-    const words = narrative
-      .toUpperCase()
-      .replace(/[^A-Z\s]/g, ' ')
-      .split(/\s+/)
-      .filter(word => {
-        const lowerWord = word.toLowerCase();
-        return word.length >= 4 &&
-               word.length <= 10 &&
-               !stopWords.has(lowerWord) &&
-               !/^[AEIOU]+$/.test(word) &&
-               !/(.)\1{2,}/.test(word);
-      });
-
-    const frequency = {};
-    const firstOccurrence = {};
-    words.forEach((word, index) => {
-      if (!frequency[word]) {
-        frequency[word] = 0;
-        firstOccurrence[word] = index;
-      }
-      frequency[word]++;
-    });
-
-    const scored = Object.entries(frequency).map(([word, freq]) => {
-      const positionBonus = 1 - (firstOccurrence[word] / words.length) * 0.5;
-      const lengthBonus = Math.min(word.length / 8, 1) * 0.3;
-      const score = freq * (1 + positionBonus + lengthBonus);
-      return { word, score };
-    });
-
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .map(({ word }) => word)
-      .slice(0, 60);
-  }
-
-  _selectOutlierWords(availableWords, count, isDecisionPoint, decision) {
-    const usedWords = new Set();
-
-    if (isDecisionPoint && decision?.options) {
-      const setA = this._selectThemedWords(availableWords, 4, decision.options[0]?.focus, usedWords);
-      setA.forEach(w => usedWords.add(w.toUpperCase()));
-
-      const remainingWords = availableWords.filter(w => !usedWords.has(w.toUpperCase()));
-      const setB = this._selectThemedWords(remainingWords, 4, decision.options[1]?.focus, usedWords);
-
-      const combined = [...setA, ...setB];
-      const uniqueCombined = [...new Set(combined.map(w => w.toUpperCase()))];
-
-      const stillAvailable = availableWords.filter(w => !uniqueCombined.includes(w.toUpperCase()));
-      while (uniqueCombined.length < 8 && stillAvailable.length > 0) {
-        uniqueCombined.push(stillAvailable.shift().toUpperCase());
-      }
-
-      return uniqueCombined.slice(0, 8);
-    }
-
-    const uniqueWords = [];
-    for (const word of availableWords) {
-      const upperWord = word.toUpperCase();
-      if (!usedWords.has(upperWord)) {
-        uniqueWords.push(upperWord);
-        usedWords.add(upperWord);
-        if (uniqueWords.length >= count) break;
-      }
-    }
-    return uniqueWords;
-  }
-
-  // ==========================================================================
-  // SEMANTIC OVERLAP DETECTION - Prevents unfair puzzles
-  // ==========================================================================
-
-  /**
-   * Known semantic clusters - words that are too closely related to appear
-   * as both outliers and main words in the same puzzle
-   *
-   * NOTE: Cached on first access to avoid recreating this large array on every call
-   */
-  _getSemanticClusters() {
-    // Return cached clusters if available
-    if (StoryGenerationService._cachedSemanticClusters) {
-      return StoryGenerationService._cachedSemanticClusters;
-    }
-
-    // Create and cache clusters on first call
-    StoryGenerationService._cachedSemanticClusters = [
-      // Weather/Temperature
-      ['COLD', 'ICE', 'FROST', 'FREEZE', 'CHILL', 'WINTER', 'SNOW', 'FROZEN', 'FRIGID'],
-      ['WIND', 'BREEZE', 'GUST', 'STORM', 'GALE', 'BLOW', 'AIR', 'TEMPEST'],
-      ['RAIN', 'WATER', 'WET', 'DAMP', 'MOIST', 'DRENCH', 'SOAK', 'FLOOD', 'POUR', 'DOWNPOUR', 'STORM'],
-      ['FIRE', 'FLAME', 'BURN', 'HEAT', 'HOT', 'BLAZE', 'EMBER', 'SCORCH', 'INFERNO'],
-
-      // Light/Dark
-      ['DARK', 'SHADOW', 'BLACK', 'NIGHT', 'GLOOM', 'DIM', 'MURKY', 'SHADE', 'DUSK'],
-      ['LIGHT', 'BRIGHT', 'SHINE', 'GLOW', 'GLEAM', 'FLASH', 'BEAM', 'LAMP', 'NEON'],
-
-      // Death/Violence
-      ['DEATH', 'DEAD', 'DIE', 'KILL', 'MURDER', 'SLAY', 'FATAL', 'CORPSE', 'BODY', 'MORGUE'],
-      ['BLOOD', 'BLEED', 'WOUND', 'CUT', 'STAB', 'SLASH', 'GASH', 'INJURY', 'HURT'],
-      ['GUN', 'SHOOT', 'SHOT', 'BULLET', 'PISTOL', 'WEAPON', 'RIFLE', 'REVOLVER', 'FIREARM'],
-      ['KNIFE', 'BLADE', 'SHARP', 'CUT', 'STAB', 'DAGGER', 'RAZOR'],
-
-      // Truth/Lies
-      ['TRUTH', 'TRUE', 'HONEST', 'REAL', 'FACT', 'GENUINE', 'SINCERE', 'CANDID'],
-      ['LIE', 'FALSE', 'FAKE', 'DECEIT', 'FRAUD', 'CHEAT', 'TRICK', 'DECEIVE', 'BETRAY'],
-      ['SECRET', 'HIDE', 'HIDDEN', 'CONCEAL', 'COVERT', 'COVER', 'BURY', 'SUPPRESS'],
-
-      // Fear/Emotion
-      ['FEAR', 'AFRAID', 'TERROR', 'DREAD', 'PANIC', 'SCARED', 'FRIGHT', 'HORROR'],
-      ['ANGER', 'ANGRY', 'RAGE', 'FURY', 'MAD', 'WRATH', 'HATE', 'HOSTILE'],
-      ['GUILT', 'SHAME', 'REGRET', 'REMORSE', 'SORRY', 'BLAME', 'FAULT'],
-      ['GRIEF', 'SORROW', 'MOURN', 'LOSS', 'SADNESS', 'DESPAIR', 'ANGUISH'],
-
-      // Crime/Law
-      ['CRIME', 'CRIMINAL', 'CROOK', 'THIEF', 'STEAL', 'ROB', 'HEIST', 'FELON', 'CONVICT'],
-      ['POLICE', 'COP', 'BADGE', 'OFFICER', 'DETECTIVE', 'PATROL', 'PRECINCT', 'SQUAD'],
-      ['JAIL', 'PRISON', 'CELL', 'LOCK', 'CAGE', 'CAPTIVE', 'TRAPPED', 'BARS', 'INMATE'],
-      ['COURT', 'TRIAL', 'JUDGE', 'JURY', 'LAWYER', 'VERDICT', 'SENTENCE', 'PROSECUTE'],
-      ['EVIDENCE', 'PROOF', 'CLUE', 'WITNESS', 'TESTIMONY', 'ALIBI', 'FORENSIC'],
-
-      // Body parts
-      ['HAND', 'FIST', 'GRIP', 'GRASP', 'HOLD', 'GRAB', 'CLUTCH', 'FINGER'],
-      ['EYE', 'EYES', 'LOOK', 'GAZE', 'STARE', 'WATCH', 'SEE', 'SIGHT', 'VISION'],
-      ['FACE', 'EXPRESSION', 'FEATURES', 'VISAGE', 'COUNTENANCE'],
-
-      // Money
-      ['MONEY', 'CASH', 'DOLLAR', 'WEALTH', 'RICH', 'GOLD', 'FORTUNE', 'FUNDS'],
-      ['PAY', 'PAID', 'BRIBE', 'DEBT', 'OWE', 'COST', 'PRICE', 'FEE'],
-      ['STEAL', 'ROB', 'THEFT', 'EMBEZZLE', 'FRAUD', 'SWINDLE', 'LAUNDER'],
-
-      // Time
-      ['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK', 'DARK', 'LATE', 'NOCTURNAL'],
-      ['PAST', 'MEMORY', 'REMEMBER', 'FORGOT', 'HISTORY', 'BEFORE', 'YESTERDAY', 'YEARS'],
-      ['WAIT', 'PATIENT', 'TIME', 'CLOCK', 'HOUR', 'MINUTE', 'SECOND'],
-
-      // ========== NEW NOIR-SPECIFIC CLUSTERS ==========
-
-      // Alcohol/Drinking (Critical for Jack's character)
-      ['WHISKEY', 'BOURBON', 'SCOTCH', 'DRINK', 'DRUNK', 'BOOZE', 'ALCOHOL', 'BOTTLE', 'BAR', 'JAMESON', 'GLASS', 'POUR', 'SIP'],
-
-      // Partners/Allies
-      ['PARTNER', 'ALLY', 'FRIEND', 'TRUST', 'LOYAL', 'COMPANION', 'COLLEAGUE'],
-      ['BETRAY', 'TRAITOR', 'TURNCOAT', 'BACKSTAB', 'DOUBLE-CROSS', 'DECEIVE'],
-
-      // Investigation
-      ['INVESTIGATE', 'SEARCH', 'HUNT', 'TRACK', 'PURSUE', 'FOLLOW', 'TRAIL', 'LEAD'],
-      ['CASE', 'FILE', 'RECORD', 'DOCUMENT', 'REPORT', 'DOSSIER'],
-      ['SUSPECT', 'ACCUSED', 'DEFENDANT', 'PERPETRATOR', 'CULPRIT'],
-
-      // Noir Locations
-      ['OFFICE', 'DESK', 'ROOM', 'SPACE', 'CHAMBER'],
-      ['ALLEY', 'STREET', 'ROAD', 'AVENUE', 'LANE', 'PATH'],
-      ['WAREHOUSE', 'BUILDING', 'FACTORY', 'PLANT', 'FACILITY'],
-      ['DOCKS', 'PIER', 'WHARF', 'HARBOR', 'PORT', 'WATERFRONT'],
-
-      // Noir Atmosphere
-      ['NEON', 'GLOW', 'SIGN', 'LIGHT', 'FLASH', 'FLICKER'],
-      ['SMOKE', 'FOG', 'MIST', 'HAZE', 'VAPOR', 'CLOUD'],
-      ['COAT', 'HAT', 'TRENCH', 'JACKET', 'COLLAR'],
-
-      // Noir emotional collocations (rain-as-grief, past-as-haunting, favors-as-debt, scars-as-history)
-      ['RAIN', 'TEARS', 'CRY', 'WEEP', 'GRIEF', 'MOURN', 'SOB'],
-      ['SHADOW', 'GHOST', 'PAST', 'MEMORY', 'HAUNT', 'HAUNTED', 'SPECTER', 'ECHO'],
-      ['DEBT', 'FAVOR', 'OWE', 'PRICE', 'COST', 'DUES', 'PAYBACK'],
-      ['SCAR', 'MARK', 'WOUND', 'BRAND', 'BURNED', 'STITCH', 'BRUISE'],
-
-      // Characters (Story-Specific)
-      ['VICTORIA', 'CONFESSOR', 'EMILY', 'BLACKWELL'],
-      ['SARAH', 'REEVES', 'PARTNER'],
-      ['TOM', 'WADE', 'FORENSIC'],
-      ['ELEANOR', 'BELLAMY', 'INNOCENT'],
-      ['GRANGE', 'DEPUTY', 'CHIEF'],
-
-      // Key Story Concepts
-      ['INNOCENT', 'WRONGFUL', 'FRAMED', 'CONVICTED', 'EXONERATE'],
-      ['CORRUPT', 'CORRUPTION', 'DIRTY', 'CROOKED', 'ROTTEN'],
-      ['JUSTICE', 'FAIR', 'RIGHT', 'WRONG', 'MORAL'],
-      ['CERTAINTY', 'CERTAIN', 'SURE', 'DOUBT', 'UNCERTAIN', 'QUESTION'],
-      ['REDEMPTION', 'ATONE', 'FORGIVE', 'REDEEM', 'SALVATION'],
-
-      // ========== NEW CLUSTERS: Vehicles, Communication, Documents ==========
-
-      // Vehicles (noir staple for chases, stakeouts, escapes)
-      ['CAR', 'DRIVE', 'DROVE', 'VEHICLE', 'AUTO', 'SEDAN', 'COUPE', 'WHEELS'],
-      ['ROAD', 'HIGHWAY', 'STREET', 'AVENUE', 'BOULEVARD', 'ROUTE', 'PATH'],
-      ['CHASE', 'PURSUE', 'TAIL', 'FOLLOW', 'TRACK', 'HUNT', 'FLEE', 'ESCAPE'],
-      ['TAXI', 'CAB', 'CABBIE', 'FARE', 'METER', 'PICKUP'],
-      ['GARAGE', 'PARKING', 'LOT', 'SPACE', 'SPOT'],
-
-      // Communication (phones, messages, interception)
-      ['PHONE', 'CALL', 'RING', 'DIAL', 'RECEIVER', 'LINE', 'BOOTH'],
-      ['MESSAGE', 'NOTE', 'LETTER', 'MAIL', 'POST', 'ENVELOPE', 'STAMP'],
-      ['WIRE', 'TAP', 'BUG', 'LISTEN', 'RECORD', 'INTERCEPT', 'EAVESDROP'],
-      ['TALK', 'SPEAK', 'SAY', 'SAID', 'TELL', 'TOLD', 'VOICE', 'WORD'],
-      ['SILENCE', 'QUIET', 'MUTE', 'HUSH', 'STILL', 'SILENT'],
-
-      // Documents (evidence, records, paperwork)
-      ['PAPER', 'DOCUMENT', 'FILE', 'FOLDER', 'BINDER', 'STACK'],
-      ['RECORD', 'REPORT', 'MEMO', 'NOTE', 'LOG', 'ENTRY', 'DOSSIER'],
-      ['SIGN', 'SIGNED', 'SIGNATURE', 'AUTOGRAPH', 'NAME', 'INITIAL'],
-      ['TYPE', 'TYPED', 'PRINT', 'CARBON', 'COPY', 'DUPLICATE'],
-      ['PHOTO', 'PICTURE', 'IMAGE', 'SNAPSHOT', 'FRAME', 'NEGATIVE'],
-      ['MAP', 'CHART', 'DIAGRAM', 'LAYOUT', 'PLAN', 'BLUEPRINT'],
-
-      // Money/Finance (bribes, debts, motives)
-      ['BANK', 'VAULT', 'SAFE', 'DEPOSIT', 'ACCOUNT', 'SAVINGS'],
-      ['CHECK', 'CHEQUE', 'CASH', 'BILL', 'COIN', 'CHANGE'],
-      ['BRIBE', 'PAYOFF', 'KICKBACK', 'GREASE', 'PALM', 'CUT'],
-
-      // Actions/Movement (common noir verbs)
-      ['WALK', 'STEP', 'PACE', 'STRIDE', 'STROLL', 'MARCH'],
-      ['RUN', 'SPRINT', 'DASH', 'BOLT', 'RACE', 'RUSH'],
-      ['WAIT', 'WATCH', 'OBSERVE', 'STAKE', 'SURVEIL', 'MONITOR'],
-      ['ENTER', 'EXIT', 'LEAVE', 'ARRIVE', 'DEPART', 'RETURN'],
-      ['OPEN', 'CLOSE', 'SHUT', 'LOCK', 'UNLOCK', 'BOLT'],
-
-      // ========== STORY-CRITICAL CLUSTERS (Prevent unfair puzzles) ==========
-
-      // Confession/Confessor (The antagonist's title - critical overlap risk)
-      ['CONFESSION', 'CONFESS', 'CONFESSIONAL', 'CONFESSOR', 'ADMIT', 'ADMISSION', 'ACKNOWLEDGE'],
-
-      // Guilt/Justice expanded (central theme of wrongful convictions)
-      ['GUILT', 'GUILTY', 'INNOCENT', 'INNOCENCE', 'CONVICT', 'CONVICTION', 'SENTENCE', 'SENTENCED'],
-      ['WRONGFUL', 'UNJUST', 'UNFAIR', 'MISTAKEN', 'ERROR', 'MISTAKE'],
-
-      // Frame/Forge (evidence tampering theme)
-      ['FRAME', 'FRAMED', 'SETUP', 'PLANT', 'PLANTED', 'STAGE', 'STAGED'],
-      ['FORGE', 'FORGED', 'FAKE', 'FALSIFY', 'FABRICATE', 'FABRICATED', 'TAMPER', 'TAMPERED'],
-      ['MANUFACTURE', 'MANUFACTURED', 'CREATE', 'CREATED', 'MAKE', 'MADE'],
-
-      // Partner/Detective relationships
-      ['PARTNER', 'DETECTIVE', 'COP', 'OFFICER', 'INVESTIGATOR', 'BADGE', 'FORCE', 'PRECINCT'],
-
-      // Prison/Incarceration (Eleanor's 8 years)
-      ['PRISON', 'JAIL', 'INMATE', 'PRISONER', 'GREYSTONE', 'CELL', 'BARS', 'LOCKED', 'CONFINED'],
-
-      // Betrayal/Trust (Tom Wade's 30-year betrayal)
-      ['BETRAY', 'BETRAYAL', 'BETRAYED', 'TRUST', 'TRUSTED', 'FAITH', 'FAITHFUL', 'LOYAL', 'LOYALTY'],
-
-      // ========== ADDITIONAL STORY-CRITICAL CLUSTERS ==========
-
-      // Memory/Recall (Jack's recollections, flashbacks)
-      ['RECALL', 'RECOLLECT', 'NOSTALGIA', 'FLASHBACK', 'MEMORY', 'MEMORIES', 'REMEMBER', 'REMEMBERED'],
-
-      // Victim/Survivor (The Five Innocents are victims)
-      ['VICTIM', 'VICTIMS', 'SURVIVOR', 'SURVIVORS', 'SUFFERER', 'TARGET', 'PREY'],
-
-      // Appeal/Exoneration (Eleanor's appeal, wrongful conviction theme)
-      ['APPEAL', 'APPEALS', 'EXONERATE', 'EXONERATION', 'OVERTURN', 'REVERSAL', 'PARDON', 'RELEASE'],
-
-      // Midnight/Night (Victoria's timing, noir atmosphere)
-      ['MIDNIGHT', 'MIDNIGHTS', 'CONFESSOR', 'CONFESSION', 'WITCHING', 'TWELVE', 'STROKE'],
-
-      // Evidence types (Tom's manufactured evidence)
-      ['FINGERPRINT', 'FINGERPRINTS', 'DNA', 'FIBER', 'FIBERS', 'TRACE', 'SAMPLE', 'SPECIMEN'],
-      ['AUTOPSY', 'POSTMORTEM', 'CORONER', 'MEDICAL', 'EXAMINER', 'FORENSICS'],
-
-      // Confession variants (The Midnight Confessor's letters)
-      ['LETTER', 'LETTERS', 'ENVELOPE', 'ENVELOPES', 'MISSIVE', 'CORRESPONDENCE', 'MAIL'],
-
-      // Watching/Surveillance (Jack's investigation methods)
-      ['STAKEOUT', 'SURVEILLANCE', 'WATCHING', 'OBSERVING', 'TAILING', 'SHADOWING', 'SPYING'],
-
-      // Old/Past (30 years of friendship, 8 years in prison)
-      ['YEARS', 'DECADES', 'ANCIENT', 'FORMER', 'PREVIOUS', 'PRIOR', 'OLD', 'AGED'],
-
-      // Five Innocents names (prevent character name overlap issues)
-      ['MARCUS', 'THORNHILL', 'ACCOUNTANT', 'EMBEZZLER'],
-      ['LISA', 'CHEN', 'DOCTOR', 'PHYSICIAN'],
-      ['JAMES', 'SULLIVAN', 'MECHANIC', 'GARAGE'],
-      ['TERESA', 'WADE', 'TOM', 'WIFE'],
-
-      // Silas Reed (Jack's former partner)
-      ['SILAS', 'REED', 'RECLUSE', 'HERMIT', 'FORMER'],
-
-      // ========== COLOR CLUSTERS (Visual descriptions) ==========
-      ['RED', 'CRIMSON', 'SCARLET', 'RUBY', 'MAROON', 'BURGUNDY', 'CHERRY', 'BLOOD-RED'],
-      ['BLUE', 'AZURE', 'NAVY', 'COBALT', 'INDIGO', 'SAPPHIRE', 'CERULEAN', 'MIDNIGHT-BLUE'],
-      ['GREEN', 'EMERALD', 'JADE', 'OLIVE', 'FOREST', 'MOSS', 'VIRIDIAN'],
-      ['BLACK', 'EBONY', 'ONYX', 'JET', 'OBSIDIAN', 'PITCH', 'INKY', 'COAL'],
-      ['WHITE', 'IVORY', 'PEARL', 'ALABASTER', 'SNOW', 'PALE', 'PALLID', 'ASHEN'],
-      ['GREY', 'GRAY', 'SILVER', 'ASH', 'SLATE', 'STEEL', 'CHARCOAL', 'GUNMETAL'],
-      ['GOLD', 'GOLDEN', 'AMBER', 'BRONZE', 'BRASS', 'COPPER', 'TAWNY'],
-
-      // ========== SOUND CLUSTERS (Auditory descriptions) ==========
-      ['WHISPER', 'MURMUR', 'HUSH', 'MUTTER', 'MUMBLE', 'BREATHE', 'SIGH'],
-      ['SCREAM', 'SHOUT', 'YELL', 'CRY', 'SHRIEK', 'HOWL', 'WAIL', 'SCREECH'],
-      ['BANG', 'CRASH', 'SLAM', 'THUD', 'BOOM', 'BLAST', 'CRACK', 'POP'],
-      ['CREAK', 'GROAN', 'SQUEAK', 'SQUEAL', 'SCRAPE', 'SCRATCH', 'RASP'],
-      ['HISS', 'SIZZLE', 'FIZZ', 'BUZZ', 'HUM', 'DRONE', 'WHIR'],
-      ['RUMBLE', 'THUNDER', 'ROAR', 'GROWL', 'SNARL', 'GRUMBLE'],
-      ['CLICK', 'CLACK', 'TAP', 'KNOCK', 'RAP', 'TICK', 'TOCK'],
-      ['RING', 'CHIME', 'TOLL', 'BELL', 'DING', 'CLANG', 'JINGLE'],
-
-      // ========== SYNONYM EXPANSIONS (Common noir words) ==========
-      ['SHADOW', 'SILHOUETTE', 'OUTLINE', 'SHAPE', 'FIGURE', 'FORM', 'PROFILE'],
-      ['STARE', 'GLARE', 'GAWK', 'OGLE', 'PEER', 'SQUINT', 'SCRUTINIZE'],
-      ['WHISKEY', 'BOURBON', 'SCOTCH', 'RYE', 'BRANDY', 'COGNAC', 'LIQUOR'],
-      ['CIGARETTE', 'SMOKE', 'CIGAR', 'TOBACCO', 'ASH', 'BUTT', 'DRAG', 'PUFF'],
-      ['TIRED', 'WEARY', 'EXHAUSTED', 'FATIGUED', 'WORN', 'DRAINED', 'SPENT'],
-      ['OLD', 'AGED', 'WORN', 'WEATHERED', 'BATTERED', 'SHABBY', 'DECREPIT'],
-
-      // ========== BODY/PHYSICAL EXPANSIONS ==========
-      ['LEG', 'FOOT', 'FEET', 'KNEE', 'ANKLE', 'THIGH', 'CALF', 'TOE'],
-      ['ARM', 'ELBOW', 'WRIST', 'SHOULDER', 'BICEP', 'FOREARM'],
-      ['CHEST', 'TORSO', 'RIBS', 'HEART', 'LUNGS', 'STOMACH', 'GUT'],
-      ['HEAD', 'SKULL', 'BRAIN', 'TEMPLE', 'FOREHEAD', 'BROW', 'SCALP'],
-      ['NECK', 'THROAT', 'JAW', 'CHIN', 'CHEEK', 'MOUTH', 'LIPS'],
-    ];
-
-    return StoryGenerationService._cachedSemanticClusters;
-  }
-
-  /**
-   * Extract dynamic semantic clusters from narrative context
-   *
-   * Analyzes the current narrative to find story-specific terms that should
-   * be clustered together to prevent unfair puzzle overlaps.
-   *
-   * Examples of dynamic clusters:
-   * - If narrative mentions "arsenic poisoning", creates [ARSENIC, POISON, TOXIC, VENOM]
-   * - If narrative mentions a unique location "the old mill", creates [MILL, OLD, ABANDONED]
-   * - If narrative mentions a weapon "the bloodied hammer", creates [HAMMER, BLOOD, WEAPON]
-   *
-   * @param {string} narrative - The narrative text to analyze
-   * @returns {string[][]} Array of dynamic semantic clusters
-   */
-  _extractDynamicClusters(narrative) {
-    if (!narrative) return [];
-
-    const dynamicClusters = [];
-    const narrativeUpper = narrative.toUpperCase();
-    const narrativeLower = narrative.toLowerCase();
-
-    // ========== PATTERN 1: Method of Death/Violence ==========
-    // Detect specific methods mentioned and cluster related terms
-    const violencePatterns = [
-      { pattern: /\b(poison|poisoned|poisoning|arsenic|cyanide|toxic|venom)\b/gi,
-        cluster: ['POISON', 'POISONED', 'ARSENIC', 'CYANIDE', 'TOXIC', 'VENOM', 'DOSE', 'LETHAL'] },
-      { pattern: /\b(strangle|strangled|strangling|choke|choked|garrote|asphyxiate)\b/gi,
-        cluster: ['STRANGLE', 'CHOKE', 'GARROTE', 'THROAT', 'NECK', 'ASPHYXIATE', 'SUFFOCATE'] },
-      { pattern: /\b(drown|drowned|drowning|submerge|underwater)\b/gi,
-        cluster: ['DROWN', 'DROWNED', 'WATER', 'SUBMERGE', 'UNDERWATER', 'LUNGS', 'BREATHE'] },
-      { pattern: /\b(burn|burned|burning|arson|fire|immolate|torch)\b/gi,
-        cluster: ['BURN', 'BURNED', 'ARSON', 'FIRE', 'FLAME', 'TORCH', 'ASH', 'CHAR'] },
-      { pattern: /\b(bludgeon|bludgeoned|blunt|hammer|club|bat|beaten)\b/gi,
-        cluster: ['BLUDGEON', 'BLUNT', 'HAMMER', 'CLUB', 'BAT', 'BEATEN', 'SKULL', 'CRUSH'] },
-    ];
-
-    for (const { pattern, cluster } of violencePatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for violence method: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 2: Specific Locations/Places ==========
-    // Extract unique location names and create clusters
-    const locationPatterns = [
-      { pattern: /\b(mill|old mill|abandoned mill|watermill)\b/gi,
-        cluster: ['MILL', 'ABANDONED', 'WATERMILL', 'GRAIN', 'WHEEL'] },
-      { pattern: /\b(lighthouse|beacon|tower light)\b/gi,
-        cluster: ['LIGHTHOUSE', 'BEACON', 'TOWER', 'LIGHT', 'COAST', 'ROCKS'] },
-      { pattern: /\b(church|chapel|cathedral|sanctuary|steeple)\b/gi,
-        cluster: ['CHURCH', 'CHAPEL', 'CATHEDRAL', 'SANCTUARY', 'STEEPLE', 'PEWS', 'ALTAR'] },
-      { pattern: /\b(cemetery|graveyard|tomb|crypt|mausoleum)\b/gi,
-        cluster: ['CEMETERY', 'GRAVEYARD', 'TOMB', 'CRYPT', 'GRAVE', 'BURIAL', 'HEADSTONE'] },
-      { pattern: /\b(casino|gambling|poker|roulette|blackjack)\b/gi,
-        cluster: ['CASINO', 'GAMBLING', 'POKER', 'CARDS', 'CHIPS', 'BET', 'STAKES'] },
-      { pattern: /\b(hospital|clinic|ward|medical center|emergency room)\b/gi,
-        cluster: ['HOSPITAL', 'CLINIC', 'WARD', 'MEDICAL', 'DOCTOR', 'NURSE', 'PATIENT'] },
-    ];
-
-    for (const { pattern, cluster } of locationPatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for location: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 3: Evidence/Objects Mentioned ==========
-    // Extract specific objects that could be evidence
-    const evidencePatterns = [
-      { pattern: /\b(ring|wedding ring|diamond ring|signet ring)\b/gi,
-        cluster: ['RING', 'DIAMOND', 'WEDDING', 'GOLD', 'BAND', 'FINGER', 'JEWELRY'] },
-      { pattern: /\b(watch|wristwatch|pocket watch|timepiece)\b/gi,
-        cluster: ['WATCH', 'WRISTWATCH', 'TIMEPIECE', 'CLOCK', 'HANDS', 'TICK'] },
-      { pattern: /\b(photograph|photo|picture|snapshot|polaroid)\b/gi,
-        cluster: ['PHOTO', 'PHOTOGRAPH', 'PICTURE', 'SNAPSHOT', 'IMAGE', 'FRAME'] },
-      { pattern: /\b(diary|journal|notebook|ledger|log book)\b/gi,
-        cluster: ['DIARY', 'JOURNAL', 'NOTEBOOK', 'LEDGER', 'PAGES', 'ENTRIES', 'WRITING'] },
-      { pattern: /\b(tape|cassette|recording|audio|reel)\b/gi,
-        cluster: ['TAPE', 'CASSETTE', 'RECORDING', 'AUDIO', 'REEL', 'VOICE', 'PLAY'] },
-      { pattern: /\b(syringe|needle|injection|hypodermic)\b/gi,
-        cluster: ['SYRINGE', 'NEEDLE', 'INJECTION', 'HYPODERMIC', 'DOSE', 'INJECT'] },
-    ];
-
-    for (const { pattern, cluster } of evidencePatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for evidence: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 4: Profession/Role Mentioned ==========
-    // If narrative introduces specific professions, cluster related terms
-    const professionPatterns = [
-      { pattern: /\b(doctor|surgeon|physician|medical)\b/gi,
-        cluster: ['DOCTOR', 'SURGEON', 'PHYSICIAN', 'MEDICAL', 'SCALPEL', 'PATIENT', 'SURGERY'] },
-      { pattern: /\b(lawyer|attorney|counsel|legal|barrister)\b/gi,
-        cluster: ['LAWYER', 'ATTORNEY', 'COUNSEL', 'LEGAL', 'COURT', 'CASE', 'CLIENT'] },
-      { pattern: /\b(priest|father|clergy|reverend|minister)\b/gi,
-        cluster: ['PRIEST', 'FATHER', 'CLERGY', 'REVEREND', 'CHURCH', 'HOLY', 'CONFESS'] },
-      { pattern: /\b(reporter|journalist|press|newspaper|editor)\b/gi,
-        cluster: ['REPORTER', 'JOURNALIST', 'PRESS', 'NEWSPAPER', 'EDITOR', 'STORY', 'HEADLINE'] },
-      { pattern: /\b(nurse|orderly|caretaker|aide)\b/gi,
-        cluster: ['NURSE', 'ORDERLY', 'CARETAKER', 'AIDE', 'PATIENT', 'CARE', 'WARD'] },
-    ];
-
-    for (const { pattern, cluster } of professionPatterns) {
-      if (pattern.test(narrativeLower)) {
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for profession: ${cluster[0]}`);
-      }
-    }
-
-    // ========== PATTERN 5: Extract Repeated Significant Nouns ==========
-    // Find nouns that appear 3+ times - they're likely thematically important
-    const nounPattern = /\b([A-Z][a-z]{3,})\b/g;
-    const nounCounts = new Map();
-    let match;
-
-    while ((match = nounPattern.exec(narrative)) !== null) {
-      const noun = match[1].toUpperCase();
-      // Skip common words and character names
-      const skipWords = new Set([
-        'JACK', 'SARAH', 'VICTORIA', 'EMILY', 'WADE', 'ELEANOR', 'BELLAMY',
-        'THAT', 'THIS', 'THEN', 'WHEN', 'WERE', 'BEEN', 'HAVE', 'SAID',
-        'JUST', 'LIKE', 'BACK', 'DOWN', 'INTO', 'OVER', 'ONLY', 'EVEN'
-      ]);
-      if (!skipWords.has(noun) && noun.length >= 4) {
-        nounCounts.set(noun, (nounCounts.get(noun) || 0) + 1);
-      }
-    }
-
-    // Create clusters for frequently mentioned nouns
-    for (const [noun, count] of nounCounts.entries()) {
-      if (count >= 3) {
-        // Create a small cluster with variations
-        const cluster = [noun];
-        // Add common variations
-        if (noun.endsWith('S')) cluster.push(noun.slice(0, -1));
-        else cluster.push(noun + 'S');
-        if (noun.endsWith('ED')) cluster.push(noun.slice(0, -2));
-        if (noun.endsWith('ING')) cluster.push(noun.slice(0, -3));
-
-        dynamicClusters.push(cluster);
-        console.log(`[StoryGenerationService] Dynamic cluster added for repeated noun: ${noun} (${count} occurrences)`);
-      }
-    }
-
-    // Store for use in semantic validation
-    this._currentDynamicClusters = dynamicClusters;
-
-    return dynamicClusters;
-  }
-
-  /**
-   * Check if two words belong to the same semantic cluster
-   * Now checks both static clusters AND dynamic clusters extracted from narrative
-   */
-  _areSemanticallySimilar(word1, word2) {
-    const w1 = word1.toUpperCase();
-    const w2 = word2.toUpperCase();
-
-    // Same word
-    if (w1 === w2) return true;
-
-    // Check if one contains the other (KILL/KILLER, DEATH/DEAD)
-    if (w1.includes(w2) || w2.includes(w1)) return true;
-
-    // Check static semantic clusters
-    const staticClusters = this._getSemanticClusters();
-    for (const cluster of staticClusters) {
-      const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
-      const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
-      if (hasW1 && hasW2) return true;
-    }
-
-    // Check dynamic semantic clusters (extracted from current narrative)
-    const dynamicClusters = this._currentDynamicClusters || [];
-    for (const cluster of dynamicClusters) {
-      const hasW1 = cluster.some(c => c === w1 || w1.includes(c) || c.includes(w1));
-      const hasW2 = cluster.some(c => c === w2 || w2.includes(c) || c.includes(w2));
-      if (hasW1 && hasW2) {
-        console.log(`[StoryGenerationService] Dynamic cluster match: "${w1}" and "${w2}" in cluster [${cluster.slice(0, 3).join(', ')}...]`);
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Validate and fix puzzle board for semantic overlap
-   * Ensures outlier words are semantically distinct from main grid words
-   */
-  _validatePuzzleSemanticsSync(outlierWords, gridWords, availableReplacements) {
-    const validatedOutliers = [...outlierWords];
-    const gridSet = new Set(gridWords.map(w => w.toUpperCase()));
-    const usedWords = new Set([...outlierWords, ...gridWords].map(w => w.toUpperCase()));
-
-    // Get semantic distance requirement from difficulty scaling (default 1 if not set)
-    const minSemanticDistance = this._currentSemanticDistanceRequirement || 1;
-
-    // For higher difficulty chapters, we need stricter semantic separation
-    // minSemanticDistance 1 = basic cluster check
-    // minSemanticDistance 2 = also check for thematic similarity
-    // minSemanticDistance 3 = also check for letter pattern similarity (harder puzzles)
-
-    // Check each outlier against all grid words
-    for (let i = 0; i < validatedOutliers.length; i++) {
-      const outlier = validatedOutliers[i];
-      let needsReplacement = false;
-
-      for (const gridWord of gridWords) {
-        // Basic semantic cluster check (always performed)
-        if (this._areSemanticallySimilar(outlier, gridWord)) {
-          needsReplacement = true;
-          console.log(`[StoryGenerationService] Semantic overlap detected: outlier "${outlier}" ~ grid word "${gridWord}"`);
-          break;
-        }
-
-        // Additional checks for higher difficulty
-        if (minSemanticDistance >= 2) {
-          // Check for shared prefix/suffix (e.g., MURDER/MURDERER, INVEST/INVESTIGATE)
-          const outlierUpper = outlier.toUpperCase();
-          const gridUpper = gridWord.toUpperCase();
-          if (outlierUpper.length >= 4 && gridUpper.length >= 4) {
-            if (outlierUpper.startsWith(gridUpper.slice(0, 4)) ||
-                gridUpper.startsWith(outlierUpper.slice(0, 4))) {
-              needsReplacement = true;
-              console.log(`[StoryGenerationService] Prefix overlap detected: "${outlier}" ~ "${gridWord}"`);
-              break;
-            }
-          }
-        }
-
-        if (minSemanticDistance >= 3) {
-          // Check for anagram-like similarity (shared letters)
-          const outlierLetters = new Set(outlier.toUpperCase().split(''));
-          const gridLetters = new Set(gridWord.toUpperCase().split(''));
-          const sharedLetters = [...outlierLetters].filter(l => gridLetters.has(l)).length;
-          const maxLength = Math.max(outlier.length, gridWord.length);
-          // If more than 70% letters are shared, might be confusing
-          // Guard: short words have naturally high letter overlap and cause false positives (e.g., GUN/RUN).
-          if (maxLength > 4 && sharedLetters / maxLength > 0.7) {
-            needsReplacement = true;
-            console.log(`[StoryGenerationService] Letter overlap detected: "${outlier}" ~ "${gridWord}" (${Math.round(sharedLetters/maxLength*100)}% shared)`);
-            break;
-          }
-        }
-      }
-
-      if (needsReplacement) {
-        // Find a replacement from available words
-        const replacement = availableReplacements.find(w => {
-          const upper = w.toUpperCase();
-          if (usedWords.has(upper)) return false;
-          // Ensure replacement doesn't overlap with any grid word
-          return !gridWords.some(gw => this._areSemanticallySimilar(upper, gw));
-        });
-
-        if (replacement) {
-          console.log(`[StoryGenerationService] Replacing "${outlier}" with "${replacement}"`);
-          usedWords.delete(outlier.toUpperCase());
-          validatedOutliers[i] = replacement.toUpperCase();
-          usedWords.add(replacement.toUpperCase());
-        }
-      }
-    }
-
-    return validatedOutliers;
-  }
-
-  /**
-   * LLM-based semantic validation for puzzles (async, more thorough)
-   * Used as a secondary check for important decision-point puzzles
-   */
-  async _validatePuzzleSemanticsWithLLM(outlierWords, mainWords) {
-    const prompt = `You are a word puzzle validator. Given these two word lists, identify any pairs where a word from List A is semantically too similar to a word from List B to be fair in a puzzle where players must identify outliers.
-
-LIST A (Outlier words - players must find these): ${outlierWords.join(', ')}
-LIST B (Main grid words): ${mainWords.join(', ')}
-
-Semantic similarity means:
-- Synonyms (COLD/FREEZING)
-- Same category/theme (WIND/ICE both relate to cold weather)
-- One implies the other (BLOOD/WOUND)
-- Common collocations (NIGHT/DARK)
-
-Return a JSON object:
-{
-  "conflicts": [
-    {"outlier": "WORD1", "mainWord": "WORD2", "reason": "brief explanation"}
-  ]
-}
-
-If no conflicts, return: {"conflicts": []}`;
-
-    try {
-      const response = await llmService.complete(
-        [{ role: 'user', content: prompt }],
-        {
-          maxTokens: GENERATION_CONFIG.maxTokens.validation,
-          responseSchema: {
-            type: 'object',
-            properties: {
-              conflicts: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    outlier: { type: 'string' },
-                    mainWord: { type: 'string' },
-                    reason: { type: 'string' }
-                  },
-                  required: ['outlier', 'mainWord', 'reason']
-                }
-              }
-            },
-            required: ['conflicts']
-          }
-        }
-      );
-
-      const result = JSON.parse(response.content);
-      return result.conflicts || [];
-    } catch (error) {
-      console.warn('[StoryGenerationService] LLM semantic validation failed:', error.message);
-      return []; // Fail open - rely on sync validation
-    }
-  }
-
-  _selectThemedWords(words, count, themeFocus, excludeWords = new Set()) {
-    const availableWords = words.filter(w => !excludeWords.has(w.toUpperCase()));
-
-    if (!themeFocus || availableWords.length === 0) {
-      return availableWords.slice(0, count);
-    }
-
-    const themeWords = themeFocus
-      .toUpperCase()
-      .replace(/[^A-Z\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length >= 3);
-
-    const scored = availableWords.map(word => {
-      const upperWord = word.toUpperCase();
-      let score = 0;
-
-      for (const tw of themeWords) {
-        if (upperWord === tw) score += 3;
-        else if (upperWord.includes(tw)) score += 2;
-        else if (tw.includes(upperWord)) score += 1;
-      }
-
-      return { word: upperWord, score };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-
-    const result = [];
-    const seen = new Set();
-    for (const { word } of scored) {
-      if (!seen.has(word)) {
-        result.push(word);
-        seen.add(word);
-        if (result.length >= count) break;
-      }
-    }
-
-    return result;
-  }
-
-  _determineTheme(outlierWords) {
-    const themes = [
-      { pattern: /EVIDENCE|PROOF|CLUE|WITNESS/, name: 'INVESTIGATION' },
-      { pattern: /DEATH|KILL|MURDER|BLOOD/, name: 'VIOLENCE' },
-      { pattern: /TRUST|BETRAY|LIE|TRUTH/, name: 'DECEPTION' },
-      { pattern: /MONEY|WEALTH|RICH|GOLD/, name: 'GREED' },
-      { pattern: /LOVE|HEART|PASSION/, name: 'PASSION' },
-      { pattern: /POWER|CONTROL|FORCE/, name: 'POWER' },
-      { pattern: /SECRET|HIDDEN|MYSTERY/, name: 'SECRETS' },
-    ];
-
-    const joined = outlierWords.join(' ');
-    for (const theme of themes) {
-      if (theme.pattern.test(joined)) {
-        return theme.name;
-      }
-    }
-
-    return 'CLUES';
   }
 
   // ==========================================================================
