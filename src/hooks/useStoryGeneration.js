@@ -5,7 +5,7 @@
  * Handles triggering generation, tracking progress, and error states.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { AppState } from 'react-native';
 import { storyGenerationService } from '../services/StoryGenerationService';
 import { llmService } from '../services/LLMService';
@@ -45,7 +45,7 @@ export const CACHE_MISS_TYPE = {
 /**
  * Hook for managing story generation
  */
-export function useStoryGeneration(storyCampaign) {
+export function useStoryGeneration(storyCampaign, settings = {}) {
   const [status, setStatus] = useState(GENERATION_STATUS.IDLE);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState(null);
@@ -63,6 +63,32 @@ export function useStoryGeneration(storyCampaign) {
   const generationStartTimeRef = useRef(null);
   const pendingGenerationRef = useRef(null); // Store params for auto-retry on foreground return
   const [shouldAutoRetry, setShouldAutoRetry] = useState(false); // Signal UI to auto-retry
+
+  const qualitySettingsOverride = useMemo(() => {
+    const override = {};
+    if (typeof settings?.enableProseQualityValidation === 'boolean') {
+      override.enableProseQualityValidation = settings.enableProseQualityValidation;
+    }
+    if (typeof settings?.enableSentenceVarietyValidation === 'boolean') {
+      override.enableSentenceVarietyValidation = settings.enableSentenceVarietyValidation;
+    }
+    if (typeof settings?.enableLLMValidation === 'boolean') {
+      override.enableLLMValidation = settings.enableLLMValidation;
+    }
+    return override;
+  }, [
+    settings?.enableProseQualityValidation,
+    settings?.enableSentenceVarietyValidation,
+    settings?.enableLLMValidation,
+  ]);
+
+  const withQualitySettings = useCallback(
+    (options = {}) => ({
+      ...options,
+      qualitySettingsOverride,
+    }),
+    [qualitySettingsOverride]
+  );
 
   // Keep branchingChoicesRef in sync to avoid stale closures
   useEffect(() => {
@@ -230,11 +256,17 @@ export function useStoryGeneration(storyCampaign) {
 
       try {
         // TRUE INFINITE BRANCHING: Pass branchingChoices so context includes realized narratives
-        const entry = await storyGenerationService.generateSubchapter(nextChapter, 1, nextPathKey, optimisticHistory, {
-          traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
-          reason: `prefetch-next-chapter-branches:${source}`,
-          branchingChoices, // Player's actual path through previous subchapters
-        });
+        const entry = await storyGenerationService.generateSubchapter(
+          nextChapter,
+          1,
+          nextPathKey,
+          optimisticHistory,
+          withQualitySettings({
+            traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
+            reason: `prefetch-next-chapter-branches:${source}`,
+            branchingChoices, // Player's actual path through previous subchapters
+          })
+        );
 
         if (entry && isMountedRef.current) {
           // Cache under the actual returned pathKey (should equal nextPathKey, but treat as source of truth)
@@ -272,7 +304,7 @@ export function useStoryGeneration(storyCampaign) {
     } catch (e) {
       llmTrace('useStoryGeneration', traceId, 'prefetch.branch.B.failed', { error: e?.message }, 'warn');
     }
-  }, [isConfigured]);
+  }, [isConfigured, withQualitySettings]);
 
   // Track mounted state to prevent state updates on unmounted component
   const isMountedRef = useRef(true);
@@ -435,12 +467,12 @@ export function useStoryGeneration(storyCampaign) {
         subchapter,
         canonicalPathKey,
         choiceHistory,
-        {
+        withQualitySettings({
           traceId,
           reason: 'immediate-generateForCase',
           isUserFacing: true, // Never show fallback to player
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
-        }
+        })
       );
 
       const duration = Date.now() - startTime;
@@ -501,7 +533,7 @@ export function useStoryGeneration(storyCampaign) {
       // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
       // This ensures proper context: 002C must exist before 003A can be generated.
     }
-  }, [isConfigured, prefetchNextChapterBranchesAfterC]);
+  }, [isConfigured, prefetchNextChapterBranchesAfterC, withQualitySettings]);
 
   /**
    * Generate all subchapters for a chapter
@@ -570,10 +602,10 @@ export function useStoryGeneration(storyCampaign) {
           sub,
           canonicalPathKey,
           choiceHistory,
-          {
+          withQualitySettings({
             traceId: createTraceId(`case_${caseNumber}_${canonicalPathKey}`),
             reason: silent ? 'preload-generateChapter' : 'immediate-generateChapter',
-          }
+          })
         );
 
         updateGeneratedCache(caseNumber, entry?.pathKey || canonicalPathKey, entry);
@@ -601,7 +633,7 @@ export function useStoryGeneration(storyCampaign) {
         generationRef.current = false;
       }
     }
-  }, [isConfigured]);
+  }, [isConfigured, withQualitySettings]);
 
   /**
    * Pre-generate the remaining subchapters of the current chapter (B and C)
@@ -647,7 +679,13 @@ export function useStoryGeneration(storyCampaign) {
         try {
           // SEQUENTIAL: Await each subchapter before starting the next.
           // This ensures proper context and prevents mobile network overload.
-          const entry = await storyGenerationService.generateSubchapter(targetChapter, subIndex, targetPath, history);
+          const entry = await storyGenerationService.generateSubchapter(
+            targetChapter,
+            subIndex,
+            targetPath,
+            history,
+            withQualitySettings()
+          );
 
           // Guard against state updates on unmounted component
           if (entry && isMountedRef.current) {
@@ -662,7 +700,7 @@ export function useStoryGeneration(storyCampaign) {
         }
       }
     }
-  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
+  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC, withQualitySettings]);
 
   /**
    * TRUE INFINITE BRANCHING: Generate next subchapter AFTER player completes branching narrative.
@@ -731,7 +769,10 @@ export function useStoryGeneration(storyCampaign) {
           nextSubIndex,
           pathKey,
           choiceHistory,
-          { branchingChoices, reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context' }
+          withQualitySettings({
+            branchingChoices,
+            reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context'
+          })
         );
 
         const genDuration = Date.now() - genStartTime;
@@ -746,7 +787,7 @@ export function useStoryGeneration(storyCampaign) {
     } else if (!needsGen) {
       log.debug('useStoryGeneration', `⏭️ ${nextCaseNumber} already exists, skipping generation`);
     }
-  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC]);
+  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC, withQualitySettings]);
 
   /**
    * TRUE INFINITE BRANCHING: Speculative prefetch after first choice is made.
@@ -838,11 +879,11 @@ export function useStoryGeneration(storyCampaign) {
           nextSubchapter,
           pathKey,
           choiceHistory,
-          {
+          withQualitySettings({
             branchingChoices: speculativeBranchingChoices,
             reason: 'speculativePrefetchForFirstChoice',
             speculativeSecondChoice, // Pass this for potential cache keying
-          }
+          })
         );
 
         if (entry && isMountedRef.current) {
@@ -858,7 +899,7 @@ export function useStoryGeneration(storyCampaign) {
     }
 
     log.debug('useStoryGeneration', `Speculative prefetch complete: 3 versions of ${nextCaseNumber} ready`);
-  }, [isConfigured]);
+  }, [isConfigured, withQualitySettings]);
 
   /**
    * Analyze choice history to predict most likely next path
@@ -1146,7 +1187,8 @@ export function useStoryGeneration(storyCampaign) {
               tier2Chapter,
               tier2Sub,
               tier2PathKey,
-              speculativeHistoryTier2
+              speculativeHistoryTier2,
+              withQualitySettings()
             );
           } catch (err) {
             console.warn('[useStoryGeneration] Tier 2 pre-load failed:', err.message);
@@ -1156,7 +1198,7 @@ export function useStoryGeneration(storyCampaign) {
         pendingTimeoutsRef.current.add(timeoutId);
       }
     }
-  }, [isConfigured, needsGeneration, generateChapter, predictNextPath]);
+  }, [isConfigured, needsGeneration, generateChapter, predictNextPath, withQualitySettings]);
 
   /**
    * Cancel ongoing generation

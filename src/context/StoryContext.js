@@ -55,7 +55,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     cancelGeneration,
     clearError: clearGenerationError,
-  } = useStoryGeneration(storyCampaign);
+  } = useStoryGeneration(storyCampaign, progress?.settings);
 
   // Keep refs in sync to avoid stale closures
   const branchingChoicesRef = useRef([]);

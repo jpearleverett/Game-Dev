@@ -266,6 +266,120 @@ export const STORY_STRUCTURE = {
 };
 
 // ============================================================================
+// REVEAL TIMING - Canonical pacing for the Under-Map
+// ============================================================================
+const getSubchapterLabel = (subchapter) => ['A', 'B', 'C'][subchapter - 1] || String(subchapter);
+const DECISION_SUBCHAPTER_LABEL = getSubchapterLabel(STORY_STRUCTURE.subchaptersPerChapter);
+
+export const REVEAL_TIMING = {
+  underMap: {
+    firstUndeniable: {
+      chapter: 1,
+      subchapter: STORY_STRUCTURE.subchaptersPerChapter,
+      label: `1${DECISION_SUBCHAPTER_LABEL}`,
+    },
+  },
+  rules: [
+    `Jack does NOT know the Under-Map is real until Chapter 1${DECISION_SUBCHAPTER_LABEL}.`,
+    `The first undeniable reveal that "the world is not what it seems" happens at the END of subchapter 1${DECISION_SUBCHAPTER_LABEL} (not earlier).`,
+    `Before the end of 1${DECISION_SUBCHAPTER_LABEL}, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).`,
+    `After 1${DECISION_SUBCHAPTER_LABEL}, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.`,
+  ],
+};
+
+// ============================================================================
+// SETUP/PAYOFF REGISTRY - Major revelations and required foreshadowing
+// ============================================================================
+export const SETUP_PAYOFF_REGISTRY = [
+  {
+    id: 'under_map_is_real',
+    payoff: 'The Under-Map is undeniably real (threshold / impossible map confirmed)',
+    requiredSetups: [
+      'Dead letter with glyph string and river-glass token',
+      'At least one repeating glyph observed in the environment (not just paper)',
+      'A "blank map" or missing-place anomaly is mentioned or witnessed',
+    ],
+    minSetupCount: 2,
+    earliestPayoffChapter: 2,
+    latestPayoffChapter: 2,
+    payoffPatterns: [
+      /\bunder-?map\b/i,
+      /\bthreshold\b.*\b(?:opened|unlatched|yawned|gaped|split)\b/i,
+      /\bthe\s+map\s+(?:moved|shifted|changed)\b/i,
+      /\bstreet\s+signs?\b.*\b(?:rearranged|rewrote|changed)\b/i,
+    ],
+  },
+  {
+    id: 'victoria_guide',
+    payoff: `${ABSOLUTE_FACTS.antagonist.trueName} is deliberately guiding ${ABSOLUTE_FACTS.protagonist.fullName} via symbols and thresholds`,
+    requiredSetups: [
+      'Signature / motif: silver ink, map-adjacent language, or rule-based instructions',
+      `${ABSOLUTE_FACTS.antagonist.trueName} demonstrates knowledge of ${ABSOLUTE_FACTS.protagonist.fullName}\'s movements or choices`,
+      'A message implies rules: "two maps," "don\'t name it," "don\'t follow the same line twice"',
+    ],
+    minSetupCount: 2,
+    earliestPayoffChapter: 3,
+    latestPayoffChapter: 8,
+    payoffPatterns: [
+      /\bvictoria\b.*\b(?:mapped|mapping|two\s+maps|rules|architect|guide)\b/i,
+      /\bblackwell\b.*\b(?:map|glyph|curriculum|route)\b/i,
+      /\bdead\s+letters?\b.*\bvictoria\b/i,
+    ],
+  },
+  {
+    id: 'official_containment',
+    payoff: 'Someone in authority is running a containment/suppression operation around Under-Map incidents',
+    requiredSetups: [
+      'A site is quietly sealed or witnesses are warned off',
+      'Police/officials deny or erase reports that should exist',
+      'Someone disappears shortly after mentioning symbols',
+    ],
+    minSetupCount: 2,
+    earliestPayoffChapter: 4,
+    latestPayoffChapter: 10,
+    payoffPatterns: [
+      /\bcontain(?:ment|ed)\b/i,
+      /\bsealed\b.*\b(?:site|block|area|archive)\b/i,
+      /\b(?:erased|missing)\b.*\b(?:report|file|record)\b/i,
+    ],
+  },
+  {
+    id: 'gatekeeper_blackmailed',
+    payoff: 'A gatekeeper character is being leveraged (blackmailed) into controlling access to a key location/person',
+    requiredSetups: [
+      'A character with access to restricted areas acting guilty or evasive',
+      'References to someone being forced to cooperate or hide something',
+      'A gatekeeper deflects questions about maps/archives/permits',
+    ],
+    minSetupCount: 2,
+    earliestPayoffChapter: 4,
+    latestPayoffChapter: 8,
+    payoffPatterns: [
+      /\bblackmail(?:ed|ing)?\b/i,
+      /\bforced\s+to\s+cooperate\b/i,
+      /\bdeflect(?:ed|ing)?\b.*\b(?:archive|permit|map|records)\b/i,
+    ],
+  },
+  {
+    id: 'five_anchors',
+    payoff: 'The five anchors (missing people / anchor points) are identified as a pattern',
+    requiredSetups: [
+      'At least two anchor-linked disappearances are named',
+      'A connecting symbol / motif repeats across sites',
+      'A hint that the pattern is deliberate (not random crime)',
+    ],
+    minSetupCount: 3,
+    earliestPayoffChapter: 5,
+    latestPayoffChapter: 11,
+    payoffPatterns: [
+      /\bfive\s+anchors?\b/i,
+      /\ball\s+five\b.*\b(?:anchors?|missing|pattern)\b/i,
+      /\banchor\b.*\bglyph\b/i,
+    ],
+  },
+];
+
+// ============================================================================
 // WRITING STYLE GUIDELINES
 // ============================================================================
 export const WRITING_STYLE = {
@@ -629,11 +743,7 @@ export const CONSISTENCY_RULES = [
   // CHARACTER NAMES & IDENTITIES
   'Jack always calls Victoria "Victoria" or "Blackwell."',
   // REALITY REVEAL TIMING (Critical pacing constraint)
-  'Jack does NOT know the Under-Map is real until Chapter 1C.',
-  'The first undeniable reveal that "the world is not what it seems" happens at the END of subchapter 1C (not earlier).',
-  'Before the end of 1C, all anomalies must be plausibly deniable (graffiti, coincidence, stress, faulty lighting, bad maps).',
-  'After 1C, Jack knows something is genuinely wrong with reality, but the full scope remains to be discovered.',
-
+  ...REVEAL_TIMING.rules,
   // SETTING & ATMOSPHERE
   'Ashport is always damp, overcast, or recently rained; the city is defined by reflections, sodium streetlight halos, and neon smear on wet pavement.',
   'Murphy\'s Bar is directly below Jack\'s office (Jack can hear the jukebox through the floorboards).',
@@ -706,6 +816,10 @@ export const GENERATION_CONFIG = {
     // Expensive. Keep OFF for normal gameplay latency.
     // When enabled, the engine may make extra LLM calls to invent consequences for past decisions.
     enableLLMDecisionConsequences: false,
+    // Validation gating (disable for low-latency gameplay)
+    enableProseQualityValidation: true,
+    enableSentenceVarietyValidation: true,
+    enableLLMValidation: true,
   },
 };
 
@@ -1439,6 +1553,8 @@ export default {
   TIMELINE,
   ABSOLUTE_FACTS,
   STORY_STRUCTURE,
+  REVEAL_TIMING,
+  SETUP_PAYOFF_REGISTRY,
   WRITING_STYLE,
   EXAMPLE_PASSAGES,
   CONSISTENCY_RULES,
