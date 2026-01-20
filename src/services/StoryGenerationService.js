@@ -2788,7 +2788,7 @@ Provide a structured arc ensuring each innocent's story gets proper attention an
       ],
       characterArcs: {
         jack: 'From skeptical pattern-hunter to Under-Map-literate investigator',
-        victoria: 'Guide who tests Jack's capacity to read rules without becoming a weapon',
+        victoria: 'Guide who tests Jack\'s capacity to read rules without becoming a weapon',
       },
       consistencyAnchors: [
         'Jack Halloway is 35 years old and does NOT start with Under-Map knowledge',
