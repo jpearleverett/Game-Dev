@@ -1196,8 +1196,8 @@ PLAYER'S CHOICE: "${choiceTitle}"${choiceFocus}
 4. Show sensory details: what Jack sees, hears, feels as he takes this action
 5. Include dialogue and character reactions from whoever Jack encounters
 
-Example of WRONG approach: "After Jack confronted Wade at the wharf, he returned to his office..."
-Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. Wade's silhouette emerged from the fog..."`;
+Example of WRONG approach: "After Jack confronted his contact at the wharf, he returned to his office..."
+Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. A silhouette emerged from the fog..."`;
     }
   }
 
