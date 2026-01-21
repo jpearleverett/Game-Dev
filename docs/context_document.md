@@ -135,13 +135,17 @@ The final case used by the UI is produced by merging:
   normalizes to canonical `1A-2A` style paths before selection.
 
 Generated entries include:
-- `title`, `narrative`, `branchingNarrative` (opening, choices, endings).
-- `decision` or `pathDecisions`.
-- `briefing`, `storyMeta`, `narrativeThreads`, `consistencyFacts`.
+- `title`, `branchingNarrative` (opening, choices, endings).
+- `decision` (for C subchapters) or `pathDecisions` (second call, 9 variants).
+- `bridge` (stored/used as `bridgeText`), `previously`, `briefing`, `narrativeThreads`.
 - Metadata: `chapter`, `subchapter`, `generatedAt`, `wordCount`, `isFallback`.
 
-`storyMeta` is used to populate case file overlays (recaps, directives, and
-bridge text shown to the player).
+Legacy/backward-compatible fields (not part of current schema contract):
+- `chapterSummary`, `puzzleCandidates`, `consistencyFacts`, `previousThreadsAddressed`.
+
+`storyMeta` is assembled from generated fields (bridge/previously/briefing) and
+used to populate case file overlays (recaps, directives, and bridge text shown
+to the player).
 
 ### 5.4 Branching outlier sets
 `src/data/branchingOutliers.js` (static for Chapter 1) and
@@ -213,6 +217,34 @@ StoryGenerationService builds prompts from multiple layers:
 
 Prompts use XML-like section tags to reduce context bleed.
 
+### 6.2.3 Caching notes (prompt prefixes)
+- Static cache keys include a **many-shot signature** (beat categories + rotation seed).
+- Chapter-start cache keys include the same signature plus a choice-history hash.
+- Cache versions live in `StoryGenerationService` (`staticCacheVersion`, `chapterStartCacheVersion`).
+
+### 6.2.1 Output schema overview (structured outputs)
+Generation returns JSON that must match schema definitions in `src/services/storyGeneration/schemas.js`.
+Key fields:
+- `title`: 2-5 words.
+- `bridge` (stored as `bridgeText`): short hook sentence (<= 15 words).
+- `previously`: 1-2 sentence recap (<= 40 words).
+- `branchingNarrative`: interactive structure (opening + 2 choice points).
+- `briefing`: puzzle objective summary + 2-3 directives.
+- `narrativeThreads`: active story threads with urgency and dueChapter.
+
+Decision-point subchapters (C):
+- `decision` is returned in the first pass only.
+- `pathDecisions` are generated in a separate second call (9 variants).
+
+### 6.2.2 Branching narrative length expectations
+Branching narrative output is 13 segments total:
+- 1 opening segment
+- 3 first-choice responses
+- 9 ending responses (one per path)
+
+Each segment targets 300-350 words, so total output should be ~4,000-4,500 words.
+Each complete path (opening + firstChoice + ending) must be >= 900 words.
+
 Story bible (`storyBible.js`) is the **single source of truth** for:
 - Absolute facts (timeline, setting, core mystery).
 - Writing style constraints (POV, tense, forbidden phrases).
@@ -246,6 +278,7 @@ path keys before lookup.
   - `target`: 1,050 words (3×350=1,050 expected per path)
   - `promptTargetMultiplier`: 1.1 (prompt asks for ~10% more than target)
   - `maximum`: 1,400 words
+  - These thresholds apply per **single path** (opening + firstChoice + ending), not total output.
 - Segment validation minimum: 300 words (ensures 3 segments meet 900 word path minimum).
 - Validation gating flags (see `GENERATION_CONFIG.qualitySettings`):
   - `enableProseQualityValidation`
