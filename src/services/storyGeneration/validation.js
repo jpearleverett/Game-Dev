@@ -1887,20 +1887,10 @@ If no issues found, return: { "hasIssues": false, "issues": [], "suggestions": [
       patterns.push(new RegExp(keywords.slice(0, 2).join('.*').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\.\\\*/g, '.{0,100}'), 'i'));
     }
 
-    if (/\btom\b/i.test(setupLower)) {
-      patterns.push(/tom.*(?:map|atlas|archive|symbols?|glyphs?)/i, /wade.*(?:map|atlas|archive|symbols?|glyphs?)/i);
-    }
+    // Only Victoria Blackwell is a canonical character with predefined patterns
+    // Other characters are LLM-generated and don't need specific detection patterns
     if (/\bvictoria\b/i.test(setupLower)) {
       patterns.push(/victoria.*(?:know|knew|knows|watch|watched|map|mapped|cartograph)/i, /blackwell.*(?:secret|rules?|map|cartograph|glyph)/i);
-    }
-    if (/\bgrange\b/i.test(setupLower)) {
-      patterns.push(/grange.*(?:sealed|contained|erased|suppressed|warning)/i, /deputy.*(?:chief|suspicious|sealed|contained)/i);
-    }
-    if (/\bsilas\b/i.test(setupLower)) {
-      patterns.push(/silas.*(?:drink|guilt|hiding|secret)/i, /reed.*(?:nervous|scared)/i);
-    }
-    if (/\bthornhill\b/i.test(setupLower)) {
-      patterns.push(/thornhill.*(?:case|frame|innocent|dead)/i, /marcus.*(?:suicide|lockup)/i);
     }
 
     return patterns;
