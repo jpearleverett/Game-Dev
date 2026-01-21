@@ -26,6 +26,8 @@ const STATUS = {
   ERROR: 'error',
 };
 
+const CONTINUE_NAVIGATION_WAIT_MS = 3500;
+
 export default function LogicPuzzleScreen({ navigation }) {
   const game = useGame();
   const { activeCase, progress, completeLogicPuzzle } = game;
@@ -51,6 +53,7 @@ export default function LogicPuzzleScreen({ navigation }) {
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [cluesExpanded, setCluesExpanded] = useState(false);
   const [checkedClues, setCheckedClues] = useState(new Set());
+  const [isContinuing, setIsContinuing] = useState(false);
 
   const saveTimerRef = useRef(null);
 
@@ -466,6 +469,8 @@ export default function LogicPuzzleScreen({ navigation }) {
   // Custom continue handler that computes the next case number directly
   // This avoids any potential state sync issues with React's batching
   const handleContinueAfterSolve = useCallback(async () => {
+    if (isContinuing) return;
+    setIsContinuing(true);
     // Compute next case directly from activeCase to avoid stale state issues
     const currentCaseNumber = activeCase?.caseNumber;
     const { chapter: currentChapter, subchapter: currentSubchapter } = parseCaseNumber(currentCaseNumber);
@@ -476,24 +481,42 @@ export default function LogicPuzzleScreen({ navigation }) {
 
     console.log(`[LogicPuzzleScreen] handleContinueAfterSolve: currentCase=${currentCaseNumber}, nextCase=${computedNextCase}`);
 
-    try {
-      if (computedNextCase) {
-        // Ensure content is generated for the NEXT case
-        const nextPathKey = storyCampaign?.currentPathKey || 'ROOT';
-        console.log(`[LogicPuzzleScreen] Ensuring content for ${computedNextCase} (path: ${nextPathKey})`);
-        await game.ensureStoryContent?.(computedNextCase, nextPathKey);
-        console.log(`[LogicPuzzleScreen] Navigating to CaseFile with caseNumber=${computedNextCase}`);
-        navigation.replace('CaseFile', { caseNumber: computedNextCase });
-      } else {
-        // Final subchapter (C) - go back to CaseFile to show decision panel
-        console.log(`[LogicPuzzleScreen] Final subchapter, navigating to CaseFile without param`);
-        navigation.replace('CaseFile');
+    if (computedNextCase) {
+      // Ensure content is generated for the NEXT case
+      const nextPathKey = storyCampaign?.currentPathKey || 'ROOT';
+      console.log(`[LogicPuzzleScreen] Ensuring content for ${computedNextCase} (path: ${nextPathKey})`);
+
+      try {
+        const ensurePromise = game.ensureStoryContent?.(computedNextCase, nextPathKey);
+        if (ensurePromise && typeof ensurePromise.then === 'function') {
+          const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => resolve({ timedOut: true }), CONTINUE_NAVIGATION_WAIT_MS);
+          });
+          const ensureHandled = ensurePromise.catch((error) => {
+            console.warn('[LogicPuzzleScreen] ensureStoryContent failed:', error?.message);
+            return { ok: false, reason: 'ensure-story-content-error', error: error?.message };
+          });
+
+          const result = await Promise.race([ensureHandled, timeoutPromise]);
+          if (result?.timedOut) {
+            console.log(`[LogicPuzzleScreen] ensureStoryContent taking longer than ${CONTINUE_NAVIGATION_WAIT_MS}ms; navigating anyway.`);
+          } else if (result?.ok === false) {
+            console.warn(`[LogicPuzzleScreen] ensureStoryContent returned not ok (${result?.reason || 'unknown'}); navigating anyway.`);
+          }
+        }
+      } catch (error) {
+        console.warn('[LogicPuzzleScreen] Continue failed, navigating to CaseFile:', error?.message);
       }
-    } catch (error) {
-      console.warn('[LogicPuzzleScreen] Continue failed, navigating to CaseFile:', error?.message);
-      navigation.replace('CaseFile', computedNextCase ? { caseNumber: computedNextCase } : undefined);
+
+      console.log(`[LogicPuzzleScreen] Navigating to CaseFile with caseNumber=${computedNextCase}`);
+      navigation.replace('CaseFile', { caseNumber: computedNextCase });
+      return;
     }
-  }, [activeCase?.caseNumber, game, navigation, storyCampaign?.currentPathKey]);
+
+    // Final subchapter (C) - go back to CaseFile to show decision panel
+    console.log(`[LogicPuzzleScreen] Final subchapter, navigating to CaseFile without param`);
+    navigation.replace('CaseFile');
+  }, [activeCase?.caseNumber, game, isContinuing, navigation, storyCampaign?.currentPathKey]);
 
   const placedCounts = useMemo(() => {
     const counts = {};
@@ -597,7 +620,17 @@ export default function LogicPuzzleScreen({ navigation }) {
               <Text style={styles.solvedBody}>
                 The logic lines up. File the report and move to the next lead.
               </Text>
-              <PrimaryButton label="Continue Investigation" onPress={handleContinueAfterSolve} fullWidth />
+              <PrimaryButton
+                label={isContinuing ? 'Preparing Next Chapter...' : 'Continue Investigation'}
+                onPress={handleContinueAfterSolve}
+                fullWidth
+                disabled={isContinuing}
+              />
+              {isContinuing && (
+                <Text style={styles.solvedHint}>
+                  Generating the next chapter. This can take a moment.
+                </Text>
+              )}
             </View>
           </View>
         )}
@@ -754,6 +787,14 @@ const styles = StyleSheet.create({
   solvedBody: {
     fontFamily: FONTS.primary,
     color: '#d7ccc8',
+    textAlign: 'center',
+  },
+  solvedHint: {
+    fontFamily: FONTS.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: '#c0b0a0',
     textAlign: 'center',
   },
 });
