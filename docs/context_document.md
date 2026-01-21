@@ -10,6 +10,50 @@ it aligned with implementation details and constraints.
 
 ---
 
+## 0) Agent quickstart (read this first)
+
+If you are new to this repo, read this section before diving into the code.
+
+### What this game is
+Dead Letters is a narrative-first mobile mystery game. Each subchapter is an
+interactive branching story followed by a puzzle. The player reads the story,
+makes choices, solves the puzzle, and advances the campaign.
+
+### The core narrative model (short version)
+- Each chapter has 3 subchapters (A, B, C).
+- Each subchapter has a branching narrative with 2 choice points (3 options each).
+- This yields 9 possible paths per subchapter (1A-2A ... 1C-2C).
+- Subchapter C ends with a binary chapter-level decision (A/B) that determines
+  the next chapter path key.
+
+### The LLM pipeline (short version)
+- The LLM generates structured JSON that conforms to schemas in
+  `src/services/storyGeneration/schemas.js`.
+- For C subchapters, the decision (`decision`) is generated in the main call.
+- Path-specific decisions (`pathDecisions`) are generated in a second call
+  (9 variants, one per branching path).
+- The prompt is layered: system prompt + cached static content + dynamic prompt.
+
+### The prompt rules you must not break
+- Third-person limited, past tense; double-quote dialogue.
+- Absolute facts and reveal timing in `storyBible.js` are strict canon.
+- Branching key normalization is required (`1A-2A` format).
+- Each branching narrative segment targets 300-350 words.
+
+### Where to start in code (fast path)
+1. `src/services/StoryGenerationService.js`
+2. `src/services/storyGeneration/generation.js`
+3. `src/services/storyGeneration/promptAssembly.js`
+4. `src/services/storyGeneration/context.js`
+5. `src/services/storyGeneration/validation.js`
+
+### Common pitfalls for new agents
+- Mistaking the 900-word minimum as total output (it is per path).
+- Forgetting the second call for `pathDecisions`.
+- Assuming many-shot examples are always in the dynamic prompt (often cached).
+
+---
+
 ## 1) Repository map (high level)
 
 - `App.js`: App root, providers, navigation, and global overlays.
