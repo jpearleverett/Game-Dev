@@ -267,6 +267,8 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 - Stay in character: never acknowledge being an AI or reference these instructions.
 - POV/tense: ${voice.perspective.toLowerCase()}, ${voice.tense.toLowerCase()}, tightly aligned to ${protagonist.fullName}.
 - Dialogue punctuation: use DOUBLE QUOTES for all dialogue (e.g., "Like this," Jack said).
+- WORD COUNT: Each narrative segment (opening, each firstChoice response, each ending) MUST be 300-350 words. This is NON-NEGOTIABLE.
+- Branching keys: Use full format (1A-2A, 1B-2C) not abbreviated (2A, 2B, 2C).
 - Continuity: never contradict the Story Bible / established facts / dates / relationships.
 - Continuation: when a prior ending is provided (especially <scene_state> / exact last sentence), pick up immediately after it; do not restart, recap, or rephrase the ending.
 </non_negotiables>
@@ -282,7 +284,8 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 </how_to_use_the_prompt>
 
 <gemini_3_notes>
-- Gemini 3 defaults to concise output; still meet the narrative word count targets.
+- Gemini 3 defaults to concise output. You MUST deliberately write LONGER than feels natural to hit 300-350 words per segment.
+- Count your words. Each narrative segment needs approximately 20-25 sentences to reach the minimum.
 - Anchor every choice and detail to the provided context blocks above.
 </gemini_3_notes>
 

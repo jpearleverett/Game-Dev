@@ -902,7 +902,12 @@ class ValidationMethods {
     // =========================================================================
     const forbiddenPatterns = [
       { pattern: /—/g, issue: 'Em dashes (—) found - use commas, periods, or semicolons instead', count: true },
+      // "Not just X; it's Y" AI patterns - extremely common LLM output
       { pattern: /\bis not just\b.*\bit'?s\b/i, issue: 'Forbidden pattern: "X is not just Y, it\'s Z"' },
+      { pattern: /\bwasn'?t just\b.*;\s*it was\b/i, issue: 'Forbidden AI pattern: "It wasn\'t just X; it was Y"' },
+      { pattern: /\bdidn'?t just\b.*;\s*it\b/i, issue: 'Forbidden AI pattern: "It didn\'t just X; it Y"' },
+      { pattern: /\bnot just\b.*\bbut\b/i, issue: 'Forbidden pattern: "not just...but" construction' },
+      { pattern: /\bmore than just\b/i, issue: 'Forbidden pattern: "more than just"' },
       { pattern: /\bin a world where\b/i, issue: 'Forbidden phrase: "In a world where..."' },
       { pattern: /\blittle did (?:he|she|they|i|we) know\b/i, issue: 'Forbidden phrase: "Little did [anyone] know..."' },
       { pattern: /\bi couldn'?t help but\b/i, issue: 'Forbidden phrase: "I couldn\'t help but..."' },

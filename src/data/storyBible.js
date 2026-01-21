@@ -406,8 +406,13 @@ export const WRITING_STYLE = {
   ],
 
   absolutelyForbidden: [
-    '"X is not just Y; it\'s Z" constructions',
-    'Constructions with the following sentence structure "The silver current didn\'t just move; it sang"',
+    // Em dashes - use commas, periods, or semicolons instead
+    'Em dashes (—). Use commas, periods, colons, or semicolons instead. Never use — in narrative.',
+    // AI-typical "not just X; it's Y" constructions - extremely common LLM output pattern
+    '"It\'s not just X; it\'s Y" or "It wasn\'t just X; it was Y" constructions (e.g., "It wasn\'t just rain; it was a deluge")',
+    '"It didn\'t just X; it Y" constructions (e.g., "The door didn\'t just open; it groaned")',
+    '"X didn\'t just Y; X Z" constructions (e.g., "She didn\'t just walk; she glided")',
+    'Any "not just...but" or "more than just" formulations that contrast two things with a semicolon',
     '"In a world where..." openings',
     '"Little did he know..." foreshadowing',
     '"I couldn\'t help but..." or "I found myself..."',
