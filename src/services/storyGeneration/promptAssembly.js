@@ -1142,7 +1142,7 @@ ${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOu
       task += `
 - **Decision Setup:** ${subchapterOutline.decisionSetup}
 - **Option A Direction:** ${subchapterOutline.optionADirection || 'More direct approach'}
-- **Option B Direction:** ${subchapterOutline.optionBDirection || 'More cautious approach'}`;
+- **Option B Direction:** ${subchapterOutline.optionBDirection || 'More methodical approach'}`;
     }
   }
 
@@ -1290,13 +1290,13 @@ Do NOT include pathDecisions in this response. Path-specific decisions are gener
 1. Present TWO distinct, defensible paths (Option A and Option B)
 2. Both options must be morally complex - NO obvious "right" answer
 3. The decision must feel EARNED by the current narrative
-4. Connect to the themes of wrongful conviction, certainty vs truth
+4. Connect to the themes of perception vs reality, the cost of naming, patterns as traps/lifelines, and institutional erasure
 5. The intro should frame the dilemma in 1-2 sentences (max 50 words)
 
 **For EACH option:**
 - title: Action statement in imperative mood (3-8 words)
 - focus: What this path prioritizes and what it risks (1 sentence)
-- personalityAlignment: aggressive | cautious | balanced`;
+- personalityAlignment: aggressive | methodical | balanced`;
   }
 
   return task;

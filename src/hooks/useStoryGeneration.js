@@ -957,8 +957,16 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
     if (upcomingDecision?.optionA && upcomingDecision?.optionB) {
       // PRIORITY 1: Use LLM-generated personalityAlignment if available (most accurate)
-      const optionAAlignment = upcomingDecision.optionA.personalityAlignment;
-      const optionBAlignment = upcomingDecision.optionB.personalityAlignment;
+      const normalizeAlignment = (value) => {
+        const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+        if (!normalized) return null;
+        if (normalized === 'cautious') return 'methodical';
+        if (normalized === 'neutral') return 'balanced';
+        return normalized;
+      };
+
+      const optionAAlignment = normalizeAlignment(upcomingDecision.optionA.personalityAlignment);
+      const optionBAlignment = normalizeAlignment(upcomingDecision.optionB.personalityAlignment);
 
       if (optionAAlignment || optionBAlignment) {
         alignmentSource = 'llm';
@@ -982,12 +990,12 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           }
         }
 
-        // For balanced players, prefer neutral options if available
+        // For balanced players, prefer balanced options if available
         if (playerPersonality === 'balanced') {
-          if (optionAAlignment === 'neutral' && optionBAlignment !== 'neutral') {
+          if (optionAAlignment === 'balanced' && optionBAlignment !== 'balanced') {
             framingBonus = 0.08;
             framingPrediction = 'A';
-          } else if (optionBAlignment === 'neutral' && optionAAlignment !== 'neutral') {
+          } else if (optionBAlignment === 'balanced' && optionAAlignment !== 'balanced') {
             framingBonus = 0.08;
             framingPrediction = 'B';
           }

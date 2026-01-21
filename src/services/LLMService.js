@@ -1968,7 +1968,7 @@ class LLMService {
     for (const msg of priorMessages) {
       const parts = [{ text: msg.content }];
       if (msg.thoughtSignature) {
-        parts.push({ thoughtSignature: msg.thoughtSignature });
+        parts[0].thoughtSignature = msg.thoughtSignature;
       }
       contents.push({ role: msg.role, parts });
     }
