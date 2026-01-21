@@ -1148,6 +1148,35 @@ Files touched: `src/data/storyBible.js`, `src/services/storyGeneration/promptAss
 `src/services/storyGeneration/validation.js`, `src/services/storyGeneration/generation.js`,
 `src/data/storyContent.js`.
 
+### 19.16 Gemini 3 best-practice prompt alignment (Jan 2026)
+
+Performed a Gemini 3 best-practice pass to remove prompt/schema contradictions
+and align system + task prompts with current structured output behavior.
+
+Key changes:
+- **Dialogue punctuation alignment**: System prompt now explicitly requires
+  **double quotes** for dialogue to match all canonical examples.
+- **Style rule cleanup**: Removed the em-dash prohibition (examples use em dashes)
+  and softened the hedging rule to avoid contradicting canonical passages.
+- **Timeline precision fix**: Updated Jack’s work background to **15 years** to
+  match exact timeline entries and the “no approximations” rule.
+- **Schema-aligned task prompts**:
+  - Removed `beatSheet` output requirement (internal planning only).
+  - Decision-point prompts now request **only** the base `decision` object;
+    `pathDecisions` are generated in a separate second call as designed.
+- **Consistent prompt structure**: The non-cached prompt path was upgraded to
+  the same XML-tagged structure as cached prompts, including `<task>` and
+  `<self_critique>` blocks and the explicit context anchor phrase.
+- **Gemini 3 note**: Added a short `<gemini_3_notes>` section reminding the
+  model to meet word-count targets despite Gemini 3’s default brevity and to
+  anchor details to provided context blocks.
+- **Documentation/comment alignment**: Updated word-count comments and dialogue
+  quote-handling notes to reflect the current rules.
+
+Files touched: `src/services/storyGeneration/prompts.js`,
+`src/services/storyGeneration/promptAssembly.js`, `src/data/storyBible.js`,
+`src/services/storyGeneration/constants.js`, `src/services/storyGeneration/validation.js`.
+
 ---
 
 ## 20) What to read first if you are new
