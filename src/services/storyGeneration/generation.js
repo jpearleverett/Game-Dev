@@ -384,6 +384,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         // Build only dynamic prompt (delta context + current state + task).
         // If cacheKey is a chapter-start cache, omit story history up to previous chapter.
         const usingChapterStartCache = typeof cacheKey === 'string' && cacheKey.startsWith(`story_chStart_c${chapter}_`);
+        // Build dynamic prompt - many-shot examples are in the cache, not here
         const dynamicPrompt = this._buildDynamicPrompt(
           context,
           chapter,
@@ -391,7 +392,6 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           isDecisionPoint,
           {
             cachedHistoryMaxChapter: usingChapterStartCache ? chapter - 1 : null,
-            includeManyShot: false,
           }
         );
 
@@ -442,6 +442,11 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           });
         }
 
+        // Per Gemini 3 docs: Use 'high' for complex multi-step reasoning, 'medium' for moderate tasks
+        // Decision points require understanding 9 branching paths, so use 'high'
+        // Regular subchapters (A and B) can use 'medium' for faster generation
+        const thinkingLevel = isDecisionPoint ? 'high' : 'medium';
+
         response = await llmService.completeWithCache({
           cacheKey,
           dynamicPrompt,
@@ -451,7 +456,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
             responseSchema: schema,
             thinkingConfig: {
               includeThoughts: process.env.INCLUDE_THOUGHTS === 'true', // Enable in dev to debug mystery logic
-              thinkingLevel: 'high' // Maximize reasoning depth for complex narrative generation
+              thinkingLevel, // Varies based on task complexity
             }
           },
         });
