@@ -7,9 +7,58 @@ import {
   MICRO_TENSION_TECHNIQUES,
   SENTENCE_RHYTHM,
 } from '../../data/storyBible';
-import { getScenesByCategory, MANY_SHOT_METADATA } from '../../data/manyShot';
+import { MANY_SHOT_METADATA, MANY_SHOT_SCENES } from '../../data/manyShot';
 import { TOTAL_CHAPTERS } from './constants';
 import { extractRecentDialogue } from './helpers';
+
+const DEFAULT_MANY_SHOT_CATEGORIES = ['dialogue_tension', 'internal_monologue', 'investigation'];
+
+const MANY_SHOT_CATEGORY_MAP = {
+  // Subchapter beat types
+  'Opening/Hook (A)': ['setup', 'atmospheric', 'internal_monologue'],
+  'Development/Conflict (B)': ['dialogue_tension', 'confrontation', 'investigation'],
+  'Resolution/Decision (C)': ['decision_point', 'revelation', 'aftermath'],
+
+  // Chapter beat types
+  CHASE: ['action', 'dialogue_tension'],
+  BOTTLE_EPISODE: ['dialogue_tension', 'internal_monologue', 'confrontation'],
+  CONFRONTATION: ['confrontation', 'dialogue_tension', 'revelation'],
+  BETRAYAL: ['revelation', 'aftermath', 'darkest_moment'],
+  INVESTIGATION: ['investigation', 'interrogation', 'internal_monologue'],
+  SETUP: ['setup', 'atmospheric'],
+  CLIMAX: ['action', 'confrontation', 'revelation'],
+  RESOLUTION: ['aftermath', 'decision_point', 'revelation'],
+  INCITING_INCIDENT: ['setup', 'atmospheric', 'investigation'],
+  REVELATION: ['revelation', 'internal_monologue', 'aftermath'],
+  RELATIONSHIP: ['dialogue_tension', 'internal_monologue', 'aftermath'],
+  TENSION: ['dialogue_tension', 'atmospheric', 'investigation'],
+  RECKONING: ['aftermath', 'revelation', 'confrontation'],
+};
+
+export const getManyShotCategories = (beatType, chapterBeatType) => {
+  const chapterCategories = (chapterBeatType?.type && MANY_SHOT_CATEGORY_MAP[chapterBeatType.type])
+    ? MANY_SHOT_CATEGORY_MAP[chapterBeatType.type]
+    : [];
+  const subchapterCategories = (beatType && MANY_SHOT_CATEGORY_MAP[beatType])
+    ? MANY_SHOT_CATEGORY_MAP[beatType]
+    : [];
+
+  if (chapterCategories.length || subchapterCategories.length) {
+    const merged = [...chapterCategories, ...subchapterCategories].filter(Boolean);
+    const deduped = [...new Set(merged)];
+    return {
+      source: chapterCategories.length && subchapterCategories.length ? 'chapter+subchapter' : chapterCategories.length ? 'chapter' : 'subchapter',
+      key: `${chapterBeatType?.type || 'none'}|${beatType || 'none'}`,
+      categories: deduped,
+    };
+  }
+
+  return {
+    source: 'default',
+    key: 'default',
+    categories: DEFAULT_MANY_SHOT_CATEGORIES,
+  };
+};
 
 // ============================================================================
 // PATHDECISIONS SYSTEM PROMPT - Story context for path-specific decisions
@@ -214,7 +263,7 @@ ${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
 </reveal_timing>
 
 <how_to_use_the_prompt>
-You will receive structured context blocks (for example: story_bible, character_reference, craft_techniques, style_examples, consistency_rules, story_context, active_threads, scene_state, engagement_guidance, task, self_critique).
+You will receive structured context blocks (for example: story_bible, character_reference, craft_techniques, style_examples, voice_dna, many_shot_examples, character_knowledge, story_context, active_threads, scene_state, engagement_guidance, task, self_critique).
 Treat those blocks as authoritative.
 If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
 </how_to_use_the_prompt>
@@ -521,46 +570,61 @@ ${NEGATIVE_EXAMPLES.heavyForeshadowing.problems.map(p => `- ${p}`).join('\n')}
 // ============================================================================
 // MANY-SHOT SCENE EXAMPLES - Pattern learning from Mystic River
 // ============================================================================
-export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15) => {
-  // Map beat types and chapter types to relevant scene categories
-  const categoryMap = {
-    // Subchapter beat types
-    'Opening/Hook (A)': ['setup', 'atmospheric', 'internal_monologue'],
-    'Development/Conflict (B)': ['dialogue_tension', 'confrontation', 'investigation'],
-    'Resolution/Decision (C)': ['decision_point', 'revelation', 'aftermath'],
-
-    // Chapter beat types
-    CHASE: ['action', 'dialogue_tension'],
-    BOTTLE_EPISODE: ['dialogue_tension', 'internal_monologue', 'confrontation'],
-    CONFRONTATION: ['confrontation', 'dialogue_tension', 'revelation'],
-    BETRAYAL: ['revelation', 'aftermath', 'darkest_moment'],
-    INVESTIGATION: ['investigation', 'interrogation', 'internal_monologue'],
-    SETUP: ['setup', 'atmospheric'],
-    CLIMAX: ['action', 'confrontation', 'revelation'],
-    RESOLUTION: ['aftermath', 'decision_point', 'revelation'],
-  };
-
-  // Determine which categories to use
-  let categories = [];
-
-  // First try chapter beat type
-  if (chapterBeatType?.type && categoryMap[chapterBeatType.type]) {
-    categories = categoryMap[chapterBeatType.type];
+const getRotatedScenes = (scenes = [], takeCount, rotationSeed) => {
+  if (!Array.isArray(scenes) || scenes.length === 0) return [];
+  if (!Number.isFinite(rotationSeed) || rotationSeed <= 0) {
+    return scenes.slice(0, takeCount);
   }
-  // Fall back to subchapter beat type
-  else if (beatType && categoryMap[beatType]) {
-    categories = categoryMap[beatType];
+  if (scenes.length <= takeCount) {
+    return scenes.slice(0, takeCount);
   }
-  // Default mix
-  else {
-    categories = ['dialogue_tension', 'internal_monologue', 'investigation'];
+
+  const offset = Math.abs(Math.floor(rotationSeed)) % scenes.length;
+  const rotated = [];
+  for (let i = 0; i < takeCount; i += 1) {
+    rotated.push(scenes[(offset + i) % scenes.length]);
   }
+  return rotated;
+};
+
+export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15, options = {}) => {
+  const { rotationSeed = null } = options;
+  const { categories } = getManyShotCategories(beatType, chapterBeatType);
 
   // Get scenes from selected categories
   const scenesPerCategory = Math.ceil(limit / categories.length);
-  const selectedScenes = categories.flatMap(category =>
-    getScenesByCategory(category, scenesPerCategory)
-  ).slice(0, limit);
+  const selectedScenes = categories.flatMap((category, idx) => {
+    const scenes = MANY_SHOT_SCENES[category] || [];
+    const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 13 : null;
+    return getRotatedScenes(scenes, scenesPerCategory, categorySeed);
+  }).slice(0, limit);
+
+  if (selectedScenes.length === 0 && categories.join('|') !== DEFAULT_MANY_SHOT_CATEGORIES.join('|')) {
+    const fallbackCategories = DEFAULT_MANY_SHOT_CATEGORIES;
+    const fallbackPerCategory = Math.ceil(limit / fallbackCategories.length);
+    const fallbackScenes = fallbackCategories.flatMap((category, idx) => {
+      const scenes = MANY_SHOT_SCENES[category] || [];
+      const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 17 : null;
+      return getRotatedScenes(scenes, fallbackPerCategory, categorySeed);
+    }).slice(0, limit);
+    if (fallbackScenes.length > 0) {
+      return `
+## MANY-SHOT LEARNING: ${fallbackCategories[0].toUpperCase()} SCENES
+Study these ${fallbackScenes.length} scene excerpts from Dennis Lehane's "Mystic River" to absorb patterns for ${fallbackCategories.map(c => {
+        const metadata = MANY_SHOT_METADATA[c];
+        return `${c} (${metadata?.totalExamples || 0} examples)`;
+      }).join(', ')}:
+
+${fallbackScenes.map((scene, i) => `---
+EXAMPLE ${i + 1}:
+${scene}
+`).join('\n')}
+
+---
+These scenes demonstrate the natural rhythm, dialogue patterns, and emotional beats characteristic of masterful noir fiction. Let them guide your voice, pacing, and scene construction.
+`;
+    }
+  }
 
   if (selectedScenes.length === 0) {
     return ''; // No many-shot examples available

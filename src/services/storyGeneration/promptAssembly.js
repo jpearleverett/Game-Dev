@@ -25,6 +25,7 @@ import {
   buildManyShotExamples,
   buildMasterSystemPrompt,
   buildVoiceDNASection,
+  getManyShotCategories,
 } from './prompts';
 
 // ==========================================================================
@@ -53,6 +54,22 @@ function _buildExtendedStyleExamplesForCache() {
     return '';
   }
 }
+
+const sanitizeCacheKeyPart = (value, fallback = 'default') => {
+  const safe = String(value || '')
+    .replace(/[^A-Za-z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48);
+  return safe || fallback;
+};
+
+const getManyShotSignature = (beatType, chapterBeatType, hasExamples, rotationSeed = null) => {
+  const { categories } = getManyShotCategories(beatType, chapterBeatType);
+  const signature = hasExamples ? categories.join('_') : 'none';
+  const rotationTag = Number.isFinite(rotationSeed) ? `r${Math.abs(Math.floor(rotationSeed))}` : 'r0';
+  return sanitizeCacheKeyPart(`ms_${signature}_${rotationTag}`, 'ms_none');
+};
 
 /**
  * Build static content for caching (Story Bible, Characters, Craft Techniques, etc.)
@@ -120,15 +137,28 @@ ${extendedExamples}
 }
 
 /**
- * Get or create cache for static content
+ * Get or create cache for static content (beat-specific many-shot cached)
  */
-async function _ensureStaticCache() {
-  const cacheKey = `story_static_v${this.staticCacheVersion}`;
+async function _ensureStaticCache(beatType, chapterBeatType) {
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+  const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples));
+  const cacheKey = `story_static_${manyShotSignature}_v${this.staticCacheVersion}`;
+
+  const cachedKey = this.staticCacheKeysBySignature?.get(manyShotSignature);
+  if (cachedKey) {
+    const cached = await llmService.getCache(cachedKey);
+    if (cached) {
+      this.staticCacheKey = cachedKey;
+      return cachedKey;
+    }
+    this.staticCacheKeysBySignature.delete(manyShotSignature);
+  }
 
   // Check if cache exists
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
     this.staticCacheKey = cacheKey;
+    this.staticCacheKeysBySignature.set(manyShotSignature, cacheKey);
     console.log(`[StoryGenerationService] ♻️ Using existing static cache: ${cacheKey}`);
     return cacheKey;
   }
@@ -136,7 +166,13 @@ async function _ensureStaticCache() {
   // Create new cache
   console.log('[StoryGenerationService] 🔧 Creating static content cache...');
 
-  const staticContent = this._buildStaticCacheContent();
+  const staticParts = [this._buildStaticCacheContent()];
+  if (manyShotExamples) {
+    staticParts.push('<many_shot_examples>');
+    staticParts.push(manyShotExamples);
+    staticParts.push('</many_shot_examples>');
+  }
+  const staticContent = staticParts.join('\n\n');
 
   await llmService.createCache({
     key: cacheKey,
@@ -148,10 +184,12 @@ async function _ensureStaticCache() {
       version: this.staticCacheVersion,
       created: new Date().toISOString(),
       type: 'story_generation_static',
+      manyShotSignature,
     },
   });
 
   this.staticCacheKey = cacheKey;
+  this.staticCacheKeysBySignature.set(manyShotSignature, cacheKey);
   console.log(`[StoryGenerationService] ✅ Static cache created: ${cacheKey}`);
 
   return cacheKey;
@@ -159,11 +197,18 @@ async function _ensureStaticCache() {
 
 /**
  * Get or create a chapter-start cache.
- * Includes the full static cache content PLUS the story-so-far up to the end of the previous chapter.
+ * Includes the full static cache content PLUS beat-specific many-shot examples
+ * and the story-so-far up to the end of the previous chapter.
  *
  * This reduces per-subchapter prompt size by moving the large shared prefix into an explicit cache.
  */
-async function _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory, context) {
+async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, choiceHistory, context) {
+  const beatType = this._getBeatType(chapter, subchapter);
+  const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+  const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
+  const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples), rotationSeed);
+
   // Hash only choices that occurred BEFORE this chapter; the chapter-start prefix should not depend
   // on decisions made inside the current chapter.
   const priorChoices = Array.isArray(choiceHistory)
@@ -175,7 +220,7 @@ async function _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory
   const priorChoicesHash = this._hashChoiceHistoryForCache(priorChoices);
 
   // Use a logical key to avoid collisions; store the actual cache key separately.
-  const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
+  const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:beat:${manyShotSignature}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
   const existingKey = this.chapterStartCacheKeys.get(logicalKey);
   if (existingKey) {
     const existing = await llmService.getCache(existingKey);
@@ -184,7 +229,7 @@ async function _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory
   }
 
   const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
-  const cacheKey = `story_chStart_c${chapter}_${safePath}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
+  const cacheKey = `story_chStart_c${chapter}_${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
 
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
@@ -216,15 +261,24 @@ Opening mood: ${chapterOutline.openingMood || 'Unknown'}
 ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.length ? `Must reference:\n${chapterOutline.mustReference.slice(0, 8).map((x) => `- ${x}`).join('\n')}` : ''}` : '### Chapter Outline\n- (Not available)'}
 `;
 
-  const chapterCacheContent = [
+  const chapterCacheParts = [
     staticContent,
+  ];
+  if (manyShotExamples) {
+    chapterCacheParts.push('<many_shot_examples>');
+    chapterCacheParts.push(manyShotExamples);
+    chapterCacheParts.push('</many_shot_examples>');
+  }
+  chapterCacheParts.push(
     '<chapter_start_story_context>',
     storyUpToPrevChapter,
     '</chapter_start_story_context>',
     '<chapter_guidance>',
     arcAndOutline,
-    '</chapter_guidance>',
-  ].join('\n\n');
+    '</chapter_guidance>'
+  );
+
+  const chapterCacheContent = chapterCacheParts.join('\n\n');
 
   await llmService.createCache({
     key: cacheKey,
@@ -238,6 +292,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
       chapter,
       pathKey: effectivePathKey,
       priorChoicesHash,
+      manyShotSignature,
       created: new Date().toISOString(),
       type: 'story_generation_chapter_start',
     },
@@ -258,7 +313,13 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
  * Build dynamic prompt content (changes per request)
  * This is sent alongside the cached static content
  */
-function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { cachedHistoryMaxChapter = null } = {}) {
+function _buildDynamicPrompt(
+  context,
+  chapter,
+  subchapter,
+  isDecisionPoint,
+  { cachedHistoryMaxChapter = null, includeManyShot = true } = {}
+) {
   const parts = [];
 
   // Per Gemini 3 docs: Use XML tags for structure clarity
@@ -284,6 +345,8 @@ function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { ca
   const charactersInScene = this._extractCharactersFromContext(context, chapter);
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+  const chapterBeatLabel = chapterBeatType?.type || 'UNKNOWN';
+  const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
 
   // Voice DNA with recent dialogue examples
   const voiceDNA = buildVoiceDNASection(charactersInScene, context, chapter);
@@ -294,10 +357,14 @@ function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { ca
   }
 
   // Many-shot examples based on current beat type
-  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
-  if (manyShotExamples) {
-    parts.push(manyShotExamples);
-    console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
+  if (includeManyShot) {
+    const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
+    if (manyShotExamples) {
+      parts.push('<many_shot_examples>');
+      parts.push(manyShotExamples);
+      parts.push('</many_shot_examples>');
+      console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
+    }
   }
 
   // NOTE: Dramatic irony section removed - LLM has creative freedom
@@ -342,12 +409,12 @@ function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { ca
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}).
+Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
 Before writing, plan internally (do not output the plan):
 1. What narrative threads from ACTIVE_THREADS must be addressed?
 2. What is the emotional anchor for this subchapter?
-3. How does this advance the chapter beat (${beatType})?
+3. How does this advance the chapter beat (${chapterBeatLabel})?
 
 ${taskSpec}
 </task>
@@ -396,16 +463,31 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push(this._buildKnowledgeSection(context));
   parts.push('</character_knowledge>');
 
-  // Part 5: Style Examples (Few-shot) with Voice DNA and Many-shot
+  // Part 5: Style Examples (Few-shot) + dynamic voice DNA/many-shot
   // Determine which characters might be in this scene based on context
   const charactersInScene = this._extractCharactersFromContext(context, chapter);
   const pathKey = context.pathKey || '';
   const choiceHistory = context.playerChoices || [];
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+  const chapterBeatLabel = chapterBeatType?.type || 'UNKNOWN';
   parts.push('<style_examples>');
   parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType, context));
   parts.push('</style_examples>');
+
+  const voiceDNA = buildVoiceDNASection(charactersInScene, context, chapter);
+  if (voiceDNA) {
+    parts.push('<voice_dna>');
+    parts.push(voiceDNA);
+    parts.push('</voice_dna>');
+  }
+
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
+  if (manyShotExamples) {
+    parts.push('<many_shot_examples>');
+    parts.push(manyShotExamples);
+    parts.push('</many_shot_examples>');
+  }
 
   // Part 6: Consistency Checklist
   parts.push('<active_threads>');
@@ -438,12 +520,12 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}).
+Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
 Before writing, plan internally (do not output the plan):
 1. What narrative threads from ACTIVE_THREADS must be addressed?
 2. What is the emotional anchor for this subchapter?
-3. How does this advance the chapter beat (${beatType})?
+3. How does this advance the chapter beat (${chapterBeatLabel})?
 
 ${taskSpec}
 </task>
@@ -1106,6 +1188,11 @@ ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
     baseTargetWords,
     Math.round(baseTargetWords * promptTargetMultiplier)
   );
+  const segmentMinWords = 300;
+  const segmentMaxWords = 350;
+  const totalSegments = 13; // opening + 3 firstChoice + 9 endings
+  const totalMinWords = segmentMinWords * totalSegments;
+  const totalMaxWords = segmentMaxWords * totalSegments;
 
   task += `
 
@@ -1124,7 +1211,7 @@ ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.agg
 **AGGRESSIVE JACK VOICE EXAMPLES:**
 Same scene, written for aggressive Jack:
 - Entering a dangerous location: "Jack kicked the door open before better judgment could catch up. The warehouse stank of rust and old violence. Good. He was in the mood for both."
-- Confronting a suspect: "'Cut the crap,' Jack said, grabbing his collar. 'I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry.'"
+- Confronting a suspect: "Cut the crap," Jack said, grabbing his collar. "I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry."
 - Internal monologue: "He'd spent years being the patient one. Look where it got him. This time, he wasn't waiting for permission."
 - DO: Push, confront, act first and deal with consequences later
 - DON'T: Hesitate, gather excessive evidence, wait patiently`;
@@ -1134,7 +1221,7 @@ Same scene, written for aggressive Jack:
 **METHODICAL JACK VOICE EXAMPLES:**
 Same scene, written for methodical Jack:
 - Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
-- Confronting a suspect: "'I've got some questions,' Jack said, keeping his voice level. 'You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice.'"
+- Confronting a suspect: "I've got some questions," Jack said, keeping his voice level. "You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice."
 - Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He'd gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
@@ -1166,7 +1253,10 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
 1. **PLAN FIRST:** Internally outline 3-5 major beats before writing. Do NOT output the outline.
-2. **MINIMUM ${MIN_WORDS_PER_SUBCHAPTER} WORDS** - AIM FOR ${targetWords}+ WORDS. Write generously. Do NOT stop short.
+2. **BRANCHING LENGTH REQUIREMENTS:**
+   - Each narrative segment (opening + each response) must be ${segmentMinWords}-${segmentMaxWords} words.
+   - Each complete path (opening + firstChoice response + ending response) must be >= ${MIN_WORDS_PER_SUBCHAPTER} words (target ~${targetWords}).
+   - Total output across all segments should land around ${totalMinWords}-${totalMaxWords} words.
 3. Continue DIRECTLY from where the last subchapter ended
 4. Maintain third-person limited voice throughout (no first-person narration)
 5. Reference specific events from previous chapters (show continuity)
@@ -1242,31 +1332,8 @@ function _buildStyleSection(charactersInScene = [], chapter = 2, pathKey = '', c
     extendedExamples = '';
   }
 
-  // Build many-shot examples section based on beat type
-  let manyShotExamples = '';
-  try {
-    manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
-    if (manyShotExamples) {
-      console.log(`[StoryGen] ✅ Many-shot: ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
-    }
-  } catch (e) {
-    console.error('[StoryGen] ❌ Many-shot examples FAILED:', e.message);
-    manyShotExamples = '';
-  }
-
-  // Build voice DNA section for characters in this scene
-  let voiceDNA = '';
-  try {
-    voiceDNA = buildVoiceDNASection(charactersInScene, context, chapter);
-    if (!voiceDNA || voiceDNA.length < 100) {
-      console.warn('[StoryGen] ⚠️ Voice DNA short/empty. Characters:', charactersInScene);
-    }
-  } catch (e) {
-    console.error('[StoryGen] ❌ Voice DNA FAILED:', e.message);
-    voiceDNA = '';
-  }
-
-  // NOTE: Dramatic irony section removed - LLM has creative freedom
+  // NOTE: Many-shot examples and voice DNA are injected separately to keep
+  // cached and non-cached prompt structures consistent.
 
   return `## STYLE REFERENCE
 
@@ -1278,11 +1345,7 @@ ${EXAMPLE_PASSAGES.tenseMoment}
 
 ${STYLE_EXAMPLES}
 
-${extendedExamples}
-
-${manyShotExamples}
-
-${voiceDNA}`;
+${extendedExamples}`;
 }
 
 /**

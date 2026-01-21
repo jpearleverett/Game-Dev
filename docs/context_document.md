@@ -10,6 +10,50 @@ it aligned with implementation details and constraints.
 
 ---
 
+## 0) Agent quickstart (read this first)
+
+If you are new to this repo, read this section before diving into the code.
+
+### What this game is
+Dead Letters is a narrative-first mobile mystery game. Each subchapter is an
+interactive branching story followed by a puzzle. The player reads the story,
+makes choices, solves the puzzle, and advances the campaign.
+
+### The core narrative model (short version)
+- Each chapter has 3 subchapters (A, B, C).
+- Each subchapter has a branching narrative with 2 choice points (3 options each).
+- This yields 9 possible paths per subchapter (1A-2A ... 1C-2C).
+- Subchapter C ends with a binary chapter-level decision (A/B) that determines
+  the next chapter path key.
+
+### The LLM pipeline (short version)
+- The LLM generates structured JSON that conforms to schemas in
+  `src/services/storyGeneration/schemas.js`.
+- For C subchapters, the decision (`decision`) is generated in the main call.
+- Path-specific decisions (`pathDecisions`) are generated in a second call
+  (9 variants, one per branching path).
+- The prompt is layered: system prompt + cached static content + dynamic prompt.
+
+### The prompt rules you must not break
+- Third-person limited, past tense; double-quote dialogue.
+- Absolute facts and reveal timing in `storyBible.js` are strict canon.
+- Branching key normalization is required (`1A-2A` format).
+- Each branching narrative segment targets 300-350 words.
+
+### Where to start in code (fast path)
+1. `src/services/StoryGenerationService.js`
+2. `src/services/storyGeneration/generation.js`
+3. `src/services/storyGeneration/promptAssembly.js`
+4. `src/services/storyGeneration/context.js`
+5. `src/services/storyGeneration/validation.js`
+
+### Common pitfalls for new agents
+- Mistaking the 900-word minimum as total output (it is per path).
+- Forgetting the second call for `pathDecisions`.
+- Assuming many-shot examples are always in the dynamic prompt (often cached).
+
+---
+
 ## 1) Repository map (high level)
 
 - `App.js`: App root, providers, navigation, and global overlays.
@@ -135,13 +179,17 @@ The final case used by the UI is produced by merging:
   normalizes to canonical `1A-2A` style paths before selection.
 
 Generated entries include:
-- `title`, `narrative`, `branchingNarrative` (opening, choices, endings).
-- `decision` or `pathDecisions`.
-- `briefing`, `storyMeta`, `narrativeThreads`, `consistencyFacts`.
+- `title`, `branchingNarrative` (opening, choices, endings).
+- `decision` (for C subchapters) or `pathDecisions` (second call, 9 variants).
+- `bridge` (stored/used as `bridgeText`), `previously`, `briefing`, `narrativeThreads`.
 - Metadata: `chapter`, `subchapter`, `generatedAt`, `wordCount`, `isFallback`.
 
-`storyMeta` is used to populate case file overlays (recaps, directives, and
-bridge text shown to the player).
+Legacy/backward-compatible fields (not part of current schema contract):
+- `chapterSummary`, `puzzleCandidates`, `consistencyFacts`, `previousThreadsAddressed`.
+
+`storyMeta` is assembled from generated fields (bridge/previously/briefing) and
+used to populate case file overlays (recaps, directives, and bridge text shown
+to the player).
 
 ### 5.4 Branching outlier sets
 `src/data/branchingOutliers.js` (static for Chapter 1) and
@@ -199,19 +247,47 @@ StoryGenerationService builds prompts from multiple layers:
    - Dynamically builds from storyBible.js data (ABSOLUTE_FACTS, WRITING_STYLE,
      CONSISTENCY_RULES, ENGAGEMENT_REQUIREMENTS, etc.)
    - Defines writing identity, noir constraints, and non-negotiables.
-   - Enforces close third-person POV, single quote dialogue, and style rules.
+   - Enforces close third-person POV, double quote dialogue, and style rules.
 2. **Static cache content**
    - Story bible, character reference, craft techniques, style examples,
-     and consistency rules.
+     and beat-specific many-shot examples (rotated deterministically per chapter/subchapter).
    - Cached using explicit Gemini cached content for cost reduction.
 3. **Dynamic prompt**
-   - Story summary and current scene state.
+   - Story summary and current scene state (delta if chapter-start cache is used).
    - Character knowledge and voice DNA.
-   - Many-shot examples by beat type.
-   - Active threads and engagement guidance.
+   - Active threads/consistency checks and engagement guidance.
+   - Many-shot examples only when not already cached (non-cached path or cache miss).
    - Task block and self-critique block.
 
 Prompts use XML-like section tags to reduce context bleed.
+
+### 6.2.3 Caching notes (prompt prefixes)
+- Static cache keys include a **many-shot signature** (beat categories + rotation seed).
+- Chapter-start cache keys include the same signature plus a choice-history hash.
+- Cache versions live in `StoryGenerationService` (`staticCacheVersion`, `chapterStartCacheVersion`).
+
+### 6.2.1 Output schema overview (structured outputs)
+Generation returns JSON that must match schema definitions in `src/services/storyGeneration/schemas.js`.
+Key fields:
+- `title`: 2-5 words.
+- `bridge` (stored as `bridgeText`): short hook sentence (<= 15 words).
+- `previously`: 1-2 sentence recap (<= 40 words).
+- `branchingNarrative`: interactive structure (opening + 2 choice points).
+- `briefing`: puzzle objective summary + 2-3 directives.
+- `narrativeThreads`: active story threads with urgency and dueChapter.
+
+Decision-point subchapters (C):
+- `decision` is returned in the first pass only.
+- `pathDecisions` are generated in a separate second call (9 variants).
+
+### 6.2.2 Branching narrative length expectations
+Branching narrative output is 13 segments total:
+- 1 opening segment
+- 3 first-choice responses
+- 9 ending responses (one per path)
+
+Each segment targets 300-350 words, so total output should be ~4,000-4,500 words.
+Each complete path (opening + firstChoice + ending) must be >= 900 words.
 
 Story bible (`storyBible.js`) is the **single source of truth** for:
 - Absolute facts (timeline, setting, core mystery).
@@ -246,6 +322,7 @@ path keys before lookup.
   - `target`: 1,050 words (3×350=1,050 expected per path)
   - `promptTargetMultiplier`: 1.1 (prompt asks for ~10% more than target)
   - `maximum`: 1,400 words
+  - These thresholds apply per **single path** (opening + firstChoice + ending), not total output.
 - Segment validation minimum: 300 words (ensures 3 segments meet 900 word path minimum).
 - Validation gating flags (see `GENERATION_CONFIG.qualitySettings`):
   - `enableProseQualityValidation`
