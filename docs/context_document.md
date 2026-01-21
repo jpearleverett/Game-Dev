@@ -1254,6 +1254,66 @@ Files touched: `src/services/storyGeneration/prompts.js`,
 `src/services/storyGeneration/promptAssembly.js`, `src/data/storyBible.js`,
 `src/services/storyGeneration/constants.js`, `src/services/storyGeneration/validation.js`.
 
+### 19.17 Prompt construction optimization (Jan 2026)
+
+Deep analysis of the prompt construction system identified several issues and
+implemented fixes based on Gemini 3 documentation best practices.
+
+#### Issues Fixed
+
+1. **rotationSeed undefined bug**
+   - `_buildGenerationPrompt()` used `rotationSeed` before defining it
+   - Caused many-shot rotation to default to 0 (no rotation) in fallback path
+   - Fix: Added calculation `chapter * 10 + subchapter` before use
+
+2. **Many-shot handling clarified**
+   - Original design intent:
+     - Cached path: many-shot in cache, NOT in dynamic prompt
+     - Fallback path: many-shot MUST be in `_buildGenerationPrompt()`
+   - The `includeManyShot` parameter was removed from `_buildDynamicPrompt()`
+     (was always false anyway)
+   - Many-shot preserved in `_buildGenerationPrompt()` for fallback when caching fails
+   - Added clear comments explaining the design pattern
+
+3. **Thread rule consolidation**
+   - Removed duplicate "YOUR CONSISTENCY RESPONSIBILITIES" from `_buildConsistencySection()`
+   - Thread rules now only in system prompt's `<thread_accounting_rule>` and
+     `<thread_escalation_rule>` sections
+
+4. **Cache content order optimized**
+   - Per Gemini docs: "put large and common contents at the beginning"
+   - Many-shot examples (~20k tokens) moved to BEGINNING of cached content
+   - Maximizes implicit cache hits across requests with similar prefixes
+
+5. **Duplicate self-critique removed**
+   - Removed `<self_critique>` block from task sections in both prompt paths
+   - Quality gates covered by system prompt's `<craft_quality_checklist>`
+   - Forbidden patterns still validated post-generation in `validation.js`
+
+6. **PathDecisions system prompt enhanced**
+   - Added `<voice_constraints>` section with POV/tense/tone guidance
+   - Decision intros now match narrative voice (atmospheric, precise, noir-adjacent)
+   - Option titles required in imperative mood, 3-8 words, action-oriented
+
+#### Design Patterns Documented
+
+Two prompt building paths exist and BOTH must be maintained:
+
+- **Cached path (84% of requests)**: `_buildDynamicPrompt()`
+  - Many-shot in cache, not in dynamic prompt
+  - Uses chapter-start or static cache
+
+- **Fallback path (16% of requests)**: `_buildGenerationPrompt()`
+  - Many-shot MUST be included (no cache available)
+  - Used when caching fails (network issues, TTL expiry, etc.)
+
+#### Files touched
+
+- `src/services/storyGeneration/generation.js`
+- `src/services/storyGeneration/promptAssembly.js`
+- `src/services/storyGeneration/prompts.js`
+- `docs/PROMPT_IMPROVEMENT_PLAN.md` (new - detailed analysis and checklist)
+
 ---
 
 ## 20) What to read first if you are new

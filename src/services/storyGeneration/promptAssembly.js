@@ -166,12 +166,16 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
   // Create new cache
   console.log('[StoryGenerationService] 🔧 Creating static content cache...');
 
-  const staticParts = [this._buildStaticCacheContent()];
+  // Per Gemini implicit caching docs: "put large and common contents at the beginning"
+  // Many-shot examples (~20k tokens) are the largest stable content, so they go FIRST.
+  // This maximizes implicit cache hits across requests with similar prefixes.
+  const staticParts = [];
   if (manyShotExamples) {
     staticParts.push('<many_shot_examples>');
     staticParts.push(manyShotExamples);
     staticParts.push('</many_shot_examples>');
   }
+  staticParts.push(this._buildStaticCacheContent());
   const staticContent = staticParts.join('\n\n');
 
   await llmService.createCache({
@@ -261,15 +265,16 @@ Opening mood: ${chapterOutline.openingMood || 'Unknown'}
 ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.length ? `Must reference:\n${chapterOutline.mustReference.slice(0, 8).map((x) => `- ${x}`).join('\n')}` : ''}` : '### Chapter Outline\n- (Not available)'}
 `;
 
-  const chapterCacheParts = [
-    staticContent,
-  ];
+  // Per Gemini implicit caching docs: "put large and common contents at the beginning"
+  // Many-shot examples (~20k tokens) are the largest stable content, so they go FIRST.
+  const chapterCacheParts = [];
   if (manyShotExamples) {
     chapterCacheParts.push('<many_shot_examples>');
     chapterCacheParts.push(manyShotExamples);
     chapterCacheParts.push('</many_shot_examples>');
   }
   chapterCacheParts.push(
+    staticContent,
     '<chapter_start_story_context>',
     storyUpToPrevChapter,
     '</chapter_start_story_context>',
@@ -318,8 +323,10 @@ function _buildDynamicPrompt(
   chapter,
   subchapter,
   isDecisionPoint,
-  { cachedHistoryMaxChapter = null, includeManyShot = true } = {}
+  { cachedHistoryMaxChapter = null } = {}
 ) {
+  // NOTE: Many-shot examples are ALWAYS in the cache (static or chapter-start).
+  // The includeManyShot parameter was removed to prevent duplication.
   const parts = [];
 
   // Per Gemini 3 docs: Use XML tags for structure clarity
@@ -356,16 +363,10 @@ function _buildDynamicPrompt(
     parts.push('</voice_dna>');
   }
 
-  // Many-shot examples based on current beat type
-  if (includeManyShot) {
-    const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
-    if (manyShotExamples) {
-      parts.push('<many_shot_examples>');
-      parts.push(manyShotExamples);
-      parts.push('</many_shot_examples>');
-      console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
-    }
-  }
+  // NOTE: Many-shot examples are included in the cache (static or chapter-start).
+  // They are NOT included here to avoid duplication. This is per Gemini best practices:
+  // "put large and common contents at the beginning of your prompt" for implicit cache hits.
+  // The many-shot examples (~20k tokens) are the largest stable content, so they go in cache.
 
   // NOTE: Dramatic irony section removed - LLM has creative freedom
 
@@ -407,6 +408,8 @@ function _buildDynamicPrompt(
   // Note: beatType already declared earlier for many-shot examples (line 5049)
 
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+  // NOTE: Self-critique checklist was moved to system prompt's <craft_quality_checklist>
+  // to avoid duplication. Gemini 3's native thinking handles quality validation internally.
   parts.push(`
 <task>
 Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
@@ -417,20 +420,7 @@ Before writing, plan internally (do not output the plan):
 3. How does this advance the chapter beat (${chapterBeatLabel})?
 
 ${taskSpec}
-</task>
-
-<self_critique>
-After generating your narrative, review it against these quality gates:
-
-1. **Intent Alignment**: Did I answer the beat requirements, not just write prose?
-2. **Thread Continuity**: Did I address ALL CRITICAL threads explicitly (or acknowledge why any were impossible to act on)?
-3. **Emotional Authenticity**: Is there a genuine gut-punch moment, not just plot?
-4. **Timeline Precision**: Are all durations EXACT per ABSOLUTE_FACTS (never approximate)?
-5. **Hook Quality**: Does the final line create unbearable forward momentum?
-6. **Forbidden Patterns**: Did I avoid all forbidden phrases and constructions?
-
-If any check fails, revise before returning your response.
-</self_critique>`);
+</task>`);
 
   return parts.join('\n\n');
 }
@@ -463,7 +453,9 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push(this._buildKnowledgeSection(context));
   parts.push('</character_knowledge>');
 
-  // Part 5: Style Examples (Few-shot) + dynamic voice DNA/many-shot
+  // Part 5: Style Examples (Few-shot) + dynamic voice DNA
+  // NOTE: Many-shot examples are now ALWAYS in the cache (static or chapter-start)
+  // to avoid duplication and optimize for implicit caching.
   // Determine which characters might be in this scene based on context
   const charactersInScene = this._extractCharactersFromContext(context, chapter);
   const pathKey = context.pathKey || '';
@@ -471,6 +463,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
   const chapterBeatLabel = chapterBeatType?.type || 'UNKNOWN';
+  // Calculate rotationSeed for consistent many-shot selection (used in cache, referenced here for context)
   const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
   parts.push('<style_examples>');
   parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType, context));
@@ -483,6 +476,10 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('</voice_dna>');
   }
 
+  // IMPORTANT: Many-shot examples MUST be included in the non-cached fallback path.
+  // When caching fails (network issues, TTL expiry, etc.), this function provides the complete prompt.
+  // The many-shot examples are essential for quality generation.
+  // In the cached path (_buildDynamicPrompt), many-shot is in the cache, so it's not duplicated there.
   const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
   if (manyShotExamples) {
     parts.push('<many_shot_examples>');
@@ -518,6 +515,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
 
   // Part 10: Current Task Specification (LAST for recency effect)
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+  // NOTE: Self-critique checklist is in system prompt's <craft_quality_checklist>
   const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
   parts.push(`
 <task>
@@ -529,20 +527,7 @@ Before writing, plan internally (do not output the plan):
 3. How does this advance the chapter beat (${chapterBeatLabel})?
 
 ${taskSpec}
-</task>
-
-<self_critique>
-After generating your narrative, review it against these quality gates:
-
-1. **Intent Alignment**: Did I answer the beat requirements, not just write prose?
-2. **Thread Continuity**: Did I address ALL CRITICAL threads explicitly (or acknowledge why any were impossible to act on)?
-3. **Emotional Authenticity**: Is there a genuine gut-punch moment, not just plot?
-4. **Timeline Precision**: Are all durations EXACT per ABSOLUTE_FACTS (never approximate)?
-5. **Hook Quality**: Does the final line create unbearable forward momentum?
-6. **Forbidden Patterns**: Did I avoid all forbidden phrases and constructions?
-
-If any check fails, revise before returning your response.
-</self_critique>`);
+</task>`);
 
   return parts.join('\n\n');
 }
@@ -1440,13 +1425,9 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
     }
   }
 
-  section += `
-
-### YOUR CONSISTENCY RESPONSIBILITIES
-1. MANDATORY threads above must be visibly addressed in dialogue or action
-2. NEVER contradict established character names, relationships, or timeline facts
-3. Setting tone: modern city with hidden fantasy layer (no Tolkien-style elements)
-4. Respect player's path personality and previous decision consequences`;
+  // NOTE: Thread handling rules (mandatory requirements, escalation) are defined in
+  // the system prompt's <thread_accounting_rule> and <thread_escalation_rule> sections.
+  // We don't repeat them here to avoid duplication and reduce token count.
 
   return section;
 }
