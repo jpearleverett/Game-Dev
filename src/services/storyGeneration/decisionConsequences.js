@@ -76,9 +76,10 @@ function _ensureDecisionConsequencesFast(choiceHistory) {
     }
 
     // Character impact based on approach - not tied to specific non-canonical characters
+    const lowerFocus = focus.toLowerCase();
     const characterImpact = {
-      aggression: focus.toLowerCase().includes('confront') ? 10 : focus.toLowerCase().includes('cautious') ? -5 : 0,
-      thoroughness: focus.toLowerCase().includes('evidence') ? 10 : 0,
+      aggression: lowerFocus.includes('confront') ? 10 : (lowerFocus.includes('cautious') || lowerFocus.includes('methodical')) ? -5 : 0,
+      thoroughness: lowerFocus.includes('evidence') ? 10 : 0,
     };
 
     // Make the "immediate" consequence feel concrete even without an LLM call.

@@ -206,9 +206,13 @@ function _analyzePathPersonality(choiceHistory) {
         alignment = null;
       }
 
-      if (alignment === 'methodical') {
+      const normalizedAlignment = typeof alignment === 'string'
+        ? (alignment.toLowerCase() === 'cautious' ? 'methodical' : alignment.toLowerCase())
+        : null;
+
+      if (normalizedAlignment === 'methodical') {
         methodicalScore += 6 * weight;
-      } else if (alignment === 'aggressive') {
+      } else if (normalizedAlignment === 'aggressive') {
         aggressiveScore += 6 * weight;
       } else {
         // Fallback scoring: A tends to be "methodical/evidence-first", B tends to be "aggressive/instinct-first".

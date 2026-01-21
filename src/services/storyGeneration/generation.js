@@ -14,7 +14,6 @@ import {
   MAX_RETRIES,
   MIN_WORDS_PER_SUBCHAPTER,
   SUBCHAPTERS_PER_CHAPTER,
-  TRUNCATE_SUMMARY,
 } from './constants';
 import { ABSOLUTE_FACTS, GENERATION_CONFIG, STORY_STRUCTURE } from '../../data/storyBible';
 import { saveGeneratedChapter } from '../../storage/generatedStoryStorage';
@@ -396,20 +395,12 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         );
 
         // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
-        // Retrieve previous thought signature for reasoning chain continuity
-        const prevThoughtSignature = this._getPreviousThoughtSignature(chapter, subchapter, effectivePathKey);
-
-        // Build prior messages with thought signature if available
+        // Thought signatures must be returned with the exact model part that produced them.
+        // We don't persist full prior model responses, so skip signature replay for safety.
         const priorMessages = [];
-        if (prevThoughtSignature && context.previousChapters?.length > 0) {
-          const lastChapter = context.previousChapters[context.previousChapters.length - 1];
-          const prevNarrativeSummary = lastChapter?.narrative
-            ? `Previous scene summary: ${lastChapter.narrative.slice(0, TRUNCATE_SUMMARY)}...`
-            : 'Continuing the story...';
-          priorMessages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
-        }
+        const hasThoughtSignatureFromPrevious = false;
 
-        console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}${prevThoughtSignature ? ' (with thought signature)' : ''}`);
+        console.log(`[StoryGenerationService] ✅ Cached generation for Chapter ${chapter}.${subchapter}`);
         llmTrace('StoryGenerationService', traceId, 'prompt.built', {
           caseNumber,
           pathKey,
@@ -419,7 +410,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           cacheKey,
           cachingEnabled: true,
           dynamicPromptLength: dynamicPrompt?.length || 0,
-          hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
+          hasThoughtSignatureFromPrevious,
           schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
           contextSummary: {
             previousChapters: context?.previousChapters?.length || 0,
@@ -469,22 +460,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
         // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
-        // Per Gemini 3 docs: thought signatures maintain reasoning chain across multi-turn conversations.
-        // Retrieve the thought signature from the previous subchapter and include it in the conversation.
-        const prevThoughtSignature = this._getPreviousThoughtSignature(chapter, subchapter, effectivePathKey);
-
-        // Build messages with thought signature if available
-        // The thought signature must be attached to a model message with representative previous content
-        const messages = [];
-        if (prevThoughtSignature && context.previousChapters?.length > 0) {
-          // Get a summary of the previous narrative for context
-          const lastChapter = context.previousChapters[context.previousChapters.length - 1];
-          const prevNarrativeSummary = lastChapter?.narrative
-            ? `Previous scene summary: ${lastChapter.narrative.slice(0, TRUNCATE_SUMMARY)}...`
-            : 'Continuing the story...';
-          messages.push({ role: 'model', content: prevNarrativeSummary, thoughtSignature: prevThoughtSignature });
-        }
-        messages.push({ role: 'user', content: prompt });
+        // Thought signatures must be returned with the exact model part that produced them.
+        // We don't persist full prior model responses, so skip signature replay for safety.
+        const messages = [{ role: 'user', content: prompt }];
 
         llmTrace('StoryGenerationService', traceId, 'prompt.built', {
           caseNumber,
@@ -494,7 +472,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           isDecisionPoint,
           cachingEnabled: false,
           promptLength: prompt?.length || 0,
-          hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
+          hasThoughtSignatureFromPrevious: false,
           schema: isDecisionPoint ? 'DECISION_CONTENT_SCHEMA' : 'STORY_CONTENT_SCHEMA',
           contextSummary: {
             previousChapters: context?.previousChapters?.length || 0,
@@ -529,7 +507,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
               subchapter,
               pathKey,
               isDecisionPoint,
-              hasThoughtSignatureFromPrevious: !!prevThoughtSignature,
+              hasThoughtSignatureFromPrevious: false,
               reason,
             },
           }

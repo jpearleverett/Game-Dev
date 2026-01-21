@@ -423,7 +423,7 @@ ${taskSpec}
 After generating your narrative, review it against these quality gates:
 
 1. **Intent Alignment**: Did I answer the beat requirements, not just write prose?
-2. **Thread Continuity**: Did I address at least 2 CRITICAL threads explicitly?
+2. **Thread Continuity**: Did I address ALL CRITICAL threads explicitly (or acknowledge why any were impossible to act on)?
 3. **Emotional Authenticity**: Is there a genuine gut-punch moment, not just plot?
 4. **Timeline Precision**: Are all durations EXACT per ABSOLUTE_FACTS (never approximate)?
 5. **Hook Quality**: Does the final line create unbearable forward momentum?
@@ -471,6 +471,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
   const chapterBeatLabel = chapterBeatType?.type || 'UNKNOWN';
+  const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
   parts.push('<style_examples>');
   parts.push(this._buildStyleSection(charactersInScene, chapter, pathKey, choiceHistory, beatType, chapterBeatType, context));
   parts.push('</style_examples>');
@@ -534,7 +535,7 @@ ${taskSpec}
 After generating your narrative, review it against these quality gates:
 
 1. **Intent Alignment**: Did I answer the beat requirements, not just write prose?
-2. **Thread Continuity**: Did I address at least 2 CRITICAL threads explicitly?
+2. **Thread Continuity**: Did I address ALL CRITICAL threads explicitly (or acknowledge why any were impossible to act on)?
 3. **Emotional Authenticity**: Is there a genuine gut-punch moment, not just plot?
 4. **Timeline Precision**: Are all durations EXACT per ABSOLUTE_FACTS (never approximate)?
 5. **Hook Quality**: Does the final line create unbearable forward momentum?
@@ -1156,7 +1157,7 @@ ${subchapterOutline.endingTransition ? `- **Transition to next:** ${subchapterOu
       task += `
 - **Decision Setup:** ${subchapterOutline.decisionSetup}
 - **Option A Direction:** ${subchapterOutline.optionADirection || 'More direct approach'}
-- **Option B Direction:** ${subchapterOutline.optionBDirection || 'More cautious approach'}`;
+- **Option B Direction:** ${subchapterOutline.optionBDirection || 'More methodical approach'}`;
     }
   }
 
@@ -1304,13 +1305,13 @@ Do NOT include pathDecisions in this response. Path-specific decisions are gener
 1. Present TWO distinct, defensible paths (Option A and Option B)
 2. Both options must be morally complex - NO obvious "right" answer
 3. The decision must feel EARNED by the current narrative
-4. Connect to the themes of wrongful conviction, certainty vs truth
+4. Connect to the themes of perception vs reality, the cost of naming, patterns as traps/lifelines, and institutional erasure
 5. The intro should frame the dilemma in 1-2 sentences (max 50 words)
 
 **For EACH option:**
 - title: Action statement in imperative mood (3-8 words)
 - focus: What this path prioritizes and what it risks (1 sentence)
-- personalityAlignment: aggressive | cautious | balanced`;
+- personalityAlignment: aggressive | methodical | balanced`;
   }
 
   return task;

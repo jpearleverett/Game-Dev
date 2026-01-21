@@ -370,7 +370,7 @@ export const DECISION_ONLY_SCHEMA = {
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
+              enum: ['aggressive', 'methodical', 'balanced'],
               description: 'Which player personality type would naturally choose this option',
             },
             narrativeSetup: {
@@ -388,7 +388,7 @@ export const DECISION_ONLY_SCHEMA = {
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
-              enum: ['aggressive', 'methodical', 'neutral'],
+              enum: ['aggressive', 'methodical', 'balanced'],
               description: 'Which player personality type would naturally choose this option',
             },
             narrativeSetup: {
@@ -449,7 +449,7 @@ export const DECISION_CONTENT_SCHEMA = {
             key: { type: 'string', description: 'Option identifier: "A"' },
             title: { type: 'string', description: 'Short imperative action (3-8 words)' },
             focus: { type: 'string', description: 'What this choice prioritizes (1 sentence)' },
-            personalityAlignment: { type: 'string', enum: ['aggressive', 'cautious', 'balanced'] },
+            personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'balanced'] },
           },
           required: ['key', 'title', 'focus', 'personalityAlignment'],
         },
@@ -459,7 +459,7 @@ export const DECISION_CONTENT_SCHEMA = {
             key: { type: 'string', description: 'Option identifier: "B"' },
             title: { type: 'string', description: 'Short imperative action (3-8 words)' },
             focus: { type: 'string', description: 'What this choice prioritizes (1 sentence)' },
-            personalityAlignment: { type: 'string', enum: ['aggressive', 'cautious', 'balanced'] },
+            personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'balanced'] },
           },
           required: ['key', 'title', 'focus', 'personalityAlignment'],
         },
@@ -648,7 +648,7 @@ export const PATHDECISIONS_ONLY_SCHEMA = {
               key: { type: 'string', description: 'Always "A"' },
               title: { type: 'string', description: 'Short imperative action (3-8 words)' },
               focus: { type: 'string', description: 'What this choice prioritizes (1 sentence)' },
-              personalityAlignment: { type: 'string', enum: ['aggressive', 'cautious', 'balanced'] },
+              personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'balanced'] },
             },
             required: ['key', 'title', 'focus', 'personalityAlignment'],
           },
@@ -658,7 +658,7 @@ export const PATHDECISIONS_ONLY_SCHEMA = {
               key: { type: 'string', description: 'Always "B"' },
               title: { type: 'string', description: 'Short imperative action (3-8 words)' },
               focus: { type: 'string', description: 'What this choice prioritizes (1 sentence)' },
-              personalityAlignment: { type: 'string', enum: ['aggressive', 'cautious', 'balanced'] },
+              personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'balanced'] },
             },
             required: ['key', 'title', 'focus', 'personalityAlignment'],
           },
