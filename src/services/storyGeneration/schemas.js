@@ -366,7 +366,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront Wade directly"' },
+            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront the suspect directly"' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',

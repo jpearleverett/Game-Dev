@@ -82,7 +82,7 @@ function _ensureDecisionConsequencesFast(choiceHistory) {
     };
 
     // Make the "immediate" consequence feel concrete even without an LLM call.
-    // Titles are imperative; convert to an infinitive-ish phrase ("Confront Wade" -> "confront Wade").
+    // Titles are imperative; convert to an infinitive-ish phrase ("Confront the suspect" -> "confront the suspect").
     const toAction = String(title || '')
       .trim()
       .replace(/^[A-Z]/, (m) => m.toLowerCase());
