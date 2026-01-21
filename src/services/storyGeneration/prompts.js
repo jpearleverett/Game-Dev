@@ -36,19 +36,20 @@ const MANY_SHOT_CATEGORY_MAP = {
 };
 
 export const getManyShotCategories = (beatType, chapterBeatType) => {
-  if (chapterBeatType?.type && MANY_SHOT_CATEGORY_MAP[chapterBeatType.type]) {
-    return {
-      source: 'chapter',
-      key: chapterBeatType.type,
-      categories: MANY_SHOT_CATEGORY_MAP[chapterBeatType.type],
-    };
-  }
+  const chapterCategories = (chapterBeatType?.type && MANY_SHOT_CATEGORY_MAP[chapterBeatType.type])
+    ? MANY_SHOT_CATEGORY_MAP[chapterBeatType.type]
+    : [];
+  const subchapterCategories = (beatType && MANY_SHOT_CATEGORY_MAP[beatType])
+    ? MANY_SHOT_CATEGORY_MAP[beatType]
+    : [];
 
-  if (beatType && MANY_SHOT_CATEGORY_MAP[beatType]) {
+  if (chapterCategories.length || subchapterCategories.length) {
+    const merged = [...chapterCategories, ...subchapterCategories].filter(Boolean);
+    const deduped = [...new Set(merged)];
     return {
-      source: 'subchapter',
-      key: beatType,
-      categories: MANY_SHOT_CATEGORY_MAP[beatType],
+      source: chapterCategories.length && subchapterCategories.length ? 'chapter+subchapter' : chapterCategories.length ? 'chapter' : 'subchapter',
+      key: `${chapterBeatType?.type || 'none'}|${beatType || 'none'}`,
+      categories: deduped,
     };
   }
 
@@ -597,6 +598,33 @@ export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15, opt
     const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 13 : null;
     return getRotatedScenes(scenes, scenesPerCategory, categorySeed);
   }).slice(0, limit);
+
+  if (selectedScenes.length === 0 && categories.join('|') !== DEFAULT_MANY_SHOT_CATEGORIES.join('|')) {
+    const fallbackCategories = DEFAULT_MANY_SHOT_CATEGORIES;
+    const fallbackPerCategory = Math.ceil(limit / fallbackCategories.length);
+    const fallbackScenes = fallbackCategories.flatMap((category, idx) => {
+      const scenes = MANY_SHOT_SCENES[category] || [];
+      const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 17 : null;
+      return getRotatedScenes(scenes, fallbackPerCategory, categorySeed);
+    }).slice(0, limit);
+    if (fallbackScenes.length > 0) {
+      return `
+## MANY-SHOT LEARNING: ${fallbackCategories[0].toUpperCase()} SCENES
+Study these ${fallbackScenes.length} scene excerpts from Dennis Lehane's "Mystic River" to absorb patterns for ${fallbackCategories.map(c => {
+        const metadata = MANY_SHOT_METADATA[c];
+        return `${c} (${metadata?.totalExamples || 0} examples)`;
+      }).join(', ')}:
+
+${fallbackScenes.map((scene, i) => `---
+EXAMPLE ${i + 1}:
+${scene}
+`).join('\n')}
+
+---
+These scenes demonstrate the natural rhythm, dialogue patterns, and emotional beats characteristic of masterful noir fiction. Let them guide your voice, pacing, and scene construction.
+`;
+    }
+  }
 
   if (selectedScenes.length === 0) {
     return ''; // No many-shot examples available
