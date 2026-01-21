@@ -1312,11 +1312,14 @@ Do NOT include pathDecisions in this response. Path-specific decisions are gener
 - personalityAlignment: aggressive | methodical | balanced`;
   }
 
-  // ========== PINNED FORBIDDEN PATTERNS (Top 5 most common violations) ==========
+  // ========== PINNED FORBIDDEN PATTERNS (Top violations) ==========
   task += `
 
 ### ⛔ FORBIDDEN PATTERNS (Automatic Quality Failure)
 NEVER use these in your narrative:
+- Em dashes (—). Use commas, periods, or semicolons instead. NEVER use —
+- "It wasn't just X; it was Y" / "It didn't just X; it Y" constructions (common AI pattern - BANNED)
+- "not just...but" or "more than just" formulations with semicolons
 - "somehow" (vague, lazy writing)
 - "little did X know" (omniscient intrusion)
 - "unbeknownst to" (archaic, breaks POV)
