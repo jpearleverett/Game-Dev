@@ -205,10 +205,10 @@ StoryGenerationService builds prompts from multiple layers:
      and beat-specific many-shot examples (rotated deterministically per chapter/subchapter).
    - Cached using explicit Gemini cached content for cost reduction.
 3. **Dynamic prompt**
-   - Story summary and current scene state.
-   - Character knowledge, voice DNA, and active threads/consistency checks.
-   - Many-shot examples by beat type.
-   - Active threads and engagement guidance.
+   - Story summary and current scene state (delta if chapter-start cache is used).
+   - Character knowledge and voice DNA.
+   - Active threads/consistency checks and engagement guidance.
+   - Many-shot examples only when not already cached (non-cached path or cache miss).
    - Task block and self-critique block.
 
 Prompts use XML-like section tags to reduce context bleed.
