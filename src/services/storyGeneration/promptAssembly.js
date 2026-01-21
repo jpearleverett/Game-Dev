@@ -64,10 +64,11 @@ const sanitizeCacheKeyPart = (value, fallback = 'default') => {
   return safe || fallback;
 };
 
-const getManyShotSignature = (beatType, chapterBeatType, hasExamples) => {
+const getManyShotSignature = (beatType, chapterBeatType, hasExamples, rotationSeed = null) => {
   const { categories } = getManyShotCategories(beatType, chapterBeatType);
   const signature = hasExamples ? categories.join('_') : 'none';
-  return sanitizeCacheKeyPart(`ms_${signature}`, 'ms_none');
+  const rotationTag = Number.isFinite(rotationSeed) ? `r${Math.abs(Math.floor(rotationSeed))}` : 'r0';
+  return sanitizeCacheKeyPart(`ms_${signature}_${rotationTag}`, 'ms_none');
 };
 
 /**
@@ -143,10 +144,21 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
   const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples));
   const cacheKey = `story_static_${manyShotSignature}_v${this.staticCacheVersion}`;
 
+  const cachedKey = this.staticCacheKeysBySignature?.get(manyShotSignature);
+  if (cachedKey) {
+    const cached = await llmService.getCache(cachedKey);
+    if (cached) {
+      this.staticCacheKey = cachedKey;
+      return cachedKey;
+    }
+    this.staticCacheKeysBySignature.delete(manyShotSignature);
+  }
+
   // Check if cache exists
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
     this.staticCacheKey = cacheKey;
+    this.staticCacheKeysBySignature.set(manyShotSignature, cacheKey);
     console.log(`[StoryGenerationService] ♻️ Using existing static cache: ${cacheKey}`);
     return cacheKey;
   }
@@ -177,6 +189,7 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
   });
 
   this.staticCacheKey = cacheKey;
+  this.staticCacheKeysBySignature.set(manyShotSignature, cacheKey);
   console.log(`[StoryGenerationService] ✅ Static cache created: ${cacheKey}`);
 
   return cacheKey;
@@ -192,8 +205,9 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
 async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, choiceHistory, context) {
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
-  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
-  const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples));
+  const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
+  const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples), rotationSeed);
 
   // Hash only choices that occurred BEFORE this chapter; the chapter-start prefix should not depend
   // on decisions made inside the current chapter.
@@ -332,6 +346,7 @@ function _buildDynamicPrompt(
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
   const chapterBeatLabel = chapterBeatType?.type || 'UNKNOWN';
+  const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
 
   // Voice DNA with recent dialogue examples
   const voiceDNA = buildVoiceDNASection(charactersInScene, context, chapter);
@@ -343,7 +358,7 @@ function _buildDynamicPrompt(
 
   // Many-shot examples based on current beat type
   if (includeManyShot) {
-    const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+    const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
     if (manyShotExamples) {
       parts.push('<many_shot_examples>');
       parts.push(manyShotExamples);
@@ -394,7 +409,7 @@ function _buildDynamicPrompt(
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
+Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
 Before writing, plan internally (do not output the plan):
 1. What narrative threads from ACTIVE_THREADS must be addressed?
@@ -467,7 +482,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('</voice_dna>');
   }
 
-  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
   if (manyShotExamples) {
     parts.push('<many_shot_examples>');
     parts.push(manyShotExamples);
@@ -505,7 +520,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
+Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
 Before writing, plan internally (do not output the plan):
 1. What narrative threads from ACTIVE_THREADS must be addressed?

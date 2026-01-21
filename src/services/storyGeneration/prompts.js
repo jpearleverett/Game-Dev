@@ -7,7 +7,7 @@ import {
   MICRO_TENSION_TECHNIQUES,
   SENTENCE_RHYTHM,
 } from '../../data/storyBible';
-import { getScenesByCategory, MANY_SHOT_METADATA } from '../../data/manyShot';
+import { MANY_SHOT_METADATA, MANY_SHOT_SCENES } from '../../data/manyShot';
 import { TOTAL_CHAPTERS } from './constants';
 import { extractRecentDialogue } from './helpers';
 
@@ -28,6 +28,11 @@ const MANY_SHOT_CATEGORY_MAP = {
   SETUP: ['setup', 'atmospheric'],
   CLIMAX: ['action', 'confrontation', 'revelation'],
   RESOLUTION: ['aftermath', 'decision_point', 'revelation'],
+  INCITING_INCIDENT: ['setup', 'atmospheric', 'investigation'],
+  REVELATION: ['revelation', 'internal_monologue', 'aftermath'],
+  RELATIONSHIP: ['dialogue_tension', 'internal_monologue', 'aftermath'],
+  TENSION: ['dialogue_tension', 'atmospheric', 'investigation'],
+  RECKONING: ['aftermath', 'revelation', 'confrontation'],
 };
 
 export const getManyShotCategories = (beatType, chapterBeatType) => {
@@ -564,14 +569,34 @@ ${NEGATIVE_EXAMPLES.heavyForeshadowing.problems.map(p => `- ${p}`).join('\n')}
 // ============================================================================
 // MANY-SHOT SCENE EXAMPLES - Pattern learning from Mystic River
 // ============================================================================
-export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15) => {
+const getRotatedScenes = (scenes = [], takeCount, rotationSeed) => {
+  if (!Array.isArray(scenes) || scenes.length === 0) return [];
+  if (!Number.isFinite(rotationSeed) || rotationSeed <= 0) {
+    return scenes.slice(0, takeCount);
+  }
+  if (scenes.length <= takeCount) {
+    return scenes.slice(0, takeCount);
+  }
+
+  const offset = Math.abs(Math.floor(rotationSeed)) % scenes.length;
+  const rotated = [];
+  for (let i = 0; i < takeCount; i += 1) {
+    rotated.push(scenes[(offset + i) % scenes.length]);
+  }
+  return rotated;
+};
+
+export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15, options = {}) => {
+  const { rotationSeed = null } = options;
   const { categories } = getManyShotCategories(beatType, chapterBeatType);
 
   // Get scenes from selected categories
   const scenesPerCategory = Math.ceil(limit / categories.length);
-  const selectedScenes = categories.flatMap(category =>
-    getScenesByCategory(category, scenesPerCategory)
-  ).slice(0, limit);
+  const selectedScenes = categories.flatMap((category, idx) => {
+    const scenes = MANY_SHOT_SCENES[category] || [];
+    const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 13 : null;
+    return getRotatedScenes(scenes, scenesPerCategory, categorySeed);
+  }).slice(0, limit);
 
   if (selectedScenes.length === 0) {
     return ''; // No many-shot examples available

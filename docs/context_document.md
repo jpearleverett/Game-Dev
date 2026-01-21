@@ -202,7 +202,7 @@ StoryGenerationService builds prompts from multiple layers:
    - Enforces close third-person POV, double quote dialogue, and style rules.
 2. **Static cache content**
    - Story bible, character reference, craft techniques, style examples,
-     and beat-specific many-shot examples (when cached).
+     and beat-specific many-shot examples (rotated deterministically per chapter/subchapter).
    - Cached using explicit Gemini cached content for cost reduction.
 3. **Dynamic prompt**
    - Story summary and current scene state.
