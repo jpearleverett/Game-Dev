@@ -476,11 +476,16 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('</voice_dna>');
   }
 
-  // NOTE: Many-shot examples removed from non-cached path.
-  // They are included in _ensureStaticCache() and _ensureChapterStartCache() instead.
-  // This eliminates duplication and ensures consistent cache behavior.
-  // If this is a fallback non-cached generation, many-shot examples may be missing,
-  // but the style examples above provide sufficient guidance.
+  // IMPORTANT: Many-shot examples MUST be included in the non-cached fallback path.
+  // When caching fails (network issues, TTL expiry, etc.), this function provides the complete prompt.
+  // The many-shot examples are essential for quality generation.
+  // In the cached path (_buildDynamicPrompt), many-shot is in the cache, so it's not duplicated there.
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
+  if (manyShotExamples) {
+    parts.push('<many_shot_examples>');
+    parts.push(manyShotExamples);
+    parts.push('</many_shot_examples>');
+  }
 
   // Part 6: Consistency Checklist
   parts.push('<active_threads>');

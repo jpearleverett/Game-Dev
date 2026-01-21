@@ -229,13 +229,16 @@ Add to `buildPathDecisionsSystemPrompt()`:
 - **Change:** Added `rotationSeed` calculation before use in `_buildGenerationPrompt()`
 - **Impact:** Prevents potential runtime errors in non-cached generation path
 
-### 2. Eliminated Many-Shot Duplication (P1)
+### 2. Fixed Many-Shot Handling (P1)
 - **Files:** `promptAssembly.js`, `generation.js`
+- **Original Design:**
+  - Cached path: many-shot in cache, `includeManyShot: false` in dynamic prompt
+  - Fallback path: many-shot MUST be in `_buildGenerationPrompt()` since there's no cache
 - **Changes:**
-  - Removed `includeManyShot` parameter from `_buildDynamicPrompt()`
-  - Removed many-shot section from `_buildGenerationPrompt()`
-  - Many-shot examples now ONLY in cache (static or chapter-start)
-- **Impact:** Reduces ~20k tokens of duplication per request
+  - Removed `includeManyShot` parameter from `_buildDynamicPrompt()` (was always false anyway)
+  - KEPT many-shot in `_buildGenerationPrompt()` for fallback when caching fails
+  - Added clear comment explaining the design pattern
+- **Impact:** Maintains correct behavior for both cached and fallback paths
 
 ### 3. Consolidated Thread Rules (P1)
 - **File:** `promptAssembly.js:1441-1443`
@@ -267,13 +270,13 @@ Add to `buildPathDecisionsSystemPrompt()`:
 ## Testing Checklist
 
 After implementation, verify:
-- [x] Non-cached generation works without errors (rotationSeed fixed)
-- [x] Cached generation produces same structure as non-cached (unified structure)
-- [x] Many-shot examples appear exactly once in prompt (only in cache)
+- [x] Non-cached generation works without errors (rotationSeed fixed + many-shot preserved)
+- [x] Cached generation works correctly (many-shot in cache, not in dynamic prompt)
+- [x] Fallback path has many-shot (CRITICAL: restored after initial incorrect removal)
 - [ ] Voice DNA is in chapter-start cache (deferred - minimal impact)
 - [x] Thread rules appear only in system prompt (consolidated)
-- [x] Self-critique appears only in system prompt (removed from task)
-- [x] Token count reduced vs. baseline (~20k+ reduction from deduplication)
+- [x] Self-critique covered by system prompt's `<craft_quality_checklist>`
+- [x] Forbidden patterns checked by post-processing validation
 - [ ] Generation quality maintained or improved (requires runtime testing)
 
 ---
