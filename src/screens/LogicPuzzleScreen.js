@@ -470,30 +470,36 @@ export default function LogicPuzzleScreen({ navigation }) {
     const currentCaseNumber = activeCase?.caseNumber;
     const { chapter: currentChapter, subchapter: currentSubchapter } = parseCaseNumber(currentCaseNumber);
     const isFinalSubchapter = currentSubchapter >= 3;
-    const computedNextCase = !isFinalSubchapter
-      ? formatCaseNumber(currentChapter, currentSubchapter + 1)
-      : null;
 
-    console.log(`[LogicPuzzleScreen] handleContinueAfterSolve: currentCase=${currentCaseNumber}, nextCase=${computedNextCase}`);
+    console.log(`[LogicPuzzleScreen] handleContinueAfterSolve: currentCase=${currentCaseNumber}, isFinalSubchapter=${isFinalSubchapter}`);
 
     try {
-      if (computedNextCase) {
-        // Ensure content is generated for the NEXT case
+      if (isFinalSubchapter) {
+        // C subchapter: use handleStoryContinue to properly activate next chapter
+        // applyPreDecision was already called in completeLogicPuzzle, which updated
+        // storyCampaign.activeCaseNumber to the next chapter's first case (e.g., 002A)
+        console.log(`[LogicPuzzleScreen] C subchapter solved, calling handleStoryContinue for next chapter`);
+        await handleStoryContinue();
+      } else {
+        // A/B subchapter: compute and navigate to next subchapter
+        const computedNextCase = formatCaseNumber(currentChapter, currentSubchapter + 1);
         const nextPathKey = storyCampaign?.currentPathKey || 'ROOT';
         console.log(`[LogicPuzzleScreen] Ensuring content for ${computedNextCase} (path: ${nextPathKey})`);
         await game.ensureStoryContent?.(computedNextCase, nextPathKey);
         console.log(`[LogicPuzzleScreen] Navigating to CaseFile with caseNumber=${computedNextCase}`);
         navigation.replace('CaseFile', { caseNumber: computedNextCase });
-      } else {
-        // Final subchapter (C) - go back to CaseFile to show decision panel
-        console.log(`[LogicPuzzleScreen] Final subchapter, navigating to CaseFile without param`);
-        navigation.replace('CaseFile');
       }
     } catch (error) {
-      console.warn('[LogicPuzzleScreen] Continue failed, navigating to CaseFile:', error?.message);
-      navigation.replace('CaseFile', computedNextCase ? { caseNumber: computedNextCase } : undefined);
+      console.warn('[LogicPuzzleScreen] Continue failed:', error?.message);
+      // Fallback: try handleStoryContinue which should handle state correctly
+      try {
+        await handleStoryContinue();
+      } catch (fallbackError) {
+        console.warn('[LogicPuzzleScreen] Fallback also failed:', fallbackError?.message);
+        navigation.replace('CaseFile');
+      }
     }
-  }, [activeCase?.caseNumber, game, navigation, storyCampaign?.currentPathKey]);
+  }, [activeCase?.caseNumber, game, navigation, storyCampaign?.currentPathKey, handleStoryContinue]);
 
   const placedCounts = useMemo(() => {
     const counts = {};
