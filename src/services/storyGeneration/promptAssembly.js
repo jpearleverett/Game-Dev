@@ -1053,9 +1053,30 @@ function _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
   // Get beat type constraints for tempo variation
   const beatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
 
+  // Calculate word count values for critical requirements
+  const baseTargetWords = GENERATION_CONFIG?.wordCount?.target || MIN_WORDS_PER_SUBCHAPTER;
+  const promptTargetMultiplier = GENERATION_CONFIG?.wordCount?.promptTargetMultiplier || 1;
+  const targetWords = Math.max(
+    baseTargetWords,
+    Math.round(baseTargetWords * promptTargetMultiplier)
+  );
+  const segmentMinWords = 300;
+  const segmentMaxWords = 350;
+  const totalSegments = 13; // opening + 3 firstChoice + 9 endings
+
   let task = `## CURRENT TASK
 
 Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
+
+### ⚠️ CRITICAL REQUIREMENTS (Read First) ⚠️
+Before writing, ensure you will meet these NON-NEGOTIABLE requirements:
+
+1. **WORD COUNT:** Each narrative segment MUST be ${segmentMinWords}-${segmentMaxWords} words (13 segments = ~4,000-4,500 total)
+2. **POV/TENSE:** Third-person limited, past tense, aligned to Jack Halloway
+3. **DIALOGUE:** All dialogue uses DOUBLE QUOTES only ("Like this," Jack said)
+4. **CONTINUATION:** Start immediately after the last sentence - NO recap, restart, or summary
+5. **OUTPUT:** Valid JSON only - no commentary, no markdown wrapping
+6. **BRANCHING KEYS:** Use full format: 1A-2A, 1B-2B, etc. (NOT just 2A/2B/2C)
 
 ### STORY POSITION
 - Chapter ${chapter} of ${TOTAL_CHAPTERS} (${chaptersRemaining} remaining)
@@ -1168,15 +1189,7 @@ ${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
 ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
   }
 
-  const baseTargetWords = GENERATION_CONFIG?.wordCount?.target || MIN_WORDS_PER_SUBCHAPTER;
-  const promptTargetMultiplier = GENERATION_CONFIG?.wordCount?.promptTargetMultiplier || 1;
-  const targetWords = Math.max(
-    baseTargetWords,
-    Math.round(baseTargetWords * promptTargetMultiplier)
-  );
-  const segmentMinWords = 300;
-  const segmentMaxWords = 350;
-  const totalSegments = 13; // opening + 3 firstChoice + 9 endings
+  // Word count variables already defined at top of function for CRITICAL REQUIREMENTS
   const totalMinWords = segmentMinWords * totalSegments;
   const totalMaxWords = segmentMaxWords * totalSegments;
 
@@ -1298,6 +1311,35 @@ Do NOT include pathDecisions in this response. Path-specific decisions are gener
 - focus: What this path prioritizes and what it risks (1 sentence)
 - personalityAlignment: aggressive | methodical | balanced`;
   }
+
+  // ========== PINNED FORBIDDEN PATTERNS (Top 5 most common violations) ==========
+  task += `
+
+### ⛔ FORBIDDEN PATTERNS (Automatic Quality Failure)
+NEVER use these in your narrative:
+- "somehow" (vague, lazy writing)
+- "little did X know" (omniscient intrusion)
+- "unbeknownst to" (archaic, breaks POV)
+- First-person narration ("I walked" instead of "Jack walked")
+- Direct reader address ("You might think...")
+- "suddenly" at sentence start
+- Stating emotions directly ("He felt angry") instead of showing them`;
+
+  // ========== FINAL CHECKLIST (Per Gemini 3 best practice: restate at end) ==========
+  task += `
+
+### ✅ FINAL CHECKLIST (Verify Before Submitting)
+Before outputting JSON, verify:
+□ Each narrative segment is ${segmentMinWords}-${segmentMaxWords} words (count them!)
+□ Written in third-person limited, past tense
+□ All dialogue uses double quotes ("Like this")
+□ Continues directly from previous subchapter - no restart/recap
+□ No forbidden phrases used (see list above)
+□ Critical threads from ACTIVE_THREADS addressed through action/dialogue
+□ Branching keys in full format (1A-2A, 1B-2C, etc.)
+□ Valid JSON output with no commentary or markdown wrapping
+
+**WORD COUNT IS NON-NEGOTIABLE: ${segmentMinWords}-${segmentMaxWords} words per segment.**`;
 
   return task;
 }

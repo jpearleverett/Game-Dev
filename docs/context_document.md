@@ -1314,6 +1314,56 @@ Two prompt building paths exist and BOTH must be maintained:
 - `src/services/storyGeneration/prompts.js`
 - `docs/PROMPT_IMPROVEMENT_PLAN.md` (new - detailed analysis and checklist)
 
+### 19.18 Prompt reinforcement for Gemini 3 (Jan 2026)
+
+LLM was consistently generating under word count (~250 words instead of 300-350
+per segment). Based on Gemini 3 documentation research:
+
+- Gemini 3 is less verbose by default
+- JSON Schema cannot enforce string minLength/maxLength
+- Word count must be done via prompt engineering
+- Key insight: "restate key rules" and "pin explicit constraints"
+
+#### Changes Made
+
+1. **CRITICAL REQUIREMENTS block added**
+   - Added at TOP of `<task>` section in `_buildTaskSection()`
+   - Lists 6 non-negotiables:
+     - Word count (300-350 per segment)
+     - POV/Tense (third-person limited, past)
+     - Dialogue punctuation (double quotes)
+     - Continuation (no restart/recap)
+     - Output format (JSON only)
+     - Branching keys (full format: 1A-2A)
+
+2. **FINAL CHECKLIST block added**
+   - Added at END of `<task>` section (per Gemini 3 "restate at end" practice)
+   - 8-item verification checklist
+   - Emphatic word count reminder at end
+
+3. **FORBIDDEN PATTERNS pinned in task**
+   - Top 7 most common violations now in task section
+   - Previously only in `<style_examples>` (buried)
+   - Includes: "somehow", "little did X know", "unbeknownst", etc.
+
+4. **System prompt non-negotiables updated**
+   - Added explicit word count requirement to `<non_negotiables>`
+   - Added branching key format requirement
+   - Updated `<gemini_3_notes>` with sentence count guidance (20-25 sentences)
+
+#### Word count now mentioned in 5 places (intentional per Gemini 3 best practices)
+
+1. System prompt `<non_negotiables>`
+2. System prompt `<gemini_3_notes>`
+3. Task section `CRITICAL REQUIREMENTS` (top)
+4. Task section `WRITING REQUIREMENTS` (existing)
+5. Task section `FINAL CHECKLIST` (end)
+
+#### Files touched
+
+- `src/services/storyGeneration/promptAssembly.js`
+- `src/services/storyGeneration/prompts.js`
+
 ---
 
 ## 20) What to read first if you are new
