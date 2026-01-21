@@ -432,11 +432,19 @@ class ValidationMethods {
    */
   _convertDecisionFormat(decision) {
     // Build option objects once
+    const normalizeAlignment = (value) => {
+      const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+      if (!normalized) return 'balanced';
+      if (normalized === 'cautious') return 'methodical';
+      if (normalized === 'neutral') return 'balanced';
+      return normalized;
+    };
+
     const optionAObj = {
       key: decision.optionA?.key || 'A',
       title: decision.optionA?.title || 'Option A',
       focus: decision.optionA?.focus || '',
-      personalityAlignment: decision.optionA?.personalityAlignment || 'neutral',
+      personalityAlignment: normalizeAlignment(decision.optionA?.personalityAlignment),
       consequence: null,
       stats: null,
       outcome: null,
@@ -448,7 +456,7 @@ class ValidationMethods {
       key: decision.optionB?.key || 'B',
       title: decision.optionB?.title || 'Option B',
       focus: decision.optionB?.focus || '',
-      personalityAlignment: decision.optionB?.personalityAlignment || 'neutral',
+      personalityAlignment: normalizeAlignment(decision.optionB?.personalityAlignment),
       consequence: null,
       stats: null,
       outcome: null,

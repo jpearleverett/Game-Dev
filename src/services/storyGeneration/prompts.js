@@ -169,7 +169,7 @@ Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marke
     "key": "B",
     "title": "Photograph the envelope, let them go",
     "focus": "Document the symbol connection without alerting Blackwell's network to Jack's interest.",
-    "personalityAlignment": "cautious"
+    "personalityAlignment": "methodical"
   }
 }
 
@@ -187,7 +187,7 @@ Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the n
     "key": "B",
     "title": "Record the coordinates, retreat to research",
     "focus": "Document this reactive threshold before attempting anything irreversible.",
-    "personalityAlignment": "cautious"
+    "personalityAlignment": "methodical"
   }
 }
 
@@ -205,7 +205,7 @@ Example 3 - Path 1C-2B (Discovery: Found a ledger with names of the disappeared,
     "key": "B",
     "title": "Cross-reference the names with city records",
     "focus": "Verify the ledger's claims before revealing that Jack has it. Knowledge is leverage.",
-    "personalityAlignment": "cautious"
+    "personalityAlignment": "methodical"
   }
 }
 
@@ -221,6 +221,8 @@ Generate 9 pathDecisions objects with:
 2. intro: 1-2 sentences framing the decision based on THIS path's discovery
 3. optionA: Action option with key="A", title (3-8 words, imperative), focus (why this makes sense), personalityAlignment
 4. optionB: Alternative option with key="B", title (3-8 words, imperative), focus (why this makes sense), personalityAlignment
+
+personalityAlignment MUST be one of: aggressive | methodical | balanced
 
 CRITICAL CHECKS before finalizing:
 ✓ Each path's options reference what THAT path discovered
