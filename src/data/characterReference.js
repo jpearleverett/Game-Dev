@@ -59,7 +59,7 @@ export const CHARACTER_REFERENCE = {
 
   antagonist: {
     name: 'Victoria Blackwell',
-    aliases: ['V.B.', 'Victoria'],
+    aliases: ['Victoria', 'Blackwell'],
     role: "Primary antagonist/guide; architect of Jack's route through the mystery",
     age: '30s',
     physicalDescription: {

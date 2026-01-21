@@ -199,7 +199,7 @@ StoryGenerationService builds prompts from multiple layers:
    - Dynamically builds from storyBible.js data (ABSOLUTE_FACTS, WRITING_STYLE,
      CONSISTENCY_RULES, ENGAGEMENT_REQUIREMENTS, etc.)
    - Defines writing identity, noir constraints, and non-negotiables.
-   - Enforces close third-person POV, single quote dialogue, and style rules.
+   - Enforces close third-person POV, double quote dialogue, and style rules.
 2. **Static cache content**
    - Story bible, character reference, craft techniques, style examples,
      and consistency rules.

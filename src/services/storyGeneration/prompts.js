@@ -214,7 +214,7 @@ ${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
 </reveal_timing>
 
 <how_to_use_the_prompt>
-You will receive structured context blocks (for example: story_bible, character_reference, craft_techniques, style_examples, consistency_rules, story_context, active_threads, scene_state, engagement_guidance, task, self_critique).
+You will receive structured context blocks (for example: story_bible, character_reference, craft_techniques, style_examples, voice_dna, many_shot_examples, character_knowledge, story_context, active_threads, scene_state, engagement_guidance, task, self_critique).
 Treat those blocks as authoritative.
 If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
 </how_to_use_the_prompt>
