@@ -442,11 +442,6 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           });
         }
 
-        // Per Gemini 3 docs: Use 'high' for complex multi-step reasoning, 'medium' for moderate tasks
-        // Decision points require understanding 9 branching paths, so use 'high'
-        // Regular subchapters (A and B) can use 'medium' for faster generation
-        const thinkingLevel = isDecisionPoint ? 'high' : 'medium';
-
         response = await llmService.completeWithCache({
           cacheKey,
           dynamicPrompt,
@@ -456,7 +451,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
             responseSchema: schema,
             thinkingConfig: {
               includeThoughts: process.env.INCLUDE_THOUGHTS === 'true', // Enable in dev to debug mystery logic
-              thinkingLevel, // Varies based on task complexity
+              thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
             }
           },
         });

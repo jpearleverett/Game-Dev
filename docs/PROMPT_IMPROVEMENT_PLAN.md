@@ -217,7 +217,7 @@ Add to `buildPathDecisionsSystemPrompt()`:
 | P1 | Consolidate thread rules | Medium | Medium (cleaner prompts) | ✅ DONE |
 | P2 | Optimize cache content order | Low | Medium (implicit cache hits) | ✅ DONE |
 | P2 | Move Voice DNA to cache | Medium | Medium (reduces tokens) | ⏳ DEFERRED (minimal impact) |
-| P3 | Vary thinking levels | Low | Low (minor latency improvement) | ✅ DONE |
+| P3 | Vary thinking levels | Low | Low (minor latency improvement) | ❌ REVERTED (keep high for all) |
 | P3 | Enhance pathDecisions prompt | Medium | Medium (better consistency) | ✅ DONE |
 
 ---
@@ -255,10 +255,11 @@ Add to `buildPathDecisionsSystemPrompt()`:
 - **Change:** Removed `<self_critique>` block from task sections
 - **Impact:** Quality gates now only in system prompt's `<craft_quality_checklist>`
 
-### 6. Varied Thinking Levels (P3)
-- **File:** `generation.js:445-448`
-- **Change:** Use 'high' for decision points, 'medium' for regular subchapters
-- **Impact:** Faster generation for non-decision subchapters
+### 6. Thinking Levels (P3 - REVERTED)
+- **File:** `generation.js:445-454`
+- **Original Change:** Use 'high' for decision points, 'medium' for regular subchapters
+- **Reverted:** Per user preference, keep 'high' thinking level for ALL subchapters
+- **Reason:** Complex narrative generation benefits from maximum reasoning depth
 
 ### 7. Enhanced PathDecisions System Prompt (P3)
 - **File:** `prompts.js:67-101`
