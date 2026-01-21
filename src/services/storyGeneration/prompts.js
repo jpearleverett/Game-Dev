@@ -11,6 +11,49 @@ import { getScenesByCategory, MANY_SHOT_METADATA } from '../../data/manyShot';
 import { TOTAL_CHAPTERS } from './constants';
 import { extractRecentDialogue } from './helpers';
 
+const DEFAULT_MANY_SHOT_CATEGORIES = ['dialogue_tension', 'internal_monologue', 'investigation'];
+
+const MANY_SHOT_CATEGORY_MAP = {
+  // Subchapter beat types
+  'Opening/Hook (A)': ['setup', 'atmospheric', 'internal_monologue'],
+  'Development/Conflict (B)': ['dialogue_tension', 'confrontation', 'investigation'],
+  'Resolution/Decision (C)': ['decision_point', 'revelation', 'aftermath'],
+
+  // Chapter beat types
+  CHASE: ['action', 'dialogue_tension'],
+  BOTTLE_EPISODE: ['dialogue_tension', 'internal_monologue', 'confrontation'],
+  CONFRONTATION: ['confrontation', 'dialogue_tension', 'revelation'],
+  BETRAYAL: ['revelation', 'aftermath', 'darkest_moment'],
+  INVESTIGATION: ['investigation', 'interrogation', 'internal_monologue'],
+  SETUP: ['setup', 'atmospheric'],
+  CLIMAX: ['action', 'confrontation', 'revelation'],
+  RESOLUTION: ['aftermath', 'decision_point', 'revelation'],
+};
+
+export const getManyShotCategories = (beatType, chapterBeatType) => {
+  if (chapterBeatType?.type && MANY_SHOT_CATEGORY_MAP[chapterBeatType.type]) {
+    return {
+      source: 'chapter',
+      key: chapterBeatType.type,
+      categories: MANY_SHOT_CATEGORY_MAP[chapterBeatType.type],
+    };
+  }
+
+  if (beatType && MANY_SHOT_CATEGORY_MAP[beatType]) {
+    return {
+      source: 'subchapter',
+      key: beatType,
+      categories: MANY_SHOT_CATEGORY_MAP[beatType],
+    };
+  }
+
+  return {
+    source: 'default',
+    key: 'default',
+    categories: DEFAULT_MANY_SHOT_CATEGORIES,
+  };
+};
+
 // ============================================================================
 // PATHDECISIONS SYSTEM PROMPT - Story context for path-specific decisions
 // Per Gemini 3 best practices: XML tags, persona, explicit constraints
@@ -522,39 +565,7 @@ ${NEGATIVE_EXAMPLES.heavyForeshadowing.problems.map(p => `- ${p}`).join('\n')}
 // MANY-SHOT SCENE EXAMPLES - Pattern learning from Mystic River
 // ============================================================================
 export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15) => {
-  // Map beat types and chapter types to relevant scene categories
-  const categoryMap = {
-    // Subchapter beat types
-    'Opening/Hook (A)': ['setup', 'atmospheric', 'internal_monologue'],
-    'Development/Conflict (B)': ['dialogue_tension', 'confrontation', 'investigation'],
-    'Resolution/Decision (C)': ['decision_point', 'revelation', 'aftermath'],
-
-    // Chapter beat types
-    CHASE: ['action', 'dialogue_tension'],
-    BOTTLE_EPISODE: ['dialogue_tension', 'internal_monologue', 'confrontation'],
-    CONFRONTATION: ['confrontation', 'dialogue_tension', 'revelation'],
-    BETRAYAL: ['revelation', 'aftermath', 'darkest_moment'],
-    INVESTIGATION: ['investigation', 'interrogation', 'internal_monologue'],
-    SETUP: ['setup', 'atmospheric'],
-    CLIMAX: ['action', 'confrontation', 'revelation'],
-    RESOLUTION: ['aftermath', 'decision_point', 'revelation'],
-  };
-
-  // Determine which categories to use
-  let categories = [];
-
-  // First try chapter beat type
-  if (chapterBeatType?.type && categoryMap[chapterBeatType.type]) {
-    categories = categoryMap[chapterBeatType.type];
-  }
-  // Fall back to subchapter beat type
-  else if (beatType && categoryMap[beatType]) {
-    categories = categoryMap[beatType];
-  }
-  // Default mix
-  else {
-    categories = ['dialogue_tension', 'internal_monologue', 'investigation'];
-  }
+  const { categories } = getManyShotCategories(beatType, chapterBeatType);
 
   // Get scenes from selected categories
   const scenesPerCategory = Math.ceil(limit / categories.length);

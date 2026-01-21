@@ -25,6 +25,7 @@ import {
   buildManyShotExamples,
   buildMasterSystemPrompt,
   buildVoiceDNASection,
+  getManyShotCategories,
 } from './prompts';
 
 // ==========================================================================
@@ -53,6 +54,21 @@ function _buildExtendedStyleExamplesForCache() {
     return '';
   }
 }
+
+const sanitizeCacheKeyPart = (value, fallback = 'default') => {
+  const safe = String(value || '')
+    .replace(/[^A-Za-z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48);
+  return safe || fallback;
+};
+
+const getManyShotSignature = (beatType, chapterBeatType, hasExamples) => {
+  const { categories } = getManyShotCategories(beatType, chapterBeatType);
+  const signature = hasExamples ? categories.join('_') : 'none';
+  return sanitizeCacheKeyPart(`ms_${signature}`, 'ms_none');
+};
 
 /**
  * Build static content for caching (Story Bible, Characters, Craft Techniques, etc.)
@@ -120,10 +136,12 @@ ${extendedExamples}
 }
 
 /**
- * Get or create cache for static content
+ * Get or create cache for static content (beat-specific many-shot cached)
  */
-async function _ensureStaticCache() {
-  const cacheKey = `story_static_v${this.staticCacheVersion}`;
+async function _ensureStaticCache(beatType, chapterBeatType) {
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+  const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples));
+  const cacheKey = `story_static_${manyShotSignature}_v${this.staticCacheVersion}`;
 
   // Check if cache exists
   const existing = await llmService.getCache(cacheKey);
@@ -136,7 +154,13 @@ async function _ensureStaticCache() {
   // Create new cache
   console.log('[StoryGenerationService] 🔧 Creating static content cache...');
 
-  const staticContent = this._buildStaticCacheContent();
+  const staticParts = [this._buildStaticCacheContent()];
+  if (manyShotExamples) {
+    staticParts.push('<many_shot_examples>');
+    staticParts.push(manyShotExamples);
+    staticParts.push('</many_shot_examples>');
+  }
+  const staticContent = staticParts.join('\n\n');
 
   await llmService.createCache({
     key: cacheKey,
@@ -148,6 +172,7 @@ async function _ensureStaticCache() {
       version: this.staticCacheVersion,
       created: new Date().toISOString(),
       type: 'story_generation_static',
+      manyShotSignature,
     },
   });
 
@@ -159,11 +184,17 @@ async function _ensureStaticCache() {
 
 /**
  * Get or create a chapter-start cache.
- * Includes the full static cache content PLUS the story-so-far up to the end of the previous chapter.
+ * Includes the full static cache content PLUS beat-specific many-shot examples
+ * and the story-so-far up to the end of the previous chapter.
  *
  * This reduces per-subchapter prompt size by moving the large shared prefix into an explicit cache.
  */
-async function _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory, context) {
+async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, choiceHistory, context) {
+  const beatType = this._getBeatType(chapter, subchapter);
+  const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+  const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples));
+
   // Hash only choices that occurred BEFORE this chapter; the chapter-start prefix should not depend
   // on decisions made inside the current chapter.
   const priorChoices = Array.isArray(choiceHistory)
@@ -175,7 +206,7 @@ async function _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory
   const priorChoicesHash = this._hashChoiceHistoryForCache(priorChoices);
 
   // Use a logical key to avoid collisions; store the actual cache key separately.
-  const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
+  const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:beat:${manyShotSignature}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
   const existingKey = this.chapterStartCacheKeys.get(logicalKey);
   if (existingKey) {
     const existing = await llmService.getCache(existingKey);
@@ -184,7 +215,7 @@ async function _ensureChapterStartCache(chapter, effectivePathKey, choiceHistory
   }
 
   const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
-  const cacheKey = `story_chStart_c${chapter}_${safePath}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
+  const cacheKey = `story_chStart_c${chapter}_${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
 
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
@@ -216,15 +247,24 @@ Opening mood: ${chapterOutline.openingMood || 'Unknown'}
 ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.length ? `Must reference:\n${chapterOutline.mustReference.slice(0, 8).map((x) => `- ${x}`).join('\n')}` : ''}` : '### Chapter Outline\n- (Not available)'}
 `;
 
-  const chapterCacheContent = [
+  const chapterCacheParts = [
     staticContent,
+  ];
+  if (manyShotExamples) {
+    chapterCacheParts.push('<many_shot_examples>');
+    chapterCacheParts.push(manyShotExamples);
+    chapterCacheParts.push('</many_shot_examples>');
+  }
+  chapterCacheParts.push(
     '<chapter_start_story_context>',
     storyUpToPrevChapter,
     '</chapter_start_story_context>',
     '<chapter_guidance>',
     arcAndOutline,
-    '</chapter_guidance>',
-  ].join('\n\n');
+    '</chapter_guidance>'
+  );
+
+  const chapterCacheContent = chapterCacheParts.join('\n\n');
 
   await llmService.createCache({
     key: cacheKey,
@@ -238,6 +278,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
       chapter,
       pathKey: effectivePathKey,
       priorChoicesHash,
+      manyShotSignature,
       created: new Date().toISOString(),
       type: 'story_generation_chapter_start',
     },
@@ -258,7 +299,13 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
  * Build dynamic prompt content (changes per request)
  * This is sent alongside the cached static content
  */
-function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { cachedHistoryMaxChapter = null } = {}) {
+function _buildDynamicPrompt(
+  context,
+  chapter,
+  subchapter,
+  isDecisionPoint,
+  { cachedHistoryMaxChapter = null, includeManyShot = true } = {}
+) {
   const parts = [];
 
   // Per Gemini 3 docs: Use XML tags for structure clarity
@@ -295,12 +342,14 @@ function _buildDynamicPrompt(context, chapter, subchapter, isDecisionPoint, { ca
   }
 
   // Many-shot examples based on current beat type
-  const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
-  if (manyShotExamples) {
-    parts.push('<many_shot_examples>');
-    parts.push(manyShotExamples);
-    parts.push('</many_shot_examples>');
-    console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
+  if (includeManyShot) {
+    const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
+    if (manyShotExamples) {
+      parts.push('<many_shot_examples>');
+      parts.push(manyShotExamples);
+      parts.push('</many_shot_examples>');
+      console.log(`[StoryGen] ✅ Many-shot (cached): ${beatType}, chapter: ${chapterBeatType?.type || 'none'}`);
+    }
   }
 
   // NOTE: Dramatic irony section removed - LLM has creative freedom

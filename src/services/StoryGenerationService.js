@@ -89,11 +89,11 @@ class StoryGenerationService {
     // ========== CONTEXT CACHING OPTIMIZATION ==========
     // Cache for static prompt content (Story Bible, Character Reference, etc.)
     this.staticCacheKey = null; // Key for the static content cache
-    this.staticCacheVersion = 2; // Increment when static content changes
+    this.staticCacheVersion = 3; // Increment when static content changes
 
     // Cache for "chapter start" prefixes (static + story up to previous chapter).
     // This lets subchapters within a chapter send only the delta (current chapter so far).
-    this.chapterStartCacheVersion = 1; // Increment when chapter cache format changes
+    this.chapterStartCacheVersion = 2; // Increment when chapter cache format changes
     this.chapterStartCacheKeys = new Map(); // logicalKey -> cacheKey
 
     // ========== PROMPT LOGGING FOR DEBUGGING ==========

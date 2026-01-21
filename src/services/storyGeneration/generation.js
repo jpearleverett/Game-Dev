@@ -362,14 +362,23 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
       // Try cached generation first (works in both proxy and direct mode)
       try {
+        const beatType = this._getBeatType(chapter, subchapter);
+        const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
+
         // Prefer a chapter-start cache (static + story up to previous chapter) to reduce prompt size.
         // Falls back to the static-only cache if chapter-start caching fails for any reason.
         let cacheKey;
         try {
-          cacheKey = await this._ensureChapterStartCache(chapter, effectivePathKey, choiceHistory, context);
+          cacheKey = await this._ensureChapterStartCache(
+            chapter,
+            subchapter,
+            effectivePathKey,
+            choiceHistory,
+            context
+          );
         } catch (e) {
           console.warn('[StoryGenerationService] ⚠️ Chapter-start cache unavailable, falling back to static cache:', e?.message);
-          cacheKey = await this._ensureStaticCache();
+          cacheKey = await this._ensureStaticCache(beatType, chapterBeatType);
         }
 
         // Build only dynamic prompt (delta context + current state + task).
@@ -380,7 +389,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           chapter,
           subchapter,
           isDecisionPoint,
-          usingChapterStartCache ? { cachedHistoryMaxChapter: chapter - 1 } : {}
+          {
+            cachedHistoryMaxChapter: usingChapterStartCache ? chapter - 1 : null,
+            includeManyShot: false,
+          }
         );
 
         // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
