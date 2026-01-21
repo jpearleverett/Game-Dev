@@ -406,7 +406,7 @@ export const WRITING_STYLE = {
   ],
 
   absolutelyForbidden: [
-    '"X is not just Y, it\'s Z" constructions',
+    '"X is not just Y; it\'s Z" constructions',
     'Constructions with the following sentence structure "The silver current didn\'t just move; it sang"',
     '"In a world where..." openings',
     '"Little did he know..." foreshadowing',
