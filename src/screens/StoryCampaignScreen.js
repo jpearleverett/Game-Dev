@@ -18,10 +18,7 @@ function formatCountdown(target) {
   const diff = targetTime - now;
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  return `${hours.toString().padStart(2, '0')}:${minutes
-    .toString()
-    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 function useUnlockCountdown(target) {
@@ -33,7 +30,7 @@ function useUnlockCountdown(target) {
     }
     const tick = () => setValue(formatCountdown(target));
     tick();
-    const timer = setInterval(tick, 1000);
+    const timer = setInterval(tick, 30000);
     return () => clearInterval(timer);
   }, [target]);
   return value;
@@ -424,4 +421,3 @@ const styles = StyleSheet.create({
       color: COLORS.cigaretteSmoke,
     },
 });
-

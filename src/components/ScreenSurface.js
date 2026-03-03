@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, ImageBackground, Platform, StatusBar, StyleSheet, View } from 'react-native';
+import { Animated, Easing, ImageBackground, Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants/colors';
@@ -78,7 +78,7 @@ export default function ScreenSurface({
 
   const safeTopInset = Platform.select({
     ios: 12,
-    android: StatusBar.currentHeight ? StatusBar.currentHeight / 2 : 12,
+    android: 12,
     default: 12,
   });
 

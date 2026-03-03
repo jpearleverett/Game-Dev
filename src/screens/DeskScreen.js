@@ -32,10 +32,7 @@ function formatCountdown(nextUnlockAt) {
   const diff = target - now;
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  return `${hours.toString().padStart(2, '0')}:${minutes
-    .toString()
-    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 function formatLockTimestamp(value) {
@@ -185,9 +182,8 @@ export default function DeskScreen({
     }
     const update = () => setCountdown(formatCountdown(nextStoryUnlockAt));
     update();
-    // Use 5s interval to reduce re-renders (60/min -> 12/min)
-    // Countdown only shows hours/minutes, so 5s precision is sufficient
-    const timer = setInterval(update, 5000);
+    // Update every 30s to minimize rerenders while keeping minute-level countdown accuracy.
+    const timer = setInterval(update, 30000);
     return () => clearInterval(timer);
   }, [nextStoryUnlockAt]);
 
