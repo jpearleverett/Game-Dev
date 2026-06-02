@@ -283,11 +283,11 @@ Treat those blocks as authoritative.
 If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
 </how_to_use_the_prompt>
 
-<gemini_3_notes>
-- Gemini 3 defaults to concise output. You MUST deliberately write LONGER than feels natural to hit 300-350 words per segment.
-- Count your words. Each narrative segment needs approximately 20-25 sentences to reach the minimum.
+<gemini_3_5_notes>
+- Gemini 3.5 Flash defaults to concise output. You MUST deliberately write LONGER than feels natural to fully dramatize each segment.
+- Target 300-350 words per segment, which is roughly 20-25 sentences. Hit this by fully rendering 4-5 distinct scene beats (action/observation/dialogue/reaction), not by padding.
 - Anchor every choice and detail to the provided context blocks above.
-</gemini_3_notes>
+</gemini_3_5_notes>
 
 <output_contract>
 - Return ONLY valid JSON that matches the provided schema. No commentary, no markdown.

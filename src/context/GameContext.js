@@ -423,11 +423,22 @@ export function GameProvider({
                       pendingDecisionCase: null,
                   };
               }
-              
+
               updateProgress({
                   storyCampaign: updatedStory,
                   nextUnlockAt: updatedStory.nextStoryUnlockAt
               });
+
+              // Keep the reducer's active case id in sync with the story position.
+              // The evidence-board path previously advanced storyCampaign without
+              // updating activeCaseId (unlike the logic-puzzle path), which left the
+              // active case stale and could snap the player back to 001A.
+              if (updatedStory.activeCaseNumber && !updatedStory.awaitingDecision) {
+                  const advancedCase = getCaseByNumber(updatedStory.activeCaseNumber);
+                  if (advancedCase?.id) {
+                      setActiveCaseInternal(advancedCase.id);
+                  }
+              }
 
           } else {
               const distributionKey = nextStatus === STATUS.SOLVED 
@@ -458,7 +469,7 @@ export function GameProvider({
               updateProgress(newStats);
           }
       }
-  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio]);
+  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio, setActiveCaseInternal]);
 
   const completeLogicPuzzle = useCallback(({ caseId, caseNumber, mistakes: puzzleMistakes = 0 } = {}) => {
       if (!caseId || !caseNumber) return;

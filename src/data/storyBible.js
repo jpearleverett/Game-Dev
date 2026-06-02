@@ -787,13 +787,13 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - Gemini 3 Flash Preview supports up to 65,536 tokens output (64k)
-  // IMPORTANT: Thinking tokens consume output budget! With default 'high' thinking,
-  // the model may use 50-80% of tokens for reasoning before generating output.
+  // Token limits - Gemini 3.5 Flash supports up to 65,536 tokens output (64k)
+  // IMPORTANT: Thinking tokens consume output budget! With 'high' thinking on core
+  // narrative, the model may use 50-80% of tokens for reasoning before output.
   // Values below are generous to ensure quality output with full reasoning depth.
-  // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
+  // Gemini 3.5 Flash: 1M input / 64k output
   maxTokens: {
-    subchapter: 65536,    // Gemini 3 max output - main narrative generation
+    subchapter: 65536,    // Gemini 3.5 max output - main narrative generation
     expansion: 32000,     // For expansion requests (currently disabled)
     validation: 8000,     // For simple validation passes (uses 'low' thinking)
     pathDecisions: 65536, // Same as subchapter - complex multi-path generation
