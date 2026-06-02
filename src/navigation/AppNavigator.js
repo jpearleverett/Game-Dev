@@ -138,6 +138,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
               onOpenCaseBoard={() => navigation.navigate('CaseBoard')}
+              onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
             />
           );

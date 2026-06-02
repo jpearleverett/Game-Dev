@@ -4,8 +4,13 @@ import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../dat
 import { saveStoredProgress } from '../storage/progressStorage';
 import { log } from '../utils/llmTrace';
 
-// Configurable unlock delay (24 hours default)
-const CHAPTER_UNLOCK_DELAY_MS = 24 * 60 * 60 * 1000;
+// Daily-hook pacing: a soft cadence, never a hard wall.
+// - The gate only engages once the player is invested (after chapter 5), so the
+//   hooked early game (Acts 1 and the start of Act 2) flows freely.
+// - The wait is a gentle nudge (12h), and is always freely bypassable from the
+//   Desk ("pick up the trail now"). The bribe IAP remains as optional support.
+const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;
+const FIRST_GATED_CHAPTER = 6; // chapters 1–5 are never gated
 
 export function useStoryEngine(progress, updateProgress) {
 
@@ -85,7 +90,7 @@ export function useStoryEngine(progress, updateProgress) {
       chapter: nextChapter,
       subchapter: nextSubchapter,
       activeCaseNumber: nextCaseNumber,
-      nextStoryUnlockAt: nextChapter > 3
+      nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
         ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
         : null
     };
@@ -214,7 +219,7 @@ export function useStoryEngine(progress, updateProgress) {
       chapter: nextChapter,
       subchapter: nextSubchapter,
       activeCaseNumber: nextCaseNumber,
-      nextStoryUnlockAt: nextChapter > 3
+      nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
         ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
         : null
     };

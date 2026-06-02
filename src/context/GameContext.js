@@ -197,6 +197,19 @@ export function GameProvider({
     return activateStoryCase({ mode: 'story' });
   }, [activateStoryCase]);
 
+  // Daily-hook: free bypass of the soft cadence. Clears the unlock timer and
+  // continues immediately (skipLock), so an engaged player is never hard-walled.
+  const pickUpTrailNow = useCallback(() => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    if (current.nextStoryUnlockAt) {
+      updateProgress({
+        storyCampaign: { ...current, nextStoryUnlockAt: null },
+        nextUnlockAt: null,
+      });
+    }
+    return activateStoryCase({ mode: 'story', skipLock: true });
+  }, [progress.storyCampaign, updateProgress, activateStoryCase]);
+
   const openStoryCase = useCallback((caseId) => {
       const targetCase = SEASON_ONE_CASES.find(c => c.id === caseId);
       if (!targetCase) return false;
@@ -808,6 +821,7 @@ export function GameProvider({
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
+    pickUpTrailNow,
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
@@ -863,6 +877,7 @@ export function GameProvider({
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
+    pickUpTrailNow,
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,

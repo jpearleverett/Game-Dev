@@ -20,6 +20,7 @@ export function useNavigationActions(navigation, game, audio) {
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
+    pickUpTrailNow,
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
@@ -235,6 +236,18 @@ export function useNavigationActions(navigation, game, audio) {
     handleStoryStart(true);
   }, [handleStoryStart]);
 
+  // Free "pick up the trail now" — bypass the soft daily cadence and continue.
+  const handlePickUpTrailNow = useCallback(async () => {
+    try {
+      const result = await pickUpTrailNow();
+      const targetCaseNumber = result?.caseNumber;
+      navigation.replace('CaseFile', targetCaseNumber ? { caseNumber: targetCaseNumber } : undefined);
+    } catch (error) {
+      console.warn('[Navigation] pickUpTrailNow threw, routing to CaseFile:', error?.message || error);
+      navigation.replace('CaseFile');
+    }
+  }, [pickUpTrailNow, navigation]);
+
   const handleStoryContinue = useCallback(async () => {
     try {
       // `continueStoryCampaign()` ultimately calls `activateStoryCase({ mode: 'story' })`,
@@ -286,6 +299,7 @@ export function useNavigationActions(navigation, game, audio) {
   return {
     handlePrologueComplete,
     handleTutorialComplete,
+    handlePickUpTrailNow,
     handleSplashContinue,
     handleStartCase,
     handleSelectArchiveCase,

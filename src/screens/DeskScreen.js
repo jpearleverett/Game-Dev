@@ -173,6 +173,7 @@ export default function DeskScreen({
   onOpenMenu,
   onOpenStoryCampaign,
   onOpenCaseBoard,
+  onPickUpTrail,
   onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
@@ -524,12 +525,24 @@ export default function DeskScreen({
                   style={[styles.actionBlock, { marginTop: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.sm) }]}
                 >
                   {storyLocked ? (
-                     <PrimaryButton 
-                        label="Bribe Clerk ($0.99)" 
-                        icon={<MaterialCommunityIcons name="cash-multiple" size={20} color={COLORS.textSecondary} />} 
-                        onPress={handleBribe} 
-                        fullWidth 
-                     />
+                     <>
+                        {onPickUpTrail ? (
+                          <PrimaryButton
+                            label="Pick Up the Trail Now"
+                            icon={<MaterialCommunityIcons name="shoe-print" size={20} color={COLORS.textSecondary} />}
+                            onPress={handleQuickPress(onPickUpTrail)}
+                            fullWidth
+                          />
+                        ) : null}
+                        {onBribe ? (
+                          <SecondaryButton
+                            label="Bribe the clerk to rush it ($0.99)"
+                            icon={<MaterialCommunityIcons name="cash-multiple" size={18} color={COLORS.textSecondary} />}
+                            onPress={handleBribe}
+                            style={{ marginTop: scaleSpacing(SPACING.sm) }}
+                          />
+                        ) : null}
+                     </>
                   ) : (
                      <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} fullWidth />
                   )}
