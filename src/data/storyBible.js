@@ -776,9 +776,10 @@ export const CONSISTENCY_RULES = [
 // ============================================================================
 export const GENERATION_CONFIG = {
   // Temperature settings
-  // IMPORTANT (Gemini 3): temperature MUST be 1.0. The LLM layer enforces this.
-  // Keep this section for backward compatibility and future provider swaps,
-  // but do not set values below 1.0 in this codebase.
+  // NOTE (Gemini 3.5): the LLM layer no longer sends sampling params (temperature/
+  // topP/topK) — the model uses its tuned defaults per Google's 3.5 guidance.
+  // This section is retained for backward compatibility and future provider swaps only;
+  // values here are not applied to Gemini 3.x requests.
   temperature: {
     narrative: 1.0,
     dialogue: 1.0,

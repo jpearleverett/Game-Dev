@@ -393,10 +393,10 @@ class LLMService {
    * Make a completion request to the LLM
    * @param {Array} messages - Array of message objects with role and content
    * @param {Object} options - Generation options
-   * @param {number} options.temperature - Sampling temperature (0-1)
    * @param {number} options.maxTokens - Maximum tokens to generate
    * @param {string} options.systemPrompt - System prompt to prepend
    * @param {Object} options.responseSchema - JSON schema for structured output (Gemini)
+   * @param {('low'|'medium'|'high')} [options.thinkingLevel] - Reasoning depth; omit for Gemini's 'medium' default
    */
   async complete(messages, options = {}) {
     await this.init();
@@ -427,19 +427,18 @@ class LLMService {
     }
 
     const {
-      temperature = 0.8,
       maxTokens = null,  // null = let Gemini decide based on prompt instructions
       systemPrompt = null,
       responseSchema = null,
       traceId = null,
       requestContext = null,
-      thinkingLevel = null,  // null = use default 'high', can override for specific tasks
+      thinkingLevel = null,  // null = use Gemini's default ('medium'); override per-task when needed
     } = options;
 
     if (this.config.provider === 'gemini') {
       // Use rate-limited request wrapper to prevent API overload during preloading bursts
       return this._rateLimitedRequest(() =>
-        this._geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel })
+        this._geminiComplete(messages, { maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel })
       );
     }
 
@@ -449,11 +448,12 @@ class LLMService {
   /**
    * Google Gemini API completion
    * Supports structured output via responseSchema for guaranteed valid JSON responses
-   * Special handling for Gemini 3 models (temperature=1.0, thinkingConfig)
+   * Per Gemini 3.5 guidance we do not set sampling params (temperature/topP/topK);
+   * thinkingConfig is only sent when a task explicitly requests a level (else 'medium' default).
    *
    * Routes through proxy if configured (production), otherwise direct API (dev)
    */
-  async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel }) {
+  async _geminiComplete(messages, { maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel }) {
     const model = this.config.model || 'gemini-3.5-flash';
 
     // DEBUG: Log config to see what mode we're in
@@ -466,22 +466,16 @@ class LLMService {
     // Check if using Gemini 3 model
     const isGemini3 = model.includes('gemini-3');
 
-    // Determine effective temperature.
-    // Per Gemini guidance for these models, temperature must be 1.0.
-    // We force it here so callers can't accidentally send lower values.
-    const effectiveTemperature = 1.0;
-
     // ========== PROXY MODE (Production - Secure) ==========
     if (this.config.proxyUrl) {
       return this._callViaProxy(messages, {
         model,
-        temperature: effectiveTemperature,
         maxTokens,
         systemPrompt,
         responseSchema,
         traceId,
         requestContext,
-        thinkingLevel,  // Pass through for proxy to use
+        thinkingLevel,  // Pass through for proxy to use (omitted => Gemini 'medium' default)
       });
     }
 
@@ -492,21 +486,17 @@ class LLMService {
     // Convert messages to Gemini format
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
 
-    // Build generation config
+    // Build generation config.
+    // Per Gemini 3.5 guidance, sampling params (temperature/topP/topK) are omitted
+    // so the model uses its tuned defaults.
     const generationConfig = {
-      temperature: effectiveTemperature,
       maxOutputTokens: maxTokens,
-      topP: 0.95,
-      topK: 40,
     };
 
-    // Add thinking configuration for Gemini 3
-    // Default to 'high' for story generation - latency-tolerant, quality-critical
-    // Allow callers to override for specific tasks requiring different reasoning depth
-    if (isGemini3) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: thinkingLevel || 'high', // Default to 'high' for complex narrative generation
-      };
+    // Thinking configuration: only set when a task explicitly requests a level.
+    // When omitted, Gemini 3.5 uses its 'medium' default.
+    if (isGemini3 && thinkingLevel) {
+      generationConfig.thinkingConfig = { thinkingLevel };
     }
 
     // Add structured output configuration if schema provided
@@ -523,7 +513,7 @@ class LLMService {
         messageCount: messages?.length || 0,
         maxTokens,
         hasSchema: !!responseSchema,
-        temperature: effectiveTemperature,
+        thinkingLevel: thinkingLevel || 'medium',
         requestContext,
       }, 'debug');
     }
@@ -926,7 +916,7 @@ class LLMService {
    *
    * Supports both SSE format (data: {...}\n\n) and legacy NDJSON ({...}\n) for backwards compatibility.
    */
-  async _callViaProxy(messages, { model, temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent, thinkingLevel }) {
+  async _callViaProxy(messages, { model, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent, thinkingLevel }) {
     let lastError = null;
     let attempt = 0;
     const operationStart = Date.now();
@@ -942,7 +932,7 @@ class LLMService {
         messageCount: messages?.length || 0,
         maxTokens,
         hasSchema: !!responseSchema,
-        temperature,
+        thinkingLevel: thinkingLevel || 'medium',
         localRequestId,
         requestContext,
       }, 'debug');
@@ -990,12 +980,11 @@ class LLMService {
             content: m.content,
           })),
           model,
-          temperature,
           maxTokens,
           systemPrompt,
           responseSchema,
           cachedContent, // Optional: cached content reference for context caching
-          thinkingLevel, // Optional: override thinkingLevel for specific tasks (default: 'high')
+          thinkingLevel, // Optional: per-task thinking level; omitted => Gemini 'medium' default
           stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
           clientTraceId: traceId || null,
           clientRequestContext: requestContext || null,
@@ -1913,11 +1902,11 @@ class LLMService {
         messages,
         {
           model,
-          temperature: 1.0, // Forced for Gemini 3
           maxTokens: options.maxTokens || 8192,
           systemPrompt: null, // System prompt is in cache
           responseSchema: options.responseSchema,
           cachedContent: cache.name,
+          thinkingLevel: options.thinkingLevel, // Per-task level; omitted => Gemini 'medium' default
           traceId: options.traceId,
           requestContext: options.requestContext,
         }
@@ -1939,20 +1928,16 @@ class LLMService {
 
     const isGemini3 = model.includes('gemini-3');
 
-    // Build generation config
+    // Build generation config.
+    // Per Gemini 3.5 guidance, sampling params (temperature/topP/topK) are omitted.
     const generationConfig = {
-      temperature: 1.0, // Forced for Gemini 3
       maxOutputTokens: options.maxTokens || 8192,
-      topP: 0.95,
-      topK: 40,
     };
 
-    // Add thinking configuration for Gemini 3
-    // Using 'high' for story generation - latency-tolerant, quality-critical
-    if (isGemini3) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || 'high', // Maximize reasoning depth
-      };
+    // Thinking configuration: only set when a task explicitly requests a level.
+    // When omitted, Gemini 3.5 uses its 'medium' default.
+    if (isGemini3 && options.thinkingLevel) {
+      generationConfig.thinkingConfig = { thinkingLevel: options.thinkingLevel };
     }
 
     // Add structured output configuration if schema provided

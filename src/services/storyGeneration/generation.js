@@ -440,10 +440,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           options: {
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
-            thinkingConfig: {
-              includeThoughts: process.env.INCLUDE_THOUGHTS === 'true', // Enable in dev to debug mystery logic
-              thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
-            }
+            // Core narrative generation: keep 'high' reasoning depth (overrides the 'medium' default)
+            thinkingLevel: 'high',
           },
         });
       } catch (cacheError) {

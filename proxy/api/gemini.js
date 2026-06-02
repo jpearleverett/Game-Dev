@@ -213,7 +213,9 @@ export default async function handler(request) {
         };
       }),
       generationConfig: {
-        temperature: isGemini3 ? 1.0 : (body.temperature ?? 0.7),
+        // Gemini 3.5 guidance: omit sampling params (temperature/topP/topK) so the
+        // model uses its tuned defaults. Pre-3 callers may still pass them explicitly.
+        ...(!isGemini3 && body.temperature != null && { temperature: body.temperature }),
         ...(body.maxTokens && { maxOutputTokens: body.maxTokens }),
         ...((!isGemini3 && body.topP) && { topP: body.topP }),
       },
@@ -226,11 +228,11 @@ export default async function handler(request) {
       ...(cachedContent && { cached_content: cachedContent }),
     };
 
-    if (isGemini3) {
+    // Thinking configuration: only set when the client explicitly requests a level.
+    // When omitted, Gemini 3.5 uses its 'medium' default.
+    if (isGemini3 && body.thinkingLevel) {
       geminiBody.generationConfig.thinkingConfig = {
-        // Default to 'high' for story generation - latency-tolerant, quality-critical
-        // Client can override with body.thinkingLevel if needed
-        thinkingLevel: body.thinkingLevel ?? 'high',
+        thinkingLevel: body.thinkingLevel,
       };
     }
 

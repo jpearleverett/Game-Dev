@@ -13,8 +13,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(async () => null),
 }));
 
-describe('LLMService Gemini temperature forcing', () => {
-  test('forces temperature=1.0 for proxy requests even if caller passes lower', async () => {
+describe('LLMService Gemini 3.5 sampling/thinking defaults', () => {
+  test('omits sampling params and thinkingLevel for proxy requests (uses model defaults)', async () => {
     // Require after mocks so constructor sees mocked NetInfo/Constants.
     // (Jest in this repo isn't configured for ESM dynamic import.)
     const { llmService } = require('../LLMService');
@@ -35,10 +35,33 @@ describe('LLMService Gemini temperature forcing', () => {
     await llmService.init();
     await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
 
-    await llmService.complete([{ role: 'user', content: 'hi' }], { temperature: 0.2, maxTokens: 10 });
+    await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10 });
 
     const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(body.temperature).toBe(1.0);
+    // Per Gemini 3.5 guidance we no longer send sampling params...
+    expect(body.temperature).toBeUndefined();
+    // ...and we don't pin a thinking level by default (falsy => proxy omits it, model uses 'medium').
+    expect(body.thinkingLevel == null).toBe(true);
+  });
+
+  test('forwards an explicit thinkingLevel when a task requests one', async () => {
+    const { llmService } = require('../LLMService');
+
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, content: '{}', finishReason: 'STOP', usage: { totalTokens: 1 } }),
+      headers: { get: () => null },
+    }));
+
+    await llmService.init();
+    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
+
+    await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10, thinkingLevel: 'high' });
+
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body.thinkingLevel).toBe('high');
+    expect(body.temperature).toBeUndefined();
   });
 });
 
