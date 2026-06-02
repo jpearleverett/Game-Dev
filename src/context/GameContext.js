@@ -26,6 +26,7 @@ export function GameProvider({
   updateProgress,
   updateSettings,
   markPrologueSeen,
+  markTutorialComplete,
   setPremiumUnlocked,
   markCaseBriefingSeen,
   clearProgress
@@ -775,6 +776,7 @@ export function GameProvider({
     unlockNextCaseIfReady,
     updateSettings,
     markPrologueSeen,
+    markTutorialComplete,
     setPremiumUnlocked,
     clearProgress,
     markCaseBriefingSeen,
@@ -816,6 +818,7 @@ export function GameProvider({
     unlockNextCaseIfReady,
     updateSettings,
     markPrologueSeen,
+    markTutorialComplete,
     setPremiumUnlocked,
     clearProgress,
     markCaseBriefingSeen,

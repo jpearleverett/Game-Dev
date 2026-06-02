@@ -9,6 +9,7 @@ import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 // Screens
 import SplashScreen from '../screens/SplashScreen';
 import PrologueScreen from '../screens/PrologueScreen';
+import TutorialScreen from '../screens/TutorialScreen';
 import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
@@ -102,6 +103,18 @@ export default function AppNavigator({ fontsReady, audio }) {
             <PrologueScreen
               onBegin={actions.handlePrologueComplete}
               reducedMotion={progress.settings.reducedMotion}
+            />
+          );
+        }}
+      </Stack.Screen>
+
+      <Stack.Screen name="Tutorial">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <TutorialScreen
+              onComplete={actions.handleTutorialComplete}
+              onSkip={actions.handleTutorialComplete}
             />
           );
         }}

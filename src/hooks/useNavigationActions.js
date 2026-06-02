@@ -16,6 +16,7 @@ export function useNavigationActions(navigation, game, audio) {
     clearProgress,
     setPremiumUnlocked,
     markPrologueSeen,
+    markTutorialComplete,
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
@@ -76,16 +77,24 @@ export function useNavigationActions(navigation, game, audio) {
 
   const handlePrologueComplete = useCallback(() => {
     markPrologueSeen();
+    // First-time players get the how-to-play tutorial before the desk.
+    navigation.replace(progress.tutorialCompleted ? 'Desk' : 'Tutorial');
+  }, [markPrologueSeen, navigation, progress.tutorialCompleted]);
+
+  const handleTutorialComplete = useCallback(() => {
+    markTutorialComplete();
     navigation.replace('Desk');
-  }, [markPrologueSeen, navigation]);
+  }, [markTutorialComplete, navigation]);
 
   const handleSplashContinue = useCallback(() => {
-    if (progress.seenPrologue) {
-      navigation.replace('Desk');
-    } else {
+    if (!progress.seenPrologue) {
       navigation.replace('Prologue');
+    } else if (!progress.tutorialCompleted) {
+      navigation.replace('Tutorial');
+    } else {
+      navigation.replace('Desk');
     }
-  }, [progress.seenPrologue, navigation]);
+  }, [progress.seenPrologue, progress.tutorialCompleted, navigation]);
 
   const handleStartCase = useCallback(async () => {
     const bypassCompletedGuard = pendingDailyStoryAdvance;
@@ -276,6 +285,7 @@ export function useNavigationActions(navigation, game, audio) {
 
   return {
     handlePrologueComplete,
+    handleTutorialComplete,
     handleSplashContinue,
     handleStartCase,
     handleSelectArchiveCase,

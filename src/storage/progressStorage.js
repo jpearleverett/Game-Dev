@@ -142,6 +142,7 @@ export const createBlankProgress = () => ({
   nextUnlockAt: null,
   currentCaseId: 1,
   seenPrologue: false,
+  tutorialCompleted: false,
   premiumUnlocked: false,
   settings: {
     sfxVolume: 0.8,

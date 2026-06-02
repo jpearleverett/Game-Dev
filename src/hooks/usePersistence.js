@@ -149,6 +149,13 @@ export function usePersistence() {
     });
   }, []);
 
+  const markTutorialComplete = useCallback(() => {
+    setProgress((prev) => {
+        if (prev.tutorialCompleted) return prev;
+        return { ...prev, tutorialCompleted: true };
+    });
+  }, []);
+
   const setPremiumUnlocked = useCallback((value = true) => {
     setProgress((prev) => {
         if (prev.premiumUnlocked === value) return prev;
@@ -184,6 +191,7 @@ export function usePersistence() {
     updateProgress,
     updateSettings,
     markPrologueSeen,
+    markTutorialComplete,
     setPremiumUnlocked,
     markCaseBriefingSeen,
     clearProgress,
