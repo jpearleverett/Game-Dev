@@ -223,11 +223,19 @@ class ValidationMethods {
       return `${fk}-${fallback}`;
     };
 
+    const clean = (t) => this._cleanBranchingProse(t);
+
+    // Clean the shared opening prose (preserving paragraph structure).
+    const opening = branchingNarrative.opening && typeof branchingNarrative.opening === 'object'
+      ? { ...branchingNarrative.opening, text: clean(branchingNarrative.opening.text) }
+      : branchingNarrative.opening;
+
     const firstChoice = branchingNarrative.firstChoice || {};
     const firstOptions = Array.isArray(firstChoice.options) ? firstChoice.options : [];
     const normalizedFirstOptions = firstOptions.map((opt, idx) => ({
       ...opt,
       key: normalizeFirstKey(opt?.key, idx),
+      ...(typeof opt?.response === 'string' ? { response: clean(opt.response) } : {}),
     }));
 
     const secondChoices = Array.isArray(branchingNarrative.secondChoices) ? branchingNarrative.secondChoices : [];
@@ -237,6 +245,7 @@ class ValidationMethods {
       const normalizedOptions = options.map((opt, optIdx) => ({
         ...opt,
         key: normalizeSecondKey(afterChoice, opt?.key, optIdx),
+        ...(typeof opt?.response === 'string' ? { response: clean(opt.response) } : {}),
       }));
       return {
         ...sc,
@@ -247,6 +256,7 @@ class ValidationMethods {
 
     return {
       ...branchingNarrative,
+      opening,
       firstChoice: {
         ...firstChoice,
         options: normalizedFirstOptions,
@@ -486,6 +496,29 @@ class ValidationMethods {
       .replace(/\s{2,}/g, ' ')
       // Remove em dashes (replace with comma)
       .replace(/\s*—\s*/g, ', ')
+      .trim();
+  }
+
+  /**
+   * Paragraph-safe prose cleaner for the branching narrative the player reads.
+   * Unlike _cleanNarrative, this preserves paragraph breaks (blank lines) so
+   * multi-paragraph subchapter responses stay readable, while still stripping
+   * the mechanical AI tells the Story Bible forbids (em dashes) and tidying
+   * stray horizontal whitespace.
+   */
+  _cleanBranchingProse(text) {
+    if (typeof text !== 'string' || !text) return text;
+    return text
+      // Em dashes -> comma (Story Bible forbids em dashes in narrative).
+      // Restrict to horizontal whitespace so paragraph breaks are never consumed.
+      .replace(/[^\S\n]*—[^\S\n]*/g, ', ')
+      // Collapse runs of spaces/tabs but keep newlines intact.
+      .replace(/[^\S\n]{2,}/g, ' ')
+      // Tidy whitespace hugging line breaks.
+      .replace(/[^\S\n]+\n/g, '\n')
+      .replace(/\n[^\S\n]+/g, '\n')
+      // Normalize 3+ blank lines down to a single paragraph break.
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
 
