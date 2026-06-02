@@ -54,7 +54,8 @@ export default function DeductionScreen({ navigation }) {
   const [solved, setSolved] = useState(false);
   const [showStamp, setShowStamp] = useState(false);
   const [cluesOpen, setCluesOpen] = useState(true);
-  const completedRef = useRef(false);
+  const [continuing, setContinuing] = useState(false);
+  const [genError, setGenError] = useState(null);
 
   // Entrance: gently fade/lift the board in.
   const enter = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
@@ -144,6 +145,21 @@ export default function DeductionScreen({ navigation }) {
       clearLogicPuzzle(caseNumber, pathKey).catch(() => {});
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
+      // Pin the contradiction to the Case Board the moment it's cracked — this is
+      // independent of continuing, so the lead is captured even if the next-scene
+      // generation later fails and the player retries.
+      try {
+        addCaseSuspects?.(puzzle.suspects.map((s) => ({ name: s.name })));
+        addCaseClue?.(makeClue({
+          label: `${puzzle.crime.culpritName}'s alibi breaks`,
+          detail: puzzle.contradiction,
+          source: CLUE_SOURCE.ALIBI,
+          weight: CLUE_WEIGHT.BREAKER,
+          caseNumber,
+          chapter,
+          suspectId: puzzle.crime.culpritId,
+        }));
+      } catch (_e) { /* board is best-effort */ }
     } else {
       const m = mistakes + 1;
       setMistakes(m);
@@ -155,43 +171,34 @@ export default function DeductionScreen({ navigation }) {
         text: `${result.correctCount} of ${result.total} placements hold up. The rest contradict the clues. Re-read and re-deduce.`,
       });
     }
-  }, [puzzle, allPlaced, placement, caseNumber, pathKey, mistakes, marks, persist, audio]);
+  }, [puzzle, allPlaced, placement, caseNumber, pathKey, chapter, mistakes, marks, persist, audio, addCaseClue, addCaseSuspects]);
 
-  // Pin the contradiction to the Case Board and advance the story.
+  // Continue: generate the next scene FIRST; only advance + navigate on success.
+  // On failure we stay put (puzzle + reveal intact) and offer a Retry, instead of
+  // half-advancing into a blank, ungenerated screen.
   const handleContinue = useCallback(async () => {
-    if (completedRef.current) return;
-    completedRef.current = true;
+    if (continuing) return;
+    setContinuing(true);
+    setGenError(null);
 
-    try {
-      addCaseSuspects?.(puzzle.suspects.map((s) => ({ name: s.name })));
-      addCaseClue?.(makeClue({
-        label: `${puzzle.crime.culpritName}'s alibi breaks`,
-        detail: puzzle.contradiction,
-        source: CLUE_SOURCE.ALIBI,
-        weight: CLUE_WEIGHT.BREAKER,
-        caseNumber,
-        chapter,
-        suspectId: puzzle.crime.culpritId,
-      }));
-    } catch (_e) { /* board is best-effort, never block progression */ }
-
-    // Advance story state exactly like the logic puzzle did.
-    completeLogicPuzzle?.({ caseId: activeCase?.id, caseNumber, mistakes });
-
-    // Navigate to the next subchapter (deduction only runs on A/B, never final).
     const { chapter: ch, subchapter } = parseCaseNumber(caseNumber);
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(ch, subchapter + 1);
+    const nextPathKey = storyCampaign?.currentPathKey || 'ROOT';
+
     try {
       if (nextCase) {
-        await game.ensureStoryContent?.(nextCase, storyCampaign?.currentPathKey || 'ROOT');
-        navigation.replace('CaseFile', { caseNumber: nextCase });
-      } else {
-        navigation.replace('CaseFile');
+        await game.ensureStoryContent?.(nextCase, nextPathKey);
       }
     } catch (_e) {
-      navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
+      setContinuing(false);
+      setGenError('The connection dropped before the next scene finished generating. Tap to try again.');
+      return;
     }
-  }, [puzzle, caseNumber, chapter, mistakes, activeCase?.id, completeLogicPuzzle, addCaseClue, addCaseSuspects, game, storyCampaign?.currentPathKey, navigation]);
+
+    // Generation succeeded (or there is no next case). Advance the story and go.
+    completeLogicPuzzle?.({ caseId: activeCase?.id, caseNumber, mistakes });
+    navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
+  }, [continuing, caseNumber, mistakes, activeCase?.id, completeLogicPuzzle, game, storyCampaign?.currentPathKey, navigation]);
 
   if (!puzzle) {
     return (
@@ -318,10 +325,13 @@ export default function DeductionScreen({ navigation }) {
             <Text style={styles.revealKicker}>CONTRADICTION</Text>
           </View>
           <Text style={styles.revealText}>{puzzle.contradiction}</Text>
+          <Text style={styles.revealPinned}>Pinned to your Case Board.</Text>
+          {genError ? <Text style={styles.revealError}>{genError}</Text> : null}
           <PrimaryButton
-            label="Pin to Case Board & Continue"
+            label={continuing ? 'Following the trail…' : genError ? 'Retry' : 'Continue the Investigation'}
             onPress={handleContinue}
-            icon={<MaterialCommunityIcons name="pin" size={18} color={COLORS.textSecondary} />}
+            disabled={continuing}
+            icon={<MaterialCommunityIcons name={genError ? 'refresh' : 'arrow-right'} size={18} color={COLORS.textSecondary} />}
           />
         </View>
       ) : (
@@ -434,5 +444,11 @@ const styles = StyleSheet.create({
   revealKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
   revealText: {
     fontFamily: FONTS.secondary, fontSize: FONT_SIZES.md, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.relaxed,
+  },
+  revealPinned: {
+    fontFamily: FONTS.primaryMedium, fontSize: FONT_SIZES.xs, color: COLORS.accentSecondary, letterSpacing: 0.5,
+  },
+  revealError: {
+    fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.bloodRed, lineHeight: LINE_HEIGHTS.cozy,
   },
 });
