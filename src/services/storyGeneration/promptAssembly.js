@@ -318,6 +318,47 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
  * Build dynamic prompt content (changes per request)
  * This is sent alongside the cached static content
  */
+function _buildPlayerDeductionSection(board) {
+  // Surfaces the player's case-board state (theory, accusation, pinned leads) so
+  // the narrative reflects their detective work. Soft steering — it never
+  // overrides canon, it asks the scene to build on what the player has deduced.
+  if (!board || typeof board !== 'object') return '';
+  const clues = Array.isArray(board.clues) ? board.clues : [];
+  const suspects = Array.isArray(board.suspects) ? board.suspects : [];
+  const theory = board.theory && typeof board.theory === 'object' ? board.theory : null;
+  const accusations = Array.isArray(board.accusations) ? board.accusations : [];
+  if (!clues.length && !theory && !accusations.length) return '';
+
+  const lines = [];
+  if (theory?.suspectId) {
+    const s = suspects.find((x) => x.id === theory.suspectId);
+    if (s) lines.push(`- The player's prime suspect is ${s.name}.`);
+  }
+  const lastAcc = accusations[0];
+  if (lastAcc?.suspectName) {
+    lines.push(
+      `- The player has formally accused ${lastAcc.suspectName}; the evidence ` +
+      `${lastAcc.correct ? 'supports this' : 'does not yet prove it'}.`,
+    );
+  }
+  const rank = { breaker: 2, major: 1, minor: 0 };
+  const topClues = [...clues].sort((a, b) => (rank[b.weight] || 0) - (rank[a.weight] || 0)).slice(0, 5);
+  if (topClues.length) {
+    lines.push('- Leads the player has pinned to the case board:');
+    topClues.forEach((c) => {
+      const detail = c.detail ? ` (${c.detail})` : '';
+      lines.push(`  • ${c.label}${detail}`);
+    });
+  }
+  if (!lines.length) return '';
+
+  return [
+    "The player has been investigating on their case board. Reflect their detective work in this scene WITHOUT contradicting established canon or the Story Bible.",
+    ...lines,
+    'Guidance: Jack should visibly act on these leads and any prime suspicion. If a formal accusation is supported by the evidence, escalate the pressure on that person this chapter. Build on these leads; never invent facts that flatly contradict them.',
+  ].join('\n');
+}
+
 function _buildDynamicPrompt(
   context,
   chapter,
@@ -374,6 +415,15 @@ function _buildDynamicPrompt(
   parts.push('<active_threads>');
   parts.push(this._buildConsistencySection(context));
   parts.push('</active_threads>');
+
+  // Dynamic Part 4.5: Player deduction state (their case board), so the
+  // narrative bends toward the player's investigation and accusations.
+  const deductionSection = this._buildPlayerDeductionSection(this.currentCaseBoard);
+  if (deductionSection) {
+    parts.push('<player_deduction>');
+    parts.push(deductionSection);
+    parts.push('</player_deduction>');
+  }
 
   // Dynamic Part 6: Current Scene State (exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
@@ -491,6 +541,14 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push('<active_threads>');
   parts.push(this._buildConsistencySection(context));
   parts.push('</active_threads>');
+
+  // Part 6.5: Player deduction state (their case board).
+  const deductionSectionGen = this._buildPlayerDeductionSection(this.currentCaseBoard);
+  if (deductionSectionGen) {
+    parts.push('<player_deduction>');
+    parts.push(deductionSectionGen);
+    parts.push('</player_deduction>');
+  }
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
@@ -1660,6 +1718,7 @@ export const promptAssemblyMethods = {
   _ensureStaticCache,
   _ensureChapterStartCache,
   _buildDynamicPrompt,
+  _buildPlayerDeductionSection,
   _buildGenerationPrompt,
   _buildCraftTechniquesSection,
   _extractCharactersFromContext,

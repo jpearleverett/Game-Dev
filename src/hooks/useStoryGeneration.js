@@ -56,6 +56,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
+  const caseBoardRef = useRef(null); // DEDUCTION: player's case board (theory/accusation/leads) for prompt context
 
   // Background resilience: Track app state to handle generation during backgrounding
   const appStateRef = useRef(AppState.currentState);
@@ -102,6 +103,10 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
   useEffect(() => {
     branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
   }, [storyCampaign?.branchingChoices]);
+
+  useEffect(() => {
+    caseBoardRef.current = storyCampaign?.caseBoard || null;
+  }, [storyCampaign?.caseBoard]);
 
   // AppState listener for background resilience
   // Tracks when app goes to background during generation to handle gracefully on return
@@ -273,6 +278,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
             reason: `prefetch-next-chapter-branches:${source}`,
             branchingChoices, // Player's actual path through previous subchapters
+            caseBoard: caseBoardRef.current, // DEDUCTION: player's investigation state
           })
         );
 
@@ -480,6 +486,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           reason: 'immediate-generateForCase',
           isUserFacing: true, // Never show fallback to player
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
+          caseBoard: caseBoardRef.current, // DEDUCTION: bend narrative toward player's investigation
         })
       );
 
@@ -779,6 +786,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           choiceHistory,
           withQualitySettings({
             branchingChoices,
+            caseBoard: caseBoardRef.current,
             reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context'
           })
         );

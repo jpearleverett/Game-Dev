@@ -243,6 +243,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // This enables _getPathDecisionData to look up path-specific decisions correctly
   this.currentBranchingChoices = branchingChoices;
 
+  // Store the player's case board so _buildPlayerDeductionSection can bend the
+  // narrative toward their theory, accusation, and pinned leads.
+  this.currentCaseBoard = options?.caseBoard || null;
+
   // Deduplication: Return existing promise if generation is already in flight for this exact content
   // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
   const MAX_PENDING_AGE_MS = 3 * 60 * 1000; // 3 minutes
