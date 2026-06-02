@@ -13,6 +13,7 @@ import TutorialScreen from '../screens/TutorialScreen';
 import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
+import DeductionScreen from '../screens/DeductionScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -173,6 +174,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="LogicPuzzle">
         {({ navigation }) => (
           <LogicPuzzleScreen navigation={navigation} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Deduction">
+        {({ navigation }) => (
+          <DeductionScreen navigation={navigation} />
         )}
       </Stack.Screen>
 

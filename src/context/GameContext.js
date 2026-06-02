@@ -2,6 +2,14 @@ import React, { createContext, useContext, useEffect, useCallback, useState, use
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
+import {
+  addClue as boardAddClue,
+  addClues as boardAddClues,
+  addSuspects as boardAddSuspects,
+  setTheory as boardSetTheory,
+  recordAccusation as boardRecordAccusation,
+  touchBoard as boardTouch,
+} from '../data/caseBoard';
 // Removed: internal usePersistence hook call
 import { useGameLogic } from '../hooks/useGameLogic';
 import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
@@ -565,6 +573,24 @@ export function GameProvider({
       }
   }, [mode, progress.storyCampaign, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
 
+  // ========== CASE BOARD (DEDUCTION) ==========
+  // Mutations to the running deduction board. Each reads the current campaign,
+  // applies a pure caseBoard helper, and writes back via updateProgress (which
+  // auto-persists). Centralised here so every screen posts to one board.
+  const _mutateCaseBoard = useCallback((mutator) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const nextBoard = mutator(current.caseBoard);
+    if (nextBoard === current.caseBoard) return;
+    updateProgress({ storyCampaign: { ...current, caseBoard: nextBoard } });
+  }, [progress.storyCampaign, updateProgress]);
+
+  const addCaseClue = useCallback((clue) => _mutateCaseBoard((b) => boardAddClue(b, clue)), [_mutateCaseBoard]);
+  const addCaseClues = useCallback((clues) => _mutateCaseBoard((b) => boardAddClues(b, clues)), [_mutateCaseBoard]);
+  const addCaseSuspects = useCallback((list) => _mutateCaseBoard((b) => boardAddSuspects(b, list)), [_mutateCaseBoard]);
+  const setCaseTheory = useCallback((theory) => _mutateCaseBoard((b) => boardSetTheory(b, theory)), [_mutateCaseBoard]);
+  const recordCaseAccusation = useCallback((acc) => _mutateCaseBoard((b) => boardRecordAccusation(b, acc)), [_mutateCaseBoard]);
+  const touchCaseBoard = useCallback(() => _mutateCaseBoard((b) => boardTouch(b)), [_mutateCaseBoard]);
+
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
   const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
@@ -803,6 +829,13 @@ export function GameProvider({
     clearGenerationError: story.clearGenerationError,
     clearAutoRetry: story.clearAutoRetry, // Clear auto-retry flag after handling
     completeLogicPuzzle,
+    // Case Board (deduction)
+    addCaseClue,
+    addCaseClues,
+    addCaseSuspects,
+    setCaseTheory,
+    recordCaseAccusation,
+    touchCaseBoard,
     // Endings & Achievements
     unlockEnding,
     unlockAchievement,
@@ -810,6 +843,12 @@ export function GameProvider({
     saveChapterCheckpoint,
     startFromChapter,
     updateGameplayStats,
+    addCaseClue,
+    addCaseClues,
+    addCaseSuspects,
+    setCaseTheory,
+    recordCaseAccusation,
+    touchCaseBoard,
   }), [
     toggleWordSelection,
     submitGuess,
@@ -837,6 +876,12 @@ export function GameProvider({
     startFromChapter,
     updateGameplayStats,
     completeLogicPuzzle,
+    addCaseClue,
+    addCaseClues,
+    addCaseSuspects,
+    setCaseTheory,
+    recordCaseAccusation,
+    touchCaseBoard,
   ]);
 
   return (
