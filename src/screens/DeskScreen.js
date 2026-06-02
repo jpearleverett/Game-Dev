@@ -172,9 +172,11 @@ export default function DeskScreen({
   onOpenSettings,
   onOpenMenu,
   onOpenStoryCampaign,
+  onOpenCaseBoard,
   onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
+  const caseBoardLeads = storyCampaign?.caseBoard?.clues?.length || 0;
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
 
@@ -671,10 +673,19 @@ export default function DeskScreen({
           <PrimaryButton 
             label="Enter" 
             icon={<MaterialCommunityIcons name="book-open-page-variant" size={20} color={COLORS.textSecondary} />} 
-            onPress={handleStoryPress} 
-            fullWidth={compact || medium} 
+            onPress={handleStoryPress}
+            fullWidth={compact || medium}
           />
         </View>
+
+        {onOpenCaseBoard ? (
+          <SecondaryButton
+            label={caseBoardLeads > 0 ? `Case Board · ${caseBoardLeads} ${caseBoardLeads === 1 ? 'lead' : 'leads'}` : 'Case Board'}
+            onPress={handleQuickPress(onOpenCaseBoard)}
+            icon={<MaterialCommunityIcons name="bulletin-board" size={20} color={COLORS.textSecondary} />}
+            style={{ marginTop: scaleSpacing(SPACING.md) }}
+          />
+        ) : null}
 
         <View style={[styles.footerSpacer, { height: footerSpacing }]} />
       </ScrollView>

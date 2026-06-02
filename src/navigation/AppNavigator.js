@@ -14,6 +14,7 @@ import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
 import DeductionScreen from '../screens/DeductionScreen';
+import CaseBoardScreen from '../screens/CaseBoardScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -135,6 +136,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenMenu={() => navigation.navigate('Menu')}
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
+              onOpenCaseBoard={() => navigation.navigate('CaseBoard')}
               onBribe={purchaseBribe}
             />
           );
@@ -180,6 +182,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Deduction">
         {({ navigation }) => (
           <DeductionScreen navigation={navigation} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="CaseBoard">
+        {({ navigation }) => (
+          <CaseBoardScreen navigation={navigation} />
         )}
       </Stack.Screen>
 
