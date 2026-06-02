@@ -118,6 +118,7 @@ export default function AppNavigator({ fontsReady, audio }) {
             <TutorialScreen
               onComplete={actions.handleTutorialComplete}
               onSkip={actions.handleTutorialComplete}
+              reducedMotion={progress.settings.reducedMotion}
             />
           );
         }}

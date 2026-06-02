@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
+import DustLayer from '../components/DustLayer';
+import SolvedStampAnimation from '../components/SolvedStampAnimation';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
+import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../utils/haptics';
 import { generateDeductionPuzzle, checkDeduction } from '../services/DeductionService';
 import { makeClue, CLUE_SOURCE, CLUE_WEIGHT } from '../data/caseBoard';
 import { parseCaseNumber, resolveStoryPathKey, formatCaseNumber } from '../data/storyContent';
@@ -44,12 +47,25 @@ export default function DeductionScreen({ navigation }) {
     [caseNumber, chapter, activeCase],
   );
 
+  const reducedMotion = !!progress?.settings?.reducedMotion;
   const [marks, setMarks] = useState({});            // { 'sId|lId': 'placed'|'ruled' }
   const [mistakes, setMistakes] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [solved, setSolved] = useState(false);
+  const [showStamp, setShowStamp] = useState(false);
   const [cluesOpen, setCluesOpen] = useState(true);
   const completedRef = useRef(false);
+
+  // Entrance: gently fade/lift the board in.
+  const enter = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
+  useEffect(() => {
+    if (reducedMotion) { enter.setValue(1); return; }
+    Animated.timing(enter, { toValue: 1, duration: 420, useNativeDriver: true }).start();
+  }, [enter, reducedMotion]);
+  const enterStyle = {
+    opacity: enter,
+    transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+  };
 
   // Restore any in-progress marks for this beat.
   useEffect(() => {
@@ -89,10 +105,13 @@ export default function DeductionScreen({ navigation }) {
           if ((ks === sId || kl === lId) && next[kk] === MARK.PLACED) delete next[kk];
         });
         next[k] = MARK.PLACED;
+        impactHaptic(Haptics.ImpactFeedbackStyle.Medium);
       } else if (current === MARK.PLACED) {
         next[k] = MARK.RULED_OUT;
+        selectionHaptic();
       } else {
         delete next[k];
+        selectionHaptic();
       }
       persist(next, mistakes);
       return next;
@@ -120,13 +139,16 @@ export default function DeductionScreen({ navigation }) {
     const result = checkDeduction(puzzle, placement);
     if (result.solved) {
       setSolved(true);
+      setShowStamp(true);
       setFeedback(null);
       clearLogicPuzzle(caseNumber, pathKey).catch(() => {});
+      notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
     } else {
       const m = mistakes + 1;
       setMistakes(m);
       persist(marks, m);
+      notificationHaptic(Haptics.NotificationFeedbackType.Error);
       audio?.playFailure?.();
       setFeedback({
         tone: 'error',
@@ -183,6 +205,10 @@ export default function DeductionScreen({ navigation }) {
 
   return (
     <ScreenSurface variant="default">
+      {!reducedMotion ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
+      ) : null}
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.kickerRow}>
@@ -220,6 +246,7 @@ export default function DeductionScreen({ navigation }) {
           </Text>
         </View>
 
+        <Animated.View style={enterStyle}>
         {puzzle.suspects.map((s) => {
           const placedLoc = placement[s.id];
           return (
@@ -274,6 +301,7 @@ export default function DeductionScreen({ navigation }) {
             </View>
           );
         })}
+        </Animated.View>
 
         {feedback ? (
           <Text style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError, feedback.tone === 'warn' && styles.feedbackWarn]}>
@@ -312,6 +340,13 @@ export default function DeductionScreen({ navigation }) {
           />
         </View>
       )}
+
+      <SolvedStampAnimation
+        visible={showStamp}
+        reducedMotion={reducedMotion}
+        intelName={`${puzzle.crime.culpritName} — alibi broken`}
+        onContinue={() => setShowStamp(false)}
+      />
     </ScreenSurface>
   );
 }

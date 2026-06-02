@@ -1,14 +1,24 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
+import DustLayer from '../components/DustLayer';
+import StringLayer from '../components/evidence-board/StringLayer';
 import { useGame } from '../context/GameContext';
+import { selectionHaptic } from '../utils/haptics';
 import { normalizeCaseBoard, CLUE_SOURCE, CLUE_WEIGHT } from '../data/caseBoard';
 import { COLORS, CARD_STATES } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
+
+// Deterministic slight tilt per pinned card, for the corkboard "tacked note" feel.
+const tiltFor = (id) => {
+  let h = 0;
+  for (let i = 0; i < String(id).length; i += 1) h = (h * 31 + String(id).charCodeAt(i)) >>> 0;
+  return `${(((h % 100) / 100) * 4 - 2).toFixed(2)}deg`; // -2deg..+2deg
+};
 
 const SOURCE_META = {
   [CLUE_SOURCE.BOARD]: { label: 'EVIDENCE', icon: 'magnify' },
@@ -31,8 +41,34 @@ export default function CaseBoardScreen({ navigation }) {
     () => normalizeCaseBoard(progress?.storyCampaign?.caseBoard),
     [progress?.storyCampaign?.caseBoard],
   );
+  const reducedMotion = !!progress?.settings?.reducedMotion;
 
   useEffect(() => { touchCaseBoard?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Entrance fade/lift.
+  const enter = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
+  useEffect(() => {
+    if (reducedMotion) { enter.setValue(1); return; }
+    Animated.timing(enter, { toValue: 1, duration: 420, useNativeDriver: true }).start();
+  }, [enter, reducedMotion]);
+  const enterStyle = {
+    opacity: enter,
+    transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+  };
+
+  // Ambient red string across the pinned area (decorative corkboard texture).
+  const [clueArea, setClueArea] = useState({ width: 0, height: 0 });
+  const stringConnectors = useMemo(() => {
+    const { width: w, height: h } = clueArea;
+    if (!w || !h || board.clues.length < 2) return [];
+    const breaker = board.clues.some((c) => c.weight === CLUE_WEIGHT.BREAKER);
+    const tone = board.theory ? 'confirmed' : breaker ? 'active' : 'idle';
+    return [
+      { id: 's1', from: { x: w * 0.12, y: h * 0.06 }, to: { x: w * 0.82, y: h * 0.34 }, tone },
+      { id: 's2', from: { x: w * 0.86, y: h * 0.1 }, to: { x: w * 0.2, y: h * 0.55 }, tone: breaker ? 'active' : 'idle' },
+      { id: 's3', from: { x: w * 0.3, y: h * 0.4 }, to: { x: w * 0.7, y: h * 0.82 }, tone: 'idle' },
+    ];
+  }, [clueArea, board.clues, board.theory]);
 
   const breakers = board.clues.filter((c) => c.weight === CLUE_WEIGHT.BREAKER).length;
   const theorySuspect = board.theory
@@ -43,6 +79,7 @@ export default function CaseBoardScreen({ navigation }) {
     : null;
 
   const onPickSuspect = (s) => {
+    selectionHaptic();
     if (board.theory?.suspectId === s.id) {
       setCaseTheory?.(null);
     } else {
@@ -54,6 +91,10 @@ export default function CaseBoardScreen({ navigation }) {
 
   return (
     <ScreenSurface variant="default">
+      {!reducedMotion ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
+      ) : null}
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -146,25 +187,41 @@ export default function CaseBoardScreen({ navigation }) {
             </Text>
           </View>
         ) : (
-          <View style={styles.clueColumn}>
-            {board.clues.map((clue) => {
-              const meta = SOURCE_META[clue.source] || SOURCE_META[CLUE_SOURCE.BOARD];
-              const isBreaker = clue.weight === CLUE_WEIGHT.BREAKER;
-              return (
-                <View key={clue.id} style={[styles.card, isBreaker && styles.cardBreaker]}>
-                  <View style={[styles.pin, { backgroundColor: PIN_COLOR[clue.weight] || CARD_STATES.lockedMain.pin }]} />
-                  <View style={styles.cardTagRow}>
-                    <MaterialCommunityIcons name={meta.icon} size={12} color={CARD_STATES.default.lineColor && '#6a5644'} />
-                    <Text style={styles.cardTag}>{meta.label}</Text>
-                    {isBreaker ? <Text style={styles.breakerTag}>CASE-BREAKER</Text> : null}
-                    {clue.chapter ? <Text style={styles.cardChapter}>Ch.{clue.chapter}</Text> : null}
+          <Animated.View
+            style={[styles.corkboard, enterStyle]}
+            onLayout={(e) => setClueArea({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+          >
+            <StringLayer
+              connectors={stringConnectors}
+              stringThickness={2}
+              reducedMotion={reducedMotion}
+              activeConnectionCount={board.theory ? 1 : 0}
+              stringOpacityActive={0.5}
+              stringOpacityIdle={0.32}
+            />
+            <View style={styles.clueColumn}>
+              {board.clues.map((clue) => {
+                const meta = SOURCE_META[clue.source] || SOURCE_META[CLUE_SOURCE.BOARD];
+                const isBreaker = clue.weight === CLUE_WEIGHT.BREAKER;
+                return (
+                  <View
+                    key={clue.id}
+                    style={[styles.card, isBreaker && styles.cardBreaker, { transform: [{ rotate: tiltFor(clue.id) }] }]}
+                  >
+                    <View style={[styles.pin, { backgroundColor: PIN_COLOR[clue.weight] || CARD_STATES.lockedMain.pin }]} />
+                    <View style={styles.cardTagRow}>
+                      <MaterialCommunityIcons name={meta.icon} size={12} color="#6a5644" />
+                      <Text style={styles.cardTag}>{meta.label}</Text>
+                      {isBreaker ? <Text style={styles.breakerTag}>CASE-BREAKER</Text> : null}
+                      {clue.chapter ? <Text style={styles.cardChapter}>Ch.{clue.chapter}</Text> : null}
+                    </View>
+                    <Text style={styles.cardLabel}>{clue.label}</Text>
+                    {clue.detail ? <Text style={styles.cardDetail}>{clue.detail}</Text> : null}
                   </View>
-                  <Text style={styles.cardLabel}>{clue.label}</Text>
-                  {clue.detail ? <Text style={styles.cardDetail}>{clue.detail}</Text> : null}
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          </Animated.View>
         )}
       </ScrollView>
 
@@ -186,7 +243,10 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   kickerWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
-  title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
+  title: {
+    fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.amberLight, marginTop: SPACING.sm,
+    textShadowColor: 'rgba(241,197,114,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14,
+  },
   status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   footer: { paddingTop: SPACING.sm },
@@ -224,8 +284,19 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted,
     textAlign: 'center', lineHeight: LINE_HEIGHTS.cozy, paddingHorizontal: SPACING.lg,
   },
+  // Cork board surface that the index cards are pinned to
+  corkboard: {
+    backgroundColor: 'rgba(58, 42, 28, 0.38)',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(120, 92, 60, 0.4)',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
+    overflow: 'hidden',
+  },
   // Clue cards (index-card aesthetic)
-  clueColumn: { gap: SPACING.md },
+  clueColumn: { gap: SPACING.lg },
   card: {
     backgroundColor: CARD_STATES.default.backgroundColor,
     borderRadius: RADIUS.sm,

@@ -4,6 +4,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
+import DustLayer from '../components/DustLayer';
+import { selectionHaptic } from '../utils/haptics';
 import { COLORS, CARD_STATES } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -59,6 +61,7 @@ function DemoBoard({ onSolved, solved }) {
 
   const toggle = useCallback((word) => {
     if (solved) return;
+    selectionHaptic();
     setMessage(null);
     setSelected((prev) => {
       if (prev.includes(word)) return prev.filter((w) => w !== word);
@@ -139,7 +142,7 @@ function DemoBoard({ onSolved, solved }) {
   );
 }
 
-export default function TutorialScreen({ onComplete, onSkip }) {
+export default function TutorialScreen({ onComplete, onSkip, reducedMotion = false }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [demoSolved, setDemoSolved] = useState(false);
 
@@ -173,6 +176,9 @@ export default function TutorialScreen({ onComplete, onSkip }) {
 
   return (
     <ScreenSurface variant="default">
+      {!reducedMotion ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
+      ) : null}
       <View style={styles.topBar}>
         <Text style={styles.kicker}>HOW TO PLAY</Text>
         <Pressable onPress={handleSkip} hitSlop={10} accessibilityRole="button">

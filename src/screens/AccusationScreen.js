@@ -4,8 +4,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
+import DustLayer from '../components/DustLayer';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
+import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { normalizeCaseBoard, makeClue, CLUE_SOURCE, CLUE_WEIGHT } from '../data/caseBoard';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
@@ -21,6 +23,7 @@ export default function AccusationScreen({ navigation }) {
     [progress?.storyCampaign?.caseBoard],
   );
   const chapter = progress?.storyCampaign?.chapter ?? null;
+  const reducedMotion = !!progress?.settings?.reducedMotion;
 
   // The breaker clues are the alibi contradictions; their suspectId is whose
   // alibi actually broke — the evidence-supported culprit for that beat.
@@ -62,7 +65,13 @@ export default function AccusationScreen({ navigation }) {
       chapter,
       suspectId,
     }));
-    if (supported) audio?.playVictory?.(); else audio?.playSubmit?.();
+    if (supported) {
+      audio?.playVictory?.();
+      notificationHaptic(Haptics.NotificationFeedbackType.Success);
+    } else {
+      audio?.playSubmit?.();
+      impactHaptic(Haptics.ImpactFeedbackStyle.Medium);
+    }
     setResult({ supported, name: chosenSuspect.name });
   };
 
@@ -85,6 +94,9 @@ export default function AccusationScreen({ navigation }) {
 
   return (
     <ScreenSurface variant="default">
+      {!reducedMotion ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
+      ) : null}
       <View style={styles.header}>
         <View style={styles.kickerRow}>
           <MaterialCommunityIcons name="gavel" size={18} color={COLORS.accentSecondary} />
@@ -103,7 +115,7 @@ export default function AccusationScreen({ navigation }) {
               <Pressable
                 key={s.id}
                 disabled={!!result}
-                onPress={() => setSuspectId(s.id)}
+                onPress={() => { selectionHaptic(); setSuspectId(s.id); }}
                 style={[styles.suspectCard, active && styles.suspectCardActive]}
                 accessibilityRole="button"
               >
@@ -129,7 +141,7 @@ export default function AccusationScreen({ navigation }) {
                 <Pressable
                   key={c.id}
                   disabled={!!result}
-                  onPress={() => setClueId(c.id)}
+                  onPress={() => { selectionHaptic(); setClueId(c.id); }}
                   style={[styles.clueCard, active && styles.clueCardActive]}
                   accessibilityRole="button"
                 >
