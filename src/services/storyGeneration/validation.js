@@ -119,6 +119,9 @@ class ValidationMethods {
         jackBehaviorDeclaration: parsed.jackBehaviorDeclaration,
         narrativeThreads: Array.isArray(parsed.narrativeThreads) ? parsed.narrativeThreads : [],
         previousThreadsAddressed: Array.isArray(parsed.previousThreadsAddressed) ? parsed.previousThreadsAddressed : [],
+        // CASE FILE: deduction ground-truth (suspects/locations/culprit) for the
+        // alibi board. Normalized so the puzzle builder can trust it.
+        caseFile: this._normalizeCaseFile(parsed.caseFile),
         pathDecisions: null,
       };
 
@@ -263,6 +266,67 @@ class ValidationMethods {
       },
       secondChoices: normalizedSecondChoices,
     };
+  }
+
+  /**
+   * Normalize the LLM-provided caseFile into deduction ground-truth the alibi
+   * grid can trust: 3-6 distinct-named suspects, a clean suspect->actualLocation
+   * bijection (collisions repaired), a culprit whose actualLocation is the crime
+   * scene and whose alibi (claimedLocation) is a lie. Returns null when there
+   * isn't enough to build a puzzle (the grid then falls back to its local pool).
+   */
+  _normalizeCaseFile(cf) {
+    if (!cf || typeof cf !== 'object') return null;
+
+    const clean = (v) => (v == null ? '' : String(v).trim());
+    const rawSuspects = Array.isArray(cf.suspects) ? cf.suspects : [];
+
+    // Require name + both locations; dedupe by name.
+    const byName = new Map();
+    rawSuspects.forEach((s) => {
+      if (!s) return;
+      const name = clean(s.name);
+      const actualLocation = clean(s.actualLocation);
+      const claimedLocation = clean(s.claimedLocation);
+      if (!name || !actualLocation || !claimedLocation) return;
+      const key = name.toLowerCase();
+      if (!byName.has(key)) byName.set(key, { name, actualLocation, claimedLocation, motive: clean(s.motive) });
+    });
+    let suspects = Array.from(byName.values()).slice(0, 6);
+    if (suspects.length < 3) return null;
+
+    // Ensure DISTINCT actualLocations (the grid is a bijection). Repair collisions
+    // by borrowing other mentioned locations, then a last-resort distinct label.
+    const mentioned = [];
+    suspects.forEach((s) => { mentioned.push(s.actualLocation, s.claimedLocation); });
+    const spares = Array.from(new Set(mentioned.map((l) => l).filter(Boolean)));
+    const used = new Set();
+    let spareIdx = 0;
+    suspects = suspects.map((s) => {
+      let loc = s.actualLocation;
+      if (used.has(loc.toLowerCase())) {
+        while (spareIdx < spares.length && used.has(spares[spareIdx].toLowerCase())) spareIdx += 1;
+        loc = spareIdx < spares.length ? spares[spareIdx++] : `${s.actualLocation} (other end)`;
+      }
+      used.add(loc.toLowerCase());
+      return { ...s, actualLocation: loc };
+    });
+
+    // Culprit: match by name, else snap to the first suspect.
+    const culpritName = clean(cf.culprit);
+    let culprit = suspects.find((s) => s.name.toLowerCase() === culpritName.toLowerCase()) || suspects[0];
+    const crimeScene = culprit.actualLocation; // snap scene to culprit's true spot for consistency
+
+    // The culprit's alibi must be a lie (claimed != actual).
+    if (culprit.claimedLocation.toLowerCase() === crimeScene.toLowerCase()) {
+      const alt = suspects.find((s) => s.actualLocation.toLowerCase() !== crimeScene.toLowerCase());
+      culprit.claimedLocation = alt ? alt.actualLocation : `${crimeScene} (away)`;
+    }
+
+    const contradiction = clean(cf.contradiction)
+      || `${culprit.name} claimed they were at ${culprit.claimedLocation}, but the evidence puts them at ${crimeScene}.`;
+
+    return { suspects, culprit: culprit.name, crimeScene, contradiction };
   }
 
   /**

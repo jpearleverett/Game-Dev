@@ -294,6 +294,15 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
 </output_contract>
 
+<case_file>
+Populate the caseFile field so the player's deduction board is built from THIS scene (not generic filler):
+- List 3-5 suspects who actually appear in or are referenced by this scene, by the names you used in the prose.
+- For each, give a DISTINCT actualLocation (where they truly were) and a claimedLocation (their stated alibi). Use concrete places from the world (e.g., the wharf, the Archive, Murphy's Bar).
+- Choose one culprit. Their actualLocation MUST equal crimeScene and MUST differ from their claimedLocation (their alibi is the lie).
+- Write contradiction as one sharp sentence: who claimed where, and where the evidence really puts them.
+- These facts must be CONSISTENT with the narrative you wrote. The player will deduce them; do not contradict them later.
+</case_file>
+
 <internal_planning>
 Before writing narrative, internally determine (do NOT output these; just let them guide your writing):
 - BEAT STRUCTURE: What are the 3-5 major plot beats for this scene?

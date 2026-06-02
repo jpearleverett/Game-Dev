@@ -135,38 +135,22 @@ const clueText = (clue, suspects, locations) => {
 };
 
 /**
- * Generate a case-rooted alibi grid.
- *
- * @param {string} caseNumber e.g. "002C"
- * @param {object} opts { caseData, storyMeta, chapter, size, difficulty }
+ * Shared core: given suspects/locations and the ground-truth bijection, generate
+ * a guaranteed-unique, minimal clue set (phrased with the real names) and return
+ * the puzzle object. Used by both the case-file path and the local pool path.
  */
-export const generateDeductionPuzzle = (caseNumber, opts = {}) => {
-  const chapter = opts.chapter ?? parseInt(String(caseNumber || '001').slice(0, 3), 10) ?? 1;
-  const n = Math.max(3, Math.min(opts.size || getDeductionSize(chapter), 6));
-  const difficulty = opts.difficulty || (chapter <= 2 ? 'easy' : chapter <= 5 ? 'medium' : 'hard');
+const assembleDeduction = ({ caseNumber, seed, suspects, locations, truth, sceneLocIdx, culpritIdx, claimIdx, contradiction, difficulty, rng, source }) => {
+  const n = suspects.length;
 
-  const seed = `deduction:${caseNumber}:${n}`;
-  const rng = seededRng(seed);
-
-  const pools = extractCaseEntities(caseNumber, { caseData: opts.caseData, storyMeta: opts.storyMeta });
-  const suspects = pools.suspects.slice(0, n).map((name) => ({ id: `suspect_${slug(name)}`, name }));
-  const locations = pools.locations.slice(0, n).map((name) => ({ id: `loc_${slug(name)}`, name }));
-
-  // Truth: a random bijection suspectIndex -> locationIndex.
-  const truth = shuffleSeeded([...Array(n).keys()], rng);
-
-  // Greedily assemble a unique, minimal clue set.
   const pool = buildCluePool(n, truth, rng, difficulty);
   const chosen = [];
   for (const clue of pool) {
     if (countSolutions(n, chosen) === 1) break;
     chosen.push(clue);
   }
-  // If the pool somehow under-constrained (shouldn't happen), top up with AT clues.
   for (let s = 0; s < n && countSolutions(n, chosen) > 1; s += 1) {
     chosen.push({ type: CLUE_TYPE.AT, suspect: s, locations: [truth[s]], strength: 0 });
   }
-  // Minimise: drop any clue that isn't needed for uniqueness.
   for (let i = chosen.length - 1; i >= 0; i -= 1) {
     const without = chosen.slice(0, i).concat(chosen.slice(i + 1));
     if (countSolutions(n, without) === 1) chosen.splice(i, 1);
@@ -180,25 +164,16 @@ export const generateDeductionPuzzle = (caseNumber, opts = {}) => {
     text: clueText(c, suspects, locations),
   }));
 
-  // The crime scene + culprit + their false alibi.
-  const sceneLocIdx = Math.floor(rng() * n);
-  const culpritIdx = truth.indexOf(sceneLocIdx);
-  let claimIdx = Math.floor(rng() * n);
-  if (claimIdx === sceneLocIdx) claimIdx = (claimIdx + 1) % n;
-
   const solution = {};
   suspects.forEach((s, i) => { solution[s.id] = locations[truth[i]].id; });
 
   const culprit = suspects[culpritIdx];
   const scene = locations[sceneLocIdx];
-  const claim = locations[claimIdx];
-
-  const contradiction =
-    `${culprit.name} swore they were at ${claim.name} that night — ` +
-    `but the placements put them at ${scene.name}, where it happened.`;
+  const claim = locations[claimIdx] || null;
 
   return {
     kind: 'deduction',
+    source, // 'caseFile' (rooted in the story) | 'pool' (local fallback)
     caseNumber,
     seed,
     size: n,
@@ -212,12 +187,99 @@ export const generateDeductionPuzzle = (caseNumber, opts = {}) => {
       sceneName: scene.name,
       culpritId: culprit.id,
       culpritName: culprit.name,
-      claimLocationId: claim.id,
-      claimName: claim.name,
+      claimLocationId: claim ? claim.id : null,
+      claimName: claim ? claim.name : null,
     },
     contradiction,
     prompt: 'Place each suspect where the evidence — not their word — puts them.',
   };
+};
+
+/**
+ * Build the alibi grid from the LLM's caseFile (suspects + true/claimed
+ * locations + culprit + crime scene). Returns null if the caseFile can't form a
+ * valid grid (caller then falls back to the local pool).
+ */
+const buildFromCaseFile = (caseFile, caseNumber, difficulty) => {
+  if (!caseFile || !Array.isArray(caseFile.suspects) || caseFile.suspects.length < 3) return null;
+
+  const seed = `deduction:${caseNumber}:cf`;
+  const rng = seededRng(seed);
+
+  const cfSuspects = caseFile.suspects.slice(0, 6);
+  const n = cfSuspects.length;
+
+  const suspects = cfSuspects.map((s) => ({ id: `suspect_${slug(s.name)}`, name: s.name }));
+
+  // Locations = each suspect's true location, shuffled so the solution isn't the diagonal.
+  const orderedLocNames = cfSuspects.map((s) => s.actualLocation);
+  const shuffledLocNames = shuffleSeeded(orderedLocNames, rng);
+  // Guard: names must be distinct (validation repairs this, but be safe).
+  if (new Set(shuffledLocNames.map((l) => l.toLowerCase())).size !== n) return null;
+  const locations = shuffledLocNames.map((name) => ({ id: `loc_${slug(name)}`, name }));
+  const locIndexByName = new Map(shuffledLocNames.map((name, i) => [name.toLowerCase(), i]));
+
+  // truth[suspectIdx] = index of that suspect's actual location.
+  const truth = cfSuspects.map((s) => locIndexByName.get(s.actualLocation.toLowerCase()));
+  if (truth.some((t) => t == null)) return null;
+
+  const culpritIdx = Math.max(0, cfSuspects.findIndex((s) => s.name === caseFile.culprit));
+  const sceneLocIdx = truth[culpritIdx];
+  const claimName = cfSuspects[culpritIdx]?.claimedLocation;
+  const claimIdx = claimName != null ? (locIndexByName.has(claimName.toLowerCase()) ? locIndexByName.get(claimName.toLowerCase()) : null) : null;
+
+  return assembleDeduction({
+    caseNumber, seed, suspects, locations, truth, sceneLocIdx, culpritIdx,
+    claimIdx: claimIdx == null ? -1 : claimIdx, // -1 => no grid cell for the claim; text comes from caseFile
+    contradiction: caseFile.contradiction,
+    difficulty, rng, source: 'caseFile',
+  });
+};
+
+/**
+ * Generate a case-rooted alibi grid.
+ *
+ * Prefers the LLM-authored caseFile (real suspects/locations/culprit from THIS
+ * scene). Falls back to the local Ashport entity pool when no caseFile exists
+ * (e.g. the static opening chapter) so a puzzle is always available.
+ *
+ * @param {string} caseNumber e.g. "002C"
+ * @param {object} opts { caseFile, caseData, storyMeta, chapter, size, difficulty }
+ */
+export const generateDeductionPuzzle = (caseNumber, opts = {}) => {
+  const chapter = opts.chapter ?? parseInt(String(caseNumber || '001').slice(0, 3), 10) ?? 1;
+  const difficulty = opts.difficulty || (chapter <= 2 ? 'easy' : chapter <= 5 ? 'medium' : 'hard');
+
+  // Preferred: build from the story's own case file.
+  const fromCaseFile = buildFromCaseFile(opts.caseFile, caseNumber, difficulty);
+  if (fromCaseFile) return fromCaseFile;
+
+  // Fallback: local Ashport pool.
+  const n = Math.max(3, Math.min(opts.size || getDeductionSize(chapter), 6));
+  const seed = `deduction:${caseNumber}:${n}`;
+  const rng = seededRng(seed);
+
+  const pools = extractCaseEntities(caseNumber, { caseData: opts.caseData, storyMeta: opts.storyMeta });
+  const suspects = pools.suspects.slice(0, n).map((name) => ({ id: `suspect_${slug(name)}`, name }));
+  const locations = pools.locations.slice(0, n).map((name) => ({ id: `loc_${slug(name)}`, name }));
+  const truth = shuffleSeeded([...Array(n).keys()], rng);
+
+  const sceneLocIdx = Math.floor(rng() * n);
+  const culpritIdx = truth.indexOf(sceneLocIdx);
+  let claimIdx = Math.floor(rng() * n);
+  if (claimIdx === sceneLocIdx) claimIdx = (claimIdx + 1) % n;
+
+  const culprit = suspects[culpritIdx];
+  const scene = locations[sceneLocIdx];
+  const claim = locations[claimIdx];
+  const contradiction =
+    `${culprit.name} swore they were at ${claim.name} that night — ` +
+    `but the placements put them at ${scene.name}, where it happened.`;
+
+  return assembleDeduction({
+    caseNumber, seed, suspects, locations, truth, sceneLocIdx, culpritIdx, claimIdx,
+    contradiction, difficulty, rng, source: 'pool',
+  });
 };
 
 /**

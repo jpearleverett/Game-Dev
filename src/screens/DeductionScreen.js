@@ -11,7 +11,7 @@ import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../utils/haptics';
 import { generateDeductionPuzzle, checkDeduction } from '../services/DeductionService';
 import { makeClue, CLUE_SOURCE, CLUE_WEIGHT } from '../data/caseBoard';
-import { parseCaseNumber, resolveStoryPathKey, formatCaseNumber } from '../data/storyContent';
+import { parseCaseNumber, resolveStoryPathKey, formatCaseNumber, getStoryEntry } from '../data/storyContent';
 import { loadLogicPuzzle, saveLogicPuzzle, clearLogicPuzzle } from '../storage/logicPuzzleStorage';
 import { COLORS, CARD_STATES } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
@@ -36,15 +36,24 @@ export default function DeductionScreen({ navigation }) {
   const { chapter } = parseCaseNumber(caseNumber);
   const pathKey = resolveStoryPathKey(caseNumber, storyCampaign);
 
+  // Prefer the LLM-authored case file for THIS beat (real suspects/locations),
+  // sourced from the generated story entry; fall back to the local pool.
+  const caseFile = useMemo(() => {
+    if (!caseNumber) return null;
+    const entry = getStoryEntry(caseNumber, pathKey);
+    return entry?.caseFile || activeCase?.caseFile || activeCase?.storyMeta?.caseFile || null;
+  }, [caseNumber, pathKey, activeCase]);
+
   const puzzle = useMemo(
     () => (caseNumber
       ? generateDeductionPuzzle(caseNumber, {
+          caseFile,
           caseData: activeCase,
           storyMeta: activeCase?.storyMeta,
           chapter,
         })
       : null),
-    [caseNumber, chapter, activeCase],
+    [caseNumber, chapter, activeCase, caseFile],
   );
 
   const reducedMotion = !!progress?.settings?.reducedMotion;
