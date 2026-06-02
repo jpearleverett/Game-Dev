@@ -33,7 +33,7 @@ describe('LLMService Gemini temperature forcing', () => {
 
     // Ensure we are in proxy mode.
     await llmService.init();
-    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3-flash-preview' });
+    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
 
     await llmService.complete([{ role: 'user', content: 'hi' }], { temperature: 0.2, maxTokens: 10 });
 

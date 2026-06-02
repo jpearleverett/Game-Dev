@@ -188,7 +188,7 @@ export default async function handler(request) {
       );
     }
 
-    const model = body.model || 'gemini-3-flash-preview';
+    const model = body.model || 'gemini-3.5-flash';
     const isGemini3 = model.includes('gemini-3');
     const hasSchema = !!body.responseSchema;
     const cachedContent = body.cachedContent;

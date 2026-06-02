@@ -32,10 +32,10 @@ console.log('[LLMService] Environment loaded:', {
   hasApiKey: !!ENV_API_KEY,
 });
 
-// Default configuration - using Gemini 3 Flash
+// Default configuration - using Gemini 3.5 Flash
 const DEFAULT_CONFIG = {
   provider: 'gemini',
-  model: 'gemini-3-flash-preview', // Gemini 3 Flash (latest)
+  model: 'gemini-3.5-flash', // Gemini 3.5 Flash (GA, released May 2026)
   apiKey: ENV_API_KEY, // Only used in direct mode (dev)
   proxyUrl: ENV_PROXY_URL, // Cloudflare Worker URL (production)
   appToken: ENV_APP_TOKEN, // Optional auth token for proxy
@@ -454,7 +454,7 @@ class LLMService {
    * Routes through proxy if configured (production), otherwise direct API (dev)
    */
   async _geminiComplete(messages, { temperature, maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel }) {
-    const model = this.config.model || 'gemini-3-flash-preview';
+    const model = this.config.model || 'gemini-3.5-flash';
 
     // DEBUG: Log config to see what mode we're in
     console.log('[LLMService] Config:', {

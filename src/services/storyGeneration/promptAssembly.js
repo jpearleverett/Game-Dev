@@ -180,7 +180,7 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
 
   await llmService.createCache({
     key: cacheKey,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.5-flash',
     systemInstruction: buildMasterSystemPrompt(),
     content: staticContent,
     ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
@@ -287,7 +287,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
   await llmService.createCache({
     key: cacheKey,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.5-flash',
     systemInstruction: buildMasterSystemPrompt(),
     content: chapterCacheContent,
     ttl: '7200s',
