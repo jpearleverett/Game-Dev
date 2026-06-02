@@ -701,6 +701,13 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           console.log(`  - Base decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
           console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (uses summaries, not full narrative)`);
 
+          // DEDUCTION: frame the per-path chapter decisions around the player's
+          // investigation (prime suspect, accusation, contradictions) where it fits.
+          const pdDeduction = this._buildPlayerDeductionSection(this.currentCaseBoard);
+          const basePathPrompt = pdDeduction
+            ? `${pathDecisionsPrompt}\n\n<player_deduction>\n${pdDeduction}\nWhere it fits a path, frame that path's options around the player's prime suspect and the contradictions they have found.\n</player_deduction>`
+            : pathDecisionsPrompt;
+
           // Single user message - start fresh conversation for pathDecisions
           //
           // Why we don't use the thoughtSignature from the first call:
@@ -715,7 +722,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           // safety filter. Using short summaries (15-25 words each) instead of full
           // narrative excerpts (~300 words each) provides necessary context without
           // triggering the safety filter.
-          const messages = [{ role: 'user', content: pathDecisionsPrompt }];
+          const messages = [{ role: 'user', content: basePathPrompt }];
 
           const pathDecisionsStartTime = Date.now();
 
@@ -754,7 +761,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
               console.warn(`[StoryGenerationService] ⚠️ RECITATION detected on pathDecisions (attempt ${retryAttempt}/${MAX_PATHDECISIONS_RETRIES})`);
               if (retryAttempt < MAX_PATHDECISIONS_RETRIES) {
                 // Add uniqueness hint to prompt for retry
-                messages[0].content = pathDecisionsPrompt + `\n\nIMPORTANT: Generate ORIGINAL decision variants. Each path should have unique framing. Attempt ${retryAttempt + 1}.`;
+                messages[0].content = basePathPrompt + `\n\nIMPORTANT: Generate ORIGINAL decision variants. Each path should have unique framing. Attempt ${retryAttempt + 1}.`;
                 await new Promise(r => setTimeout(r, 1000)); // Brief delay before retry
               }
             } else {
