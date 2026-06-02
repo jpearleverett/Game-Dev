@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
+import PrimaryButton from '../components/PrimaryButton';
 import { useGame } from '../context/GameContext';
 import { normalizeCaseBoard, CLUE_SOURCE, CLUE_WEIGHT } from '../data/caseBoard';
 import { COLORS, CARD_STATES } from '../constants/colors';
@@ -166,6 +167,16 @@ export default function CaseBoardScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      {board.suspects.length > 0 ? (
+        <View style={styles.footer}>
+          <PrimaryButton
+            label="Make Your Accusation"
+            onPress={() => navigation.navigate('Accusation')}
+            icon={<MaterialCommunityIcons name="gavel" size={18} color={COLORS.textSecondary} />}
+          />
+        </View>
+      ) : null}
     </ScreenSurface>
   );
 }
@@ -178,6 +189,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
   status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
+  footer: { paddingTop: SPACING.sm },
   // Theory band
   theoryBand: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
