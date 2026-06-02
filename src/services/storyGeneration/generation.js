@@ -440,8 +440,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           options: {
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
-            // Core narrative generation: keep 'high' reasoning depth (overrides the 'medium' default)
-            thinkingLevel: 'high',
+            // Core narrative generation: Gemini 3.5's recommended 'medium' default,
+            // which tends to read less stiff than 'high' for prose (and is cheaper/faster).
+            thinkingLevel: 'medium',
           },
         });
       } catch (cacheError) {
@@ -728,9 +729,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
                 systemPrompt: buildPathDecisionsSystemPrompt(),
                 maxTokens: GENERATION_CONFIG.maxTokens.pathDecisions, // 16k tokens for complex branching + thinking
                 responseSchema: PATHDECISIONS_ONLY_SCHEMA,
-                // Use 'high' thinkingLevel for complex multi-path reasoning per Gemini 3 best practices
-                // This task requires understanding 9 different player journeys and deriving unique decisions
-                thinkingLevel: 'high',
+                // Gemini 3.5's recommended 'medium' default for this multi-path reasoning task
+                // (understanding 9 player journeys and deriving unique decisions).
+                thinkingLevel: 'medium',
                 traceId: traceId + '-pathDecisions' + (retryAttempt > 0 ? `-retry${retryAttempt}` : ''),
                 requestContext: {
                   caseNumber,
