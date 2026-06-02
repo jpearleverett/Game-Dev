@@ -911,7 +911,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       };
       const enableProseQualityValidation = resolveQualityFlag('enableProseQualityValidation');
       const enableSentenceVarietyValidation = resolveQualityFlag('enableSentenceVarietyValidation');
-      const enableLLMValidation = resolveQualityFlag('enableLLMValidation');
+      // Post-generation LLM validation disabled for now: it adds a serial ~5s LLM
+      // call after every subchapter. Regex/prose checks below still run. To
+      // re-enable, restore: resolveQualityFlag('enableLLMValidation').
+      const enableLLMValidation = false;
 
       // ========== A+ QUALITY VALIDATION (Warnings Only - Don't Block Generation) ==========
       // These validators provide feedback but should NOT cause generation failures.
