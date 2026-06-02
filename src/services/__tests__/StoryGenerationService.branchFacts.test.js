@@ -25,14 +25,9 @@ jest.mock('../LLMService', () => ({
 import { storyGenerationService } from '../StoryGenerationService';
 
 describe('StoryGenerationService branch-scoped persisted facts', () => {
-  test('minimal fallback narrative is sanitized to third-person', () => {
-    const entry = storyGenerationService._generateMinimalFallback(99, 1, 'ROOT', false);
-    expect(entry).toBeTruthy();
-    // No first-person narration tokens should remain after sanitization.
-    expect(entry.narrative).not.toMatch(/\bI\b/);
-    expect(entry.narrative).not.toMatch(/\bmy\b/i);
-    expect(entry.narrative).toMatch(/\bJack\b/); // sanity: should still be close on Jack
-  });
+  // NOTE: `_generateMinimalFallback` was removed when fallback narratives were
+  // dropped from the pipeline (generation now throws and the UI offers retry).
+  // The obsolete test for it was deleted.
 
   test('path personality mapping treats A as methodical and B as aggressive by default', () => {
     const methodical = storyGenerationService._analyzePathPersonality([
