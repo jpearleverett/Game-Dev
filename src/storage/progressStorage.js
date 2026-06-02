@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createBlankCaseBoard } from '../data/caseBoard';
 
 const STORAGE_KEY = 'detective_portrait_progress_v1';
 
@@ -49,6 +50,9 @@ export const createBlankStoryCampaign = () => ({
   // This enables true infinite branching - next subchapter continues from player's ACTUAL experience
   branchingChoices: [],
   completedCaseNumbers: [],
+  // CASE BOARD: running deduction board (clues, suspects, theory, accusations).
+  // The connective tissue that turns subchapters into one building case.
+  caseBoard: createBlankCaseBoard(),
   lastDecision: null,
   startedAt: null,
   completedAt: null,
