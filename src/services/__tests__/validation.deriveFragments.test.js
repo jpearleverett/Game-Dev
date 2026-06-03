@@ -61,3 +61,54 @@ describe('_deriveFragmentsFromBranching (EXAMINE fallback for generated scenes)'
     expect(derive(bn).filter((f) => f.label === 'The Glyph')).toHaveLength(1);
   });
 });
+
+describe('_parseGeneratedContent populates fragments end-to-end (the bug: none appeared in 1B/1C)', () => {
+  test('a generated scene with NO top-level fragments still yields tappable fragments from details', () => {
+    const content = {
+      title: 'The Edge of the Grid',
+      branchingNarrative: {
+        opening: {
+          text: 'The ink moved on the page while he read 14 Acheron Avenue aloud.',
+          details: [
+            { phrase: 'The ink moved', note: 'Ink does not move on its own.', evidenceCard: 'Moving Ink', kind: 'phenomenon' },
+            { phrase: '14 Acheron Avenue', note: 'A street paved over a decade ago.', evidenceCard: 'Acheron Avenue', kind: 'place' },
+            { phrase: 'the rain', note: 'Just weather.', evidenceCard: '' }, // atmospheric -> not a fragment
+          ],
+        },
+        firstChoice: {
+          prompt: 'What now?',
+          options: [
+            { key: '1A', label: 'Ask the courier', response: 'Marco would not meet his eyes.', details: [{ phrase: 'Marco', note: 'The courier who knows more than he says.', evidenceCard: 'Marco', kind: 'person' }] },
+          ],
+        },
+        secondChoices: [],
+      },
+      // NOTE: deliberately NO top-level `fragments` — reproduces what the model emitted.
+    };
+
+    const result = validationMethods._parseGeneratedContent(content, false);
+    const labels = result.fragments.map((f) => f.label);
+    expect(labels).toEqual(expect.arrayContaining(['Moving Ink', 'Acheron Avenue', 'Marco']));
+    expect(labels).not.toContain('the rain');
+    // Every derived fragment must carry a verbatim phrase so EXAMINE can highlight it.
+    result.fragments.forEach((f) => expect(typeof f.phrase === 'string' && f.phrase.length).toBeTruthy());
+    // Kinds preserved from the tagged details.
+    expect(result.fragments.find((f) => f.label === 'Acheron Avenue').kind).toBe('place');
+    expect(result.fragments.find((f) => f.label === 'Marco').kind).toBe('person');
+  });
+
+  test('explicit top-level fragments are kept and merged with derived ones', () => {
+    const content = {
+      title: 'x',
+      fragments: [{ label: 'A black envelope', kind: 'symbol', detail: 'expensive', phrase: 'black envelope' }],
+      branchingNarrative: {
+        opening: { text: 'the seal was cold', details: [{ phrase: 'the seal', note: 'cold wax', evidenceCard: 'The Seal', kind: 'symbol' }] },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+    };
+    const result = validationMethods._parseGeneratedContent(content, false);
+    const labels = result.fragments.map((f) => f.label);
+    expect(labels).toEqual(expect.arrayContaining(['A black envelope', 'The Seal']));
+  });
+});
