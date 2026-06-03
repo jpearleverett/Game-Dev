@@ -378,6 +378,99 @@ export const STORY_CONTENT_SCHEMA = {
 };
 
 // ============================================================================
+// LAZY BRANCHING SCHEMAS (opt-in via lazyBranchGeneration)
+// ----------------------------------------------------------------------------
+// To avoid generating all 9 second-choice response bodies up front (the player
+// only ever reads one), generation is split into two layers:
+//   Layer 1: opening + firstChoice (full) + secondChoice LABELS/summaries only.
+//   Layer 2: the 3 response bodies for whichever firstChoice the player picks.
+// ============================================================================
+
+// A second-choice option WITHOUT its response body (label/summary only).
+const SECOND_CHOICE_OPTION_LABEL_SCHEMA = {
+  type: 'object',
+  properties: {
+    key: { type: 'string', description: 'Unique identifier: "1A-2A", "1A-2B", "1A-2C", etc.' },
+    label: {
+      type: 'string',
+      description: 'Short action label (2-5 words). For 2C options, make it a WILDCARD - unexpected/creative.',
+    },
+    summary: {
+      type: 'string',
+      description: 'One-sentence summary of what happens in this path ending (15-25 words).',
+    },
+  },
+  required: ['key', 'label', 'summary'],
+};
+
+const SECOND_CHOICE_LABELS_SCHEMA = {
+  type: 'object',
+  properties: {
+    afterChoice: { type: 'string', description: 'Which first choice this follows: "1A", "1B", or "1C"' },
+    prompt: { type: 'string', description: 'Brief context for this choice point (5-15 words)' },
+    options: {
+      type: 'array',
+      items: SECOND_CHOICE_OPTION_LABEL_SCHEMA,
+      minItems: 3,
+      maxItems: 3,
+    },
+  },
+  required: ['afterChoice', 'prompt', 'options'],
+};
+
+// Layer-1 branching narrative: full opening + firstChoice, but secondChoices
+// carry only labels/summaries (no response bodies yet).
+export const BRANCHING_LAYER1_SCHEMA = {
+  type: 'object',
+  properties: {
+    opening: BRANCHING_NARRATIVE_SCHEMA.properties.opening,
+    firstChoice: CHOICE_POINT_SCHEMA,
+    secondChoices: {
+      type: 'array',
+      items: SECOND_CHOICE_LABELS_SCHEMA,
+      minItems: 3,
+      maxItems: 3,
+      description: 'Three second-choice points (labels/summaries only) - one per first choice (1A, 1B, 1C)',
+    },
+  },
+  required: ['opening', 'firstChoice', 'secondChoices'],
+};
+
+// Full subchapter content with a Layer-1 branching narrative.
+export const STORY_CONTENT_LAYER1_SCHEMA = {
+  type: 'object',
+  properties: {
+    ...STORY_CONTENT_SCHEMA.properties,
+    branchingNarrative: BRANCHING_LAYER1_SCHEMA,
+  },
+  required: STORY_CONTENT_SCHEMA.required,
+};
+
+// Layer-2: the three response bodies for one firstChoice's second choices.
+export const SECOND_CHOICE_RESPONSES_SCHEMA = {
+  type: 'object',
+  properties: {
+    afterChoice: { type: 'string', description: 'Which first choice these responses follow: "1A", "1B", or "1C"' },
+    responses: {
+      type: 'array',
+      description: 'Exactly 3 response bodies, one per second-choice option, matched by key.',
+      items: {
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'The option key this body belongs to, e.g. "1A-2B"' },
+          response: { type: 'string', description: 'The ending narrative segment (300-350 words). Conclude this path.' },
+          details: { type: 'array', items: DETAIL_SCHEMA, description: '0-2 tappable details in this ending' },
+        },
+        required: ['key', 'response'],
+      },
+      minItems: 3,
+      maxItems: 3,
+    },
+  },
+  required: ['afterChoice', 'responses'],
+};
+
+// ============================================================================
 // DECISION-ONLY SCHEMA - Used for 2-pass generation (decision structure only)
 // ============================================================================
 export const DECISION_ONLY_SCHEMA = {
