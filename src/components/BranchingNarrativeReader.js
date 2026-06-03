@@ -92,6 +92,9 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
 
   // Fragment anomalies get a kind-colored ink treatment so the things that
   // "don't belong" visibly stand out from ordinary observations.
+  // Keep the page's typewriter font; mark anomalies with kind-colored ink + an
+  // underline so the things that "don't belong" stand out without breaking the
+  // monospace rhythm of the prose.
   const fragmentStyle = isFragment
     ? {
         color: KIND_INK[kind] || KIND_INK.phenomenon,
@@ -99,7 +102,7 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
         textDecorationLine: 'underline',
         textDecorationStyle: isRevealed ? 'solid' : 'dotted',
         textDecorationColor: KIND_INK[kind] || KIND_INK.phenomenon,
-        fontFamily: FONTS.secondaryBold || undefined,
+        fontWeight: 'bold',
       }
     : null;
 

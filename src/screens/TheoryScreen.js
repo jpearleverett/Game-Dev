@@ -91,6 +91,13 @@ export default function TheoryScreen({ navigation, route }) {
   // (which advances the chapter via the proven contract), then navigate.
   const crossThreshold = useCallback(async () => {
     if (continuing || !caseNumber) return;
+    // The chapter only advances on a sealed pre-decision (chosen on the case file).
+    // Without it, completeLogicPuzzle would not advance — so guard instead of
+    // stranding the player on a half-advanced state.
+    if (!preDecision) {
+      setGenError('Choose your next move back on the case file before you cross.');
+      return;
+    }
     setContinuing(true);
     setGenError(null);
 

@@ -343,7 +343,15 @@ export default function CaseFileScreen({
   const examinableBranchingNarrative = useMemo(() => {
     if (!branchingNarrative) return branchingNarrative;
     if (!examinableDetails.length) return branchingNarrative;
-    const withExtra = (details) => [...(Array.isArray(details) ? details : []), ...examinableDetails];
+    const fragmentPhrases = new Set(examinableDetails.map((d) => d.phrase.toLowerCase()));
+    // A fragment examinable takes precedence over a plain observation on the same
+    // phrase, so the anomaly is collectable (not just flavor). Drop colliding originals.
+    const withExtra = (details) => [
+      ...(Array.isArray(details) ? details : []).filter(
+        (d) => !(d && typeof d.phrase === "string" && fragmentPhrases.has(d.phrase.toLowerCase())),
+      ),
+      ...examinableDetails,
+    ];
     const mapOptions = (options) =>
       (Array.isArray(options) ? options : []).map((opt) => ({ ...opt, details: withExtra(opt?.details) }));
     return {
@@ -852,7 +860,7 @@ export default function CaseFileScreen({
               : "Your decision is sealed. Now solve the evidence board to confirm your fate.",
             hint: theoryBeat ? "Seal your reading of the hidden world." : "The puzzle awaits to complete this chapter.",
             actionLabel: puzzleActionLabel,
-            actionIcon: theoryBeat ? "🜂" : "🔍",
+            actionIcon: theoryBeat ? "🔮" : "🔍",
             onPress: onProceedToPuzzle,
           };
         }
