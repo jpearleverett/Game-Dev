@@ -76,11 +76,15 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     if (typeof settings?.enableLLMValidation === 'boolean') {
       override.enableLLMValidation = settings.enableLLMValidation;
     }
+    if (typeof settings?.lazyBranchGeneration === 'boolean') {
+      override.lazyBranchGeneration = settings.lazyBranchGeneration;
+    }
     return override;
   }, [
     settings?.enableProseQualityValidation,
     settings?.enableSentenceVarietyValidation,
     settings?.enableLLMValidation,
+    settings?.lazyBranchGeneration,
   ]);
 
   useEffect(() => {

@@ -826,6 +826,11 @@ export const GENERATION_CONFIG = {
     enableProseQualityValidation: true,
     enableSentenceVarietyValidation: true,
     enableLLMValidation: true,
+    // LAZY BRANCHING: when true, A/B subchapters generate only the opening +
+    // firstChoice + second-choice labels up front, and the 3 second-choice
+    // response bodies are generated on demand when the player picks a first
+    // choice. Cuts generated content ~half. Default off until verified on-device.
+    lazyBranchGeneration: false,
   },
 };
 

@@ -8,7 +8,10 @@ import {
   DECISION_ONLY_SCHEMA,
   PATHDECISIONS_ONLY_SCHEMA,
   STORY_CONTENT_SCHEMA,
+  STORY_CONTENT_LAYER1_SCHEMA,
+  SECOND_CHOICE_RESPONSES_SCHEMA,
 } from './schemas';
+import { isLayer1Partial, mergeSecondChoiceResponses } from './lazyBranching';
 import {
   DECISION_SUBCHAPTER,
   MAX_RETRIES,
@@ -360,7 +363,20 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       // Decision schema has decision field BEFORE narrative, so decision is generated first
       // This eliminates the need for two-pass generation while ensuring complete decisions
 
-      const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
+      // LAZY BRANCHING (opt-in): for non-decision (A/B) subchapters, generate
+      // only opening + firstChoice + second-choice labels now; the 3 response
+      // bodies are filled on demand (generateSecondChoiceResponses) when the
+      // player picks a first choice. Decision (C) subchapters keep the full tree.
+      const _baseQ = GENERATION_CONFIG?.qualitySettings || {};
+      const _overrideQ = options?.qualitySettingsOverride || {};
+      const lazyBranchGeneration = typeof _overrideQ.lazyBranchGeneration === 'boolean'
+        ? _overrideQ.lazyBranchGeneration
+        : (typeof _baseQ.lazyBranchGeneration === 'boolean' ? _baseQ.lazyBranchGeneration : false);
+      const useLazyBranching = lazyBranchGeneration && !isDecisionPoint;
+
+      const schema = isDecisionPoint
+        ? DECISION_CONTENT_SCHEMA
+        : (useLazyBranching ? STORY_CONTENT_LAYER1_SCHEMA : STORY_CONTENT_SCHEMA);
       let response;
 
       // Try cached generation first (works in both proxy and direct mode)
@@ -1269,6 +1285,73 @@ async function generateChapter(chapter, pathKey, choiceHistory = []) {
   return results;
 }
 
+/**
+ * LAZY BRANCHING — Layer 2: generate the three second-choice response bodies for
+ * one firstChoice, given a Layer-1 branching narrative. Focused, fast (low
+ * thinking), and consistent with the scene already written. Returns a payload
+ * { afterChoice, responses } to be merged via mergeSecondChoiceResponses.
+ */
+async function generateSecondChoiceResponses(afterChoice, branchingNarrative, options = {}) {
+  const norm = (v) => String(v || '').trim().toUpperCase();
+  const target = norm(afterChoice);
+  if (!branchingNarrative || !Array.isArray(branchingNarrative.secondChoices)) {
+    throw new Error('generateSecondChoiceResponses: missing branchingNarrative');
+  }
+  const group = branchingNarrative.secondChoices.find((g) => norm(g?.afterChoice) === target);
+  if (!group || !Array.isArray(group.options) || group.options.length === 0) {
+    throw new Error(`generateSecondChoiceResponses: no second-choice group for ${target}`);
+  }
+
+  const firstOpt = (branchingNarrative.firstChoice?.options || []).find((o) => norm(o?.key) === target);
+  const opening = branchingNarrative.opening?.text || '';
+  const firstResponse = firstOpt?.response || '';
+  const endings = group.options.map((o) => `- ${o.key}: "${o.label}"${o.summary ? ` — ${o.summary}` : ''}`).join('\n');
+
+  const userPrompt = [
+    '<task>',
+    `Write the THREE ending segments for path ${target} of this scene. Each is 300-350 words and concludes that branch with momentum, in the established voice.`,
+    '</task>',
+    '<scene_so_far>',
+    opening,
+    '',
+    firstResponse,
+    '</scene_so_far>',
+    '<endings_to_write>',
+    'Write exactly one ending per option below, matched by its key. Stay consistent with the scene above; do not contradict it.',
+    endings,
+    '</endings_to_write>',
+    '<output_contract>',
+    `Return ONLY JSON: { "afterChoice": "${target}", "responses": [ { "key": "...", "response": "..." } ] } with exactly 3 responses. No commentary, no markdown.`,
+    '</output_contract>',
+  ].join('\n');
+
+  const response = await llmService.complete(
+    [{ role: 'user', content: userPrompt }],
+    {
+      systemPrompt: buildMasterSystemPrompt(),
+      responseSchema: SECOND_CHOICE_RESPONSES_SCHEMA,
+      maxTokens: 16000,
+      thinkingLevel: 'low',
+      traceId: options.traceId || createTraceId(`scResp_${target}`),
+      requestContext: { secondChoiceResponsesFor: target, ...(options.requestContext || {}) },
+    },
+  );
+
+  let parsed;
+  try {
+    parsed = typeof response.content === 'string' ? JSON.parse(response.content) : response.content;
+  } catch (e) {
+    throw new Error(`generateSecondChoiceResponses: failed to parse response: ${e.message}`);
+  }
+  const rawResponses = Array.isArray(parsed?.responses) ? parsed.responses : [];
+  const responses = rawResponses.map((r) => ({
+    key: r?.key,
+    response: typeof r?.response === 'string' ? this._cleanBranchingProse(r.response) : '',
+    ...(Array.isArray(r?.details) ? { details: r.details } : {}),
+  }));
+  return { afterChoice: target, responses };
+}
+
 export const generationMethods = {
   _generateDecisionStructure,
   _waitForGenerationSlot,
@@ -1276,4 +1359,5 @@ export const generationMethods = {
   _releaseGenerationSlot,
   generateSubchapter,
   generateChapter,
+  generateSecondChoiceResponses,
 };

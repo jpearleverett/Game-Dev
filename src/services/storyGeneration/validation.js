@@ -10,6 +10,7 @@ import { saveStoryContext } from '../../storage/generatedStoryStorage';
 import { DECISION_CONTENT_SCHEMA, STORY_CONTENT_SCHEMA } from './schemas';
 import { DECISION_SUBCHAPTER, MIN_WORDS_PER_SUBCHAPTER, TRUNCATE_VALIDATION } from './constants';
 import { formatSubchapterLabel } from './helpers';
+import { isLayer1Partial } from './lazyBranching';
 
 class ValidationMethods {
   /**
@@ -1058,7 +1059,9 @@ class ValidationMethods {
     // NOTE: These are warnings, not errors - schema instructs correct lengths, retries are wasteful
     // =========================================================================
     const bn = content.branchingNarrative;
-    if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
+    // Skip per-segment word-count checks for Layer-1 lazy partials: their
+    // second-choice response bodies are intentionally generated on demand.
+    if (bn && bn.opening && bn.firstChoice && bn.secondChoices && !isLayer1Partial(bn)) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
       const MIN_SEGMENT_WORDS = 300;  // Minimum per segment (300-350 target). 3×300=900 word path minimum.
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
