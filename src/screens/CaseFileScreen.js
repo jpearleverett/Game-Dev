@@ -225,14 +225,21 @@ export default function CaseFileScreen({
     return getStoryEntry(caseNumber, pathKey, previousBranchingPath) || null;
   }, [activeCase?.caseNumber, activeCase?.storyMeta, storyCampaign]);
 
-  // UNDER-MAP: auto-ingest fragments/relations from the current scene exactly once.
-  // (Interim collection mechanism until inline EXAMINE tapping replaces it.)
+  // UNDER-MAP: fragments are collected by EXAMINING (tapping anomalies in the prose).
+  // For scenes WITHOUT a branching narrative reader (no prose to tap), fall back to
+  // ingesting the whole scene at load so the board still fills. Branching scenes
+  // ingest via tap + a completion backfill (see handleBranchingComplete) so no
+  // uncollected fragment is ever lost before the CONNECT/THEORY beat.
   const ingestedCaseRef = useRef(null);
   useEffect(() => {
     if (typeof onIngestFragments !== "function") return;
     const caseNumber = storyMeta?.caseNumber || activeCase?.caseNumber;
     if (!caseNumber) return;
     if (ingestedCaseRef.current === caseNumber) return;
+    const hasReader = Boolean(
+      (storyMeta?.branchingNarrative || activeCase?.branchingNarrative)?.opening?.text,
+    );
+    if (hasReader) return; // collected inline / backfilled on completion
     const fragments = Array.isArray(storyMeta?.fragments) ? storyMeta.fragments : [];
     const relations = Array.isArray(storyMeta?.relations) ? storyMeta.relations : [];
     if (!fragments.length && !relations.length) return;
@@ -306,9 +313,72 @@ export default function CaseFileScreen({
 
   const hasBranchingNarrative = Boolean(branchingNarrative?.opening?.text);
 
+  // UNDER-MAP / EXAMINE: this scene's collectable fragments + their relations.
+  const sceneFragments = useMemo(
+    () => (Array.isArray(storyMeta?.fragments) ? storyMeta.fragments : []),
+    [storyMeta?.fragments],
+  );
+  const sceneRelations = useMemo(
+    () => (Array.isArray(storyMeta?.relations) ? storyMeta.relations : []),
+    [storyMeta?.relations],
+  );
+
+  // Build detail-shaped "examinables" from fragments that name a verbatim prose
+  // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
+  const examinableDetails = useMemo(() => {
+    return sceneFragments
+      .filter((f) => f && f.label && typeof f.phrase === "string" && f.phrase.trim())
+      .map((f) => ({
+        phrase: f.phrase.trim(),
+        note: (f.detail && f.detail.trim()) || `${f.label} — something here doesn't belong.`,
+        evidenceCard: f.label,
+        kind: f.kind || "phenomenon",
+        __fragment: true,
+      }));
+  }, [sceneFragments]);
+
+  // Merge the examinables into every segment's details. parseTextWithDetails only
+  // highlights phrases actually present in a given page, so appending everywhere is
+  // safe — a fragment lights up only on the page whose prose contains its phrase.
+  const examinableBranchingNarrative = useMemo(() => {
+    if (!branchingNarrative) return branchingNarrative;
+    if (!examinableDetails.length) return branchingNarrative;
+    const withExtra = (details) => [...(Array.isArray(details) ? details : []), ...examinableDetails];
+    const mapOptions = (options) =>
+      (Array.isArray(options) ? options : []).map((opt) => ({ ...opt, details: withExtra(opt?.details) }));
+    return {
+      ...branchingNarrative,
+      opening: branchingNarrative.opening
+        ? { ...branchingNarrative.opening, details: withExtra(branchingNarrative.opening.details) }
+        : branchingNarrative.opening,
+      firstChoice: branchingNarrative.firstChoice
+        ? { ...branchingNarrative.firstChoice, options: mapOptions(branchingNarrative.firstChoice.options) }
+        : branchingNarrative.firstChoice,
+      secondChoices: Array.isArray(branchingNarrative.secondChoices)
+        ? branchingNarrative.secondChoices.map((sc) => ({ ...sc, options: mapOptions(sc?.options) }))
+        : branchingNarrative.secondChoices,
+    };
+  }, [branchingNarrative, examinableDetails]);
+
   // State for tracking branching narrative progress and evidence
   const [branchingProgress, setBranchingProgress] = useState(null);
   const [collectedEvidence, setCollectedEvidence] = useState([]);
+  // EXAMINE: labels collected via tapping this visit, to avoid redundant ingests.
+  const examinedLabelsRef = useRef(new Set());
+  useEffect(() => { examinedLabelsRef.current = new Set(); }, [caseNumber]);
+
+  const handleExamineFragment = useCallback((frag) => {
+    if (!frag || !frag.label || typeof onIngestFragments !== "function") return;
+    if (examinedLabelsRef.current.has(frag.label)) return;
+    examinedLabelsRef.current.add(frag.label);
+    // Ingest the single tapped fragment + the scene relations (relations re-resolve
+    // as more fragments are collected, so it's safe to pass them every time).
+    onIngestFragments([frag], sceneRelations, {
+      caseNumber: storyMeta?.caseNumber || activeCase?.caseNumber,
+      chapter: storyMeta?.chapter,
+      subchapter: storyMeta?.subchapter,
+    });
+  }, [onIngestFragments, sceneRelations, storyMeta?.caseNumber, storyMeta?.chapter, storyMeta?.subchapter, activeCase?.caseNumber]);
 
   // NARRATIVE-FIRST FLOW: Track if narrative is complete (ready for puzzle)
   // Applies to ALL subchapters in chapters 2+ (not just C)
@@ -415,7 +485,17 @@ export default function CaseFileScreen({
     if (hasBranchingNarrative) {
       setNarrativeComplete(true);
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete]);
+
+    // UNDER-MAP backfill: the scene is read — ensure every fragment + relation is on
+    // the board (idempotent), so missing a tap never blocks the CONNECT/THEORY beat.
+    if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
+      onIngestFragments(sceneFragments, sceneRelations, {
+        caseNumber,
+        chapter: storyMeta?.chapter,
+        subchapter: storyMeta?.subchapter,
+      });
+    }
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
@@ -1012,13 +1092,14 @@ export default function CaseFileScreen({
                   <View style={styles.narrativeSection}>
                     <BranchingNarrativeReader
                       key={caseNumber || 'branching-narrative'}
-                      branchingNarrative={branchingNarrative}
+                      branchingNarrative={examinableBranchingNarrative}
                       palette={palette}
                       onComplete={handleBranchingComplete}
                       onFirstChoice={handleFirstChoice}
                       secondChoiceLoading={!!lazyLoadingFor}
                       onSecondChoice={handleSecondChoice}
                       onEvidenceCollected={handleEvidenceCollected}
+                      onExamineFragment={handleExamineFragment}
                       initialChoice={branchingChoiceSeed}
                     />
                   </View>

@@ -297,7 +297,7 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 <under_map>
 This is NOT a whodunit. The player is mapping a hidden layer of reality, not catching a culprit. Populate two fields from THIS scene:
 
-fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the EXACT wording from your prose. Mark anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each a short detail (Jack's note on why it's strange).
+fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the EXACT wording from your prose. Mark anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each a short detail (Jack's note on why it's strange). CRITICAL: also give each fragment a "phrase" — the exact verbatim substring from your narrative where it appears — so the player can TAP that phrase in the prose to examine and collect it. The phrase must match your prose character-for-character.
 
 relations — how fragments connect to reveal a secret. Reference fragments by their exact label (from this scene OR established earlier in the story). Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are TRUE in your world and that an attentive player could infer. It's fine to return an empty relations list early on when nothing connects yet.
 

@@ -6,10 +6,10 @@
         "subchapter": 1,
         "title": "The Letter He Never Wrote",
         "fragments": [
-          { "label": "A seal like a compass crossed with a closed eye", "kind": "symbol", "detail": "Pressed in dark red wax that stayed hard and cold, as if it had never been warm enough to melt.", "anomalous": true },
-          { "label": "Silver ink that shifts in the light", "kind": "phenomenon", "detail": "His name, written in ink that seemed to move when he tilted the envelope toward the window.", "anomalous": true },
-          { "label": "His own handwriting he never wrote", "kind": "phenomenon", "detail": "His exact hand — the looped Js, the backward lean — on an envelope he'd swear he had never seen.", "anomalous": true },
-          { "label": "Marco from the front desk", "kind": "person", "detail": "Delivered the black envelope by hand instead of sliding it under the door. Said someone left it for Jack.", "anomalous": false }
+          { "label": "A seal like a compass crossed with a closed eye", "kind": "symbol", "detail": "Pressed in dark red wax that stayed hard and cold, as if it had never been warm enough to melt.", "phrase": "something between a compass rose and a closed eye", "anomalous": true },
+          { "label": "Silver ink that shifts in the light", "kind": "phenomenon", "detail": "His name, written in ink that seemed to move when he tilted the envelope toward the window.", "phrase": "silver ink that seemed to shift", "anomalous": true },
+          { "label": "His own handwriting he never wrote", "kind": "phenomenon", "detail": "His exact hand — the looped Js, the backward lean — on an envelope he'd swear he had never seen.", "phrase": "The handwriting was his", "anomalous": true },
+          { "label": "Marco from the front desk", "kind": "person", "detail": "Delivered the black envelope by hand instead of sliding it under the door. Said someone left it for Jack.", "phrase": "a teenager named Marco", "anomalous": false }
         ],
         "relations": [
           { "aLabel": "A seal like a compass crossed with a closed eye", "bLabel": "Silver ink that shifts in the light", "revelation": "Both were made to be noticed only by you. Wax that won't warm, ink that won't hold still — this is craft answering to rules ink and wax don't obey. Something is signalling across a line most people never see." },

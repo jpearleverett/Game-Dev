@@ -60,10 +60,26 @@ const PAGE_TYPES = {
  */
 
 // Inline tappable phrase component
+// EXAMINE: ink-tones for fragment kinds, tuned to read on the aged-paper texture.
+const KIND_INK = {
+  symbol: '#9a6b00',
+  place: '#1f6f7a',
+  person: '#8a2a22',
+  phenomenon: '#5b3a8a',
+};
+const KIND_TINT = {
+  symbol: 'rgba(154,107,0,0.16)',
+  place: 'rgba(31,111,122,0.16)',
+  person: 'rgba(138,42,34,0.16)',
+  phenomenon: 'rgba(91,58,138,0.16)',
+};
+
 const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   phrase,
   note,
   evidenceCard,
+  kind,
+  isFragment,
   onTap,
   isRevealed,
 }) {
@@ -71,15 +87,30 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
     Haptics.impactAsync(
       isRevealed ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
     );
-    onTap({ phrase, note, evidenceCard, isRevealed });
-  }, [isRevealed, phrase, note, evidenceCard, onTap]);
+    onTap({ phrase, note, evidenceCard, kind, isFragment, isRevealed });
+  }, [isRevealed, phrase, note, evidenceCard, kind, isFragment, onTap]);
+
+  // Fragment anomalies get a kind-colored ink treatment so the things that
+  // "don't belong" visibly stand out from ordinary observations.
+  const fragmentStyle = isFragment
+    ? {
+        color: KIND_INK[kind] || KIND_INK.phenomenon,
+        backgroundColor: isRevealed ? (KIND_TINT[kind] || KIND_TINT.phenomenon) : 'transparent',
+        textDecorationLine: 'underline',
+        textDecorationStyle: isRevealed ? 'solid' : 'dotted',
+        textDecorationColor: KIND_INK[kind] || KIND_INK.phenomenon,
+        fontFamily: FONTS.secondaryBold || undefined,
+      }
+    : null;
 
   return (
     <Text
       onPress={handlePress}
       style={[
         styles.inlineTappable,
-        isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
+        isFragment
+          ? fragmentStyle
+          : isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
       ]}
     >
       {phrase}
@@ -163,6 +194,8 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
               phrase={segment.content}
               note={segment.detail.note}
               evidenceCard={segment.detail.evidenceCard}
+              kind={segment.detail.kind}
+              isFragment={!!segment.detail.__fragment}
               onTap={onDetailTap}
               isRevealed={revealedDetails.has(segment.detail.phrase)}
             />
@@ -213,11 +246,18 @@ const ObservationPopup = React.memo(function ObservationPopup({
           <Text style={[styles.observationNote, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
             {detail.note}
           </Text>
-          {detail.evidenceCard && (
+          {detail.isFragment ? (
+            <View style={[styles.fragmentBadge, { borderColor: KIND_INK[detail.kind] || KIND_INK.phenomenon }]}>
+              <Text style={[styles.fragmentBadgeKind, { color: KIND_INK[detail.kind] || KIND_INK.phenomenon }]}>
+                ◆ {(detail.kind || 'anomaly').toUpperCase()}
+              </Text>
+              <Text style={styles.fragmentBadgeText}>Pinned to the Under-Map</Text>
+            </View>
+          ) : detail.evidenceCard ? (
             <View style={styles.evidenceCardBadge}>
               <Text style={styles.evidenceCardText}>📄 {detail.evidenceCard}</Text>
             </View>
-          )}
+          ) : null}
           <Text style={styles.tapToDismiss}>Tap to continue</Text>
         </Animated.View>
       </Pressable>
@@ -320,6 +360,7 @@ export default function BranchingNarrativeReader({
   onFirstChoice,
   onSecondChoice,
   onEvidenceCollected,
+  onExamineFragment, // EXAMINE: a kind-tagged anomaly was tapped — collect it onto the Under-Map
   initialChoice,
   style,
   secondChoiceLoading = false, // LAZY BRANCHING: true while a chosen path's ending is still generating
@@ -571,13 +612,22 @@ export default function BranchingNarrativeReader({
     setActivePopup(detail);
     if (!detail.isRevealed) {
       setRevealedDetails(prev => new Set(prev).add(detail.phrase));
-      if (detail.evidenceCard) {
+      if (detail.isFragment) {
+        // EXAMINE: pin this anomaly onto the Under-Map.
+        Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success).catch?.(() => {});
+        onExamineFragment?.({
+          label: detail.evidenceCard || detail.phrase,
+          kind: detail.kind,
+          detail: detail.note,
+          phrase: detail.phrase,
+        });
+      } else if (detail.evidenceCard) {
         const newEvidence = { label: detail.evidenceCard, phrase: detail.phrase, note: detail.note };
         setCollectedEvidence(prev => [...prev, newEvidence]);
         onEvidenceCollected?.(newEvidence);
       }
     }
-  }, [onEvidenceCollected]);
+  }, [onEvidenceCollected, onExamineFragment]);
 
   // Handle popup dismiss
   const handlePopupDismiss = useCallback(() => {
@@ -1085,6 +1135,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  fragmentBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 12,
+    gap: 2,
+  },
+  fragmentBadgeKind: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
+    fontSize: 11,
+    letterSpacing: 2,
+  },
+  fragmentBadgeText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#f8d8a8',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   tapToDismiss: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',

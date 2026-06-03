@@ -352,6 +352,8 @@ class ValidationMethods {
         label,
         kind,
         detail: f.detail ? String(f.detail).trim() : '',
+        // EXAMINE: verbatim prose substring the player taps to collect this fragment.
+        phrase: f.phrase ? String(f.phrase).trim() : '',
         anomalous: f.anomalous != null ? !!f.anomalous : true,
       });
       if (out.length >= 6) break;

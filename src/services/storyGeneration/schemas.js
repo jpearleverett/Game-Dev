@@ -384,6 +384,7 @@ export const STORY_CONTENT_SCHEMA = {
           label: { type: 'string', description: 'Short name of the thing noticed (2-5 words), as it appears in the prose.' },
           kind: { type: 'string', enum: ['symbol', 'place', 'person', 'phenomenon'], description: 'What kind of fragment this is.' },
           detail: { type: 'string', description: "Jack's one-line note on why it's strange (10-20 words)." },
+          phrase: { type: 'string', description: 'The EXACT verbatim substring from your narrative prose where this fragment first appears, so the player can tap it to examine it. Must match the prose character-for-character.' },
           anomalous: { type: 'boolean', description: 'True if it breaks reality / is part of the hidden world (vs. a mundane detail).' },
         },
         required: ['label', 'kind'],
