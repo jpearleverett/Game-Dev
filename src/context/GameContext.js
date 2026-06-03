@@ -10,6 +10,14 @@ import {
   recordAccusation as boardRecordAccusation,
   touchBoard as boardTouch,
 } from '../data/caseBoard';
+import {
+  makeFragment as umMakeFragment,
+  addFragments as umAddFragments,
+  addRelations as umAddRelations,
+  connectFragments as umConnect,
+  recordTheory as umRecordTheory,
+  touchUnderMap as umTouch,
+} from '../data/underMap';
 // Removed: internal usePersistence hook call
 import { useGameLogic } from '../hooks/useGameLogic';
 import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
@@ -608,6 +616,55 @@ export function GameProvider({
   const recordCaseAccusation = useCallback((acc) => _mutateCaseBoard((b) => boardRecordAccusation(b, acc)), [_mutateCaseBoard]);
   const touchCaseBoard = useCallback(() => _mutateCaseBoard((b) => boardTouch(b)), [_mutateCaseBoard]);
 
+  // ========== UNDER-MAP ==========
+  // Functional updates (read latest at write time) so these never clobber a
+  // concurrent story advance.
+  const ingestSceneFragments = useCallback((fragments, relations, meta = {}) => {
+    const frags = Array.isArray(fragments) ? fragments : [];
+    const rels = Array.isArray(relations) ? relations : [];
+    if (!frags.length && !rels.length) return;
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      let um = current.underMap;
+      if (frags.length) {
+        um = umAddFragments(um, frags.map((f) => umMakeFragment({ ...f, caseNumber: meta.caseNumber, chapter: meta.chapter })));
+      }
+      if (rels.length) um = umAddRelations(um, rels, { caseNumber: meta.caseNumber });
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  const connectUnderMap = useCallback((aId, bId) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const result = umConnect(current.underMap, aId, bId);
+    if (result.map !== current.underMap) {
+      updateProgress((prev) => {
+        const c = normalizeStoryCampaignShape(prev.storyCampaign);
+        const r = umConnect(c.underMap, aId, bId);
+        if (r.map === c.underMap) return null;
+        return { storyCampaign: { ...c, underMap: r.map } };
+      });
+    }
+    return result; // { revealed, valid, alreadyConnected } for the UI reveal
+  }, [progress.storyCampaign, updateProgress]);
+
+  const recordUnderMapTheory = useCallback((theory) => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umRecordTheory(current.underMap, theory);
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  const touchUnderMap = useCallback(() => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      return { storyCampaign: { ...current, underMap: umTouch(current.underMap) } };
+    });
+  }, [updateProgress]);
+
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
   const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
@@ -855,6 +912,10 @@ export function GameProvider({
     setCaseTheory,
     recordCaseAccusation,
     touchCaseBoard,
+    ingestSceneFragments,
+    connectUnderMap,
+    recordUnderMapTheory,
+    touchUnderMap,
     // Endings & Achievements
     unlockEnding,
     unlockAchievement,
@@ -868,6 +929,10 @@ export function GameProvider({
     setCaseTheory,
     recordCaseAccusation,
     touchCaseBoard,
+    ingestSceneFragments,
+    connectUnderMap,
+    recordUnderMapTheory,
+    touchUnderMap,
   }), [
     toggleWordSelection,
     submitGuess,
@@ -902,6 +967,10 @@ export function GameProvider({
     setCaseTheory,
     recordCaseAccusation,
     touchCaseBoard,
+    ingestSceneFragments,
+    connectUnderMap,
+    recordUnderMapTheory,
+    touchUnderMap,
   ]);
 
   return (

@@ -373,6 +373,35 @@ export const STORY_CONTENT_SCHEMA = {
       },
       required: ['suspects', 'culprit', 'crimeScene', 'contradiction'],
     },
+    // UNDER-MAP: the fragments the player can collect from this scene, and how
+    // they connect to reveal the hidden world. Drives examine -> connect -> reveal.
+    fragments: {
+      type: 'array',
+      description: 'The 2-4 most striking things Jack could notice in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose.',
+      items: {
+        type: 'object',
+        properties: {
+          label: { type: 'string', description: 'Short name of the thing noticed (2-5 words), as it appears in the prose.' },
+          kind: { type: 'string', enum: ['symbol', 'place', 'person', 'phenomenon'], description: 'What kind of fragment this is.' },
+          detail: { type: 'string', description: "Jack's one-line note on why it's strange (10-20 words)." },
+          anomalous: { type: 'boolean', description: 'True if it breaks reality / is part of the hidden world (vs. a mundane detail).' },
+        },
+        required: ['label', 'kind'],
+      },
+    },
+    relations: {
+      type: 'array',
+      description: 'How fragments connect to reveal a secret of the hidden world. Reference fragments by their EXACT label (from this scene or established earlier). Only assert connections that are true in your world and inferable by the player.',
+      items: {
+        type: 'object',
+        properties: {
+          aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
+          bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
+          revelation: { type: 'string', description: 'The secret this connection reveals (one sentence).' },
+        },
+        required: ['aLabel', 'bLabel', 'revelation'],
+      },
+    },
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };

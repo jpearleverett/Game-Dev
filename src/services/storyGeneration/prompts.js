@@ -294,14 +294,15 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
 </output_contract>
 
-<case_file>
-Populate the caseFile field so the player's deduction board is built from THIS scene (not generic filler):
-- List 3-5 suspects who actually appear in or are referenced by this scene, by the names you used in the prose.
-- For each, give a DISTINCT actualLocation (where they truly were) and a claimedLocation (their stated alibi). Use concrete places from the world (e.g., the wharf, the Archive, Murphy's Bar).
-- Choose one culprit. Their actualLocation MUST equal crimeScene and MUST differ from their claimedLocation (their alibi is the lie).
-- Write contradiction as one sharp sentence: who claimed where, and where the evidence really puts them.
-- These facts must be CONSISTENT with the narrative you wrote. The player will deduce them; do not contradict them later.
-</case_file>
+<under_map>
+This is NOT a whodunit. The player is mapping a hidden layer of reality, not catching a culprit. Populate two fields from THIS scene:
+
+fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the EXACT wording from your prose. Mark anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each a short detail (Jack's note on why it's strange).
+
+relations — how fragments connect to reveal a secret. Reference fragments by their exact label (from this scene OR established earlier in the story). Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are TRUE in your world and that an attentive player could infer. It's fine to return an empty relations list early on when nothing connects yet.
+
+These must be consistent with the narrative you wrote; the player will discover them.
+</under_map>
 
 <internal_planning>
 Before writing narrative, internally determine (do NOT output these; just let them guide your writing):

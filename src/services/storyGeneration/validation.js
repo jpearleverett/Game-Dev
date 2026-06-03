@@ -120,9 +120,13 @@ class ValidationMethods {
         jackBehaviorDeclaration: parsed.jackBehaviorDeclaration,
         narrativeThreads: Array.isArray(parsed.narrativeThreads) ? parsed.narrativeThreads : [],
         previousThreadsAddressed: Array.isArray(parsed.previousThreadsAddressed) ? parsed.previousThreadsAddressed : [],
-        // CASE FILE: deduction ground-truth (suspects/locations/culprit) for the
-        // alibi board. Normalized so the puzzle builder can trust it.
+        // CASE FILE: legacy deduction ground-truth (retired alibi grid). Kept
+        // for back-compat; the Under-Map uses fragments/relations below.
         caseFile: this._normalizeCaseFile(parsed.caseFile),
+        // UNDER-MAP: fragments the player can examine/collect, and how they
+        // connect to reveal the hidden world.
+        fragments: this._normalizeFragments(parsed.fragments),
+        relations: this._normalizeRelations(parsed.relations),
         pathDecisions: null,
       };
 
@@ -328,6 +332,48 @@ class ValidationMethods {
       || `${culprit.name} claimed they were at ${culprit.claimedLocation}, but the evidence puts them at ${crimeScene}.`;
 
     return { suspects, culprit: culprit.name, crimeScene, contradiction };
+  }
+
+  /** UNDER-MAP: normalize the scene's collectable fragments (dedup, clamp, defaults). */
+  _normalizeFragments(raw) {
+    if (!Array.isArray(raw)) return [];
+    const KINDS = new Set(['symbol', 'place', 'person', 'phenomenon']);
+    const seen = new Set();
+    const out = [];
+    for (const f of raw) {
+      if (!f || !f.label) continue;
+      const label = String(f.label).trim();
+      if (!label) continue;
+      const kind = KINDS.has(f.kind) ? f.kind : 'phenomenon';
+      const key = `${kind}:${label.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        label,
+        kind,
+        detail: f.detail ? String(f.detail).trim() : '',
+        anomalous: f.anomalous != null ? !!f.anomalous : true,
+      });
+      if (out.length >= 6) break;
+    }
+    return out;
+  }
+
+  /** UNDER-MAP: normalize the scene's relations (the discoverable connection truth). */
+  _normalizeRelations(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    for (const r of raw) {
+      if (!r) continue;
+      const aLabel = String(r.aLabel || '').trim();
+      const bLabel = String(r.bLabel || '').trim();
+      const revelation = String(r.revelation || '').trim();
+      if (!aLabel || !bLabel || !revelation) continue;
+      if (aLabel.toLowerCase() === bLabel.toLowerCase()) continue;
+      out.push({ aLabel, bLabel, revelation });
+      if (out.length >= 8) break;
+    }
+    return out;
   }
 
   /**
