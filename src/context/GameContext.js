@@ -591,11 +591,15 @@ export function GameProvider({
   // applies a pure caseBoard helper, and writes back via updateProgress (which
   // auto-persists). Centralised here so every screen posts to one board.
   const _mutateCaseBoard = useCallback((mutator) => {
-    const current = normalizeStoryCampaignShape(progress.storyCampaign);
-    const nextBoard = mutator(current.caseBoard);
-    if (nextBoard === current.caseBoard) return;
-    updateProgress({ storyCampaign: { ...current, caseBoard: nextBoard } });
-  }, [progress.storyCampaign, updateProgress]);
+    // Functional update: read the LATEST campaign at write time so a Case Board
+    // write can never clobber a concurrent story advance (the 1C -> 1A reset).
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const nextBoard = mutator(current.caseBoard);
+      if (nextBoard === current.caseBoard) return null;
+      return { storyCampaign: { ...current, caseBoard: nextBoard } };
+    });
+  }, [updateProgress]);
 
   const addCaseClue = useCallback((clue) => _mutateCaseBoard((b) => boardAddClue(b, clue)), [_mutateCaseBoard]);
   const addCaseClues = useCallback((clues) => _mutateCaseBoard((b) => boardAddClues(b, clues)), [_mutateCaseBoard]);

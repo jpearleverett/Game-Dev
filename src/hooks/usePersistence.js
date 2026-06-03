@@ -125,11 +125,15 @@ export function usePersistence() {
     };
   }, [progress, hydrationComplete]);
 
-  const updateProgress = useCallback((updates) => {
-    setProgress((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+  const updateProgress = useCallback((updatesOrFn) => {
+    setProgress((prev) => {
+      // Support a functional updater so callers can read the LATEST state and
+      // avoid clobbering concurrent writes (e.g. a story advance happening at the
+      // same time as a Case Board write).
+      const updates = typeof updatesOrFn === 'function' ? updatesOrFn(prev) : updatesOrFn;
+      if (!updates) return prev;
+      return { ...prev, ...updates };
+    });
   }, []);
 
   const updateSettings = useCallback((partialSettings) => {

@@ -1113,8 +1113,9 @@ class ValidationMethods {
       if (totalBranchingWords < 3500) {
         warnings.push(`Total branching narrative content is thin: ${totalBranchingWords} words (expected ~4000+ for full coverage)`);
       }
-    } else if (content.branchingNarrative) {
-      // branchingNarrative exists but is malformed
+    } else if (content.branchingNarrative && !isLayer1Partial(content.branchingNarrative)) {
+      // branchingNarrative exists but is malformed (a Layer-1 lazy partial is
+      // intentionally missing second-choice response bodies, so don't flag it).
       warnings.push('Branching narrative structure incomplete: missing opening, firstChoice, or secondChoices');
     }
 
