@@ -466,6 +466,16 @@ function _buildDynamicPrompt(
     parts.push('</player_deduction>');
   }
 
+  // Dynamic Part 4.6: Player's Under-Map (collected fragments, revealed nodes,
+  // sealed theory), so the scene answers the reading the player committed to.
+  const theorySection = this._buildPlayerTheorySection?.(this.currentUnderMap);
+  if (theorySection) {
+    parts.push('<player_theory>');
+    parts.push(theorySection);
+    parts.push('Honor and build on what the player surfaced and sealed; let this scene answer it without contradicting canon.');
+    parts.push('</player_theory>');
+  }
+
   // Dynamic Part 6: Current Scene State (exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
   if (sceneState) {
@@ -589,6 +599,16 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('<player_deduction>');
     parts.push(deductionSectionGen);
     parts.push('</player_deduction>');
+  }
+
+  // Part 6.6: Player's Under-Map (collected fragments, revealed nodes, sealed
+  // theory), so the scene answers the reading the player committed to.
+  const theorySectionGen = this._buildPlayerTheorySection?.(this.currentUnderMap);
+  if (theorySectionGen) {
+    parts.push('<player_theory>');
+    parts.push(theorySectionGen);
+    parts.push('Honor and build on what the player surfaced and sealed; let this scene answer it without contradicting canon.');
+    parts.push('</player_theory>');
   }
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)

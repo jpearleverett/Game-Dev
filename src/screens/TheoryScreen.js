@@ -7,7 +7,7 @@ import SecondaryButton from '../components/SecondaryButton';
 import DustLayer from '../components/DustLayer';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
-import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
+import { selectionHaptic, notificationHaptic, Haptics } from '../utils/haptics';
 import { normalizeUnderMap, FRAGMENT_KIND } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber, computeBranchPathKey } from '../data/storyContent';
 import { COLORS } from '../constants/colors';
@@ -68,15 +68,15 @@ export default function TheoryScreen({ navigation, route }) {
     const fragmentIds = selected.size > 0
       ? Array.from(selected)
       : map.fragments.map((f) => f.id);
-    if (!fragmentIds.length) {
-      impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
-      setGenError('Examine the scenes first — you have nothing to build a theory on yet.');
-      return;
+    // Record the theory only when there's something to stake — but ALWAYS allow
+    // sealing so a fragment-light chapter can never soft-lock at the climax.
+    if (fragmentIds.length) {
+      const interpretation = preDecision?.optionTitle
+        || preDecision?.optionFocus
+        || 'A reading of the hidden world.';
+      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation });
     }
-    const interpretation = preDecision?.optionTitle
-      || preDecision?.optionFocus
-      || 'A reading of the hidden world.';
-    recordUnderMapTheory?.({ chapter, fragmentIds, interpretation });
+    setGenError(null);
     notificationHaptic(Haptics.NotificationFeedbackType.Success);
     audio?.playVictory?.();
     setSealed(true);

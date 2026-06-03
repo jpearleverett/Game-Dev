@@ -91,6 +91,31 @@ describe('underMap', () => {
     expect(m.relations).toHaveLength(1);
   });
 
+  test('EXAMINE: relations re-resolve as fragments are collected one at a time', () => {
+    // Simulates tapping anomalies in the prose: each tap ingests one fragment plus
+    // the full scene relations. A relation must wait until BOTH endpoints exist.
+    const rels = [{ aLabel: 'The Glyph', bLabel: 'The Sigil', revelation: 'They are the same mark, drawn twice.' }];
+    let m = createBlankUnderMap();
+
+    // First tap collects one endpoint; the relation cannot resolve yet.
+    m = addFragments(m, [makeFragment({ label: 'The Glyph', kind: 'symbol' })]);
+    m = addRelations(m, rels);
+    expect(m.relations).toHaveLength(0);
+
+    // Second tap collects the other endpoint; now the relation resolves.
+    m = addFragments(m, [makeFragment({ label: 'The Sigil', kind: 'symbol' })]);
+    m = addRelations(m, rels);
+    expect(m.relations).toHaveLength(1);
+
+    // And connecting the two now reveals the hidden node exactly once.
+    const a = fragmentId('symbol', 'The Glyph');
+    const b = fragmentId('symbol', 'The Sigil');
+    const res = connectFragments(m, a, b);
+    expect(res.valid).toBe(true);
+    expect(res.revealed?.node?.revelation).toContain('drawn twice');
+    expect(undiscoveredRelationCount(res.map)).toBe(0);
+  });
+
   test('recordTheory stores a committed theory', () => {
     let m = seed();
     m = recordTheory(m, { chapter: 1, fragmentIds: ['a', 'b'], interpretation: 'It is all one map.' });
