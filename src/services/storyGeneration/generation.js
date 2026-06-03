@@ -251,6 +251,11 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // narrative toward their theory, accusation, and pinned leads.
   this.currentCaseBoard = options?.caseBoard || null;
 
+  // Store the player's Under-Map (collected fragments, revealed nodes, sealed
+  // theory) so _buildPlayerTheorySection can steer the next scene toward the
+  // reading the player committed to.
+  this.currentUnderMap = options?.underMap || null;
+
   // Deduplication: Return existing promise if generation is already in flight for this exact content
   // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
   const MAX_PENDING_AGE_MS = 3 * 60 * 1000; // 3 minutes
@@ -727,9 +732,16 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           // DEDUCTION: frame the per-path chapter decisions around the player's
           // investigation (prime suspect, accusation, contradictions) where it fits.
           const pdDeduction = this._buildPlayerDeductionSection(this.currentCaseBoard);
-          const basePathPrompt = pdDeduction
+          let basePathPrompt = pdDeduction
             ? `${pathDecisionsPrompt}\n\n<player_deduction>\n${pdDeduction}\nWhere it fits a path, frame that path's options around the player's prime suspect and the contradictions they have found.\n</player_deduction>`
             : pathDecisionsPrompt;
+
+          // UNDER-MAP: steer the next chapter around the theory the player sealed
+          // and the fragments/nodes they've surfaced about the hidden world.
+          const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap);
+          if (pdTheory) {
+            basePathPrompt = `${basePathPrompt}\n\n<player_theory>\n${pdTheory}\nLet the next chapter answer this theory — confirm it, complicate it, or reveal its cost. Make the player feel their reading mattered.\n</player_theory>`;
+          }
 
           // Single user message - start fresh conversation for pathDecisions
           //

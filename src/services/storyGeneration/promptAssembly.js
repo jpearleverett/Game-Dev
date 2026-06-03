@@ -353,6 +353,53 @@ function _buildPlayerDeductionSection(board) {
   ].join('\n');
 }
 
+function _buildPlayerTheorySection(underMap) {
+  // Surfaces the player's Under-Map: the fragments they collected, the hidden-world
+  // nodes they revealed by connecting them, and the theory they SEALED at the last
+  // chapter climax. Soft steering — the next chapter should answer the player's
+  // reading (confirm, complicate, or reveal its cost) without breaking canon.
+  if (!underMap || typeof underMap !== 'object') return '';
+  const fragments = Array.isArray(underMap.fragments) ? underMap.fragments : [];
+  const nodes = Array.isArray(underMap.nodes) ? underMap.nodes : [];
+  const theories = Array.isArray(underMap.theories) ? underMap.theories : [];
+  const latest = theories.length ? theories[0] : null;
+  if (!fragments.length && !nodes.length && !latest) return '';
+
+  const lines = [];
+
+  if (latest) {
+    if (latest.interpretation) {
+      lines.push(`- The player just SEALED this theory of the hidden world: "${latest.interpretation}".`);
+    }
+    if (Array.isArray(latest.fragmentIds) && latest.fragmentIds.length) {
+      const staked = fragments
+        .filter((f) => latest.fragmentIds.includes(f.id))
+        .map((f) => f.label)
+        .slice(0, 6);
+      if (staked.length) lines.push(`- They staked it on: ${staked.join('; ')}.`);
+    }
+  }
+
+  if (nodes.length) {
+    lines.push('- Truths the player has already pulled out of the Under-Map:');
+    nodes.slice(0, 5).forEach((n) => {
+      if (n?.revelation) lines.push(`  • ${n.revelation}`);
+    });
+  }
+
+  if (fragments.length) {
+    const labels = fragments.slice(0, 8).map((f) => f.label).filter(Boolean);
+    if (labels.length) lines.push(`- Fragments the player has examined so far: ${labels.join('; ')}.`);
+  }
+
+  if (!lines.length) return '';
+
+  return [
+    "The player is mapping a hidden layer of reality on their Under-Map (this is NOT a whodunit). Honor what they have surfaced and committed, WITHOUT contradicting established canon or the Story Bible.",
+    ...lines,
+  ].join('\n');
+}
+
 function _buildDynamicPrompt(
   context,
   chapter,
@@ -1713,6 +1760,7 @@ export const promptAssemblyMethods = {
   _ensureChapterStartCache,
   _buildDynamicPrompt,
   _buildPlayerDeductionSection,
+  _buildPlayerTheorySection,
   _buildGenerationPrompt,
   _buildCraftTechniquesSection,
   _extractCharactersFromContext,

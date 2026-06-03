@@ -16,6 +16,7 @@ import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
 import DeductionScreen from '../screens/DeductionScreen';
 import CaseBoardScreen from '../screens/CaseBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
+import TheoryScreen from '../screens/TheoryScreen';
 import AccusationScreen from '../screens/AccusationScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
@@ -203,6 +204,12 @@ export default function AppNavigator({ fontsReady, audio }) {
         )}
       </Stack.Screen>
 
+      <Stack.Screen name="Theory">
+        {({ navigation, route }) => (
+          <TheoryScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
       <Stack.Screen name="Accusation">
         {({ navigation }) => (
           <AccusationScreen navigation={navigation} />
@@ -267,6 +274,14 @@ export default function AppNavigator({ fontsReady, audio }) {
               // Enter the Under-Map as the CONNECT beat: it gates advancing to the next scene.
               navigation.navigate('UnderMap', {
                 asPuzzle: true,
+                caseNumber: resolvedActiveCase?.caseNumber,
+                caseId: resolvedActiveCase?.id,
+              });
+              return;
+            }
+            if (routeName === 'Theory') {
+              // The chapter-climax THEORY beat: commit a theory that steers what's next.
+              navigation.navigate('Theory', {
                 caseNumber: resolvedActiveCase?.caseNumber,
                 caseId: resolvedActiveCase?.id,
               });

@@ -6,6 +6,7 @@ import { Share } from 'react-native';
 // entered with puzzle params. Other puzzle routes take no params.
 function puzzleNavParams(routeName, caseNumber, caseId) {
   if (routeName === 'UnderMap') return { asPuzzle: true, caseNumber, caseId };
+  if (routeName === 'Theory') return { caseNumber, caseId };
   return undefined;
 }
 

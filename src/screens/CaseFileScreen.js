@@ -842,14 +842,17 @@ export default function CaseFileScreen({
     // For A/B subchapters: Show "Solve Puzzle" after narrative is complete
     if (!isCaseSolved && typeof onProceedToPuzzle === "function") {
       if (isSubchapterC) {
-        // C subchapter: Must make decision before puzzle
+        // C subchapter: Must make decision before the climax
         if (hasPreDecision) {
+          const theoryBeat = puzzleMode === PUZZLE_MODE.THEORY;
           return {
-            title: "Path Chosen",
-            body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
-            hint: "The puzzle awaits to complete this chapter.",
+            title: theoryBeat ? "Name What You've Seen" : "Path Chosen",
+            body: theoryBeat
+              ? "Your move is chosen. Before you cross into the next chapter, commit your theory of the Under-Map — what you stake will shape what it reveals."
+              : "Your decision is sealed. Now solve the evidence board to confirm your fate.",
+            hint: theoryBeat ? "Seal your reading of the hidden world." : "The puzzle awaits to complete this chapter.",
             actionLabel: puzzleActionLabel,
-            actionIcon: "🔍",
+            actionIcon: theoryBeat ? "🜂" : "🔍",
             onPress: onProceedToPuzzle,
           };
         }
