@@ -45,7 +45,6 @@ function _buildExtendedStyleExamplesForCache() {
         expected: '5000+ chars',
       });
     } else {
-      console.log(`[StoryGenerationService] ✅ Extended examples built: ${examples.length} chars`);
     }
     return examples;
   } catch (e) {
@@ -84,25 +83,21 @@ function _buildStaticCacheContent() {
   parts.push('<story_bible>');
   parts.push(groundingSection);
   parts.push('</story_bible>');
-  console.log(`[Cache] Grounding section: ${groundingSection.length} chars`);
 
   // Part 2: Character Reference (STATIC)
   const characterSection = this._buildCharacterSection();
   parts.push('<character_reference>');
   parts.push(characterSection);
   parts.push('</character_reference>');
-  console.log(`[Cache] Character section: ${characterSection.length} chars`);
 
   // Part 3: Craft Techniques (STATIC)
   const craftSection = this._buildCraftTechniquesSection();
   parts.push('<craft_techniques>');
   parts.push(craftSection);
   parts.push('</craft_techniques>');
-  console.log(`[Cache] Craft techniques: ${craftSection.length} chars`);
 
   // Part 4: Writing Style Examples (STATIC)
   const extendedExamples = this._buildExtendedStyleExamplesForCache();
-  console.log(`[Cache] Extended examples: ${extendedExamples.length} chars`);
 
   const styleSection = `## WRITING STYLE - Voice DNA Examples
 
@@ -125,7 +120,6 @@ ${extendedExamples}
   parts.push('<style_examples>');
   parts.push(styleSection);
   parts.push('</style_examples>');
-  console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
   // NOTE: Consistency rules NOT included in static cache - they are in _buildDynamicPrompt
   // so that thread data can be updated dynamically per request

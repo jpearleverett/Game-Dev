@@ -444,11 +444,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           options: {
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
-            // Core narrative generation: 'low' thinking. Gemini 3.5 Flash's
-            // latency is dominated by thinking time (medium spent ~80s before
-            // writing); 'low' keeps strong quality while cutting time-to-first-
-            // token dramatically so puzzle-solving can mask the generation.
-            thinkingLevel: 'low',
+            // Core narrative: 'medium' for richer, fuller prose (the main scene
+            // the player reads). Path-decisions/personality/etc. stay 'low' for
+            // speed since they're shorter, structural calls.
+            thinkingLevel: 'medium',
           },
         });
       } catch (cacheError) {

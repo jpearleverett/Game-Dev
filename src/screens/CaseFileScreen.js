@@ -53,6 +53,10 @@ const BOARD_CORNER_BR = require("../../assets/images/ui/decorative/corner-orname
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
+// Ambient sound asset can fail to decode on some devices; log it once, not on
+// every mount, to keep the console readable.
+let ambientSoundWarned = false;
+
 export default function CaseFileScreen({
   activeCase,
   nextUnlockAt,
@@ -96,7 +100,10 @@ export default function CaseFileScreen({
         soundObject = sound;
         setSound(sound);
       } catch (error) {
-        console.log("Failed to load ambient sound", error);
+        if (!ambientSoundWarned) {
+          ambientSoundWarned = true;
+          console.warn("[CaseFile] Ambient sound failed to load (logged once):", error?.message || error);
+        }
       }
     }
     
@@ -209,7 +216,6 @@ export default function CaseFileScreen({
       const prevChoice = branchingChoices.find(bc => bc.caseNumber === prevCaseNumber);
       if (prevChoice?.secondChoice) {
         previousBranchingPath = prevChoice.secondChoice;
-        console.log(`[CaseFileScreen] Looking for speculative cache with path: ${previousBranchingPath}`);
       }
     }
 
