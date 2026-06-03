@@ -337,11 +337,11 @@ export default function CaseFileScreen({
         __fragment: true,
       }));
     if (__DEV__) {
-      console.log(`[EXAMINE] case=${caseNumber} sceneFragments=${sceneFragments.length} withPhrase=${built.length}` +
+      console.log(`[EXAMINE] case=${activeCase?.caseNumber} sceneFragments=${sceneFragments.length} withPhrase=${built.length}` +
         (built.length ? ` first="${built[0].phrase}"` : ''));
     }
     return built;
-  }, [sceneFragments, caseNumber]);
+  }, [sceneFragments, activeCase?.caseNumber]);
 
   // Merge the examinables into every segment's details. parseTextWithDetails only
   // highlights phrases actually present in a given page, so appending everywhere is

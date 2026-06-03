@@ -1117,6 +1117,11 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         briefing: generatedContent.briefing || { summary: '', objectives: [] },
         pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
         decision: isDecisionPoint ? generatedContent.decision : null,
+        // UNDER-MAP / EXAMINE: carry the scene's collectable fragments + relations
+        // onto the stored entry. (This whitelist previously dropped them, so the
+        // board never populated for generated chapters.)
+        fragments: Array.isArray(generatedContent.fragments) ? generatedContent.fragments : [],
+        relations: Array.isArray(generatedContent.relations) ? generatedContent.relations : [],
         board: shouldGenerateBoard
           ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
           : null,
