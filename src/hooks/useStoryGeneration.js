@@ -19,6 +19,8 @@ import {
   formatCaseNumber,
   computeBranchPathKey,
 } from '../data/storyContent';
+import { saveGeneratedChapter } from '../storage/generatedStoryStorage';
+import { secondChoiceResponsesNeeded, mergeSecondChoiceResponses } from '../services/storyGeneration/lazyBranching';
 
 // Generation states
 export const GENERATION_STATUS = {
@@ -1244,12 +1246,47 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     setStatus(GENERATION_STATUS.IDLE);
   }, []);
 
+  // LAZY BRANCHING (Layer 2): fill in the 3 second-choice response bodies for the
+  // firstChoice the player just picked, then persist + return the merged entry.
+  // No-op when the content is already complete (full-tree / flag off).
+  const ensureSecondChoiceResponses = useCallback(async (caseNumber, pathKey, afterChoice, knownBranchingNarrative = null) => {
+    if (!caseNumber || !afterChoice) return knownBranchingNarrative || null;
+    let entry = null;
+    let bn = knownBranchingNarrative;
+    if (!bn) {
+      entry = await getStoryEntryAsync(caseNumber, pathKey);
+      bn = entry?.branchingNarrative || null;
+    }
+    if (!bn) return null;
+    if (!secondChoiceResponsesNeeded(bn, afterChoice)) return bn; // already complete
+    try {
+      const payload = await storyGenerationService.generateSecondChoiceResponses(
+        afterChoice,
+        bn,
+        { requestContext: { caseNumber, pathKey } },
+      );
+      const mergedBN = mergeSecondChoiceResponses(bn, afterChoice, payload);
+      // Best-effort persist (the live screen uses the returned value regardless).
+      try {
+        const baseEntry = entry || (await getStoryEntryAsync(caseNumber, pathKey)) || { branchingNarrative: bn };
+        const updatedEntry = { ...baseEntry, branchingNarrative: mergedBN };
+        updateGeneratedCache(caseNumber, pathKey, updatedEntry);
+        saveGeneratedChapter(caseNumber, pathKey, updatedEntry).catch(() => {});
+      } catch (_persistErr) { /* persistence is best-effort */ }
+      return mergedBN;
+    } catch (e) {
+      log.debug('useStoryGeneration', `Layer-2 generation failed for ${caseNumber} ${afterChoice}: ${e.message}`);
+      return bn; // hand back the partial; the reader shows a loading/retry state
+    }
+  }, []);
+
   return {
     // State
     status,
     progress,
     error,
     isConfigured,
+    ensureSecondChoiceResponses,
     isGenerating: status === GENERATION_STATUS.GENERATING,
     generationType,
     isPreloading: status === GENERATION_STATUS.GENERATING && generationType === GENERATION_TYPE.PRELOAD,

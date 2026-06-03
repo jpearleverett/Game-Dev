@@ -42,6 +42,7 @@ import {
   splitSummaryLines,
 } from "../utils/caseFileHelpers";
 import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
+import { isLayer1Partial, secondChoiceResponsesNeeded } from "../services/storyGeneration/lazyBranching";
 
 const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
 const CORKBOARD_BG = require("../../assets/images/ui/backgrounds/corkboardbg.jpg");
@@ -65,6 +66,7 @@ export default function CaseFileScreen({
   onSelectDecision,
   onSelectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
+  onEnsureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onBack,
   isStoryMode = false,
@@ -272,9 +274,15 @@ export default function CaseFileScreen({
   }, [activeCase?.caseNumber, caseSummary, dailyIntro, storySummary]);
 
   // Check if we have branching narrative (new interactive format)
-  const branchingNarrative = useMemo(() => {
+  const sourceBranchingNarrative = useMemo(() => {
     return storyMeta?.branchingNarrative || activeCase?.branchingNarrative || null;
   }, [storyMeta?.branchingNarrative, activeCase?.branchingNarrative]);
+
+  // LAZY BRANCHING: when second-choice responses are generated on demand, hold
+  // the merged narrative locally so the reader sees the filled-in responses.
+  const [lazyBranchingNarrative, setLazyBranchingNarrative] = useState(null);
+  const [lazyLoadingFor, setLazyLoadingFor] = useState(null); // firstChoice key currently generating
+  const branchingNarrative = lazyBranchingNarrative || sourceBranchingNarrative;
 
   const hasBranchingNarrative = Boolean(branchingNarrative?.opening?.text);
 
@@ -317,7 +325,19 @@ export default function CaseFileScreen({
     setCollectedEvidence([]);
     setNarrativeComplete(false);
     setLocalPreDecisionKey(null); // Reset local pre-decision tracking when case changes
+    setLazyBranchingNarrative(null); // LAZY BRANCHING: drop merged narrative on case change
+    setLazyLoadingFor(null);
   }, [caseNumber]);
+
+  // The path key under which this case's content is stored (mirrors storyMeta resolution).
+  const branchingPathKey = useMemo(() => {
+    if (!caseNumber) return ROOT_PATH_KEY;
+    const chapterNumber = Number(caseNumber.slice(0, 3));
+    const chapterKey = Number.isNaN(chapterNumber) ? null : chapterNumber;
+    return (chapterKey && storyCampaign?.pathHistory && storyCampaign.pathHistory[chapterKey])
+      || storyCampaign?.currentPathKey
+      || ROOT_PATH_KEY;
+  }, [caseNumber, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
 
   const branchingChoiceSeed = useMemo(() => {
     if (!existingBranchingChoice) return null;
@@ -398,9 +418,27 @@ export default function CaseFileScreen({
   // With narrative-first, we wait until branching is COMPLETE to generate next content
   // This means we only generate 1 version (the exact path player took), not 3 speculative versions
   const handleFirstChoice = useCallback((firstChoiceKey) => {
-    // Note: No speculative prefetch needed - generation happens after second choice
-    // via onSaveBranchingChoice -> triggerPrefetchAfterBranchingComplete
-  }, []);
+    // LAZY BRANCHING: if the narrative is a Layer-1 partial, generate the chosen
+    // first choice's 3 second-choice responses now (masked while the player reads
+    // the first-choice response). No-op for full-tree content (flag off).
+    if (
+      typeof onEnsureSecondChoiceResponses === 'function' &&
+      caseNumber &&
+      branchingNarrative &&
+      isLayer1Partial(branchingNarrative) &&
+      secondChoiceResponsesNeeded(branchingNarrative, firstChoiceKey)
+    ) {
+      setLazyLoadingFor(firstChoiceKey);
+      Promise.resolve(
+        onEnsureSecondChoiceResponses(caseNumber, branchingPathKey, firstChoiceKey, branchingNarrative),
+      )
+        .then((mergedBN) => {
+          if (mergedBN) setLazyBranchingNarrative(mergedBN);
+        })
+        .catch(() => {})
+        .finally(() => setLazyLoadingFor(null));
+    }
+  }, [onEnsureSecondChoiceResponses, caseNumber, branchingNarrative, branchingPathKey]);
 
   // Legacy linear narrative (for Chapter 1 or fallback)
   const narrative = useMemo(() => {
@@ -949,6 +987,7 @@ export default function CaseFileScreen({
                       palette={palette}
                       onComplete={handleBranchingComplete}
                       onFirstChoice={handleFirstChoice}
+                      secondChoiceLoading={!!lazyLoadingFor}
                       onSecondChoice={handleSecondChoice}
                       onEvidenceCollected={handleEvidenceCollected}
                       initialChoice={branchingChoiceSeed}

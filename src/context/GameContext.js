@@ -837,6 +837,7 @@ export function GameProvider({
     // Story generation actions - delegated to StoryContext
     configureLLM: story.configureLLM,
     ensureStoryContent: story.ensureStoryContent,
+    ensureSecondChoiceResponses: story.ensureSecondChoiceResponses,
     generateForCase: story.generateForCase,
     generateChapter: story.generateChapter,
     cancelGeneration: story.cancelGeneration,

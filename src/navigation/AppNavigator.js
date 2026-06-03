@@ -48,6 +48,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     selectStoryDecision,
     selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
+    ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -291,6 +292,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onSelectDecision={selectStoryDecision}
               onSelectDecisionBeforePuzzle={selectDecisionBeforePuzzle}
               onSaveBranchingChoice={saveBranchingChoice}
+              onEnsureSecondChoiceResponses={ensureSecondChoiceResponses}
               onProceedToPuzzle={handleProceedToPuzzle}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}

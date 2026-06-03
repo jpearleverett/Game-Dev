@@ -48,6 +48,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     needsGeneration,
     generateForCase,
     generateChapter,
+    ensureSecondChoiceResponses,
     pregenerate,
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC,
@@ -560,6 +561,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     applyPreDecision, // NARRATIVE-FIRST: Apply pre-made decision after puzzle
     saveBranchingChoice: saveBranchingChoiceAndPrefetch, // TRUE INFINITE BRANCHING: Save + prefetch
     ensureStoryContent,
+    ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     handleBackgroundGeneration, // Exposed for GameContext
     prefetchNextChapterBranchesAfterC, // Exposed for early Chapter 2 prefetch
     configureLLM,
@@ -578,6 +580,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     applyPreDecision,
     saveBranchingChoiceAndPrefetch,
     ensureStoryContent,
+    ensureSecondChoiceResponses,
     handleBackgroundGeneration,
     prefetchNextChapterBranchesAfterC,
     configureLLM,

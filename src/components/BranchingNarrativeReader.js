@@ -322,6 +322,7 @@ export default function BranchingNarrativeReader({
   onEvidenceCollected,
   initialChoice,
   style,
+  secondChoiceLoading = false, // LAZY BRANCHING: true while a chosen path's ending is still generating
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -481,8 +482,11 @@ export default function BranchingNarrativeReader({
           globalIndex: pageIndex++,
         });
       } else if (secondChoiceMade && currentEndingSegment) {
-        // Ending pages (based on both choices)
-        const endingText = currentEndingSegment.response || '';
+        // Ending pages (based on both choices). LAZY BRANCHING: if the response
+        // hasn't arrived yet, show a brief placeholder; it fills in when the
+        // merged narrative prop updates (pages recompute).
+        const endingText = currentEndingSegment.response
+          || (secondChoiceLoading ? 'Following the thread…' : '…');
         const endingDetails = currentEndingSegment.details || [];
         const endingPages = paginateNarrativeSegments([endingText], paginationParams);
 
@@ -502,7 +506,7 @@ export default function BranchingNarrativeReader({
     }
 
     return result;
-  }, [branchingNarrative, firstChoiceMade, secondChoiceMade, currentMiddleSegment, currentSecondChoice, currentEndingSegment, paginationParams]);
+  }, [branchingNarrative, firstChoiceMade, secondChoiceMade, currentMiddleSegment, currentSecondChoice, currentEndingSegment, paginationParams, secondChoiceLoading]);
 
   // Handle first choice
   const handleFirstChoice = useCallback((option) => {
