@@ -558,6 +558,11 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         hasBridgeText: !!generatedContent?.bridgeText,
         hasPreviously: !!generatedContent?.previously,
         hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
+        // Alibi-grid ground truth: confirms the deduction puzzle is story-rooted
+        // (vs. falling back to the local entity pool).
+        hasCaseFile: !!generatedContent?.caseFile,
+        caseFileSuspects: generatedContent?.caseFile?.suspects?.length || 0,
+        caseFileCulprit: generatedContent?.caseFile?.culprit || null,
       }, 'debug');
 
       // ========== SECOND CALL: Generate path-specific decisions ==========
