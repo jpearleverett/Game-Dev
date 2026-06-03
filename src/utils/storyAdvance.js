@@ -1,12 +1,18 @@
 // Pure campaign-advance helpers, shared by useStoryEngine (applyPreDecision /
-// selectDecision) and GameContext (completeLogicPuzzle). Keeping the advance
-// math in one pure place means every caller advances identically and can be
-// driven from inside a functional updateProgress((prev) => ...) — which reads the
-// LATEST state at write time and can never clobber a concurrent write (the
-// stale-closure class of bug that produced the 1C -> 1A reset).
+// selectDecision) and GameContext (completeLogicPuzzle). Keeping the advance math
+// in one pure place means every caller advances identically and can be driven from
+// inside a functional updateProgress((prev) => ...), which reads the LATEST state
+// at write time (clobber-safe).
+//
+// IMPORTANT: the next position is derived from the COMPLETED case number (the
+// param), NOT from current.activeCaseNumber. Navigation and campaign-advance had
+// drifted out of sync (the player floats forward by route param while the campaign
+// position lagged), and keying the advance off activeCaseNumber made the drift
+// permanent (every advance SKIPped). Deriving from the completed case + only ever
+// moving FORWARD makes the advance robust and idempotent.
 
 import { formatCaseNumber } from './gameLogic';
-import { computeBranchPathKey } from '../data/storyContent';
+import { computeBranchPathKey, parseCaseNumber } from '../data/storyContent';
 
 export const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;
 export const FIRST_GATED_CHAPTER = 6; // chapters 1-5 are never gated
@@ -17,13 +23,22 @@ function nextUnlockAt(nextChapter) {
     : null;
 }
 
+/** Sortable order key for a case number, e.g. "002B" -> 2*10+2 = 22. */
+export function caseOrder(caseNumber) {
+  if (!caseNumber) return 0;
+  const { chapter, subchapter } = parseCaseNumber(caseNumber);
+  return (chapter || 0) * 10 + (subchapter || 0);
+}
+
 /**
- * Advance to the next CHAPTER after a committed decision (the C-climax belief, or
- * a post-puzzle decision). `current` must already be normalized.
- * Returns the updated storyCampaign.
+ * Advance to the next CHAPTER after a committed decision (the C-climax belief or a
+ * post-puzzle decision). `current` must already be normalized. `decisionCase` is the
+ * completed C case (e.g. "001C"); the next chapter is derived from IT, not from
+ * current.chapter. Returns the updated storyCampaign.
  */
 export function advanceWithDecision(current, { decisionCase, optionKey, optionTitle = null, optionFocus = null, timestamp }) {
-  const nextChapter = current.chapter + 1;
+  const { chapter } = parseCaseNumber(decisionCase);
+  const nextChapter = chapter + 1;
   const nextCaseNumber = formatCaseNumber(nextChapter, 1);
   const nextChoiceHistory = [
     ...(Array.isArray(current.choiceHistory) ? current.choiceHistory : []),
@@ -51,16 +66,19 @@ export function advanceWithDecision(current, { decisionCase, optionKey, optionTi
 }
 
 /**
- * Advance to the next SUBCHAPTER within the current chapter (A->B, B->C).
- * `current` must already be normalized; `caseNumber` is the just-completed case.
+ * Advance to the next SUBCHAPTER (A->B, B->C). `current` must be normalized;
+ * `caseNumber` is the just-completed case. The next position is derived from
+ * `caseNumber` so it works even if current.activeCaseNumber had drifted.
  */
 export function advanceSubchapter(current, caseNumber, { startedAt } = {}) {
-  const nextSubchapter = current.subchapter + 1;
-  const nextCaseNumber = formatCaseNumber(current.chapter, nextSubchapter);
+  const { chapter, subchapter } = parseCaseNumber(caseNumber);
+  const nextSubchapter = subchapter + 1;
+  const nextCaseNumber = formatCaseNumber(chapter, nextSubchapter);
   return {
     ...current,
     completedCaseNumbers: Array.from(new Set([...(current.completedCaseNumbers || []), caseNumber])),
     startedAt: current.startedAt || startedAt || null,
+    chapter,
     subchapter: nextSubchapter,
     activeCaseNumber: nextCaseNumber,
     awaitingDecision: false,

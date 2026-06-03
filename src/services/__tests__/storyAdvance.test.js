@@ -1,4 +1,4 @@
-import { advanceWithDecision, advanceSubchapter } from '../../utils/storyAdvance';
+import { advanceWithDecision, advanceSubchapter, caseOrder } from '../../utils/storyAdvance';
 
 const base = (over = {}) => ({
   chapter: 1, subchapter: 3, activeCaseNumber: '001C',
@@ -50,5 +50,25 @@ describe('advanceSubchapter (A->B->C)', () => {
     const out = advanceSubchapter(base({ subchapter: 2, activeCaseNumber: '001B', underMap: { nodes: [1, 2] } }), '001B');
     expect(out.activeCaseNumber).toBe('001C');
     expect(out.underMap.nodes).toHaveLength(2);
+  });
+
+  test('DRIFT RECOVERY: derives next from the completed case, not the (drifted) active position', () => {
+    // The reported bug: campaign stuck at 001A while the player floated forward.
+    // Completing 001B must advance to 001C regardless of the stale active position.
+    const stuck = base({ subchapter: 1, activeCaseNumber: '001A' });
+    const out = advanceSubchapter(stuck, '001B');
+    expect(out.activeCaseNumber).toBe('001C');
+    expect(out.chapter).toBe(1);
+    expect(out.subchapter).toBe(3);
+  });
+});
+
+describe('caseOrder (forward-only comparisons)', () => {
+  test('orders by chapter then subchapter', () => {
+    expect(caseOrder('001A')).toBe(11);
+    expect(caseOrder('001C')).toBe(13);
+    expect(caseOrder('002A')).toBe(21);
+    expect(caseOrder('001C') < caseOrder('002A')).toBe(true);
+    expect(caseOrder('001A') < caseOrder('001B')).toBe(true);
   });
 });

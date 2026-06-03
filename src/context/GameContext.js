@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useCallback, useState, use
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
-import { advanceWithDecision, advanceSubchapter } from '../utils/storyAdvance';
+import { advanceWithDecision, advanceSubchapter, caseOrder } from '../utils/storyAdvance';
 import {
   addClue as boardAddClue,
   addClues as boardAddClues,
@@ -503,19 +503,25 @@ export function GameProvider({
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio, setActiveCaseInternal]);
 
   const completeLogicPuzzle = useCallback(({ caseId, caseNumber, mistakes: puzzleMistakes = 0 } = {}) => {
+      console.log(`[ADV] completeLogicPuzzle CALLED case=${caseNumber} caseId=${caseId} mode=${mode}`);
       if (!caseId || !caseNumber) return;
-      if (mode !== 'story') return;
+      // NOTE: no `mode !== story` guard — this is only called from the story gates
+      // (Under-Map CONNECT / Theory climax), and a transiently-stale mode must never
+      // block the campaign advance (that stranded the player at 001A).
 
       const nowIso = new Date().toISOString();
       const pathKey = story.getCurrentPathKey(caseNumber);
 
-      analytics.logLevelComplete(caseId, mode, Math.max(1, puzzleMistakes + 1), true, pathKey);
+      analytics.logLevelComplete(caseId, mode || 'story', Math.max(1, puzzleMistakes + 1), true, pathKey);
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio.playVictory();
 
-      const { subchapter } = parseCaseNumber(caseNumber);
+      const { chapter, subchapter } = parseCaseNumber(caseNumber);
       const isFinalSubchapter = subchapter >= 3;
-      // Build the post-puzzle decision options (only used in the fallback path).
+      // The position we WOULD advance to (derived from the completed case).
+      const targetOrder = isFinalSubchapter ? (chapter + 1) * 10 + 1 : chapter * 10 + (subchapter + 1);
+
+      // Post-puzzle decision options (only used in the no-pre-decision fallback).
       const sd = activeCase?.storyDecision;
       const pendingDecisionOptions = {};
       if (sd?.optionA) pendingDecisionOptions.A = { title: sd.optionA.title, focus: sd.optionA.focus };
@@ -523,23 +529,19 @@ export function GameProvider({
       if (!pendingDecisionOptions.A && sd?.options?.[0]) pendingDecisionOptions[sd.options[0].key || 'A'] = { title: sd.options[0].title, focus: sd.options[0].focus };
       if (!pendingDecisionOptions.B && sd?.options?.[1]) pendingDecisionOptions[sd.options[1].key || 'B'] = { title: sd.options[1].title, focus: sd.options[1].focus };
 
-      // The case we advance to (captured from the functional updater) so we can sync
-      // the reducer's active case id afterward. Reassignment is idempotent.
       let advancedCaseNumber = null;
 
-      // FUNCTIONAL update: read the LATEST campaign at write time so the advance can
-      // never clobber (or be clobbered by) a concurrent background-generation write.
-      // This is what the stale object-merge here previously got wrong (1C -> 1A).
+      // FUNCTIONAL + FORWARD-ONLY: read the latest campaign, derive the next position
+      // from the COMPLETED case, and only ever move forward. This is robust to the
+      // campaign/navigation drift that previously stranded the player at 001A.
       updateProgress((prev) => {
         const current = normalizeStoryCampaignShape(prev.storyCampaign);
-        if (caseNumber !== current.activeCaseNumber) {
-          console.log(`[ADV] completeLogicPuzzle SKIP: case=${caseNumber} but activeCaseNumber=${current.activeCaseNumber} (not the active case)`);
-          return null; // stale/double call
-        }
+        const curOrder = caseOrder(current.activeCaseNumber);
 
         if (isFinalSubchapter) {
           const pre = current.preDecision;
           if (pre && pre.caseNumber === caseNumber) {
+            if (targetOrder <= curOrder) { console.log(`[ADV] climax skip: already at/after ${current.activeCaseNumber}`); return null; }
             const updatedStory = advanceWithDecision(current, {
               decisionCase: caseNumber,
               optionKey: pre.optionKey,
@@ -551,7 +553,9 @@ export function GameProvider({
             console.log(`[ADV] C climax sealed: ${caseNumber} -> ${advancedCaseNumber}`);
             return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
           }
-          // No pre-decision: surface the post-puzzle decision panel instead of advancing.
+          // No pre-decision: surface the post-puzzle decision panel (only if we
+          // haven't already advanced past this case).
+          if (curOrder > caseOrder(caseNumber)) { console.log(`[ADV] climax decision skip: already past ${caseNumber}`); return null; }
           return {
             storyCampaign: {
               ...current,
@@ -565,6 +569,7 @@ export function GameProvider({
           };
         }
 
+        if (targetOrder <= curOrder) { console.log(`[ADV] subchapter skip: already at/after ${current.activeCaseNumber} (completed ${caseNumber})`); return null; }
         const updatedStory = advanceSubchapter(current, caseNumber, { startedAt: nowIso });
         advancedCaseNumber = updatedStory.activeCaseNumber;
         console.log(`[ADV] subchapter complete: ${caseNumber} -> ${advancedCaseNumber} (campaign now ${updatedStory.chapter}.${updatedStory.subchapter})`);
