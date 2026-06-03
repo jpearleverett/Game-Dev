@@ -36,6 +36,7 @@ import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
 import { getStoryEntry, ROOT_PATH_KEY } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
+import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
   formatCountdown,
   parseDailyIntro,
@@ -406,6 +407,9 @@ export default function CaseFileScreen({
   const isSubchapterC = subchapterLetter === 'C';
   const puzzleMode = useMemo(() => getPuzzleMode(caseNumber, isStoryMode), [caseNumber, isStoryMode]);
   const puzzleActionLabel = getPuzzleActionLabel(puzzleMode);
+  // The C climax now commits the chapter decision AS a belief on the Theory screen,
+  // so the inline decision panel is suppressed here for the theory climax.
+  const isTheoryClimax = isStoryMode && isSubchapterC && puzzleMode === PUZZLE_MODE.THEORY;
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
@@ -632,31 +636,13 @@ export default function CaseFileScreen({
     return fromSession || fromStored || null;
   }, [branchingProgress?.path, existingBranchingChoice?.secondChoice]);
 
-  const storyDecision = useMemo(() => {
-    const fallback = activeCase?.storyDecision || storyMeta?.decision || null;
-
-    const metaPathDecisions = storyMeta?.pathDecisions;
-    if (!metaPathDecisions) return fallback;
-
-    // Only C subchapters use pathDecisions.
-    if (subchapterLetter !== 'C') return fallback;
-
-    // Prefer the in-session completed path; fall back to persisted branching choice; then default.
-    const defaultPathKey = '1A-2A';
-    const pathKey = resolvedBranchingPath || defaultPathKey;
-
-    if (Array.isArray(metaPathDecisions)) {
-      const picked =
-        metaPathDecisions.find((d) => d?.pathKey === pathKey) ||
-        metaPathDecisions.find((d) => d?.pathKey === defaultPathKey) ||
-        metaPathDecisions[0] ||
-        fallback;
-      return picked;
-    }
-
-    // Legacy object map format
-    return metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
-  }, [
+  const storyDecision = useMemo(() => resolveStoryDecision({
+    activeCaseStoryDecision: activeCase?.storyDecision,
+    metaDecision: storyMeta?.decision,
+    metaPathDecisions: storyMeta?.pathDecisions,
+    subchapterLetter,
+    branchingPath: resolvedBranchingPath,
+  }), [
     activeCase?.storyDecision,
     storyMeta?.decision,
     storyMeta?.pathDecisions,
@@ -707,18 +693,7 @@ export default function CaseFileScreen({
   const showDecision = Boolean(storyDecision);
   const selectedOptionKey = decisionChoice?.optionKey || (lastDecision?.caseNumber === caseNumber ? lastDecision.optionKey : null);
 
-  // Handle both new schema (optionA/optionB objects) and old schema (options array)
-  const decisionOptions = useMemo(() => {
-    if (storyDecision?.optionA && storyDecision?.optionB) {
-      // New schema: convert optionA/optionB to array format
-      return [
-        { key: 'A', ...storyDecision.optionA },
-        { key: 'B', ...storyDecision.optionB },
-      ];
-    }
-    // Old schema: use options array directly
-    return Array.isArray(storyDecision?.options) ? storyDecision.options : [];
-  }, [storyDecision?.optionA, storyDecision?.optionB, storyDecision?.options]);
+  const decisionOptions = useMemo(() => decisionOptionsFrom(storyDecision), [storyDecision]);
 
   const subchapterIndex = Number(storyMeta?.subchapter);
   const isThirdSubchapter = subchapterIndex === 3;
@@ -753,8 +728,8 @@ export default function CaseFileScreen({
     (!awaitingDecision && selectedOptionKey && lastDecision?.caseNumber === caseNumber) ||
     hasPreDecision
   );
-  const showDecisionPrompt = showDecision && shouldGateDecisionPanel && !decisionPanelRevealed;
-  const showDecisionPanel = decisionPanelRevealed && (showDecision || hasLockedDecision);
+  const showDecisionPrompt = !isTheoryClimax && showDecision && shouldGateDecisionPanel && !decisionPanelRevealed;
+  const showDecisionPanel = !isTheoryClimax && decisionPanelRevealed && (showDecision || hasLockedDecision);
 
   // Show decision options when:
   // 1. Normal flow: awaitingDecision is true (after puzzle solved), OR
@@ -767,7 +742,7 @@ export default function CaseFileScreen({
   const branchingDecisionReady = hasBranchingNarrative
     ? Boolean(branchingChoiceComplete) || Boolean(branchingProgressForCase) || narrativeComplete
     : true;
-  const showDecisionOptions = showDecision && (
+  const showDecisionOptions = !isTheoryClimax && showDecision && (
     awaitingDecision ||
     (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision && (
       branchingDecisionReady
@@ -858,21 +833,33 @@ export default function CaseFileScreen({
     // For A/B subchapters: Show "Solve Puzzle" after narrative is complete
     if (!isCaseSolved && typeof onProceedToPuzzle === "function") {
       if (isSubchapterC) {
-        // C subchapter: Must make decision before the climax
-        if (hasPreDecision) {
-          const theoryBeat = puzzleMode === PUZZLE_MODE.THEORY;
+        // C climax: once the scene is read, go form your theory. The chapter
+        // decision IS the belief committed on the Theory screen (no separate
+        // inline decision), so we surface the CTA after the narrative is complete.
+        if (isTheoryClimax) {
+          if (narrativeReadyForPuzzle) {
+            return {
+              title: "The Threshold",
+              body: "You've seen what this chapter had to show. Commit your theory of the Under-Map — the belief you stake decides what it reveals next.",
+              hint: "Connect what you've found into a reading of the hidden world.",
+              actionLabel: puzzleActionLabel,
+              actionIcon: "🔮",
+              // Pass the resolved belief options so the Theory climax presents them.
+              onPress: () => onProceedToPuzzle(decisionOptions),
+            };
+          }
+          // Still reading — no CTA yet.
+        } else if (hasPreDecision) {
+          // Legacy/non-theory C beat: decision already made on this screen.
           return {
-            title: theoryBeat ? "Name What You've Seen" : "Path Chosen",
-            body: theoryBeat
-              ? "Your move is chosen. Before you cross into the next chapter, commit your theory of the Under-Map — what you stake will shape what it reveals."
-              : "Your decision is sealed. Now solve the evidence board to confirm your fate.",
-            hint: theoryBeat ? "Seal your reading of the hidden world." : "The puzzle awaits to complete this chapter.",
+            title: "Path Chosen",
+            body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
+            hint: "The puzzle awaits to complete this chapter.",
             actionLabel: puzzleActionLabel,
-            actionIcon: theoryBeat ? "🔮" : "🔍",
+            actionIcon: "🔍",
             onPress: onProceedToPuzzle,
           };
         }
-        // Decision not yet made - don't show puzzle button (let them decide first)
       } else if (narrativeReadyForPuzzle) {
         // A/B subchapter: Show puzzle after narrative is complete (branching choices made)
         const connectBeat = puzzleMode === PUZZLE_MODE.CONNECT;
@@ -918,7 +905,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, isTheoryClimax, decisionOptions, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option) return;

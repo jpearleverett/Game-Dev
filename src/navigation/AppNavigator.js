@@ -264,7 +264,7 @@ export default function AppNavigator({ fontsReady, audio }) {
           const resolvedActiveCase = stableCaseFromParams || activeCase;
 
           // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
-          const handleProceedToPuzzle = () => {
+          const handleProceedToPuzzle = (decisionOptions) => {
             const puzzleMode = getPuzzleMode(resolvedActiveCase?.caseNumber, effectivelyStoryMode);
             const routeName = getPuzzleRouteName(puzzleMode);
             if (routeName === 'Board' && resolvedActiveCase?.id) {
@@ -280,10 +280,13 @@ export default function AppNavigator({ fontsReady, audio }) {
               return;
             }
             if (routeName === 'Theory') {
-              // The chapter-climax THEORY beat: commit a theory that steers what's next.
+              // The chapter-climax THEORY beat: commit a belief about the hidden world.
+              // The belief options ARE the chapter decision — forward them so the
+              // Theory screen presents them (it can also self-resolve as a fallback).
               navigation.navigate('Theory', {
                 caseNumber: resolvedActiveCase?.caseNumber,
                 caseId: resolvedActiveCase?.id,
+                decisionOptions: Array.isArray(decisionOptions) ? decisionOptions : undefined,
               });
               return;
             }
