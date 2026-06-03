@@ -117,14 +117,18 @@ export default function TheoryScreen({ navigation, route }) {
     const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
 
     try {
-      await game.ensureStoryContent?.(nextCaseNumber, nextPathKey);
+      // Pre-warm under the SAME path key applyPreDecision will set (pass the
+      // projected choice history so the canonical key matches) — this guarantees a
+      // cache hit on the next CaseFile instead of a wrong-key regeneration.
+      await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory);
     } catch (_e) {
       setContinuing(false);
       setGenError('The next chapter would not take shape. Tap to try again.');
       return;
     }
 
-    // Apply the sealed decision — this advances chapter -> next via applyPreDecision.
+    // Apply the sealed decision — this advances chapter -> next via applyPreDecision
+    // (functional/clobber-safe), then navigate to the now-cached next scene.
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
     navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
   }, [continuing, caseNumber, caseId, storyCampaign.choiceHistory, preDecision, game, completeLogicPuzzle, navigation]);

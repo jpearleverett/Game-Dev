@@ -494,16 +494,24 @@ export default function CaseFileScreen({
       setNarrativeComplete(true);
     }
 
-    // UNDER-MAP backfill: the scene is read — ensure every fragment + relation is on
-    // the board (idempotent), so missing a tap never blocks the CONNECT/THEORY beat.
+    // UNDER-MAP backfill: ensure the scene's CORE anomalies (those in the always-read
+    // opening, plus any scene-level fragments without a specific prose phrase) are on
+    // the board even if the player didn't tap them — so the CONNECT/THEORY beat always
+    // has material. Path-specific anomalies are collected inline on tap (already
+    // ingested), so we intentionally do NOT backfill them here — that would leak
+    // fragments from branches the player never read.
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
-      onIngestFragments(sceneFragments, sceneRelations, {
+      const openingText = branchingNarrative?.opening?.text || "";
+      const backfillFragments = sceneFragments.filter(
+        (f) => !f.phrase || (typeof openingText === "string" && openingText.includes(f.phrase)),
+      );
+      onIngestFragments(backfillFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter]);
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter, branchingNarrative]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;

@@ -534,6 +534,13 @@ export function GameProvider({
         if (preDecision && preDecision.caseNumber === caseNumber) {
           log.debug('GameContext', `C subchapter logic puzzle solved with pre-decision: applying Option ${preDecision.optionKey}`);
           story.applyPreDecision();
+          // Keep the reducer's active case id aligned with the advanced campaign so
+          // the next CaseFile doesn't re-sync into a stale/blank state (1C->1A guard).
+          const advancedCaseNumber = formatCaseNumber(currentStory.chapter + 1, 1);
+          const advancedCase = getCaseByNumber(advancedCaseNumber);
+          if (advancedCase?.id) {
+            setActiveCaseInternal(advancedCase.id);
+          }
           return;
         }
 

@@ -299,6 +299,8 @@ This is NOT a whodunit. The player is mapping a hidden layer of reality, not cat
 
 fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the EXACT wording from your prose. Mark anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each a short detail (Jack's note on why it's strange). CRITICAL: also give each fragment a "phrase" — the exact verbatim substring from your narrative where it appears — so the player can TAP that phrase in the prose to examine and collect it. The phrase must match your prose character-for-character.
 
+CRITICAL DOUBLE-MARK: every fragment you list here MUST ALSO appear as a tappable detail inside the matching branchingNarrative segment (opening / option response) where its phrase occurs — that detail must set kind (symbol/place/person/phenomenon) and an evidenceCard label EQUAL to the fragment's label. This is how the player taps the anomaly in the prose to collect it. If you only mark it in one place it will not be collectable, so ALWAYS do both. There must be 2-4 such kind-tagged details across this scene.
+
 relations — how fragments connect to reveal a secret. Reference fragments by their exact label (from this scene OR established earlier in the story). Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are TRUE in your world and that an attentive player could infer. It's fine to return an empty relations list early on when nothing connects yet.
 
 These must be consistent with the narrative you wrote; the player will discover them.

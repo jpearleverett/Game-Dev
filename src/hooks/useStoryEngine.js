@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
 import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../data/storyContent';
-import { saveStoredProgress } from '../storage/progressStorage';
 import { log } from '../utils/llmTrace';
 
 // Daily-hook pacing: a soft cadence, never a hard wall.
@@ -40,78 +39,66 @@ export function useStoryEngine(progress, updateProgress) {
   }, [updateProgress]);
 
   const selectDecision = useCallback((optionKey) => {
-    if (!storyCampaign.awaitingDecision) return;
-
-    const decisionCase = storyCampaign.pendingDecisionCase;
     const decisionTime = new Date().toISOString();
-    const nextChapter = storyCampaign.chapter + 1;
-    const nextSubchapter = 1;
-    const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
+    // Functional update reads the LATEST campaign at write time (clobber-safe);
+    // persistence handled by the debounced auto-save.
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      if (!current.awaitingDecision) return null;
 
-    // Build updated choice history first, then compute the cumulative branch key for the next chapter.
-    // This ensures generated content is keyed by the full decision history (not just "A"/"B").
-    // Include optionTitle and optionFocus so the LLM knows WHAT the player chose
-    const pendingOptions = storyCampaign.pendingDecisionOptions || {};
-    const selectedOption = pendingOptions[optionKey] || {};
-    const nextChoiceHistory = [
-      ...storyCampaign.choiceHistory,
-      {
-        caseNumber: decisionCase,
-        optionKey: optionKey,
-        optionTitle: selectedOption.title || null,  // e.g., "Go to the wharf and confront the confessor"
-        optionFocus: selectedOption.focus || null,  // e.g., "Prioritizes direct confrontation over evidence"
-        timestamp: decisionTime,
-      },
-    ];
-    const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
+      const decisionCase = current.pendingDecisionCase;
+      const nextChapter = current.chapter + 1;
+      const nextSubchapter = 1;
+      const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
 
-    const updatedStory = {
-      ...storyCampaign,
-      awaitingDecision: false,
-      pendingDecisionCase: null,
-      lastDecision: {
-        caseNumber: decisionCase,
-        selectedAt: decisionTime,
-        optionKey: optionKey,
-        nextChapter: nextChapter,
-        nextPathKey,
-      },
-      choiceHistory: nextChoiceHistory.map((entry) => ({
-        ...entry,
-        // Useful for UI history display and debugging
-        nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
-      })),
-      pathHistory: {
-        ...storyCampaign.pathHistory,
-        // Store the cumulative branch key for this chapter for deterministic retrieval.
-        [nextChapter]: nextPathKey,
-      },
-      currentPathKey: nextPathKey,
-      chapter: nextChapter,
-      subchapter: nextSubchapter,
-      activeCaseNumber: nextCaseNumber,
-      nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
-        ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
-        : null
-    };
+      const pendingOptions = current.pendingDecisionOptions || {};
+      const selectedOption = pendingOptions[optionKey] || {};
+      const nextChoiceHistory = [
+        ...current.choiceHistory,
+        {
+          caseNumber: decisionCase,
+          optionKey,
+          optionTitle: selectedOption.title || null,
+          optionFocus: selectedOption.focus || null,
+          timestamp: decisionTime,
+        },
+      ];
+      const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
 
-    updateProgress({
+      const updatedStory = {
+        ...current,
+        awaitingDecision: false,
+        pendingDecisionCase: null,
+        lastDecision: {
+          caseNumber: decisionCase,
+          selectedAt: decisionTime,
+          optionKey,
+          nextChapter,
+          nextPathKey,
+        },
+        choiceHistory: nextChoiceHistory.map((entry) => ({
+          ...entry,
+          nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
+        })),
+        pathHistory: {
+          ...current.pathHistory,
+          [nextChapter]: nextPathKey,
+        },
+        currentPathKey: nextPathKey,
+        chapter: nextChapter,
+        subchapter: nextSubchapter,
+        activeCaseNumber: nextCaseNumber,
+        nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
+          ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
+          : null,
+      };
+
+      return {
         storyCampaign: updatedStory,
-        nextUnlockAt: updatedStory.nextStoryUnlockAt
+        nextUnlockAt: updatedStory.nextStoryUnlockAt,
+      };
     });
-
-    // Force persistent save immediately to prevent save scumming
-    saveStoredProgress({
-        ...progress,
-        storyCampaign: updatedStory,
-        nextUnlockAt: updatedStory.nextStoryUnlockAt
-    }).catch((err) => {
-      // Log error but don't block - the in-memory state is already updated
-      // This prevents data loss from being completely silent
-      console.error('[useStoryEngine] Failed to persist decision:', err);
-    });
-
-  }, [storyCampaign, updateProgress, progress]);
+  }, [updateProgress]);
 
   /**
    * NARRATIVE-FIRST FLOW: Select a decision BEFORE solving the puzzle.
@@ -125,41 +112,33 @@ export function useStoryEngine(progress, updateProgress) {
   const selectDecisionBeforePuzzle = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null) => {
     if (!optionKey) return;
 
-    // STALE STATE FIX: Use explicit caseNumber from UI if provided, fall back to state
-    const caseNumber = explicitCaseNumber || storyCampaign.activeCaseNumber;
-    if (!caseNumber) return;
-
-    // Check if this is actually a C subchapter
-    const subchapterLetter = caseNumber.slice(-1);
-    if (subchapterLetter !== 'C') {
-      console.warn('[useStoryEngine] selectDecisionBeforePuzzle called on non-C subchapter:', caseNumber);
-      return;
-    }
-
-    const updatedStory = {
-      ...storyCampaign,
-      preDecision: {
-        caseNumber,
-        optionKey,
-        optionTitle: optionDetails.title || null,
-        optionFocus: optionDetails.focus || null,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    log.debug('useStoryEngine', `Pre-puzzle decision stored for ${caseNumber}: Option ${optionKey}`);
-
-    updateProgress({ storyCampaign: updatedStory });
-
-    // Force persistent save immediately
-    saveStoredProgress({
-      ...progress,
-      storyCampaign: updatedStory,
-    }).catch((err) => {
-      console.error('[useStoryEngine] Failed to persist pre-decision:', err);
+    const timestamp = new Date().toISOString();
+    // Functional update reads the LATEST campaign so we never clobber a concurrent
+    // write. Persistence is handled by the debounced auto-save.
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const caseNumber = explicitCaseNumber || current.activeCaseNumber;
+      if (!caseNumber) return null;
+      const subchapterLetter = caseNumber.slice(-1);
+      if (subchapterLetter !== 'C') {
+        console.warn('[useStoryEngine] selectDecisionBeforePuzzle called on non-C subchapter:', caseNumber);
+        return null;
+      }
+      log.debug('useStoryEngine', `Pre-puzzle decision stored for ${caseNumber}: Option ${optionKey}`);
+      return {
+        storyCampaign: {
+          ...current,
+          preDecision: {
+            caseNumber,
+            optionKey,
+            optionTitle: optionDetails.title || null,
+            optionFocus: optionDetails.focus || null,
+            timestamp,
+          },
+        },
+      };
     });
-
-  }, [storyCampaign, updateProgress, progress]);
+  }, [updateProgress]);
 
   /**
    * Apply a pre-made decision after solving the puzzle.
@@ -167,80 +146,81 @@ export function useStoryEngine(progress, updateProgress) {
    * and a preDecision exists for that case.
    */
   const applyPreDecision = useCallback(() => {
-    const preDecision = storyCampaign.preDecision;
-    if (!preDecision) return false;
+    // Functional update: read the LATEST campaign at write time so the advance can
+    // never be clobbered by (or clobber) a concurrent write. Persistence is handled
+    // by usePersistence's debounced auto-save — no manual saveStoredProgress here.
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const preDecision = current.preDecision;
+      if (!preDecision) return null;
+      if (preDecision.caseNumber !== current.activeCaseNumber) {
+        console.warn('[useStoryEngine] Pre-decision case mismatch:', preDecision.caseNumber, 'vs', current.activeCaseNumber);
+        return null;
+      }
 
-    // Verify the pre-decision is for the current case
-    if (preDecision.caseNumber !== storyCampaign.activeCaseNumber) {
-      console.warn('[useStoryEngine] Pre-decision case mismatch:', preDecision.caseNumber, 'vs', storyCampaign.activeCaseNumber);
-      return false;
-    }
+      const optionKey = preDecision.optionKey;
+      const decisionCase = preDecision.caseNumber;
+      const decisionTime = preDecision.timestamp;
+      const nextChapter = current.chapter + 1;
+      const nextSubchapter = 1;
+      const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
 
-    const optionKey = preDecision.optionKey;
-    const decisionCase = preDecision.caseNumber;
-    const decisionTime = preDecision.timestamp;
-    const nextChapter = storyCampaign.chapter + 1;
-    const nextSubchapter = 1;
-    const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
+      const nextChoiceHistory = [
+        ...current.choiceHistory,
+        {
+          caseNumber: decisionCase,
+          optionKey,
+          optionTitle: preDecision.optionTitle || null,
+          optionFocus: preDecision.optionFocus || null,
+          timestamp: decisionTime,
+        },
+      ];
+      const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
 
-    const nextChoiceHistory = [
-      ...storyCampaign.choiceHistory,
-      {
-        caseNumber: decisionCase,
-        optionKey: optionKey,
-        optionTitle: preDecision.optionTitle || null,
-        optionFocus: preDecision.optionFocus || null,
-        timestamp: decisionTime,
-      },
-    ];
-    const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
+      const completedCaseNumbers = Array.from(
+        new Set([...(current.completedCaseNumbers || []), decisionCase]),
+      );
 
-    const updatedStory = {
-      ...storyCampaign,
-      preDecision: null, // Clear the pre-decision
-      awaitingDecision: false,
-      pendingDecisionCase: null,
-      lastDecision: {
-        caseNumber: decisionCase,
-        selectedAt: decisionTime,
-        optionKey: optionKey,
-        nextChapter: nextChapter,
-        nextPathKey,
-      },
-      choiceHistory: nextChoiceHistory.map((entry) => ({
-        ...entry,
-        nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
-      })),
-      pathHistory: {
-        ...storyCampaign.pathHistory,
-        [nextChapter]: nextPathKey,
-      },
-      currentPathKey: nextPathKey,
-      chapter: nextChapter,
-      subchapter: nextSubchapter,
-      activeCaseNumber: nextCaseNumber,
-      nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
-        ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
-        : null
-    };
+      const updatedStory = {
+        ...current,
+        completedCaseNumbers,
+        preDecision: null,
+        awaitingDecision: false,
+        pendingDecisionCase: null,
+        lastDecision: {
+          caseNumber: decisionCase,
+          selectedAt: decisionTime,
+          optionKey,
+          nextChapter,
+          nextPathKey,
+        },
+        choiceHistory: nextChoiceHistory.map((entry) => ({
+          ...entry,
+          nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
+        })),
+        pathHistory: {
+          ...current.pathHistory,
+          [nextChapter]: nextPathKey,
+        },
+        currentPathKey: nextPathKey,
+        chapter: nextChapter,
+        subchapter: nextSubchapter,
+        activeCaseNumber: nextCaseNumber,
+        nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
+          ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
+          : null,
+      };
 
-    log.debug('useStoryEngine', `Applied pre-decision for ${decisionCase}: advancing to Chapter ${nextChapter}`);
+      log.debug('useStoryEngine', `Applied pre-decision for ${decisionCase}: advancing to Chapter ${nextChapter}`);
 
-    updateProgress({
-      storyCampaign: updatedStory,
-      nextUnlockAt: updatedStory.nextStoryUnlockAt
-    });
-
-    saveStoredProgress({
-      ...progress,
-      storyCampaign: updatedStory,
-      nextUnlockAt: updatedStory.nextStoryUnlockAt
-    }).catch((err) => {
-      console.error('[useStoryEngine] Failed to persist applied pre-decision:', err);
+      return {
+        storyCampaign: updatedStory,
+        nextUnlockAt: updatedStory.nextStoryUnlockAt,
+      };
     });
 
     return true;
-  }, [storyCampaign, updateProgress, progress]);
+  }, [updateProgress]);
 
   /**
    * Save player's branching choice within a subchapter (for true infinite branching).
@@ -294,78 +274,42 @@ export function useStoryEngine(progress, updateProgress) {
       return false;
     }
 
-    const existingChoices = storyCampaign.branchingChoices || [];
-    const existingIndex = existingChoices.findIndex(bc => bc.caseNumber === caseNumber);
-    if (existingIndex >= 0) {
-      const existing = existingChoices[existingIndex];
-      const sameChoice = existing.firstChoice === fc && existing.secondChoice === sc;
-      if (!sameChoice) {
-        console.warn('[useStoryEngine] Branching choice mismatch - keeping existing choice:', {
-          caseNumber,
-          existingFirst: existing.firstChoice,
-          existingSecond: existing.secondChoice,
-          incomingFirst: fc,
-          incomingSecond: sc,
-        });
-        return false;
+    const nowIso = new Date().toISOString();
+    // Functional update: read the LATEST campaign at write time so branching writes
+    // never clobber a concurrent story advance. Persistence via debounced auto-save.
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const existingChoices = current.branchingChoices || [];
+      const existingIndex = existingChoices.findIndex((bc) => bc.caseNumber === caseNumber);
+
+      if (existingIndex >= 0) {
+        const existing = existingChoices[existingIndex];
+        const sameChoice = existing.firstChoice === fc && existing.secondChoice === sc;
+        if (!sameChoice) {
+          console.warn('[useStoryEngine] Branching choice mismatch - keeping existing choice:', {
+            caseNumber,
+            existingFirst: existing.firstChoice,
+            existingSecond: existing.secondChoice,
+            incomingFirst: fc,
+            incomingSecond: sc,
+          });
+          return null;
+        }
+        if (existing.isComplete === false && isComplete) {
+          const updatedChoices = [...existingChoices];
+          updatedChoices[existingIndex] = { ...existing, isComplete: true, completedAt: nowIso };
+          return { storyCampaign: { ...current, branchingChoices: updatedChoices } };
+        }
+        return null;
       }
-      if (existing.isComplete === false && isComplete) {
-        const updatedChoice = {
-          ...existing,
-          isComplete: true,
-          completedAt: new Date().toISOString(),
-        };
-        const updatedChoices = [...existingChoices];
-        updatedChoices[existingIndex] = updatedChoice;
-        const updatedStory = {
-          ...storyCampaign,
-          branchingChoices: updatedChoices,
-        };
-        updateProgress({
-          storyCampaign: updatedStory,
-        });
-        saveStoredProgress({
-          ...progress,
-          storyCampaign: updatedStory,
-        }).catch((err) => {
-          console.error('[useStoryEngine] Failed to persist branching choice update:', err);
-        });
-        return true;
-      }
-      return false;
-    }
 
-    const newChoice = {
-      caseNumber,
-      firstChoice: fc,
-      secondChoice: sc,
-      completedAt: new Date().toISOString(),
-      isComplete,
-    };
-
-    const updatedChoices = [...existingChoices, newChoice];
-
-    const updatedStory = {
-      ...storyCampaign,
-      branchingChoices: updatedChoices,
-    };
-
-    log.debug('useStoryEngine', `Saving branching choice for ${caseNumber}: ${fc} -> ${sc}`);
-
-    updateProgress({
-      storyCampaign: updatedStory,
-    });
-
-    // Force persistent save immediately
-    saveStoredProgress({
-      ...progress,
-      storyCampaign: updatedStory,
-    }).catch((err) => {
-      console.error('[useStoryEngine] Failed to persist branching choice:', err);
+      const newChoice = { caseNumber, firstChoice: fc, secondChoice: sc, completedAt: nowIso, isComplete };
+      log.debug('useStoryEngine', `Saving branching choice for ${caseNumber}: ${fc} -> ${sc}`);
+      return { storyCampaign: { ...current, branchingChoices: [...existingChoices, newChoice] } };
     });
 
     return true;
-  }, [storyCampaign, updateProgress, progress]);
+  }, [updateProgress]);
 
   // This logic was previously in 'activateStoryCase'
   const activateStoryCase = useCallback(({ skipLock = false } = {}) => {

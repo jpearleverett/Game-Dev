@@ -130,6 +130,14 @@ class ValidationMethods {
         pathDecisions: null,
       };
 
+      // EXAMINE robustness: the model reliably fills branching `details` but often
+      // omits top-level `fragments`. Derive collectable fragments from kind-tagged
+      // details and merge, so the Under-Map always populates from generated scenes.
+      const derivedFragments = this._deriveFragmentsFromBranching(result.branchingNarrative);
+      if (derivedFragments.length) {
+        result.fragments = this._normalizeFragments([...(result.fragments || []), ...derivedFragments]);
+      }
+
       // Convert decision format if present
       if (isDecisionPoint) {
         if (parsed.pathDecisions) {
@@ -332,6 +340,51 @@ class ValidationMethods {
       || `${culprit.name} claimed they were at ${culprit.claimedLocation}, but the evidence puts them at ${crimeScene}.`;
 
     return { suspects, culprit: culprit.name, crimeScene, contradiction };
+  }
+
+  /**
+   * UNDER-MAP / EXAMINE: derive collectable fragments from the branching narrative's
+   * tappable details. The model fills `details` (phrase/note/evidenceCard, optional
+   * kind) far more reliably than the separate top-level `fragments` array, so any
+   * detail that is tagged with a `kind` (or carries an evidenceCard label) becomes a
+   * fragment the player can tap-collect in the prose. Returns raw fragment shapes
+   * (label/kind/detail/phrase/anomalous) to be merged + normalized by the caller.
+   */
+  _deriveFragmentsFromBranching(bn) {
+    if (!bn || typeof bn !== 'object') return [];
+    const KINDS = new Set(['symbol', 'place', 'person', 'phenomenon']);
+    const out = [];
+    const seen = new Set();
+    const pushDetail = (d) => {
+      if (!d || typeof d !== 'object') return;
+      const phrase = typeof d.phrase === 'string' ? d.phrase.trim() : '';
+      if (!phrase) return;
+      const kindTagged = KINDS.has(d.kind);
+      const card = typeof d.evidenceCard === 'string' ? d.evidenceCard.trim() : '';
+      // Only details the model marked as collectable anomalies (a kind, or an
+      // evidenceCard label) become fragments — plain atmospheric details stay flavor.
+      if (!kindTagged && !card) return;
+      const label = card || phrase;
+      const key = label.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        label,
+        kind: kindTagged ? d.kind : 'phenomenon',
+        detail: typeof d.note === 'string' ? d.note.trim() : '',
+        phrase,
+        anomalous: true,
+      });
+    };
+    const scanDetails = (details) => {
+      if (Array.isArray(details)) details.forEach(pushDetail);
+    };
+    scanDetails(bn.opening?.details);
+    (Array.isArray(bn.firstChoice?.options) ? bn.firstChoice.options : []).forEach((o) => scanDetails(o?.details));
+    (Array.isArray(bn.secondChoices) ? bn.secondChoices : []).forEach((sc) => {
+      (Array.isArray(sc?.options) ? sc.options : []).forEach((o) => scanDetails(o?.details));
+    });
+    return out;
   }
 
   /** UNDER-MAP: normalize the scene's collectable fragments (dedup, clamp, defaults). */

@@ -16,6 +16,11 @@ export const DETAIL_SCHEMA = {
       type: 'string',
       description: 'If this detail becomes evidence, the card label (2-4 words). Leave empty if purely atmospheric.',
     },
+    kind: {
+      type: 'string',
+      enum: ['symbol', 'place', 'person', 'phenomenon'],
+      description: 'OPTIONAL. If this detail is an anomaly of the hidden world the player should COLLECT as an Under-Map fragment, set its kind (symbol/place/person/phenomenon) AND give it an evidenceCard label. Leave unset for purely atmospheric details.',
+    },
   },
   required: ['phrase', 'note'],
 };
