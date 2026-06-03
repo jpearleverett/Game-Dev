@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useCallback, useState, use
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
+import { advanceWithDecision, advanceSubchapter } from '../utils/storyAdvance';
 import {
   addClue as boardAddClue,
   addClues as boardAddClues,
@@ -512,94 +513,69 @@ export function GameProvider({
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio.playVictory();
 
-      const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
-      const isStoryCase = caseNumber === currentStory.activeCaseNumber;
-      if (!isStoryCase) return;
+      const { subchapter } = parseCaseNumber(caseNumber);
+      const isFinalSubchapter = subchapter >= 3;
+      // Build the post-puzzle decision options (only used in the fallback path).
+      const sd = activeCase?.storyDecision;
+      const pendingDecisionOptions = {};
+      if (sd?.optionA) pendingDecisionOptions.A = { title: sd.optionA.title, focus: sd.optionA.focus };
+      if (sd?.optionB) pendingDecisionOptions.B = { title: sd.optionB.title, focus: sd.optionB.focus };
+      if (!pendingDecisionOptions.A && sd?.options?.[0]) pendingDecisionOptions[sd.options[0].key || 'A'] = { title: sd.options[0].title, focus: sd.options[0].focus };
+      if (!pendingDecisionOptions.B && sd?.options?.[1]) pendingDecisionOptions[sd.options[1].key || 'B'] = { title: sd.options[1].title, focus: sd.options[1].focus };
 
-      const completedCaseNumbers = Array.from(
-        new Set([...(currentStory.completedCaseNumbers || []), caseNumber]),
-      );
+      // The case we advance to (captured from the functional updater) so we can sync
+      // the reducer's active case id afterward. Reassignment is idempotent.
+      let advancedCaseNumber = null;
 
-      const isFinalSubchapter = currentStory.subchapter >= 3;
-      let updatedStory = {
-        ...currentStory,
-        completedCaseNumbers,
-        startedAt: currentStory.startedAt || nowIso,
-      };
-      let nextCaseNumber = null;
+      // FUNCTIONAL update: read the LATEST campaign at write time so the advance can
+      // never clobber (or be clobbered by) a concurrent background-generation write.
+      // This is what the stale object-merge here previously got wrong (1C -> 1A).
+      updateProgress((prev) => {
+        const current = normalizeStoryCampaignShape(prev.storyCampaign);
+        if (caseNumber !== current.activeCaseNumber) {
+          console.log(`[ADV] completeLogicPuzzle SKIP: case=${caseNumber} but activeCaseNumber=${current.activeCaseNumber} (not the active case)`);
+          return null; // stale/double call
+        }
 
-      if (isFinalSubchapter) {
-        // C subchapter: Check for pre-decision (narrative-first flow)
-        const preDecision = currentStory.preDecision;
-        if (preDecision && preDecision.caseNumber === caseNumber) {
-          log.debug('GameContext', `C subchapter logic puzzle solved with pre-decision: applying Option ${preDecision.optionKey}`);
-          story.applyPreDecision();
-          // Keep the reducer's active case id aligned with the advanced campaign so
-          // the next CaseFile doesn't re-sync into a stale/blank state (1C->1A guard).
-          const advancedCaseNumber = formatCaseNumber(currentStory.chapter + 1, 1);
-          const advancedCase = getCaseByNumber(advancedCaseNumber);
-          if (advancedCase?.id) {
-            setActiveCaseInternal(advancedCase.id);
+        if (isFinalSubchapter) {
+          const pre = current.preDecision;
+          if (pre && pre.caseNumber === caseNumber) {
+            const updatedStory = advanceWithDecision(current, {
+              decisionCase: caseNumber,
+              optionKey: pre.optionKey,
+              optionTitle: pre.optionTitle,
+              optionFocus: pre.optionFocus,
+              timestamp: pre.timestamp,
+            });
+            advancedCaseNumber = updatedStory.activeCaseNumber;
+            console.log(`[ADV] C climax sealed: ${caseNumber} -> ${advancedCaseNumber}`);
+            return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
           }
-          return;
-        }
-
-        // No pre-decision: show decision panel after puzzle
-        // Store decision options for LLM context
-        const pendingDecisionOptions = {};
-        if (activeCase?.storyDecision?.optionA) {
-          pendingDecisionOptions.A = {
-            title: activeCase.storyDecision.optionA.title,
-            focus: activeCase.storyDecision.optionA.focus,
+          // No pre-decision: surface the post-puzzle decision panel instead of advancing.
+          return {
+            storyCampaign: {
+              ...current,
+              completedCaseNumbers: Array.from(new Set([...(current.completedCaseNumbers || []), caseNumber])),
+              startedAt: current.startedAt || nowIso,
+              awaitingDecision: true,
+              pendingDecisionCase: caseNumber,
+              pendingDecisionOptions,
+              lastDecision: null,
+            },
           };
         }
-        if (activeCase?.storyDecision?.optionB) {
-          pendingDecisionOptions.B = {
-            title: activeCase.storyDecision.optionB.title,
-            focus: activeCase.storyDecision.optionB.focus,
-          };
-        }
-        // Fallback to options[] array
-        if (!pendingDecisionOptions.A && activeCase?.storyDecision?.options?.[0]) {
-          const opt = activeCase.storyDecision.options[0];
-          pendingDecisionOptions[opt.key || 'A'] = { title: opt.title, focus: opt.focus };
-        }
-        if (!pendingDecisionOptions.B && activeCase?.storyDecision?.options?.[1]) {
-          const opt = activeCase.storyDecision.options[1];
-          pendingDecisionOptions[opt.key || 'B'] = { title: opt.title, focus: opt.focus };
-        }
 
-        updatedStory = {
-          ...updatedStory,
-          awaitingDecision: true,
-          pendingDecisionCase: caseNumber,
-          pendingDecisionOptions,
-          lastDecision: null,
-        };
-      } else {
-        const nextSubchapter = currentStory.subchapter + 1;
-        nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
-        updatedStory = {
-          ...updatedStory,
-          subchapter: nextSubchapter,
-          activeCaseNumber: nextCaseNumber,
-          awaitingDecision: false,
-          pendingDecisionCase: null,
-        };
-      }
-
-      updateProgress({
-        storyCampaign: updatedStory,
-        nextUnlockAt: updatedStory.nextStoryUnlockAt,
+        const updatedStory = advanceSubchapter(current, caseNumber, { startedAt: nowIso });
+        advancedCaseNumber = updatedStory.activeCaseNumber;
+        console.log(`[ADV] subchapter complete: ${caseNumber} -> ${advancedCaseNumber} (campaign now ${updatedStory.chapter}.${updatedStory.subchapter})`);
+        return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
       });
 
-      if (nextCaseNumber) {
-        const nextCase = getCaseByNumber(nextCaseNumber);
-        if (nextCase?.id) {
-          setActiveCaseInternal(nextCase.id);
-        }
+      if (advancedCaseNumber) {
+        const nextCase = getCaseByNumber(advancedCaseNumber);
+        if (nextCase?.id) setActiveCaseInternal(nextCase.id);
       }
-  }, [mode, progress.storyCampaign, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
+  }, [mode, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
 
   // ========== CASE BOARD (DEDUCTION) ==========
   // Mutations to the running deduction board. Each reads the current campaign,

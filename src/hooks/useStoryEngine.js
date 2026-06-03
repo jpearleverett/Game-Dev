@@ -1,15 +1,8 @@
 import { useCallback } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
 import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../data/storyContent';
+import { advanceWithDecision, CHAPTER_UNLOCK_DELAY_MS, FIRST_GATED_CHAPTER } from '../utils/storyAdvance';
 import { log } from '../utils/llmTrace';
-
-// Daily-hook pacing: a soft cadence, never a hard wall.
-// - The gate only engages once the player is invested (after chapter 5), so the
-//   hooked early game (Acts 1 and the start of Act 2) flows freely.
-// - The wait is a gentle nudge (12h), and is always freely bypassable from the
-//   Desk ("pick up the trail now"). The bribe IAP remains as optional support.
-const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;
-const FIRST_GATED_CHAPTER = 6; // chapters 1–5 are never gated
 
 export function useStoryEngine(progress, updateProgress) {
 
@@ -45,58 +38,15 @@ export function useStoryEngine(progress, updateProgress) {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       if (!current.awaitingDecision) return null;
-
-      const decisionCase = current.pendingDecisionCase;
-      const nextChapter = current.chapter + 1;
-      const nextSubchapter = 1;
-      const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
-
-      const pendingOptions = current.pendingDecisionOptions || {};
-      const selectedOption = pendingOptions[optionKey] || {};
-      const nextChoiceHistory = [
-        ...current.choiceHistory,
-        {
-          caseNumber: decisionCase,
-          optionKey,
-          optionTitle: selectedOption.title || null,
-          optionFocus: selectedOption.focus || null,
-          timestamp: decisionTime,
-        },
-      ];
-      const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
-
-      const updatedStory = {
-        ...current,
-        awaitingDecision: false,
-        pendingDecisionCase: null,
-        lastDecision: {
-          caseNumber: decisionCase,
-          selectedAt: decisionTime,
-          optionKey,
-          nextChapter,
-          nextPathKey,
-        },
-        choiceHistory: nextChoiceHistory.map((entry) => ({
-          ...entry,
-          nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
-        })),
-        pathHistory: {
-          ...current.pathHistory,
-          [nextChapter]: nextPathKey,
-        },
-        currentPathKey: nextPathKey,
-        chapter: nextChapter,
-        subchapter: nextSubchapter,
-        activeCaseNumber: nextCaseNumber,
-        nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
-          ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
-          : null,
-      };
-
-      return {
-        storyCampaign: updatedStory,
-        nextUnlockAt: updatedStory.nextStoryUnlockAt,
-      };
+      const selectedOption = (current.pendingDecisionOptions || {})[optionKey] || {};
+      const updatedStory = advanceWithDecision(current, {
+        decisionCase: current.pendingDecisionCase,
+        optionKey,
+        optionTitle: selectedOption.title || null,
+        optionFocus: selectedOption.focus || null,
+        timestamp: decisionTime,
+      });
+      return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
     });
   }, [updateProgress]);
 
@@ -157,66 +107,15 @@ export function useStoryEngine(progress, updateProgress) {
         console.warn('[useStoryEngine] Pre-decision case mismatch:', preDecision.caseNumber, 'vs', current.activeCaseNumber);
         return null;
       }
-
-      const optionKey = preDecision.optionKey;
-      const decisionCase = preDecision.caseNumber;
-      const decisionTime = preDecision.timestamp;
-      const nextChapter = current.chapter + 1;
-      const nextSubchapter = 1;
-      const nextCaseNumber = formatCaseNumber(nextChapter, nextSubchapter);
-
-      const nextChoiceHistory = [
-        ...current.choiceHistory,
-        {
-          caseNumber: decisionCase,
-          optionKey,
-          optionTitle: preDecision.optionTitle || null,
-          optionFocus: preDecision.optionFocus || null,
-          timestamp: decisionTime,
-        },
-      ];
-      const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
-
-      const completedCaseNumbers = Array.from(
-        new Set([...(current.completedCaseNumbers || []), decisionCase]),
-      );
-
-      const updatedStory = {
-        ...current,
-        completedCaseNumbers,
-        preDecision: null,
-        awaitingDecision: false,
-        pendingDecisionCase: null,
-        lastDecision: {
-          caseNumber: decisionCase,
-          selectedAt: decisionTime,
-          optionKey,
-          nextChapter,
-          nextPathKey,
-        },
-        choiceHistory: nextChoiceHistory.map((entry) => ({
-          ...entry,
-          nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
-        })),
-        pathHistory: {
-          ...current.pathHistory,
-          [nextChapter]: nextPathKey,
-        },
-        currentPathKey: nextPathKey,
-        chapter: nextChapter,
-        subchapter: nextSubchapter,
-        activeCaseNumber: nextCaseNumber,
-        nextStoryUnlockAt: nextChapter >= FIRST_GATED_CHAPTER
-          ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
-          : null,
-      };
-
-      log.debug('useStoryEngine', `Applied pre-decision for ${decisionCase}: advancing to Chapter ${nextChapter}`);
-
-      return {
-        storyCampaign: updatedStory,
-        nextUnlockAt: updatedStory.nextStoryUnlockAt,
-      };
+      const updatedStory = advanceWithDecision(current, {
+        decisionCase: preDecision.caseNumber,
+        optionKey: preDecision.optionKey,
+        optionTitle: preDecision.optionTitle || null,
+        optionFocus: preDecision.optionFocus || null,
+        timestamp: preDecision.timestamp,
+      });
+      log.debug('useStoryEngine', `Applied pre-decision for ${preDecision.caseNumber}: advancing to Chapter ${updatedStory.chapter}`);
+      return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
     });
 
     return true;

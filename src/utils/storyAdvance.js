@@ -1,0 +1,69 @@
+// Pure campaign-advance helpers, shared by useStoryEngine (applyPreDecision /
+// selectDecision) and GameContext (completeLogicPuzzle). Keeping the advance
+// math in one pure place means every caller advances identically and can be
+// driven from inside a functional updateProgress((prev) => ...) — which reads the
+// LATEST state at write time and can never clobber a concurrent write (the
+// stale-closure class of bug that produced the 1C -> 1A reset).
+
+import { formatCaseNumber } from './gameLogic';
+import { computeBranchPathKey } from '../data/storyContent';
+
+export const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;
+export const FIRST_GATED_CHAPTER = 6; // chapters 1-5 are never gated
+
+function nextUnlockAt(nextChapter) {
+  return nextChapter >= FIRST_GATED_CHAPTER
+    ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
+    : null;
+}
+
+/**
+ * Advance to the next CHAPTER after a committed decision (the C-climax belief, or
+ * a post-puzzle decision). `current` must already be normalized.
+ * Returns the updated storyCampaign.
+ */
+export function advanceWithDecision(current, { decisionCase, optionKey, optionTitle = null, optionFocus = null, timestamp }) {
+  const nextChapter = current.chapter + 1;
+  const nextCaseNumber = formatCaseNumber(nextChapter, 1);
+  const nextChoiceHistory = [
+    ...(Array.isArray(current.choiceHistory) ? current.choiceHistory : []),
+    { caseNumber: decisionCase, optionKey, optionTitle, optionFocus, timestamp },
+  ];
+  const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
+  return {
+    ...current,
+    completedCaseNumbers: Array.from(new Set([...(current.completedCaseNumbers || []), decisionCase])),
+    preDecision: null,
+    awaitingDecision: false,
+    pendingDecisionCase: null,
+    lastDecision: { caseNumber: decisionCase, selectedAt: timestamp, optionKey, nextChapter, nextPathKey },
+    choiceHistory: nextChoiceHistory.map((entry) => ({
+      ...entry,
+      nextPathKey: computeBranchPathKey(nextChoiceHistory, parseInt(entry.caseNumber?.slice(0, 3), 10) + 1),
+    })),
+    pathHistory: { ...current.pathHistory, [nextChapter]: nextPathKey },
+    currentPathKey: nextPathKey,
+    chapter: nextChapter,
+    subchapter: 1,
+    activeCaseNumber: nextCaseNumber,
+    nextStoryUnlockAt: nextUnlockAt(nextChapter),
+  };
+}
+
+/**
+ * Advance to the next SUBCHAPTER within the current chapter (A->B, B->C).
+ * `current` must already be normalized; `caseNumber` is the just-completed case.
+ */
+export function advanceSubchapter(current, caseNumber, { startedAt } = {}) {
+  const nextSubchapter = current.subchapter + 1;
+  const nextCaseNumber = formatCaseNumber(current.chapter, nextSubchapter);
+  return {
+    ...current,
+    completedCaseNumbers: Array.from(new Set([...(current.completedCaseNumbers || []), caseNumber])),
+    startedAt: current.startedAt || startedAt || null,
+    subchapter: nextSubchapter,
+    activeCaseNumber: nextCaseNumber,
+    awaitingDecision: false,
+    pendingDecisionCase: null,
+  };
+}

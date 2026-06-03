@@ -131,12 +131,17 @@ class ValidationMethods {
       };
 
       // EXAMINE robustness: the model reliably fills branching `details` but often
-      // omits top-level `fragments`. Derive collectable fragments from kind-tagged
+      // omits top-level `fragments`. Derive collectable fragments from the prose
       // details and merge, so the Under-Map always populates from generated scenes.
+      const explicitCount = (result.fragments || []).length;
       const derivedFragments = this._deriveFragmentsFromBranching(result.branchingNarrative);
       if (derivedFragments.length) {
         result.fragments = this._normalizeFragments([...(result.fragments || []), ...derivedFragments]);
       }
+      console.log(
+        `[FRAG] explicit=${explicitCount} detailsScanned=${this._lastDetailScanCount || 0} derived=${derivedFragments.length} total=${(result.fragments || []).length}` +
+        (result.fragments && result.fragments.length ? ` sample="${result.fragments[0].label}" phrase="${result.fragments[0].phrase || ''}"` : ''),
+      );
 
       // Convert decision format if present
       if (isDecisionPoint) {
@@ -355,15 +360,18 @@ class ValidationMethods {
     const KINDS = new Set(['symbol', 'place', 'person', 'phenomenon']);
     const out = [];
     const seen = new Set();
+    let detailCount = 0;
     const pushDetail = (d) => {
       if (!d || typeof d !== 'object') return;
       const phrase = typeof d.phrase === 'string' ? d.phrase.trim() : '';
       if (!phrase) return;
+      detailCount += 1;
       const kindTagged = KINDS.has(d.kind);
       const card = typeof d.evidenceCard === 'string' ? d.evidenceCard.trim() : '';
-      // Only details the model marked as collectable anomalies (a kind, or an
-      // evidenceCard label) become fragments — plain atmospheric details stay flavor.
-      if (!kindTagged && !card) return;
+      // Every tappable prose detail is an examinable Under-Map fragment. The model
+      // fills `details` (phrase/note) reliably but rarely fills the optional kind /
+      // evidenceCard, so we no longer gate on those — otherwise generated scenes
+      // produce no collectable fragments at all (the reported bug).
       const label = card || phrase;
       const key = label.toLowerCase();
       if (seen.has(key)) return;
@@ -384,6 +392,7 @@ class ValidationMethods {
     (Array.isArray(bn.secondChoices) ? bn.secondChoices : []).forEach((sc) => {
       (Array.isArray(sc?.options) ? sc.options : []).forEach((o) => scanDetails(o?.details));
     });
+    this._lastDetailScanCount = detailCount;
     return out;
   }
 

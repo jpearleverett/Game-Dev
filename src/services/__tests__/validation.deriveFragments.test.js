@@ -19,13 +19,13 @@ describe('_deriveFragmentsFromBranching (EXAMINE fallback for generated scenes)'
     expect(derive({ opening: { details: [] } })).toEqual([]);
   });
 
-  test('derives fragments from kind-tagged and evidenceCard details across all segments', () => {
+  test('derives a fragment from EVERY tappable detail across all segments (kind/card optional)', () => {
     const bn = {
       opening: {
         text: '...',
         details: [
           { phrase: 'the moving ink', note: 'It shifts.', evidenceCard: 'Moving Ink', kind: 'phenomenon' },
-          { phrase: 'a damp coat', note: 'Just rain.', evidenceCard: '' }, // atmospheric -> skipped
+          { phrase: 'a damp coat', note: 'Just rain.', evidenceCard: '' }, // no card/kind -> still a fragment (label=phrase)
         ],
       },
       firstChoice: {
@@ -42,7 +42,7 @@ describe('_deriveFragmentsFromBranching (EXAMINE fallback for generated scenes)'
     expect(labels).toContain('Moving Ink');
     expect(labels).toContain('Brass Key');
     expect(labels).toContain('Acheron Avenue'); // kind, no evidenceCard -> label falls back to phrase
-    expect(labels).not.toContain('a damp coat'); // atmospheric detail excluded
+    expect(labels).toContain('a damp coat'); // every tappable detail is now collectable
 
     const ink = out.find((f) => f.label === 'Moving Ink');
     expect(ink.kind).toBe('phenomenon');
@@ -72,7 +72,7 @@ describe('_parseGeneratedContent populates fragments end-to-end (the bug: none a
           details: [
             { phrase: 'The ink moved', note: 'Ink does not move on its own.', evidenceCard: 'Moving Ink', kind: 'phenomenon' },
             { phrase: '14 Acheron Avenue', note: 'A street paved over a decade ago.', evidenceCard: 'Acheron Avenue', kind: 'place' },
-            { phrase: 'the rain', note: 'Just weather.', evidenceCard: '' }, // atmospheric -> not a fragment
+            { phrase: 'the rain', note: 'Just weather.', evidenceCard: '' }, // no card -> still collectable (label=phrase)
           ],
         },
         firstChoice: {
@@ -89,7 +89,6 @@ describe('_parseGeneratedContent populates fragments end-to-end (the bug: none a
     const result = validationMethods._parseGeneratedContent(content, false);
     const labels = result.fragments.map((f) => f.label);
     expect(labels).toEqual(expect.arrayContaining(['Moving Ink', 'Acheron Avenue', 'Marco']));
-    expect(labels).not.toContain('the rain');
     // Every derived fragment must carry a verbatim phrase so EXAMINE can highlight it.
     result.fragments.forEach((f) => expect(typeof f.phrase === 'string' && f.phrase.length).toBeTruthy());
     // Kinds preserved from the tagged details.
