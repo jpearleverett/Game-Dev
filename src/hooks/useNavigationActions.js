@@ -2,6 +2,13 @@ import { useCallback } from 'react';
 import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 import { Share } from 'react-native';
 
+// The Under-Map (CONNECT beat) gates advancing to the next scene, so it must be
+// entered with puzzle params. Other puzzle routes take no params.
+function puzzleNavParams(routeName, caseNumber, caseId) {
+  if (routeName === 'UnderMap') return { asPuzzle: true, caseNumber, caseId };
+  return undefined;
+}
+
 export function useNavigationActions(navigation, game, audio) {
   const {
     status,
@@ -142,7 +149,7 @@ export function useNavigationActions(navigation, game, audio) {
         if (routeName === 'Board' && activeCase?.id) {
           resetBoardForCase(activeCase.id);
         }
-        navigation.navigate(routeName);
+        navigation.navigate(routeName, puzzleNavParams(routeName, targetCaseNumber, activeCase?.id));
       }
     }
   }, [
@@ -226,7 +233,7 @@ export function useNavigationActions(navigation, game, audio) {
       } else {
         const puzzleMode = getPuzzleMode(targetCaseNumber, true);
         const routeName = getPuzzleRouteName(puzzleMode);
-        navigation.navigate(routeName);
+        navigation.navigate(routeName, puzzleNavParams(routeName, targetCaseNumber, activeCase?.id));
       }
     }
     // If not ok, the overlay will show the error/not-configured state
@@ -279,7 +286,7 @@ export function useNavigationActions(navigation, game, audio) {
       const targetCaseNumber = cases?.find((c) => c.id === caseId)?.caseNumber;
       const puzzleMode = getPuzzleMode(targetCaseNumber, true);
       const routeName = getPuzzleRouteName(puzzleMode);
-      navigation.navigate(routeName);
+      navigation.navigate(routeName, puzzleNavParams(routeName, targetCaseNumber, caseId));
     }
   }, [openStoryCase, navigation, cases]);
 

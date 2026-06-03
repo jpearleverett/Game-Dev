@@ -776,14 +776,23 @@ export default function CaseFileScreen({
         // Decision not yet made - don't show puzzle button (let them decide first)
       } else if (narrativeReadyForPuzzle) {
         // A/B subchapter: Show puzzle after narrative is complete (branching choices made)
+        const connectBeat = puzzleMode === PUZZLE_MODE.CONNECT;
         return {
-          title: puzzleMode === PUZZLE_MODE.LOGIC ? "Logic Grid Ready" : "Evidence Board Ready",
-          body: puzzleMode === PUZZLE_MODE.LOGIC
-            ? "The narrative threads are woven. Now solve the logic grid to unlock your next move."
-            : "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
-          hint: "Solve the puzzle to continue the investigation.",
+          title: connectBeat
+            ? "The Under-Map Stirs"
+            : puzzleMode === PUZZLE_MODE.LOGIC
+              ? "Logic Grid Ready"
+              : "Evidence Board Ready",
+          body: connectBeat
+            ? "The scene left threads behind. Descend into the Under-Map and draw the connections to reveal what hides beneath."
+            : puzzleMode === PUZZLE_MODE.LOGIC
+              ? "The narrative threads are woven. Now solve the logic grid to unlock your next move."
+              : "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
+          hint: connectBeat
+            ? "Connect the fragments to pull the hidden world into view."
+            : "Solve the puzzle to continue the investigation.",
           actionLabel: puzzleActionLabel,
-          actionIcon: "🔍",
+          actionIcon: connectBeat ? "🗺️" : "🔍",
           onPress: onProceedToPuzzle,
         };
       }

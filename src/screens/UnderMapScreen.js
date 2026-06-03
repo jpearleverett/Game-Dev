@@ -14,6 +14,7 @@ import {
   areConnected,
   FRAGMENT_KIND,
 } from '../data/underMap';
+import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -26,11 +27,21 @@ const KIND_META = {
 };
 const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];
 
-export default function UnderMapScreen({ navigation }) {
+export default function UnderMapScreen({ navigation, route }) {
   const game = useGame();
   const audio = useAudio();
   const { progress, connectUnderMap, touchUnderMap } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
+
+  // CONNECT beat: when opened as a puzzle gate (A/B subchapters), the Under-Map
+  // stands between the scene just read and the next one. Drawing connections is
+  // the puzzle; "Continue the descent" generates + advances to the next scene.
+  const asPuzzle = !!route?.params?.asPuzzle;
+  const gateCaseNumber = route?.params?.caseNumber || progress?.storyCampaign?.activeCaseNumber || null;
+  const gateCaseId = route?.params?.caseId || null;
+  const [revealsThisVisit, setRevealsThisVisit] = useState(0);
+  const [continuing, setContinuing] = useState(false);
+  const [genError, setGenError] = useState(null);
 
   const map = useMemo(
     () => normalizeUnderMap(progress?.storyCampaign?.underMap),
@@ -102,6 +113,7 @@ export default function UnderMapScreen({ navigation }) {
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
       setFeedback({ tone: 'reveal', text: result.revealed.node.revelation });
+      setRevealsThisVisit((n) => n + 1);
       doReveal();
       setSlotA(null); setSlotB(null);
     } else {
@@ -110,6 +122,31 @@ export default function UnderMapScreen({ navigation }) {
       doShake();
     }
   }, [slotA, slotB, connectUnderMap, audio, doReveal, doShake]);
+
+  // Generate-first, advance-on-success — mirrors the proven A/B advance contract.
+  // We never half-advance into an ungenerated scene; on failure we stay put and retry.
+  const handleContinueDescent = useCallback(async () => {
+    if (continuing || !asPuzzle || !gateCaseNumber) return;
+    setContinuing(true);
+    setGenError(null);
+
+    const { chapter, subchapter } = parseCaseNumber(gateCaseNumber);
+    const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
+    const nextPathKey = progress?.storyCampaign?.currentPathKey || 'ROOT';
+
+    try {
+      if (nextCase) {
+        await game.ensureStoryContent?.(nextCase, nextPathKey);
+      }
+    } catch (_e) {
+      setContinuing(false);
+      setGenError('The descent stalled before the next scene took shape. Tap to try again.');
+      return;
+    }
+
+    game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
+    navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, progress?.storyCampaign?.currentPathKey, game, navigation]);
 
   const renderSlot = (id, side) => {
     const f = id ? fragById(id) : null;
@@ -145,8 +182,8 @@ export default function UnderMapScreen({ navigation }) {
             <MaterialCommunityIcons name="map-marker-path" size={18} color={COLORS.accentSecondary} />
             <Text style={styles.kicker}>THE UNDER-MAP</Text>
           </View>
-          <SecondaryButton label="Close" size="compact" onPress={() => navigation.goBack()}
-            icon={<MaterialCommunityIcons name="close" size={16} color={COLORS.textSecondary} />} />
+          <SecondaryButton label={asPuzzle ? 'Re-read' : 'Close'} size="compact" onPress={() => navigation.goBack()}
+            icon={<MaterialCommunityIcons name={asPuzzle ? 'book-open-variant' : 'close'} size={16} color={COLORS.textSecondary} />} />
         </View>
         <Text style={styles.status}>
           {map.fragments.length} {map.fragments.length === 1 ? 'fragment' : 'fragments'}
@@ -244,6 +281,25 @@ export default function UnderMapScreen({ navigation }) {
           ) : null}
         </ScrollView>
       )}
+
+      {asPuzzle ? (
+        <View style={styles.gateFooter}>
+          <Text style={styles.gateHint}>
+            {revealsThisVisit > 0
+              ? `${revealsThisVisit} new ${revealsThisVisit === 1 ? 'connection' : 'connections'} drawn. The way down is open.`
+              : remaining > 0
+                ? 'Draw a connection to pull the map open — or press on into the dark.'
+                : 'Nothing new to link here yet. Press on.'}
+          </Text>
+          {genError ? <Text style={styles.gateError}>{genError}</Text> : null}
+          <PrimaryButton
+            label={continuing ? 'Descending…' : genError ? 'Retry' : 'Continue the descent'}
+            onPress={handleContinueDescent}
+            disabled={continuing}
+            icon={<MaterialCommunityIcons name="stairs-down" size={18} color={COLORS.textSecondary} />}
+          />
+        </View>
+      ) : null}
     </ScreenSurface>
   );
 }
@@ -293,6 +349,13 @@ const styles = StyleSheet.create({
   },
   nodeText: { flex: 1, fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
   deeper: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontStyle: 'italic', textAlign: 'center', marginTop: SPACING.lg },
+  // Puzzle gate footer
+  gateFooter: {
+    paddingTop: SPACING.md, paddingBottom: SPACING.sm, gap: SPACING.sm,
+    borderTopWidth: 1, borderTopColor: COLORS.panelOutline,
+  },
+  gateHint: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center', lineHeight: LINE_HEIGHTS.cozy },
+  gateError: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.bloodRed, textAlign: 'center' },
   // Empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.md, paddingHorizontal: SPACING.lg },
   emptyText: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, textAlign: 'center', lineHeight: LINE_HEIGHTS.relaxed },

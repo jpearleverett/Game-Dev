@@ -198,8 +198,8 @@ export default function AppNavigator({ fontsReady, audio }) {
       </Stack.Screen>
 
       <Stack.Screen name="UnderMap">
-        {({ navigation }) => (
-          <UnderMapScreen navigation={navigation} />
+        {({ navigation, route }) => (
+          <UnderMapScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
@@ -262,6 +262,15 @@ export default function AppNavigator({ fontsReady, audio }) {
             const routeName = getPuzzleRouteName(puzzleMode);
             if (routeName === 'Board' && resolvedActiveCase?.id) {
               game.resetBoardForCase(resolvedActiveCase.id);
+            }
+            if (routeName === 'UnderMap') {
+              // Enter the Under-Map as the CONNECT beat: it gates advancing to the next scene.
+              navigation.navigate('UnderMap', {
+                asPuzzle: true,
+                caseNumber: resolvedActiveCase?.caseNumber,
+                caseId: resolvedActiveCase?.id,
+              });
+              return;
             }
             navigation.navigate(routeName);
           };
