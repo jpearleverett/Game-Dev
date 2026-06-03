@@ -5,6 +5,7 @@ import { buildMasterSystemPrompt, buildPathDecisionsSystemPrompt, PATHDECISIONS_
 import { fillTemplate } from './helpers';
 import {
   DECISION_CONTENT_SCHEMA,
+  DECISION_CONTENT_LAYER1_SCHEMA,
   DECISION_ONLY_SCHEMA,
   PATHDECISIONS_ONLY_SCHEMA,
   STORY_CONTENT_SCHEMA,
@@ -363,19 +364,19 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       // Decision schema has decision field BEFORE narrative, so decision is generated first
       // This eliminates the need for two-pass generation while ensuring complete decisions
 
-      // LAZY BRANCHING (opt-in): for non-decision (A/B) subchapters, generate
-      // only opening + firstChoice + second-choice labels now; the 3 response
-      // bodies are filled on demand (generateSecondChoiceResponses) when the
-      // player picks a first choice. Decision (C) subchapters keep the full tree.
+      // LAZY BRANCHING (opt-in): generate only opening + firstChoice + second-
+      // choice labels now; the 3 response bodies are filled on demand
+      // (generateSecondChoiceResponses) when the player picks a first choice.
+      // Applies to A/B and C subchapters (C keeps its decision + pathDecisions).
       const _baseQ = GENERATION_CONFIG?.qualitySettings || {};
       const _overrideQ = options?.qualitySettingsOverride || {};
       const lazyBranchGeneration = typeof _overrideQ.lazyBranchGeneration === 'boolean'
         ? _overrideQ.lazyBranchGeneration
         : (typeof _baseQ.lazyBranchGeneration === 'boolean' ? _baseQ.lazyBranchGeneration : false);
-      const useLazyBranching = lazyBranchGeneration && !isDecisionPoint;
+      const useLazyBranching = lazyBranchGeneration;
 
       const schema = isDecisionPoint
-        ? DECISION_CONTENT_SCHEMA
+        ? (useLazyBranching ? DECISION_CONTENT_LAYER1_SCHEMA : DECISION_CONTENT_SCHEMA)
         : (useLazyBranching ? STORY_CONTENT_LAYER1_SCHEMA : STORY_CONTENT_SCHEMA);
       let response;
 

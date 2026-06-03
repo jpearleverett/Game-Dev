@@ -733,6 +733,17 @@ export const DECISION_CONTENT_SCHEMA = {
   required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };
 
+// Lazy (Layer-1) variant of the decision schema: same as above but the branching
+// narrative carries second-choice labels only (response bodies on demand).
+export const DECISION_CONTENT_LAYER1_SCHEMA = {
+  type: 'object',
+  properties: {
+    ...DECISION_CONTENT_SCHEMA.properties,
+    branchingNarrative: BRANCHING_LAYER1_SCHEMA,
+  },
+  required: DECISION_CONTENT_SCHEMA.required,
+};
+
 // ============================================================================
 // PATHDECISIONS SCHEMA - Minimal schema for 9 path-specific decisions (second call)
 // This is called AFTER main content generation to add path-specific decision options
