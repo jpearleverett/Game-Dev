@@ -11,7 +11,6 @@ import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../u
 import {
   normalizeUnderMap,
   undiscoveredRelationCount,
-  areConnected,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
@@ -84,9 +83,13 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const doReveal = useCallback(() => {
     reveal.setValue(0);
-    Animated.sequence([
-      Animated.timing(reveal, { toValue: 1, duration: reducedMotion ? 0 : 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
+    if (reducedMotion) { reveal.setValue(1); return; }
+    Animated.spring(reveal, {
+      toValue: 1,
+      friction: 6,
+      tension: 70,
+      useNativeDriver: true,
+    }).start();
   }, [reveal, reducedMotion]);
 
   const doShake = useCallback(() => {
@@ -154,7 +157,11 @@ export default function UnderMapScreen({ navigation, route }) {
     return (
       <Animated.View style={[
         styles.slot,
-        f && { borderColor: m.color, transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) }] },
+        f && {
+          borderColor: m.color,
+          backgroundColor: COLORS.surfaceAlt,
+          transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) }],
+        },
       ]}>
         {f ? (
           <>
@@ -200,7 +207,7 @@ export default function UnderMapScreen({ navigation, route }) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           {/* Connection bench */}
           <Text style={styles.sectionLabel}>DRAW A CONNECTION</Text>
           <View style={styles.bench}>
@@ -212,8 +219,11 @@ export default function UnderMapScreen({ navigation, route }) {
           {feedback ? (
             feedback.tone === 'reveal' ? (
               <Animated.View style={[styles.revealCard, {
-                opacity: reveal,
-                transform: [{ translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+                opacity: reveal.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
+                transform: [
+                  { translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+                  { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) },
+                ],
               }]}>
                 <View style={styles.revealHeader}>
                   <MaterialCommunityIcons name="map-marker-star" size={20} color={COLORS.accentSecondary} />
@@ -245,7 +255,11 @@ export default function UnderMapScreen({ navigation, route }) {
                 <Pressable
                   key={f.id}
                   onPress={() => loadSlot(f.id)}
-                  style={[styles.frag, { borderColor: selected ? m.color : COLORS.panelOutline }, selected && { backgroundColor: COLORS.surfaceAlt }]}
+                  style={[
+                    styles.frag,
+                    { borderColor: selected ? m.color : COLORS.panelOutline, borderLeftColor: m.color },
+                    selected && { backgroundColor: COLORS.surfaceAlt },
+                  ]}
                   accessibilityRole="button"
                   accessibilityLabel={`${m.label}: ${f.label}`}
                 >
@@ -310,6 +324,7 @@ const styles = StyleSheet.create({
   kickerWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
   status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
+  scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
   // Bench
@@ -320,7 +335,10 @@ const styles = StyleSheet.create({
   },
   slotLabel: { fontFamily: FONTS.primaryMedium, fontSize: FONT_SIZES.xs, color: COLORS.offWhite, textAlign: 'center' },
   slotEmpty: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
-  link: { width: 28, height: 3, borderRadius: 2 },
+  link: {
+    width: 28, height: 3, borderRadius: 2,
+    shadowColor: COLORS.bloodRed, shadowOpacity: 0.8, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
+  },
   // Reveal
   revealCard: {
     marginTop: SPACING.md, backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg,
@@ -335,7 +353,7 @@ const styles = StyleSheet.create({
   fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   frag: {
     width: '47%', flexGrow: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.panelOutline, padding: SPACING.md, gap: 4,
+    borderWidth: 1, borderLeftWidth: 3, borderColor: COLORS.panelOutline, padding: SPACING.md, gap: 4,
   },
   fragTop: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   fragKind: { fontFamily: FONTS.monoBold, fontSize: 10, letterSpacing: 1.5 },
