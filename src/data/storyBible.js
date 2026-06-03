@@ -829,8 +829,10 @@ export const GENERATION_CONFIG = {
     // LAZY BRANCHING: when true, A/B subchapters generate only the opening +
     // firstChoice + second-choice labels up front, and the 3 second-choice
     // response bodies are generated on demand when the player picks a first
-    // choice. Cuts generated content ~half. Default off until verified on-device.
-    lazyBranchGeneration: false,
+    // choice. Cuts generated content ~half.
+    // ⚠️ ENABLED FOR ON-DEVICE VERIFICATION. If anything looks broken (blank
+    // endings, stuck loading), set this back to false for the proven full-tree path.
+    lazyBranchGeneration: true,
   },
 };
 
