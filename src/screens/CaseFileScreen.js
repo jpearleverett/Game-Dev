@@ -68,6 +68,7 @@ export default function CaseFileScreen({
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
   onEnsureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
+  onIngestFragments, // UNDER-MAP: ingest scene fragments/relations into the board
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -223,6 +224,25 @@ export default function CaseFileScreen({
 
     return getStoryEntry(caseNumber, pathKey, previousBranchingPath) || null;
   }, [activeCase?.caseNumber, activeCase?.storyMeta, storyCampaign]);
+
+  // UNDER-MAP: auto-ingest fragments/relations from the current scene exactly once.
+  // (Interim collection mechanism until inline EXAMINE tapping replaces it.)
+  const ingestedCaseRef = useRef(null);
+  useEffect(() => {
+    if (typeof onIngestFragments !== "function") return;
+    const caseNumber = storyMeta?.caseNumber || activeCase?.caseNumber;
+    if (!caseNumber) return;
+    if (ingestedCaseRef.current === caseNumber) return;
+    const fragments = Array.isArray(storyMeta?.fragments) ? storyMeta.fragments : [];
+    const relations = Array.isArray(storyMeta?.relations) ? storyMeta.relations : [];
+    if (!fragments.length && !relations.length) return;
+    ingestedCaseRef.current = caseNumber;
+    onIngestFragments(fragments, relations, {
+      caseNumber,
+      chapter: storyMeta?.chapter,
+      subchapter: storyMeta?.subchapter,
+    });
+  }, [storyMeta, activeCase?.caseNumber, onIngestFragments]);
 
   const storySummary = useMemo(() => {
     if (!storyMeta) return null;

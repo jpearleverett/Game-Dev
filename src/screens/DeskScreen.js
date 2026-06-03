@@ -177,7 +177,7 @@ export default function DeskScreen({
   onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
-  const caseBoardLeads = storyCampaign?.caseBoard?.clues?.length || 0;
+  const underMapFragments = storyCampaign?.underMap?.fragments?.length || 0;
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
 
@@ -693,9 +693,9 @@ export default function DeskScreen({
 
         {onOpenCaseBoard ? (
           <SecondaryButton
-            label={caseBoardLeads > 0 ? `Case Board · ${caseBoardLeads} ${caseBoardLeads === 1 ? 'lead' : 'leads'}` : 'Case Board'}
+            label={underMapFragments > 0 ? `The Under-Map · ${underMapFragments} ${underMapFragments === 1 ? 'fragment' : 'fragments'}` : 'The Under-Map'}
             onPress={handleQuickPress(onOpenCaseBoard)}
-            icon={<MaterialCommunityIcons name="bulletin-board" size={20} color={COLORS.textSecondary} />}
+            icon={<MaterialCommunityIcons name="map-marker-path" size={20} color={COLORS.textSecondary} />}
             style={{ marginTop: scaleSpacing(SPACING.md) }}
           />
         ) : null}

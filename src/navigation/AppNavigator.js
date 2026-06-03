@@ -15,6 +15,7 @@ import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
 import DeductionScreen from '../screens/DeductionScreen';
 import CaseBoardScreen from '../screens/CaseBoardScreen';
+import UnderMapScreen from '../screens/UnderMapScreen';
 import AccusationScreen from '../screens/AccusationScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
@@ -49,6 +50,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
     ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
+    ingestSceneFragments, // UNDER-MAP: collect fragments/relations from the scene
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -139,7 +141,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenMenu={() => navigation.navigate('Menu')}
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
-              onOpenCaseBoard={() => navigation.navigate('CaseBoard')}
+              onOpenCaseBoard={() => navigation.navigate('UnderMap')}
               onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
             />
@@ -192,6 +194,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="CaseBoard">
         {({ navigation }) => (
           <CaseBoardScreen navigation={navigation} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="UnderMap">
+        {({ navigation }) => (
+          <UnderMapScreen navigation={navigation} />
         )}
       </Stack.Screen>
 
@@ -294,6 +302,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onSaveBranchingChoice={saveBranchingChoice}
               onEnsureSecondChoiceResponses={ensureSecondChoiceResponses}
               onProceedToPuzzle={handleProceedToPuzzle}
+              onIngestFragments={ingestSceneFragments}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}
