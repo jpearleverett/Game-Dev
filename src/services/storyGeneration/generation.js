@@ -736,11 +736,11 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
             ? `${pathDecisionsPrompt}\n\n<player_deduction>\n${pdDeduction}\nWhere it fits a path, frame that path's options around the player's prime suspect and the contradictions they have found.\n</player_deduction>`
             : pathDecisionsPrompt;
 
-          // UNDER-MAP: steer the next chapter around the theory the player sealed
-          // and the fragments/nodes they've surfaced about the hidden world.
+          // UNDER-MAP: weave the next chapter's decisions around the living map —
+          // the fragments collected, truths revealed, and theory sealed.
           const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap);
           if (pdTheory) {
-            basePathPrompt = `${basePathPrompt}\n\n<player_theory>\n${pdTheory}\nLet the next chapter answer this theory — confirm it, complicate it, or reveal its cost. Make the player feel their reading mattered.\n</player_theory>`;
+            basePathPrompt = `${basePathPrompt}\n\n<under_map_state>\n${pdTheory}\n</under_map_state>`;
           }
 
           // Single user message - start fresh conversation for pathDecisions

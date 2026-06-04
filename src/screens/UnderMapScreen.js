@@ -11,6 +11,8 @@ import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../u
 import {
   normalizeUnderMap,
   undiscoveredRelationCount,
+  isMotif,
+  mapDepth,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
@@ -60,6 +62,13 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const fragById = useCallback((id) => map.fragments.find((f) => f.id === id) || null, [map.fragments]);
   const remaining = undiscoveredRelationCount(map);
+  const depth = mapDepth(map);
+  const depthPct = Math.round(depth.ratio * 100);
+  const depthLabel = depthPct >= 100 ? 'The hidden world stands revealed'
+    : depthPct >= 75 ? 'The shape of it is unmistakable now'
+    : depthPct >= 50 ? 'The map is taking shape'
+    : depthPct >= 25 ? 'Something is forming in the dark'
+    : 'The map runs deeper than this';
 
   useEffect(() => {
     // Link line glows when both slots are filled.
@@ -197,6 +206,14 @@ export default function UnderMapScreen({ navigation, route }) {
           {'  ·  '}{map.nodes.length} revealed
           {remaining > 0 ? `  ·  ${remaining} connection${remaining === 1 ? '' : 's'} you can sense` : ''}
         </Text>
+        {depth.total > 0 ? (
+          <View style={styles.depthWrap}>
+            <View style={styles.depthTrack}>
+              <View style={[styles.depthFill, { width: `${Math.max(4, depthPct)}%` }]} />
+            </View>
+            <Text style={styles.depthLabel}>{depthLabel} · {depthPct}% charted</Text>
+          </View>
+        ) : null}
       </View>
 
       {map.fragments.length === 0 ? (
@@ -266,7 +283,13 @@ export default function UnderMapScreen({ navigation, route }) {
                   <View style={styles.fragTop}>
                     <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
                     <Text style={[styles.fragKind, { color: m.color }]}>{m.label}</Text>
-                    {linked ? <MaterialCommunityIcons name="vector-link" size={12} color={COLORS.accentSecondary} style={{ marginLeft: 'auto' }} /> : null}
+                    {isMotif(f) ? (
+                      <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
+                        <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
+                        <Text style={styles.motifText}>×{f.seen}</Text>
+                      </View>
+                    ) : null}
+                    {linked ? <MaterialCommunityIcons name="vector-link" size={12} color={COLORS.accentSecondary} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} /> : null}
                   </View>
                   <Text style={styles.fragLabel}>{f.label}</Text>
                   {f.detail ? <Text style={styles.fragDetail} numberOfLines={2}>{f.detail}</Text> : null}
@@ -324,6 +347,14 @@ const styles = StyleSheet.create({
   kickerWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
   status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
+  // Map depth ("the map is taking shape")
+  depthWrap: { marginTop: SPACING.sm, gap: 4 },
+  depthTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceAlt, overflow: 'hidden' },
+  depthFill: { height: 4, borderRadius: 2, backgroundColor: COLORS.accentSecondary },
+  depthLabel: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.amberLight || COLORS.accentSecondary, fontStyle: 'italic', letterSpacing: 0.3 },
+  // Motif badge
+  motifBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
+  motifText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },

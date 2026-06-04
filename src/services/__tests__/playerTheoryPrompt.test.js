@@ -51,6 +51,13 @@ describe('_buildPlayerTheorySection', () => {
     expect(out).toContain('Silver ink');
     expect(out).toContain('made to be seen only by Jack');
     expect(out).toContain('NOT a whodunit');
+    // Cross-chapter weaving + motif instructions must be present so the model
+    // links new anomalies to ones the player already holds.
+    expect(out).toContain('ALREADY HOLDS');
+    expect(out).toContain('WEAVING');
+    expect(out.toLowerCase()).toContain('recurring motif');
+    // Fragment kinds are tagged so the model can reference them precisely.
+    expect(out).toContain('[SYMBOL]');
   });
 });
 

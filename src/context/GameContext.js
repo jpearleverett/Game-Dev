@@ -503,7 +503,6 @@ export function GameProvider({
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio, setActiveCaseInternal]);
 
   const completeLogicPuzzle = useCallback(({ caseId, caseNumber, mistakes: puzzleMistakes = 0 } = {}) => {
-      console.log(`[ADV] completeLogicPuzzle CALLED case=${caseNumber} caseId=${caseId} mode=${mode}`);
       if (!caseId || !caseNumber) return;
       // NOTE: no `mode !== story` guard — this is only called from the story gates
       // (Under-Map CONNECT / Theory climax), and a transiently-stale mode must never
@@ -541,7 +540,7 @@ export function GameProvider({
         if (isFinalSubchapter) {
           const pre = current.preDecision;
           if (pre && pre.caseNumber === caseNumber) {
-            if (targetOrder <= curOrder) { console.log(`[ADV] climax skip: already at/after ${current.activeCaseNumber}`); return null; }
+            if (targetOrder <= curOrder) return null; // already advanced past this climax
             const updatedStory = advanceWithDecision(current, {
               decisionCase: caseNumber,
               optionKey: pre.optionKey,
@@ -550,12 +549,11 @@ export function GameProvider({
               timestamp: pre.timestamp,
             });
             advancedCaseNumber = updatedStory.activeCaseNumber;
-            console.log(`[ADV] C climax sealed: ${caseNumber} -> ${advancedCaseNumber}`);
             return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
           }
           // No pre-decision: surface the post-puzzle decision panel (only if we
           // haven't already advanced past this case).
-          if (curOrder > caseOrder(caseNumber)) { console.log(`[ADV] climax decision skip: already past ${caseNumber}`); return null; }
+          if (curOrder > caseOrder(caseNumber)) return null; // already advanced past this case
           return {
             storyCampaign: {
               ...current,
@@ -569,10 +567,9 @@ export function GameProvider({
           };
         }
 
-        if (targetOrder <= curOrder) { console.log(`[ADV] subchapter skip: already at/after ${current.activeCaseNumber} (completed ${caseNumber})`); return null; }
+        if (targetOrder <= curOrder) return null; // already advanced past this subchapter
         const updatedStory = advanceSubchapter(current, caseNumber, { startedAt: nowIso });
         advancedCaseNumber = updatedStory.activeCaseNumber;
-        console.log(`[ADV] subchapter complete: ${caseNumber} -> ${advancedCaseNumber} (campaign now ${updatedStory.chapter}.${updatedStory.subchapter})`);
         return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
       });
 

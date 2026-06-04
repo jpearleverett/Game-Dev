@@ -354,10 +354,11 @@ function _buildPlayerDeductionSection(board) {
 }
 
 function _buildPlayerTheorySection(underMap) {
-  // Surfaces the player's Under-Map: the fragments they collected, the hidden-world
-  // nodes they revealed by connecting them, and the theory they SEALED at the last
-  // chapter climax. Soft steering — the next chapter should answer the player's
-  // reading (confirm, complicate, or reveal its cost) without breaking canon.
+  // Surfaces the player's living Under-Map so each new scene WEAVES into it: the
+  // fragments they've collected (so the model can link new anomalies back to old
+  // ones across chapters), the hidden-world nodes they've revealed by connecting
+  // them (so the prose builds on what they've uncovered), recurring motifs to
+  // deepen, and the theory they sealed. Soft steering — never breaks canon.
   if (!underMap || typeof underMap !== 'object') return '';
   const fragments = Array.isArray(underMap.fragments) ? underMap.fragments : [];
   const nodes = Array.isArray(underMap.nodes) ? underMap.nodes : [];
@@ -365,38 +366,34 @@ function _buildPlayerTheorySection(underMap) {
   const latest = theories.length ? theories[0] : null;
   if (!fragments.length && !nodes.length && !latest) return '';
 
+  const KIND_TAG = { symbol: 'SYMBOL', place: 'PLACE', person: 'PERSON', phenomenon: 'PHENOMENON' };
   const lines = [];
 
-  if (latest) {
-    if (latest.interpretation) {
-      lines.push(`- The player just SEALED this theory of the hidden world: "${latest.interpretation}".`);
-    }
-    if (Array.isArray(latest.fragmentIds) && latest.fragmentIds.length) {
-      const staked = fragments
-        .filter((f) => latest.fragmentIds.includes(f.id))
-        .map((f) => f.label)
-        .slice(0, 6);
-      if (staked.length) lines.push(`- They staked it on: ${staked.join('; ')}.`);
-    }
+  if (latest?.interpretation) {
+    lines.push(`- The player just SEALED this theory of the hidden world: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
   }
 
   if (nodes.length) {
-    lines.push('- Truths the player has already pulled out of the Under-Map:');
-    nodes.slice(0, 5).forEach((n) => {
-      if (n?.revelation) lines.push(`  • ${n.revelation}`);
-    });
+    lines.push('- Truths the player has already pulled out of the Under-Map (treat these as ESTABLISHED and build the scene on them):');
+    nodes.slice(0, 6).forEach((n) => { if (n?.revelation) lines.push(`  • ${n.revelation}`); });
   }
 
   if (fragments.length) {
-    const labels = fragments.slice(0, 8).map((f) => f.label).filter(Boolean);
-    if (labels.length) lines.push(`- Fragments the player has examined so far: ${labels.join('; ')}.`);
+    lines.push('- Fragments the player ALREADY HOLDS (reference any of these by their EXACT label to weave this chapter into the map):');
+    fragments.slice(0, 14).forEach((f) => {
+      if (f?.label) lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}`);
+    });
   }
 
   if (!lines.length) return '';
 
   return [
-    "The player is mapping a hidden layer of reality on their Under-Map (this is NOT a whodunit). Honor what they have surfaced and committed, WITHOUT contradicting established canon or the Story Bible.",
+    "The player is assembling a hidden map of reality on their Under-Map (this is NOT a whodunit). Each chapter should make that map feel more interconnected, WITHOUT contradicting established canon or the Story Bible.",
     ...lines,
+    'WEAVING (important):',
+    '- In this scene\'s `relations`, author AT LEAST ONE connection that links a NEW fragment to a fragment THE PLAYER ALREADY HOLDS above (reference it by its exact label). This is how the map threads across chapters.',
+    '- RE-SURFACE a recurring motif when it fits: reuse the EXACT label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
+    '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
   ].join('\n');
 }
 
@@ -466,14 +463,13 @@ function _buildDynamicPrompt(
     parts.push('</player_deduction>');
   }
 
-  // Dynamic Part 4.6: Player's Under-Map (collected fragments, revealed nodes,
-  // sealed theory), so the scene answers the reading the player committed to.
+  // Dynamic Part 4.6: Player's living Under-Map (collected fragments, revealed
+  // nodes, sealed theory) so this scene WEAVES into it across chapters.
   const theorySection = this._buildPlayerTheorySection?.(this.currentUnderMap);
   if (theorySection) {
-    parts.push('<player_theory>');
+    parts.push('<under_map_state>');
     parts.push(theorySection);
-    parts.push('Honor and build on what the player surfaced and sealed; let this scene answer it without contradicting canon.');
-    parts.push('</player_theory>');
+    parts.push('</under_map_state>');
   }
 
   // Dynamic Part 6: Current Scene State (exact continuation point)
@@ -601,14 +597,12 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('</player_deduction>');
   }
 
-  // Part 6.6: Player's Under-Map (collected fragments, revealed nodes, sealed
-  // theory), so the scene answers the reading the player committed to.
+  // Part 6.6: Player's living Under-Map so this scene WEAVES into it across chapters.
   const theorySectionGen = this._buildPlayerTheorySection?.(this.currentUnderMap);
   if (theorySectionGen) {
-    parts.push('<player_theory>');
+    parts.push('<under_map_state>');
     parts.push(theorySectionGen);
-    parts.push('Honor and build on what the player surfaced and sealed; let this scene answer it without contradicting canon.');
-    parts.push('</player_theory>');
+    parts.push('</under_map_state>');
   }
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)

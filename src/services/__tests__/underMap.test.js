@@ -11,6 +11,9 @@ import {
   revealedNodeCount,
   areConnected,
   undiscoveredRelationCount,
+  isMotif,
+  motifCount,
+  mapDepth,
   FRAGMENT_KIND,
 } from '../../data/underMap';
 
@@ -126,5 +129,37 @@ describe('underMap', () => {
   test('normalizeUnderMap repairs garbage', () => {
     expect(normalizeUnderMap(null).fragments).toEqual([]);
     expect(normalizeUnderMap({ fragments: 'nope' }).fragments).toEqual([]);
+  });
+
+  test('MOTIF: re-collecting a fragment deepens it instead of duplicating', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [makeFragment({ label: 'The silver ink', kind: 'phenomenon', caseNumber: '001A' })]);
+    expect(fragmentCount(m)).toBe(1);
+    const first = m.fragments[0];
+    expect(first.seen).toBe(1);
+    expect(isMotif(first)).toBe(false);
+
+    // It re-surfaces in a later chapter.
+    m = addFragments(m, [makeFragment({ label: 'the silver ink', kind: 'phenomenon', caseNumber: '003B' })]); // same slug
+    expect(fragmentCount(m)).toBe(1); // not duplicated
+    const deep = m.fragments[0];
+    expect(deep.seen).toBe(2);
+    expect(deep.lastCaseNumber).toBe('003B');
+    expect(deep.firstCaseNumber).toBe('001A');
+    expect(isMotif(deep)).toBe(true);
+    expect(motifCount(m)).toBe(1);
+  });
+
+  test('mapDepth = share of discoverable relations actually drawn', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Old Customs House', bLabel: '14 Acheron Avenue', revelation: 'one' },
+      { aLabel: 'Silver ink that moves', bLabel: 'Silver stain on the courier', revelation: 'two' },
+    ]);
+    expect(mapDepth(m)).toEqual({ drawn: 0, total: 2, ratio: 0 });
+    const a = fragmentId(FRAGMENT_KIND.PLACE, 'Old Customs House');
+    const b = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
+    m = connectFragments(m, a, b).map;
+    expect(mapDepth(m)).toEqual({ drawn: 1, total: 2, ratio: 0.5 });
   });
 });

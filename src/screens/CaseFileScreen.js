@@ -327,7 +327,7 @@ export default function CaseFileScreen({
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
   const examinableDetails = useMemo(() => {
-    const built = sceneFragments
+    return sceneFragments
       .filter((f) => f && f.label && typeof f.phrase === "string" && f.phrase.trim())
       .map((f) => ({
         phrase: f.phrase.trim(),
@@ -336,12 +336,7 @@ export default function CaseFileScreen({
         kind: f.kind || "phenomenon",
         __fragment: true,
       }));
-    if (__DEV__) {
-      console.log(`[EXAMINE] case=${activeCase?.caseNumber} sceneFragments=${sceneFragments.length} withPhrase=${built.length}` +
-        (built.length ? ` first="${built[0].phrase}"` : ''));
-    }
-    return built;
-  }, [sceneFragments, activeCase?.caseNumber]);
+  }, [sceneFragments]);
 
   // Merge the examinables into every segment's details. parseTextWithDetails only
   // highlights phrases actually present in a given page, so appending everywhere is

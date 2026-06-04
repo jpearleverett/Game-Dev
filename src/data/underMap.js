@@ -57,6 +57,7 @@ export const normalizeUnderMap = (map) => {
 
 export const makeFragment = ({ label, kind, detail = '', anomalous = true, caseNumber = null, chapter = null }) => {
   const k = KIND_SET.has(kind) ? kind : FRAGMENT_KIND.PHENOMENON;
+  const now = new Date().toISOString();
   return {
     id: fragmentId(k, label),
     label: String(label || '').trim(),
@@ -65,24 +66,50 @@ export const makeFragment = ({ label, kind, detail = '', anomalous = true, caseN
     anomalous: !!anomalous,
     caseNumber,
     chapter,
-    discoveredAt: new Date().toISOString(),
+    // MOTIF tracking: how many times this anomaly has re-surfaced across scenes.
+    seen: 1,
+    firstCaseNumber: caseNumber,
+    lastCaseNumber: caseNumber,
+    discoveredAt: now,
+    lastSeenAt: now,
   };
 };
 
-/** Add collected fragments (idempotent by id). Newest first. */
+/**
+ * Add collected fragments. New fragments are prepended (newest-first). A fragment
+ * whose id already exists is a RECURRING MOTIF: instead of being dropped, it
+ * DEEPENS the existing one (bumps `seen`, updates lastCaseNumber/lastSeenAt, and
+ * fills in a detail if it had none). This is what lets anomalies thread through
+ * the story and gain meaning over chapters.
+ */
 export const addFragments = (map, fragments = []) => {
   const m = normalizeUnderMap(map);
-  const have = new Set(m.fragments.map((f) => f.id));
+  const byId = new Map(m.fragments.map((f) => [f.id, f]));
   const incoming = [];
+  let changed = false;
   (Array.isArray(fragments) ? fragments : []).forEach((raw) => {
     if (!raw || !raw.label) return;
     const f = raw.id ? raw : makeFragment(raw);
-    if (have.has(f.id)) return;
-    have.add(f.id);
+    const existing = byId.get(f.id);
+    if (existing) {
+      byId.set(f.id, {
+        ...existing,
+        seen: (existing.seen || 1) + 1,
+        lastCaseNumber: f.caseNumber || f.lastCaseNumber || existing.lastCaseNumber || existing.caseNumber || null,
+        lastSeenAt: new Date().toISOString(),
+        detail: existing.detail || f.detail || '',
+      });
+      changed = true;
+      return;
+    }
+    byId.set(f.id, f);
     incoming.push(f);
+    changed = true;
   });
-  if (!incoming.length) return m;
-  return { ...m, fragments: [...incoming, ...m.fragments].slice(0, MAX_FRAGMENTS) };
+  if (!changed) return m;
+  // Keep existing order (with deepened updates applied), prepend the brand-new ones.
+  const updatedExisting = m.fragments.map((f) => byId.get(f.id) || f);
+  return { ...m, fragments: [...incoming, ...updatedExisting].slice(0, MAX_FRAGMENTS) };
 };
 
 /**
@@ -173,3 +200,21 @@ export const undiscoveredRelationCount = (map) => {
   return m.relations.filter((r) => !made.has(relationKey(r.a, r.b))).length;
 };
 export const latestNode = (map) => normalizeUnderMap(map).nodes[0] || null;
+
+/** A fragment is a MOTIF once it has re-surfaced more than once. */
+export const isMotif = (fragment) => !!fragment && (fragment.seen || 1) > 1;
+/** How many collected fragments have become recurring motifs. */
+export const motifCount = (map) => normalizeUnderMap(map).fragments.filter(isMotif).length;
+
+/**
+ * How "deep" the hidden world has been mapped: the share of discoverable
+ * connections the player has actually drawn (0..1). Drives the "the map is taking
+ * shape" progression. Returns { drawn, total, ratio }.
+ */
+export const mapDepth = (map) => {
+  const m = normalizeUnderMap(map);
+  const made = new Set(m.connections.map((c) => relationKey(c.a, c.b)));
+  const total = new Set(m.relations.map((r) => relationKey(r.a, r.b))).size;
+  const drawn = m.relations.filter((r) => made.has(relationKey(r.a, r.b))).length;
+  return { drawn, total, ratio: total > 0 ? Math.min(1, drawn / total) : 0 };
+};

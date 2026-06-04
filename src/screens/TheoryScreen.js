@@ -8,7 +8,7 @@ import DustLayer from '../components/DustLayer';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
-import { normalizeUnderMap, FRAGMENT_KIND } from '../data/underMap';
+import { normalizeUnderMap, FRAGMENT_KIND, isMotif } from '../data/underMap';
 import {
   parseCaseNumber,
   formatCaseNumber,
@@ -260,8 +260,14 @@ export default function TheoryScreen({ navigation, route }) {
                 >
                   <View style={styles.fragTop}>
                     <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
+                    {isMotif(f) ? (
+                      <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
+                        <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
+                        <Text style={styles.motifText}>×{f.seen}</Text>
+                      </View>
+                    ) : null}
                     {active ? (
-                      <MaterialCommunityIcons name="check-circle" size={14} color={m.color} style={{ marginLeft: 'auto' }} />
+                      <MaterialCommunityIcons name="check-circle" size={14} color={m.color} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} />
                     ) : null}
                   </View>
                   <Text style={styles.fragLabel}>{f.label}</Text>
@@ -346,6 +352,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderLeftWidth: 3, borderColor: COLORS.panelOutline, padding: SPACING.md, gap: 4,
   },
   fragTop: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  motifBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
+  motifText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
   fragLabel: { fontFamily: FONTS.primarySemiBold, fontSize: FONT_SIZES.sm, color: COLORS.offWhite },
   fragDetail: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, lineHeight: LINE_HEIGHTS.cozy },
   muted: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, lineHeight: LINE_HEIGHTS.cozy },

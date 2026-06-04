@@ -133,15 +133,10 @@ class ValidationMethods {
       // EXAMINE robustness: the model reliably fills branching `details` but often
       // omits top-level `fragments`. Derive collectable fragments from the prose
       // details and merge, so the Under-Map always populates from generated scenes.
-      const explicitCount = (result.fragments || []).length;
       const derivedFragments = this._deriveFragmentsFromBranching(result.branchingNarrative);
       if (derivedFragments.length) {
         result.fragments = this._normalizeFragments([...(result.fragments || []), ...derivedFragments]);
       }
-      console.log(
-        `[FRAG] explicit=${explicitCount} detailsScanned=${this._lastDetailScanCount || 0} derived=${derivedFragments.length} total=${(result.fragments || []).length}` +
-        (result.fragments && result.fragments.length ? ` sample="${result.fragments[0].label}" phrase="${result.fragments[0].phrase || ''}"` : ''),
-      );
 
       // Convert decision format if present
       if (isDecisionPoint) {
