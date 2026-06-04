@@ -14,6 +14,8 @@ import Svg, { Line, Circle, Path } from 'react-native-svg';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
+import Stagger from '../components/motion/Stagger';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -247,6 +249,8 @@ export default function ChapterSelectScreen({
 }) {
   const { sizeClass, moderateScale, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
 
   // Prepare chapter data with completion status
   const enrichedChapters = useMemo(() => {
@@ -280,6 +284,7 @@ export default function ChapterSelectScreen({
       >
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
+        <Stagger reducedMotion={reducedMotion} distance={14}>
         <View style={styles.header}>
           <Text style={[styles.title, { fontSize: moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display) }]}>
             Chapter Select
@@ -376,6 +381,7 @@ export default function ChapterSelectScreen({
             Starting from a previous chapter will create a new playthrough branch. Your original progress is preserved in the Ending Gallery.
           </Text>
         </View>
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );

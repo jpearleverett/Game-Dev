@@ -5,6 +5,9 @@ import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
 import DustLayer from '../components/DustLayer';
+import Celebration from '../components/Celebration';
+import PressableScale from '../components/PressableScale';
+import Reveal from '../components/motion/Reveal';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
@@ -255,16 +258,16 @@ export default function TheoryScreen({ navigation, route }) {
           <Text style={styles.muted}>The way forward is yours to take. Seal your read and press on.</Text>
         ) : (
           <View style={styles.beliefList}>
-            {beliefs.map((b) => {
+            {beliefs.map((b, bi) => {
               const active = b.key === beliefKey;
               return (
-                <Pressable
-                  key={b.key}
-                  onPress={() => { if (!sealed) { selectionHaptic(); setBeliefKey(b.key); setGenError(null); } }}
+                <Reveal key={b.key} index={bi} reducedMotion={reducedMotion} distance={10}>
+                <PressableScale
+                  reducedMotion={reducedMotion}
+                  onPress={() => { if (!sealed) { setBeliefKey(b.key); setGenError(null); } }}
                   disabled={sealed}
                   style={[styles.beliefCard, active && styles.beliefCardActive, sealed && !active && { opacity: 0.4 }]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={b.title || 'A reading of the hidden world'}
                 >
                   <View style={styles.beliefTop}>
                     <MaterialCommunityIcons
@@ -277,7 +280,8 @@ export default function TheoryScreen({ navigation, route }) {
                   {(b.focus || b.consequence) ? (
                     <Text style={styles.beliefFocus}>{b.focus || b.consequence}</Text>
                   ) : null}
-                </Pressable>
+                </PressableScale>
+                </Reveal>
               );
             })}
           </View>
@@ -366,6 +370,9 @@ export default function TheoryScreen({ navigation, route }) {
           />
         )}
       </View>
+
+      {/* Committing a belief is the chapter's weight-bearing moment — mark it. */}
+      <Celebration active={sealed} reducedMotion={reducedMotion} count={48} />
     </ScreenSurface>
   );
 }

@@ -11,6 +11,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
+import Stagger from '../components/motion/Stagger';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -161,6 +163,8 @@ export default function AchievementsScreen({
 }) {
   const { sizeClass, moderateScale, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
 
   // Expanded categories state
   const [expandedCategories, setExpandedCategories] = useState({
@@ -205,6 +209,7 @@ export default function AchievementsScreen({
       >
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
+        <Stagger reducedMotion={reducedMotion} distance={14}>
         <View style={styles.header}>
           <Text style={[styles.title, { fontSize: moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display) }]}>
             Achievements
@@ -317,6 +322,7 @@ export default function AchievementsScreen({
             </Text>
           </View>
         )}
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );

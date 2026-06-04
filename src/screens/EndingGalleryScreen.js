@@ -13,6 +13,8 @@ import Svg, { Path } from 'react-native-svg';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
+import Stagger from '../components/motion/Stagger';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -207,6 +209,8 @@ export default function EndingGalleryScreen({
 }) {
   const { sizeClass, width, moderateScale, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
 
   const [selectedEnding, setSelectedEnding] = React.useState(null);
 
@@ -261,6 +265,7 @@ export default function EndingGalleryScreen({
       >
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
+        <Stagger reducedMotion={reducedMotion} distance={14}>
         <View style={styles.header}>
           <Text style={[styles.title, { fontSize: moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display) }]}>
             Ending Gallery
@@ -320,6 +325,7 @@ export default function EndingGalleryScreen({
             </Text>
           </View>
         )}
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );

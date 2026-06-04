@@ -5,6 +5,8 @@ import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
 import BribeModal from '../components/BribeModal';
+import Reveal from '../components/motion/Reveal';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING } from '../constants/layout';
@@ -53,6 +55,8 @@ export default function StoryCampaignScreen({
   const { moderateScale, sizeClass, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
   const medium = sizeClass === 'medium';
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
 
   const [bribeModalVisible, setBribeModalVisible] = useState(false);
 
@@ -107,7 +111,7 @@ export default function StoryCampaignScreen({
         <SecondaryButton label="Daily Mode" icon="???" onPress={onExitToDesk} />
       </View>
 
-      <View style={[styles.heroCard, compact && styles.heroCardCompact]}>
+      <Reveal reducedMotion={reducedMotion} distance={16} style={[styles.heroCard, compact && styles.heroCardCompact]}>
         <Text
           style={[
             styles.heroTitle,
@@ -176,7 +180,7 @@ export default function StoryCampaignScreen({
                  />
             )}
           </View>
-      </View>
+      </Reveal>
 
         <ScrollView
           contentContainerStyle={[styles.scroll, { gap: scaleSpacing(SPACING.lg) }]}
@@ -197,8 +201,11 @@ export default function StoryCampaignScreen({
                 ? new Date(entry.selectedAt).toLocaleString()
                 : 'Recently';
               return (
-                <View
+                <Reveal
                   key={`${entry.caseNumber}-${entry.optionKey}-${index}`}
+                  index={Math.min(index, 8)}
+                  reducedMotion={reducedMotion}
+                  distance={12}
                   style={[
                     styles.historyCard,
                     {
@@ -213,7 +220,7 @@ export default function StoryCampaignScreen({
                     {`Option ${entry.optionKey} → Path ${entry.nextPathKey || '—'}`}
                   </Text>
                   <Text style={styles.historyTimestamp}>{timestamp}</Text>
-                </View>
+                </Reveal>
               );
             })
           ) : (
