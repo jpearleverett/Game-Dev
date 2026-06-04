@@ -10,6 +10,8 @@ import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
 import NeonSign from '../components/NeonSign';
 import DustLayer from '../components/DustLayer';
+import Stagger from '../components/motion/Stagger';
+import PressableScale from '../components/PressableScale';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/layout';
@@ -177,6 +179,7 @@ export default function DeskScreen({
   onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
+  const reducedMotion = !!progress?.settings?.reducedMotion;
   const underMapFragments = storyCampaign?.underMap?.fragments?.length || 0;
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
@@ -352,6 +355,7 @@ export default function DeskScreen({
         contentContainerStyle={[styles.container, { gap: sectionGap, paddingBottom: scrollPaddingBottom }]}
         showsVerticalScrollIndicator={false}
       >
+        <Stagger reducedMotion={reducedMotion} distance={14}>
         <View style={[styles.topSection, { gap: scaleSpacing(SPACING.sm) }]}>
           <View style={[styles.headerBar, { marginBottom: scaleSpacing(SPACING.sm) }]}>
             <Pressable
@@ -631,7 +635,9 @@ export default function DeskScreen({
       </View>
 
         <View style={[styles.quickRow, { gap: quickSpacing }, compact && styles.quickRowStack]}>
-          <Pressable
+          <PressableScale
+            reducedMotion={reducedMotion}
+            containerStyle={styles.quickCardFlex}
             style={[
               styles.quickCard,
               {
@@ -647,8 +653,10 @@ export default function DeskScreen({
                   {completedSubchapters} / {totalSubchapters}
                 </Text>
                 <Text style={[styles.quickMeta, { fontSize: quickMetaFont, letterSpacing: quickMetaLetter }]}>Subchapters completed</Text>
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
+            reducedMotion={reducedMotion}
+            containerStyle={styles.quickCardFlex}
             style={[
               styles.quickCard,
               {
@@ -664,7 +672,7 @@ export default function DeskScreen({
               {progress.streak} days
             </Text>
             <Text style={[styles.quickMeta, { fontSize: quickMetaFont, letterSpacing: quickMetaLetter }]}>Days on the Force</Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View
@@ -701,6 +709,7 @@ export default function DeskScreen({
         ) : null}
 
         <View style={[styles.footerSpacer, { height: footerSpacing }]} />
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );
@@ -988,6 +997,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: SPACING.sm,
   },
+  quickCardFlex: { flex: 1 },
   quickCard: {
     flex: 1,
     backgroundColor: 'rgba(18, 19, 24, 0.92)',

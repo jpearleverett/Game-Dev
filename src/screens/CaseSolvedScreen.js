@@ -13,11 +13,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from "../components/ScreenSurface";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import Celebration from "../components/Celebration";
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import { COLORS } from "../constants/colors";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
-import { GAME_STATUS } from "../context/GameContext";
+import { GAME_STATUS, useGame } from "../context/GameContext";
 import { createCasePalette } from "../theme/casePalette";
 import { formatCaseOutlierThemes } from "../utils/themeDisplay";
 
@@ -149,6 +150,8 @@ export default function CaseSolvedScreen({
   onAdvanceStory,
 }) {
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
   const solved = status === GAME_STATUS.SOLVED;
   // In story mode, advancing to the next subchapter can update game state *before*
   // navigation completes. That would flip `solved` to false and incorrectly change
@@ -1059,6 +1062,9 @@ export default function CaseSolvedScreen({
           </View>
         </View>
       </ScrollView>
+
+      {/* Payoff: a restrained ink-fleck burst when the case is cracked. */}
+      <Celebration active={solved} reducedMotion={reducedMotion} count={60} />
     </ScreenSurface>
   );
 }

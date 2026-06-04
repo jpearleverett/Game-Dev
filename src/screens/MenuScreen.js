@@ -5,6 +5,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
+import Stagger from '../components/motion/Stagger';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -28,6 +30,8 @@ export default function MenuScreen({
   achievementsCount = 0,
   totalAchievements = 30,
 }) {
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
   const handleShare = () => {
     onShare?.(SHARE_MESSAGE);
   };
@@ -37,6 +41,7 @@ export default function MenuScreen({
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
+        <Stagger reducedMotion={reducedMotion} distance={14}>
         <Text style={styles.title}>Menu</Text>
 
         {/* Replayability Features Section */}
@@ -103,6 +108,7 @@ export default function MenuScreen({
           </Text>
           <PrimaryButton label="Share the Game" onPress={handleShare} />
         </View>
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );

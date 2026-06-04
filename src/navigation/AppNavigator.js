@@ -148,7 +148,7 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
-      <Stack.Screen name="Board">
+      <Stack.Screen name="Board" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
           return (
@@ -178,19 +178,19 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
-      <Stack.Screen name="UnderMap">
+      <Stack.Screen name="UnderMap" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <UnderMapScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
-      <Stack.Screen name="Theory">
+      <Stack.Screen name="Theory" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <TheoryScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
-      <Stack.Screen name="Ending">
+      <Stack.Screen name="Ending" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <EndingScreen navigation={navigation} route={route} />
         )}

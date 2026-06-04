@@ -4,6 +4,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import DustLayer from '../components/DustLayer';
+import Celebration from '../components/Celebration';
+import Stagger from '../components/motion/Stagger';
+import Reveal from '../components/motion/Reveal';
 import { useGame } from '../context/GameContext';
 import { normalizeUnderMap } from '../data/underMap';
 import { selectEnding } from '../data/endings';
@@ -40,28 +43,37 @@ export default function EndingScreen({ navigation, route }) {
       ) : null}
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <View style={styles.kickerRow}>
-          <MaterialCommunityIcons name="map-marker-check-outline" size={18} color={COLORS.accentSecondary} />
-          <Text style={styles.kicker}>{ending?.kicker || 'THE THRESHOLD'} · THE UNDER-MAP</Text>
-        </View>
-        <Text style={styles.title}>{ending?.title || 'The Threshold'}</Text>
+        <Reveal reducedMotion={reducedMotion} distance={16} duration={520}>
+          <View style={styles.kickerRow}>
+            <MaterialCommunityIcons name="map-marker-check-outline" size={18} color={COLORS.accentSecondary} />
+            <Text style={styles.kicker}>{ending?.kicker || 'THE THRESHOLD'} · THE UNDER-MAP</Text>
+          </View>
+          <Text style={styles.title}>{ending?.title || 'The Threshold'}</Text>
+        </Reveal>
 
         {cl.resolved > 0 ? (
-          <View style={styles.clarityCard}>
-            <MaterialCommunityIcons name="eye-outline" size={15} color={COLORS.accentSecondary} />
-            <Text style={styles.clarityText}>
-              You read the hidden world true {cl.correct} of {cl.resolved} times — {Math.round(cl.ratio * 100)}% clarity.
-            </Text>
-          </View>
+          <Reveal reducedMotion={reducedMotion} index={1} distance={12}>
+            <View style={styles.clarityCard}>
+              <MaterialCommunityIcons name="eye-outline" size={15} color={COLORS.accentSecondary} />
+              <Text style={styles.clarityText}>
+                You read the hidden world true {cl.correct} of {cl.resolved} times — {Math.round(cl.ratio * 100)}% clarity.
+              </Text>
+            </View>
+          </Reveal>
         ) : null}
 
         <View style={styles.prose}>
-          {(ending?.body || []).map((p, i) => (
-            <Text key={i} style={styles.para}>{p}</Text>
-          ))}
-          {ending?.flavorLine ? <Text style={styles.flavor}>{ending.flavorLine}</Text> : null}
+          <Stagger reducedMotion={reducedMotion} delay={420} distance={14}>
+            {(ending?.body || []).map((p, i) => (
+              <Text key={i} style={styles.para}>{p}</Text>
+            ))}
+            {ending?.flavorLine ? <Text style={styles.flavor}>{ending.flavorLine}</Text> : null}
+          </Stagger>
         </View>
       </ScrollView>
+
+      {/* The Clear-Eyed ("true") ending earns a restrained ink-fleck burst. */}
+      <Celebration active={ending?.variant === 'clear'} reducedMotion={reducedMotion} count={70} />
 
       <View style={styles.footer}>
         <PrimaryButton

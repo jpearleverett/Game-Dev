@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
+import Reveal from '../components/motion/Reveal';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -23,6 +24,7 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
   );
 
   const premiumUnlocked = progress.premiumUnlocked;
+  const reducedMotion = !!progress?.settings?.reducedMotion;
 
   return (
     <ScreenSurface variant="default" accentColor={COLORS.accentPrimary} contentStyle={styles.surface}>
@@ -32,8 +34,8 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
         <Text style={styles.subtitle}>Season 1: The Vanishing</Text>
 
         <View style={styles.caseStack}>
-          {enrichedCases.map((item) => (
-            <View key={item.id} style={[styles.caseCard, !item.unlocked && styles.caseCardLocked]}>
+          {enrichedCases.map((item, idx) => (
+            <Reveal key={item.id} index={Math.min(idx, 8)} reducedMotion={reducedMotion} distance={12} style={[styles.caseCard, !item.unlocked && styles.caseCardLocked]}>
               <View style={styles.caseHeader}>
                 <Text style={styles.caseNumber}>#{item.caseNumber}</Text>
                 <View style={[
@@ -66,7 +68,7 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
               ) : (
                 <Text style={styles.lockedCopy}>Unlocks after the previous case is solved.</Text>
               )}
-            </View>
+            </Reveal>
           ))}
         </View>
 
