@@ -41,3 +41,21 @@ Everything respects `settings.reducedMotion`.
 - **Audio**: music-layer ducking during dialogue; UI tap SFX; ambient fade-in.
 - **Atmosphere**: optional rain layer / grain parallax in `ScreenSurface`.
 - **Tutorial / Prologue / Settings** — not yet touched in this pass.
+
+---
+
+## Inkbleed Noir re-skin (art direction)
+Dark-first noir with the supernatural **Under-Map bleeding through in electric
+violet→cyan**. Tokens in `constants/colors.js` (`ink*`, `underViolet/underCyan/
+underGlow*`, `glass*`, `GRADIENTS`). New primitives: `GlassPanel` (expo-blur
+frosted glass + luminous edge) and `LottieEffect` (bundled vector effects).
+- The whole **mystical arc** (Under-Map → Theory → Ending) now shares the violet
+  under-glow identity (kickers, reveal/chooser cards = frosted-glass + violet edge,
+  depth meter, constellation links), visually separating it from the amber noir
+  surface of the daily/desk world.
+- Buttons play a click SFX (`playSelect`) on every press.
+- CaseSolved fires a Lottie burst + confetti on a win.
+
+**Needs your on-device eye to converge** — color/blur/lottie intensities are best
+tuned live. Remaining: apply `GlassPanel` to more hero surfaces (Desk board,
+overlays), wire `achievement-unlock` Lottie, music ducking, Tutorial/Prologue.

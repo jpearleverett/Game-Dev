@@ -77,8 +77,8 @@ export default function UnderMapConstellation({ map, height = 200, selectedIds =
                 l.unresolvedReading
                   ? 'rgba(157,150,141,0.5)'
                   : l.scope === 'arc'
-                    ? 'rgba(241,197,114,0.9)'
-                    : 'rgba(196,62,96,0.7)'
+                    ? 'rgba(241,197,114,0.95)'
+                    : COLORS.underGlow
               }
               strokeWidth={l.scope === 'arc' ? 2.5 : 1.5}
               strokeDasharray={l.unresolvedReading ? '4,4' : undefined}

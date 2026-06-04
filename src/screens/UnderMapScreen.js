@@ -382,7 +382,7 @@ export default function UnderMapScreen({ navigation, route }) {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.kickerWrap}>
-            <MaterialCommunityIcons name="map-marker-path" size={18} color={COLORS.accentSecondary} />
+            <MaterialCommunityIcons name="map-marker-path" size={18} color={COLORS.underViolet} />
             <Text style={styles.kicker}>THE UNDER-MAP</Text>
           </View>
           <SecondaryButton label={asPuzzle ? 'Re-read' : 'Close'} size="compact" onPress={() => navigation.goBack()}
@@ -505,7 +505,7 @@ export default function UnderMapScreen({ navigation, route }) {
                 ],
               }]}>
                 <View style={styles.revealHeader}>
-                  <MaterialCommunityIcons name="map-marker-star" size={20} color={COLORS.accentSecondary} />
+                  <MaterialCommunityIcons name="map-marker-star" size={20} color={COLORS.underViolet} />
                   <Text style={styles.revealKicker}>THE MAP REVEALS</Text>
                 </View>
                 <Text style={styles.revealText}>{feedback.text}</Text>
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   header: { marginBottom: SPACING.sm },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   kickerWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
+  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
   status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
   // Probe meter + streak
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
@@ -632,8 +632,8 @@ const styles = StyleSheet.create({
   // Map depth ("the map is taking shape")
   depthWrap: { marginTop: SPACING.sm, gap: 4 },
   depthTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceAlt, overflow: 'hidden' },
-  depthFill: { height: 4, borderRadius: 2, backgroundColor: COLORS.accentSecondary },
-  depthLabel: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.amberLight || COLORS.accentSecondary, fontStyle: 'italic', letterSpacing: 0.3 },
+  depthFill: { height: 4, borderRadius: 2, backgroundColor: COLORS.underViolet },
+  depthLabel: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.underViolet, fontStyle: 'italic', letterSpacing: 0.3 },
   // Motif badge
   motifBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
   motifText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
@@ -672,11 +672,11 @@ const styles = StyleSheet.create({
   bondHint: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.accentCyan, fontStyle: 'italic', marginTop: SPACING.sm, lineHeight: LINE_HEIGHTS.cozy },
   // Choose-the-truth
   chooserCard: {
-    marginTop: SPACING.md, backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.accentSoft, padding: SPACING.md, gap: SPACING.sm,
+    marginTop: SPACING.md, backgroundColor: COLORS.glassTintStrong, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.glassEdge, padding: SPACING.md, gap: SPACING.sm,
   },
   chooserHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
-  chooserKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.accentSecondary, flex: 1 },
+  chooserKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.underViolet, flex: 1 },
   readingOption: {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
     backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.panelOutline, padding: SPACING.md,
@@ -684,11 +684,12 @@ const styles = StyleSheet.create({
   readingText: { flex: 1, fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
   // Reveal
   revealCard: {
-    marginTop: SPACING.md, backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.accentSoft, padding: SPACING.lg, gap: SPACING.sm,
+    marginTop: SPACING.md, backgroundColor: COLORS.glassTintStrong, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.glassEdge, padding: SPACING.lg, gap: SPACING.sm,
+    shadowColor: COLORS.underViolet, shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
   },
   revealHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  revealKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
+  revealKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
   revealText: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.md, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.relaxed },
   // Blurred (wrong reading)
   blurCard: {

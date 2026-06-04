@@ -203,7 +203,7 @@ export default function TheoryScreen({ navigation, route }) {
 
       <View style={styles.header}>
         <View style={styles.kickerRow}>
-          <MaterialCommunityIcons name="eye-circle-outline" size={18} color={COLORS.accentSecondary} />
+          <MaterialCommunityIcons name="eye-circle-outline" size={18} color={COLORS.underViolet} />
           <Text style={styles.kicker}>THE THEORY{chapter ? ` · CHAPTER ${chapter}` : ''}</Text>
         </View>
         <Text style={styles.title}>What is the Under-Map?</Text>
@@ -380,7 +380,7 @@ export default function TheoryScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   header: { marginBottom: SPACING.sm },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
+  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
   title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
   lede: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, lineHeight: LINE_HEIGHTS.cozy },
   scroll: { flex: 1 },

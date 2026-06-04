@@ -45,7 +45,7 @@ export default function EndingScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <Reveal reducedMotion={reducedMotion} distance={16} duration={520}>
           <View style={styles.kickerRow}>
-            <MaterialCommunityIcons name="map-marker-check-outline" size={18} color={COLORS.accentSecondary} />
+            <MaterialCommunityIcons name="map-marker-check-outline" size={18} color={COLORS.underViolet} />
             <Text style={styles.kicker}>{ending?.kicker || 'THE THRESHOLD'} · THE UNDER-MAP</Text>
           </View>
           <Text style={styles.title}>{ending?.title || 'The Threshold'}</Text>
@@ -89,7 +89,7 @@ export default function EndingScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   body: { paddingVertical: SPACING.xl, paddingBottom: SPACING.xxl },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.accentSecondary },
+  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.underViolet },
   title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
   clarityCard: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.lg,
