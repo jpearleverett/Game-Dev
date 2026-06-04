@@ -26,6 +26,9 @@ import {
   bestFlawlessStreak,
   isMotif,
   motifCount,
+  isKeystone,
+  keystoneCount,
+  arcNodeCount,
   mapDepth,
   FRAGMENT_KIND,
 } from '../../data/underMap';
@@ -296,6 +299,60 @@ describe('underMap — deduction', () => {
     expect(r.valid).toBe(true);
     expect(r.revealed.node.revelation).toBe('The ink marks who carries it.');
     expect(r.revealed.node.unresolvedReading).toBe(false); // auto-resolves the truth
+  });
+});
+
+// ---- Move 5: Keystones + arc-level truths -----------------------------------
+
+describe('underMap — keystones', () => {
+  const collect = (label, caseNumber) =>
+    makeFragment({ label, kind: 'phenomenon', caseNumber });
+
+  test('a motif that recurs >=3x WITHIN one chapter is NOT a keystone', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [collect('silver ink', '001A')]);
+    m = addFragments(m, [collect('silver ink', '001B')]);
+    m = addFragments(m, [collect('silver ink', '001C')]);
+    const f = m.fragments[0];
+    expect(f.seen).toBe(3);
+    expect(isMotif(f)).toBe(true);
+    expect(isKeystone(f)).toBe(false); // span is 1 chapter
+    expect(keystoneCount(m)).toBe(0);
+  });
+
+  test('a motif that recurs >=3x ACROSS chapters becomes a keystone', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [collect('silver ink', '001A')]);
+    m = addFragments(m, [collect('silver ink', '002B')]);
+    m = addFragments(m, [collect('silver ink', '004A')]);
+    const f = m.fragments[0];
+    expect(f.seen).toBe(3);
+    expect(isKeystone(f)).toBe(true);
+    expect(keystoneCount(m)).toBe(1);
+  });
+
+  test('arc-scoped relations reveal arc-level nodes', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [
+      { label: 'silver ink', kind: 'phenomenon' },
+      { label: 'the closed eye', kind: 'symbol' },
+    ]);
+    m = addRelations(m, [
+      { aLabel: 'silver ink', bLabel: 'the closed eye', revelation: 'They are one signal across the whole map.', scope: 'arc' },
+    ]);
+    expect(m.relations[0].scope).toBe('arc');
+    const a = fragmentId('phenomenon', 'silver ink');
+    const b = fragmentId('symbol', 'the closed eye');
+    const r = connectFragments(m, a, b);
+    expect(r.revealed.node.scope).toBe('arc');
+    expect(arcNodeCount(r.map)).toBe(1);
+  });
+
+  test('relations default to chapter scope', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'a', kind: 'symbol' }, { label: 'b', kind: 'place' }]);
+    m = addRelations(m, [{ aLabel: 'a', bLabel: 'b', revelation: 'x' }]);
+    expect(m.relations[0].scope).toBe('chapter');
   });
 });
 

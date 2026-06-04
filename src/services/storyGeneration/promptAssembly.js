@@ -1,5 +1,6 @@
 import { llmService } from '../LLMService';
 import { CHARACTER_REFERENCE } from '../../data/characterReference';
+import { isKeystone } from '../../data/underMap';
 import {
   ABSOLUTE_FACTS,
   ENGAGEMENT_REQUIREMENTS,
@@ -336,10 +337,14 @@ function _buildPlayerTheorySection(underMap) {
     nodes.slice(0, 6).forEach((n) => { if (n?.revelation) lines.push(`  • ${n.revelation}`); });
   }
 
+  let hasKeystone = false;
   if (fragments.length) {
     lines.push('- Fragments the player ALREADY HOLDS (reference any of these by their EXACT label to weave this chapter into the map):');
     fragments.slice(0, 14).forEach((f) => {
-      if (f?.label) lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}`);
+      if (!f?.label) return;
+      const keystone = isKeystone(f);
+      if (keystone) hasKeystone = true;
+      lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}${keystone ? ' (KEYSTONE — recurred across chapters)' : ''}`);
     });
   }
 
@@ -354,6 +359,9 @@ function _buildPlayerTheorySection(underMap) {
     '- For EACH relation, also author its two `falseReadings`: tempting-but-FALSE one-sentence interpretations of the same pair that a careful player might wrongly believe (the player must pick the true reading from among them — make the wrong ones plausible, never absurd).',
     '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
     '- ECHO: when this scene builds on one of the truths the player has ALREADY revealed (listed above), add an `echoes` entry — `nodeRef` quoting that truth, `line` = the exact sentence in THIS scene that pays it off — so the player SEES their mapping reshaping the story.',
+    ...(hasKeystone
+      ? ['- KEYSTONE: a fragment above has recurred across chapters. If it now connects into a SERIES-LEVEL truth about the hidden world, author that relation with `scope: "arc"` (rare, big — the payoff for the player\'s long attention).']
+      : []),
   ].join('\n');
 }
 

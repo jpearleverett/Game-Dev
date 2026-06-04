@@ -29,6 +29,12 @@ const MAX_NODES = 60;
 export const PROBE_BASE = 3;
 export const PROBE_PER_FRAGMENTS = 3;
 
+// KEYSTONE tuning (Move 5, see docs §6): a fragment becomes a Keystone once it
+// has recurred enough AND spanned enough chapters — rewarding cross-chapter
+// pattern recognition, not within-chapter repetition.
+export const KEYSTONE_SEEN = 3;
+export const KEYSTONE_MIN_CHAPTER_SPAN = 2;
+
 const slug = (v, fb = 'x') =>
   String(v || fb).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fb;
 
@@ -154,6 +160,8 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
       b: bId,
       revelation,
       falseReadings: cleanFalseReadings(raw.falseReadings),
+      // 'arc' relations reveal an arc-level truth (bigger than a chapter node).
+      scope: raw.scope === 'arc' ? 'arc' : 'chapter',
     });
   });
   if (next.length === m.relations.length) return m;
@@ -235,6 +243,7 @@ export const resolveReading = (map, aId, bId, chosenRevelation = null) => {
     label: relation.revelation,
     revelation: relation.revelation,
     unresolvedReading: !correctReading,
+    scope: relation.scope === 'arc' ? 'arc' : 'chapter',
     at: now,
   };
   const nodes = existingNode ? m.nodes : [node, ...m.nodes].slice(0, MAX_NODES);
@@ -391,6 +400,30 @@ export const latestNode = (map) => normalizeUnderMap(map).nodes[0] || null;
 export const isMotif = (fragment) => !!fragment && (fragment.seen || 1) > 1;
 /** How many collected fragments have become recurring motifs. */
 export const motifCount = (map) => normalizeUnderMap(map).fragments.filter(isMotif).length;
+
+/** Chapter number from a case number like "003B" -> 3 (null if unparseable). */
+const chapterOf = (caseNumber) => {
+  const n = parseInt(String(caseNumber || '').slice(0, 3), 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+/**
+ * A KEYSTONE is a motif that has recurred enough (`seen >= KEYSTONE_SEEN`) AND
+ * spanned enough chapters (>= KEYSTONE_MIN_CHAPTER_SPAN) — so within-chapter
+ * repetition alone never qualifies. Connecting keystones tends to surface
+ * arc-level truths (the long-game payoff for cross-chapter attention).
+ */
+export const isKeystone = (fragment) => {
+  if (!fragment || (fragment.seen || 1) < KEYSTONE_SEEN) return false;
+  const a = chapterOf(fragment.firstCaseNumber);
+  const b = chapterOf(fragment.lastCaseNumber);
+  if (a == null || b == null) return false;
+  return Math.abs(b - a) + 1 >= KEYSTONE_MIN_CHAPTER_SPAN;
+};
+export const keystoneCount = (map) => normalizeUnderMap(map).fragments.filter(isKeystone).length;
+/** How many revealed nodes are arc-level truths. */
+export const arcNodeCount = (map) =>
+  normalizeUnderMap(map).nodes.filter((n) => n.scope === 'arc').length;
 
 /**
  * How "deep" the hidden world has been mapped: the share of discoverable

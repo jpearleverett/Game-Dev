@@ -371,6 +371,11 @@ export const STORY_CONTENT_SCHEMA = {
           aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
           bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
           revelation: { type: 'string', description: 'The TRUE secret this connection reveals (one sentence).' },
+          scope: {
+            type: 'string',
+            enum: ['chapter', 'arc'],
+            description: "Default 'chapter'. Use 'arc' ONLY when this connection links long-recurring motifs into a SERIES-LEVEL truth about the hidden world (rare, big — the payoff for cross-chapter attention).",
+          },
           falseReadings: {
             type: 'array',
             description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair — plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",

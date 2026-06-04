@@ -146,6 +146,17 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
     };
     const out = validationMethods._parseGeneratedContent(content, false);
     expect(out.relations[0].falseReadings).toEqual([]);
+    expect(out.relations[0].scope).toBe('chapter'); // default
+  });
+
+  test('arc-scoped relations survive parsing (keystone payoff)', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      relations: [{ aLabel: 'A', bLabel: 'B', revelation: 'One signal across the map.', scope: 'arc' }],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.relations[0].scope).toBe('arc');
   });
 
   test('echoes survive parsing and drop entries with no line', () => {

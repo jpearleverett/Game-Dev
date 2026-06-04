@@ -375,7 +375,9 @@ class ValidationMethods {
       const falseReadings = Array.isArray(r.falseReadings)
         ? r.falseReadings.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 2)
         : [];
-      out.push({ aLabel, bLabel, revelation, falseReadings });
+      // 'arc' relations reveal a series-level truth (keystone payoff); default chapter.
+      const scope = r.scope === 'arc' ? 'arc' : 'chapter';
+      out.push({ aLabel, bLabel, revelation, falseReadings, scope });
       if (out.length >= 8) break;
     }
     return out;

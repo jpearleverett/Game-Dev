@@ -12,6 +12,7 @@ import {
   normalizeUnderMap,
   undiscoveredRelationCount,
   isMotif,
+  isKeystone,
   mapDepth,
   probeBudgetFor,
   sensedRelations,
@@ -437,7 +438,12 @@ export default function UnderMapScreen({ navigation, route }) {
                   <View style={styles.fragTop}>
                     <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
                     <Text style={[styles.fragKind, { color: m.color }]}>{m.label}</Text>
-                    {isMotif(f) ? (
+                    {isKeystone(f) ? (
+                      <View style={[styles.keystoneBadge, { marginLeft: 'auto' }]}>
+                        <MaterialCommunityIcons name="star-circle" size={11} color={COLORS.amberLight || COLORS.accentSecondary} />
+                        <Text style={styles.keystoneText}>KEYSTONE</Text>
+                      </View>
+                    ) : isMotif(f) ? (
                       <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
                         <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
                         <Text style={styles.motifText}>×{f.seen}</Text>
@@ -457,18 +463,24 @@ export default function UnderMapScreen({ navigation, route }) {
             <>
               <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>WHAT THE MAP HAS REVEALED</Text>
               <View style={styles.nodeList}>
-                {map.nodes.map((n) => (
-                  <View key={n.id} style={[styles.nodeRow, n.unresolvedReading && styles.nodeRowBlur]}>
-                    <MaterialCommunityIcons
-                      name={n.unresolvedReading ? 'blur' : 'map-marker-check'}
-                      size={16}
-                      color={n.unresolvedReading ? COLORS.textMuted : COLORS.accentSecondary}
-                    />
-                    <Text style={[styles.nodeText, n.unresolvedReading && styles.nodeTextBlur]}>
-                      {n.unresolvedReading ? 'A link you haven’t read true yet — re-read it to settle its meaning.' : n.revelation}
-                    </Text>
-                  </View>
-                ))}
+                {map.nodes.map((n) => {
+                  const arc = n.scope === 'arc' && !n.unresolvedReading;
+                  return (
+                    <View key={n.id} style={[styles.nodeRow, n.unresolvedReading && styles.nodeRowBlur, arc && styles.nodeRowArc]}>
+                      <MaterialCommunityIcons
+                        name={n.unresolvedReading ? 'blur' : arc ? 'star-circle' : 'map-marker-check'}
+                        size={16}
+                        color={n.unresolvedReading ? COLORS.textMuted : arc ? (COLORS.amberLight || COLORS.accentSecondary) : COLORS.accentSecondary}
+                      />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        {arc ? <Text style={styles.arcLabel}>ARC TRUTH</Text> : null}
+                        <Text style={[styles.nodeText, n.unresolvedReading && styles.nodeTextBlur]}>
+                          {n.unresolvedReading ? 'A link you haven’t read true yet — re-read it to settle its meaning.' : n.revelation}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             </>
           ) : null}
@@ -521,6 +533,9 @@ const styles = StyleSheet.create({
   // Motif badge
   motifBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
   motifText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
+  // Keystone badge (a motif that recurred across chapters)
+  keystoneBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.18)', borderWidth: 1, borderColor: 'rgba(241,197,114,0.4)' },
+  keystoneText: { fontFamily: FONTS.monoBold, fontSize: 8.5, letterSpacing: 0.8, color: COLORS.amberLight || COLORS.accentSecondary },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
@@ -582,7 +597,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(241,197,114,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(241,197,114,0.25)', padding: SPACING.md,
   },
   nodeRowBlur: { backgroundColor: 'rgba(157,150,141,0.06)', borderColor: COLORS.panelOutline },
-  nodeText: { flex: 1, fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
+  nodeRowArc: { backgroundColor: 'rgba(241,197,114,0.12)', borderColor: 'rgba(241,197,114,0.5)' },
+  arcLabel: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 1.5, color: COLORS.amberLight || COLORS.accentSecondary },
+  nodeText: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
   nodeTextBlur: { color: COLORS.textMuted, fontStyle: 'italic' },
   deeper: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontStyle: 'italic', textAlign: 'center', marginTop: SPACING.lg },
   // Puzzle gate footer
