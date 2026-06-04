@@ -51,7 +51,10 @@ export default function StatsScreen({ progress, onBack }) {
       <View style={styles.container}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
         <Stagger reducedMotion={reducedMotion} distance={14}>
-        <Text style={styles.title}>Statistics</Text>
+        <View style={styles.titleBlock}>
+          <Text style={styles.eyebrow}>DETECTIVE RECORD</Text>
+          <Text style={styles.title}>STATISTICS</Text>
+        </View>
 
         <View style={styles.card}>
           <View style={styles.metricRow}>
@@ -104,18 +107,22 @@ const styles = StyleSheet.create({
       paddingVertical: SPACING.xl,
       gap: SPACING.lg,
     },
+  titleBlock: { gap: 2 },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   card: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: COLORS.panelOutline,
-    backgroundColor: COLORS.surfaceAlt,
+    borderLeftColor: COLORS.accentSecondary,
+    backgroundColor: 'rgba(0,0,0,0.30)',
     padding: SPACING.lg,
     gap: SPACING.md,
   },

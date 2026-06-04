@@ -267,11 +267,12 @@ export default function EndingGalleryScreen({
 
         <Stagger reducedMotion={reducedMotion} distance={14}>
         <View style={styles.header}>
+          <Text style={styles.eyebrow}>THE WAYS IT ENDS</Text>
           <Text style={[styles.title, { fontSize: moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display) }]}>
-            Ending Gallery
+            ENDING GALLERY
           </Text>
-          <Text style={[styles.subtitle, { fontSize: moderateScale(FONT_SIZES.md) }]}>
-            Season 1: The Vanishing
+          <Text style={[styles.subtitle, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
+            Season 1 · The Vanishing
           </Text>
         </View>
 
@@ -341,20 +342,21 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   header: {
-    gap: SPACING.xs,
+    gap: 2,
   },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.underViolet, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   subtitle: {
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.md,
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    letterSpacing: 1.6,
+    letterSpacing: 2,
   },
   progressContainer: {
     gap: SPACING.sm,

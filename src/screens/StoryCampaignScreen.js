@@ -9,7 +9,7 @@ import Reveal from '../components/motion/Reveal';
 import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
-import { SPACING } from '../constants/layout';
+import { SPACING, RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 function formatCountdown(target) {
@@ -112,6 +112,7 @@ export default function StoryCampaignScreen({
       </View>
 
       <Reveal reducedMotion={reducedMotion} distance={16} style={[styles.heroCard, compact && styles.heroCardCompact]}>
+        <Text style={styles.heroEyebrow}>THE FULL INVESTIGATION</Text>
         <Text
           style={[
             styles.heroTitle,
@@ -263,25 +264,34 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   heroCard: {
-    backgroundColor: 'rgba(32, 26, 23, 0.92)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    borderRadius: RADIUS.sm,
     padding: SPACING.xl,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: 'rgba(203,167,113,0.18)',
+    borderLeftColor: COLORS.accentSecondary,
     gap: SPACING.md,
     marginBottom: SPACING.lg,
   },
   heroCardCompact: {
-    borderRadius: 16,
     padding: SPACING.lg,
     gap: SPACING.sm,
     marginBottom: SPACING.md,
+  },
+  heroEyebrow: {
+    fontFamily: FONTS.monoBold,
+    fontSize: FONT_SIZES.xs,
+    letterSpacing: 4,
+    color: COLORS.accentSecondary,
+    textTransform: 'uppercase',
   },
   heroTitle: {
     fontFamily: FONTS.secondaryBold,
     fontSize: 30,
     letterSpacing: 4,
     color: COLORS.offWhite,
+    textTransform: 'uppercase',
   },
   heroSubtitle: {
     fontFamily: FONTS.primary,

@@ -30,8 +30,11 @@ export default function ArchiveScreen({ cases, progress, onSelectCase, onBack, o
     <ScreenSurface variant="default" accentColor={COLORS.accentPrimary} contentStyle={styles.surface}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
-        <Text style={styles.title}>Case Archive</Text>
-        <Text style={styles.subtitle}>Season 1: The Vanishing</Text>
+        <View style={styles.titleBlock}>
+          <Text style={styles.eyebrow}>EVIDENCE ROOM</Text>
+          <Text style={styles.title}>CASE ARCHIVE</Text>
+          <Text style={styles.subtitle}>Season 1 · The Vanishing</Text>
+        </View>
 
         <View style={styles.caseStack}>
           {enrichedCases.map((item, idx) => (
@@ -110,27 +113,31 @@ const styles = StyleSheet.create({
       paddingVertical: SPACING.xl,
       gap: SPACING.lg,
     },
+  titleBlock: { gap: 2 },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   subtitle: {
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.md,
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    letterSpacing: 1.6,
+    letterSpacing: 2,
   },
   caseStack: {
     gap: SPACING.md,
   },
   caseCard: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: COLORS.panelOutline,
-    backgroundColor: COLORS.surfaceAlt,
+    borderLeftColor: COLORS.accentSecondary,
+    backgroundColor: 'rgba(0,0,0,0.30)',
     padding: SPACING.lg,
     gap: SPACING.sm,
   },
@@ -193,10 +200,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   futureBlock: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: COLORS.panelOutline,
-    backgroundColor: 'rgba(21, 24, 32, 0.85)',
+    borderLeftColor: COLORS.textMuted,
+    backgroundColor: 'rgba(0,0,0,0.28)',
     padding: SPACING.lg,
     gap: SPACING.sm,
   },
