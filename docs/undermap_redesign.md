@@ -8,6 +8,11 @@ on-ramp.
 **Decided constraints (locked):**
 - Puzzle stakes = **tense but forgiving** (see §3.1). Limited probes + streak + choose-the-truth,
   but running out of probes **never hard-blocks** progress. Unfound links stay *sensed* for later.
+- **Endings** = a **3-variant clarity spectrum** (Clear-Eyed / Half-Blind / Deceived), with
+  final-act belief *flavor* steering which variant lands (see §5).
+- **Keystone** = a fragment with `seen ≥ 3` **that spans ≥2 chapters** (see §6).
+- **Full scope is committed:** the daily on-ramp (§8.1) and the constellation Under-Map (§7) are
+  in-scope deliverables, not "future" — see the roadmap in §9.
 
 ---
 
@@ -234,10 +239,26 @@ The map already steers generation; make the payoff **visible**.
   `theory.correct` when the resolving beat generates. Wrong beliefs are **not a fail-state** — the
   story refracts through the misreading (still good fiction).
 - Accrue into a **Clarity / Worldview meter**: `clarity = correctBeliefs / sealedBeliefs` (plus
-  bonus for resolved-reading nodes). Surface it as *"how truly you see the Under-Map."*
-- **Endgame branch** keyed on accumulated clarity + which beliefs were held → the **true ending**
-  vs. a *deceived* ending. This is the retention spine: *"keep playing to learn if you were right,
-  and to earn the true ending."*
+  a small bonus for resolved-reading nodes — see §3.2). Surface it as *"how truly you see the
+  Under-Map."*
+
+**Decided — the ending is a 3-variant clarity spectrum:**
+
+| Variant | Clarity gate | Feel |
+|---------|--------------|------|
+| **Clear-Eyed** | `clarity ≥ 0.66` | You saw the Under-Map for what it is. The "true" ending. |
+| **Half-Blind** | `0.33 ≤ clarity < 0.66` | You grasped part of it; the rest stays warped. Bittersweet. |
+| **Deceived** | `clarity < 0.33` | The hidden world wore the shape you wanted. You were led. |
+
+- The clarity gate picks the **variant**; the **flavor** of the player's final-act sealed
+  belief(s) steers the *specific* terminal scene within that variant (so two Clear-Eyed players
+  who believed different things get differently-colored true endings). This keeps it a bounded,
+  authorable set (3 variants × belief-flavor) rather than an unmanageable combinatorial tree.
+- Wrong beliefs are **never a fail-state** — they route you down the spectrum, not into a
+  game-over. This is the retention spine: *"keep playing to learn if you were right, and to earn
+  the Clear-Eyed ending."*
+- **Tuning note:** thresholds are constants (`CLARITY_TRUE = 0.66`, `CLARITY_PARTIAL = 0.33`),
+  trivially re-balanced once season length / belief count settles.
 
 ### 5.1 Plumbing
 - `schemas.js`/`promptAssembly.js`: `chapterTruth` (chapter-start), belief-resolution signal in the
@@ -257,8 +278,13 @@ The map already steers generation; make the payoff **visible**.
 
 ## 6. Move 5 — Keystones: cross-chapter mastery (P1)
 
-- A fragment whose `seen ≥ 3` becomes a **Keystone** (`isKeystone` selector; `isMotif` stays at
-  `seen > 1`).
+- **Decided — Keystone = `seen ≥ 3` AND the fragment spans ≥2 chapters** (i.e.
+  `parseCaseNumber(firstCaseNumber).chapter !== parseCaseNumber(lastCaseNumber).chapter`).
+  `isMotif` stays at `seen > 1`; `isKeystone` adds the cross-chapter span requirement so a
+  fragment re-tapped three times *within one chapter* doesn't cheaply qualify — keystones must
+  genuinely recur **across** chapters, which is the cross-chapter mastery this mechanic exists to
+  reward. Thresholds are constants (`KEYSTONE_SEEN = 3`, `KEYSTONE_MIN_CHAPTER_SPAN = 2`),
+  re-tunable as season length settles.
 - Connecting a keystone pulls from an **arc-relation pool** (relations the model tags
   `scope:'arc'`) and reveals an **arc-level truth** — bigger than a chapter node, rarer, with a
   distinct "deep reveal" animation. Variable-ratio reward.
@@ -272,7 +298,7 @@ The map already steers generation; make the payoff **visible**.
 
 ---
 
-## 7. Move 4 — The constellation Under-Map (P2)
+## 7. Move 4 — The constellation Under-Map (P2, committed)
 
 Replace the vertical card list with a **dark star-map**:
 - Fragments = nodes, connections = glowing lines, revealed nodes light **regions** (one per
@@ -291,12 +317,33 @@ Replace the vertical card list with a **dark star-map**:
 - **Curiosity-gap close:** each ECHO ends on *"one thread still unmapped."* Open loop → return.
 - **Streaks on the map:** `flawlessDescents` + days-played, shown on the constellation.
 - **Variable reward:** keystone/arc-truths are rarer + bigger (most addictive schedule).
-- **Daily on-ramp (future):** "the Under-Map stirred overnight — one connection is sense-able
-  today" notification drops a fragment into the campaign map; reframes the dormant
-  `EvidenceBoard` daily as an on-ramp, not a sidecar.
 - **Chapter 1 is static (`storyNarrative.json`) → the tutorial.** 1A/1B teach probes +
   choose-the-truth + bonds before generative chapters begin. Author 1A/1B `falseReadings` + bond-
   obeying relations by hand for a clean first impression.
+
+### 8.1 Daily on-ramp (P2, committed)
+
+Turn the dormant `EvidenceBoard` daily from a sidecar into a habit loop that *feeds the campaign
+map*:
+
+- **The overnight stir.** Once per day, "the Under-Map stirs": a single **drifting fragment**
+  appears as a sense-able point on the constellation, plus a local notification — *"The Under-Map
+  shifted overnight. One thread is sense-able."* This is the daily hook (no server needed; gated
+  on `lastVisitedAt` / a `lastDailyStirAt` timestamp on the map).
+- **What the daily gives.** Completing the daily word puzzle (`EvidenceBoard`, untouched
+  mechanically) **resolves that day's drifting fragment** — pinning it permanently to the map and,
+  if it completes a sense-able relation, granting a **free probe-less reveal** (a "the map gave you
+  one" gift). This makes the daily *matter to the campaign* without coupling their mechanics.
+- **Streak.** A **days-mapped streak** (consecutive days the player resolved the stir), surfaced on
+  the constellation next to `flawlessDescents`. Missing a day softly resets it; a small "the map
+  forgot a little" dimming, never a hard penalty (consistent with tense-but-forgiving).
+- **Cold-content safety.** The drifting fragment is drawn from already-collected motifs (re-surface
+  to deepen) or from a small curated daily pool, so the daily never depends on un-generated
+  campaign content and works even if the player is between chapters.
+- **Plumbing:** `underMap.js` (`lastDailyStirAt`, `drawDailyStir(map, today)`,
+  `resolveDailyStir(map)` — pure + tested); a notification scheduler (Expo notifications) gated by
+  settings; a thin bridge from `EvidenceBoardScreen` completion → `resolveDailyStir`; constellation
+  surfacing of the drifting node + streak. **No change to the daily puzzle's own rules.**
 
 ---
 
@@ -341,8 +388,22 @@ Suggested build order: **1 → 2 → (tune on device) → 3 → 5 → 4 → 8.**
 
 ---
 
-## 12. Open questions for review
-1. **Clarity → endings:** how many terminal variants (just true/deceived, or a spectrum)?
-2. **Keystone threshold:** `seen ≥ 3` or scale with campaign length?
-3. **Daily on-ramp:** in this redesign's scope, or a separate track?
-4. **Constellation map:** worth the L-effort now, or after P0/P1 prove the loop on device?
+## 12. Decisions (resolved)
+All four review questions are now decided — the redesign covers the full scope.
+
+1. **Clarity → endings → DECIDED:** a **3-variant spectrum** (Clear-Eyed ≥ 0.66 / Half-Blind /
+   Deceived < 0.33), with final-act belief *flavor* steering the specific terminal scene within a
+   variant. Bounded and authorable. (§5)
+2. **Keystone threshold → DECIDED:** `seen ≥ 3` **and spans ≥2 chapters**, so keystones reward
+   genuine cross-chapter recurrence. (§6)
+3. **Daily on-ramp → DECIDED: in scope (P2).** The overnight "stir" drops a sense-able fragment +
+   a notification; completing the daily word puzzle resolves it into the campaign map and can gift
+   a probe-less reveal. Mechanics of the daily puzzle itself are untouched. (§8.1)
+4. **Constellation map → DECIDED: in scope (P2).** Phased: radial/cluster by chapter region first,
+   force-directed graph second, with a reduced-motion list fallback. (§7)
+
+### Remaining tuning knobs (not blockers — settle on device)
+- Clarity thresholds (`CLARITY_TRUE`, `CLARITY_PARTIAL`) and keystone constants
+  (`KEYSTONE_SEEN`, `KEYSTONE_MIN_CHAPTER_SPAN`).
+- Probe budget formula (§3.1) and the "sense" assist timing.
+- Daily-streak reset softness and the drifting-fragment source pool (§8.1).
