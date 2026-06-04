@@ -1,22 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, Image as RNImage } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Line, Circle } from 'react-native-svg';
 
 import ScreenSurface from '../components/ScreenSurface';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
-import GlassPanel from '../components/GlassPanel';
-import Stamp from '../components/noir/Stamp';
-import CornerFrame from '../components/noir/CornerFrame';
-import Stagger from '../components/motion/Stagger';
+import NeonSign from '../components/NeonSign';
 import PressableScale from '../components/PressableScale';
+import Stagger from '../components/motion/Stagger';
 import { COLORS } from '../constants/colors';
-import { FONTS, FONT_SIZES } from '../constants/typography';
-import { RADIUS, SPACING } from '../constants/layout';
+import { FONTS } from '../constants/typography';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
-import { formatCaseOutlierThemes } from '../utils/themeDisplay';
+
+const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
+const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
+
+const BEATS = ['Read', 'Examine', 'Connect', 'Theory'];
 
 function formatCountdown(nextUnlockAt) {
   if (!nextUnlockAt) return null;
@@ -24,51 +25,10 @@ function formatCountdown(nextUnlockAt) {
   const now = Date.now();
   if (target <= now) return 'Unlocking soon';
   const diff = target - now;
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  return `${hours.toString().padStart(2, '0')}:${minutes
-    .toString()
-    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
-
-const DEFAULT_PATH_SUMMARY = {
-  title: 'Ghost Route',
-  description: 'Whoever charted this trail forgot to label it, but it still reeks of trouble.',
-};
-
-const PATH_SUMMARIES = {
-  ROOT: { title: 'Uncharted Route', description: 'Keep working the case to learn which poison you really picked.' },
-  A: { title: 'Ledger Trail', description: 'You followed the daughter with the receipts—paper over gunpowder.' },
-  B: { title: 'Gunmetal Shortcut', description: 'You stared Silas down first and let instinct write the paperwork later.' },
-  AGGRESSIVE: { title: 'Confessor\'s Dare', description: 'You demanded names before alibis, daring the Midnight Confessor to blink.' },
-  METHODICAL: { title: 'Clean Hands Pact', description: 'You dragged the truth into the daylight even if it cut you open.' },
-  AFL: { title: 'Run-and-Report', description: 'You bolted into the rain but still handed the files to the suits.' },
-  AFV: { title: 'Fugitive Justice', description: 'You stayed on the lam, serving verdicts with bruised knuckles.' },
-  ASL: { title: 'Static Surveillance', description: 'You sat tight under neon hum and trusted the Feds to kick the right door.' },
-  ASR: { title: 'Broken Tether', description: 'You cut the monitor and outran the sirens to grab the evidence yourself.' },
-  MACLF: { title: 'Survival Clause', description: 'You bargained with Blackwell to keep breathing, letting trust take the hit.' },
-  MACLS: { title: 'Martyr\'s Signature', description: 'You inked a confession to keep Sarah clean, trading freedom for penance.' },
-  MAER: { title: 'Integrity League', description: 'You joined the reformers and promised to air every filthy secret.' },
-  MAES: { title: 'Shadow Executor', description: 'You weaponized Blackwell\'s bankroll to erase threats off the books.' },
-  MLE: { title: 'Heart-First Lead', description: 'You chased the victims\' people before politicking the room.' },
-  MLEJ: { title: 'James\' Lifeline', description: 'You sprinted to Sullivan\'s lawyer to keep his appeal breathing.' },
-  MLEJE: { title: 'Emily Unmasked', description: 'You swore to broadcast her torture file—and your role in it.' },
-  MLEJF: { title: 'Blood-Money Brief', description: 'You slid Tom\'s offshore cash across the table to buy time.' },
-  MLEM: { title: 'Margaret\'s Anchor', description: 'You pulled your ex into the mess, trading nostalgia for intel.' },
-  MLI: { title: 'Casefile Surgeon', description: 'You cracked the docket yourself, scalpel-clean and by the book.' },
-  MLIC: { title: 'Sterile Evidence', description: 'You only moved the uncontaminated slugs and let the rest rot.' },
-  MLICC: { title: 'Necessary Leak', description: 'You tipped the right ears to save the judge and Teresa before the fire.' },
-  MLICL: { title: 'Letter of the Law', description: 'You refused shortcuts and let Sarah fight it in daylight.' },
-  MLIT: { title: 'Stacked Deck', description: 'You slammed the slugs and the ledger down, chain of custody be damned.' },
-  MLITF: { title: 'Slush-Fund Rescue', description: 'You cracked Tom\'s offshore vault to bankroll the appeals.' },
-  MLITR: { title: 'Dry-Wallet Stand', description: 'You kept your hands off the dirty cash and trusted the public defender.' },
-};
-
-function getPathSummary(pathKey) {
-  if (!pathKey) return PATH_SUMMARIES.ROOT;
-  const normalized = String(pathKey).trim().toUpperCase();
-  return PATH_SUMMARIES[normalized] || DEFAULT_PATH_SUMMARY;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 export default function DeskScreen({
@@ -78,7 +38,6 @@ export default function DeskScreen({
   onOpenArchive,
   onOpenStats,
   onOpenSettings,
-  onOpenMenu,
   onOpenStoryCampaign,
   onOpenCaseBoard,
   onPickUpTrail,
@@ -86,279 +45,241 @@ export default function DeskScreen({
 }) {
   const storyCampaign = progress.storyCampaign || {};
   const reducedMotion = !!progress?.settings?.reducedMotion;
-  const underMapFragments = storyCampaign?.underMap?.fragments?.length || 0;
+  const underMap = storyCampaign?.underMap || {};
+  const fragments = underMap?.fragments?.length || 0;
+  const truths = underMap?.nodes?.length || 0;
+  const totalRelations = underMap?.relations?.length || 0;
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
 
   useEffect(() => {
-    if (!nextStoryUnlockAt) {
-      setCountdown(null);
-      return;
-    }
+    if (!nextStoryUnlockAt) { setCountdown(null); return undefined; }
     const update = () => setCountdown(formatCountdown(nextStoryUnlockAt));
     update();
     const timer = setInterval(update, 5000);
     return () => clearInterval(timer);
   }, [nextStoryUnlockAt]);
 
-  const solved = progress.solvedCaseIds.includes(activeCase.id);
-  const failed = progress.failedCaseIds.includes(activeCase.id);
-  const completed = solved || failed;
-  const briefingSeen = Boolean(progress.seenBriefings && progress.seenBriefings[activeCase.id]);
-  const completedSubchapters = Array.isArray(storyCampaign.completedCaseNumbers)
-    ? storyCampaign.completedCaseNumbers.length
-    : 0;
-  const totalSubchapters = 12;
+  const caseNumber = activeCase?.caseNumber || '001A';
+  const chapterStr = caseNumber.slice(0, 3);
+  const letter = caseNumber.slice(3, 4) || 'A';
   const storyChapter = storyCampaign.chapter || 1;
-  const storySubchapter = storyCampaign.subchapter || 1;
+  const completedSubchapters = Array.isArray(storyCampaign.completedCaseNumbers) ? storyCampaign.completedCaseNumbers.length : 0;
   const awaitingDecision = Boolean(storyCampaign.awaitingDecision && storyCampaign.pendingDecisionCase);
   const storyLocked = Boolean(!awaitingDecision && nextStoryUnlockAt);
-  const activeCaseNumber = activeCase?.caseNumber;
-  const storyActiveCaseNumber = storyCampaign?.activeCaseNumber;
-  const pendingStoryAdvance = Boolean(
-    !awaitingDecision && !storyLocked && storyActiveCaseNumber && activeCaseNumber &&
-      storyActiveCaseNumber !== activeCaseNumber,
-  );
 
-  const primaryLabel = pendingStoryAdvance
-    ? 'Continue Investigation'
-    : awaitingDecision
-      ? 'Review Branch Choice'
-      : storyLocked
-        ? 'Chapter Locked'
-        : completed
-          ? (solved ? 'Review Case Results' : 'Review Case Debrief')
-          : briefingSeen
-            ? 'Open Case File'
-            : 'Investigate';
-  const primaryIcon = pendingStoryAdvance
-    ? <MaterialCommunityIcons name="arrow-right-circle" size={20} color={COLORS.textSecondary} />
-    : awaitingDecision
-      ? <MaterialCommunityIcons name="source-branch" size={20} color={COLORS.textSecondary} />
-      : storyLocked
-        ? <MaterialCommunityIcons name="timer-sand" size={20} color={COLORS.textSecondary} />
-        : completed
-          ? (solved
-            ? <MaterialCommunityIcons name="file-document-check" size={20} color={COLORS.textSecondary} />
-            : <MaterialCommunityIcons name="file-document-alert" size={20} color={COLORS.textSecondary} />)
-          : <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textSecondary} />;
+  const solved = progress.solvedCaseIds.includes(activeCase.id);
+  const teaser = (typeof activeCase?.briefing?.summary === 'string' && activeCase.briefing.summary.trim())
+    || 'A new file lands on the desk. Read it through, mark what doesn’t belong, and follow the thread down.';
 
-  const statusLine = useMemo(() => {
-    if (awaitingDecision) return 'Awaiting Branch';
-    if (storyLocked) return 'Chapter Locked';
-    if (pendingStoryAdvance) return 'Subchapter Ready';
-    if (completed) return solved ? 'Case Solved' : 'Out of Attempts';
-    return 'Active Investigation';
-  }, [awaitingDecision, storyLocked, pendingStoryAdvance, completed, solved]);
-  const statusColor = solved ? COLORS.successGreen : failed ? COLORS.bloodRed : awaitingDecision ? COLORS.underViolet : COLORS.accentSecondary;
+  const primaryLabel = storyLocked ? 'Locked — pick up the trail' : solved ? 'Review the case file' : 'Continue reading';
 
-  const lastDecision = storyCampaign?.lastDecision || null;
-  const lockedPathKey = storyCampaign.currentPathKey || 'ROOT';
-  const hasLockedPath = Boolean(lastDecision?.optionKey);
-  const lockedPathSummary = useMemo(
-    () => getPathSummary(hasLockedPath ? lockedPathKey : 'ROOT'),
-    [lockedPathKey, hasLockedPath],
-  );
-  const isEarlyIntroSubchapter = storyChapter === 1 && storySubchapter >= 1 && storySubchapter <= 3;
-  const showPathCard = hasLockedPath && !isEarlyIntroSubchapter;
+  const tap = (cb) => () => { Haptics.selectionAsync().catch(() => {}); cb?.(); };
+  const onPrimary = storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
 
-  const showCaseThemes = solved;
-  const outlierThemeDisplay = showCaseThemes
-    ? formatCaseOutlierThemes(activeCase, { separator: '  •  ' }) || 'Unknown Theme'
-    : null;
-
-  const handleQuickPress = (callback) => () => {
-    Haptics.selectionAsync().catch(() => {});
-    callback?.();
-  };
-  const handleStoryPress = handleQuickPress(onOpenStoryCampaign);
-  const handleSettingsPress = handleQuickPress(onOpenSettings);
-  const handleBribe = async () => {
-    if (onBribe) await onBribe();
-  };
-
-  const { sizeClass, moderateScale } = useResponsiveLayout();
-  const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const { moderateScale } = useResponsiveLayout();
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
 
-  // Editorial type scale (dramatic, Persona-ish).
-  const caseNoSize = moderateScale(compact ? 17 : 20);
-  const titleSize = moderateScale(compact ? 36 : 48);
-  const statNumSize = moderateScale(compact ? 40 : 52);
-
   return (
-    <ScreenSurface variant="desk" accentColor={palette.accent}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <Text style={styles.brand}>DEAD LETTERS</Text>
-          <View style={styles.topRight}>
-            <Text style={styles.brandSub}>ASHPORT · P.I.</Text>
-            <Pressable onPress={handleSettingsPress} hitSlop={10} style={styles.settingsBtn}>
-              <MaterialCommunityIcons name="cog-outline" size={22} color={COLORS.accentCyan} />
-            </Pressable>
+    <ScreenSurface variant="desk" glow="amber" frameless contentStyle={styles.surface} accentColor={palette.accent}>
+      {/* lamp pool */}
+      <View pointerEvents="none" style={styles.lampPool} />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+
+        {/* rain-glass window with neon */}
+        <View style={styles.window}>
+          <LinearGradient
+            colors={['#0b0a12', '#161425', '#0c0a14']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.windowTint} pointerEvents="none" />
+          <View style={styles.windowNeon} pointerEvents="none">
+            <NeonSign logoSource={DEAD_LETTERS_LOGO} style={styles.neon} />
           </View>
+          <Pressable onPress={tap(onOpenSettings)} hitSlop={10} style={styles.settingsBtn}>
+            <MaterialCommunityIcons name="cog-outline" size={20} color={COLORS.accentCyan} />
+          </Pressable>
+          <View style={styles.windowSill} pointerEvents="none" />
         </View>
 
-        <Stagger reducedMotion={reducedMotion} distance={18}>
-          {/* HERO — the case file, editorial */}
-          <View style={styles.hero}>
-            <View style={styles.heroSlash} pointerEvents="none" />
-            <Text style={styles.eyebrow}>ACTIVE CASE FILE</Text>
-            <Text style={[styles.caseNo, { fontSize: caseNoSize }]}>№ {activeCase.caseNumber}</Text>
-            <Text
-              style={[styles.title, { fontSize: titleSize, lineHeight: Math.round(titleSize * 1.0) }]}
-              numberOfLines={3}
-              adjustsFontSizeToFit
-              minimumFontScale={0.5}
-            >
-              {activeCase.title}
-            </Text>
-            <View style={styles.stampRow}>
-              <Stamp label={`STATUS · ${statusLine}`} color={statusColor} angle={-4} size={compact ? 10 : 11} />
-              {solved && outlierThemeDisplay ? (
-                <Stamp label="INTEL ACQUIRED" color={COLORS.successGreen} angle={3} filled={false} size={compact ? 9 : 10} />
-              ) : null}
-            </View>
-          </View>
+        <Text style={styles.idStrip}>JACK HALLOWAY · PRIVATE INVESTIGATOR</Text>
 
-          {/* Primary action */}
-          {storyLocked ? (
-            <View style={styles.lockedActions}>
-              {onPickUpTrail ? (
-                <PrimaryButton
-                  label="Pick Up the Trail Now"
-                  icon={<MaterialCommunityIcons name="shoe-print" size={20} color={COLORS.textSecondary} />}
-                  onPress={handleQuickPress(onPickUpTrail)}
-                  fullWidth
-                />
-              ) : null}
-              {onBribe ? (
-                <SecondaryButton
-                  label="Bribe the clerk to rush it ($0.99)"
-                  icon={<MaterialCommunityIcons name="cash-multiple" size={18} color={COLORS.textSecondary} />}
-                  onPress={handleBribe}
-                />
-              ) : null}
-            </View>
-          ) : (
-            <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} fullWidth />
-          )}
+        <Stagger reducedMotion={reducedMotion} distance={16}>
+          {/* the case dossier — aged paper folder */}
+          <View style={styles.folder}>
+            <View style={styles.folderTab}><Text style={styles.folderTabText}>CASE {chapterStr} · {letter}</Text></View>
+            <View style={styles.paper}>
+              <RNImage source={NOISE} style={styles.paperGrain} resizeMode="repeat" pointerEvents="none" />
+              <View style={styles.clip} pointerEvents="none" />
+              <View style={styles.stampOpen}><Text style={styles.stampOpenText}>{solved ? 'CLOSED' : 'OPEN'}</Text></View>
+              <Text style={styles.typed}>CURRENT CASE FILE</Text>
+              <Text style={styles.inkTitle}>{activeCase.title}</Text>
+              <Text style={styles.teaser}>{teaser}</Text>
 
-          {/* NEXT line */}
-          <Text style={styles.nextLine}>
-            ▸ NEXT  ·  CHAPTER {storyChapter}.{storySubchapter}
-            {storyLocked && countdown ? `  ·  UNLOCKS ${countdown}` : ''}
-          </Text>
-
-          {/* Giant-number stats */}
-          <View style={styles.statRow}>
-            <PressableScale reducedMotion={reducedMotion} containerStyle={styles.statFlex} style={styles.statBlock} onPress={handleQuickPress(onOpenArchive)}>
-              <Text style={[styles.statNum, { fontSize: statNumSize }]}>
-                {completedSubchapters}<Text style={styles.statDenom}>/{totalSubchapters}</Text>
-              </Text>
-              <Text style={styles.statLabel}>SUBCHAPTERS · ARCHIVE</Text>
-            </PressableScale>
-            <View style={styles.statDivider} />
-            <PressableScale reducedMotion={reducedMotion} containerStyle={styles.statFlex} style={styles.statBlock} onPress={handleQuickPress(onOpenStats)}>
-              <Text style={[styles.statNum, { fontSize: statNumSize }]}>{progress.streak}</Text>
-              <Text style={styles.statLabel}>DAYS ON THE FORCE</Text>
-            </PressableScale>
-          </View>
-
-          {/* Story campaign — amber glass strip */}
-          <PressableScale reducedMotion={reducedMotion} onPress={handleStoryPress} style={styles.stripWrap}>
-            <GlassPanel edge="amber" radius={RADIUS.lg} contentStyle={styles.strip}>
-              <View style={styles.stripText}>
-                <Text style={styles.stripTitle}>STORY CAMPAIGN</Text>
-                <Text style={styles.stripSub}>Work the full arc — no clocks, just clues.</Text>
+              <View style={styles.beatTrack}>
+                {BEATS.map((b, i) => (
+                  <React.Fragment key={b}>
+                    <View style={styles.beatNode}>
+                      <View style={[styles.beatDot, i === 0 && styles.beatDotOn]} />
+                      <Text style={[styles.beatName, i === 0 && styles.beatNameOn]}>{b.toUpperCase()}</Text>
+                    </View>
+                    {i < BEATS.length - 1 ? <View style={styles.beatLine} /> : null}
+                  </React.Fragment>
+                ))}
               </View>
-              <MaterialCommunityIcons name="arrow-right-thin" size={26} color={COLORS.accentSecondary} />
-            </GlassPanel>
+
+              <PressableScale onPress={tap(onPrimary)} reducedMotion={reducedMotion} style={styles.btnStamp} haptic={false}>
+                <Text style={styles.btnStampText}>{primaryLabel}</Text>
+                <Text style={styles.btnStampArrow}>▸</Text>
+              </PressableScale>
+              {storyLocked && countdown ? (
+                <Text style={styles.lockNote}>Next chapter unlocks in {countdown}</Text>
+              ) : null}
+              {storyLocked && onBribe ? (
+                <Pressable onPress={tap(onBribe)}><Text style={styles.bribeNote}>Bribe the clerk to rush it ($0.99)</Text></Pressable>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Under-Map descent aperture */}
+          <PressableScale onPress={tap(onOpenCaseBoard)} reducedMotion={reducedMotion} style={styles.aperture} containerStyle={styles.apertureWrap}>
+            <View style={styles.apertureGlow} pointerEvents="none" />
+            <Svg width={60} height={50} style={{ flex: 0 }}>
+              <Line x1="12" y1="14" x2="42" y2="24" stroke={COLORS.underViolet} strokeWidth="1.4" opacity="0.8" />
+              <Line x1="42" y1="24" x2="26" y2="40" stroke={COLORS.underCyan} strokeWidth="1.4" opacity="0.8" />
+              <Circle cx="12" cy="14" r="3" fill={COLORS.kindSymbol} />
+              <Circle cx="42" cy="24" r="3.4" fill={COLORS.kindPhenomenon} />
+              <Circle cx="26" cy="40" r="3" fill={COLORS.kindPlace} />
+              <Circle cx="50" cy="13" r="2.4" fill={COLORS.kindPerson} opacity="0.85" />
+            </Svg>
+            <View style={styles.apertureText}>
+              <Text style={styles.apertureKicker}>DESCEND ▾</Text>
+              <Text style={styles.apertureTitle}>The Under-Map</Text>
+              <Text style={styles.apertureSub}>
+                {truths} / {Math.max(totalRelations, truths)} truths surfaced
+              </Text>
+            </View>
+            <Text style={styles.apertureArrow}>↓</Text>
           </PressableScale>
 
-          {/* Under-Map — violet glass strip (the mystical layer) */}
-          {onOpenCaseBoard ? (
-            <PressableScale reducedMotion={reducedMotion} onPress={handleQuickPress(onOpenCaseBoard)} style={styles.stripWrap}>
-              <GlassPanel edge="violet" radius={RADIUS.lg} contentStyle={styles.strip}>
-                <MaterialCommunityIcons name="map-marker-path" size={24} color={COLORS.underViolet} />
-                <View style={[styles.stripText, { marginLeft: SPACING.md }]}>
-                  <Text style={[styles.stripTitle, { color: COLORS.underViolet }]}>THE UNDER-MAP</Text>
-                  <Text style={styles.stripSub}>
-                    {underMapFragments > 0
-                      ? `${underMapFragments} ${underMapFragments === 1 ? 'fragment' : 'fragments'} charted`
-                      : 'A reality that doesn’t want to be seen.'}
-                  </Text>
-                </View>
-                <MaterialCommunityIcons name="arrow-right-thin" size={26} color={COLORS.underViolet} />
-              </GlassPanel>
-            </PressableScale>
-          ) : null}
+          {/* Story campaign — ghost entry */}
+          <Pressable onPress={tap(onOpenStoryCampaign)} style={styles.storyLink}>
+            <MaterialCommunityIcons name="book-open-page-variant-outline" size={16} color={COLORS.coral} />
+            <Text style={styles.storyLinkText}>ENTER THE FULL CAMPAIGN</Text>
+            <Text style={styles.storyLinkArrow}>→</Text>
+          </Pressable>
 
-          {/* Sealed path — dossier corner-frame */}
-          {showPathCard ? (
-            <CornerFrame color={COLORS.accentSecondary} size={16} style={styles.pathFrame}>
-              <View style={styles.pathInner}>
-                <Text style={styles.pathKicker}>SEALED PATH</Text>
-                <Text style={styles.pathTitle}>{lockedPathSummary.title}</Text>
-                <Text style={styles.pathDesc} numberOfLines={2}>{lockedPathSummary.description}</Text>
-              </View>
-            </CornerFrame>
-          ) : null}
+          {/* stat tags (tappable: archive / stats) */}
+          <View style={styles.statRow}>
+            <Pressable style={styles.statTag} onPress={tap(onOpenArchive)}>
+              <Text style={styles.statNum}>{String(completedSubchapters).padStart(2, '0')}</Text>
+              <Text style={styles.statLabel}>ARCHIVE</Text>
+            </Pressable>
+            <Pressable style={styles.statTag} onPress={tap(onOpenStats)}>
+              <Text style={styles.statNum}>{String(progress.streak || 0).padStart(2, '0')}</Text>
+              <Text style={styles.statLabel}>DAY STREAK</Text>
+            </Pressable>
+            <View style={styles.statTag}>
+              <Text style={styles.statNum}>{String(storyChapter).padStart(2, '0')}</Text>
+              <Text style={styles.statLabel}>CHAPTER</Text>
+            </View>
+          </View>
         </Stagger>
       </ScrollView>
     </ScreenSurface>
   );
 }
 
+const PAPER = '#e7dcc2';
+
 const styles = StyleSheet.create({
+  surface: { paddingHorizontal: 0, paddingVertical: 0 },
   scroll: { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: SPACING.md, paddingTop: SPACING.lg, paddingBottom: SPACING.gutter, gap: SPACING.lg },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.sm, letterSpacing: 4, color: COLORS.offWhite },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  brandSub: { fontFamily: FONTS.mono, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.textMuted },
-  settingsBtn: { padding: 4 },
+  container: { paddingBottom: 36 },
+  lampPool: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
 
-  // Hero
-  hero: { position: 'relative', paddingVertical: SPACING.sm, gap: SPACING.xs },
-  heroSlash: {
-    position: 'absolute', right: -40, top: 8, width: 220, height: 3,
-    backgroundColor: COLORS.bloodRed, opacity: 0.85, transform: [{ rotate: '-26deg' }],
+  // Rain-glass window
+  window: { position: 'relative', height: 210, overflow: 'hidden', borderBottomWidth: 1, borderBottomColor: 'rgba(245,230,205,0.1)' },
+  windowTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,9,14,0.36)',
   },
-  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
-  caseNo: { fontFamily: FONTS.monoBold, letterSpacing: 4, color: 'rgba(246, 236, 219, 0.45)' },
-  title: { fontFamily: FONTS.secondaryBold, color: COLORS.offWhite, letterSpacing: 1, textTransform: 'uppercase', marginTop: SPACING.xs },
-  stampRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, marginTop: SPACING.md, alignItems: 'center' },
+  windowNeon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  neon: { transform: [{ rotate: '-2deg' }] },
+  settingsBtn: { position: 'absolute', top: 16, right: 16, padding: 6, zIndex: 5 },
+  windowSill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 14, backgroundColor: '#1c150e' },
 
-  nextLine: { fontFamily: FONTS.mono, fontSize: FONT_SIZES.xs, letterSpacing: 2.4, color: COLORS.textMuted, textTransform: 'uppercase' },
+  idStrip: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.textMuted, textAlign: 'center', paddingTop: 16, paddingHorizontal: 24 },
 
-  lockedActions: { gap: SPACING.sm },
+  // Paper dossier
+  folder: { paddingTop: 20, paddingHorizontal: 20, marginTop: 18 },
+  folderTab: {
+    position: 'absolute', top: 0, left: 44, zIndex: 3,
+    backgroundColor: '#cdb988', paddingHorizontal: 18, paddingTop: 6, paddingBottom: 10,
+    borderTopLeftRadius: 9, borderTopRightRadius: 9,
+  },
+  folderTabText: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1.8, color: '#3a2c1c' },
+  paper: {
+    position: 'relative', backgroundColor: PAPER, borderRadius: 4, padding: 24, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 22, shadowOffset: { width: 0, height: 18 }, elevation: 14,
+  },
+  paperGrain: { ...StyleSheet.absoluteFillObject, opacity: 0.10 },
+  clip: {
+    position: 'absolute', top: 4, right: 28, width: 16, height: 44, zIndex: 3,
+    borderWidth: 3, borderBottomWidth: 0, borderColor: '#ad9472', borderTopLeftRadius: 9, borderTopRightRadius: 9,
+  },
+  stampOpen: { position: 'absolute', top: 34, right: 18, zIndex: 3, transform: [{ rotate: '9deg' }], borderWidth: 2, borderColor: '#9a3b2e', borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3, opacity: 0.62 },
+  stampOpenText: { fontFamily: FONTS.monoBold, fontSize: 12, letterSpacing: 2, color: '#9a3b2e' },
+  typed: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 1.6, color: '#9a3b2e' },
+  inkTitle: { fontFamily: FONTS.secondaryBold, fontSize: 28, lineHeight: 30, color: '#241a12', marginTop: 8, marginBottom: 10 },
+  teaser: { fontFamily: FONTS.primary, fontSize: 13.5, lineHeight: 21, color: '#4a3a28', marginBottom: 18 },
 
-  // Stats
-  statRow: { flexDirection: 'row', alignItems: 'stretch', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.panelOutline, paddingVertical: SPACING.md },
-  statFlex: { flex: 1 },
-  statBlock: { alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: SPACING.sm },
-  statNum: { fontFamily: FONTS.secondaryBold, color: COLORS.offWhite },
-  statDenom: { fontFamily: FONTS.secondaryBold, color: COLORS.textMuted, fontSize: FONT_SIZES.lg },
-  statLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.4, color: COLORS.accentSecondary, textTransform: 'uppercase', textAlign: 'center' },
-  statDivider: { width: 1, backgroundColor: COLORS.panelOutline, marginVertical: SPACING.sm },
+  beatTrack: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  beatNode: { alignItems: 'center', gap: 6 },
+  beatDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#c4af86', borderWidth: 1, borderColor: '#9a8460' },
+  beatDotOn: { backgroundColor: '#c0563f', borderColor: '#c0563f' },
+  beatName: { fontFamily: FONTS.mono, fontSize: 8.5, letterSpacing: 0.8, color: '#8a7656' },
+  beatNameOn: { color: '#9a3b2e' },
+  beatLine: { flex: 1, height: 1, marginBottom: 14, marginHorizontal: 2, backgroundColor: 'rgba(169,144,102,0.5)' },
 
-  // Glass strips
-  stripWrap: { width: '100%' },
-  strip: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACING.lg, paddingHorizontal: SPACING.lg },
-  stripText: { flex: 1, gap: 3 },
-  stripTitle: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.lg, letterSpacing: 2, color: COLORS.offWhite },
-  stripSub: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, letterSpacing: 0.4, color: COLORS.textSecondary },
+  btnStamp: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, borderRadius: 10, backgroundColor: '#b14430',
+    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
+  },
+  btnStampText: { fontFamily: FONTS.primarySemiBold, fontWeight: '700', fontSize: 14, letterSpacing: 0.3, color: '#fce7d9' },
+  btnStampArrow: { fontFamily: FONTS.mono, fontSize: 14, color: '#fce7d9' },
+  lockNote: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1, color: '#7a5a3a', textAlign: 'center', marginTop: 10 },
+  bribeNote: { fontFamily: FONTS.mono, fontSize: 11, color: '#9a3b2e', textAlign: 'center', marginTop: 8, textDecorationLine: 'underline' },
 
-  // Sealed path
-  pathFrame: { padding: SPACING.xs },
-  pathInner: { padding: SPACING.lg, gap: SPACING.xs },
-  pathKicker: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.accentSecondary, textTransform: 'uppercase' },
-  pathTitle: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.lg, color: COLORS.offWhite, letterSpacing: 1 },
-  pathDesc: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: 20 },
+  // Aperture
+  apertureWrap: { paddingHorizontal: 20, marginTop: 18 },
+  aperture: {
+    flexDirection: 'row', alignItems: 'center', gap: 16, padding: 18, borderRadius: 18, overflow: 'hidden',
+    backgroundColor: 'rgba(20,16,30,0.7)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.28)',
+  },
+  apertureGlow: {
+    position: 'absolute', right: -34, top: '50%', width: 170, height: 170, borderRadius: 170,
+    transform: [{ translateY: -85 }], backgroundColor: COLORS.underGlowSoft,
+  },
+  apertureText: { flex: 1 },
+  apertureKicker: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 3, color: COLORS.underViolet, marginBottom: 5 },
+  apertureTitle: { fontFamily: FONTS.secondaryBold, fontSize: 19, color: COLORS.textPrimary },
+  apertureSub: { fontFamily: FONTS.mono, fontSize: 10.5, color: COLORS.textMuted, marginTop: 3 },
+  apertureArrow: { color: COLORS.underViolet, fontSize: 20 },
+
+  storyLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 18 },
+  storyLinkText: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.coral },
+  storyLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.coral },
+
+  // Stat tags
+  statRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 18 },
+  statTag: {
+    flex: 1, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', borderRadius: 12,
+    backgroundColor: 'rgba(30,25,20,0.72)', borderWidth: 1, borderColor: COLORS.hair,
+  },
+  statNum: { fontFamily: FONTS.secondaryBold, fontSize: 24, color: COLORS.amberLight },
+  statLabel: { fontFamily: FONTS.mono, fontSize: 9, letterSpacing: 1.4, color: COLORS.textSubtle, marginTop: 2 },
 });
