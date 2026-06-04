@@ -14,6 +14,7 @@ import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
 import TheoryScreen from '../screens/TheoryScreen';
+import EndingScreen from '../screens/EndingScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -48,6 +49,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
     ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     ingestSceneFragments, // UNDER-MAP: collect fragments/relations from the scene
+    resolveUnderMapBelief, // UNDER-MAP: bear out a sealed belief (Clarity)
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -146,7 +148,7 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
-      <Stack.Screen name="Board">
+      <Stack.Screen name="Board" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
           return (
@@ -176,15 +178,21 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
-      <Stack.Screen name="UnderMap">
+      <Stack.Screen name="UnderMap" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <UnderMapScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
-      <Stack.Screen name="Theory">
+      <Stack.Screen name="Theory" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <TheoryScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Ending" options={{ animation: 'slide_from_bottom' }}>
+        {({ navigation, route }) => (
+          <EndingScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
@@ -302,6 +310,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onEnsureSecondChoiceResponses={ensureSecondChoiceResponses}
               onProceedToPuzzle={handleProceedToPuzzle}
               onIngestFragments={ingestSceneFragments}
+              onResolveBelief={resolveUnderMapBelief}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

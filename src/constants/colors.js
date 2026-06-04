@@ -1,6 +1,6 @@
 export const COLORS = {
-  background: '#1F1B18',
-  backgroundAlt: '#24201D',
+  background: '#17130F',
+  backgroundAlt: '#1E1A16',
   surface: '#26221E',
   surfaceSubtle: '#2C2824',
   surfaceAlt: '#322E2A',
@@ -40,6 +40,33 @@ export const COLORS = {
   branchPathB: '#6faad5',
   branchPathASoft: 'rgba(241, 197, 114, 0.2)',
   branchPathBSoft: 'rgba(111, 170, 213, 0.2)',
+
+  // ── "Inkbleed Noir" re-skin tokens ──────────────────────────────────────
+  // Deep warm-black inks for the dark-first base.
+  ink: '#120F0C',
+  inkAlt: '#1A1612',
+  inkRaised: '#241F1A',
+  // The Under-Map "glow beneath" — the supernatural layer bleeds through in
+  // electric violet→cyan. Reserve these for the mystical / revelation moments.
+  underViolet: '#a78bfa',
+  underCyan: '#67e8f9',
+  underGlow: 'rgba(167, 139, 250, 0.45)',
+  underGlowSoft: 'rgba(167, 139, 250, 0.16)',
+  underCyanGlow: 'rgba(103, 232, 249, 0.4)',
+  underCyanSoft: 'rgba(103, 232, 249, 0.14)',
+  // Frosted dark-glass surfaces (used with expo-blur) + their luminous hairline.
+  glassTint: 'rgba(22, 18, 14, 0.42)',
+  glassTintStrong: 'rgba(16, 13, 10, 0.62)',
+  glassBorder: 'rgba(245, 230, 205, 0.14)',
+  glassEdge: 'rgba(167, 139, 250, 0.32)',
+  glassEdgeAmber: 'rgba(241, 197, 114, 0.34)',
+};
+
+// Signature gradient stops for hero surfaces / glows (Inkbleed Noir).
+export const GRADIENTS = {
+  inkDepth: ['#1E1A16', '#120F0C', '#0B0907'],
+  underBeam: ['rgba(167,139,250,0.0)', 'rgba(167,139,250,0.18)', 'rgba(103,232,249,0.10)'],
+  amberDesk: ['#d9b78b', '#c68f57', '#ab6b34'],
 };
 
 export const CARD_STATES = {

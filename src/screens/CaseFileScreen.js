@@ -70,6 +70,7 @@ export default function CaseFileScreen({
   onEnsureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onIngestFragments, // UNDER-MAP: ingest scene fragments/relations into the board
+  onResolveBelief, // UNDER-MAP: bear out a sealed belief when the scene resolves it (Clarity)
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -324,6 +325,31 @@ export default function CaseFileScreen({
     [storyMeta?.relations],
   );
 
+  // UNDER-MAP ECHO: callbacks tying this scene to truths the player already
+  // revealed. Only shown when the player actually HAS revealed something — so a
+  // player who skipped the connections never sees "this follows from what you mapped."
+  const sceneEchoes = useMemo(
+    () => (Array.isArray(storyMeta?.echoes) ? storyMeta.echoes.filter((e) => e && e.line) : []),
+    [storyMeta?.echoes],
+  );
+  const hasRevealedNodes = (storyCampaign?.underMap?.nodes?.length || 0) > 0;
+  const showEcho = isStoryMode && hasRevealedNodes && sceneEchoes.length > 0;
+
+  // BELIEF RESOLUTION (Move 3): when a generated scene reports that a sealed
+  // belief was borne out (or subverted), record it so the player's Clarity
+  // accrues. The context action is idempotent; a ref keeps it to once per case.
+  const resolvedBeliefRef = useRef(null);
+  useEffect(() => {
+    if (typeof onResolveBelief !== "function") return;
+    const br = storyMeta?.beliefResolution;
+    if (!br || !Number.isFinite(Number(br.resolvesChapter)) || typeof br.correct !== "boolean") return;
+    const sceneKey = storyMeta?.caseNumber || activeCase?.caseNumber || null;
+    const applyKey = `${sceneKey}:${br.resolvesChapter}`;
+    if (resolvedBeliefRef.current === applyKey) return;
+    resolvedBeliefRef.current = applyKey;
+    onResolveBelief({ chapter: Number(br.resolvesChapter), correct: br.correct });
+  }, [storyMeta?.beliefResolution, storyMeta?.caseNumber, activeCase?.caseNumber, onResolveBelief]);
+
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
   const examinableDetails = useMemo(() => {
@@ -498,24 +524,20 @@ export default function CaseFileScreen({
       setNarrativeComplete(true);
     }
 
-    // UNDER-MAP backfill: ensure the scene's CORE anomalies (those in the always-read
-    // opening, plus any scene-level fragments without a specific prose phrase) are on
-    // the board even if the player didn't tap them — so the CONNECT/THEORY beat always
-    // has material. Path-specific anomalies are collected inline on tap (already
-    // ingested), so we intentionally do NOT backfill them here — that would leak
-    // fragments from branches the player never read.
+    // UNDER-MAP backfill: collect ALL of the scene's fragments at the gate (not
+    // just the opening's), so every relation's endpoints exist and the CONNECT
+    // beat always has probeable pairs. Tapping during the read is still the
+    // EXAMINE reward; this guarantees the puzzle is never starved if the player
+    // didn't tap everything. (A fragment from a branch they skipped is a minor
+    // cost next to a connectable board.)
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
-      const openingText = branchingNarrative?.opening?.text || "";
-      const backfillFragments = sceneFragments.filter(
-        (f) => !f.phrase || (typeof openingText === "string" && openingText.includes(f.phrase)),
-      );
-      onIngestFragments(backfillFragments, sceneRelations, {
+      onIngestFragments(sceneFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter, branchingNarrative]);
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
@@ -1093,6 +1115,26 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
+                {/* UNDER-MAP ECHO — the loop made visible: this scene follows from what you mapped */}
+                {showEcho && (
+                  <View
+                    style={[
+                      styles.echoCard,
+                      { borderRadius: scaleRadius(RADIUS.lg), borderColor: palette.border, padding: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.xs) },
+                    ]}
+                  >
+                    <Text style={[styles.echoKicker, { color: palette.accent, fontSize: slugSize }]}>↳ THIS FOLLOWS FROM WHAT YOU MAPPED</Text>
+                    {sceneEchoes.map((e, i) => (
+                      <View key={i} style={{ gap: 2 }}>
+                        {e.nodeRef ? (
+                          <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>“{e.nodeRef}”</Text>
+                        ) : null}
+                        <Text style={[styles.echoLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>{e.line}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 {/* Narrative Section - Branching or Linear */}
                 {hasBranchingNarrative ? (
                   <View style={styles.narrativeSection}>
@@ -1328,6 +1370,10 @@ const styles = StyleSheet.create({
   choiceSignalLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   choiceSignalBody: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.6 },
   narrativeSection: { position: "relative", overflow: "visible" },
+  echoCard: { borderWidth: 1, backgroundColor: "rgba(20, 12, 4, 0.78)" },
+  echoKicker: { fontFamily: FONTS.monoBold, letterSpacing: 1.6, textTransform: "uppercase" },
+  echoFrom: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.4 },
+  echoLine: { fontFamily: FONTS.primary, letterSpacing: 0.4 },
   storyPromptCard: { borderWidth: 1, backgroundColor: "rgba(8, 4, 2, 0.86)" },
   storyPromptLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   storyPromptBody: { fontFamily: FONTS.primary, letterSpacing: 0.6 },

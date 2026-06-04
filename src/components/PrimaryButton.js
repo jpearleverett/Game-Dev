@@ -6,6 +6,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
+import { useAudioOptional } from '../context/AudioContext';
 
 const VARIANTS = {
   primary: {
@@ -31,6 +32,7 @@ export default function PrimaryButton({
   fullWidth = false,
 }) {
   const { moderateScale, scaleRadius, sizeClass } = useResponsiveLayout();
+  const audio = useAudioOptional();
 
   const palette = VARIANTS[tone] || VARIANTS.primary;
 
@@ -42,7 +44,8 @@ export default function PrimaryButton({
   const handlePressIn = useCallback(() => {
     if (disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }, [disabled]);
+    audio?.playSelect?.();
+  }, [disabled, audio]);
 
   const responsiveStyles = useMemo(() => {
     const paddingVertical = sizeClass === 'xsmall' ? 12 : sizeClass === 'small' ? 14 : sizeClass === 'medium' ? 16 : 18;

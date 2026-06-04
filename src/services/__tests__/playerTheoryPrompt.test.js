@@ -58,6 +58,14 @@ describe('_buildPlayerTheorySection', () => {
     expect(out.toLowerCase()).toContain('recurring motif');
     // Fragment kinds are tagged so the model can reference them precisely.
     expect(out).toContain('[SYMBOL]');
+    // Move 1: the model must author choose-the-truth decoys for each relation.
+    expect(out).toContain('falseReadings');
+    // Move 2: emit an ECHO when a scene pays off a revealed truth.
+    expect(out).toContain('ECHO');
+    // Move 3: a sealed belief can be borne out / subverted via beliefResolution,
+    // tagged with the chapter it was sealed in.
+    expect(out).toContain('beliefResolution');
+    expect(out).toContain('chapter 1');
   });
 });
 

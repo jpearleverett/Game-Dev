@@ -5,10 +5,15 @@ import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
 import DustLayer from '../components/DustLayer';
+import Celebration from '../components/Celebration';
+import PressableScale from '../components/PressableScale';
+import Reveal from '../components/motion/Reveal';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
-import { normalizeUnderMap, FRAGMENT_KIND, isMotif } from '../data/underMap';
+import { normalizeUnderMap, FRAGMENT_KIND, isMotif, clarity, endingVariant } from '../data/underMap';
+import { selectEnding } from '../data/endings';
+import { TOTAL_CHAPTERS } from '../services/storyGeneration/constants';
 import {
   parseCaseNumber,
   formatCaseNumber,
@@ -37,6 +42,7 @@ export default function TheoryScreen({ navigation, route }) {
     recordUnderMapTheory,
     completeLogicPuzzle,
     selectDecisionBeforePuzzle,
+    unlockEnding,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
@@ -49,6 +55,16 @@ export default function TheoryScreen({ navigation, route }) {
     () => normalizeUnderMap(storyCampaign.underMap),
     [storyCampaign.underMap],
   );
+
+  // CLARITY (Move 3): how truly the player has read the hidden world so far, and
+  // the most recent belief the story has borne out or subverted.
+  const cl = useMemo(() => clarity(map), [map]);
+  const variant = useMemo(() => endingVariant(map), [map]);
+  const lastResolved = useMemo(() => map.theories.find((t) => t.correct != null) || null, [map.theories]);
+  const clarityLabel = variant === 'clear' ? 'You are reading the Under-Map true.'
+    : variant === 'half' ? 'You see some of it; the rest stays warped.'
+    : variant === 'deceived' ? 'The hidden world is wearing the shape you want.'
+    : 'No belief has been borne out yet.';
 
   // The competing beliefs (the chapter decision, framed as interpretations of the
   // hidden world). Prefer options passed from the CaseFile; otherwise resolve them
@@ -137,6 +153,20 @@ export default function TheoryScreen({ navigation, route }) {
     setContinuing(true);
     setGenError(null);
 
+    // FINALE (Move 3, §5): after the last chapter's belief is sealed there is no
+    // chapter to generate — the clarity spectrum decides which ending is reached.
+    const sealedChapter = parseCaseNumber(caseNumber).chapter;
+    if (sealedChapter >= TOTAL_CHAPTERS) {
+      const ending = selectEnding(map);
+      unlockEnding?.(ending.id, {
+        variant: ending.variant,
+        clarityRatio: ending.clarity?.ratio ?? 0,
+        finalChapter: sealedChapter,
+      });
+      navigation.replace('Ending', { ending });
+      return;
+    }
+
     const nextChapter = parseCaseNumber(caseNumber).chapter + 1;
     const nextCaseNumber = formatCaseNumber(nextChapter, 1);
     const nextChoiceHistory = [
@@ -160,20 +190,20 @@ export default function TheoryScreen({ navigation, route }) {
 
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
     navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
-  }, [continuing, caseNumber, caseId, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
+  }, [continuing, caseNumber, caseId, map, unlockEnding, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
 
   const sealScale = sealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
   const sealOpacity = sealAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] });
 
   return (
-    <ScreenSurface variant="default">
+    <ScreenSurface variant="default" glow="violet">
       {!reducedMotion ? (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
       ) : null}
 
       <View style={styles.header}>
         <View style={styles.kickerRow}>
-          <MaterialCommunityIcons name="eye-circle-outline" size={18} color={COLORS.accentSecondary} />
+          <MaterialCommunityIcons name="eye-circle-outline" size={18} color={COLORS.underViolet} />
           <Text style={styles.kicker}>THE THEORY{chapter ? ` · CHAPTER ${chapter}` : ''}</Text>
         </View>
         <Text style={styles.title}>What is the Under-Map?</Text>
@@ -183,6 +213,30 @@ export default function TheoryScreen({ navigation, route }) {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {/* How the LAST belief was borne out, and the player's running Clarity */}
+        {lastResolved ? (
+          <View style={[styles.resolvedCard, lastResolved.correct ? styles.resolvedTrue : styles.resolvedFalse]}>
+            <View style={styles.resolvedHeader}>
+              <MaterialCommunityIcons
+                name={lastResolved.correct ? 'check-decagram-outline' : 'alert-decagram-outline'}
+                size={16}
+                color={lastResolved.correct ? COLORS.accentSecondary : COLORS.bloodRed}
+              />
+              <Text style={styles.resolvedKicker}>{lastResolved.correct ? 'YOUR LAST READING HELD TRUE' : 'YOUR LAST READING WAS SUBVERTED'}</Text>
+            </View>
+            {lastResolved.interpretation ? <Text style={styles.resolvedBelief}>“{lastResolved.interpretation}”</Text> : null}
+          </View>
+        ) : null}
+
+        {cl.resolved > 0 ? (
+          <View style={styles.clarityRow}>
+            <MaterialCommunityIcons name="eye-outline" size={14} color={COLORS.accentSecondary} />
+            <Text style={styles.clarityText}>
+              Clarity: {cl.correct} of {cl.resolved} readings held true · {clarityLabel}
+            </Text>
+          </View>
+        ) : null}
+
         {/* What the map has revealed so far */}
         {map.nodes.length > 0 ? (
           <>
@@ -204,16 +258,16 @@ export default function TheoryScreen({ navigation, route }) {
           <Text style={styles.muted}>The way forward is yours to take. Seal your read and press on.</Text>
         ) : (
           <View style={styles.beliefList}>
-            {beliefs.map((b) => {
+            {beliefs.map((b, bi) => {
               const active = b.key === beliefKey;
               return (
-                <Pressable
-                  key={b.key}
-                  onPress={() => { if (!sealed) { selectionHaptic(); setBeliefKey(b.key); setGenError(null); } }}
+                <Reveal key={b.key} index={bi} reducedMotion={reducedMotion} distance={10}>
+                <PressableScale
+                  reducedMotion={reducedMotion}
+                  onPress={() => { if (!sealed) { setBeliefKey(b.key); setGenError(null); } }}
                   disabled={sealed}
                   style={[styles.beliefCard, active && styles.beliefCardActive, sealed && !active && { opacity: 0.4 }]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={b.title || 'A reading of the hidden world'}
                 >
                   <View style={styles.beliefTop}>
                     <MaterialCommunityIcons
@@ -226,7 +280,8 @@ export default function TheoryScreen({ navigation, route }) {
                   {(b.focus || b.consequence) ? (
                     <Text style={styles.beliefFocus}>{b.focus || b.consequence}</Text>
                   ) : null}
-                </Pressable>
+                </PressableScale>
+                </Reveal>
               );
             })}
           </View>
@@ -315,6 +370,9 @@ export default function TheoryScreen({ navigation, route }) {
           />
         )}
       </View>
+
+      {/* Committing a belief is the chapter's weight-bearing moment — mark it. */}
+      <Celebration active={sealed} reducedMotion={reducedMotion} count={48} />
     </ScreenSurface>
   );
 }
@@ -322,12 +380,21 @@ export default function TheoryScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   header: { marginBottom: SPACING.sm },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
+  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
   title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
   lede: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, lineHeight: LINE_HEIGHTS.cozy },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
+  // Clarity / belief resolution (Move 3)
+  resolvedCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.sm },
+  resolvedTrue: { backgroundColor: 'rgba(241,197,114,0.07)', borderColor: COLORS.accentSoft },
+  resolvedFalse: { backgroundColor: 'rgba(196,62,96,0.08)', borderColor: 'rgba(196,62,96,0.35)' },
+  resolvedHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  resolvedKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.textSecondary },
+  resolvedBelief: { fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
+  clarityRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.lg },
+  clarityText: { flex: 1, fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontStyle: 'italic', lineHeight: LINE_HEIGHTS.cozy },
   // Nodes
   nodeList: { gap: SPACING.sm },
   nodeRow: {

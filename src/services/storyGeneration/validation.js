@@ -124,6 +124,10 @@ class ValidationMethods {
         // connect to reveal the hidden world.
         fragments: this._normalizeFragments(parsed.fragments),
         relations: this._normalizeRelations(parsed.relations),
+        // UNDER-MAP ECHO: callbacks to truths the player already revealed.
+        echoes: this._normalizeEchoes(parsed.echoes),
+        // BELIEF RESOLUTION: did a sealed belief bear out here? (drives Clarity)
+        beliefResolution: this._normalizeBeliefResolution(parsed.beliefResolution),
         pathDecisions: null,
       };
 
@@ -133,6 +137,14 @@ class ValidationMethods {
       const derivedFragments = this._deriveFragmentsFromBranching(result.branchingNarrative);
       if (derivedFragments.length) {
         result.fragments = this._normalizeFragments([...(result.fragments || []), ...derivedFragments]);
+      }
+
+      // CONNECT GUARANTEE: a CONNECT beat (A/B) must always have probeable pairs.
+      // If the model under-delivered relations, synthesize kind-bond ones among
+      // this scene's own fragments so the puzzle is never empty. (Skip C/decision
+      // beats — those are THEORY, not CONNECT.)
+      if (!isDecisionPoint) {
+        result.relations = this._ensureConnectableRelations(result.fragments, result.relations, 2);
       }
 
       // Convert decision format if present
@@ -366,10 +378,128 @@ class ValidationMethods {
       const revelation = String(r.revelation || '').trim();
       if (!aLabel || !bLabel || !revelation) continue;
       if (aLabel.toLowerCase() === bLabel.toLowerCase()) continue;
-      out.push({ aLabel, bLabel, revelation });
+      // Carry the choose-the-truth decoys: two tempting-but-false readings of
+      // this same pair (dropped here previously, so the deduction had no decoys).
+      const falseReadings = Array.isArray(r.falseReadings)
+        ? r.falseReadings.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 2)
+        : [];
+      // 'arc' relations reveal a series-level truth (keystone payoff); default chapter.
+      const scope = r.scope === 'arc' ? 'arc' : 'chapter';
+      out.push({ aLabel, bLabel, revelation, falseReadings, scope });
       if (out.length >= 8) break;
     }
     return out;
+  }
+
+  /**
+   * CONNECT GUARANTEE: a templated kind-bond relation between two fragments,
+   * used as a deterministic fallback so a CONNECT beat is never empty. Lower
+   * quality than authored relations, but grounded in the bond grammar and only
+   * used to top up to the minimum.
+   */
+  _deriveBondRelation(fa, fb) {
+    const pairKey = [fa.kind, fb.kind].sort().join('|');
+    const byKind = (k) => (fa.kind === k ? fa.label : fb.label);
+    let revelation;
+    let falseReadings;
+    switch (pairKey) {
+      case 'place|symbol': {
+        const sym = byKind('symbol');
+        const place = byKind('place');
+        revelation = `The ${sym} is cut into ${place} — the mark and the ground are the same claim.`;
+        falseReadings = [`The ${sym} is just old graffiti on ${place}.`, `${place} and the ${sym} have nothing to do with each other.`];
+        break;
+      }
+      case 'person|phenomenon': {
+        const per = byKind('person');
+        const phe = byKind('phenomenon');
+        revelation = `The ${phe} clings to ${per} — it follows wherever they go.`;
+        falseReadings = [`${per} only happened to be near the ${phe}.`, `The ${phe} is a trick of the light, nothing to do with ${per}.`];
+        break;
+      }
+      case 'person|place': {
+        const per = byKind('person');
+        const place = byKind('place');
+        revelation = `${place} remembers ${per} — it still holds the shape of their passing.`;
+        falseReadings = [`${per} has never set foot in ${place}.`, `It is coincidence that ${per} and ${place} keep surfacing together.`];
+        break;
+      }
+      case 'phenomenon|symbol': {
+        const sym = byKind('symbol');
+        const phe = byKind('phenomenon');
+        revelation = `The ${sym} is what sets the ${phe} loose — the mark is the trigger.`;
+        falseReadings = [`The ${phe} would happen with or without the ${sym}.`, `The ${sym} is decorative; the ${phe} is unrelated.`];
+        break;
+      }
+      default: {
+        revelation = `${fa.label} and ${fb.label} keep surfacing together — two faces of one hidden thing.`;
+        falseReadings = [`${fa.label} and ${fb.label} are unconnected; the city is full of echoes.`, `One explains the other in an ordinary way — nothing hidden here.`];
+      }
+    }
+    return { aLabel: fa.label, bLabel: fb.label, revelation, falseReadings, scope: 'chapter' };
+  }
+
+  /**
+   * Ensure at least `minCount` relations resolve among THIS scene's fragments,
+   * topping up with templated kind-bond relations (preferring bond-grammar pairs)
+   * when the model authored too few. Guarantees a CONNECT beat is never empty.
+   */
+  _ensureConnectableRelations(fragments, relations, minCount = 2) {
+    const frags = (Array.isArray(fragments) ? fragments : []).filter((f) => f && f.label);
+    const rels = Array.isArray(relations) ? [...relations] : [];
+    if (frags.length < 2) return rels;
+
+    const lc = (v) => String(v || '').trim().toLowerCase();
+    const labels = new Set(frags.map((f) => lc(f.label)));
+    const pairKey = (a, b) => [lc(a), lc(b)].sort().join('::');
+    const resolvable = (r) => labels.has(lc(r.aLabel)) && labels.has(lc(r.bLabel)) && lc(r.aLabel) !== lc(r.bLabel);
+    const have = new Set(rels.filter(resolvable).map((r) => pairKey(r.aLabel, r.bLabel)));
+    if (have.size >= minCount) return rels;
+
+    const BOND = new Set(['place|symbol', 'person|phenomenon', 'person|place', 'phenomenon|symbol']);
+    const isBond = (a, b) => BOND.has([a.kind, b.kind].sort().join('|'));
+    const pairs = [];
+    for (let i = 0; i < frags.length; i += 1) {
+      for (let j = i + 1; j < frags.length; j += 1) pairs.push([frags[i], frags[j]]);
+    }
+    // Prefer bond-grammar pairs (more legible deductions) first.
+    pairs.sort((p, q) => (isBond(q[0], q[1]) ? 1 : 0) - (isBond(p[0], p[1]) ? 1 : 0));
+
+    let count = have.size;
+    for (const [a, b] of pairs) {
+      if (count >= minCount) break;
+      const key = pairKey(a.label, b.label);
+      if (have.has(key)) continue;
+      have.add(key);
+      rels.push(this._deriveBondRelation(a, b));
+      count += 1;
+    }
+    return rels;
+  }
+
+  /** UNDER-MAP ECHO: normalize callbacks to truths the player already revealed. */
+  _normalizeEchoes(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    for (const e of raw) {
+      if (!e) continue;
+      const line = String(e.line || '').trim();
+      if (!line) continue;
+      const nodeRef = String(e.nodeRef || '').trim();
+      out.push(nodeRef ? { nodeRef, line } : { line });
+      if (out.length >= 2) break;
+    }
+    return out;
+  }
+
+  /** BELIEF RESOLUTION: normalize the signal that a sealed belief was borne out. */
+  _normalizeBeliefResolution(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const resolvesChapter = Number(raw.resolvesChapter);
+    if (!Number.isFinite(resolvesChapter)) return null;
+    if (typeof raw.correct !== 'boolean') return null;
+    const line = String(raw.line || '').trim();
+    return { resolvesChapter, correct: raw.correct, line };
   }
 
   /**

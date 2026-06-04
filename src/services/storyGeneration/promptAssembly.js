@@ -1,5 +1,6 @@
 import { llmService } from '../LLMService';
 import { CHARACTER_REFERENCE } from '../../data/characterReference';
+import { isKeystone } from '../../data/underMap';
 import {
   ABSOLUTE_FACTS,
   ENGAGEMENT_REQUIREMENTS,
@@ -326,7 +327,9 @@ function _buildPlayerTheorySection(underMap) {
   const lines = [];
 
   if (latest?.interpretation) {
-    lines.push(`- The player just SEALED this theory of the hidden world: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
+    const sealedChapter = Number.isFinite(latest.chapter) ? latest.chapter : null;
+    lines.push(`- The player just SEALED this theory of the hidden world${sealedChapter ? ` (chapter ${sealedChapter})` : ''}: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
+    lines.push(`- If THIS scene reveals whether that belief was RIGHT, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Be willing to SUBVERT a wrong reading — it makes a richer story and steers the player's ending.`);
   }
 
   if (nodes.length) {
@@ -334,10 +337,14 @@ function _buildPlayerTheorySection(underMap) {
     nodes.slice(0, 6).forEach((n) => { if (n?.revelation) lines.push(`  • ${n.revelation}`); });
   }
 
+  let hasKeystone = false;
   if (fragments.length) {
     lines.push('- Fragments the player ALREADY HOLDS (reference any of these by their EXACT label to weave this chapter into the map):');
     fragments.slice(0, 14).forEach((f) => {
-      if (f?.label) lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}`);
+      if (!f?.label) return;
+      const keystone = isKeystone(f);
+      if (keystone) hasKeystone = true;
+      lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}${keystone ? ' (KEYSTONE — recurred across chapters)' : ''}`);
     });
   }
 
@@ -347,9 +354,15 @@ function _buildPlayerTheorySection(underMap) {
     "The player is assembling a hidden map of reality on their Under-Map (this is NOT a whodunit). Each chapter should make that map feel more interconnected, WITHOUT contradicting established canon or the Story Bible.",
     ...lines,
     'WEAVING (important):',
-    '- In this scene\'s `relations`, author AT LEAST ONE connection that links a NEW fragment to a fragment THE PLAYER ALREADY HOLDS above (reference it by its exact label). This is how the map threads across chapters.',
+    '- ALWAYS give the player something to connect: author AT LEAST TWO relations whose BOTH endpoints are fragments introduced in THIS scene (reference them by exact label), so the CONNECT beat is never empty.',
+    '- THEN, author at least one MORE connection that links a NEW fragment to a fragment THE PLAYER ALREADY HOLDS above (by its exact label). This is how the map threads across chapters.',
     '- RE-SURFACE a recurring motif when it fits: reuse the EXACT label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
+    '- For EACH relation, also author its two `falseReadings`: tempting-but-FALSE one-sentence interpretations of the same pair that a careful player might wrongly believe (the player must pick the true reading from among them — make the wrong ones plausible, never absurd).',
     '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
+    '- ECHO: when this scene builds on one of the truths the player has ALREADY revealed (listed above), add an `echoes` entry — `nodeRef` quoting that truth, `line` = the exact sentence in THIS scene that pays it off — so the player SEES their mapping reshaping the story.',
+    ...(hasKeystone
+      ? ['- KEYSTONE: a fragment above has recurred across chapters. If it now connects into a SERIES-LEVEL truth about the hidden world, author that relation with `scope: "arc"` (rare, big — the payoff for the player\'s long attention).']
+      : []),
   ].join('\n');
 }
 

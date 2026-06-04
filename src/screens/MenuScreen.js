@@ -5,6 +5,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
+import Stagger from '../components/motion/Stagger';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -28,6 +30,8 @@ export default function MenuScreen({
   achievementsCount = 0,
   totalAchievements = 30,
 }) {
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
   const handleShare = () => {
     onShare?.(SHARE_MESSAGE);
   };
@@ -37,7 +41,11 @@ export default function MenuScreen({
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
-        <Text style={styles.title}>Menu</Text>
+        <Stagger reducedMotion={reducedMotion} distance={14}>
+        <View style={styles.titleBlock}>
+          <Text style={styles.eyebrow}>FIELD MANUAL</Text>
+          <Text style={styles.title}>MENU</Text>
+        </View>
 
         {/* Replayability Features Section */}
         <View style={styles.section}>
@@ -103,6 +111,7 @@ export default function MenuScreen({
           </Text>
           <PrimaryButton label="Share the Game" onPress={handleShare} />
         </View>
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );
@@ -118,26 +127,31 @@ const styles = StyleSheet.create({
       paddingVertical: SPACING.xl,
       gap: SPACING.xl,
     },
+  titleBlock: { gap: 2 },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   section: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: COLORS.panelOutline,
-    backgroundColor: COLORS.surfaceAlt,
+    borderLeftColor: COLORS.accentSecondary,
+    backgroundColor: 'rgba(0,0,0,0.28)',
     padding: SPACING.lg,
     gap: SPACING.sm,
   },
   sectionTitle: {
-    fontFamily: FONTS.secondaryBold,
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.textPrimary,
-    letterSpacing: 2,
+    fontFamily: FONTS.monoBold,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.accentSecondary,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
   },
   body: {
     fontFamily: FONTS.primary,

@@ -349,7 +349,7 @@ export const STORY_CONTENT_SCHEMA = {
     // they connect to reveal the hidden world. Drives examine -> connect -> reveal.
     fragments: {
       type: 'array',
-      description: 'The 2-4 most striking things Jack could notice in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose.',
+      description: 'REQUIRED: 3-5 striking things Jack notices in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose. There MUST be enough here to support at least two connections (see relations).',
       items: {
         type: 'object',
         properties: {
@@ -364,19 +364,60 @@ export const STORY_CONTENT_SCHEMA = {
     },
     relations: {
       type: 'array',
-      description: 'How fragments connect to reveal a secret of the hidden world. Reference fragments by their EXACT label (from this scene or established earlier). Only assert connections that are true in your world and inferable by the player.',
+      description: 'REQUIRED: author AT LEAST 2 connections, and BOTH endpoints of at least two of them MUST be fragments you listed in THIS scene\'s `fragments` (so the player can connect them immediately). Reference fragments by their EXACT label. Only assert connections true in your world and inferable by the player. Prefer the bond grammar: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON. You MAY add one extra relation linking a new fragment to one the player already holds.',
       items: {
         type: 'object',
         properties: {
           aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
           bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
-          revelation: { type: 'string', description: 'The secret this connection reveals (one sentence).' },
+          revelation: { type: 'string', description: 'The TRUE secret this connection reveals (one sentence).' },
+          scope: {
+            type: 'string',
+            enum: ['chapter', 'arc'],
+            description: "Default 'chapter'. Use 'arc' ONLY when this connection links long-recurring motifs into a SERIES-LEVEL truth about the hidden world (rare, big — the payoff for cross-chapter attention).",
+          },
+          falseReadings: {
+            type: 'array',
+            description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair — plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",
+            items: { type: 'string' },
+            minItems: 2,
+            maxItems: 2,
+          },
         },
         required: ['aLabel', 'bLabel', 'revelation'],
       },
     },
+    // UNDER-MAP ECHO: make the player FEEL their mapping shaped the story. When
+    // this scene builds on a truth the player already revealed (listed in
+    // <under_map_state>), name the callback so the UI can surface it.
+    echoes: {
+      type: 'array',
+      description: 'If THIS scene builds on a truth the player has ALREADY revealed on their Under-Map (see <under_map_state>), add up to 2 callbacks. Omit entirely if this scene does not build on a prior discovery.',
+      items: {
+        type: 'object',
+        properties: {
+          nodeRef: { type: 'string', description: 'The revealed truth this scene builds on — quote it closely from the list in <under_map_state>.' },
+          line: { type: 'string', description: 'The single in-fiction sentence in THIS scene that pays that discovery off.' },
+        },
+        required: ['line'],
+      },
+      maxItems: 2,
+    },
+    // BELIEF RESOLUTION (Move 3): if the player SEALED a belief last chapter
+    // (shown in <under_map_state>), this scene may begin to bear it out — or
+    // subvert it. Reporting this drives the player's Clarity / the ending they reach.
+    beliefResolution: {
+      type: 'object',
+      description: 'OMIT unless a sealed belief is listed in <under_map_state> AND this scene reveals whether it was right. Be willing to SUBVERT a wrong belief — a misread of the hidden world makes a richer story.',
+      properties: {
+        resolvesChapter: { type: 'integer', description: 'The chapter number the resolved belief was sealed in.' },
+        correct: { type: 'boolean', description: 'True if reality CONFIRMS the player\'s belief; false if it subverts/contradicts it.' },
+        line: { type: 'string', description: 'The in-fiction sentence in THIS scene that shows the belief confirmed or undone.' },
+      },
+      required: ['resolvesChapter', 'correct'],
+    },
   },
-  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads', 'fragments', 'relations'],
 };
 
 // ============================================================================

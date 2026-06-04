@@ -12,7 +12,13 @@ import {
   addFragments as umAddFragments,
   addRelations as umAddRelations,
   connectFragments as umConnect,
+  senseConnection as umSense,
+  resolveReading as umResolveReading,
+  recordDescent as umRecordDescent,
   recordTheory as umRecordTheory,
+  resolveTheory as umResolveTheory,
+  drawDailyStir as umDrawStir,
+  resolveDailyStir as umResolveStir,
   touchUnderMap as umTouch,
 } from '../data/underMap';
 // Removed: internal usePersistence hook call
@@ -494,6 +500,23 @@ export function GameProvider({
               };
               
               updateProgress(newStats);
+
+              // §8.1 bridge: finishing the daily word puzzle resolves today's
+              // Under-Map stir (advances the days-mapped streak + deepens the
+              // drifted fragment). Functional + underMap-only, so it never
+              // clobbers the campaign (see the non-story guard above).
+              if (nextStatus === STATUS.SOLVED) {
+                  updateProgress((prev) => {
+                      const camp = normalizeStoryCampaignShape(prev.storyCampaign);
+                      const before = camp.underMap;
+                      const after = umResolveStir(before);
+                      if (after?.dailyStir?.resolved === before?.dailyStir?.resolved
+                          && after?.dailyStreak === before?.dailyStreak) {
+                          return null;
+                      }
+                      return { storyCampaign: { ...camp, underMap: after } };
+                  });
+              }
           }
       }
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio, setActiveCaseInternal]);
@@ -625,6 +648,83 @@ export function GameProvider({
     }
     return result; // { revealed, valid, alreadyConnected } for the UI reveal
   }, [progress.storyCampaign, updateProgress]);
+
+  // CONNECT-as-deduction (Move 1): probe a pair WITHOUT mutating, so the UI can
+  // surface candidate readings (choose-the-truth) and spend a probe only on a miss.
+  const senseUnderMap = useCallback((aId, bId) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    return umSense(current.underMap, aId, bId);
+  }, [progress.storyCampaign]);
+
+  // Commit a connection with the player's chosen reading. Returns the result
+  // (node, correctReading, alreadyConnected, upgraded) for the reveal UI.
+  const resolveUnderMapReading = useCallback((aId, bId, chosenRevelation) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const result = umResolveReading(current.underMap, aId, bId, chosenRevelation);
+    if (result.map !== current.underMap) {
+      updateProgress((prev) => {
+        const c = normalizeStoryCampaignShape(prev.storyCampaign);
+        const r = umResolveReading(c.underMap, aId, bId, chosenRevelation);
+        if (r.map === c.underMap) return null;
+        return { storyCampaign: { ...c, underMap: r.map } };
+      });
+    }
+    return result;
+  }, [progress.storyCampaign, updateProgress]);
+
+  // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
+  const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umRecordDescent(current.underMap, { hadMisstep });
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  // Bear out a sealed belief once the story reveals whether it was right (Move 3).
+  // Idempotent: resolveTheory only flips the first still-unresolved theory for the
+  // chapter, so re-applying the same scene's resolution is a safe no-op.
+  const resolveUnderMapBelief = useCallback(({ chapter, correct } = {}) => {
+    if (!Number.isFinite(chapter) || typeof correct !== 'boolean') return;
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = current.underMap;
+      // Skip cleanly if there's nothing to resolve (normalizeUnderMap always
+      // clones, so we can't rely on reference equality to detect the no-op).
+      const hasUnresolved = Array.isArray(um?.theories)
+        && um.theories.some((t) => t.chapter === chapter && t.correct == null);
+      if (!hasUnresolved) return null;
+      return { storyCampaign: { ...current, underMap: umResolveTheory(um, chapter, correct) } };
+    });
+  }, [updateProgress]);
+
+  // Daily on-ramp (§8.1): draw today's drifting fragment (idempotent per day) and
+  // resolve it (advances the days-mapped streak). Guarded against render churn.
+  const drawUnderMapDailyStir = useCallback(() => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umDrawStir(current.underMap);
+      const a = current.underMap?.dailyStir;
+      const b = um?.dailyStir;
+      const unchanged = (!a && !b)
+        || (a && b && a.date === b.date && a.fragmentId === b.fragmentId && a.resolved === b.resolved);
+      if (unchanged) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  const resolveUnderMapDailyStir = useCallback(() => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const before = current.underMap;
+      const um = umResolveStir(before);
+      if (um?.dailyStir?.resolved === before?.dailyStir?.resolved && um?.dailyStreak === before?.dailyStreak) {
+        return null;
+      }
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
 
   const recordUnderMapTheory = useCallback((theory) => {
     updateProgress((prev) => {
@@ -887,6 +987,12 @@ export function GameProvider({
     addCaseClues,
     ingestSceneFragments,
     connectUnderMap,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
+    resolveUnderMapBelief,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
     recordUnderMapTheory,
     touchUnderMap,
     // Endings & Achievements
@@ -900,6 +1006,12 @@ export function GameProvider({
     addCaseClues,
     ingestSceneFragments,
     connectUnderMap,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
+    resolveUnderMapBelief,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
     recordUnderMapTheory,
     touchUnderMap,
   }), [
@@ -934,6 +1046,12 @@ export function GameProvider({
     addCaseClues,
     ingestSceneFragments,
     connectUnderMap,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
+    resolveUnderMapBelief,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
     recordUnderMapTheory,
     touchUnderMap,
   ]);
@@ -950,12 +1068,17 @@ export function GameProvider({
 export function useGame() {
   const state = useContext(GameStateContext);
   const dispatch = useContext(GameDispatchContext);
-  
+
   if (!state || !dispatch) {
     throw new Error('useGame must be used within a GameProvider');
   }
-  
+
   return useMemo(() => ({ ...state, ...dispatch }), [state, dispatch]);
+}
+
+/** Non-throwing state access — returns the state context or null (no provider). */
+export function useGameStateOptional() {
+  return useContext(GameStateContext);
 }
 
 export function useGameState() {

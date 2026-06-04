@@ -111,3 +111,133 @@ describe('_parseGeneratedContent populates fragments end-to-end (the bug: none a
     expect(labels).toEqual(expect.arrayContaining(['A black envelope', 'The Seal']));
   });
 });
+
+describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
+  const baseBN = {
+    opening: { text: 'x', details: [] },
+    firstChoice: { options: [] },
+    secondChoices: [],
+  };
+
+  test('relations carry falseReadings (choose-the-truth decoys)', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      relations: [
+        {
+          aLabel: 'The seal', bLabel: 'The ink',
+          revelation: 'Both answer to rules ink and wax do not obey.',
+          falseReadings: ['A client used fancy materials.', 'A printing trick, nothing more.'],
+        },
+      ],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.relations[0].falseReadings).toEqual([
+      'A client used fancy materials.',
+      'A printing trick, nothing more.',
+    ]);
+  });
+
+  test('relations without falseReadings normalize to an empty array (clean reveal)', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      relations: [{ aLabel: 'A', bLabel: 'B', revelation: 'They are one.' }],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.relations[0].falseReadings).toEqual([]);
+    expect(out.relations[0].scope).toBe('chapter'); // default
+  });
+
+  test('CONNECT guarantee: under-delivered relations are topped up to 2 from this scene fragments', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: {
+        opening: {
+          text: 'The seal on 14 Acheron Avenue caught the lamplight wrong.',
+          details: [
+            { phrase: 'The seal', note: 'a mark', evidenceCard: 'The Seal', kind: 'symbol' },
+            { phrase: '14 Acheron Avenue', note: 'a street', evidenceCard: 'Acheron Avenue', kind: 'place' },
+            { phrase: 'lamplight wrong', note: 'the glow', evidenceCard: 'Wrong Lamplight', kind: 'phenomenon' },
+          ],
+        },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+      // Model authored NO relations.
+    };
+    const out = validationMethods._parseGeneratedContent(content, false); // A/B beat
+    const labelSet = new Set(out.fragments.map((f) => f.label.toLowerCase()));
+    const resolvable = out.relations.filter(
+      (r) => labelSet.has(String(r.aLabel).toLowerCase()) && labelSet.has(String(r.bLabel).toLowerCase()),
+    );
+    expect(resolvable.length).toBeGreaterThanOrEqual(2);
+    // Fallbacks carry a revelation + two false readings (choose-the-truth still works).
+    resolvable.forEach((r) => {
+      expect(typeof r.revelation).toBe('string');
+      expect(r.revelation.length).toBeGreaterThan(0);
+      expect(r.falseReadings).toHaveLength(2);
+    });
+  });
+
+  test('CONNECT guarantee does NOT fire on C/decision beats', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: {
+        opening: { text: 'a b c', details: [
+          { phrase: 'a', note: 'x', evidenceCard: 'A', kind: 'symbol' },
+          { phrase: 'b', note: 'y', evidenceCard: 'B', kind: 'place' },
+        ] },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+    };
+    const out = validationMethods._parseGeneratedContent(content, true); // C/decision
+    expect(out.relations).toEqual([]); // no fabricated relations on THEORY beats
+  });
+
+  test('arc-scoped relations survive parsing (keystone payoff)', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      relations: [{ aLabel: 'A', bLabel: 'B', revelation: 'One signal across the map.', scope: 'arc' }],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.relations[0].scope).toBe('arc');
+  });
+
+  test('echoes survive parsing and drop entries with no line', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      echoes: [
+        { nodeRef: 'The ink marks who carries it.', line: 'The silver was on the ledger again.' },
+        { nodeRef: 'orphan with no line' },
+      ],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.echoes).toHaveLength(1);
+    expect(out.echoes[0]).toEqual({
+      nodeRef: 'The ink marks who carries it.',
+      line: 'The silver was on the ledger again.',
+    });
+  });
+
+  test('beliefResolution survives parsing only when shaped correctly', () => {
+    const ok = validationMethods._parseGeneratedContent({
+      title: 'x',
+      branchingNarrative: baseBN,
+      beliefResolution: { resolvesChapter: 2, correct: false, line: 'Blackwell was never guiding you.' },
+    }, false);
+    expect(ok.beliefResolution).toEqual({ resolvesChapter: 2, correct: false, line: 'Blackwell was never guiding you.' });
+
+    // Missing/!boolean correct or non-numeric chapter -> dropped to null.
+    const bad = validationMethods._parseGeneratedContent({
+      title: 'x', branchingNarrative: baseBN, beliefResolution: { resolvesChapter: 'two', correct: 'yes' },
+    }, false);
+    expect(bad.beliefResolution).toBeNull();
+
+    const none = validationMethods._parseGeneratedContent({ title: 'x', branchingNarrative: baseBN }, false);
+    expect(none.beliefResolution).toBeNull();
+  });
+});

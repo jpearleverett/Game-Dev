@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
@@ -7,10 +7,45 @@ import { FONTS, FONT_SIZES } from '../constants/typography';
 const SPLASH_IMAGE = require('../../assets/splash-icon.png');
 
 export default function SplashScreen({ onContinue, bootReady }) {
+  const enter = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  // Gentle entrance for the prompt.
+  useEffect(() => {
+    const anim = Animated.timing(enter, {
+      toValue: 1,
+      duration: 700,
+      delay: 200,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [enter]);
+
+  // "Press start" breathing once the game is ready to enter.
+  useEffect(() => {
+    if (!bootReady) return undefined;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 1300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 1300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bootReady, pulse]);
+
   const handlePress = () => {
     if (!bootReady) return;
     onContinue?.();
   };
+
+  const promptOpacity = bootReady
+    ? pulse.interpolate({ inputRange: [0, 1], outputRange: [0.62, 1] })
+    : enter.interpolate({ inputRange: [0, 1], outputRange: [0, 0.85] });
+  const promptScale = bootReady ? pulse.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1.03] }) : 1;
+  const promptRise = enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
 
   return (
     <Pressable
@@ -22,14 +57,20 @@ export default function SplashScreen({ onContinue, bootReady }) {
     >
       <Image source={SPLASH_IMAGE} style={styles.image} contentFit="cover" pointerEvents="none" />
       <View style={styles.content} pointerEvents="none">
-        <View style={[styles.promptContainer, !bootReady && styles.promptContainerDisabled]}>
+        <Animated.View
+          style={[
+            styles.promptContainer,
+            !bootReady && styles.promptContainerDisabled,
+            { opacity: promptOpacity, transform: [{ scale: promptScale }, { translateY: promptRise }] },
+          ]}
+        >
           <Text
             style={[styles.promptText, !bootReady && styles.promptTextDisabled]}
             accessibilityRole="text"
           >
-            Tap to Enter the Case
+            {bootReady ? 'Tap to Enter the Case' : 'Opening the case…'}
           </Text>
-        </View>
+        </Animated.View>
       </View>
     </Pressable>
   );

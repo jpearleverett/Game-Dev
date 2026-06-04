@@ -1,15 +1,33 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
+import Stagger from '../components/motion/Stagger';
+import { EASE_OUT, DURATION } from '../utils/motion';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
 
-function barWidth(value) {
-  const ratio = Math.min(1, value / 12);
-  return `${Math.max(8, ratio * 100)}%`;
+/** A solve-distribution bar that grows from 0 to its value on mount. */
+function StatBar({ value, index = 0, reducedMotion = false }) {
+  const target = Math.max(0.08, Math.min(1, value / 12));
+  const w = useRef(new Animated.Value(reducedMotion ? target : 0)).current;
+  useEffect(() => {
+    if (reducedMotion) return undefined;
+    const anim = Animated.timing(w, {
+      toValue: target,
+      duration: DURATION.scene,
+      delay: 180 + index * 60,
+      easing: EASE_OUT,
+      useNativeDriver: false,
+    });
+    anim.start();
+    return () => anim.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
+  const width = w.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  return <Animated.View style={[styles.barFill, { width }]} />;
 }
 
 export default function StatsScreen({ progress, onBack }) {
@@ -26,12 +44,17 @@ export default function StatsScreen({ progress, onBack }) {
   const failedCount = progress.failedCaseIds.length;
   const attemptedCount = solvedCount + failedCount;
   const accuracy = attemptedCount ? Math.round((solvedCount / attemptedCount) * 100) : 0;
+  const reducedMotion = !!progress?.settings?.reducedMotion;
 
   return (
     <ScreenSurface variant="default" accentColor={COLORS.accentPrimary} contentStyle={styles.surface}>
       <View style={styles.container}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
-        <Text style={styles.title}>Statistics</Text>
+        <Stagger reducedMotion={reducedMotion} distance={14}>
+        <View style={styles.titleBlock}>
+          <Text style={styles.eyebrow}>DETECTIVE RECORD</Text>
+          <Text style={styles.title}>STATISTICS</Text>
+        </View>
 
         <View style={styles.card}>
           <View style={styles.metricRow}>
@@ -58,16 +81,17 @@ export default function StatsScreen({ progress, onBack }) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Solve Distribution</Text>
-          {distributionOrder.map((key) => (
+          {distributionOrder.map((key, i) => (
             <View key={key} style={styles.distributionRow}>
               <Text style={styles.distributionLabel}>{distributionLabels[key]}</Text>
               <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: barWidth(progress.attemptsDistribution[key] || 0) }]} />
+                <StatBar value={progress.attemptsDistribution[key] || 0} index={i} reducedMotion={reducedMotion} />
               </View>
               <Text style={styles.distributionCount}>{progress.attemptsDistribution[key] || 0}</Text>
             </View>
           ))}
         </View>
+        </Stagger>
       </View>
     </ScreenSurface>
   );
@@ -83,18 +107,22 @@ const styles = StyleSheet.create({
       paddingVertical: SPACING.xl,
       gap: SPACING.lg,
     },
+  titleBlock: { gap: 2 },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   card: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: COLORS.panelOutline,
-    backgroundColor: COLORS.surfaceAlt,
+    borderLeftColor: COLORS.accentSecondary,
+    backgroundColor: 'rgba(0,0,0,0.30)',
     padding: SPACING.lg,
     gap: SPACING.md,
   },

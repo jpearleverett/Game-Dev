@@ -11,6 +11,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
+import Stagger from '../components/motion/Stagger';
+import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -161,6 +163,8 @@ export default function AchievementsScreen({
 }) {
   const { sizeClass, moderateScale, scaleSpacing } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const game = useGame();
+  const reducedMotion = !!game?.progress?.settings?.reducedMotion;
 
   // Expanded categories state
   const [expandedCategories, setExpandedCategories] = useState({
@@ -205,11 +209,13 @@ export default function AchievementsScreen({
       >
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
+        <Stagger reducedMotion={reducedMotion} distance={14}>
         <View style={styles.header}>
+          <Text style={styles.eyebrow}>COMMENDATIONS</Text>
           <Text style={[styles.title, { fontSize: moderateScale(compact ? FONT_SIZES.title : FONT_SIZES.display) }]}>
-            Achievements
+            ACHIEVEMENTS
           </Text>
-          <Text style={[styles.subtitle, { fontSize: moderateScale(FONT_SIZES.md) }]}>
+          <Text style={[styles.subtitle, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
             Your detective accomplishments
           </Text>
         </View>
@@ -317,6 +323,7 @@ export default function AchievementsScreen({
             </Text>
           </View>
         )}
+        </Stagger>
       </ScrollView>
     </ScreenSurface>
   );
@@ -333,20 +340,21 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   header: {
-    gap: SPACING.xs,
+    gap: 2,
   },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   subtitle: {
-    fontFamily: FONTS.primary,
-    fontSize: FONT_SIZES.md,
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    letterSpacing: 1.6,
+    letterSpacing: 2,
   },
   statsContainer: {
     flexDirection: 'row',
