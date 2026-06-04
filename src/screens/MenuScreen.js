@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
+import AtmosphereLayer from '../components/AtmosphereLayer';
 import Stagger from '../components/motion/Stagger';
 import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
@@ -38,11 +39,15 @@ export default function MenuScreen({
 
   return (
     <ScreenSurface variant="default" accentColor={COLORS.accentPrimary} contentStyle={styles.surface}>
+      <AtmosphereLayer reducedMotion={reducedMotion} glow="violet" />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
         <Stagger reducedMotion={reducedMotion} distance={14}>
-        <Text style={styles.title}>Menu</Text>
+        <View style={styles.titleBlock}>
+          <Text style={styles.eyebrow}>FIELD MANUAL</Text>
+          <Text style={styles.title}>MENU</Text>
+        </View>
 
         {/* Replayability Features Section */}
         <View style={styles.section}>
@@ -124,26 +129,31 @@ const styles = StyleSheet.create({
       paddingVertical: SPACING.xl,
       gap: SPACING.xl,
     },
+  titleBlock: { gap: 2 },
+  eyebrow: { fontFamily: FONTS.monoBold, fontSize: FONT_SIZES.xs, letterSpacing: 4, color: COLORS.accentSecondary, textTransform: 'uppercase' },
   title: {
     fontFamily: FONTS.secondaryBold,
     fontSize: FONT_SIZES.display,
-    color: COLORS.textPrimary,
-    letterSpacing: 3,
+    color: COLORS.offWhite,
+    letterSpacing: 4,
     textTransform: 'uppercase',
   },
   section: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: COLORS.panelOutline,
-    backgroundColor: COLORS.surfaceAlt,
+    borderLeftColor: COLORS.accentSecondary,
+    backgroundColor: 'rgba(0,0,0,0.28)',
     padding: SPACING.lg,
     gap: SPACING.sm,
   },
   sectionTitle: {
-    fontFamily: FONTS.secondaryBold,
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.textPrimary,
-    letterSpacing: 2,
+    fontFamily: FONTS.monoBold,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.accentSecondary,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
   },
   body: {
     fontFamily: FONTS.primary,
