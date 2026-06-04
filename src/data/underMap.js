@@ -247,7 +247,10 @@ export const resolveReading = (map, aId, bId, chosenRevelation = null) => {
     at: now,
   };
   const nodes = existingNode ? m.nodes : [node, ...m.nodes].slice(0, MAX_NODES);
-  const connections = [{ a: aId, b: bId, relationId: relation.id, at: now, unresolvedReading: !correctReading }, ...m.connections];
+  const connections = [
+    { a: aId, b: bId, relationId: relation.id, at: now, unresolvedReading: !correctReading, scope: node.scope },
+    ...m.connections,
+  ];
   return { map: { ...m, connections, nodes }, valid: true, node, revealed: { node }, alreadyConnected: false, correctReading, upgraded: false };
 };
 

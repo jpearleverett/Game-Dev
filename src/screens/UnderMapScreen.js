@@ -5,6 +5,7 @@ import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
 import DustLayer from '../components/DustLayer';
+import UnderMapConstellation from '../components/UnderMapConstellation';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../utils/haptics';
@@ -347,6 +348,18 @@ export default function UnderMapScreen({ navigation, route }) {
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+          {/* The map, taking shape — tap a star to load it into the bench */}
+          {map.fragments.length >= 2 ? (
+            <View style={styles.constellationWrap}>
+              <UnderMapConstellation
+                map={map}
+                height={200}
+                selectedIds={[slotA, slotB]}
+                onTapNode={loadSlot}
+              />
+            </View>
+          ) : null}
+
           {/* Connection bench */}
           <Text style={styles.sectionLabel}>PROBE A CONNECTION</Text>
           <View style={styles.bench}>
@@ -538,6 +551,10 @@ const styles = StyleSheet.create({
   keystoneText: { fontFamily: FONTS.monoBold, fontSize: 8.5, letterSpacing: 0.8, color: COLORS.amberLight || COLORS.accentSecondary },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
+  constellationWrap: {
+    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.panelOutline,
+    backgroundColor: 'rgba(8,6,12,0.5)', overflow: 'hidden', marginBottom: SPACING.lg,
+  },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
   // Bench
   bench: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
