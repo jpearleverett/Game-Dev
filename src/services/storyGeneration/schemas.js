@@ -110,7 +110,7 @@ export const SECOND_CHOICE_SCHEMA = {
           },
           summary: {
             type: 'string',
-            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g., "Jack confronts the suspect directly, learning the truth but alerting their accomplices."',
+            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g., "Jack presses the symbol into the wet brick and the threshold answers, but something on the other side now knows his name."',
           },
           details: {
             type: 'array',
@@ -494,7 +494,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront the suspect directly"' },
+            title: { type: 'string', description: 'A declarative BELIEF about the hidden world the player can commit to (3-8 words), e.g., "She is guiding you in". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
@@ -512,7 +512,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            title: { type: 'string', description: 'The opposed declarative BELIEF about the hidden world (3-8 words), e.g., "You are bait". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',

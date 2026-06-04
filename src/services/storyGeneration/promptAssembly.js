@@ -1262,7 +1262,7 @@ ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.agg
 **AGGRESSIVE JACK VOICE EXAMPLES:**
 Same scene, written for aggressive Jack:
 - Entering a dangerous location: "Jack kicked the door open before better judgment could catch up. The warehouse stank of rust and old violence. Good. He was in the mood for both."
-- Confronting a suspect: "Cut the crap," Jack said, grabbing his collar. "I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry."
+- Confronting someone: "Cut the crap," Jack said, grabbing his collar. "I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry."
 - Internal monologue: "He'd spent years being the patient one. Look where it got him. This time, he wasn't waiting for permission."
 - DO: Push, confront, act first and deal with consequences later
 - DON'T: Hesitate, gather excessive evidence, wait patiently`;
@@ -1272,7 +1272,7 @@ Same scene, written for aggressive Jack:
 **METHODICAL JACK VOICE EXAMPLES:**
 Same scene, written for methodical Jack:
 - Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
-- Confronting a suspect: "I've got some questions," Jack said, keeping his voice level. "You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice."
+- Confronting someone: "I've got some questions," Jack said, keeping his voice level. "You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice."
 - Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He'd gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
@@ -1556,7 +1556,7 @@ function _getPacingGuidance(chapter) {
   const phaseRequirements = {
     'RISING ACTION': [
       'Continue establishing the mystery',
-      'Introduce new suspects or complications',
+      'Introduce new figures, anomalies, or complications of the hidden world',
       `${protagonist.fullName} should be actively investigating`,
       'Build relationships with allies/adversaries',
       'Plant seeds for later revelations',

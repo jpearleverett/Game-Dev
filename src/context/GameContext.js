@@ -6,10 +6,6 @@ import { advanceWithDecision, advanceSubchapter, caseOrder } from '../utils/stor
 import {
   addClue as boardAddClue,
   addClues as boardAddClues,
-  addSuspects as boardAddSuspects,
-  setTheory as boardSetTheory,
-  recordAccusation as boardRecordAccusation,
-  touchBoard as boardTouch,
 } from '../data/caseBoard';
 import {
   makeFragment as umMakeFragment,
@@ -596,10 +592,6 @@ export function GameProvider({
 
   const addCaseClue = useCallback((clue) => _mutateCaseBoard((b) => boardAddClue(b, clue)), [_mutateCaseBoard]);
   const addCaseClues = useCallback((clues) => _mutateCaseBoard((b) => boardAddClues(b, clues)), [_mutateCaseBoard]);
-  const addCaseSuspects = useCallback((list) => _mutateCaseBoard((b) => boardAddSuspects(b, list)), [_mutateCaseBoard]);
-  const setCaseTheory = useCallback((theory) => _mutateCaseBoard((b) => boardSetTheory(b, theory)), [_mutateCaseBoard]);
-  const recordCaseAccusation = useCallback((acc) => _mutateCaseBoard((b) => boardRecordAccusation(b, acc)), [_mutateCaseBoard]);
-  const touchCaseBoard = useCallback(() => _mutateCaseBoard((b) => boardTouch(b)), [_mutateCaseBoard]);
 
   // ========== UNDER-MAP ==========
   // Functional updates (read latest at write time) so these never clobber a
@@ -893,10 +885,6 @@ export function GameProvider({
     // Case Board (deduction)
     addCaseClue,
     addCaseClues,
-    addCaseSuspects,
-    setCaseTheory,
-    recordCaseAccusation,
-    touchCaseBoard,
     ingestSceneFragments,
     connectUnderMap,
     recordUnderMapTheory,
@@ -910,10 +898,6 @@ export function GameProvider({
     updateGameplayStats,
     addCaseClue,
     addCaseClues,
-    addCaseSuspects,
-    setCaseTheory,
-    recordCaseAccusation,
-    touchCaseBoard,
     ingestSceneFragments,
     connectUnderMap,
     recordUnderMapTheory,
@@ -948,10 +932,6 @@ export function GameProvider({
     completeLogicPuzzle,
     addCaseClue,
     addCaseClues,
-    addCaseSuspects,
-    setCaseTheory,
-    recordCaseAccusation,
-    touchCaseBoard,
     ingestSceneFragments,
     connectUnderMap,
     recordUnderMapTheory,

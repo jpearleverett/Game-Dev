@@ -125,22 +125,22 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
     console.error('[StoryGenerationService] Failed to parse decision structure:', error);
     // Return a valid fallback structure
     return {
-      decisionContext: 'Jack faces an impossible choice.',
+      decisionContext: 'Jack faces an impossible choice about the hidden world.',
       decision: {
-        intro: 'The evidence points in two directions, and time is running out.',
+        intro: 'What he has seen forces a belief about the Under-Map, and the reading he commits to will shape what it shows him next.',
         optionA: {
           key: 'A',
-          title: 'Take direct action now',
-          focus: 'Prioritizes immediate resolution and confrontation. Risks escalating the situation before all facts are known.',
-          personalityAlignment: 'aggressive',
-          narrativeSetup: 'The tension builds to a breaking point where waiting feels impossible.',
+          title: 'The map is reaching for you',
+          focus: 'It believes the hidden world is drawing Jack in deliberately, that he is being chosen. Risks trusting something that may only be baiting him deeper.',
+          personalityAlignment: 'balanced',
+          narrativeSetup: 'The signs all seem aimed at him, too precise to be accident.',
         },
         optionB: {
           key: 'B',
-          title: 'Gather more evidence first',
-          focus: 'Prioritizes thorough investigation and certainty. Risks letting the trail go cold or enemies preparing.',
-          personalityAlignment: 'methodical',
-          narrativeSetup: 'New information suggests there may be more to uncover.',
+          title: 'You are a crack it leaks through',
+          focus: 'It believes Jack is an accident the hidden world is bleeding through, not an invitation. Risks treating a deliberate hand as mere chance.',
+          personalityAlignment: 'balanced',
+          narrativeSetup: 'The wrongness feels less like a summons and more like a wound.',
         },
       },
       keyMoments: ['Building tension', 'Key revelation', 'Forced choice'],
@@ -574,11 +574,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         hasBridgeText: !!generatedContent?.bridgeText,
         hasPreviously: !!generatedContent?.previously,
         hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
-        // Alibi-grid ground truth: confirms the deduction puzzle is story-rooted
-        // (vs. falling back to the local entity pool).
-        hasCaseFile: !!generatedContent?.caseFile,
-        caseFileSuspects: generatedContent?.caseFile?.suspects?.length || 0,
-        caseFileCulprit: generatedContent?.caseFile?.culprit || null,
+        // UNDER-MAP: how many collectable fragments + relations this scene surfaced.
+        fragments: Array.isArray(generatedContent?.fragments) ? generatedContent.fragments.length : 0,
+        relations: Array.isArray(generatedContent?.relations) ? generatedContent.relations.length : 0,
       }, 'debug');
 
       // ========== SECOND CALL: Generate path-specific decisions ==========
