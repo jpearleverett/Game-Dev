@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
-import Svg, { Path, Ellipse, Defs, LinearGradient as SvgGradient, Stop, RadialGradient } from 'react-native-svg';
+import Svg, { Path, Ellipse, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import ScreenSurface from '../components/ScreenSurface';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
@@ -52,7 +52,7 @@ function Starfield({ reducedMotion }) {
   );
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {stars.map((s) => <Twinkle key={s.key} {...s} reducedMotion={reducedMotion} />)}
+      {stars.map(({ key, ...rest }) => <Twinkle key={key} {...rest} reducedMotion={reducedMotion} />)}
     </View>
   );
 }
@@ -87,6 +87,25 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const map = useMemo(() => normalizeUnderMap(progress?.storyCampaign?.underMap), [progress?.storyCampaign?.underMap]);
 
+  // Spread fragments across the field like the design's star-field — a stable
+  // golden-angle (sunflower) distribution so stars fill the space evenly and
+  // never bunch up. Stable: keyed by sorted id, independent of collection order.
+  const placed = useMemo(() => {
+    const frags = [...map.fragments].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const N = Math.max(1, frags.length);
+    const GA = Math.PI * (3 - Math.sqrt(5));
+    const byId = {};
+    frags.forEach((f, i) => {
+      const r = Math.sqrt((i + 0.5) / N) * (N <= 1 ? 0 : 0.42);
+      const th = i * GA;
+      byId[f.id] = {
+        nx: Math.min(0.9, Math.max(0.1, 0.5 + r * Math.cos(th))),
+        ny: Math.min(0.9, Math.max(0.12, 0.46 + r * Math.sin(th))),
+      };
+    });
+    return byId;
+  }, [map.fragments]);
+
   useEffect(() => { touchUnderMap?.(); drawUnderMapDailyStir?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [field, setField] = useState({ w: 0, h: 0 });
@@ -111,11 +130,10 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const fragById = useCallback((id) => map.fragments.find((f) => f.id === id) || null, [map.fragments]);
   const posPx = useCallback((id) => {
-    const f = fragById(id);
-    if (!f || !field.w) return { x: 0, y: 0 };
-    const n = fragNorm(f);
-    return { x: n.nx * field.w, y: n.ny * field.h };
-  }, [fragById, field]);
+    const p = placed[id];
+    if (!p || !field.w) return { x: 0, y: 0 };
+    return { x: p.nx * field.w, y: p.ny * field.h };
+  }, [placed, field]);
 
   const arcPath = useCallback((aId, bId) => {
     const a = posPx(aId); const b = posPx(bId);
@@ -281,12 +299,7 @@ export default function UnderMapScreen({ navigation, route }) {
                 <Stop offset="0.5" stopColor={COLORS.underViolet} />
                 <Stop offset="1" stopColor={COLORS.underCyan} />
               </SvgGradient>
-              <RadialGradient id="hub" cx="50%" cy="42%" r="55%">
-                <Stop offset="0" stopColor="rgba(167,139,250,0.18)" />
-                <Stop offset="1" stopColor="rgba(167,139,250,0)" />
-              </RadialGradient>
             </Defs>
-            <Ellipse cx={field.w / 2} cy={field.h * 0.42} rx={field.w * 0.5} ry={field.h * 0.46} fill="url(#hub)" />
             {[0.22, 0.34, 0.46].map((r, i) => (
               <Ellipse key={i} cx={field.w / 2} cy={field.h * 0.42} rx={field.w * (r + 0.02)} ry={field.h * r}
                 fill="none" stroke="rgba(167,139,250,0.13)" strokeWidth="1" strokeDasharray="2 7" />
@@ -310,8 +323,8 @@ export default function UnderMapScreen({ navigation, route }) {
 
         {/* stars */}
         {field.w > 0 && map.fragments.map((f) => {
-          const n = fragNorm(f);
-          const x = n.nx * field.w; const y = n.ny * field.h;
+          const p = placed[f.id] || { nx: 0.5, ny: 0.5 };
+          const x = p.nx * field.w; const y = p.ny * field.h;
           const kc = colorFor(f.kind);
           const isSel = selected.includes(f.id);
           const mapped = connectionList.some((c) => c.a === f.id || c.b === f.id);
@@ -440,8 +453,8 @@ const styles = StyleSheet.create({
   star: { position: 'absolute', width: 90, alignItems: 'center', paddingTop: 0, gap: 8, zIndex: 3 },
   starGlow: { position: 'absolute', top: -3 },
   starCore: {
-    width: 12, height: 12, borderRadius: 6,
-    shadowOpacity: 0.95, shadowRadius: 9, shadowOffset: { width: 0, height: 0 }, elevation: 6,
+    width: 13, height: 13, borderRadius: 7,
+    shadowOpacity: 1, shadowRadius: 13, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
   starCoreSel: { transform: [{ scale: 1.4 }], borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)' },
   starLabel: { fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
