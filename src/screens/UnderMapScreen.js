@@ -33,7 +33,7 @@ import { SPACING, RADIUS } from '../constants/layout';
 const KIND_META = {
   [FRAGMENT_KIND.SYMBOL]: { icon: 'star-four-points-outline', color: COLORS.accentSecondary, label: 'SYMBOL' },
   [FRAGMENT_KIND.PLACE]: { icon: 'map-marker-outline', color: COLORS.accentCyan, label: 'PLACE' },
-  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.bloodRed, label: 'PERSON' },
+  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.kindPerson, label: 'PERSON' },
   [FRAGMENT_KIND.PHENOMENON]: { icon: 'shimmer', color: COLORS.accentViolet, label: 'ANOMALY' },
 };
 const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];

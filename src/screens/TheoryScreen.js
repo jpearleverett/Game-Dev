@@ -29,7 +29,7 @@ import { SPACING, RADIUS } from '../constants/layout';
 const KIND_META = {
   [FRAGMENT_KIND.SYMBOL]: { icon: 'star-four-points-outline', color: COLORS.accentSecondary },
   [FRAGMENT_KIND.PLACE]: { icon: 'map-marker-outline', color: COLORS.accentCyan },
-  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.bloodRed },
+  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.kindPerson },
   [FRAGMENT_KIND.PHENOMENON]: { icon: 'shimmer', color: COLORS.accentViolet },
 };
 const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];

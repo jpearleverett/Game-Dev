@@ -10,13 +10,14 @@ import { useAudioOptional } from '../context/AudioContext';
 
 const VARIANTS = {
   primary: {
-    idle: [COLORS.accentPrimary, '#a14a43'],
-    pressed: ['#a14a43', '#7f3733'],
+    // btn-coral from the design: coral-bright -> coral, dark-ink label.
+    idle: [COLORS.coralBright, COLORS.coral],
+    pressed: [COLORS.coral, '#b14e3f'],
     disabled: ['#2b2a32', '#242329'],
-    shadow: COLORS.accentSoft,
-    text: COLORS.offWhite,
+    shadow: 'rgba(224,113,95,0.34)',
+    text: '#2a120c',
     textDisabled: 'rgba(246, 236, 219, 0.5)',
-    glyph: COLORS.textSecondary,
+    glyph: '#2a120c',
     glyphDisabled: 'rgba(214, 201, 186, 0.52)',
   },
 };

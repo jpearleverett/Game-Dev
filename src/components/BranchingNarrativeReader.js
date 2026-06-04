@@ -61,17 +61,18 @@ const PAGE_TYPES = {
 
 // Inline tappable phrase component
 // EXAMINE: ink-tones for fragment kinds, tuned to read on the aged-paper texture.
+// Anomaly inks matched to the design's k-text-* values (on aged paper).
 const KIND_INK = {
-  symbol: '#9a6b00',
-  place: '#1f6f7a',
-  person: '#8a2a22',
-  phenomenon: '#5b3a8a',
+  symbol: '#97681a',
+  place: '#2f6f7e',
+  person: '#9a3b2e',
+  phenomenon: '#6a4aa0',
 };
 const KIND_TINT = {
-  symbol: 'rgba(154,107,0,0.16)',
-  place: 'rgba(31,111,122,0.16)',
-  person: 'rgba(138,42,34,0.16)',
-  phenomenon: 'rgba(91,58,138,0.16)',
+  symbol: 'rgba(151,104,26,0.16)',
+  place: 'rgba(47,111,126,0.16)',
+  person: 'rgba(154,59,46,0.16)',
+  phenomenon: 'rgba(106,74,160,0.16)',
 };
 
 const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
