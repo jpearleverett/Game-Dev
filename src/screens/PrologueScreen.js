@@ -75,7 +75,7 @@ export default function PrologueScreen({ onBegin, reducedMotion = false }) {
   }, [reducedMotion]);
 
   return (
-    <ScreenSurface variant="default">
+    <ScreenSurface variant="default" glow="violet">
       <View style={styles.header}>
         <View style={styles.headerRow}>
             <MaterialCommunityIcons name="email-alert-outline" size={24} color={COLORS.cigaretteSmoke} />
