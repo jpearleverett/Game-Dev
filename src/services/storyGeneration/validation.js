@@ -124,6 +124,8 @@ class ValidationMethods {
         // connect to reveal the hidden world.
         fragments: this._normalizeFragments(parsed.fragments),
         relations: this._normalizeRelations(parsed.relations),
+        // UNDER-MAP ECHO: callbacks to truths the player already revealed.
+        echoes: this._normalizeEchoes(parsed.echoes),
         pathDecisions: null,
       };
 
@@ -373,6 +375,21 @@ class ValidationMethods {
         : [];
       out.push({ aLabel, bLabel, revelation, falseReadings });
       if (out.length >= 8) break;
+    }
+    return out;
+  }
+
+  /** UNDER-MAP ECHO: normalize callbacks to truths the player already revealed. */
+  _normalizeEchoes(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    for (const e of raw) {
+      if (!e) continue;
+      const line = String(e.line || '').trim();
+      if (!line) continue;
+      const nodeRef = String(e.nodeRef || '').trim();
+      out.push(nodeRef ? { nodeRef, line } : { line });
+      if (out.length >= 2) break;
     }
     return out;
   }

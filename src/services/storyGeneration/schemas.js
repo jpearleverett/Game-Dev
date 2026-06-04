@@ -382,6 +382,22 @@ export const STORY_CONTENT_SCHEMA = {
         required: ['aLabel', 'bLabel', 'revelation'],
       },
     },
+    // UNDER-MAP ECHO: make the player FEEL their mapping shaped the story. When
+    // this scene builds on a truth the player already revealed (listed in
+    // <under_map_state>), name the callback so the UI can surface it.
+    echoes: {
+      type: 'array',
+      description: 'If THIS scene builds on a truth the player has ALREADY revealed on their Under-Map (see <under_map_state>), add up to 2 callbacks. Omit entirely if this scene does not build on a prior discovery.',
+      items: {
+        type: 'object',
+        properties: {
+          nodeRef: { type: 'string', description: 'The revealed truth this scene builds on — quote it closely from the list in <under_map_state>.' },
+          line: { type: 'string', description: 'The single in-fiction sentence in THIS scene that pays that discovery off.' },
+        },
+        required: ['line'],
+      },
+      maxItems: 2,
+    },
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };

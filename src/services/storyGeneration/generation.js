@@ -1109,6 +1109,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         // board never populated for generated chapters.)
         fragments: Array.isArray(generatedContent.fragments) ? generatedContent.fragments : [],
         relations: Array.isArray(generatedContent.relations) ? generatedContent.relations : [],
+        // UNDER-MAP ECHO: callbacks tying this scene to truths the player revealed.
+        echoes: Array.isArray(generatedContent.echoes) ? generatedContent.echoes : [],
         board: shouldGenerateBoard
           ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
           : null,

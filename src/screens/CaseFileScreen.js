@@ -324,6 +324,16 @@ export default function CaseFileScreen({
     [storyMeta?.relations],
   );
 
+  // UNDER-MAP ECHO: callbacks tying this scene to truths the player already
+  // revealed. Only shown when the player actually HAS revealed something — so a
+  // player who skipped the connections never sees "this follows from what you mapped."
+  const sceneEchoes = useMemo(
+    () => (Array.isArray(storyMeta?.echoes) ? storyMeta.echoes.filter((e) => e && e.line) : []),
+    [storyMeta?.echoes],
+  );
+  const hasRevealedNodes = (storyCampaign?.underMap?.nodes?.length || 0) > 0;
+  const showEcho = isStoryMode && hasRevealedNodes && sceneEchoes.length > 0;
+
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
   const examinableDetails = useMemo(() => {
@@ -1093,6 +1103,26 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
+                {/* UNDER-MAP ECHO — the loop made visible: this scene follows from what you mapped */}
+                {showEcho && (
+                  <View
+                    style={[
+                      styles.echoCard,
+                      { borderRadius: scaleRadius(RADIUS.lg), borderColor: palette.border, padding: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.xs) },
+                    ]}
+                  >
+                    <Text style={[styles.echoKicker, { color: palette.accent, fontSize: slugSize }]}>↳ THIS FOLLOWS FROM WHAT YOU MAPPED</Text>
+                    {sceneEchoes.map((e, i) => (
+                      <View key={i} style={{ gap: 2 }}>
+                        {e.nodeRef ? (
+                          <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>“{e.nodeRef}”</Text>
+                        ) : null}
+                        <Text style={[styles.echoLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>{e.line}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 {/* Narrative Section - Branching or Linear */}
                 {hasBranchingNarrative ? (
                   <View style={styles.narrativeSection}>
@@ -1328,6 +1358,10 @@ const styles = StyleSheet.create({
   choiceSignalLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   choiceSignalBody: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.6 },
   narrativeSection: { position: "relative", overflow: "visible" },
+  echoCard: { borderWidth: 1, backgroundColor: "rgba(20, 12, 4, 0.78)" },
+  echoKicker: { fontFamily: FONTS.monoBold, letterSpacing: 1.6, textTransform: "uppercase" },
+  echoFrom: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.4 },
+  echoLine: { fontFamily: FONTS.primary, letterSpacing: 0.4 },
   storyPromptCard: { borderWidth: 1, backgroundColor: "rgba(8, 4, 2, 0.86)" },
   storyPromptLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   storyPromptBody: { fontFamily: FONTS.primary, letterSpacing: 0.6 },

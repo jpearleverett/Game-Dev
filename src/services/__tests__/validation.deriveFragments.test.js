@@ -111,3 +111,57 @@ describe('_parseGeneratedContent populates fragments end-to-end (the bug: none a
     expect(labels).toEqual(expect.arrayContaining(['A black envelope', 'The Seal']));
   });
 });
+
+describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
+  const baseBN = {
+    opening: { text: 'x', details: [] },
+    firstChoice: { options: [] },
+    secondChoices: [],
+  };
+
+  test('relations carry falseReadings (choose-the-truth decoys)', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      relations: [
+        {
+          aLabel: 'The seal', bLabel: 'The ink',
+          revelation: 'Both answer to rules ink and wax do not obey.',
+          falseReadings: ['A client used fancy materials.', 'A printing trick, nothing more.'],
+        },
+      ],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.relations[0].falseReadings).toEqual([
+      'A client used fancy materials.',
+      'A printing trick, nothing more.',
+    ]);
+  });
+
+  test('relations without falseReadings normalize to an empty array (clean reveal)', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      relations: [{ aLabel: 'A', bLabel: 'B', revelation: 'They are one.' }],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.relations[0].falseReadings).toEqual([]);
+  });
+
+  test('echoes survive parsing and drop entries with no line', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: baseBN,
+      echoes: [
+        { nodeRef: 'The ink marks who carries it.', line: 'The silver was on the ledger again.' },
+        { nodeRef: 'orphan with no line' },
+      ],
+    };
+    const out = validationMethods._parseGeneratedContent(content, false);
+    expect(out.echoes).toHaveLength(1);
+    expect(out.echoes[0]).toEqual({
+      nodeRef: 'The ink marks who carries it.',
+      line: 'The silver was on the ledger again.',
+    });
+  });
+});

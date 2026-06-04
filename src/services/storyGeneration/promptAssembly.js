@@ -351,6 +351,7 @@ function _buildPlayerTheorySection(underMap) {
     '- RE-SURFACE a recurring motif when it fits: reuse the EXACT label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
     '- For EACH relation, also author its two `falseReadings`: tempting-but-FALSE one-sentence interpretations of the same pair that a careful player might wrongly believe (the player must pick the true reading from among them — make the wrong ones plausible, never absurd).',
     '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
+    '- ECHO: when this scene builds on one of the truths the player has ALREADY revealed (listed above), add an `echoes` entry — `nodeRef` quoting that truth, `line` = the exact sentence in THIS scene that pays it off — so the player SEES their mapping reshaping the story.',
   ].join('\n');
 }
 
