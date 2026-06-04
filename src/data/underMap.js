@@ -296,7 +296,54 @@ export const recordTheory = (map, theory) => {
   };
 };
 
+/**
+ * Resolve a sealed belief once the story bears it out (Move 3). Marks the named
+ * chapter's still-unresolved theory correct/incorrect — wrong beliefs are NOT a
+ * fail-state, they just steer the player down the clarity spectrum.
+ */
+export const resolveTheory = (map, chapter, correct) => {
+  const m = normalizeUnderMap(map);
+  let changed = false;
+  const theories = m.theories.map((t) => {
+    if (t.chapter === chapter && t.correct == null) {
+      changed = true;
+      return { ...t, correct: !!correct };
+    }
+    return t;
+  });
+  return changed ? { ...m, theories } : m;
+};
+
 export const touchUnderMap = (map) => ({ ...normalizeUnderMap(map), lastVisitedAt: new Date().toISOString() });
+
+// ---- Clarity / Worldview & ending spectrum (Move 3, see docs §5) ----------
+
+export const CLARITY_TRUE = 0.66;    // >= -> the Clear-Eyed ("true") ending
+export const CLARITY_PARTIAL = 0.33; // >= -> Half-Blind; below -> Deceived
+
+/**
+ * How truly the player sees the Under-Map: the share of their RESOLVED beliefs
+ * that proved correct. Returns { resolved, correct, ratio }.
+ */
+export const clarity = (map) => {
+  const m = normalizeUnderMap(map);
+  const resolved = m.theories.filter((t) => t.correct != null);
+  const correct = resolved.filter((t) => t.correct).length;
+  return { resolved: resolved.length, correct, ratio: resolved.length ? correct / resolved.length : 0 };
+};
+
+/**
+ * The ending variant the player's accumulated clarity steers toward. The
+ * specific terminal scene within a variant is further colored by final-act
+ * belief flavor (wired at the endgame). 'unproven' until any belief resolves.
+ */
+export const endingVariant = (map) => {
+  const { resolved, ratio } = clarity(map);
+  if (!resolved) return 'unproven';
+  if (ratio >= CLARITY_TRUE) return 'clear';
+  if (ratio >= CLARITY_PARTIAL) return 'half';
+  return 'deceived';
+};
 
 // ---- selectors -----------------------------------------------------------
 

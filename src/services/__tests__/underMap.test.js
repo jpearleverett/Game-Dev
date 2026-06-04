@@ -11,6 +11,9 @@ import {
   readingChoices,
   recordDescent,
   recordTheory,
+  resolveTheory,
+  clarity,
+  endingVariant,
   fragmentCount,
   revealedNodeCount,
   areConnected,
@@ -293,5 +296,54 @@ describe('underMap — deduction', () => {
     expect(r.valid).toBe(true);
     expect(r.revealed.node.revelation).toBe('The ink marks who carries it.');
     expect(r.revealed.node.unresolvedReading).toBe(false); // auto-resolves the truth
+  });
+});
+
+// ---- Move 3: belief truth + Clarity + ending spectrum -----------------------
+
+describe('underMap — clarity & endings', () => {
+  const sealed = (chapter, interpretation) =>
+    recordTheory(createBlankUnderMap(), { chapter, fragmentIds: ['a'], interpretation });
+
+  test('resolveTheory marks the chapter belief and only the first unresolved one', () => {
+    let m = sealed(1, 'It guides you in.');
+    expect(clarity(m)).toEqual({ resolved: 0, correct: 0, ratio: 0 });
+    m = resolveTheory(m, 1, true);
+    expect(m.theories[0].correct).toBe(true);
+    // An already-resolved belief is not flipped by a later resolve.
+    expect(resolveTheory(m, 1, false).theories[0].correct).toBe(true);
+  });
+
+  test('clarity ratio reflects correct vs resolved beliefs', () => {
+    let m = createBlankUnderMap();
+    m = recordTheory(m, { chapter: 1, fragmentIds: ['a'], interpretation: 'x' });
+    m = recordTheory(m, { chapter: 2, fragmentIds: ['b'], interpretation: 'y' });
+    m = recordTheory(m, { chapter: 3, fragmentIds: ['c'], interpretation: 'z' });
+    m = resolveTheory(m, 1, true);
+    m = resolveTheory(m, 2, true);
+    m = resolveTheory(m, 3, false);
+    expect(clarity(m)).toEqual({ resolved: 3, correct: 2, ratio: 2 / 3 });
+  });
+
+  test('endingVariant follows the locked clarity spectrum', () => {
+    expect(endingVariant(createBlankUnderMap())).toBe('unproven');
+
+    // 2/3 correct -> >= 0.66 -> Clear-Eyed.
+    let clear = createBlankUnderMap();
+    [1, 2, 3].forEach((c) => { clear = recordTheory(clear, { chapter: c, fragmentIds: ['a'], interpretation: 'x' }); });
+    clear = resolveTheory(resolveTheory(resolveTheory(clear, 1, true), 2, true), 3, false);
+    expect(endingVariant(clear)).toBe('clear');
+
+    // 1/3 correct -> >= 0.33 -> Half-Blind.
+    let half = createBlankUnderMap();
+    [1, 2, 3].forEach((c) => { half = recordTheory(half, { chapter: c, fragmentIds: ['a'], interpretation: 'x' }); });
+    half = resolveTheory(resolveTheory(resolveTheory(half, 1, true), 2, false), 3, false);
+    expect(endingVariant(half)).toBe('half');
+
+    // 0/2 correct -> Deceived.
+    let deceived = createBlankUnderMap();
+    [1, 2].forEach((c) => { deceived = recordTheory(deceived, { chapter: c, fragmentIds: ['a'], interpretation: 'x' }); });
+    deceived = resolveTheory(resolveTheory(deceived, 1, false), 2, false);
+    expect(endingVariant(deceived)).toBe('deceived');
   });
 });
