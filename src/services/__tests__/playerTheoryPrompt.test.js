@@ -1,0 +1,80 @@
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(async () => null),
+  setItem: jest.fn(async () => null),
+  removeItem: jest.fn(async () => null),
+}));
+jest.mock('../LLMService', () => ({
+  llmService: { init: jest.fn(), isConfigured: jest.fn(() => true), complete: jest.fn(async () => ({ content: '{}' })) },
+}));
+jest.mock('../../storage/generatedStoryStorage', () => ({ saveStoryContext: jest.fn(async () => true) }));
+
+import { promptAssemblyMethods } from '../storyGeneration/promptAssembly';
+import {
+  createBlankUnderMap,
+  addFragments,
+  addRelations,
+  connectFragments,
+  recordTheory,
+  fragmentId,
+} from '../../data/underMap';
+import { getPuzzleMode, getPuzzleRouteName, PUZZLE_MODE } from '../../utils/puzzleMode';
+
+const build = (um) => promptAssemblyMethods._buildPlayerTheorySection(um);
+
+describe('_buildPlayerTheorySection', () => {
+  test('empty / invalid map yields no section', () => {
+    expect(build(null)).toBe('');
+    expect(build(createBlankUnderMap())).toBe('');
+    expect(build({})).toBe('');
+  });
+
+  test('surfaces sealed theory, staked fragments, revealed nodes, and examined fragments', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [
+      { label: 'The shifting seal', kind: 'symbol', detail: 'wax that never warmed' },
+      { label: 'Silver ink', kind: 'phenomenon', detail: 'it moves in the light' },
+    ]);
+    m = addRelations(m, [
+      { aLabel: 'The shifting seal', bLabel: 'Silver ink', revelation: 'Both are made to be seen only by Jack.' },
+    ]);
+    const sealId = fragmentId('symbol', 'The shifting seal');
+    const inkId = fragmentId('phenomenon', 'Silver ink');
+    const res = connectFragments(m, sealId, inkId);
+    expect(res.valid).toBe(true);
+    m = res.map;
+    m = recordTheory(m, { chapter: 1, fragmentIds: [sealId, inkId], interpretation: 'The Under-Map is signalling to me directly.' });
+
+    const out = build(m);
+    expect(out).toContain('SEALED');
+    expect(out).toContain('The Under-Map is signalling to me directly.');
+    expect(out).toContain('The shifting seal');
+    expect(out).toContain('Silver ink');
+    expect(out).toContain('made to be seen only by Jack');
+    expect(out).toContain('NOT a whodunit');
+    // Cross-chapter weaving + motif instructions must be present so the model
+    // links new anomalies to ones the player already holds.
+    expect(out).toContain('ALREADY HOLDS');
+    expect(out).toContain('WEAVING');
+    expect(out.toLowerCase()).toContain('recurring motif');
+    // Fragment kinds are tagged so the model can reference them precisely.
+    expect(out).toContain('[SYMBOL]');
+  });
+});
+
+describe('puzzle mode routing (CONNECT / THEORY)', () => {
+  test('A/B beats route to the Under-Map CONNECT beat', () => {
+    expect(getPuzzleMode('001A', true)).toBe(PUZZLE_MODE.CONNECT);
+    expect(getPuzzleMode('003B', true)).toBe(PUZZLE_MODE.CONNECT);
+    expect(getPuzzleRouteName(PUZZLE_MODE.CONNECT)).toBe('UnderMap');
+  });
+
+  test('C beats route to the THEORY climax', () => {
+    expect(getPuzzleMode('001C', true)).toBe(PUZZLE_MODE.THEORY);
+    expect(getPuzzleMode('007C', true)).toBe(PUZZLE_MODE.THEORY);
+    expect(getPuzzleRouteName(PUZZLE_MODE.THEORY)).toBe('Theory');
+  });
+
+  test('non-story mode stays on the evidence board', () => {
+    expect(getPuzzleMode('001A', false)).toBe(PUZZLE_MODE.EVIDENCE);
+  });
+});

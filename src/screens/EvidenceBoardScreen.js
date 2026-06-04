@@ -32,7 +32,8 @@ import StringLayer from "../components/evidence-board/StringLayer";
 import { COLORS } from "../constants/colors";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { RADIUS, SPACING } from "../constants/layout";
-import { GAME_STATUS } from "../context/GameContext";
+import { GAME_STATUS, useGame } from "../context/GameContext";
+import { CLUE_SOURCE, CLUE_WEIGHT } from "../data/caseBoard";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { getBoardProfile } from "../utils/caseNumbers";
 import {
@@ -243,6 +244,30 @@ export default function EvidenceBoardScreen({
   const solved = status === GAME_STATUS.SOLVED;
   const failed = status === GAME_STATUS.FAILED;
   const inProgress = status === GAME_STATUS.IN_PROGRESS;
+
+  // DEDUCTION-FIRST: when the player cracks the board, the anomalies they
+  // surfaced (the outliers) get pinned to the Case Board as leads. Idempotent
+  // by clue id, so re-renders / re-entry never double-pin.
+  const { addCaseClues } = useGame();
+  const cluesCapturedRef = useRef(false);
+  useEffect(() => {
+    if (!solved || cluesCapturedRef.current) return;
+    const outliers = Array.isArray(activeCase?.board?.outlierWords) ? activeCase.board.outlierWords : [];
+    if (!outliers.length) return;
+    cluesCapturedRef.current = true;
+    const summaries = activeCase?.clueSummaries?.outliers || {};
+    const chapter = parseInt(String(activeCase?.caseNumber || "001").slice(0, 3), 10) || null;
+    addCaseClues?.(
+      outliers.filter(Boolean).map((word) => ({
+        label: String(word),
+        detail: summaries[word] || summaries[String(word).toUpperCase()] || "",
+        source: CLUE_SOURCE.BOARD,
+        weight: CLUE_WEIGHT.MAJOR,
+        caseNumber: activeCase?.caseNumber || null,
+        chapter,
+      })),
+    );
+  }, [solved, activeCase, addCaseClues]);
   const hintsActive = hintsEnabled && premiumUnlocked;
   const normalizedSolvedCaseIds = useMemo(() => Array.isArray(solvedCaseIds) ? solvedCaseIds.filter((id) => typeof id === "number" && Number.isFinite(id)) : [], [solvedCaseIds]);
   const casePool = useMemo(() => Array.isArray(cases) && cases.length ? cases : activeCase ? [activeCase] : [], [cases, activeCase]);

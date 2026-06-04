@@ -5,10 +5,14 @@ import { buildMasterSystemPrompt, buildPathDecisionsSystemPrompt, PATHDECISIONS_
 import { fillTemplate } from './helpers';
 import {
   DECISION_CONTENT_SCHEMA,
+  DECISION_CONTENT_LAYER1_SCHEMA,
   DECISION_ONLY_SCHEMA,
   PATHDECISIONS_ONLY_SCHEMA,
   STORY_CONTENT_SCHEMA,
+  STORY_CONTENT_LAYER1_SCHEMA,
+  SECOND_CHOICE_RESPONSES_SCHEMA,
 } from './schemas';
+import { isLayer1Partial, mergeSecondChoiceResponses } from './lazyBranching';
 import {
   DECISION_SUBCHAPTER,
   MAX_RETRIES,
@@ -121,22 +125,22 @@ Generate the decision structure FIRST. This will guide the narrative that leads 
     console.error('[StoryGenerationService] Failed to parse decision structure:', error);
     // Return a valid fallback structure
     return {
-      decisionContext: 'Jack faces an impossible choice.',
+      decisionContext: 'Jack faces an impossible choice about the hidden world.',
       decision: {
-        intro: 'The evidence points in two directions, and time is running out.',
+        intro: 'What he has seen forces a belief about the Under-Map, and the reading he commits to will shape what it shows him next.',
         optionA: {
           key: 'A',
-          title: 'Take direct action now',
-          focus: 'Prioritizes immediate resolution and confrontation. Risks escalating the situation before all facts are known.',
-          personalityAlignment: 'aggressive',
-          narrativeSetup: 'The tension builds to a breaking point where waiting feels impossible.',
+          title: 'The map is reaching for you',
+          focus: 'It believes the hidden world is drawing Jack in deliberately, that he is being chosen. Risks trusting something that may only be baiting him deeper.',
+          personalityAlignment: 'balanced',
+          narrativeSetup: 'The signs all seem aimed at him, too precise to be accident.',
         },
         optionB: {
           key: 'B',
-          title: 'Gather more evidence first',
-          focus: 'Prioritizes thorough investigation and certainty. Risks letting the trail go cold or enemies preparing.',
-          personalityAlignment: 'methodical',
-          narrativeSetup: 'New information suggests there may be more to uncover.',
+          title: 'You are a crack it leaks through',
+          focus: 'It believes Jack is an accident the hidden world is bleeding through, not an invitation. Risks treating a deliberate hand as mere chance.',
+          personalityAlignment: 'balanced',
+          narrativeSetup: 'The wrongness feels less like a summons and more like a wound.',
         },
       },
       keyMoments: ['Building tension', 'Key revelation', 'Forced choice'],
@@ -242,6 +246,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // Store branchingChoices on instance so helper functions can access player's actual path
   // This enables _getPathDecisionData to look up path-specific decisions correctly
   this.currentBranchingChoices = branchingChoices;
+
+  // Store the player's Under-Map (collected fragments, revealed nodes, sealed
+  // theory) so _buildPlayerTheorySection can weave the next scene into it.
+  this.currentUnderMap = options?.underMap || null;
 
   // Deduplication: Return existing promise if generation is already in flight for this exact content
   // But first check if the cached promise is stale (older than 3 minutes) - if so, discard it
@@ -356,7 +364,20 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       // Decision schema has decision field BEFORE narrative, so decision is generated first
       // This eliminates the need for two-pass generation while ensuring complete decisions
 
-      const schema = isDecisionPoint ? DECISION_CONTENT_SCHEMA : STORY_CONTENT_SCHEMA;
+      // LAZY BRANCHING (opt-in): generate only opening + firstChoice + second-
+      // choice labels now; the 3 response bodies are filled on demand
+      // (generateSecondChoiceResponses) when the player picks a first choice.
+      // Applies to A/B and C subchapters (C keeps its decision + pathDecisions).
+      const _baseQ = GENERATION_CONFIG?.qualitySettings || {};
+      const _overrideQ = options?.qualitySettingsOverride || {};
+      const lazyBranchGeneration = typeof _overrideQ.lazyBranchGeneration === 'boolean'
+        ? _overrideQ.lazyBranchGeneration
+        : (typeof _baseQ.lazyBranchGeneration === 'boolean' ? _baseQ.lazyBranchGeneration : false);
+      const useLazyBranching = lazyBranchGeneration;
+
+      const schema = isDecisionPoint
+        ? (useLazyBranching ? DECISION_CONTENT_LAYER1_SCHEMA : DECISION_CONTENT_SCHEMA)
+        : (useLazyBranching ? STORY_CONTENT_LAYER1_SCHEMA : STORY_CONTENT_SCHEMA);
       let response;
 
       // Try cached generation first (works in both proxy and direct mode)
@@ -440,10 +461,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           options: {
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
-            thinkingConfig: {
-              includeThoughts: process.env.INCLUDE_THOUGHTS === 'true', // Enable in dev to debug mystery logic
-              thinkingLevel: 'high', // Maximize reasoning depth for complex narrative generation
-            }
+            // Core narrative: 'medium' for richer, fuller prose (the main scene
+            // the player reads). Path-decisions/personality/etc. stay 'low' for
+            // speed since they're shorter, structural calls.
+            thinkingLevel: 'medium',
           },
         });
       } catch (cacheError) {
@@ -553,6 +574,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         hasBridgeText: !!generatedContent?.bridgeText,
         hasPreviously: !!generatedContent?.previously,
         hasPuzzleCandidates: Array.isArray(generatedContent?.puzzleCandidates),
+        // UNDER-MAP: how many collectable fragments + relations this scene surfaced.
+        fragments: Array.isArray(generatedContent?.fragments) ? generatedContent.fragments.length : 0,
+        relations: Array.isArray(generatedContent?.relations) ? generatedContent.relations.length : 0,
       }, 'debug');
 
       // ========== SECOND CALL: Generate path-specific decisions ==========
@@ -698,6 +722,14 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           console.log(`  - Base decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
           console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (uses summaries, not full narrative)`);
 
+          // UNDER-MAP: weave the next chapter's decisions around the living map —
+          // the fragments collected, truths revealed, and theory sealed.
+          let basePathPrompt = pathDecisionsPrompt;
+          const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap);
+          if (pdTheory) {
+            basePathPrompt = `${basePathPrompt}\n\n<under_map_state>\n${pdTheory}\n</under_map_state>`;
+          }
+
           // Single user message - start fresh conversation for pathDecisions
           //
           // Why we don't use the thoughtSignature from the first call:
@@ -712,7 +744,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           // safety filter. Using short summaries (15-25 words each) instead of full
           // narrative excerpts (~300 words each) provides necessary context without
           // triggering the safety filter.
-          const messages = [{ role: 'user', content: pathDecisionsPrompt }];
+          const messages = [{ role: 'user', content: basePathPrompt }];
 
           const pathDecisionsStartTime = Date.now();
 
@@ -730,9 +762,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
                 systemPrompt: buildPathDecisionsSystemPrompt(),
                 maxTokens: GENERATION_CONFIG.maxTokens.pathDecisions, // 16k tokens for complex branching + thinking
                 responseSchema: PATHDECISIONS_ONLY_SCHEMA,
-                // Use 'high' thinkingLevel for complex multi-path reasoning per Gemini 3 best practices
-                // This task requires understanding 9 different player journeys and deriving unique decisions
-                thinkingLevel: 'high',
+                // 'low' thinking for fast multi-path decision generation.
+                thinkingLevel: 'low',
                 traceId: traceId + '-pathDecisions' + (retryAttempt > 0 ? `-retry${retryAttempt}` : ''),
                 requestContext: {
                   caseNumber,
@@ -751,7 +782,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
               console.warn(`[StoryGenerationService] ⚠️ RECITATION detected on pathDecisions (attempt ${retryAttempt}/${MAX_PATHDECISIONS_RETRIES})`);
               if (retryAttempt < MAX_PATHDECISIONS_RETRIES) {
                 // Add uniqueness hint to prompt for retry
-                messages[0].content = pathDecisionsPrompt + `\n\nIMPORTANT: Generate ORIGINAL decision variants. Each path should have unique framing. Attempt ${retryAttempt + 1}.`;
+                messages[0].content = basePathPrompt + `\n\nIMPORTANT: Generate ORIGINAL decision variants. Each path should have unique framing. Attempt ${retryAttempt + 1}.`;
                 await new Promise(r => setTimeout(r, 1000)); // Brief delay before retry
               }
             } else {
@@ -900,7 +931,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       };
       const enableProseQualityValidation = resolveQualityFlag('enableProseQualityValidation');
       const enableSentenceVarietyValidation = resolveQualityFlag('enableSentenceVarietyValidation');
-      const enableLLMValidation = resolveQualityFlag('enableLLMValidation');
+      // Post-generation LLM validation disabled for now: it adds a serial ~5s LLM
+      // call after every subchapter. Regex/prose checks below still run. To
+      // re-enable, restore: resolveQualityFlag('enableLLMValidation').
+      const enableLLMValidation = false;
 
       // ========== A+ QUALITY VALIDATION (Warnings Only - Don't Block Generation) ==========
       // These validators provide feedback but should NOT cause generation failures.
@@ -1070,6 +1104,11 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         briefing: generatedContent.briefing || { summary: '', objectives: [] },
         pathDecisions: isDecisionPoint ? generatedContent.pathDecisions : null,
         decision: isDecisionPoint ? generatedContent.decision : null,
+        // UNDER-MAP / EXAMINE: carry the scene's collectable fragments + relations
+        // onto the stored entry. (This whitelist previously dropped them, so the
+        // board never populated for generated chapters.)
+        fragments: Array.isArray(generatedContent.fragments) ? generatedContent.fragments : [],
+        relations: Array.isArray(generatedContent.relations) ? generatedContent.relations : [],
         board: shouldGenerateBoard
           ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
           : null,
@@ -1251,6 +1290,73 @@ async function generateChapter(chapter, pathKey, choiceHistory = []) {
   return results;
 }
 
+/**
+ * LAZY BRANCHING — Layer 2: generate the three second-choice response bodies for
+ * one firstChoice, given a Layer-1 branching narrative. Focused, fast (low
+ * thinking), and consistent with the scene already written. Returns a payload
+ * { afterChoice, responses } to be merged via mergeSecondChoiceResponses.
+ */
+async function generateSecondChoiceResponses(afterChoice, branchingNarrative, options = {}) {
+  const norm = (v) => String(v || '').trim().toUpperCase();
+  const target = norm(afterChoice);
+  if (!branchingNarrative || !Array.isArray(branchingNarrative.secondChoices)) {
+    throw new Error('generateSecondChoiceResponses: missing branchingNarrative');
+  }
+  const group = branchingNarrative.secondChoices.find((g) => norm(g?.afterChoice) === target);
+  if (!group || !Array.isArray(group.options) || group.options.length === 0) {
+    throw new Error(`generateSecondChoiceResponses: no second-choice group for ${target}`);
+  }
+
+  const firstOpt = (branchingNarrative.firstChoice?.options || []).find((o) => norm(o?.key) === target);
+  const opening = branchingNarrative.opening?.text || '';
+  const firstResponse = firstOpt?.response || '';
+  const endings = group.options.map((o) => `- ${o.key}: "${o.label}"${o.summary ? ` — ${o.summary}` : ''}`).join('\n');
+
+  const userPrompt = [
+    '<task>',
+    `Write the THREE ending segments for path ${target} of this scene. Each is 300-350 words and concludes that branch with momentum, in the established voice.`,
+    '</task>',
+    '<scene_so_far>',
+    opening,
+    '',
+    firstResponse,
+    '</scene_so_far>',
+    '<endings_to_write>',
+    'Write exactly one ending per option below, matched by its key. Stay consistent with the scene above; do not contradict it.',
+    endings,
+    '</endings_to_write>',
+    '<output_contract>',
+    `Return ONLY JSON: { "afterChoice": "${target}", "responses": [ { "key": "...", "response": "..." } ] } with exactly 3 responses. No commentary, no markdown.`,
+    '</output_contract>',
+  ].join('\n');
+
+  const response = await llmService.complete(
+    [{ role: 'user', content: userPrompt }],
+    {
+      systemPrompt: buildMasterSystemPrompt(),
+      responseSchema: SECOND_CHOICE_RESPONSES_SCHEMA,
+      maxTokens: 16000,
+      thinkingLevel: 'low',
+      traceId: options.traceId || createTraceId(`scResp_${target}`),
+      requestContext: { secondChoiceResponsesFor: target, ...(options.requestContext || {}) },
+    },
+  );
+
+  let parsed;
+  try {
+    parsed = typeof response.content === 'string' ? JSON.parse(response.content) : response.content;
+  } catch (e) {
+    throw new Error(`generateSecondChoiceResponses: failed to parse response: ${e.message}`);
+  }
+  const rawResponses = Array.isArray(parsed?.responses) ? parsed.responses : [];
+  const responses = rawResponses.map((r) => ({
+    key: r?.key,
+    response: typeof r?.response === 'string' ? this._cleanBranchingProse(r.response) : '',
+    ...(Array.isArray(r?.details) ? { details: r.details } : {}),
+  }));
+  return { afterChoice: target, responses };
+}
+
 export const generationMethods = {
   _generateDecisionStructure,
   _waitForGenerationSlot,
@@ -1258,4 +1364,5 @@ export const generationMethods = {
   _releaseGenerationSlot,
   generateSubchapter,
   generateChapter,
+  generateSecondChoiceResponses,
 };

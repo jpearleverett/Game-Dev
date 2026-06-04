@@ -172,9 +172,12 @@ export default function DeskScreen({
   onOpenSettings,
   onOpenMenu,
   onOpenStoryCampaign,
+  onOpenCaseBoard,
+  onPickUpTrail,
   onBribe,
 }) {
   const storyCampaign = progress.storyCampaign || {};
+  const underMapFragments = storyCampaign?.underMap?.fragments?.length || 0;
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
 
@@ -522,12 +525,24 @@ export default function DeskScreen({
                   style={[styles.actionBlock, { marginTop: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.sm) }]}
                 >
                   {storyLocked ? (
-                     <PrimaryButton 
-                        label="Bribe Clerk ($0.99)" 
-                        icon={<MaterialCommunityIcons name="cash-multiple" size={20} color={COLORS.textSecondary} />} 
-                        onPress={handleBribe} 
-                        fullWidth 
-                     />
+                     <>
+                        {onPickUpTrail ? (
+                          <PrimaryButton
+                            label="Pick Up the Trail Now"
+                            icon={<MaterialCommunityIcons name="shoe-print" size={20} color={COLORS.textSecondary} />}
+                            onPress={handleQuickPress(onPickUpTrail)}
+                            fullWidth
+                          />
+                        ) : null}
+                        {onBribe ? (
+                          <SecondaryButton
+                            label="Bribe the clerk to rush it ($0.99)"
+                            icon={<MaterialCommunityIcons name="cash-multiple" size={18} color={COLORS.textSecondary} />}
+                            onPress={handleBribe}
+                            style={{ marginTop: scaleSpacing(SPACING.sm) }}
+                          />
+                        ) : null}
+                     </>
                   ) : (
                      <PrimaryButton label={primaryLabel} icon={primaryIcon} onPress={onStartCase} fullWidth />
                   )}
@@ -671,10 +686,19 @@ export default function DeskScreen({
           <PrimaryButton 
             label="Enter" 
             icon={<MaterialCommunityIcons name="book-open-page-variant" size={20} color={COLORS.textSecondary} />} 
-            onPress={handleStoryPress} 
-            fullWidth={compact || medium} 
+            onPress={handleStoryPress}
+            fullWidth={compact || medium}
           />
         </View>
+
+        {onOpenCaseBoard ? (
+          <SecondaryButton
+            label={underMapFragments > 0 ? `The Under-Map · ${underMapFragments} ${underMapFragments === 1 ? 'fragment' : 'fragments'}` : 'The Under-Map'}
+            onPress={handleQuickPress(onOpenCaseBoard)}
+            icon={<MaterialCommunityIcons name="map-marker-path" size={20} color={COLORS.textSecondary} />}
+            style={{ marginTop: scaleSpacing(SPACING.md) }}
+          />
+        ) : null}
 
         <View style={[styles.footerSpacer, { height: footerSpacing }]} />
       </ScrollView>

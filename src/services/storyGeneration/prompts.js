@@ -85,7 +85,7 @@ You understand that different player journeys through the branching narrative le
 - POV/Tense: ${voice.perspective}, ${voice.tense}
 - Tone: ${voice.tone}
 - Decision intros should match the narrative voice: atmospheric, precise, noir-adjacent
-- Option titles: imperative mood, 3-8 words, action-oriented (e.g., "Follow the courier" not "You could follow the courier")
+- Climax option titles: a BELIEF/interpretation of the hidden world, 3-8 words, declarative (e.g., "She is guiding you in", "You are bait" — NOT "Follow the courier")
 - Option focus: one sentence explaining stakes and tradeoffs
 </voice_constraints>
 
@@ -142,63 +142,69 @@ The main narrative pass generated this base decision (use as inspiration, not co
 - Option B: "{{optionBTitle}}" ({{optionBFocus}})
 </canonical_decision_reference>
 
+<climax_decision_nature>
+This is the CHAPTER CLIMAX decision, and in "Dead Letters" it is NOT a choice of action — it is a choice of BELIEF. The player has been mapping a hidden layer of reality (the Under-Map). At the climax they commit to an INTERPRETATION of what it is and what it wants. The two options are two competing READINGS of the hidden world that this path's discoveries support — each a different truth the player stakes themselves on, and each pulling the next chapter in a different direction.
+
+Frame each option as a stance/conviction ("what's really going on"), NOT an errand. Titles are beliefs, not imperatives. Avoid verbs like "go to", "confront", "search", "photograph". Prefer framings like "She is guiding you in", "The map is using you", "This is a snare", "The dead are still writing".
+</climax_decision_nature>
+
 <reasoning_instructions>
 Before generating each path's decision, internally reason through:
 1. WHAT did this player discover? (Extract the key revelation from the path notes)
-2. HOW does that discovery change what options make sense? (Causality mapping)
-3. WHAT would Jack specifically do with THIS information? (Character consistency)
-4. WHY would the options differ from other paths? (Differentiation check)
+2. What TWO competing interpretations of the hidden world does that discovery support? (One reading vs. another — both plausible from what was seen)
+3. How does committing to each belief change Jack's relationship to the Under-Map and the direction of the next chapter?
+4. WHY would these readings differ from other paths? (Differentiation check)
 </reasoning_instructions>
 
 <causality_rules>
-Discoveries MUST drive decisions. Follow these causality patterns:
+Discoveries MUST drive the competing interpretations. Follow these patterns:
 
-DISCOVERY TYPE → DECISION PATTERN:
-- Found a NAME → Options involve: confronting the person, researching them, or using the name as leverage
-- Found a SYMBOL/GLYPH → Options involve: following it, documenting it, testing it, or using it as bait
-- Witnessed an ANOMALY → Options involve: investigating immediately, retreating to process, or provoking it further
-- Gained EVIDENCE → Options involve: confronting someone with it, verifying it independently, or using it as protection
-- Learned a LOCATION → Options involve: going there immediately, surveilling it first, or using it to lure someone
+DISCOVERY TYPE → COMPETING BELIEFS:
+- Found a NAME → Readings: this person is a guide drawing you in vs. a warden keeping you out (or a victim vs. an architect)
+- Found a SYMBOL/GLYPH → Readings: it is an invitation/map left for you vs. a ward/warning meant to keep you away
+- Witnessed an ANOMALY → Readings: the hidden world is reaching for you deliberately vs. you are an accident bleeding through its edges
+- Gained EVIDENCE → Readings: it confirms the underworld is benevolent/ordered vs. predatory/indifferent
+- Learned a LOCATION → Readings: it is a threshold meant for you vs. a trap baited with your own curiosity
 
-If the discovery doesn't fit these patterns, derive the decision logically from what was learned.
+If the discovery doesn't fit these patterns, derive two honest, opposed interpretations from what was learned.
 </causality_rules>
 
 <few_shot_examples>
-GOOD path-specific decisions (note how discoveries drive the options):
+GOOD path-specific climax beliefs (note how each option is a STANCE on the hidden world, not an action):
 
 Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marked envelope)
 {
   "pathKey": "1A-2A",
-  "intro": "The courier's envelope bears the same symbol Jack saw on the threshold. Blackwell's network runs deeper than he thought.",
+  "intro": "The courier carried the same symbol as the threshold. Whatever Blackwell is, she wanted Jack to find this.",
   "optionA": {
     "key": "A",
-    "title": "Follow the courier to Blackwell",
-    "focus": "Use this connection to trace Blackwell's location directly, aggressive but potentially revealing.",
-    "personalityAlignment": "aggressive"
+    "title": "Blackwell is guiding you in",
+    "focus": "The symbols are breadcrumbs she left on purpose — the Under-Map wants Jack to descend, and she is its hand.",
+    "personalityAlignment": "trusting"
   },
   "optionB": {
     "key": "B",
-    "title": "Photograph the envelope, let them go",
-    "focus": "Document the symbol connection without alerting Blackwell's network to Jack's interest.",
-    "personalityAlignment": "methodical"
+    "title": "Blackwell is the lock, not the key",
+    "focus": "The symbols are wards, not invitations — she is keeping something sealed, and Jack is forcing a door meant to stay shut.",
+    "personalityAlignment": "wary"
   }
 }
 
 Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the name aloud)
 {
   "pathKey": "1B-2C",
-  "intro": "The threshold responded to the name. Proof that the Under-Map is not just symbols; it is listening.",
+  "intro": "The threshold answered to the name. The Under-Map is not just symbols — it is listening.",
   "optionA": {
     "key": "A",
-    "title": "Speak the name again and step through",
-    "focus": "Test whether the threshold will open fully. Risk everything to see what is on the other side.",
-    "personalityAlignment": "aggressive"
+    "title": "It is reaching for you",
+    "focus": "The map responds to Jack specifically; he is being chosen, drawn deliberately toward whatever waits below.",
+    "personalityAlignment": "trusting"
   },
   "optionB": {
     "key": "B",
-    "title": "Record the coordinates, retreat to research",
-    "focus": "Document this reactive threshold before attempting anything irreversible.",
-    "personalityAlignment": "methodical"
+    "title": "You are a crack it leaks through",
+    "focus": "The reaction is not invitation but accident — Jack is a flaw the hidden world bleeds through, and it will try to close.",
+    "personalityAlignment": "wary"
   }
 }
 
@@ -229,9 +235,9 @@ BAD examples (generic, not path-specific):
 <output_requirements>
 Generate 9 pathDecisions objects with:
 1. pathKey: The path identifier (1A-2A through 1C-2C)
-2. intro: 1-2 sentences framing the decision based on THIS path's discovery
-3. optionA: Action option with key="A", title (3-8 words, imperative), focus (why this makes sense), personalityAlignment
-4. optionB: Alternative option with key="B", title (3-8 words, imperative), focus (why this makes sense), personalityAlignment
+2. intro: 1-2 sentences framing the climax question — what THIS path's discovery forces Jack to decide he believes about the hidden world
+3. optionA: A belief about the hidden world, key="A", title (3-8 words, declarative stance), focus (the reading + the direction committing to it pulls the story), personalityAlignment
+4. optionB: The opposed belief, key="B", title (3-8 words, declarative stance), focus (the reading + its direction), personalityAlignment
 
 personalityAlignment MUST be one of: aggressive | methodical | balanced
 
@@ -283,16 +289,31 @@ Treat those blocks as authoritative.
 If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
 </how_to_use_the_prompt>
 
-<gemini_3_notes>
-- Gemini 3 defaults to concise output. You MUST deliberately write LONGER than feels natural to hit 300-350 words per segment.
-- Count your words. Each narrative segment needs approximately 20-25 sentences to reach the minimum.
+<gemini_3_5_notes>
+- Gemini 3.5 Flash defaults to concise output. You MUST deliberately write LONGER than feels natural to fully dramatize each segment.
+- Target 300-350 words per segment, which is roughly 20-25 sentences. Hit this by fully rendering 4-5 distinct scene beats (action/observation/dialogue/reaction), not by padding.
 - Anchor every choice and detail to the provided context blocks above.
-</gemini_3_notes>
+</gemini_3_5_notes>
 
 <output_contract>
 - Return ONLY valid JSON that matches the provided schema. No commentary, no markdown.
 - Branches must be logically consistent with what precedes them, and genuinely divergent (different discoveries and/or consequences) while staying within canon.
 </output_contract>
+
+<under_map>
+This is NOT a whodunit. The player is mapping a hidden layer of reality, not catching a culprit. Populate two fields from THIS scene:
+
+fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Give each a short label (2-4 words) and a short detail (Jack's note on why it's strange). Mark anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. CRITICAL: give each fragment a "phrase" — a SHORT verbatim substring (2-5 words) lifted EXACTLY from your narrative where it appears — so the player can TAP that phrase to collect it. The phrase must match your prose character-for-character and must be short enough to highlight cleanly (a few words, NOT a whole sentence).
+
+CRITICAL DOUBLE-MARK: every fragment you list here MUST ALSO appear as a tappable detail inside the matching branchingNarrative segment (opening / option response) where its phrase occurs — that detail must set kind (symbol/place/person/phenomenon) and an evidenceCard label EQUAL to the fragment's label. This is how the player taps the anomaly in the prose to collect it. If you only mark it in one place it will not be collectable, so ALWAYS do both. There must be 2-4 such kind-tagged details across this scene.
+
+WEAVING ACROSS CHAPTERS: if an <under_map_state> block lists fragments the player ALREADY HOLDS, you are encouraged to RE-SURFACE one of them here when it fits — reuse its EXACT label so it deepens into a recurring motif instead of becoming a new duplicate.
+
+relations — how fragments connect to reveal a secret of the hidden world. Reference fragments by their exact label. Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are TRUE in your world and that an attentive player could infer.
+CROSS-CHAPTER WEAVING: if an <under_map_state> block lists fragments the player ALREADY HOLDS, author AT LEAST ONE relation that links a NEW fragment from THIS scene to one of those EARLIER fragments (by its exact label). This threads the map together across chapters and is more valuable than a relation between two brand-new fragments. It's fine to return an empty relations list only when nothing genuinely connects yet.
+
+These must be consistent with the narrative you wrote; the player will discover them.
+</under_map>
 
 <internal_planning>
 Before writing narrative, internally determine (do NOT output these; just let them guide your writing):

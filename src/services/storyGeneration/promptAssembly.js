@@ -45,7 +45,6 @@ function _buildExtendedStyleExamplesForCache() {
         expected: '5000+ chars',
       });
     } else {
-      console.log(`[StoryGenerationService] ✅ Extended examples built: ${examples.length} chars`);
     }
     return examples;
   } catch (e) {
@@ -84,25 +83,21 @@ function _buildStaticCacheContent() {
   parts.push('<story_bible>');
   parts.push(groundingSection);
   parts.push('</story_bible>');
-  console.log(`[Cache] Grounding section: ${groundingSection.length} chars`);
 
   // Part 2: Character Reference (STATIC)
   const characterSection = this._buildCharacterSection();
   parts.push('<character_reference>');
   parts.push(characterSection);
   parts.push('</character_reference>');
-  console.log(`[Cache] Character section: ${characterSection.length} chars`);
 
   // Part 3: Craft Techniques (STATIC)
   const craftSection = this._buildCraftTechniquesSection();
   parts.push('<craft_techniques>');
   parts.push(craftSection);
   parts.push('</craft_techniques>');
-  console.log(`[Cache] Craft techniques: ${craftSection.length} chars`);
 
   // Part 4: Writing Style Examples (STATIC)
   const extendedExamples = this._buildExtendedStyleExamplesForCache();
-  console.log(`[Cache] Extended examples: ${extendedExamples.length} chars`);
 
   const styleSection = `## WRITING STYLE - Voice DNA Examples
 
@@ -125,7 +120,6 @@ ${extendedExamples}
   parts.push('<style_examples>');
   parts.push(styleSection);
   parts.push('</style_examples>');
-  console.log(`[Cache] Style section total: ${styleSection.length} chars`);
 
   // NOTE: Consistency rules NOT included in static cache - they are in _buildDynamicPrompt
   // so that thread data can be updated dynamically per request
@@ -180,7 +174,7 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
 
   await llmService.createCache({
     key: cacheKey,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.5-flash',
     systemInstruction: buildMasterSystemPrompt(),
     content: staticContent,
     ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
@@ -287,7 +281,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
   await llmService.createCache({
     key: cacheKey,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.5-flash',
     systemInstruction: buildMasterSystemPrompt(),
     content: chapterCacheContent,
     ttl: '7200s',
@@ -314,10 +308,51 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
   return cacheKey;
 }
 
-/**
- * Build dynamic prompt content (changes per request)
- * This is sent alongside the cached static content
- */
+
+function _buildPlayerTheorySection(underMap) {
+  // Surfaces the player's living Under-Map so each new scene WEAVES into it: the
+  // fragments they've collected (so the model can link new anomalies back to old
+  // ones across chapters), the hidden-world nodes they've revealed by connecting
+  // them (so the prose builds on what they've uncovered), recurring motifs to
+  // deepen, and the theory they sealed. Soft steering — never breaks canon.
+  if (!underMap || typeof underMap !== 'object') return '';
+  const fragments = Array.isArray(underMap.fragments) ? underMap.fragments : [];
+  const nodes = Array.isArray(underMap.nodes) ? underMap.nodes : [];
+  const theories = Array.isArray(underMap.theories) ? underMap.theories : [];
+  const latest = theories.length ? theories[0] : null;
+  if (!fragments.length && !nodes.length && !latest) return '';
+
+  const KIND_TAG = { symbol: 'SYMBOL', place: 'PLACE', person: 'PERSON', phenomenon: 'PHENOMENON' };
+  const lines = [];
+
+  if (latest?.interpretation) {
+    lines.push(`- The player just SEALED this theory of the hidden world: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
+  }
+
+  if (nodes.length) {
+    lines.push('- Truths the player has already pulled out of the Under-Map (treat these as ESTABLISHED and build the scene on them):');
+    nodes.slice(0, 6).forEach((n) => { if (n?.revelation) lines.push(`  • ${n.revelation}`); });
+  }
+
+  if (fragments.length) {
+    lines.push('- Fragments the player ALREADY HOLDS (reference any of these by their EXACT label to weave this chapter into the map):');
+    fragments.slice(0, 14).forEach((f) => {
+      if (f?.label) lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}`);
+    });
+  }
+
+  if (!lines.length) return '';
+
+  return [
+    "The player is assembling a hidden map of reality on their Under-Map (this is NOT a whodunit). Each chapter should make that map feel more interconnected, WITHOUT contradicting established canon or the Story Bible.",
+    ...lines,
+    'WEAVING (important):',
+    '- In this scene\'s `relations`, author AT LEAST ONE connection that links a NEW fragment to a fragment THE PLAYER ALREADY HOLDS above (reference it by its exact label). This is how the map threads across chapters.',
+    '- RE-SURFACE a recurring motif when it fits: reuse the EXACT label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
+    '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
+  ].join('\n');
+}
+
 function _buildDynamicPrompt(
   context,
   chapter,
@@ -374,6 +409,15 @@ function _buildDynamicPrompt(
   parts.push('<active_threads>');
   parts.push(this._buildConsistencySection(context));
   parts.push('</active_threads>');
+
+  // Dynamic Part 4.6: Player's living Under-Map (collected fragments, revealed
+  // nodes, sealed theory) so this scene WEAVES into it across chapters.
+  const theorySection = this._buildPlayerTheorySection?.(this.currentUnderMap);
+  if (theorySection) {
+    parts.push('<under_map_state>');
+    parts.push(theorySection);
+    parts.push('</under_map_state>');
+  }
 
   // Dynamic Part 6: Current Scene State (exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
@@ -491,6 +535,14 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push('<active_threads>');
   parts.push(this._buildConsistencySection(context));
   parts.push('</active_threads>');
+
+  // Part 6.6: Player's living Under-Map so this scene WEAVES into it across chapters.
+  const theorySectionGen = this._buildPlayerTheorySection?.(this.currentUnderMap);
+  if (theorySectionGen) {
+    parts.push('<under_map_state>');
+    parts.push(theorySectionGen);
+    parts.push('</under_map_state>');
+  }
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
@@ -1210,7 +1262,7 @@ ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.agg
 **AGGRESSIVE JACK VOICE EXAMPLES:**
 Same scene, written for aggressive Jack:
 - Entering a dangerous location: "Jack kicked the door open before better judgment could catch up. The warehouse stank of rust and old violence. Good. He was in the mood for both."
-- Confronting a suspect: "Cut the crap," Jack said, grabbing his collar. "I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry."
+- Confronting someone: "Cut the crap," Jack said, grabbing his collar. "I know what you did. The only question is whether you tell me now, or I find out the hard way and come back angry."
 - Internal monologue: "He'd spent years being the patient one. Look where it got him. This time, he wasn't waiting for permission."
 - DO: Push, confront, act first and deal with consequences later
 - DON'T: Hesitate, gather excessive evidence, wait patiently`;
@@ -1220,7 +1272,7 @@ Same scene, written for aggressive Jack:
 **METHODICAL JACK VOICE EXAMPLES:**
 Same scene, written for methodical Jack:
 - Entering a dangerous location: "Jack circled the warehouse twice before going in. Noted the exits. The fire escape with the broken third rung. The way the security light flickered every forty seconds. Only then did he try the door."
-- Confronting a suspect: "I've got some questions," Jack said, keeping his voice level. "You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice."
+- Confronting someone: "I've got some questions," Jack said, keeping his voice level. "You can answer them here, or I can come back with enough evidence to make this conversation unnecessary. Your choice."
 - Internal monologue: "Patterns rewarded patience more than bravado. He could wait. He'd gotten good at waiting."
 - DO: Observe, plan, build the case methodically, leverage information
 - DON'T: Rush in, confront without evidence, take unnecessary risks`;
@@ -1504,7 +1556,7 @@ function _getPacingGuidance(chapter) {
   const phaseRequirements = {
     'RISING ACTION': [
       'Continue establishing the mystery',
-      'Introduce new suspects or complications',
+      'Introduce new figures, anomalies, or complications of the hidden world',
       `${protagonist.fullName} should be actively investigating`,
       'Build relationships with allies/adversaries',
       'Plant seeds for later revelations',
@@ -1660,6 +1712,7 @@ export const promptAssemblyMethods = {
   _ensureStaticCache,
   _ensureChapterStartCache,
   _buildDynamicPrompt,
+  _buildPlayerTheorySection,
   _buildGenerationPrompt,
   _buildCraftTechniquesSection,
   _extractCharactersFromContext,

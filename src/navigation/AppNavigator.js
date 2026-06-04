@@ -9,9 +9,11 @@ import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 // Screens
 import SplashScreen from '../screens/SplashScreen';
 import PrologueScreen from '../screens/PrologueScreen';
+import TutorialScreen from '../screens/TutorialScreen';
 import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
-import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
+import UnderMapScreen from '../screens/UnderMapScreen';
+import TheoryScreen from '../screens/TheoryScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -44,6 +46,8 @@ export default function AppNavigator({ fontsReady, audio }) {
     selectStoryDecision,
     selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
+    ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
+    ingestSceneFragments, // UNDER-MAP: collect fragments/relations from the scene
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -107,6 +111,19 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
+      <Stack.Screen name="Tutorial">
+        {({ navigation }) => {
+          const actions = useNavigationActions(navigation, game, audio);
+          return (
+            <TutorialScreen
+              onComplete={actions.handleTutorialComplete}
+              onSkip={actions.handleTutorialComplete}
+              reducedMotion={progress.settings.reducedMotion}
+            />
+          );
+        }}
+      </Stack.Screen>
+
       <Stack.Screen name="Desk">
         {({ navigation }) => {
           const actions = useNavigationActions(navigation, game, audio);
@@ -121,6 +138,8 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenMenu={() => navigation.navigate('Menu')}
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
+              onOpenCaseBoard={() => navigation.navigate('UnderMap')}
+              onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
             />
           );
@@ -157,9 +176,15 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
-      <Stack.Screen name="LogicPuzzle">
-        {({ navigation }) => (
-          <LogicPuzzleScreen navigation={navigation} />
+      <Stack.Screen name="UnderMap">
+        {({ navigation, route }) => (
+          <UnderMapScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Theory">
+        {({ navigation, route }) => (
+          <TheoryScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
@@ -211,11 +236,31 @@ export default function AppNavigator({ fontsReady, audio }) {
           const resolvedActiveCase = stableCaseFromParams || activeCase;
 
           // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
-          const handleProceedToPuzzle = () => {
+          const handleProceedToPuzzle = (decisionOptions) => {
             const puzzleMode = getPuzzleMode(resolvedActiveCase?.caseNumber, effectivelyStoryMode);
             const routeName = getPuzzleRouteName(puzzleMode);
             if (routeName === 'Board' && resolvedActiveCase?.id) {
               game.resetBoardForCase(resolvedActiveCase.id);
+            }
+            if (routeName === 'UnderMap') {
+              // Enter the Under-Map as the CONNECT beat: it gates advancing to the next scene.
+              navigation.navigate('UnderMap', {
+                asPuzzle: true,
+                caseNumber: resolvedActiveCase?.caseNumber,
+                caseId: resolvedActiveCase?.id,
+              });
+              return;
+            }
+            if (routeName === 'Theory') {
+              // The chapter-climax THEORY beat: commit a belief about the hidden world.
+              // The belief options ARE the chapter decision — forward them so the
+              // Theory screen presents them (it can also self-resolve as a fallback).
+              navigation.navigate('Theory', {
+                caseNumber: resolvedActiveCase?.caseNumber,
+                caseId: resolvedActiveCase?.id,
+                decisionOptions: Array.isArray(decisionOptions) ? decisionOptions : undefined,
+              });
+              return;
             }
             navigation.navigate(routeName);
           };
@@ -254,7 +299,9 @@ export default function AppNavigator({ fontsReady, audio }) {
               onSelectDecision={selectStoryDecision}
               onSelectDecisionBeforePuzzle={selectDecisionBeforePuzzle}
               onSaveBranchingChoice={saveBranchingChoice}
+              onEnsureSecondChoiceResponses={ensureSecondChoiceResponses}
               onProceedToPuzzle={handleProceedToPuzzle}
+              onIngestFragments={ingestSceneFragments}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

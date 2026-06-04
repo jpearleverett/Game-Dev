@@ -19,6 +19,8 @@ import {
   formatCaseNumber,
   computeBranchPathKey,
 } from '../data/storyContent';
+import { saveGeneratedChapter } from '../storage/generatedStoryStorage';
+import { secondChoiceResponsesNeeded, mergeSecondChoiceResponses } from '../services/storyGeneration/lazyBranching';
 
 // Generation states
 export const GENERATION_STATUS = {
@@ -56,6 +58,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
+  const underMapRef = useRef(null);  // UNDER-MAP: player's collected fragments, revealed nodes, sealed theories for prompt context
 
   // Background resilience: Track app state to handle generation during backgrounding
   const appStateRef = useRef(AppState.currentState);
@@ -75,11 +78,15 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     if (typeof settings?.enableLLMValidation === 'boolean') {
       override.enableLLMValidation = settings.enableLLMValidation;
     }
+    if (typeof settings?.lazyBranchGeneration === 'boolean') {
+      override.lazyBranchGeneration = settings.lazyBranchGeneration;
+    }
     return override;
   }, [
     settings?.enableProseQualityValidation,
     settings?.enableSentenceVarietyValidation,
     settings?.enableLLMValidation,
+    settings?.lazyBranchGeneration,
   ]);
 
   useEffect(() => {
@@ -102,6 +109,11 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
   useEffect(() => {
     branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
   }, [storyCampaign?.branchingChoices]);
+
+
+  useEffect(() => {
+    underMapRef.current = storyCampaign?.underMap || null;
+  }, [storyCampaign?.underMap]);
 
   // AppState listener for background resilience
   // Tracks when app goes to background during generation to handle gracefully on return
@@ -273,6 +285,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
             reason: `prefetch-next-chapter-branches:${source}`,
             branchingChoices, // Player's actual path through previous subchapters
+            underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
           })
         );
 
@@ -359,7 +372,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     // If a caller passes non-gemini values, force-correct to prevent hard failures in LLMService.
     const safeModel = typeof model === 'string' && model.toLowerCase().includes('gemini')
       ? model
-      : 'gemini-3-flash-preview';
+      : 'gemini-3.5-flash';
     await llmService.setConfig({ provider: 'gemini', model: safeModel });
     setIsConfigured(true);
     setError(null);
@@ -480,6 +493,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           reason: 'immediate-generateForCase',
           isUserFacing: true, // Never show fallback to player
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
+          underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
         })
       );
 
@@ -779,6 +793,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           choiceHistory,
           withQualitySettings({
             branchingChoices,
+            underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
             reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context'
           })
         );
@@ -1232,12 +1247,47 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     setStatus(GENERATION_STATUS.IDLE);
   }, []);
 
+  // LAZY BRANCHING (Layer 2): fill in the 3 second-choice response bodies for the
+  // firstChoice the player just picked, then persist + return the merged entry.
+  // No-op when the content is already complete (full-tree / flag off).
+  const ensureSecondChoiceResponses = useCallback(async (caseNumber, pathKey, afterChoice, knownBranchingNarrative = null) => {
+    if (!caseNumber || !afterChoice) return knownBranchingNarrative || null;
+    let entry = null;
+    let bn = knownBranchingNarrative;
+    if (!bn) {
+      entry = await getStoryEntryAsync(caseNumber, pathKey);
+      bn = entry?.branchingNarrative || null;
+    }
+    if (!bn) return null;
+    if (!secondChoiceResponsesNeeded(bn, afterChoice)) return bn; // already complete
+    try {
+      const payload = await storyGenerationService.generateSecondChoiceResponses(
+        afterChoice,
+        bn,
+        { requestContext: { caseNumber, pathKey } },
+      );
+      const mergedBN = mergeSecondChoiceResponses(bn, afterChoice, payload);
+      // Best-effort persist (the live screen uses the returned value regardless).
+      try {
+        const baseEntry = entry || (await getStoryEntryAsync(caseNumber, pathKey)) || { branchingNarrative: bn };
+        const updatedEntry = { ...baseEntry, branchingNarrative: mergedBN };
+        updateGeneratedCache(caseNumber, pathKey, updatedEntry);
+        saveGeneratedChapter(caseNumber, pathKey, updatedEntry).catch(() => {});
+      } catch (_persistErr) { /* persistence is best-effort */ }
+      return mergedBN;
+    } catch (e) {
+      log.debug('useStoryGeneration', `Layer-2 generation failed for ${caseNumber} ${afterChoice}: ${e.message}`);
+      return bn; // hand back the partial; the reader shows a loading/retry state
+    }
+  }, []);
+
   return {
     // State
     status,
     progress,
     error,
     isConfigured,
+    ensureSecondChoiceResponses,
     isGenerating: status === GENERATION_STATUS.GENERATING,
     generationType,
     isPreloading: status === GENERATION_STATUS.GENERATING && generationType === GENERATION_TYPE.PRELOAD,

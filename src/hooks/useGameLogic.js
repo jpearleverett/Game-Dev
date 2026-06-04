@@ -43,7 +43,18 @@ export function useGameLogic(cases, progress, updateProgress) {
 
   // Derived Active Case
   const activeCase = useMemo(() => {
-    const baseCase = cases.find((c) => c.id === state.activeCaseId) || cases[0] || null;
+    // Primary: resolve by the reducer's active case id.
+    // Fallback: if that id is stale/unresolved, resolve by the story campaign's
+    // current activeCaseNumber BEFORE defaulting to cases[0]. Without this, a
+    // desynced activeCaseId silently snapped the player back to cases[0] (001A)
+    // after advancing past a final subchapter (the "1C -> 1A" bug).
+    const baseCase =
+      cases.find((c) => c.id === state.activeCaseId) ||
+      (stableStoryCampaign?.activeCaseNumber
+        ? cases.find((c) => c.caseNumber === stableStoryCampaign.activeCaseNumber)
+        : null) ||
+      cases[0] ||
+      null;
     if (!baseCase) return null;
 
     // Merge dynamic story data (outliers, narrative, themes)

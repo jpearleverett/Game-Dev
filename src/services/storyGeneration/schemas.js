@@ -16,6 +16,11 @@ export const DETAIL_SCHEMA = {
       type: 'string',
       description: 'If this detail becomes evidence, the card label (2-4 words). Leave empty if purely atmospheric.',
     },
+    kind: {
+      type: 'string',
+      enum: ['symbol', 'place', 'person', 'phenomenon'],
+      description: 'OPTIONAL. If this detail is an anomaly of the hidden world the player should COLLECT as an Under-Map fragment, set its kind (symbol/place/person/phenomenon) AND give it an evidenceCard label. Leave unset for purely atmospheric details.',
+    },
   },
   required: ['phrase', 'note'],
 };
@@ -105,7 +110,7 @@ export const SECOND_CHOICE_SCHEMA = {
           },
           summary: {
             type: 'string',
-            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g., "Jack confronts the suspect directly, learning the truth but alerting their accomplices."',
+            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g., "Jack presses the symbol into the wet brick and the threshold answers, but something on the other side now knows his name."',
           },
           details: {
             type: 'array',
@@ -340,8 +345,131 @@ export const STORY_CONTENT_SCHEMA = {
       },
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
+    // UNDER-MAP: the fragments the player can collect from this scene, and how
+    // they connect to reveal the hidden world. Drives examine -> connect -> reveal.
+    fragments: {
+      type: 'array',
+      description: 'The 2-4 most striking things Jack could notice in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose.',
+      items: {
+        type: 'object',
+        properties: {
+          label: { type: 'string', description: 'Short name of the thing noticed (2-5 words), as it appears in the prose.' },
+          kind: { type: 'string', enum: ['symbol', 'place', 'person', 'phenomenon'], description: 'What kind of fragment this is.' },
+          detail: { type: 'string', description: "Jack's one-line note on why it's strange (10-20 words)." },
+          phrase: { type: 'string', description: 'The EXACT verbatim substring from your narrative prose where this fragment first appears, so the player can tap it to examine it. Must match the prose character-for-character.' },
+          anomalous: { type: 'boolean', description: 'True if it breaks reality / is part of the hidden world (vs. a mundane detail).' },
+        },
+        required: ['label', 'kind'],
+      },
+    },
+    relations: {
+      type: 'array',
+      description: 'How fragments connect to reveal a secret of the hidden world. Reference fragments by their EXACT label (from this scene or established earlier). Only assert connections that are true in your world and inferable by the player.',
+      items: {
+        type: 'object',
+        properties: {
+          aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
+          bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
+          revelation: { type: 'string', description: 'The secret this connection reveals (one sentence).' },
+        },
+        required: ['aLabel', 'bLabel', 'revelation'],
+      },
+    },
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
+};
+
+// ============================================================================
+// LAZY BRANCHING SCHEMAS (opt-in via lazyBranchGeneration)
+// ----------------------------------------------------------------------------
+// To avoid generating all 9 second-choice response bodies up front (the player
+// only ever reads one), generation is split into two layers:
+//   Layer 1: opening + firstChoice (full) + secondChoice LABELS/summaries only.
+//   Layer 2: the 3 response bodies for whichever firstChoice the player picks.
+// ============================================================================
+
+// A second-choice option WITHOUT its response body (label/summary only).
+const SECOND_CHOICE_OPTION_LABEL_SCHEMA = {
+  type: 'object',
+  properties: {
+    key: { type: 'string', description: 'Unique identifier: "1A-2A", "1A-2B", "1A-2C", etc.' },
+    label: {
+      type: 'string',
+      description: 'Short action label (2-5 words). For 2C options, make it a WILDCARD - unexpected/creative.',
+    },
+    summary: {
+      type: 'string',
+      description: 'One-sentence summary of what happens in this path ending (15-25 words).',
+    },
+  },
+  required: ['key', 'label', 'summary'],
+};
+
+const SECOND_CHOICE_LABELS_SCHEMA = {
+  type: 'object',
+  properties: {
+    afterChoice: { type: 'string', description: 'Which first choice this follows: "1A", "1B", or "1C"' },
+    prompt: { type: 'string', description: 'Brief context for this choice point (5-15 words)' },
+    options: {
+      type: 'array',
+      items: SECOND_CHOICE_OPTION_LABEL_SCHEMA,
+      minItems: 3,
+      maxItems: 3,
+    },
+  },
+  required: ['afterChoice', 'prompt', 'options'],
+};
+
+// Layer-1 branching narrative: full opening + firstChoice, but secondChoices
+// carry only labels/summaries (no response bodies yet).
+export const BRANCHING_LAYER1_SCHEMA = {
+  type: 'object',
+  properties: {
+    opening: BRANCHING_NARRATIVE_SCHEMA.properties.opening,
+    firstChoice: CHOICE_POINT_SCHEMA,
+    secondChoices: {
+      type: 'array',
+      items: SECOND_CHOICE_LABELS_SCHEMA,
+      minItems: 3,
+      maxItems: 3,
+      description: 'Three second-choice points (labels/summaries only) - one per first choice (1A, 1B, 1C)',
+    },
+  },
+  required: ['opening', 'firstChoice', 'secondChoices'],
+};
+
+// Full subchapter content with a Layer-1 branching narrative.
+export const STORY_CONTENT_LAYER1_SCHEMA = {
+  type: 'object',
+  properties: {
+    ...STORY_CONTENT_SCHEMA.properties,
+    branchingNarrative: BRANCHING_LAYER1_SCHEMA,
+  },
+  required: STORY_CONTENT_SCHEMA.required,
+};
+
+// Layer-2: the three response bodies for one firstChoice's second choices.
+export const SECOND_CHOICE_RESPONSES_SCHEMA = {
+  type: 'object',
+  properties: {
+    afterChoice: { type: 'string', description: 'Which first choice these responses follow: "1A", "1B", or "1C"' },
+    responses: {
+      type: 'array',
+      description: 'Exactly 3 response bodies, one per second-choice option, matched by key.',
+      items: {
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'The option key this body belongs to, e.g. "1A-2B"' },
+          response: { type: 'string', description: 'The ending narrative segment (300-350 words). Conclude this path.' },
+          details: { type: 'array', items: DETAIL_SCHEMA, description: '0-2 tappable details in this ending' },
+        },
+        required: ['key', 'response'],
+      },
+      minItems: 3,
+      maxItems: 3,
+    },
+  },
+  required: ['afterChoice', 'responses'],
 };
 
 // ============================================================================
@@ -366,7 +494,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Confront the suspect directly"' },
+            title: { type: 'string', description: 'A declarative BELIEF about the hidden world the player can commit to (3-8 words), e.g., "She is guiding you in". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
@@ -384,7 +512,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'Action statement in imperative mood, e.g., "Gather more evidence first"' },
+            title: { type: 'string', description: 'The opposed declarative BELIEF about the hidden world (3-8 words), e.g., "You are bait". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
@@ -605,6 +733,17 @@ export const DECISION_CONTENT_SCHEMA = {
     },
   },
   required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'briefing', 'narrativeThreads'],
+};
+
+// Lazy (Layer-1) variant of the decision schema: same as above but the branching
+// narrative carries second-choice labels only (response bodies on demand).
+export const DECISION_CONTENT_LAYER1_SCHEMA = {
+  type: 'object',
+  properties: {
+    ...DECISION_CONTENT_SCHEMA.properties,
+    branchingNarrative: BRANCHING_LAYER1_SCHEMA,
+  },
+  required: DECISION_CONTENT_SCHEMA.required,
 };
 
 // ============================================================================

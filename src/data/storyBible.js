@@ -776,9 +776,10 @@ export const CONSISTENCY_RULES = [
 // ============================================================================
 export const GENERATION_CONFIG = {
   // Temperature settings
-  // IMPORTANT (Gemini 3): temperature MUST be 1.0. The LLM layer enforces this.
-  // Keep this section for backward compatibility and future provider swaps,
-  // but do not set values below 1.0 in this codebase.
+  // NOTE (Gemini 3.5): the LLM layer no longer sends sampling params (temperature/
+  // topP/topK) — the model uses its tuned defaults per Google's 3.5 guidance.
+  // This section is retained for backward compatibility and future provider swaps only;
+  // values here are not applied to Gemini 3.x requests.
   temperature: {
     narrative: 1.0,
     dialogue: 1.0,
@@ -786,13 +787,13 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - Gemini 3 Flash Preview supports up to 65,536 tokens output (64k)
-  // IMPORTANT: Thinking tokens consume output budget! With default 'high' thinking,
-  // the model may use 50-80% of tokens for reasoning before generating output.
+  // Token limits - Gemini 3.5 Flash supports up to 65,536 tokens output (64k)
+  // IMPORTANT: Thinking tokens consume output budget! With 'high' thinking on core
+  // narrative, the model may use 50-80% of tokens for reasoning before output.
   // Values below are generous to ensure quality output with full reasoning depth.
-  // Gemini 3 Flash Preview: 1M input / 64k output per docs/gemini_3_developer_guide.md
+  // Gemini 3.5 Flash: 1M input / 64k output
   maxTokens: {
-    subchapter: 65536,    // Gemini 3 max output - main narrative generation
+    subchapter: 65536,    // Gemini 3.5 max output - main narrative generation
     expansion: 32000,     // For expansion requests (currently disabled)
     validation: 8000,     // For simple validation passes (uses 'low' thinking)
     pathDecisions: 65536, // Same as subchapter - complex multi-path generation
@@ -825,6 +826,13 @@ export const GENERATION_CONFIG = {
     enableProseQualityValidation: true,
     enableSentenceVarietyValidation: true,
     enableLLMValidation: true,
+    // LAZY BRANCHING: when true, A/B subchapters generate only the opening +
+    // firstChoice + second-choice labels up front, and the 3 second-choice
+    // response bodies are generated on demand when the player picks a first
+    // choice. Cuts generated content ~half.
+    // ⚠️ ENABLED FOR ON-DEVICE VERIFICATION. If anything looks broken (blank
+    // endings, stuck loading), set this back to false for the proven full-tree path.
+    lazyBranchGeneration: true,
   },
 };
 

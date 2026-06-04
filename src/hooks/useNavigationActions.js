@@ -2,6 +2,14 @@ import { useCallback } from 'react';
 import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 import { Share } from 'react-native';
 
+// The Under-Map (CONNECT beat) gates advancing to the next scene, so it must be
+// entered with puzzle params. Other puzzle routes take no params.
+function puzzleNavParams(routeName, caseNumber, caseId) {
+  if (routeName === 'UnderMap') return { asPuzzle: true, caseNumber, caseId };
+  if (routeName === 'Theory') return { caseNumber, caseId };
+  return undefined;
+}
+
 export function useNavigationActions(navigation, game, audio) {
   const {
     status,
@@ -16,9 +24,11 @@ export function useNavigationActions(navigation, game, audio) {
     clearProgress,
     setPremiumUnlocked,
     markPrologueSeen,
+    markTutorialComplete,
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
+    pickUpTrailNow,
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
@@ -76,16 +86,24 @@ export function useNavigationActions(navigation, game, audio) {
 
   const handlePrologueComplete = useCallback(() => {
     markPrologueSeen();
+    // First-time players get the how-to-play tutorial before the desk.
+    navigation.replace(progress.tutorialCompleted ? 'Desk' : 'Tutorial');
+  }, [markPrologueSeen, navigation, progress.tutorialCompleted]);
+
+  const handleTutorialComplete = useCallback(() => {
+    markTutorialComplete();
     navigation.replace('Desk');
-  }, [markPrologueSeen, navigation]);
+  }, [markTutorialComplete, navigation]);
 
   const handleSplashContinue = useCallback(() => {
-    if (progress.seenPrologue) {
-      navigation.replace('Desk');
-    } else {
+    if (!progress.seenPrologue) {
       navigation.replace('Prologue');
+    } else if (!progress.tutorialCompleted) {
+      navigation.replace('Tutorial');
+    } else {
+      navigation.replace('Desk');
     }
-  }, [progress.seenPrologue, navigation]);
+  }, [progress.seenPrologue, progress.tutorialCompleted, navigation]);
 
   const handleStartCase = useCallback(async () => {
     const bypassCompletedGuard = pendingDailyStoryAdvance;
@@ -132,7 +150,7 @@ export function useNavigationActions(navigation, game, audio) {
         if (routeName === 'Board' && activeCase?.id) {
           resetBoardForCase(activeCase.id);
         }
-        navigation.navigate(routeName);
+        navigation.navigate(routeName, puzzleNavParams(routeName, targetCaseNumber, activeCase?.id));
       }
     }
   }, [
@@ -216,7 +234,7 @@ export function useNavigationActions(navigation, game, audio) {
       } else {
         const puzzleMode = getPuzzleMode(targetCaseNumber, true);
         const routeName = getPuzzleRouteName(puzzleMode);
-        navigation.navigate(routeName);
+        navigation.navigate(routeName, puzzleNavParams(routeName, targetCaseNumber, activeCase?.id));
       }
     }
     // If not ok, the overlay will show the error/not-configured state
@@ -225,6 +243,18 @@ export function useNavigationActions(navigation, game, audio) {
   const handleStoryRestart = useCallback(() => {
     handleStoryStart(true);
   }, [handleStoryStart]);
+
+  // Free "pick up the trail now" — bypass the soft daily cadence and continue.
+  const handlePickUpTrailNow = useCallback(async () => {
+    try {
+      const result = await pickUpTrailNow();
+      const targetCaseNumber = result?.caseNumber;
+      navigation.replace('CaseFile', targetCaseNumber ? { caseNumber: targetCaseNumber } : undefined);
+    } catch (error) {
+      console.warn('[Navigation] pickUpTrailNow threw, routing to CaseFile:', error?.message || error);
+      navigation.replace('CaseFile');
+    }
+  }, [pickUpTrailNow, navigation]);
 
   const handleStoryContinue = useCallback(async () => {
     try {
@@ -257,7 +287,7 @@ export function useNavigationActions(navigation, game, audio) {
       const targetCaseNumber = cases?.find((c) => c.id === caseId)?.caseNumber;
       const puzzleMode = getPuzzleMode(targetCaseNumber, true);
       const routeName = getPuzzleRouteName(puzzleMode);
-      navigation.navigate(routeName);
+      navigation.navigate(routeName, puzzleNavParams(routeName, targetCaseNumber, caseId));
     }
   }, [openStoryCase, navigation, cases]);
 
@@ -276,6 +306,8 @@ export function useNavigationActions(navigation, game, audio) {
 
   return {
     handlePrologueComplete,
+    handleTutorialComplete,
+    handlePickUpTrailNow,
     handleSplashContinue,
     handleStartCase,
     handleSelectArchiveCase,

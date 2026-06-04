@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createBlankCaseBoard } from '../data/caseBoard';
+import { createBlankUnderMap } from '../data/underMap';
 
 const STORAGE_KEY = 'detective_portrait_progress_v1';
 
@@ -49,6 +51,11 @@ export const createBlankStoryCampaign = () => ({
   // This enables true infinite branching - next subchapter continues from player's ACTUAL experience
   branchingChoices: [],
   completedCaseNumbers: [],
+  // CASE BOARD: legacy deduction board (retired alibi system) — kept for back-compat.
+  caseBoard: createBlankCaseBoard(),
+  // UNDER-MAP: collected fragments, discovered connections, revealed nodes, theories.
+  // The spine of examine -> follow -> connect -> reveal.
+  underMap: createBlankUnderMap(),
   lastDecision: null,
   startedAt: null,
   completedAt: null,
@@ -142,6 +149,7 @@ export const createBlankProgress = () => ({
   nextUnlockAt: null,
   currentCaseId: 1,
   seenPrologue: false,
+  tutorialCompleted: false,
   premiumUnlocked: false,
   settings: {
     sfxVolume: 0.8,

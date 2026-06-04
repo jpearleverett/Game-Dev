@@ -36,12 +36,14 @@ import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
 import { getStoryEntry, ROOT_PATH_KEY } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
+import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
   formatCountdown,
   parseDailyIntro,
   splitSummaryLines,
 } from "../utils/caseFileHelpers";
 import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
+import { isLayer1Partial, secondChoiceResponsesNeeded } from "../services/storyGeneration/lazyBranching";
 
 const NOISE_TEXTURE = require("../../assets/images/ui/backgrounds/noise-texture.png");
 const CORKBOARD_BG = require("../../assets/images/ui/backgrounds/corkboardbg.jpg");
@@ -53,6 +55,10 @@ const BOARD_CORNER_BR = require("../../assets/images/ui/decorative/corner-orname
 const FONT_TWEAK_FACTOR = 0.95;
 const shrinkFont = (value) => Math.max(10, Math.floor(value * FONT_TWEAK_FACTOR));
 
+// Ambient sound asset can fail to decode on some devices; log it once, not on
+// every mount, to keep the console readable.
+let ambientSoundWarned = false;
+
 export default function CaseFileScreen({
   activeCase,
   nextUnlockAt,
@@ -61,7 +67,9 @@ export default function CaseFileScreen({
   onSelectDecision,
   onSelectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
   onSaveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
+  onEnsureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
+  onIngestFragments, // UNDER-MAP: ingest scene fragments/relations into the board
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -96,7 +104,10 @@ export default function CaseFileScreen({
         soundObject = sound;
         setSound(sound);
       } catch (error) {
-        console.log("Failed to load ambient sound", error);
+        if (!ambientSoundWarned) {
+          ambientSoundWarned = true;
+          console.warn("[CaseFile] Ambient sound failed to load (logged once):", error?.message || error);
+        }
       }
     }
     
@@ -209,12 +220,37 @@ export default function CaseFileScreen({
       const prevChoice = branchingChoices.find(bc => bc.caseNumber === prevCaseNumber);
       if (prevChoice?.secondChoice) {
         previousBranchingPath = prevChoice.secondChoice;
-        console.log(`[CaseFileScreen] Looking for speculative cache with path: ${previousBranchingPath}`);
       }
     }
 
     return getStoryEntry(caseNumber, pathKey, previousBranchingPath) || null;
   }, [activeCase?.caseNumber, activeCase?.storyMeta, storyCampaign]);
+
+  // UNDER-MAP: fragments are collected by EXAMINING (tapping anomalies in the prose).
+  // For scenes WITHOUT a branching narrative reader (no prose to tap), fall back to
+  // ingesting the whole scene at load so the board still fills. Branching scenes
+  // ingest via tap + a completion backfill (see handleBranchingComplete) so no
+  // uncollected fragment is ever lost before the CONNECT/THEORY beat.
+  const ingestedCaseRef = useRef(null);
+  useEffect(() => {
+    if (typeof onIngestFragments !== "function") return;
+    const caseNumber = storyMeta?.caseNumber || activeCase?.caseNumber;
+    if (!caseNumber) return;
+    if (ingestedCaseRef.current === caseNumber) return;
+    const hasReader = Boolean(
+      (storyMeta?.branchingNarrative || activeCase?.branchingNarrative)?.opening?.text,
+    );
+    if (hasReader) return; // collected inline / backfilled on completion
+    const fragments = Array.isArray(storyMeta?.fragments) ? storyMeta.fragments : [];
+    const relations = Array.isArray(storyMeta?.relations) ? storyMeta.relations : [];
+    if (!fragments.length && !relations.length) return;
+    ingestedCaseRef.current = caseNumber;
+    onIngestFragments(fragments, relations, {
+      caseNumber,
+      chapter: storyMeta?.chapter,
+      subchapter: storyMeta?.subchapter,
+    });
+  }, [storyMeta, activeCase?.caseNumber, onIngestFragments]);
 
   const storySummary = useMemo(() => {
     if (!storyMeta) return null;
@@ -266,15 +302,92 @@ export default function CaseFileScreen({
   }, [activeCase?.caseNumber, caseSummary, dailyIntro, storySummary]);
 
   // Check if we have branching narrative (new interactive format)
-  const branchingNarrative = useMemo(() => {
+  const sourceBranchingNarrative = useMemo(() => {
     return storyMeta?.branchingNarrative || activeCase?.branchingNarrative || null;
   }, [storyMeta?.branchingNarrative, activeCase?.branchingNarrative]);
 
+  // LAZY BRANCHING: when second-choice responses are generated on demand, hold
+  // the merged narrative locally so the reader sees the filled-in responses.
+  const [lazyBranchingNarrative, setLazyBranchingNarrative] = useState(null);
+  const [lazyLoadingFor, setLazyLoadingFor] = useState(null); // firstChoice key currently generating
+  const branchingNarrative = lazyBranchingNarrative || sourceBranchingNarrative;
+
   const hasBranchingNarrative = Boolean(branchingNarrative?.opening?.text);
+
+  // UNDER-MAP / EXAMINE: this scene's collectable fragments + their relations.
+  const sceneFragments = useMemo(
+    () => (Array.isArray(storyMeta?.fragments) ? storyMeta.fragments : []),
+    [storyMeta?.fragments],
+  );
+  const sceneRelations = useMemo(
+    () => (Array.isArray(storyMeta?.relations) ? storyMeta.relations : []),
+    [storyMeta?.relations],
+  );
+
+  // Build detail-shaped "examinables" from fragments that name a verbatim prose
+  // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
+  const examinableDetails = useMemo(() => {
+    return sceneFragments
+      .filter((f) => f && f.label && typeof f.phrase === "string" && f.phrase.trim())
+      .map((f) => ({
+        phrase: f.phrase.trim(),
+        note: (f.detail && f.detail.trim()) || `${f.label} — something here doesn't belong.`,
+        evidenceCard: f.label,
+        kind: f.kind || "phenomenon",
+        __fragment: true,
+      }));
+  }, [sceneFragments]);
+
+  // Merge the examinables into every segment's details. parseTextWithDetails only
+  // highlights phrases actually present in a given page, so appending everywhere is
+  // safe — a fragment lights up only on the page whose prose contains its phrase.
+  const examinableBranchingNarrative = useMemo(() => {
+    if (!branchingNarrative) return branchingNarrative;
+    if (!examinableDetails.length) return branchingNarrative;
+    const fragmentPhrases = new Set(examinableDetails.map((d) => d.phrase.toLowerCase()));
+    // A fragment examinable takes precedence over a plain observation on the same
+    // phrase, so the anomaly is collectable (not just flavor). Drop colliding originals.
+    const withExtra = (details) => [
+      ...(Array.isArray(details) ? details : []).filter(
+        (d) => !(d && typeof d.phrase === "string" && fragmentPhrases.has(d.phrase.toLowerCase())),
+      ),
+      ...examinableDetails,
+    ];
+    const mapOptions = (options) =>
+      (Array.isArray(options) ? options : []).map((opt) => ({ ...opt, details: withExtra(opt?.details) }));
+    return {
+      ...branchingNarrative,
+      opening: branchingNarrative.opening
+        ? { ...branchingNarrative.opening, details: withExtra(branchingNarrative.opening.details) }
+        : branchingNarrative.opening,
+      firstChoice: branchingNarrative.firstChoice
+        ? { ...branchingNarrative.firstChoice, options: mapOptions(branchingNarrative.firstChoice.options) }
+        : branchingNarrative.firstChoice,
+      secondChoices: Array.isArray(branchingNarrative.secondChoices)
+        ? branchingNarrative.secondChoices.map((sc) => ({ ...sc, options: mapOptions(sc?.options) }))
+        : branchingNarrative.secondChoices,
+    };
+  }, [branchingNarrative, examinableDetails]);
 
   // State for tracking branching narrative progress and evidence
   const [branchingProgress, setBranchingProgress] = useState(null);
   const [collectedEvidence, setCollectedEvidence] = useState([]);
+  // EXAMINE: labels collected via tapping this visit, to avoid redundant ingests.
+  const examinedLabelsRef = useRef(new Set());
+  useEffect(() => { examinedLabelsRef.current = new Set(); }, [caseNumber]);
+
+  const handleExamineFragment = useCallback((frag) => {
+    if (!frag || !frag.label || typeof onIngestFragments !== "function") return;
+    if (examinedLabelsRef.current.has(frag.label)) return;
+    examinedLabelsRef.current.add(frag.label);
+    // Ingest the single tapped fragment + the scene relations (relations re-resolve
+    // as more fragments are collected, so it's safe to pass them every time).
+    onIngestFragments([frag], sceneRelations, {
+      caseNumber: storyMeta?.caseNumber || activeCase?.caseNumber,
+      chapter: storyMeta?.chapter,
+      subchapter: storyMeta?.subchapter,
+    });
+  }, [onIngestFragments, sceneRelations, storyMeta?.caseNumber, storyMeta?.chapter, storyMeta?.subchapter, activeCase?.caseNumber]);
 
   // NARRATIVE-FIRST FLOW: Track if narrative is complete (ready for puzzle)
   // Applies to ALL subchapters in chapters 2+ (not just C)
@@ -294,6 +407,9 @@ export default function CaseFileScreen({
   const isSubchapterC = subchapterLetter === 'C';
   const puzzleMode = useMemo(() => getPuzzleMode(caseNumber, isStoryMode), [caseNumber, isStoryMode]);
   const puzzleActionLabel = getPuzzleActionLabel(puzzleMode);
+  // The C climax now commits the chapter decision AS a belief on the Theory screen,
+  // so the inline decision panel is suppressed here for the theory climax.
+  const isTheoryClimax = isStoryMode && isSubchapterC && puzzleMode === PUZZLE_MODE.THEORY;
 
   // Check if we already have a branching choice for this case (came back after puzzle)
   const existingBranchingChoice = useMemo(() => {
@@ -311,7 +427,19 @@ export default function CaseFileScreen({
     setCollectedEvidence([]);
     setNarrativeComplete(false);
     setLocalPreDecisionKey(null); // Reset local pre-decision tracking when case changes
+    setLazyBranchingNarrative(null); // LAZY BRANCHING: drop merged narrative on case change
+    setLazyLoadingFor(null);
   }, [caseNumber]);
+
+  // The path key under which this case's content is stored (mirrors storyMeta resolution).
+  const branchingPathKey = useMemo(() => {
+    if (!caseNumber) return ROOT_PATH_KEY;
+    const chapterNumber = Number(caseNumber.slice(0, 3));
+    const chapterKey = Number.isNaN(chapterNumber) ? null : chapterNumber;
+    return (chapterKey && storyCampaign?.pathHistory && storyCampaign.pathHistory[chapterKey])
+      || storyCampaign?.currentPathKey
+      || ROOT_PATH_KEY;
+  }, [caseNumber, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
 
   const branchingChoiceSeed = useMemo(() => {
     if (!existingBranchingChoice) return null;
@@ -369,7 +497,25 @@ export default function CaseFileScreen({
     if (hasBranchingNarrative) {
       setNarrativeComplete(true);
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete]);
+
+    // UNDER-MAP backfill: ensure the scene's CORE anomalies (those in the always-read
+    // opening, plus any scene-level fragments without a specific prose phrase) are on
+    // the board even if the player didn't tap them — so the CONNECT/THEORY beat always
+    // has material. Path-specific anomalies are collected inline on tap (already
+    // ingested), so we intentionally do NOT backfill them here — that would leak
+    // fragments from branches the player never read.
+    if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
+      const openingText = branchingNarrative?.opening?.text || "";
+      const backfillFragments = sceneFragments.filter(
+        (f) => !f.phrase || (typeof openingText === "string" && openingText.includes(f.phrase)),
+      );
+      onIngestFragments(backfillFragments, sceneRelations, {
+        caseNumber,
+        chapter: storyMeta?.chapter,
+        subchapter: storyMeta?.subchapter,
+      });
+    }
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter, branchingNarrative]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
@@ -392,9 +538,27 @@ export default function CaseFileScreen({
   // With narrative-first, we wait until branching is COMPLETE to generate next content
   // This means we only generate 1 version (the exact path player took), not 3 speculative versions
   const handleFirstChoice = useCallback((firstChoiceKey) => {
-    // Note: No speculative prefetch needed - generation happens after second choice
-    // via onSaveBranchingChoice -> triggerPrefetchAfterBranchingComplete
-  }, []);
+    // LAZY BRANCHING: if the narrative is a Layer-1 partial, generate the chosen
+    // first choice's 3 second-choice responses now (masked while the player reads
+    // the first-choice response). No-op for full-tree content (flag off).
+    if (
+      typeof onEnsureSecondChoiceResponses === 'function' &&
+      caseNumber &&
+      branchingNarrative &&
+      isLayer1Partial(branchingNarrative) &&
+      secondChoiceResponsesNeeded(branchingNarrative, firstChoiceKey)
+    ) {
+      setLazyLoadingFor(firstChoiceKey);
+      Promise.resolve(
+        onEnsureSecondChoiceResponses(caseNumber, branchingPathKey, firstChoiceKey, branchingNarrative),
+      )
+        .then((mergedBN) => {
+          if (mergedBN) setLazyBranchingNarrative(mergedBN);
+        })
+        .catch(() => {})
+        .finally(() => setLazyLoadingFor(null));
+    }
+  }, [onEnsureSecondChoiceResponses, caseNumber, branchingNarrative, branchingPathKey]);
 
   // Legacy linear narrative (for Chapter 1 or fallback)
   const narrative = useMemo(() => {
@@ -472,31 +636,13 @@ export default function CaseFileScreen({
     return fromSession || fromStored || null;
   }, [branchingProgress?.path, existingBranchingChoice?.secondChoice]);
 
-  const storyDecision = useMemo(() => {
-    const fallback = activeCase?.storyDecision || storyMeta?.decision || null;
-
-    const metaPathDecisions = storyMeta?.pathDecisions;
-    if (!metaPathDecisions) return fallback;
-
-    // Only C subchapters use pathDecisions.
-    if (subchapterLetter !== 'C') return fallback;
-
-    // Prefer the in-session completed path; fall back to persisted branching choice; then default.
-    const defaultPathKey = '1A-2A';
-    const pathKey = resolvedBranchingPath || defaultPathKey;
-
-    if (Array.isArray(metaPathDecisions)) {
-      const picked =
-        metaPathDecisions.find((d) => d?.pathKey === pathKey) ||
-        metaPathDecisions.find((d) => d?.pathKey === defaultPathKey) ||
-        metaPathDecisions[0] ||
-        fallback;
-      return picked;
-    }
-
-    // Legacy object map format
-    return metaPathDecisions[pathKey] || metaPathDecisions[defaultPathKey] || fallback;
-  }, [
+  const storyDecision = useMemo(() => resolveStoryDecision({
+    activeCaseStoryDecision: activeCase?.storyDecision,
+    metaDecision: storyMeta?.decision,
+    metaPathDecisions: storyMeta?.pathDecisions,
+    subchapterLetter,
+    branchingPath: resolvedBranchingPath,
+  }), [
     activeCase?.storyDecision,
     storyMeta?.decision,
     storyMeta?.pathDecisions,
@@ -547,18 +693,7 @@ export default function CaseFileScreen({
   const showDecision = Boolean(storyDecision);
   const selectedOptionKey = decisionChoice?.optionKey || (lastDecision?.caseNumber === caseNumber ? lastDecision.optionKey : null);
 
-  // Handle both new schema (optionA/optionB objects) and old schema (options array)
-  const decisionOptions = useMemo(() => {
-    if (storyDecision?.optionA && storyDecision?.optionB) {
-      // New schema: convert optionA/optionB to array format
-      return [
-        { key: 'A', ...storyDecision.optionA },
-        { key: 'B', ...storyDecision.optionB },
-      ];
-    }
-    // Old schema: use options array directly
-    return Array.isArray(storyDecision?.options) ? storyDecision.options : [];
-  }, [storyDecision?.optionA, storyDecision?.optionB, storyDecision?.options]);
+  const decisionOptions = useMemo(() => decisionOptionsFrom(storyDecision), [storyDecision]);
 
   const subchapterIndex = Number(storyMeta?.subchapter);
   const isThirdSubchapter = subchapterIndex === 3;
@@ -593,8 +728,8 @@ export default function CaseFileScreen({
     (!awaitingDecision && selectedOptionKey && lastDecision?.caseNumber === caseNumber) ||
     hasPreDecision
   );
-  const showDecisionPrompt = showDecision && shouldGateDecisionPanel && !decisionPanelRevealed;
-  const showDecisionPanel = decisionPanelRevealed && (showDecision || hasLockedDecision);
+  const showDecisionPrompt = !isTheoryClimax && showDecision && shouldGateDecisionPanel && !decisionPanelRevealed;
+  const showDecisionPanel = !isTheoryClimax && decisionPanelRevealed && (showDecision || hasLockedDecision);
 
   // Show decision options when:
   // 1. Normal flow: awaitingDecision is true (after puzzle solved), OR
@@ -607,7 +742,7 @@ export default function CaseFileScreen({
   const branchingDecisionReady = hasBranchingNarrative
     ? Boolean(branchingChoiceComplete) || Boolean(branchingProgressForCase) || narrativeComplete
     : true;
-  const showDecisionOptions = showDecision && (
+  const showDecisionOptions = !isTheoryClimax && showDecision && (
     awaitingDecision ||
     (isStoryMode && isSubchapterC && !isCaseSolved && !hasPreDecision && (
       branchingDecisionReady
@@ -698,8 +833,24 @@ export default function CaseFileScreen({
     // For A/B subchapters: Show "Solve Puzzle" after narrative is complete
     if (!isCaseSolved && typeof onProceedToPuzzle === "function") {
       if (isSubchapterC) {
-        // C subchapter: Must make decision before puzzle
-        if (hasPreDecision) {
+        // C climax: once the scene is read, go form your theory. The chapter
+        // decision IS the belief committed on the Theory screen (no separate
+        // inline decision), so we surface the CTA after the narrative is complete.
+        if (isTheoryClimax) {
+          if (narrativeReadyForPuzzle) {
+            return {
+              title: "The Threshold",
+              body: "You've seen what this chapter had to show. Commit your theory of the Under-Map — the belief you stake decides what it reveals next.",
+              hint: "Connect what you've found into a reading of the hidden world.",
+              actionLabel: puzzleActionLabel,
+              actionIcon: "🔮",
+              // Pass the resolved belief options so the Theory climax presents them.
+              onPress: () => onProceedToPuzzle(decisionOptions),
+            };
+          }
+          // Still reading — no CTA yet.
+        } else if (hasPreDecision) {
+          // Legacy/non-theory C beat: decision already made on this screen.
           return {
             title: "Path Chosen",
             body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
@@ -709,17 +860,25 @@ export default function CaseFileScreen({
             onPress: onProceedToPuzzle,
           };
         }
-        // Decision not yet made - don't show puzzle button (let them decide first)
       } else if (narrativeReadyForPuzzle) {
         // A/B subchapter: Show puzzle after narrative is complete (branching choices made)
+        const connectBeat = puzzleMode === PUZZLE_MODE.CONNECT;
         return {
-          title: puzzleMode === PUZZLE_MODE.LOGIC ? "Logic Grid Ready" : "Evidence Board Ready",
-          body: puzzleMode === PUZZLE_MODE.LOGIC
-            ? "The narrative threads are woven. Now solve the logic grid to unlock your next move."
-            : "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
-          hint: "Solve the puzzle to continue the investigation.",
+          title: connectBeat
+            ? "The Under-Map Stirs"
+            : puzzleMode === PUZZLE_MODE.LOGIC
+              ? "Logic Grid Ready"
+              : "Evidence Board Ready",
+          body: connectBeat
+            ? "The scene left threads behind. Descend into the Under-Map and draw the connections to reveal what hides beneath."
+            : puzzleMode === PUZZLE_MODE.LOGIC
+              ? "The narrative threads are woven. Now solve the logic grid to unlock your next move."
+              : "The narrative threads are woven. Now untangle the evidence to unlock your next move.",
+          hint: connectBeat
+            ? "Connect the fragments to pull the hidden world into view."
+            : "Solve the puzzle to continue the investigation.",
           actionLabel: puzzleActionLabel,
-          actionIcon: "🔍",
+          actionIcon: connectBeat ? "🗺️" : "🔍",
           onPress: onProceedToPuzzle,
         };
       }
@@ -746,7 +905,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, isTheoryClimax, decisionOptions, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option) return;
@@ -939,12 +1098,14 @@ export default function CaseFileScreen({
                   <View style={styles.narrativeSection}>
                     <BranchingNarrativeReader
                       key={caseNumber || 'branching-narrative'}
-                      branchingNarrative={branchingNarrative}
+                      branchingNarrative={examinableBranchingNarrative}
                       palette={palette}
                       onComplete={handleBranchingComplete}
                       onFirstChoice={handleFirstChoice}
+                      secondChoiceLoading={!!lazyLoadingFor}
                       onSecondChoice={handleSecondChoice}
                       onEvidenceCollected={handleEvidenceCollected}
+                      onExamineFragment={handleExamineFragment}
                       initialChoice={branchingChoiceSeed}
                     />
                   </View>

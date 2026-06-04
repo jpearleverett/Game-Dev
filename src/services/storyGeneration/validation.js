@@ -10,6 +10,7 @@ import { saveStoryContext } from '../../storage/generatedStoryStorage';
 import { DECISION_CONTENT_SCHEMA, STORY_CONTENT_SCHEMA } from './schemas';
 import { DECISION_SUBCHAPTER, MIN_WORDS_PER_SUBCHAPTER, TRUNCATE_VALIDATION } from './constants';
 import { formatSubchapterLabel } from './helpers';
+import { isLayer1Partial } from './lazyBranching';
 
 class ValidationMethods {
   /**
@@ -119,8 +120,20 @@ class ValidationMethods {
         jackBehaviorDeclaration: parsed.jackBehaviorDeclaration,
         narrativeThreads: Array.isArray(parsed.narrativeThreads) ? parsed.narrativeThreads : [],
         previousThreadsAddressed: Array.isArray(parsed.previousThreadsAddressed) ? parsed.previousThreadsAddressed : [],
+        // UNDER-MAP: fragments the player can examine/collect, and how they
+        // connect to reveal the hidden world.
+        fragments: this._normalizeFragments(parsed.fragments),
+        relations: this._normalizeRelations(parsed.relations),
         pathDecisions: null,
       };
+
+      // EXAMINE robustness: the model reliably fills branching `details` but often
+      // omits top-level `fragments`. Derive collectable fragments from the prose
+      // details and merge, so the Under-Map always populates from generated scenes.
+      const derivedFragments = this._deriveFragmentsFromBranching(result.branchingNarrative);
+      if (derivedFragments.length) {
+        result.fragments = this._normalizeFragments([...(result.fragments || []), ...derivedFragments]);
+      }
 
       // Convert decision format if present
       if (isDecisionPoint) {
@@ -223,11 +236,19 @@ class ValidationMethods {
       return `${fk}-${fallback}`;
     };
 
+    const clean = (t) => this._cleanBranchingProse(t);
+
+    // Clean the shared opening prose (preserving paragraph structure).
+    const opening = branchingNarrative.opening && typeof branchingNarrative.opening === 'object'
+      ? { ...branchingNarrative.opening, text: clean(branchingNarrative.opening.text) }
+      : branchingNarrative.opening;
+
     const firstChoice = branchingNarrative.firstChoice || {};
     const firstOptions = Array.isArray(firstChoice.options) ? firstChoice.options : [];
     const normalizedFirstOptions = firstOptions.map((opt, idx) => ({
       ...opt,
       key: normalizeFirstKey(opt?.key, idx),
+      ...(typeof opt?.response === 'string' ? { response: clean(opt.response) } : {}),
     }));
 
     const secondChoices = Array.isArray(branchingNarrative.secondChoices) ? branchingNarrative.secondChoices : [];
@@ -237,6 +258,7 @@ class ValidationMethods {
       const normalizedOptions = options.map((opt, optIdx) => ({
         ...opt,
         key: normalizeSecondKey(afterChoice, opt?.key, optIdx),
+        ...(typeof opt?.response === 'string' ? { response: clean(opt.response) } : {}),
       }));
       return {
         ...sc,
@@ -247,12 +269,107 @@ class ValidationMethods {
 
     return {
       ...branchingNarrative,
+      opening,
       firstChoice: {
         ...firstChoice,
         options: normalizedFirstOptions,
       },
       secondChoices: normalizedSecondChoices,
     };
+  }
+
+
+  /**
+   * UNDER-MAP / EXAMINE: derive collectable fragments from the branching narrative's
+   * tappable details. The model fills `details` (phrase/note/evidenceCard, optional
+   * kind) far more reliably than the separate top-level `fragments` array, so any
+   * detail that is tagged with a `kind` (or carries an evidenceCard label) becomes a
+   * fragment the player can tap-collect in the prose. Returns raw fragment shapes
+   * (label/kind/detail/phrase/anomalous) to be merged + normalized by the caller.
+   */
+  _deriveFragmentsFromBranching(bn) {
+    if (!bn || typeof bn !== 'object') return [];
+    const KINDS = new Set(['symbol', 'place', 'person', 'phenomenon']);
+    const out = [];
+    const seen = new Set();
+    let detailCount = 0;
+    const pushDetail = (d) => {
+      if (!d || typeof d !== 'object') return;
+      const phrase = typeof d.phrase === 'string' ? d.phrase.trim() : '';
+      if (!phrase) return;
+      detailCount += 1;
+      const kindTagged = KINDS.has(d.kind);
+      const card = typeof d.evidenceCard === 'string' ? d.evidenceCard.trim() : '';
+      // Every tappable prose detail is an examinable Under-Map fragment. The model
+      // fills `details` (phrase/note) reliably but rarely fills the optional kind /
+      // evidenceCard, so we no longer gate on those — otherwise generated scenes
+      // produce no collectable fragments at all (the reported bug).
+      const label = card || phrase;
+      const key = label.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        label,
+        kind: kindTagged ? d.kind : 'phenomenon',
+        detail: typeof d.note === 'string' ? d.note.trim() : '',
+        phrase,
+        anomalous: true,
+      });
+    };
+    const scanDetails = (details) => {
+      if (Array.isArray(details)) details.forEach(pushDetail);
+    };
+    scanDetails(bn.opening?.details);
+    (Array.isArray(bn.firstChoice?.options) ? bn.firstChoice.options : []).forEach((o) => scanDetails(o?.details));
+    (Array.isArray(bn.secondChoices) ? bn.secondChoices : []).forEach((sc) => {
+      (Array.isArray(sc?.options) ? sc.options : []).forEach((o) => scanDetails(o?.details));
+    });
+    this._lastDetailScanCount = detailCount;
+    return out;
+  }
+
+  /** UNDER-MAP: normalize the scene's collectable fragments (dedup, clamp, defaults). */
+  _normalizeFragments(raw) {
+    if (!Array.isArray(raw)) return [];
+    const KINDS = new Set(['symbol', 'place', 'person', 'phenomenon']);
+    const seen = new Set();
+    const out = [];
+    for (const f of raw) {
+      if (!f || !f.label) continue;
+      const label = String(f.label).trim();
+      if (!label) continue;
+      const kind = KINDS.has(f.kind) ? f.kind : 'phenomenon';
+      const key = `${kind}:${label.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        label,
+        kind,
+        detail: f.detail ? String(f.detail).trim() : '',
+        // EXAMINE: verbatim prose substring the player taps to collect this fragment.
+        phrase: f.phrase ? String(f.phrase).trim() : '',
+        anomalous: f.anomalous != null ? !!f.anomalous : true,
+      });
+      if (out.length >= 6) break;
+    }
+    return out;
+  }
+
+  /** UNDER-MAP: normalize the scene's relations (the discoverable connection truth). */
+  _normalizeRelations(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    for (const r of raw) {
+      if (!r) continue;
+      const aLabel = String(r.aLabel || '').trim();
+      const bLabel = String(r.bLabel || '').trim();
+      const revelation = String(r.revelation || '').trim();
+      if (!aLabel || !bLabel || !revelation) continue;
+      if (aLabel.toLowerCase() === bLabel.toLowerCase()) continue;
+      out.push({ aLabel, bLabel, revelation });
+      if (out.length >= 8) break;
+    }
+    return out;
   }
 
   /**
@@ -486,6 +603,29 @@ class ValidationMethods {
       .replace(/\s{2,}/g, ' ')
       // Remove em dashes (replace with comma)
       .replace(/\s*—\s*/g, ', ')
+      .trim();
+  }
+
+  /**
+   * Paragraph-safe prose cleaner for the branching narrative the player reads.
+   * Unlike _cleanNarrative, this preserves paragraph breaks (blank lines) so
+   * multi-paragraph subchapter responses stay readable, while still stripping
+   * the mechanical AI tells the Story Bible forbids (em dashes) and tidying
+   * stray horizontal whitespace.
+   */
+  _cleanBranchingProse(text) {
+    if (typeof text !== 'string' || !text) return text;
+    return text
+      // Em dashes -> comma (Story Bible forbids em dashes in narrative).
+      // Restrict to horizontal whitespace so paragraph breaks are never consumed.
+      .replace(/[^\S\n]*—[^\S\n]*/g, ', ')
+      // Collapse runs of spaces/tabs but keep newlines intact.
+      .replace(/[^\S\n]{2,}/g, ' ')
+      // Tidy whitespace hugging line breaks.
+      .replace(/[^\S\n]+\n/g, '\n')
+      .replace(/\n[^\S\n]+/g, '\n')
+      // Normalize 3+ blank lines down to a single paragraph break.
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
 
@@ -961,7 +1101,9 @@ class ValidationMethods {
     // NOTE: These are warnings, not errors - schema instructs correct lengths, retries are wasteful
     // =========================================================================
     const bn = content.branchingNarrative;
-    if (bn && bn.opening && bn.firstChoice && bn.secondChoices) {
+    // Skip per-segment word-count checks for Layer-1 lazy partials: their
+    // second-choice response bodies are intentionally generated on demand.
+    if (bn && bn.opening && bn.firstChoice && bn.secondChoices && !isLayer1Partial(bn)) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
       const MIN_SEGMENT_WORDS = 300;  // Minimum per segment (300-350 target). 3×300=900 word path minimum.
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
@@ -1013,8 +1155,9 @@ class ValidationMethods {
       if (totalBranchingWords < 3500) {
         warnings.push(`Total branching narrative content is thin: ${totalBranchingWords} words (expected ~4000+ for full coverage)`);
       }
-    } else if (content.branchingNarrative) {
-      // branchingNarrative exists but is malformed
+    } else if (content.branchingNarrative && !isLayer1Partial(content.branchingNarrative)) {
+      // branchingNarrative exists but is malformed (a Layer-1 lazy partial is
+      // intentionally missing second-choice response bodies, so don't flag it).
       warnings.push('Branching narrative structure incomplete: missing opening, firstChoice, or secondChoices');
     }
 

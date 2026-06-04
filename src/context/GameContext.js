@@ -2,6 +2,19 @@ import React, { createContext, useContext, useEffect, useCallback, useState, use
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
+import { advanceWithDecision, advanceSubchapter, caseOrder } from '../utils/storyAdvance';
+import {
+  addClue as boardAddClue,
+  addClues as boardAddClues,
+} from '../data/caseBoard';
+import {
+  makeFragment as umMakeFragment,
+  addFragments as umAddFragments,
+  addRelations as umAddRelations,
+  connectFragments as umConnect,
+  recordTheory as umRecordTheory,
+  touchUnderMap as umTouch,
+} from '../data/underMap';
 // Removed: internal usePersistence hook call
 import { useGameLogic } from '../hooks/useGameLogic';
 import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
@@ -26,6 +39,7 @@ export function GameProvider({
   updateProgress,
   updateSettings,
   markPrologueSeen,
+  markTutorialComplete,
   setPremiumUnlocked,
   markCaseBriefingSeen,
   clearProgress
@@ -187,6 +201,19 @@ export function GameProvider({
   const continueStoryCampaign = useCallback(() => {
     return activateStoryCase({ mode: 'story' });
   }, [activateStoryCase]);
+
+  // Daily-hook: free bypass of the soft cadence. Clears the unlock timer and
+  // continues immediately (skipLock), so an engaged player is never hard-walled.
+  const pickUpTrailNow = useCallback(() => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    if (current.nextStoryUnlockAt) {
+      updateProgress({
+        storyCampaign: { ...current, nextStoryUnlockAt: null },
+        nextUnlockAt: null,
+      });
+    }
+    return activateStoryCase({ mode: 'story', skipLock: true });
+  }, [progress.storyCampaign, updateProgress, activateStoryCase]);
 
   const openStoryCase = useCallback((caseId) => {
       const targetCase = SEASON_ONE_CASES.find(c => c.id === caseId);
@@ -423,11 +450,22 @@ export function GameProvider({
                       pendingDecisionCase: null,
                   };
               }
-              
+
               updateProgress({
                   storyCampaign: updatedStory,
                   nextUnlockAt: updatedStory.nextStoryUnlockAt
               });
+
+              // Keep the reducer's active case id in sync with the story position.
+              // The evidence-board path previously advanced storyCampaign without
+              // updating activeCaseId (unlike the logic-puzzle path), which left the
+              // active case stale and could snap the player back to 001A.
+              if (updatedStory.activeCaseNumber && !updatedStory.awaitingDecision) {
+                  const advancedCase = getCaseByNumber(updatedStory.activeCaseNumber);
+                  if (advancedCase?.id) {
+                      setActiveCaseInternal(advancedCase.id);
+                  }
+              }
 
           } else {
               const distributionKey = nextStatus === STATUS.SOLVED 
@@ -458,100 +496,151 @@ export function GameProvider({
               updateProgress(newStats);
           }
       }
-  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio]);
+  }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio, setActiveCaseInternal]);
 
   const completeLogicPuzzle = useCallback(({ caseId, caseNumber, mistakes: puzzleMistakes = 0 } = {}) => {
       if (!caseId || !caseNumber) return;
-      if (mode !== 'story') return;
+      // NOTE: no `mode !== story` guard — this is only called from the story gates
+      // (Under-Map CONNECT / Theory climax), and a transiently-stale mode must never
+      // block the campaign advance (that stranded the player at 001A).
 
       const nowIso = new Date().toISOString();
       const pathKey = story.getCurrentPathKey(caseNumber);
 
-      analytics.logLevelComplete(caseId, mode, Math.max(1, puzzleMistakes + 1), true, pathKey);
+      analytics.logLevelComplete(caseId, mode || 'story', Math.max(1, puzzleMistakes + 1), true, pathKey);
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio.playVictory();
 
-      const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
-      const isStoryCase = caseNumber === currentStory.activeCaseNumber;
-      if (!isStoryCase) return;
+      const { chapter, subchapter } = parseCaseNumber(caseNumber);
+      const isFinalSubchapter = subchapter >= 3;
+      // The position we WOULD advance to (derived from the completed case).
+      const targetOrder = isFinalSubchapter ? (chapter + 1) * 10 + 1 : chapter * 10 + (subchapter + 1);
 
-      const completedCaseNumbers = Array.from(
-        new Set([...(currentStory.completedCaseNumbers || []), caseNumber]),
-      );
+      // Post-puzzle decision options (only used in the no-pre-decision fallback).
+      const sd = activeCase?.storyDecision;
+      const pendingDecisionOptions = {};
+      if (sd?.optionA) pendingDecisionOptions.A = { title: sd.optionA.title, focus: sd.optionA.focus };
+      if (sd?.optionB) pendingDecisionOptions.B = { title: sd.optionB.title, focus: sd.optionB.focus };
+      if (!pendingDecisionOptions.A && sd?.options?.[0]) pendingDecisionOptions[sd.options[0].key || 'A'] = { title: sd.options[0].title, focus: sd.options[0].focus };
+      if (!pendingDecisionOptions.B && sd?.options?.[1]) pendingDecisionOptions[sd.options[1].key || 'B'] = { title: sd.options[1].title, focus: sd.options[1].focus };
 
-      const isFinalSubchapter = currentStory.subchapter >= 3;
-      let updatedStory = {
-        ...currentStory,
-        completedCaseNumbers,
-        startedAt: currentStory.startedAt || nowIso,
-      };
-      let nextCaseNumber = null;
+      let advancedCaseNumber = null;
 
-      if (isFinalSubchapter) {
-        // C subchapter: Check for pre-decision (narrative-first flow)
-        const preDecision = currentStory.preDecision;
-        if (preDecision && preDecision.caseNumber === caseNumber) {
-          log.debug('GameContext', `C subchapter logic puzzle solved with pre-decision: applying Option ${preDecision.optionKey}`);
-          story.applyPreDecision();
-          return;
-        }
+      // FUNCTIONAL + FORWARD-ONLY: read the latest campaign, derive the next position
+      // from the COMPLETED case, and only ever move forward. This is robust to the
+      // campaign/navigation drift that previously stranded the player at 001A.
+      updateProgress((prev) => {
+        const current = normalizeStoryCampaignShape(prev.storyCampaign);
+        const curOrder = caseOrder(current.activeCaseNumber);
 
-        // No pre-decision: show decision panel after puzzle
-        // Store decision options for LLM context
-        const pendingDecisionOptions = {};
-        if (activeCase?.storyDecision?.optionA) {
-          pendingDecisionOptions.A = {
-            title: activeCase.storyDecision.optionA.title,
-            focus: activeCase.storyDecision.optionA.focus,
+        if (isFinalSubchapter) {
+          const pre = current.preDecision;
+          if (pre && pre.caseNumber === caseNumber) {
+            if (targetOrder <= curOrder) return null; // already advanced past this climax
+            const updatedStory = advanceWithDecision(current, {
+              decisionCase: caseNumber,
+              optionKey: pre.optionKey,
+              optionTitle: pre.optionTitle,
+              optionFocus: pre.optionFocus,
+              timestamp: pre.timestamp,
+            });
+            advancedCaseNumber = updatedStory.activeCaseNumber;
+            return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
+          }
+          // No pre-decision: surface the post-puzzle decision panel (only if we
+          // haven't already advanced past this case).
+          if (curOrder > caseOrder(caseNumber)) return null; // already advanced past this case
+          return {
+            storyCampaign: {
+              ...current,
+              completedCaseNumbers: Array.from(new Set([...(current.completedCaseNumbers || []), caseNumber])),
+              startedAt: current.startedAt || nowIso,
+              awaitingDecision: true,
+              pendingDecisionCase: caseNumber,
+              pendingDecisionOptions,
+              lastDecision: null,
+            },
           };
         }
-        if (activeCase?.storyDecision?.optionB) {
-          pendingDecisionOptions.B = {
-            title: activeCase.storyDecision.optionB.title,
-            focus: activeCase.storyDecision.optionB.focus,
-          };
-        }
-        // Fallback to options[] array
-        if (!pendingDecisionOptions.A && activeCase?.storyDecision?.options?.[0]) {
-          const opt = activeCase.storyDecision.options[0];
-          pendingDecisionOptions[opt.key || 'A'] = { title: opt.title, focus: opt.focus };
-        }
-        if (!pendingDecisionOptions.B && activeCase?.storyDecision?.options?.[1]) {
-          const opt = activeCase.storyDecision.options[1];
-          pendingDecisionOptions[opt.key || 'B'] = { title: opt.title, focus: opt.focus };
-        }
 
-        updatedStory = {
-          ...updatedStory,
-          awaitingDecision: true,
-          pendingDecisionCase: caseNumber,
-          pendingDecisionOptions,
-          lastDecision: null,
-        };
-      } else {
-        const nextSubchapter = currentStory.subchapter + 1;
-        nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
-        updatedStory = {
-          ...updatedStory,
-          subchapter: nextSubchapter,
-          activeCaseNumber: nextCaseNumber,
-          awaitingDecision: false,
-          pendingDecisionCase: null,
-        };
-      }
-
-      updateProgress({
-        storyCampaign: updatedStory,
-        nextUnlockAt: updatedStory.nextStoryUnlockAt,
+        if (targetOrder <= curOrder) return null; // already advanced past this subchapter
+        const updatedStory = advanceSubchapter(current, caseNumber, { startedAt: nowIso });
+        advancedCaseNumber = updatedStory.activeCaseNumber;
+        return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
       });
 
-      if (nextCaseNumber) {
-        const nextCase = getCaseByNumber(nextCaseNumber);
-        if (nextCase?.id) {
-          setActiveCaseInternal(nextCase.id);
-        }
+      if (advancedCaseNumber) {
+        const nextCase = getCaseByNumber(advancedCaseNumber);
+        if (nextCase?.id) setActiveCaseInternal(nextCase.id);
       }
-  }, [mode, progress.storyCampaign, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
+  }, [mode, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
+
+  // ========== CASE BOARD (DEDUCTION) ==========
+  // Mutations to the running deduction board. Each reads the current campaign,
+  // applies a pure caseBoard helper, and writes back via updateProgress (which
+  // auto-persists). Centralised here so every screen posts to one board.
+  const _mutateCaseBoard = useCallback((mutator) => {
+    // Functional update: read the LATEST campaign at write time so a Case Board
+    // write can never clobber a concurrent story advance (the 1C -> 1A reset).
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const nextBoard = mutator(current.caseBoard);
+      if (nextBoard === current.caseBoard) return null;
+      return { storyCampaign: { ...current, caseBoard: nextBoard } };
+    });
+  }, [updateProgress]);
+
+  const addCaseClue = useCallback((clue) => _mutateCaseBoard((b) => boardAddClue(b, clue)), [_mutateCaseBoard]);
+  const addCaseClues = useCallback((clues) => _mutateCaseBoard((b) => boardAddClues(b, clues)), [_mutateCaseBoard]);
+
+  // ========== UNDER-MAP ==========
+  // Functional updates (read latest at write time) so these never clobber a
+  // concurrent story advance.
+  const ingestSceneFragments = useCallback((fragments, relations, meta = {}) => {
+    const frags = Array.isArray(fragments) ? fragments : [];
+    const rels = Array.isArray(relations) ? relations : [];
+    if (!frags.length && !rels.length) return;
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      let um = current.underMap;
+      if (frags.length) {
+        um = umAddFragments(um, frags.map((f) => umMakeFragment({ ...f, caseNumber: meta.caseNumber, chapter: meta.chapter })));
+      }
+      if (rels.length) um = umAddRelations(um, rels, { caseNumber: meta.caseNumber });
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  const connectUnderMap = useCallback((aId, bId) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const result = umConnect(current.underMap, aId, bId);
+    if (result.map !== current.underMap) {
+      updateProgress((prev) => {
+        const c = normalizeStoryCampaignShape(prev.storyCampaign);
+        const r = umConnect(c.underMap, aId, bId);
+        if (r.map === c.underMap) return null;
+        return { storyCampaign: { ...c, underMap: r.map } };
+      });
+    }
+    return result; // { revealed, valid, alreadyConnected } for the UI reveal
+  }, [progress.storyCampaign, updateProgress]);
+
+  const recordUnderMapTheory = useCallback((theory) => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umRecordTheory(current.underMap, theory);
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  const touchUnderMap = useCallback(() => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      return { storyCampaign: { ...current, underMap: umTouch(current.underMap) } };
+    });
+  }, [updateProgress]);
 
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
@@ -764,11 +853,13 @@ export function GameProvider({
     unlockNextCaseIfReady,
     updateSettings,
     markPrologueSeen,
+    markTutorialComplete,
     setPremiumUnlocked,
     clearProgress,
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
+    pickUpTrailNow,
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
@@ -784,12 +875,20 @@ export function GameProvider({
     // Story generation actions - delegated to StoryContext
     configureLLM: story.configureLLM,
     ensureStoryContent: story.ensureStoryContent,
+    ensureSecondChoiceResponses: story.ensureSecondChoiceResponses,
     generateForCase: story.generateForCase,
     generateChapter: story.generateChapter,
     cancelGeneration: story.cancelGeneration,
     clearGenerationError: story.clearGenerationError,
     clearAutoRetry: story.clearAutoRetry, // Clear auto-retry flag after handling
     completeLogicPuzzle,
+    // Case Board (deduction)
+    addCaseClue,
+    addCaseClues,
+    ingestSceneFragments,
+    connectUnderMap,
+    recordUnderMapTheory,
+    touchUnderMap,
     // Endings & Achievements
     unlockEnding,
     unlockAchievement,
@@ -797,6 +896,12 @@ export function GameProvider({
     saveChapterCheckpoint,
     startFromChapter,
     updateGameplayStats,
+    addCaseClue,
+    addCaseClues,
+    ingestSceneFragments,
+    connectUnderMap,
+    recordUnderMapTheory,
+    touchUnderMap,
   }), [
     toggleWordSelection,
     submitGuess,
@@ -805,11 +910,13 @@ export function GameProvider({
     unlockNextCaseIfReady,
     updateSettings,
     markPrologueSeen,
+    markTutorialComplete,
     setPremiumUnlocked,
     clearProgress,
     markCaseBriefingSeen,
     enterStoryCampaign,
     continueStoryCampaign,
+    pickUpTrailNow,
     openStoryCase,
     exitStoryCampaign,
     ensureDailyStoryCase,
@@ -823,6 +930,12 @@ export function GameProvider({
     startFromChapter,
     updateGameplayStats,
     completeLogicPuzzle,
+    addCaseClue,
+    addCaseClues,
+    ingestSceneFragments,
+    connectUnderMap,
+    recordUnderMapTheory,
+    touchUnderMap,
   ]);
 
   return (

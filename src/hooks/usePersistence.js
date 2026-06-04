@@ -125,11 +125,15 @@ export function usePersistence() {
     };
   }, [progress, hydrationComplete]);
 
-  const updateProgress = useCallback((updates) => {
-    setProgress((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+  const updateProgress = useCallback((updatesOrFn) => {
+    setProgress((prev) => {
+      // Support a functional updater so callers can read the LATEST state and
+      // avoid clobbering concurrent writes (e.g. a story advance happening at the
+      // same time as a Case Board write).
+      const updates = typeof updatesOrFn === 'function' ? updatesOrFn(prev) : updatesOrFn;
+      if (!updates) return prev;
+      return { ...prev, ...updates };
+    });
   }, []);
 
   const updateSettings = useCallback((partialSettings) => {
@@ -146,6 +150,13 @@ export function usePersistence() {
     setProgress((prev) => {
         if (prev.seenPrologue) return prev;
         return { ...prev, seenPrologue: true };
+    });
+  }, []);
+
+  const markTutorialComplete = useCallback(() => {
+    setProgress((prev) => {
+        if (prev.tutorialCompleted) return prev;
+        return { ...prev, tutorialCompleted: true };
     });
   }, []);
 
@@ -184,6 +195,7 @@ export function usePersistence() {
     updateProgress,
     updateSettings,
     markPrologueSeen,
+    markTutorialComplete,
     setPremiumUnlocked,
     markCaseBriefingSeen,
     clearProgress,

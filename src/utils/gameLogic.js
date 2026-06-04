@@ -8,6 +8,8 @@ import {
     normalizeStoryPathKey,
 } from '../data/storyContent';
 import { getBoardProfile } from '../utils/caseNumbers';
+import { normalizeCaseBoard } from '../data/caseBoard';
+import { normalizeUnderMap } from '../data/underMap';
 
 export const STATUS = {
     LOADING: 'LOADING',
@@ -85,6 +87,8 @@ export function normalizeStoryCampaignShape(campaign) {
         : [];
     merged.currentPathKey = normalizeStoryPathKey(merged.currentPathKey || ROOT_PATH_KEY);
     merged.pathHistory[merged.chapter] = merged.currentPathKey;
+    merged.caseBoard = normalizeCaseBoard(campaign?.caseBoard);
+    merged.underMap = normalizeUnderMap(campaign?.underMap);
     if (!merged.activeCaseNumber) {
         merged.activeCaseNumber = formatCaseNumber(merged.chapter, merged.subchapter);
     }
