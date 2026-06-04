@@ -72,6 +72,35 @@ describe('computeConstellationLayout', () => {
     ]));
   });
 
+  test('force mode: deterministic, one node per fragment, clamped inside canvas', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [
+      { label: 'a', kind: 'symbol', caseNumber: '001A' },
+      { label: 'b', kind: 'place', caseNumber: '001A' },
+      { label: 'c', kind: 'person', caseNumber: '002A' },
+      { label: 'd', kind: 'phenomenon', caseNumber: '003A' },
+    ]);
+    m = addRelations(m, [{ aLabel: 'a', bLabel: 'b', revelation: 'x' }]);
+    const a = fragmentId(FRAGMENT_KIND.SYMBOL, 'a');
+    const b = fragmentId(FRAGMENT_KIND.PLACE, 'b');
+    m = connectFragments(m, a, b).map;
+
+    const opts = { ...DIMS, mode: 'force', iterations: 40 };
+    const out = computeConstellationLayout(m, opts);
+    expect(out.nodes).toHaveLength(4);
+    out.nodes.forEach((n) => expect(within(n)).toBe(true));
+    expect(out.links).toHaveLength(1);
+    // Deterministic: identical inputs -> identical refined positions.
+    expect(computeConstellationLayout(m, opts)).toEqual(out);
+  });
+
+  test('force mode falls back gracefully for <3 nodes', () => {
+    let m = addFragments(createBlankUnderMap(), [{ label: 'solo', kind: 'symbol', caseNumber: '001A' }]);
+    const out = computeConstellationLayout(m, { ...DIMS, mode: 'force' });
+    expect(out.nodes).toHaveLength(1);
+    expect(within(out.nodes[0])).toBe(true);
+  });
+
   test('links to a fragment with no position are skipped (robustness)', () => {
     const map = {
       fragments: [{ id: 'f1', label: 'a', kind: 'symbol', firstCaseNumber: '001A' }],

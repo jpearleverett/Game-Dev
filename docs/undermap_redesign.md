@@ -279,9 +279,11 @@ held), and the prompt explicitly invites SUBVERSION so it isn't self-graded into
   case; the action is idempotent too). ✅ **DONE**
 - `TheoryScreen.js`: prior-belief payoff card ("YOUR LAST READING HELD TRUE / WAS SUBVERTED") +
   a Clarity readout. Seal flow untouched (CLAUDE.md §5 invariants respected). ✅ **DONE**
-- **Endgame branch (still TODO):** `endingVariant`/`clarity` are exposed and ready; wiring an
-  actual terminal scene into the existing (currently un-triggered) `unlockEnding` system is the
-  remaining Move 3 work and needs on-device verification.
+- **Endgame branch — DONE:** `src/data/endings.js` (`selectEnding` — pure + tested: maps the
+  clarity spectrum → Clear-Eyed / Half-Blind / Deceived / Unproven, flavored by the last sealed
+  belief); `EndingScreen.js` (registered as the `Ending` route); `TheoryScreen.crossThreshold`
+  detects the finale (`chapter >= TOTAL_CHAPTERS`), calls `unlockEnding`, and routes to the ending
+  instead of generating a nonexistent chapter 13. ✅
 
 ### 5.2 Acceptance criteria
 - A sealed belief eventually flips `correct` to true/false based on `chapterTruth`.
@@ -317,8 +319,11 @@ held), and the prompt explicitly invites SUBVERSION so it isn't self-graded into
 Replace the vertical card list with a **dark star-map**:
 - Fragments = nodes, connections = glowing lines, revealed nodes light **regions** (one per
   chapter), depth-% becomes a *visibly filling* map of reality.
-- **Phase 1:** radial/cluster layout grouped by chapter region (cheap, deterministic).
-- **Phase 2:** force-directed graph with gentle physics; keep `reducedMotion` parity.
+- **Phase 1 — DONE:** radial/cluster layout grouped by chapter region (cheap, deterministic, tested).
+- **Phase 2 — DONE:** deterministic force-directed refinement (`forceRefine` in `underMapLayout.js`)
+  seeded from the cluster layout — repulsion + spring + centering with cooling, no randomness and no
+  `reanimated` dependency, so it stays pure + unit-tested. Skipped above `FORCE_MAX_NODES` (60) and
+  for <3 nodes (falls back to cluster). The component renders `mode: 'force'`.
 - Persistent across the whole campaign. Because branching + each player's specific connections
   differ, **no two maps look alike** — the unique, screenshot-shareable artifact.
 
@@ -365,14 +370,14 @@ map*:
 - `GameContext`: `drawUnderMapDailyStir` / `resolveUnderMapDailyStir` (functional, churn-guarded). ✅ **DONE**
 - `UnderMapScreen`: draws the stir on open and shows a "THE UNDER-MAP STIRRED OVERNIGHT" banner;
   tapping "trace it" advances the days-mapped streak and loads the fragment onto the bench. ✅ **DONE**
-- **Follow-ups (deliberately deferred):**
-  1. **Overnight push notification** — needs the `expo-notifications` dependency (currently NOT in
-     package.json). Adding a platform dependency + scheduler is a product decision; left for the
-     user to greenlight. Without it, the stir still surfaces in-app on open.
-  2. **Daily word-puzzle bridge** — call `resolveUnderMapDailyStir()` from `EvidenceBoardScreen`
-     completion so finishing the daily (rather than the in-app "trace it") resolves the stir, per
-     the original §8.1 design. Left out to avoid editing the shared `submitGuess` completion path
-     without on-device verification.
+- **Overnight push notification — DONE:** `expo-notifications ~0.32.17` added; `src/services/
+  dailyStirNotifications.js` schedules a daily local reminder (defensive — silent no-op on web /
+  denied permission / unavailable module). Scheduled from the Under-Map mount once the player has
+  fragments, opt-out via `settings.dailyStirRemindersDisabled`. (Notification *firing* still needs
+  on-device confirmation.) ✅
+- **Daily word-puzzle bridge — DONE:** the non-story (daily) SOLVED path in `submitGuess` now
+  resolves the day's stir via a **functional, underMap-only** `updateProgress` — clobber-safe and
+  respecting the "don't write storyCampaign from non-story solves" guard. ✅
 
 ---
 

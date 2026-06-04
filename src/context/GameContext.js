@@ -500,6 +500,23 @@ export function GameProvider({
               };
               
               updateProgress(newStats);
+
+              // §8.1 bridge: finishing the daily word puzzle resolves today's
+              // Under-Map stir (advances the days-mapped streak + deepens the
+              // drifted fragment). Functional + underMap-only, so it never
+              // clobbers the campaign (see the non-story guard above).
+              if (nextStatus === STATUS.SOLVED) {
+                  updateProgress((prev) => {
+                      const camp = normalizeStoryCampaignShape(prev.storyCampaign);
+                      const before = camp.underMap;
+                      const after = umResolveStir(before);
+                      if (after?.dailyStir?.resolved === before?.dailyStir?.resolved
+                          && after?.dailyStreak === before?.dailyStreak) {
+                          return null;
+                      }
+                      return { storyCampaign: { ...camp, underMap: after } };
+                  });
+              }
           }
       }
   }, [coreSubmitGuess, mode, progress, activeCase, updateProgress, story, audio, setActiveCaseInternal]);

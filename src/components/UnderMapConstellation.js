@@ -24,7 +24,7 @@ const colorFor = (k) => KIND_COLOR[k] || COLORS.accentViolet;
 export default function UnderMapConstellation({ map, height = 200, selectedIds = [], onTapNode }) {
   const [width, setWidth] = useState(0);
   const layout = useMemo(
-    () => computeConstellationLayout(map, { width, height, padding: 26 }),
+    () => computeConstellationLayout(map, { width, height, padding: 26, mode: 'force' }),
     [map, width, height],
   );
 

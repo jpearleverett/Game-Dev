@@ -14,6 +14,7 @@ import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
 import TheoryScreen from '../screens/TheoryScreen';
+import EndingScreen from '../screens/EndingScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -186,6 +187,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Theory">
         {({ navigation, route }) => (
           <TheoryScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Ending">
+        {({ navigation, route }) => (
+          <EndingScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 

@@ -16,14 +16,96 @@ const chapterOf = (caseNumber) => {
 
 const undirectedKey = (a, b) => [a, b].sort().join('::');
 
+// Above this node count, the force layout is skipped (cluster reads clearer and
+// the O(n^2) refine isn't worth it). Deterministic either way.
+const FORCE_MAX_NODES = 60;
+
+/**
+ * Deterministic force-directed refinement (Phase 2). Seeded from the cluster
+ * positions (NOT random), then relaxed with simple repulsion + spring +
+ * centering forces and cooling. Mutates the passed node objects' x/y in place
+ * and returns the updated posById. Pure given identical inputs.
+ */
+function forceRefine(nodes, connections, { width, height, padding, iterations = 60 }) {
+  const n = nodes.length;
+  const area = (width - padding * 2) * (height - padding * 2);
+  const k = Math.sqrt(Math.max(1, area) / n); // ideal edge length
+  const cx = width / 2;
+  const cy = height / 2;
+  const idIndex = new Map(nodes.map((node, i) => [node.id, i]));
+  const edges = [];
+  const seenEdge = new Set();
+  connections.forEach((c) => {
+    const ia = idIndex.get(c.a);
+    const ib = idIndex.get(c.b);
+    if (ia == null || ib == null || ia === ib) return;
+    const key = undirectedKey(String(ia), String(ib));
+    if (seenEdge.has(key)) return;
+    seenEdge.add(key);
+    edges.push([ia, ib]);
+  });
+
+  let temp = Math.min(width, height) * 0.12;
+  const cool = temp / (iterations + 1);
+
+  for (let it = 0; it < iterations; it += 1) {
+    const dispX = new Array(n).fill(0);
+    const dispY = new Array(n).fill(0);
+
+    // Repulsion between every pair.
+    for (let i = 0; i < n; i += 1) {
+      for (let j = i + 1; j < n; j += 1) {
+        let dx = nodes[i].x - nodes[j].x;
+        let dy = nodes[i].y - nodes[j].y;
+        let dist = Math.hypot(dx, dy) || 0.01;
+        // Nudge apart deterministically if exactly coincident.
+        if (dist < 0.02) { dx = (i - j) * 0.01; dy = 0.01; dist = Math.hypot(dx, dy); }
+        const rep = (k * k) / dist;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        dispX[i] += ux * rep; dispY[i] += uy * rep;
+        dispX[j] -= ux * rep; dispY[j] -= uy * rep;
+      }
+    }
+    // Attraction along edges.
+    edges.forEach(([a, b]) => {
+      const dx = nodes[a].x - nodes[b].x;
+      const dy = nodes[a].y - nodes[b].y;
+      const dist = Math.hypot(dx, dy) || 0.01;
+      const att = (dist * dist) / k;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      dispX[a] -= ux * att; dispY[a] -= uy * att;
+      dispX[b] += ux * att; dispY[b] += uy * att;
+    });
+    // Gentle pull toward center so disconnected nodes don't drift to the rim.
+    for (let i = 0; i < n; i += 1) {
+      dispX[i] += (cx - nodes[i].x) * 0.02;
+      dispY[i] += (cy - nodes[i].y) * 0.02;
+    }
+    // Apply, capped by temperature, clamped to the padded canvas.
+    for (let i = 0; i < n; i += 1) {
+      const d = Math.hypot(dispX[i], dispY[i]) || 0.01;
+      const step = Math.min(d, temp);
+      nodes[i].x = Math.max(padding, Math.min(width - padding, nodes[i].x + (dispX[i] / d) * step));
+      nodes[i].y = Math.max(padding, Math.min(height - padding, nodes[i].y + (dispY[i] / d) * step));
+    }
+    temp = Math.max(0, temp - cool);
+  }
+
+  const posById = new Map();
+  nodes.forEach((node) => posById.set(node.id, { x: node.x, y: node.y }));
+  return posById;
+}
+
 /**
  * @param {{fragments?: array, connections?: array}} map
- * @param {{width:number, height:number, padding?:number}} dims
+ * @param {{width:number, height:number, padding?:number, mode?:'cluster'|'force', iterations?:number}} dims
  * @returns {{ nodes: array, links: array, width:number, height:number }}
  *   node: { id, x, y, kind, label, chapter, seen }
  *   link: { id, x1, y1, x2, y2, unresolvedReading, scope }
  */
-export function computeConstellationLayout(map, { width = 0, height = 0, padding = 28 } = {}) {
+export function computeConstellationLayout(map, { width = 0, height = 0, padding = 28, mode = 'cluster', iterations = 60 } = {}) {
   const fragments = Array.isArray(map?.fragments) ? map.fragments : [];
   const connections = Array.isArray(map?.connections) ? map.connections : [];
 
@@ -75,11 +157,17 @@ export function computeConstellationLayout(map, { width = 0, height = 0, padding
     });
   });
 
+  // Phase 2: optionally relax the cluster seed into an organic force-directed graph.
+  let positions = posById;
+  if (mode === 'force' && nodes.length >= 3 && nodes.length <= FORCE_MAX_NODES) {
+    positions = forceRefine(nodes, connections, { width, height, padding, iterations });
+  }
+
   const links = [];
   const seen = new Set();
   connections.forEach((c, i) => {
-    const pa = posById.get(c.a);
-    const pb = posById.get(c.b);
+    const pa = positions.get(c.a);
+    const pb = positions.get(c.b);
     if (!pa || !pb) return;
     const key = undirectedKey(c.a, c.b);
     if (seen.has(key)) return;

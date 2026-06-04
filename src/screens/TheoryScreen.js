@@ -9,6 +9,8 @@ import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { normalizeUnderMap, FRAGMENT_KIND, isMotif, clarity, endingVariant } from '../data/underMap';
+import { selectEnding } from '../data/endings';
+import { TOTAL_CHAPTERS } from '../services/storyGeneration/constants';
 import {
   parseCaseNumber,
   formatCaseNumber,
@@ -37,6 +39,7 @@ export default function TheoryScreen({ navigation, route }) {
     recordUnderMapTheory,
     completeLogicPuzzle,
     selectDecisionBeforePuzzle,
+    unlockEnding,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
@@ -147,6 +150,20 @@ export default function TheoryScreen({ navigation, route }) {
     setContinuing(true);
     setGenError(null);
 
+    // FINALE (Move 3, §5): after the last chapter's belief is sealed there is no
+    // chapter to generate — the clarity spectrum decides which ending is reached.
+    const sealedChapter = parseCaseNumber(caseNumber).chapter;
+    if (sealedChapter >= TOTAL_CHAPTERS) {
+      const ending = selectEnding(map);
+      unlockEnding?.(ending.id, {
+        variant: ending.variant,
+        clarityRatio: ending.clarity?.ratio ?? 0,
+        finalChapter: sealedChapter,
+      });
+      navigation.replace('Ending', { ending });
+      return;
+    }
+
     const nextChapter = parseCaseNumber(caseNumber).chapter + 1;
     const nextCaseNumber = formatCaseNumber(nextChapter, 1);
     const nextChoiceHistory = [
@@ -170,7 +187,7 @@ export default function TheoryScreen({ navigation, route }) {
 
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
     navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
-  }, [continuing, caseNumber, caseId, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
+  }, [continuing, caseNumber, caseId, map, unlockEnding, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
 
   const sealScale = sealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
   const sealOpacity = sealAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] });

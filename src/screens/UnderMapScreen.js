@@ -6,6 +6,7 @@ import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
 import DustLayer from '../components/DustLayer';
 import UnderMapConstellation from '../components/UnderMapConstellation';
+import { scheduleDailyStirReminder } from '../services/dailyStirNotifications';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../utils/haptics';
@@ -84,6 +85,13 @@ export default function UnderMapScreen({ navigation, route }) {
   useEffect(() => {
     touchUnderMap?.();
     drawUnderMapDailyStir?.(); // §8.1: surface today's drifting fragment (idempotent)
+    // Schedule the daily "stirred overnight" reminder once the player is invested
+    // (has collected something). Opt-out via settings; the service is a no-op on
+    // web / denied permission and only does real work once per session.
+    const hasFragments = (progress?.storyCampaign?.underMap?.fragments?.length || 0) > 0;
+    if (hasFragments && !progress?.settings?.dailyStirRemindersDisabled) {
+      scheduleDailyStirReminder().catch(() => {});
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [slotA, setSlotA] = useState(null);
