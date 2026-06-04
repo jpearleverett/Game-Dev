@@ -37,6 +37,20 @@ describe('computeConstellationLayout', () => {
     expect(out.nodes.find((n) => n.label === 'ink').kind).toBe('phenomenon');
   });
 
+  test('honors a fragment persistent position (stable map, no reflow)', () => {
+    const map = {
+      fragments: [
+        { id: 'f1', label: 'pinned', kind: 'symbol', firstCaseNumber: '001A', pos: { nx: 0.25, ny: 0.75 } },
+      ],
+      connections: [],
+    };
+    const out = computeConstellationLayout(map, DIMS);
+    const n = out.nodes[0];
+    // x = padding + nx*(W-2pad), y = padding + ny*(H-2pad)
+    expect(n.x).toBeCloseTo(DIMS.padding + 0.25 * (DIMS.width - 2 * DIMS.padding), 5);
+    expect(n.y).toBeCloseTo(DIMS.padding + 0.75 * (DIMS.height - 2 * DIMS.padding), 5);
+  });
+
   test('is deterministic — same input yields identical positions', () => {
     let m = createBlankUnderMap();
     m = addFragments(m, [

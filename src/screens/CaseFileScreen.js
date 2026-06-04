@@ -524,24 +524,20 @@ export default function CaseFileScreen({
       setNarrativeComplete(true);
     }
 
-    // UNDER-MAP backfill: ensure the scene's CORE anomalies (those in the always-read
-    // opening, plus any scene-level fragments without a specific prose phrase) are on
-    // the board even if the player didn't tap them — so the CONNECT/THEORY beat always
-    // has material. Path-specific anomalies are collected inline on tap (already
-    // ingested), so we intentionally do NOT backfill them here — that would leak
-    // fragments from branches the player never read.
+    // UNDER-MAP backfill: collect ALL of the scene's fragments at the gate (not
+    // just the opening's), so every relation's endpoints exist and the CONNECT
+    // beat always has probeable pairs. Tapping during the read is still the
+    // EXAMINE reward; this guarantees the puzzle is never starved if the player
+    // didn't tap everything. (A fragment from a branch they skipped is a minor
+    // cost next to a connectable board.)
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
-      const openingText = branchingNarrative?.opening?.text || "";
-      const backfillFragments = sceneFragments.filter(
-        (f) => !f.phrase || (typeof openingText === "string" && openingText.includes(f.phrase)),
-      );
-      onIngestFragments(backfillFragments, sceneRelations, {
+      onIngestFragments(sceneFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter, branchingNarrative]);
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;

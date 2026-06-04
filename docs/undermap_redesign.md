@@ -1,7 +1,24 @@
 # Dead Letters — Under-Map Puzzle↔Story Redesign
 
-**Status:** Design proposal (pre-implementation). Awaiting review.
+**Status:** Implemented (Moves 1–5, 8) + on-device playtest fixes. See §13.
 **Author:** design pass, 2026-06.
+
+> **§13 — Playtest fixes (on-device round 1).** Three issues surfaced playing on device:
+> 1. **"Most subchapters had nothing to connect."** Root causes: completion backfill only
+>    re-collected the *opening's* fragments; `addRelations` matched labels exactly (the model's
+>    wording drift dropped relations); `fragments`/`relations` weren't required. Fixes: backfill
+>    **all** scene fragments at the gate; **fuzzy label resolution** (exact→slug→contains) in
+>    `addRelations`; `fragments`/`relations` made **required** + prompt demands ≥2 intra-scene
+>    pairs; and a **deterministic safety net** in `validation._ensureConnectableRelations` that
+>    synthesizes kind-bond relations (with templated decoys) when the model under-delivers — so a
+>    CONNECT beat is **never empty**. (C/THEORY beats are skipped.)
+> 2. **"The fragment list grows forever."** The CONNECT screen now partitions into **"Threads you
+>    can still link"** (fragments in an unfound relation) up front, with the rest collapsed into a
+>    **"Show the rest of the map"** archive.
+> 3. **"The map shifts every time / isn't obviously a map."** Each fragment now gets a **persistent
+>    normalized position** at creation (`makeFragment.pos`, deterministic, chapter-ringed); the
+>    constellation honors it (no reflow) and draws faint **chapter territory rings**. The
+>    force-directed mode is retained in the layout util but no longer used by the screen.
 **Scope:** the story-campaign loop only — READ → EXAMINE → **CONNECT** → **THEORY**. The
 daily word puzzle (`EvidenceBoardScreen`) is out of scope except where noted as a future
 on-ramp.

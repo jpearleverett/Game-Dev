@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { Line, Circle } from 'react-native-svg';
+import Svg, { Line, Circle, Ellipse } from 'react-native-svg';
 import { computeConstellationLayout } from '../utils/underMapLayout';
 import { FRAGMENT_KIND } from '../data/underMap';
 import { COLORS } from '../constants/colors';
@@ -23,8 +23,9 @@ const colorFor = (k) => KIND_COLOR[k] || COLORS.accentViolet;
 
 export default function UnderMapConstellation({ map, height = 200, selectedIds = [], onTapNode }) {
   const [width, setWidth] = useState(0);
+  const padding = 26;
   const layout = useMemo(
-    () => computeConstellationLayout(map, { width, height, padding: 26, mode: 'force' }),
+    () => computeConstellationLayout(map, { width, height, padding }),
     [map, width, height],
   );
 
@@ -35,10 +36,36 @@ export default function UnderMapConstellation({ map, height = 200, selectedIds =
 
   const selected = useMemo(() => new Set(selectedIds.filter(Boolean)), [selectedIds]);
 
+  // Faint concentric "territory" rings, one per chapter present, so the
+  // constellation reads as a structured map (a core with chapters fanning out).
+  const rings = useMemo(() => {
+    if (width <= 0 || !layout.nodes.length) return [];
+    const innerW = width - padding * 2;
+    const innerH = height - padding * 2;
+    const chapters = [...new Set(layout.nodes.map((n) => n.chapter))].sort((a, b) => a - b);
+    return chapters.map((c) => {
+      const ringBase = Math.min(0.42, 0.12 + (Math.max(1, c) - 1) * 0.045);
+      return { c, rx: ringBase * innerW, ry: ringBase * innerH };
+    });
+  }, [layout.nodes, width, height]);
+
   return (
     <View onLayout={onLayout} style={[styles.wrap, { height }]}>
       {width > 0 && layout.nodes.length > 0 ? (
         <Svg width={width} height={height}>
+          {/* Chapter territory rings (faint) */}
+          {rings.map((r) => (
+            <Ellipse
+              key={`ring_${r.c}`}
+              cx={width / 2}
+              cy={height / 2}
+              rx={r.rx}
+              ry={r.ry}
+              stroke="rgba(157,150,141,0.16)"
+              strokeWidth={1}
+              fill="none"
+            />
+          ))}
           {layout.links.map((l) => (
             <Line
               key={l.id}

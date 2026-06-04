@@ -135,6 +135,8 @@ export function computeConstellationLayout(map, { width = 0, height = 0, padding
   const posById = new Map();
   const nodes = [];
 
+  const innerW = width - padding * 2;
+  const innerH = height - padding * 2;
   chapters.forEach((ch, ci) => {
     const clusterAngle = chapterCount > 1 ? (ci / chapterCount) * Math.PI * 2 - Math.PI / 2 : 0;
     const ccx = cx + clusterRing * Math.cos(clusterAngle);
@@ -142,12 +144,21 @@ export function computeConstellationLayout(map, { width = 0, height = 0, padding
     const group = byChapter.get(ch);
     const m = group.length;
     group.forEach((f, fi) => {
-      let x = ccx;
-      let y = ccy;
-      if (m > 1) {
+      let x;
+      let y;
+      // PERSISTENT POSITION: if the fragment carries a stored normalized position
+      // (assigned once at creation), honor it so the map never reflows — it only
+      // grows. Fall back to the chapter-cluster layout for older fragments.
+      if (f.pos && Number.isFinite(f.pos.nx) && Number.isFinite(f.pos.ny)) {
+        x = padding + f.pos.nx * innerW;
+        y = padding + f.pos.ny * innerH;
+      } else if (m > 1) {
         const a = (fi / m) * Math.PI * 2 - Math.PI / 2;
         x = ccx + fragRing * Math.cos(a);
         y = ccy + fragRing * Math.sin(a);
+      } else {
+        x = ccx;
+        y = ccy;
       }
       // Clamp inside the padded canvas.
       x = Math.max(padding, Math.min(width - padding, x));

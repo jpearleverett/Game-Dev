@@ -149,6 +149,53 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
     expect(out.relations[0].scope).toBe('chapter'); // default
   });
 
+  test('CONNECT guarantee: under-delivered relations are topped up to 2 from this scene fragments', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: {
+        opening: {
+          text: 'The seal on 14 Acheron Avenue caught the lamplight wrong.',
+          details: [
+            { phrase: 'The seal', note: 'a mark', evidenceCard: 'The Seal', kind: 'symbol' },
+            { phrase: '14 Acheron Avenue', note: 'a street', evidenceCard: 'Acheron Avenue', kind: 'place' },
+            { phrase: 'lamplight wrong', note: 'the glow', evidenceCard: 'Wrong Lamplight', kind: 'phenomenon' },
+          ],
+        },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+      // Model authored NO relations.
+    };
+    const out = validationMethods._parseGeneratedContent(content, false); // A/B beat
+    const labelSet = new Set(out.fragments.map((f) => f.label.toLowerCase()));
+    const resolvable = out.relations.filter(
+      (r) => labelSet.has(String(r.aLabel).toLowerCase()) && labelSet.has(String(r.bLabel).toLowerCase()),
+    );
+    expect(resolvable.length).toBeGreaterThanOrEqual(2);
+    // Fallbacks carry a revelation + two false readings (choose-the-truth still works).
+    resolvable.forEach((r) => {
+      expect(typeof r.revelation).toBe('string');
+      expect(r.revelation.length).toBeGreaterThan(0);
+      expect(r.falseReadings).toHaveLength(2);
+    });
+  });
+
+  test('CONNECT guarantee does NOT fire on C/decision beats', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: {
+        opening: { text: 'a b c', details: [
+          { phrase: 'a', note: 'x', evidenceCard: 'A', kind: 'symbol' },
+          { phrase: 'b', note: 'y', evidenceCard: 'B', kind: 'place' },
+        ] },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+    };
+    const out = validationMethods._parseGeneratedContent(content, true); // C/decision
+    expect(out.relations).toEqual([]); // no fabricated relations on THEORY beats
+  });
+
   test('arc-scoped relations survive parsing (keystone payoff)', () => {
     const content = {
       title: 'x',

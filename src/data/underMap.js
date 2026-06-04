@@ -44,6 +44,37 @@ const norm = (v) => String(v || '').trim().toLowerCase();
 /** A relation is undirected; key it order-independently. */
 const relationKey = (aId, bId) => [aId, bId].sort().join('::');
 
+/** Chapter number from a case number like "003B" -> 3 (null if unparseable). */
+const chapterOf = (caseNumber) => {
+  const n = parseInt(String(caseNumber || '').slice(0, 3), 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Stable [0,1) hash of a string (FNV-1a-ish) for deterministic positioning. */
+const hash01 = (str, salt = 0) => {
+  let h = (2166136261 ^ salt) >>> 0;
+  const s = String(str);
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 100000) / 100000;
+};
+
+/**
+ * A fragment's PERSISTENT position on the map (normalized 0..1), assigned once
+ * at creation and never moved — so the Under-Map reads as a stable place that
+ * GROWS rather than reflowing every render. Chapters fan outward in rings (the
+ * hidden world drawing itself from a core), with the angle seeded by the id.
+ */
+const assignPosition = (id, caseNumber) => {
+  const chapter = chapterOf(caseNumber) || 1;
+  const angle = hash01(id, 1) * Math.PI * 2;
+  const ringBase = Math.min(0.42, 0.12 + (chapter - 1) * 0.045);
+  const r = Math.max(0.06, ringBase + (hash01(id, 2) - 0.5) * 0.07);
+  return { nx: 0.5 + r * Math.cos(angle), ny: 0.5 + r * Math.sin(angle), chapter };
+};
+
 export const createBlankUnderMap = () => ({
   fragments: [],     // { id, label, kind, detail, anomalous, caseNumber, chapter, discoveredAt }
   relations: [],     // { id, a, b, revelation, falseReadings } — discoverable truth (a/b are fragment ids)
@@ -92,10 +123,13 @@ const cleanFalseReadings = (arr) =>
 export const makeFragment = ({ label, kind, detail = '', anomalous = true, caseNumber = null, chapter = null }) => {
   const k = KIND_SET.has(kind) ? kind : FRAGMENT_KIND.PHENOMENON;
   const now = new Date().toISOString();
+  const id = fragmentId(k, label);
   return {
-    id: fragmentId(k, label),
+    id,
     label: String(label || '').trim(),
     kind: k,
+    // Persistent map position (assigned once; never moves). See assignPosition.
+    pos: assignPosition(id, caseNumber),
     detail: String(detail || '').trim(),
     anomalous: !!anomalous,
     caseNumber,
@@ -152,13 +186,33 @@ export const addFragments = (map, fragments = []) => {
  */
 export const addRelations = (map, relations = [], { caseNumber = null } = {}) => {
   const m = normalizeUnderMap(map);
-  const byLabel = new Map(m.fragments.map((f) => [norm(f.label), f.id]));
+  const byNorm = new Map(m.fragments.map((f) => [norm(f.label), f.id]));
+  const bySlug = new Map(m.fragments.map((f) => [slug(f.label), f.id]));
+  // Resolve a relation's label to a fragment id, tolerant of the model's wording
+  // drift: exact (normalized) -> slug -> fuzzy contains. This recovers many
+  // relations that would otherwise silently fail to resolve (the #1 cause of a
+  // CONNECT beat having "nothing to link").
+  const resolveLabel = (label) => {
+    if (!label) return null;
+    const n = norm(label);
+    if (byNorm.has(n)) return byNorm.get(n);
+    const s = slug(label);
+    if (bySlug.has(s)) return bySlug.get(s);
+    if (n.length >= 4) {
+      const hit = m.fragments.find((f) => {
+        const fn = norm(f.label);
+        return fn.length >= 4 && (fn.includes(n) || n.includes(fn));
+      });
+      if (hit) return hit.id;
+    }
+    return null;
+  };
   const have = new Set(m.relations.map((r) => relationKey(r.a, r.b)));
   const next = [...m.relations];
   (Array.isArray(relations) ? relations : []).forEach((raw, idx) => {
     if (!raw) return;
-    const aId = raw.a || byLabel.get(norm(raw.aLabel));
-    const bId = raw.b || byLabel.get(norm(raw.bLabel));
+    const aId = raw.a || resolveLabel(raw.aLabel);
+    const bId = raw.b || resolveLabel(raw.bLabel);
     const revelation = String(raw.revelation || '').trim();
     if (!aId || !bId || aId === bId || !revelation) return;
     const key = relationKey(aId, bId);
@@ -474,12 +528,6 @@ export const latestNode = (map) => normalizeUnderMap(map).nodes[0] || null;
 export const isMotif = (fragment) => !!fragment && (fragment.seen || 1) > 1;
 /** How many collected fragments have become recurring motifs. */
 export const motifCount = (map) => normalizeUnderMap(map).fragments.filter(isMotif).length;
-
-/** Chapter number from a case number like "003B" -> 3 (null if unparseable). */
-const chapterOf = (caseNumber) => {
-  const n = parseInt(String(caseNumber || '').slice(0, 3), 10);
-  return Number.isFinite(n) ? n : null;
-};
 
 /**
  * A KEYSTONE is a motif that has recurred enough (`seen >= KEYSTONE_SEEN`) AND

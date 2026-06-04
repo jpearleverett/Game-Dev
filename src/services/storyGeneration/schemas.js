@@ -349,7 +349,7 @@ export const STORY_CONTENT_SCHEMA = {
     // they connect to reveal the hidden world. Drives examine -> connect -> reveal.
     fragments: {
       type: 'array',
-      description: 'The 2-4 most striking things Jack could notice in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose.',
+      description: 'REQUIRED: 3-5 striking things Jack notices in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose. There MUST be enough here to support at least two connections (see relations).',
       items: {
         type: 'object',
         properties: {
@@ -364,7 +364,7 @@ export const STORY_CONTENT_SCHEMA = {
     },
     relations: {
       type: 'array',
-      description: 'How fragments connect to reveal a secret of the hidden world. Reference fragments by their EXACT label (from this scene or established earlier). Only assert connections that are true in your world and inferable by the player. Prefer pairs that follow the bond grammar where natural: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON.',
+      description: 'REQUIRED: author AT LEAST 2 connections, and BOTH endpoints of at least two of them MUST be fragments you listed in THIS scene\'s `fragments` (so the player can connect them immediately). Reference fragments by their EXACT label. Only assert connections true in your world and inferable by the player. Prefer the bond grammar: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON. You MAY add one extra relation linking a new fragment to one the player already holds.',
       items: {
         type: 'object',
         properties: {
@@ -417,7 +417,7 @@ export const STORY_CONTENT_SCHEMA = {
       required: ['resolvesChapter', 'correct'],
     },
   },
-  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
+  required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads', 'fragments', 'relations'],
 };
 
 // ============================================================================

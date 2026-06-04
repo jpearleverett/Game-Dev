@@ -63,6 +63,36 @@ describe('underMap', () => {
     expect(f.anomalous).toBe(true);
   });
 
+  test('fragments get a stable normalized map position at creation', () => {
+    const f = makeFragment({ label: 'Silver ink', kind: 'phenomenon', caseNumber: '002A' });
+    expect(f.pos).toBeTruthy();
+    expect(f.pos.nx).toBeGreaterThanOrEqual(0);
+    expect(f.pos.nx).toBeLessThanOrEqual(1);
+    expect(f.pos.ny).toBeGreaterThanOrEqual(0);
+    expect(f.pos.ny).toBeLessThanOrEqual(1);
+    expect(f.pos.chapter).toBe(2);
+    // Deterministic: same id -> same position.
+    const g = makeFragment({ label: 'silver ink', kind: 'phenomenon', caseNumber: '002A' });
+    expect(g.pos).toEqual(f.pos);
+  });
+
+  test('addRelations resolves labels fuzzily (recovers the models wording drift)', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [
+      { label: 'Silver ink that shifts in the light', kind: 'phenomenon' },
+      { label: 'A seal like a closed eye', kind: 'symbol' },
+    ]);
+    // Relation labels are shortened/drifted versions of the fragment labels.
+    m = addRelations(m, [
+      { aLabel: 'silver ink', bLabel: 'seal like a closed eye', revelation: 'They share a maker.' },
+    ]);
+    expect(m.relations).toHaveLength(1); // resolved despite inexact labels
+    const ink = fragmentId('phenomenon', 'Silver ink that shifts in the light');
+    const seal = fragmentId('symbol', 'A seal like a closed eye');
+    expect(undiscoveredRelationCount(m)).toBe(1);
+    expect(connectFragments(m, ink, seal).valid).toBe(true);
+  });
+
   test('relations resolve by label and a correct connection reveals a node', () => {
     let m = seed();
     m = addRelations(m, [

@@ -99,6 +99,8 @@ export default function UnderMapScreen({ navigation, route }) {
   const [feedback, setFeedback] = useState(null); // { tone:'reveal'|'known'|'none'|'blur', text }
   // Choose-the-truth: { aId, bId, options:[...], unresolved:bool } when a relation is found.
   const [chooser, setChooser] = useState(null);
+  // Tame the growing list: show only connectable fragments by default.
+  const [showAllFrags, setShowAllFrags] = useState(false);
 
   // Probe budget for THIS descent (tense-but-forgiving): fixed at entry, never
   // hard-blocks "Continue the descent" when spent — unfound links stay sensed.
@@ -138,6 +140,17 @@ export default function UnderMapScreen({ navigation, route }) {
   const slotFragB = slotB ? fragById(slotB) : null;
   const bondHint = slotFragA && slotFragB ? bondHintFor(slotFragA.kind, slotFragB.kind) : null;
 
+  // Partition the (cumulative, ever-growing) fragments so the player sees what's
+  // still CONNECTABLE up front, and everything else collapses into an archive.
+  const { connectableFrags, otherFrags } = useMemo(() => {
+    const ids = new Set();
+    sensedRelations(map).forEach((r) => { ids.add(r.a); ids.add(r.b); });
+    const connectable = [];
+    const other = [];
+    map.fragments.forEach((f) => (ids.has(f.id) ? connectable : other).push(f));
+    return { connectableFrags: connectable, otherFrags: other };
+  }, [map]);
+
   useEffect(() => {
     // Link line glows when both slots are filled.
     Animated.timing(linkGlow, {
@@ -158,6 +171,45 @@ export default function UnderMapScreen({ navigation, route }) {
     // both full -> replace B
     setSlotB(id);
   }, [slotA, slotB]);
+
+  const renderFrag = useCallback((f) => {
+    const m = metaFor(f.kind);
+    const selected = f.id === slotA || f.id === slotB;
+    const hinted = hintIds.has(f.id);
+    const linked = map.connections.some((c) => c.a === f.id || c.b === f.id);
+    return (
+      <Pressable
+        key={f.id}
+        onPress={() => loadSlot(f.id)}
+        style={[
+          styles.frag,
+          { borderColor: selected ? m.color : (hinted ? COLORS.accentSecondary : COLORS.panelOutline), borderLeftColor: m.color },
+          (selected || hinted) && { backgroundColor: COLORS.surfaceAlt },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`${m.label}: ${f.label}`}
+      >
+        <View style={styles.fragTop}>
+          <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
+          <Text style={[styles.fragKind, { color: m.color }]}>{m.label}</Text>
+          {isKeystone(f) ? (
+            <View style={[styles.keystoneBadge, { marginLeft: 'auto' }]}>
+              <MaterialCommunityIcons name="star-circle" size={11} color={COLORS.amberLight || COLORS.accentSecondary} />
+              <Text style={styles.keystoneText}>KEYSTONE</Text>
+            </View>
+          ) : isMotif(f) ? (
+            <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
+              <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
+              <Text style={styles.motifText}>×{f.seen}</Text>
+            </View>
+          ) : null}
+          {linked ? <MaterialCommunityIcons name="vector-link" size={12} color={COLORS.accentSecondary} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} /> : null}
+        </View>
+        <Text style={styles.fragLabel}>{f.label}</Text>
+        {f.detail ? <Text style={styles.fragDetail} numberOfLines={2}>{f.detail}</Text> : null}
+      </Pressable>
+    );
+  }, [slotA, slotB, hintIds, map.connections, loadSlot]);
 
   // Daily stir: acknowledge the drifting fragment — advance the days-mapped
   // streak and load it onto the bench so the player can work it into the map.
@@ -478,48 +530,37 @@ export default function UnderMapScreen({ navigation, route }) {
             />
           ) : null}
 
-          {/* Fragments */}
-          <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>FRAGMENTS</Text>
-          <View style={styles.fragWrap}>
-            {map.fragments.map((f) => {
-              const m = metaFor(f.kind);
-              const selected = f.id === slotA || f.id === slotB;
-              const hinted = hintIds.has(f.id);
-              const linked = map.connections.some((c) => c.a === f.id || c.b === f.id);
-              return (
-                <Pressable
-                  key={f.id}
-                  onPress={() => loadSlot(f.id)}
-                  style={[
-                    styles.frag,
-                    { borderColor: selected ? m.color : (hinted ? COLORS.accentSecondary : COLORS.panelOutline), borderLeftColor: m.color },
-                    (selected || hinted) && { backgroundColor: COLORS.surfaceAlt },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${m.label}: ${f.label}`}
-                >
-                  <View style={styles.fragTop}>
-                    <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
-                    <Text style={[styles.fragKind, { color: m.color }]}>{m.label}</Text>
-                    {isKeystone(f) ? (
-                      <View style={[styles.keystoneBadge, { marginLeft: 'auto' }]}>
-                        <MaterialCommunityIcons name="star-circle" size={11} color={COLORS.amberLight || COLORS.accentSecondary} />
-                        <Text style={styles.keystoneText}>KEYSTONE</Text>
-                      </View>
-                    ) : isMotif(f) ? (
-                      <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
-                        <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
-                        <Text style={styles.motifText}>×{f.seen}</Text>
-                      </View>
-                    ) : null}
-                    {linked ? <MaterialCommunityIcons name="vector-link" size={12} color={COLORS.accentSecondary} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} /> : null}
-                  </View>
-                  <Text style={styles.fragLabel}>{f.label}</Text>
-                  {f.detail ? <Text style={styles.fragDetail} numberOfLines={2}>{f.detail}</Text> : null}
-                </Pressable>
-              );
-            })}
-          </View>
+          {/* Fragments — connectable first, the rest collapsed into an archive */}
+          <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>
+            {connectableFrags.length ? 'THREADS YOU CAN STILL LINK' : 'FRAGMENTS'}
+          </Text>
+          {connectableFrags.length ? (
+            <View style={styles.fragWrap}>{connectableFrags.map(renderFrag)}</View>
+          ) : (
+            <Text style={styles.allMapped}>
+              Every thread here is mapped. Press on — or open the full map below.
+            </Text>
+          )}
+
+          {otherFrags.length ? (
+            <>
+              <Pressable
+                onPress={() => setShowAllFrags((v) => !v)}
+                style={styles.archiveToggle}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons
+                  name={showAllFrags ? 'chevron-down' : 'chevron-right'}
+                  size={16}
+                  color={COLORS.textSecondary}
+                />
+                <Text style={styles.archiveToggleText}>
+                  {showAllFrags ? 'Hide' : 'Show'} the rest of the map · {otherFrags.length} {otherFrags.length === 1 ? 'fragment' : 'fragments'}
+                </Text>
+              </Pressable>
+              {showAllFrags ? <View style={styles.fragWrap}>{otherFrags.map(renderFrag)}</View> : null}
+            </>
+          ) : null}
 
           {/* Revealed nodes */}
           {map.nodes.length > 0 ? (
@@ -658,6 +699,9 @@ const styles = StyleSheet.create({
   feedback: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.md, lineHeight: LINE_HEIGHTS.cozy },
   feedbackNone: { color: COLORS.textMuted, fontStyle: 'italic' },
   // Fragments
+  allMapped: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, fontStyle: 'italic', lineHeight: LINE_HEIGHTS.cozy },
+  archiveToggle: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: SPACING.md, marginBottom: SPACING.sm },
+  archiveToggleText: { fontFamily: FONTS.primaryMedium, fontSize: FONT_SIZES.xs, letterSpacing: 0.5, color: COLORS.textSecondary },
   fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   frag: {
     width: '47%', flexGrow: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
