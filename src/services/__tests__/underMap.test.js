@@ -6,11 +6,21 @@ import {
   addFragments,
   addRelations,
   connectFragments,
+  senseConnection,
+  resolveReading,
+  readingChoices,
+  recordDescent,
   recordTheory,
   fragmentCount,
   revealedNodeCount,
   areConnected,
   undiscoveredRelationCount,
+  sensedRelations,
+  connectableFragmentCount,
+  probeBudgetFor,
+  unresolvedReadingCount,
+  flawlessStreak,
+  bestFlawlessStreak,
   isMotif,
   motifCount,
   mapDepth,
@@ -161,5 +171,127 @@ describe('underMap', () => {
     const b = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
     m = connectFragments(m, a, b).map;
     expect(mapDepth(m)).toEqual({ drawn: 1, total: 2, ratio: 0.5 });
+  });
+});
+
+// ---- Move 1: CONNECT-as-deduction (probes, choose-the-truth, streak) --------
+
+const deductionSeed = () => {
+  let m = createBlankUnderMap();
+  m = addFragments(m, [
+    { label: 'Silver ink that moves', kind: FRAGMENT_KIND.PHENOMENON },
+    { label: 'Silver stain on the courier', kind: FRAGMENT_KIND.PHENOMENON },
+    { label: 'Old Customs House', kind: FRAGMENT_KIND.PLACE },
+    { label: '14 Acheron Avenue', kind: FRAGMENT_KIND.PLACE },
+  ]);
+  m = addRelations(m, [
+    {
+      aLabel: 'Silver stain on the courier',
+      bLabel: 'Silver ink that moves',
+      revelation: 'The ink marks who carries it.',
+      falseReadings: ['The courier spilled a cosmetic.', 'The stain is unrelated rust.'],
+    },
+  ]);
+  return m;
+};
+const INK = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+const STAIN = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+const ACHERON = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
+
+describe('underMap — deduction', () => {
+  test('addRelations captures up to two falseReadings', () => {
+    const m = deductionSeed();
+    expect(m.relations[0].falseReadings).toEqual([
+      'The courier spilled a cosmetic.',
+      'The stain is unrelated rust.',
+    ]);
+  });
+
+  test('senseConnection is a pure probe — no mutation, surfaces readings', () => {
+    const m = deductionSeed();
+    const hit = senseConnection(m, STAIN, INK);
+    expect(hit.valid).toBe(true);
+    expect(hit.alreadyConnected).toBe(false);
+    expect(hit.readings.correct).toBe('The ink marks who carries it.');
+    expect(hit.readings.options).toHaveLength(3);
+    expect(hit.readings.options).toContain('The ink marks who carries it.');
+    // No mutation: still 0 nodes/connections.
+    expect(revealedNodeCount(m)).toBe(0);
+    expect(m.connections).toHaveLength(0);
+
+    const wrongProbe = senseConnection(m, INK, ACHERON);
+    expect(wrongProbe.valid).toBe(false);
+    expect(wrongProbe.readings).toBeNull();
+  });
+
+  test('resolveReading: correct reading reveals a sharp node', () => {
+    const m = deductionSeed();
+    const res = resolveReading(m, STAIN, INK, 'The ink marks who carries it.');
+    expect(res.valid).toBe(true);
+    expect(res.correctReading).toBe(true);
+    expect(res.node.unresolvedReading).toBe(false);
+    expect(revealedNodeCount(res.map)).toBe(1);
+    expect(unresolvedReadingCount(res.map)).toBe(0);
+    expect(areConnected(res.map, INK, STAIN)).toBe(true);
+  });
+
+  test('resolveReading: wrong reading still connects but blurs the node', () => {
+    const m = deductionSeed();
+    const res = resolveReading(m, STAIN, INK, 'The courier spilled a cosmetic.');
+    expect(res.valid).toBe(true);
+    expect(res.correctReading).toBe(false);
+    expect(res.node.unresolvedReading).toBe(true);
+    expect(unresolvedReadingCount(res.map)).toBe(1);
+    // Progress not lost: the connection counts toward depth.
+    expect(mapDepth(res.map).drawn).toBe(1);
+  });
+
+  test('a blurred node upgrades to sharp when read correctly later', () => {
+    let m = deductionSeed();
+    m = resolveReading(m, STAIN, INK, 'The stain is unrelated rust.').map; // wrong
+    expect(unresolvedReadingCount(m)).toBe(1);
+    const up = resolveReading(m, STAIN, INK, 'The ink marks who carries it.'); // correct now
+    expect(up.upgraded).toBe(true);
+    expect(up.alreadyConnected).toBe(true);
+    expect(unresolvedReadingCount(up.map)).toBe(0);
+    expect(revealedNodeCount(up.map)).toBe(1); // no duplicate node
+  });
+
+  test('probe budget scales with connectable fragments, shrinks as links are drawn', () => {
+    const m = deductionSeed();
+    // 2 fragments participate in the single unfound relation -> base + floor(2/3) = 3.
+    expect(connectableFragmentCount(m)).toBe(2);
+    expect(probeBudgetFor(m)).toBe(3);
+    expect(sensedRelations(m)).toHaveLength(1);
+
+    const drawn = resolveReading(m, STAIN, INK, 'The ink marks who carries it.').map;
+    expect(connectableFragmentCount(drawn)).toBe(0);
+    expect(sensedRelations(drawn)).toHaveLength(0);
+  });
+
+  test('readingChoices shuffles deterministically with an injected rng', () => {
+    const { readings } = senseConnection(deductionSeed(), STAIN, INK);
+    const order = readingChoices(readings, () => 0); // rng=0 -> reverse-ish deterministic order
+    expect(order).toHaveLength(3);
+    expect([...order].sort()).toEqual([...readings.options].sort()); // same set
+  });
+
+  test('recordDescent tracks the flawless streak and resets on a misstep', () => {
+    let m = createBlankUnderMap();
+    m = recordDescent(m, { hadMisstep: false });
+    m = recordDescent(m, { hadMisstep: false });
+    expect(flawlessStreak(m)).toBe(2);
+    expect(bestFlawlessStreak(m)).toBe(2);
+    m = recordDescent(m, { hadMisstep: true });
+    expect(flawlessStreak(m)).toBe(0);
+    expect(bestFlawlessStreak(m)).toBe(2); // best preserved
+  });
+
+  test('back-compat: connectFragments still reveals via the legacy shape', () => {
+    const m = deductionSeed();
+    const r = connectFragments(m, STAIN, INK);
+    expect(r.valid).toBe(true);
+    expect(r.revealed.node.revelation).toBe('The ink marks who carries it.');
+    expect(r.revealed.node.unresolvedReading).toBe(false); // auto-resolves the truth
   });
 });

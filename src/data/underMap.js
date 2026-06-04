@@ -23,6 +23,12 @@ const KIND_SET = new Set(Object.values(FRAGMENT_KIND));
 const MAX_FRAGMENTS = 120;
 const MAX_NODES = 60;
 
+// CONNECT-as-deduction tuning (see docs/undermap_redesign.md §3.1).
+// Probe budget = base + one extra per N "connectable" fragments, so it scales
+// with how much there is to find, never with noise.
+export const PROBE_BASE = 3;
+export const PROBE_PER_FRAGMENTS = 3;
+
 const slug = (v, fb = 'x') =>
   String(v || fb).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fb;
 
@@ -34,10 +40,13 @@ const relationKey = (aId, bId) => [aId, bId].sort().join('::');
 
 export const createBlankUnderMap = () => ({
   fragments: [],     // { id, label, kind, detail, anomalous, caseNumber, chapter, discoveredAt }
-  relations: [],     // { id, a, b, revelation } — discoverable truth (a/b are fragment ids)
-  connections: [],   // { a, b, relationId, at } — player-made correct links
-  nodes: [],         // { id, label, revelation, at } — revealed Under-Map nodes
+  relations: [],     // { id, a, b, revelation, falseReadings } — discoverable truth (a/b are fragment ids)
+  connections: [],   // { a, b, relationId, at, unresolvedReading } — player-made links
+  nodes: [],         // { id, label, revelation, at, unresolvedReading } — revealed Under-Map nodes
   theories: [],      // { chapter, fragmentIds, interpretation, correct, at }
+  // CONNECT-as-deduction streak: consecutive descents mapped without a wrong probe.
+  flawlessStreak: 0,
+  bestFlawlessStreak: 0,
   lastVisitedAt: null,
 });
 
@@ -52,8 +61,17 @@ export const normalizeUnderMap = (map) => {
     connections: Array.isArray(map.connections) ? map.connections : [],
     nodes: Array.isArray(map.nodes) ? map.nodes : [],
     theories: Array.isArray(map.theories) ? map.theories : [],
+    flawlessStreak: Number.isFinite(map.flawlessStreak) ? map.flawlessStreak : 0,
+    bestFlawlessStreak: Number.isFinite(map.bestFlawlessStreak) ? map.bestFlawlessStreak : 0,
   };
 };
+
+/** Two tempting-but-FALSE readings the model authors per relation (for choose-the-truth). */
+const cleanFalseReadings = (arr) =>
+  (Array.isArray(arr) ? arr : [])
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .slice(0, 2);
 
 export const makeFragment = ({ label, kind, detail = '', anomalous = true, caseNumber = null, chapter = null }) => {
   const k = KIND_SET.has(kind) ? kind : FRAGMENT_KIND.PHENOMENON;
@@ -130,38 +148,134 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
     const key = relationKey(aId, bId);
     if (have.has(key)) return;
     have.add(key);
-    next.push({ id: raw.id || `rel_${slug(caseNumber || 'x')}_${idx}_${slug(revelation).slice(0, 24)}`, a: aId, b: bId, revelation });
+    next.push({
+      id: raw.id || `rel_${slug(caseNumber || 'x')}_${idx}_${slug(revelation).slice(0, 24)}`,
+      a: aId,
+      b: bId,
+      revelation,
+      falseReadings: cleanFalseReadings(raw.falseReadings),
+    });
   });
   if (next.length === m.relations.length) return m;
   return { ...m, relations: next };
 };
 
 /**
- * Attempt to connect two fragments.
- * Returns { map, revealed: { node } | null, alreadyConnected, valid }.
- * A valid connection matches a known relation; it reveals a node (once).
+ * STEP 1 of the deduction — probe a pair WITHOUT mutating the map.
+ * Tells the caller whether a relation exists between the two fragments and, if
+ * so, surfaces the candidate readings (the true revelation + the model's false
+ * readings) for the player to choose from. A probe that finds no relation is a
+ * "wrong probe" (the caller spends a probe); a probe that finds one is free.
+ *
+ * Returns { valid, relation|null, alreadyConnected, unresolvedReading, readings|null }.
+ * `readings` is { correct, options } with `options` DETERMINISTIC (correct first)
+ * so this stays pure/testable — the UI shuffles for display via readingChoices().
  */
-export const connectFragments = (map, aId, bId) => {
+export const senseConnection = (map, aId, bId) => {
   const m = normalizeUnderMap(map);
-  if (!aId || !bId || aId === bId) return { map: m, revealed: null, alreadyConnected: false, valid: false };
+  if (!aId || !bId || aId === bId) {
+    return { valid: false, relation: null, alreadyConnected: false, unresolvedReading: false, readings: null };
+  }
   const key = relationKey(aId, bId);
-  if (m.connections.some((c) => relationKey(c.a, c.b) === key)) {
-    return { map: m, revealed: null, alreadyConnected: true, valid: true };
-  }
-  const relation = m.relations.find((r) => relationKey(r.a, r.b) === key);
+  const relation = m.relations.find((r) => relationKey(r.a, r.b) === key) || null;
   if (!relation) {
-    // Inconclusive — not punishing, just no reveal.
-    return { map: m, revealed: null, alreadyConnected: false, valid: false };
+    return { valid: false, relation: null, alreadyConnected: false, unresolvedReading: false, readings: null };
   }
+  const existing = m.connections.find((c) => relationKey(c.a, c.b) === key) || null;
+  return {
+    valid: true,
+    relation,
+    alreadyConnected: !!existing,
+    unresolvedReading: !!existing?.unresolvedReading,
+    readings: { correct: relation.revelation, options: [relation.revelation, ...(relation.falseReadings || [])] },
+  };
+};
+
+/**
+ * STEP 2 of the deduction — commit a connection with the player's chosen reading.
+ * `chosenRevelation` is the interpretation the player picked; omit it (or pass
+ * null) to auto-commit the true reading (used by the back-compat connectFragments).
+ *
+ * A correct reading reveals the node fully. A WRONG reading still draws the
+ * connection (progress is never lost) but flags the node `unresolvedReading`
+ * (blurred — nudges a re-read) until the player resolves it correctly later.
+ *
+ * Returns { map, valid, node|null, revealed:{node}|null, alreadyConnected, correctReading, upgraded }.
+ */
+export const resolveReading = (map, aId, bId, chosenRevelation = null) => {
+  const m = normalizeUnderMap(map);
+  const miss = { map: m, valid: false, node: null, revealed: null, alreadyConnected: false, correctReading: false, upgraded: false };
+  if (!aId || !bId || aId === bId) return miss;
+  const key = relationKey(aId, bId);
+  const relation = m.relations.find((r) => relationKey(r.a, r.b) === key);
+  if (!relation) return miss;
+
+  // No explicit choice → treat as correct (auto-resolve). Otherwise compare.
+  const correctReading = chosenRevelation == null ? true : norm(chosenRevelation) === norm(relation.revelation);
+  const nodeId = `node_${relation.id}`;
+  const now = new Date().toISOString();
+  const existingNode = m.nodes.find((n) => n.id === nodeId) || null;
+  const existingConn = m.connections.find((c) => relationKey(c.a, c.b) === key) || null;
+
+  if (existingConn) {
+    // Already drawn. A correct reading can UPGRADE a previously-blurred node.
+    if (correctReading && existingNode?.unresolvedReading) {
+      const nodes = m.nodes.map((n) => (n.id === nodeId ? { ...n, unresolvedReading: false } : n));
+      const connections = m.connections.map((c) =>
+        relationKey(c.a, c.b) === key ? { ...c, unresolvedReading: false } : c,
+      );
+      const upgraded = { ...existingNode, unresolvedReading: false };
+      return { map: { ...m, nodes, connections }, valid: true, node: upgraded, revealed: null, alreadyConnected: true, correctReading: true, upgraded: true };
+    }
+    return { map: m, valid: true, node: existingNode, revealed: null, alreadyConnected: true, correctReading, upgraded: false };
+  }
+
   const node = {
-    id: `node_${relation.id}`,
+    id: nodeId,
     label: relation.revelation,
     revelation: relation.revelation,
-    at: new Date().toISOString(),
+    unresolvedReading: !correctReading,
+    at: now,
   };
-  const nodes = m.nodes.some((n) => n.id === node.id) ? m.nodes : [node, ...m.nodes].slice(0, MAX_NODES);
-  const connections = [{ a: aId, b: bId, relationId: relation.id, at: node.at }, ...m.connections];
-  return { map: { ...m, connections, nodes }, revealed: { node }, alreadyConnected: false, valid: true };
+  const nodes = existingNode ? m.nodes : [node, ...m.nodes].slice(0, MAX_NODES);
+  const connections = [{ a: aId, b: bId, relationId: relation.id, at: now, unresolvedReading: !correctReading }, ...m.connections];
+  return { map: { ...m, connections, nodes }, valid: true, node, revealed: { node }, alreadyConnected: false, correctReading, upgraded: false };
+};
+
+/**
+ * Back-compat one-shot connect: sense + auto-resolve the TRUE reading.
+ * Returns the legacy shape { map, revealed:{node}|null, alreadyConnected, valid }.
+ * New callers should use senseConnection + resolveReading for the deduction flow.
+ */
+export const connectFragments = (map, aId, bId) => {
+  const res = resolveReading(map, aId, bId, null);
+  return {
+    map: res.map,
+    revealed: res.alreadyConnected ? null : res.revealed,
+    alreadyConnected: !!res.alreadyConnected,
+    valid: !!res.valid,
+  };
+};
+
+/** Shuffle a relation's reading options for display (pure given an rng). */
+export const readingChoices = (readings, rng = Math.random) => {
+  const options = Array.isArray(readings?.options) ? [...readings.options] : [];
+  for (let i = options.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+  return options;
+};
+
+/**
+ * Record the outcome of a descent for the flawless-mapping streak. A descent
+ * with any wrong probe resets the streak (soft sting); a clean one extends it.
+ */
+export const recordDescent = (map, { hadMisstep = false } = {}) => {
+  const m = normalizeUnderMap(map);
+  const flawlessStreak = hadMisstep ? 0 : (m.flawlessStreak || 0) + 1;
+  const bestFlawlessStreak = Math.max(m.bestFlawlessStreak || 0, flawlessStreak);
+  return { ...m, flawlessStreak, bestFlawlessStreak };
 };
 
 export const recordTheory = (map, theory) => {
@@ -199,6 +313,31 @@ export const undiscoveredRelationCount = (map) => {
   const made = new Set(m.connections.map((c) => relationKey(c.a, c.b)));
   return m.relations.filter((r) => !made.has(relationKey(r.a, r.b))).length;
 };
+
+/** The relations still unmade — "sensed" links the player can still draw (drives the assist pulse). */
+export const sensedRelations = (map) => {
+  const m = normalizeUnderMap(map);
+  const made = new Set(m.connections.map((c) => relationKey(c.a, c.b)));
+  return m.relations.filter((r) => !made.has(relationKey(r.a, r.b)));
+};
+
+/** Distinct fragments that participate in at least one still-unfound relation. */
+export const connectableFragmentCount = (map) => {
+  const ids = new Set();
+  sensedRelations(map).forEach((r) => { ids.add(r.a); ids.add(r.b); });
+  return ids.size;
+};
+
+/** Probe budget for a descent: base + one per N connectable fragments (see §3.1). */
+export const probeBudgetFor = (map) =>
+  PROBE_BASE + Math.floor(connectableFragmentCount(map) / PROBE_PER_FRAGMENTS);
+
+/** Connections drawn but whose meaning the player hasn't yet read correctly (blurred nodes). */
+export const unresolvedReadingCount = (map) =>
+  normalizeUnderMap(map).nodes.filter((n) => n.unresolvedReading).length;
+
+export const flawlessStreak = (map) => normalizeUnderMap(map).flawlessStreak || 0;
+export const bestFlawlessStreak = (map) => normalizeUnderMap(map).bestFlawlessStreak || 0;
 export const latestNode = (map) => normalizeUnderMap(map).nodes[0] || null;
 
 /** A fragment is a MOTIF once it has re-surfaced more than once. */
