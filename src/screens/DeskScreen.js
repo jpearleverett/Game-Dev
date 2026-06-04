@@ -6,7 +6,6 @@ import * as Haptics from 'expo-haptics';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
-import AtmosphereLayer from '../components/AtmosphereLayer';
 import GlassPanel from '../components/GlassPanel';
 import Stamp from '../components/noir/Stamp';
 import CornerFrame from '../components/noir/CornerFrame';
@@ -189,7 +188,6 @@ export default function DeskScreen({
 
   return (
     <ScreenSurface variant="desk" accentColor={palette.accent}>
-      <AtmosphereLayer reducedMotion={reducedMotion} glow="violet" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}

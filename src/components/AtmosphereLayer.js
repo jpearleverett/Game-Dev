@@ -63,8 +63,8 @@ export default function AtmosphereLayer({
     }));
   }, [rain, reducedMotion, width]);
 
-  const glowColor = glow === 'cyan' ? COLORS.underCyanSoft : COLORS.underGlowSoft;
-  const glow2 = glow === 'cyan' ? COLORS.underGlowSoft : COLORS.underCyanSoft;
+  const glowColor = glow === 'cyan' ? COLORS.underCyanSoft : glow === 'amber' ? 'rgba(241,197,114,0.13)' : COLORS.underGlowSoft;
+  const glow2 = glow === 'amber' ? COLORS.underGlowSoft : glow === 'cyan' ? COLORS.underGlowSoft : COLORS.underCyanSoft;
   const bloom = Math.max(280, Math.round(width * 0.9));
 
   return (

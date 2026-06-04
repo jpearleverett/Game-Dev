@@ -374,7 +374,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const probeTotal = initialBudgetRef.current;
 
   return (
-    <ScreenSurface variant="default">
+    <ScreenSurface variant="default" glow="violet">
       {!reducedMotion ? (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
       ) : null}

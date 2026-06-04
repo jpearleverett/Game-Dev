@@ -196,7 +196,7 @@ export default function TheoryScreen({ navigation, route }) {
   const sealOpacity = sealAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] });
 
   return (
-    <ScreenSurface variant="default">
+    <ScreenSurface variant="default" glow="violet">
       {!reducedMotion ? (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
       ) : null}

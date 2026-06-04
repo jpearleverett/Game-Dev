@@ -1068,12 +1068,17 @@ export function GameProvider({
 export function useGame() {
   const state = useContext(GameStateContext);
   const dispatch = useContext(GameDispatchContext);
-  
+
   if (!state || !dispatch) {
     throw new Error('useGame must be used within a GameProvider');
   }
-  
+
   return useMemo(() => ({ ...state, ...dispatch }), [state, dispatch]);
+}
+
+/** Non-throwing state access — returns the state context or null (no provider). */
+export function useGameStateOptional() {
+  return useContext(GameStateContext);
 }
 
 export function useGameState() {

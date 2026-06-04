@@ -5,7 +5,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
 import PrimaryButton from '../components/PrimaryButton';
-import AtmosphereLayer from '../components/AtmosphereLayer';
 import Stagger from '../components/motion/Stagger';
 import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
@@ -39,7 +38,6 @@ export default function MenuScreen({
 
   return (
     <ScreenSurface variant="default" accentColor={COLORS.accentPrimary} contentStyle={styles.surface}>
-      <AtmosphereLayer reducedMotion={reducedMotion} glow="violet" />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <SecondaryButton label="Back" arrow onPress={onBack} />
 
