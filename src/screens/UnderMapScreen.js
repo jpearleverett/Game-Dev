@@ -232,8 +232,11 @@ export default function UnderMapScreen({ navigation, route }) {
     setContinuing(true);
     setGenError(null);
 
-    // Record the descent for the flawless-mapping streak BEFORE we leave.
-    recordUnderMapDescent?.({ hadMisstep });
+    // Record the descent for the flawless-mapping streak BEFORE we leave — but
+    // only if the player actually engaged (probed or revealed). Skipping the
+    // board entirely neither builds nor breaks the streak.
+    const engaged = hadMisstep || revealsThisVisit > 0;
+    if (engaged) recordUnderMapDescent?.({ hadMisstep });
 
     const { chapter, subchapter } = parseCaseNumber(gateCaseNumber);
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
@@ -251,7 +254,7 @@ export default function UnderMapScreen({ navigation, route }) {
 
     game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
     navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
-  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, hadMisstep, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, hadMisstep, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
 
   const renderSlot = (id, side) => {
     const f = id ? fragById(id) : null;

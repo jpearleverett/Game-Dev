@@ -260,14 +260,28 @@ The map already steers generation; make the payoff **visible**.
 - **Tuning note:** thresholds are constants (`CLARITY_TRUE = 0.66`, `CLARITY_PARTIAL = 0.33`),
   trivially re-balanced once season length / belief count settles.
 
-### 5.1 Plumbing
-- `schemas.js`/`promptAssembly.js`: `chapterTruth` (chapter-start), belief-resolution signal in the
-  beat that pays it off.
-- `underMap.js`: `recordTheory` already stores `correct`; add `resolveTheory(map, chapter, correct)`
-  + `clarity(map)` selector. Pure + tested.
-- `TheoryScreen.js`: show prior-belief payoff ("Last chapter you believed X — the Under-Map
-  answered: …") and a Clarity readout. Keep the seal flow intact (invariants in CLAUDE.md §5 about
-  functional `updateProgress` advances must not be touched).
+### 5.1 Plumbing — IMPLEMENTATION NOTE
+Rather than store a hidden `chapterTruth` string and fuzzy-match the sealed belief against it
+(brittle), resolution is reported by the model **as it writes the next chapter**: a
+`beliefResolution { resolvesChapter, correct, line }` field. This is more robust (no string
+matching) and more narratively coherent (the story itself decides whether the player's reading
+held), and the prompt explicitly invites SUBVERSION so it isn't self-graded into always-correct.
+
+- `schemas.js`/`promptAssembly.js`: `beliefResolution` field + a prompt instruction tied to the
+  sealed belief's actual chapter number. ✅ **DONE**
+- `validation.js`: `_normalizeBeliefResolution` (drops malformed signals to null). ✅ **DONE**
+- `generation.js`: `beliefResolution` carried through the entry whitelist. ✅ **DONE**
+- `underMap.js`: `resolveTheory(map, chapter, correct)` + `clarity(map)` + `endingVariant(map)` +
+  `CLARITY_TRUE/CLARITY_PARTIAL`. Pure + tested. ✅ **DONE**
+- `GameContext.js`: `resolveUnderMapBelief({chapter,correct})` (functional, idempotent — guards on
+  an existing unresolved theory since `normalizeUnderMap` always clones). ✅ **DONE**
+- `CaseFileScreen.js`: applies `storyMeta.beliefResolution` on scene load (ref-guarded once per
+  case; the action is idempotent too). ✅ **DONE**
+- `TheoryScreen.js`: prior-belief payoff card ("YOUR LAST READING HELD TRUE / WAS SUBVERTED") +
+  a Clarity readout. Seal flow untouched (CLAUDE.md §5 invariants respected). ✅ **DONE**
+- **Endgame branch (still TODO):** `endingVariant`/`clarity` are exposed and ready; wiring an
+  actual terminal scene into the existing (currently un-triggered) `unlockEnding` system is the
+  remaining Move 3 work and needs on-device verification.
 
 ### 5.2 Acceptance criteria
 - A sealed belief eventually flips `correct` to true/false based on `chapterTruth`.

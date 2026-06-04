@@ -326,7 +326,9 @@ function _buildPlayerTheorySection(underMap) {
   const lines = [];
 
   if (latest?.interpretation) {
-    lines.push(`- The player just SEALED this theory of the hidden world: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
+    const sealedChapter = Number.isFinite(latest.chapter) ? latest.chapter : null;
+    lines.push(`- The player just SEALED this theory of the hidden world${sealedChapter ? ` (chapter ${sealedChapter})` : ''}: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
+    lines.push(`- If THIS scene reveals whether that belief was RIGHT, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Be willing to SUBVERT a wrong reading — it makes a richer story and steers the player's ending.`);
   }
 
   if (nodes.length) {

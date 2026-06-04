@@ -8,7 +8,7 @@ import DustLayer from '../components/DustLayer';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
-import { normalizeUnderMap, FRAGMENT_KIND, isMotif } from '../data/underMap';
+import { normalizeUnderMap, FRAGMENT_KIND, isMotif, clarity, endingVariant } from '../data/underMap';
 import {
   parseCaseNumber,
   formatCaseNumber,
@@ -49,6 +49,16 @@ export default function TheoryScreen({ navigation, route }) {
     () => normalizeUnderMap(storyCampaign.underMap),
     [storyCampaign.underMap],
   );
+
+  // CLARITY (Move 3): how truly the player has read the hidden world so far, and
+  // the most recent belief the story has borne out or subverted.
+  const cl = useMemo(() => clarity(map), [map]);
+  const variant = useMemo(() => endingVariant(map), [map]);
+  const lastResolved = useMemo(() => map.theories.find((t) => t.correct != null) || null, [map.theories]);
+  const clarityLabel = variant === 'clear' ? 'You are reading the Under-Map true.'
+    : variant === 'half' ? 'You see some of it; the rest stays warped.'
+    : variant === 'deceived' ? 'The hidden world is wearing the shape you want.'
+    : 'No belief has been borne out yet.';
 
   // The competing beliefs (the chapter decision, framed as interpretations of the
   // hidden world). Prefer options passed from the CaseFile; otherwise resolve them
@@ -183,6 +193,30 @@ export default function TheoryScreen({ navigation, route }) {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {/* How the LAST belief was borne out, and the player's running Clarity */}
+        {lastResolved ? (
+          <View style={[styles.resolvedCard, lastResolved.correct ? styles.resolvedTrue : styles.resolvedFalse]}>
+            <View style={styles.resolvedHeader}>
+              <MaterialCommunityIcons
+                name={lastResolved.correct ? 'check-decagram-outline' : 'alert-decagram-outline'}
+                size={16}
+                color={lastResolved.correct ? COLORS.accentSecondary : COLORS.bloodRed}
+              />
+              <Text style={styles.resolvedKicker}>{lastResolved.correct ? 'YOUR LAST READING HELD TRUE' : 'YOUR LAST READING WAS SUBVERTED'}</Text>
+            </View>
+            {lastResolved.interpretation ? <Text style={styles.resolvedBelief}>“{lastResolved.interpretation}”</Text> : null}
+          </View>
+        ) : null}
+
+        {cl.resolved > 0 ? (
+          <View style={styles.clarityRow}>
+            <MaterialCommunityIcons name="eye-outline" size={14} color={COLORS.accentSecondary} />
+            <Text style={styles.clarityText}>
+              Clarity: {cl.correct} of {cl.resolved} readings held true · {clarityLabel}
+            </Text>
+          </View>
+        ) : null}
+
         {/* What the map has revealed so far */}
         {map.nodes.length > 0 ? (
           <>
@@ -328,6 +362,15 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
+  // Clarity / belief resolution (Move 3)
+  resolvedCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.sm },
+  resolvedTrue: { backgroundColor: 'rgba(241,197,114,0.07)', borderColor: COLORS.accentSoft },
+  resolvedFalse: { backgroundColor: 'rgba(196,62,96,0.08)', borderColor: 'rgba(196,62,96,0.35)' },
+  resolvedHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  resolvedKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.textSecondary },
+  resolvedBelief: { fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
+  clarityRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.lg },
+  clarityText: { flex: 1, fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontStyle: 'italic', lineHeight: LINE_HEIGHTS.cozy },
   // Nodes
   nodeList: { gap: SPACING.sm },
   nodeRow: {

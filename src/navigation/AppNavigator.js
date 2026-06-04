@@ -48,6 +48,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's path through interactive narrative
     ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     ingestSceneFragments, // UNDER-MAP: collect fragments/relations from the scene
+    resolveUnderMapBelief, // UNDER-MAP: bear out a sealed belief (Clarity)
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -302,6 +303,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onEnsureSecondChoiceResponses={ensureSecondChoiceResponses}
               onProceedToPuzzle={handleProceedToPuzzle}
               onIngestFragments={ingestSceneFragments}
+              onResolveBelief={resolveUnderMapBelief}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

@@ -70,6 +70,7 @@ export default function CaseFileScreen({
   onEnsureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onIngestFragments, // UNDER-MAP: ingest scene fragments/relations into the board
+  onResolveBelief, // UNDER-MAP: bear out a sealed belief when the scene resolves it (Clarity)
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -333,6 +334,21 @@ export default function CaseFileScreen({
   );
   const hasRevealedNodes = (storyCampaign?.underMap?.nodes?.length || 0) > 0;
   const showEcho = isStoryMode && hasRevealedNodes && sceneEchoes.length > 0;
+
+  // BELIEF RESOLUTION (Move 3): when a generated scene reports that a sealed
+  // belief was borne out (or subverted), record it so the player's Clarity
+  // accrues. The context action is idempotent; a ref keeps it to once per case.
+  const resolvedBeliefRef = useRef(null);
+  useEffect(() => {
+    if (typeof onResolveBelief !== "function") return;
+    const br = storyMeta?.beliefResolution;
+    if (!br || !Number.isFinite(Number(br.resolvesChapter)) || typeof br.correct !== "boolean") return;
+    const sceneKey = storyMeta?.caseNumber || activeCase?.caseNumber || null;
+    const applyKey = `${sceneKey}:${br.resolvesChapter}`;
+    if (resolvedBeliefRef.current === applyKey) return;
+    resolvedBeliefRef.current = applyKey;
+    onResolveBelief({ chapter: Number(br.resolvesChapter), correct: br.correct });
+  }, [storyMeta?.beliefResolution, storyMeta?.caseNumber, activeCase?.caseNumber, onResolveBelief]);
 
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).

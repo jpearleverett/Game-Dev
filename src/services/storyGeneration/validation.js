@@ -126,6 +126,8 @@ class ValidationMethods {
         relations: this._normalizeRelations(parsed.relations),
         // UNDER-MAP ECHO: callbacks to truths the player already revealed.
         echoes: this._normalizeEchoes(parsed.echoes),
+        // BELIEF RESOLUTION: did a sealed belief bear out here? (drives Clarity)
+        beliefResolution: this._normalizeBeliefResolution(parsed.beliefResolution),
         pathDecisions: null,
       };
 
@@ -392,6 +394,16 @@ class ValidationMethods {
       if (out.length >= 2) break;
     }
     return out;
+  }
+
+  /** BELIEF RESOLUTION: normalize the signal that a sealed belief was borne out. */
+  _normalizeBeliefResolution(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const resolvesChapter = Number(raw.resolvesChapter);
+    if (!Number.isFinite(resolvesChapter)) return null;
+    if (typeof raw.correct !== 'boolean') return null;
+    const line = String(raw.line || '').trim();
+    return { resolvesChapter, correct: raw.correct, line };
   }
 
   /**

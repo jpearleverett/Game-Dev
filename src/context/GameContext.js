@@ -16,6 +16,7 @@ import {
   resolveReading as umResolveReading,
   recordDescent as umRecordDescent,
   recordTheory as umRecordTheory,
+  resolveTheory as umResolveTheory,
   touchUnderMap as umTouch,
 } from '../data/underMap';
 // Removed: internal usePersistence hook call
@@ -662,6 +663,23 @@ export function GameProvider({
     });
   }, [updateProgress]);
 
+  // Bear out a sealed belief once the story reveals whether it was right (Move 3).
+  // Idempotent: resolveTheory only flips the first still-unresolved theory for the
+  // chapter, so re-applying the same scene's resolution is a safe no-op.
+  const resolveUnderMapBelief = useCallback(({ chapter, correct } = {}) => {
+    if (!Number.isFinite(chapter) || typeof correct !== 'boolean') return;
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = current.underMap;
+      // Skip cleanly if there's nothing to resolve (normalizeUnderMap always
+      // clones, so we can't rely on reference equality to detect the no-op).
+      const hasUnresolved = Array.isArray(um?.theories)
+        && um.theories.some((t) => t.chapter === chapter && t.correct == null);
+      if (!hasUnresolved) return null;
+      return { storyCampaign: { ...current, underMap: umResolveTheory(um, chapter, correct) } };
+    });
+  }, [updateProgress]);
+
   const recordUnderMapTheory = useCallback((theory) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
@@ -926,6 +944,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    resolveUnderMapBelief,
     recordUnderMapTheory,
     touchUnderMap,
     // Endings & Achievements
@@ -942,6 +961,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    resolveUnderMapBelief,
     recordUnderMapTheory,
     touchUnderMap,
   }), [
@@ -979,6 +999,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    resolveUnderMapBelief,
     recordUnderMapTheory,
     touchUnderMap,
   ]);

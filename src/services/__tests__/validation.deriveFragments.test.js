@@ -164,4 +164,22 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
       line: 'The silver was on the ledger again.',
     });
   });
+
+  test('beliefResolution survives parsing only when shaped correctly', () => {
+    const ok = validationMethods._parseGeneratedContent({
+      title: 'x',
+      branchingNarrative: baseBN,
+      beliefResolution: { resolvesChapter: 2, correct: false, line: 'Blackwell was never guiding you.' },
+    }, false);
+    expect(ok.beliefResolution).toEqual({ resolvesChapter: 2, correct: false, line: 'Blackwell was never guiding you.' });
+
+    // Missing/!boolean correct or non-numeric chapter -> dropped to null.
+    const bad = validationMethods._parseGeneratedContent({
+      title: 'x', branchingNarrative: baseBN, beliefResolution: { resolvesChapter: 'two', correct: 'yes' },
+    }, false);
+    expect(bad.beliefResolution).toBeNull();
+
+    const none = validationMethods._parseGeneratedContent({ title: 'x', branchingNarrative: baseBN }, false);
+    expect(none.beliefResolution).toBeNull();
+  });
 });

@@ -398,6 +398,19 @@ export const STORY_CONTENT_SCHEMA = {
       },
       maxItems: 2,
     },
+    // BELIEF RESOLUTION (Move 3): if the player SEALED a belief last chapter
+    // (shown in <under_map_state>), this scene may begin to bear it out — or
+    // subvert it. Reporting this drives the player's Clarity / the ending they reach.
+    beliefResolution: {
+      type: 'object',
+      description: 'OMIT unless a sealed belief is listed in <under_map_state> AND this scene reveals whether it was right. Be willing to SUBVERT a wrong belief — a misread of the hidden world makes a richer story.',
+      properties: {
+        resolvesChapter: { type: 'integer', description: 'The chapter number the resolved belief was sealed in.' },
+        correct: { type: 'boolean', description: 'True if reality CONFIRMS the player\'s belief; false if it subverts/contradicts it.' },
+        line: { type: 'string', description: 'The in-fiction sentence in THIS scene that shows the belief confirmed or undone.' },
+      },
+      required: ['resolvesChapter', 'correct'],
+    },
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads'],
 };

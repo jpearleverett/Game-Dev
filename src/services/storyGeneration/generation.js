@@ -1111,6 +1111,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         relations: Array.isArray(generatedContent.relations) ? generatedContent.relations : [],
         // UNDER-MAP ECHO: callbacks tying this scene to truths the player revealed.
         echoes: Array.isArray(generatedContent.echoes) ? generatedContent.echoes : [],
+        // BELIEF RESOLUTION: whether a sealed belief was borne out here (drives Clarity).
+        beliefResolution: generatedContent.beliefResolution || null,
         board: shouldGenerateBoard
           ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
           : null,
