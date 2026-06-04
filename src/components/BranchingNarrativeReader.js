@@ -24,15 +24,16 @@ import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/t
 // Noir/Detective paper texture background
 const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jpg");
 
-// Noir aesthetic constants - "Dirty Typewriter" look
+// Tide-ledger prose: aged-paper ink in Work Sans, matching the design's
+// .prose-ink (16px / 1.9 line-height, deep ink #332617). Labels stay mono.
 const NOIR_TYPOGRAPHY = {
-  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  color: '#1a1a1a',
-  fontSize: 14,
-  lineHeight: 22,
-  textShadowColor: 'rgba(0, 0, 0, 0.25)',
-  textShadowOffset: { width: 0.5, height: 0.5 },
-  textShadowRadius: 1,
+  fontFamily: FONTS.primary,
+  color: '#332617',
+  fontSize: 16,
+  lineHeight: 30,
+  textShadowColor: 'transparent',
+  textShadowOffset: { width: 0, height: 0 },
+  textShadowRadius: 0,
 };
 
 // Heavy internal padding for paper margins
