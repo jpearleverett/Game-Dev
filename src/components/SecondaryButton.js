@@ -5,6 +5,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import { RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
+import { useAudioOptional } from '../context/AudioContext';
 
 export default function SecondaryButton({
   label,
@@ -16,6 +17,7 @@ export default function SecondaryButton({
   disabled = false,
 }) {
   const { moderateScale, scaleRadius, sizeClass } = useResponsiveLayout();
+  const audio = useAudioOptional();
 
   const handlePress = useCallback(() => {
     if (disabled) return;
@@ -25,7 +27,8 @@ export default function SecondaryButton({
   const handlePressIn = useCallback(() => {
     if (disabled) return;
     Haptics.selectionAsync().catch(() => {});
-  }, [disabled]);
+    audio?.playSelect?.();
+  }, [disabled, audio]);
 
   const responsiveStyles = useMemo(() => {
     const paddingVerticalBase =

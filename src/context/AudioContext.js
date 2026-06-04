@@ -24,10 +24,15 @@ export function AudioProvider({ children, controller, settings }) {
     audioRef.current?.playSubmit?.();
   }, []);
 
+  const playSelect = useCallback(() => {
+    audioRef.current?.playSelect?.();
+  }, []);
+
   const value = {
     playVictory,
     playFailure,
     playSubmit,
+    playSelect,
     controller: audioRef.current // Expose raw controller if needed for complex logic
   };
 
@@ -44,4 +49,9 @@ export function useAudio() {
     throw new Error('useAudio must be used within an AudioProvider');
   }
   return context;
+}
+
+/** Like useAudio, but returns null instead of throwing when no provider is present. */
+export function useAudioOptional() {
+  return useContext(AudioContext);
 }

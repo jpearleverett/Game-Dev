@@ -14,6 +14,7 @@ import ScreenSurface from "../components/ScreenSurface";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Celebration from "../components/Celebration";
+import LottieEffect from "../components/LottieEffect";
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import { COLORS } from "../constants/colors";
@@ -159,6 +160,7 @@ export default function CaseSolvedScreen({
   // Lock the CTA based on the state when this screen first mounted.
   const initialSolvedRef = useRef(solved);
   const [advanceInFlight, setAdvanceInFlight] = useState(false);
+  const [burstDone, setBurstDone] = useState(false);
   const caseNumber = activeCase?.caseNumber;
   const hasStoryCampaign = Boolean(storyCampaign);
   const awaitingDecision = Boolean(
@@ -1063,7 +1065,15 @@ export default function CaseSolvedScreen({
         </View>
       </ScrollView>
 
-      {/* Payoff: a restrained ink-fleck burst when the case is cracked. */}
+      {/* Payoff: a vector burst + ink-fleck confetti when the case is cracked. */}
+      <LottieEffect
+        name="word-found-burst"
+        active={solved && !burstDone}
+        reducedMotion={reducedMotion}
+        size={340}
+        onFinish={() => setBurstDone(true)}
+        style={StyleSheet.absoluteFill}
+      />
       <Celebration active={solved} reducedMotion={reducedMotion} count={60} />
     </ScreenSurface>
   );
