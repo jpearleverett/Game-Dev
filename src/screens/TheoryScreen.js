@@ -206,7 +206,7 @@ export default function TheoryScreen({ navigation, route }) {
           <MaterialCommunityIcons name="eye-circle-outline" size={18} color={COLORS.underViolet} />
           <Text style={styles.kicker}>THE THEORY{chapter ? ` · CHAPTER ${chapter}` : ''}</Text>
         </View>
-        <Text style={styles.title}>What is the Under-Map?</Text>
+        <Text style={styles.title}>What do you believe?</Text>
         <Text style={styles.lede}>
           Commit to a reading of the hidden world. The belief you stake decides which way it pulls you next — and what it lets you see.
         </Text>
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   header: { marginBottom: SPACING.sm },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
-  title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
+  title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: '#f3eeff', marginTop: SPACING.sm, textShadowColor: COLORS.underGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 26 },
   lede: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, lineHeight: LINE_HEIGHTS.cozy },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
@@ -405,13 +405,13 @@ const styles = StyleSheet.create({
   // Beliefs
   beliefList: { gap: SPACING.sm },
   beliefCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.panelOutline,
-    padding: SPACING.lg, gap: SPACING.xs,
+    backgroundColor: 'rgba(34,28,52,0.5)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(167,139,250,0.16)',
+    padding: 17, gap: SPACING.xs,
   },
-  beliefCardActive: { borderColor: COLORS.accentSecondary, backgroundColor: COLORS.surfaceAlt },
+  beliefCardActive: { borderColor: COLORS.underViolet, backgroundColor: 'rgba(167,139,250,0.12)' },
   beliefTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  beliefTitle: { flex: 1, fontFamily: FONTS.primarySemiBold, fontSize: FONT_SIZES.md, color: COLORS.textSecondary },
-  beliefFocus: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, lineHeight: LINE_HEIGHTS.cozy, marginLeft: 26 },
+  beliefTitle: { flex: 1, fontFamily: FONTS.secondaryBold, fontSize: 18, lineHeight: 21, color: COLORS.textPrimary },
+  beliefFocus: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: LINE_HEIGHTS.cozy, marginLeft: 26 },
   // Fragments
   fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   frag: {
