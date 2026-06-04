@@ -58,7 +58,6 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
-  const caseBoardRef = useRef(null); // DEDUCTION: player's case board (theory/accusation/leads) for prompt context
   const underMapRef = useRef(null);  // UNDER-MAP: player's collected fragments, revealed nodes, sealed theories for prompt context
 
   // Background resilience: Track app state to handle generation during backgrounding
@@ -111,9 +110,6 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     branchingChoicesRef.current = storyCampaign?.branchingChoices || [];
   }, [storyCampaign?.branchingChoices]);
 
-  useEffect(() => {
-    caseBoardRef.current = storyCampaign?.caseBoard || null;
-  }, [storyCampaign?.caseBoard]);
 
   useEffect(() => {
     underMapRef.current = storyCampaign?.underMap || null;
@@ -289,7 +285,6 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
             reason: `prefetch-next-chapter-branches:${source}`,
             branchingChoices, // Player's actual path through previous subchapters
-            caseBoard: caseBoardRef.current, // DEDUCTION: player's investigation state
             underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
           })
         );
@@ -498,7 +493,6 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           reason: 'immediate-generateForCase',
           isUserFacing: true, // Never show fallback to player
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
-          caseBoard: caseBoardRef.current, // DEDUCTION: bend narrative toward player's investigation
           underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
         })
       );
@@ -799,7 +793,6 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           choiceHistory,
           withQualitySettings({
             branchingChoices,
-            caseBoard: caseBoardRef.current,
             underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
             reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context'
           })

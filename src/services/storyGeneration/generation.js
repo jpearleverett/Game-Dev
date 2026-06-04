@@ -247,13 +247,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // This enables _getPathDecisionData to look up path-specific decisions correctly
   this.currentBranchingChoices = branchingChoices;
 
-  // Store the player's case board so _buildPlayerDeductionSection can bend the
-  // narrative toward their theory, accusation, and pinned leads.
-  this.currentCaseBoard = options?.caseBoard || null;
-
   // Store the player's Under-Map (collected fragments, revealed nodes, sealed
-  // theory) so _buildPlayerTheorySection can steer the next scene toward the
-  // reading the player committed to.
+  // theory) so _buildPlayerTheorySection can weave the next scene into it.
   this.currentUnderMap = options?.underMap || null;
 
   // Deduplication: Return existing promise if generation is already in flight for this exact content
@@ -729,15 +724,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           console.log(`  - Base decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
           console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (uses summaries, not full narrative)`);
 
-          // DEDUCTION: frame the per-path chapter decisions around the player's
-          // investigation (prime suspect, accusation, contradictions) where it fits.
-          const pdDeduction = this._buildPlayerDeductionSection(this.currentCaseBoard);
-          let basePathPrompt = pdDeduction
-            ? `${pathDecisionsPrompt}\n\n<player_deduction>\n${pdDeduction}\nWhere it fits a path, frame that path's options around the player's prime suspect and the contradictions they have found.\n</player_deduction>`
-            : pathDecisionsPrompt;
-
           // UNDER-MAP: weave the next chapter's decisions around the living map —
           // the fragments collected, truths revealed, and theory sealed.
+          let basePathPrompt = pathDecisionsPrompt;
           const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap);
           if (pdTheory) {
             basePathPrompt = `${basePathPrompt}\n\n<under_map_state>\n${pdTheory}\n</under_map_state>`;

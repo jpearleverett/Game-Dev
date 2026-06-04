@@ -345,39 +345,6 @@ export const STORY_CONTENT_SCHEMA = {
       },
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
-    caseFile: {
-      type: 'object',
-      description: 'Deduction data for the alibi board: the suspects in play this beat, where each TRULY was vs. what they claim, and which one is lying. Drives a who-was-where puzzle built from THIS scene. Provide it whenever the scene involves people whose whereabouts matter.',
-      properties: {
-        crimeScene: {
-          type: 'string',
-          description: "The location where the key incident this beat took place. MUST equal exactly one suspect's actualLocation (the culprit's).",
-        },
-        culprit: {
-          type: 'string',
-          description: "Full name of the responsible suspect; their actualLocation MUST equal crimeScene and MUST differ from their claimedLocation.",
-        },
-        contradiction: {
-          type: 'string',
-          description: 'One sentence naming the culprit, what they claimed, and where the evidence actually places them.',
-        },
-        suspects: {
-          type: 'array',
-          description: '3 to 5 named suspects relevant to this scene. Give each a DISTINCT actualLocation.',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string', description: 'The suspect name exactly as it appears in the narrative.' },
-              actualLocation: { type: 'string', description: 'Where they truly were that night.' },
-              claimedLocation: { type: 'string', description: 'Where they claim they were (their alibi).' },
-              motive: { type: 'string', description: 'Optional brief motive or connection to the case.' },
-            },
-            required: ['name', 'actualLocation', 'claimedLocation'],
-          },
-        },
-      },
-      required: ['suspects', 'culprit', 'crimeScene', 'contradiction'],
-    },
     // UNDER-MAP: the fragments the player can collect from this scene, and how
     // they connect to reveal the hidden world. Drives examine -> connect -> reveal.
     fragments: {

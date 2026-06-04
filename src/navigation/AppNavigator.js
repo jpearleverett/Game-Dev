@@ -12,12 +12,8 @@ import PrologueScreen from '../screens/PrologueScreen';
 import TutorialScreen from '../screens/TutorialScreen';
 import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
-import LogicPuzzleScreen from '../screens/LogicPuzzleScreen';
-import DeductionScreen from '../screens/DeductionScreen';
-import CaseBoardScreen from '../screens/CaseBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
 import TheoryScreen from '../screens/TheoryScreen';
-import AccusationScreen from '../screens/AccusationScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
@@ -180,24 +176,6 @@ export default function AppNavigator({ fontsReady, audio }) {
         }}
       </Stack.Screen>
 
-      <Stack.Screen name="LogicPuzzle">
-        {({ navigation }) => (
-          <LogicPuzzleScreen navigation={navigation} />
-        )}
-      </Stack.Screen>
-
-      <Stack.Screen name="Deduction">
-        {({ navigation }) => (
-          <DeductionScreen navigation={navigation} />
-        )}
-      </Stack.Screen>
-
-      <Stack.Screen name="CaseBoard">
-        {({ navigation }) => (
-          <CaseBoardScreen navigation={navigation} />
-        )}
-      </Stack.Screen>
-
       <Stack.Screen name="UnderMap">
         {({ navigation, route }) => (
           <UnderMapScreen navigation={navigation} route={route} />
@@ -207,12 +185,6 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Theory">
         {({ navigation, route }) => (
           <TheoryScreen navigation={navigation} route={route} />
-        )}
-      </Stack.Screen>
-
-      <Stack.Screen name="Accusation">
-        {({ navigation }) => (
-          <AccusationScreen navigation={navigation} />
         )}
       </Stack.Screen>
 
