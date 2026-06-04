@@ -366,7 +366,12 @@ class ValidationMethods {
       const revelation = String(r.revelation || '').trim();
       if (!aLabel || !bLabel || !revelation) continue;
       if (aLabel.toLowerCase() === bLabel.toLowerCase()) continue;
-      out.push({ aLabel, bLabel, revelation });
+      // Carry the choose-the-truth decoys: two tempting-but-false readings of
+      // this same pair (dropped here previously, so the deduction had no decoys).
+      const falseReadings = Array.isArray(r.falseReadings)
+        ? r.falseReadings.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 2)
+        : [];
+      out.push({ aLabel, bLabel, revelation, falseReadings });
       if (out.length >= 8) break;
     }
     return out;

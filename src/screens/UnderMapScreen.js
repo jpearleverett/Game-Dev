@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenSurface from '../components/ScreenSurface';
 import SecondaryButton from '../components/SecondaryButton';
@@ -13,6 +13,10 @@ import {
   undiscoveredRelationCount,
   isMotif,
   mapDepth,
+  probeBudgetFor,
+  sensedRelations,
+  readingChoices,
+  flawlessStreak,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
@@ -28,10 +32,25 @@ const KIND_META = {
 };
 const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];
 
+// Kind-bond grammar (see docs/undermap_redesign.md §3.3): soft, learnable hints
+// that give the player a REASON to suspect a pair before spending a probe.
+const BOND_HINTS = {
+  'place|symbol': 'A mark is carved into somewhere — these often bond.',
+  'person|phenomenon': 'The wrongness clings to someone — these often bond.',
+  'person|place': 'Somewhere remembers someone — these can bond.',
+  'phenomenon|symbol': 'The mark is what makes the wrongness — these often bond.',
+};
+const bondHintFor = (kindA, kindB) => {
+  if (!kindA || !kindB) return null;
+  if (kindA === kindB) return 'Two of a kind rarely touch directly — but the dark surprises.';
+  const key = [kindA, kindB].sort().join('|');
+  return BOND_HINTS[key] || 'An unusual pairing — probe it and see.';
+};
+
 export default function UnderMapScreen({ navigation, route }) {
   const game = useGame();
   const audio = useAudio();
-  const { progress, connectUnderMap, touchUnderMap } = game;
+  const { progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
   // CONNECT beat: when opened as a puzzle gate (A/B subchapters), the Under-Map
@@ -53,7 +72,22 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const [slotA, setSlotA] = useState(null);
   const [slotB, setSlotB] = useState(null);
-  const [feedback, setFeedback] = useState(null); // { tone:'reveal'|'known'|'none', text }
+  const [feedback, setFeedback] = useState(null); // { tone:'reveal'|'known'|'none'|'blur', text }
+  // Choose-the-truth: { aId, bId, options:[...], unresolved:bool } when a relation is found.
+  const [chooser, setChooser] = useState(null);
+
+  // Probe budget for THIS descent (tense-but-forgiving): fixed at entry, never
+  // hard-blocks "Continue the descent" when spent — unfound links stay sensed.
+  const initialBudgetRef = useRef(null);
+  if (initialBudgetRef.current == null) initialBudgetRef.current = Math.max(1, probeBudgetFor(map));
+  const [probesLeft, setProbesLeft] = useState(initialBudgetRef.current);
+  const [hadMisstep, setHadMisstep] = useState(false);
+  // Sensed-assist: after a miss, faintly pulse two fragments that DO share an unfound link.
+  const [hintIds, setHintIds] = useState(() => new Set());
+  const hintTimer = useRef(null);
+  useEffect(() => () => { if (hintTimer.current) clearTimeout(hintTimer.current); }, []);
+
+  const streak = flawlessStreak(map);
 
   // Reveal + shake animations.
   const reveal = useRef(new Animated.Value(0)).current;
@@ -70,6 +104,10 @@ export default function UnderMapScreen({ navigation, route }) {
     : depthPct >= 25 ? 'Something is forming in the dark'
     : 'The map runs deeper than this';
 
+  const slotFragA = slotA ? fragById(slotA) : null;
+  const slotFragB = slotB ? fragById(slotB) : null;
+  const bondHint = slotFragA && slotFragB ? bondHintFor(slotFragA.kind, slotFragB.kind) : null;
+
   useEffect(() => {
     // Link line glows when both slots are filled.
     Animated.timing(linkGlow, {
@@ -82,6 +120,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const loadSlot = useCallback((id) => {
     selectionHaptic();
     setFeedback(null);
+    setChooser(null);
     if (slotA === id) { setSlotA(null); return; }
     if (slotB === id) { setSlotB(null); return; }
     if (!slotA) { setSlotA(id); return; }
@@ -93,12 +132,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const doReveal = useCallback(() => {
     reveal.setValue(0);
     if (reducedMotion) { reveal.setValue(1); return; }
-    Animated.spring(reveal, {
-      toValue: 1,
-      friction: 6,
-      tension: 70,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(reveal, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }).start();
   }, [reveal, reducedMotion]);
 
   const doShake = useCallback(() => {
@@ -112,35 +146,94 @@ export default function UnderMapScreen({ navigation, route }) {
     ]).start();
   }, [shake, reducedMotion]);
 
-  const attemptConnect = useCallback(() => {
+  // After a wrong probe, faintly mark a real unfound pair so the player isn't lost.
+  const pulseAssist = useCallback(() => {
+    const sensed = sensedRelations(map);
+    if (!sensed.length) return;
+    const pick = sensed[Math.floor(Math.random() * sensed.length)];
+    setHintIds(new Set([pick.a, pick.b]));
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHintIds(new Set()), 2600);
+  }, [map]);
+
+  // STEP 1 — probe the pair. A miss spends a probe (tense). A hit opens choose-the-truth (free).
+  const attemptProbe = useCallback(() => {
     if (!slotA || !slotB) return;
-    const result = connectUnderMap?.(slotA, slotB);
-    if (result?.alreadyConnected) {
+    const sensed = senseUnderMap?.(slotA, slotB);
+
+    if (sensed?.valid && sensed.alreadyConnected && !sensed.unresolved) {
       setFeedback({ tone: 'known', text: 'Already mapped.' });
       selectionHaptic();
       setSlotA(null); setSlotB(null);
       return;
     }
-    if (result?.valid && result?.revealed?.node) {
+    if (sensed?.valid && sensed.readings) {
+      const options = readingChoices(sensed.readings);
+      // No decoys authored (e.g. a prose-derived relation) → there's nothing to
+      // deduce; reveal the single truth cleanly rather than faking a choice.
+      if (options.length < 2) {
+        const res = resolveUnderMapReading?.(slotA, slotB, sensed.readings.correct);
+        setSlotA(null); setSlotB(null);
+        notificationHaptic(Haptics.NotificationFeedbackType.Success);
+        audio?.playVictory?.();
+        setFeedback({ tone: 'reveal', text: res?.node?.revelation || sensed.readings.correct });
+        if (!res?.alreadyConnected || res?.upgraded) setRevealsThisVisit((n) => n + 1);
+        doReveal();
+        return;
+      }
+      // A link is here — now READ it. (Re-reading an unresolved link is free too.)
+      selectionHaptic();
+      setFeedback(null);
+      setChooser({ aId: slotA, bId: slotB, options, unresolved: !!sensed.unresolved });
+      return;
+    }
+
+    // Miss — the dark doesn't answer. Spend a probe (forgiving: never blocks progress).
+    const left = Math.max(0, probesLeft - 1);
+    setProbesLeft(left);
+    setHadMisstep(true);
+    impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
+    setFeedback({
+      tone: 'none',
+      text: left > 0
+        ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
+        : "The dark goes quiet. You're out of probes — the rest stays sensed for later. Press on when ready.",
+    });
+    doShake();
+    pulseAssist();
+    setSlotA(null); setSlotB(null);
+  }, [slotA, slotB, senseUnderMap, probesLeft, doShake, pulseAssist]);
+
+  // STEP 2 — commit the chosen reading. Correct = sharp reveal; wrong = blurred (still drawn).
+  const chooseReading = useCallback((optionText) => {
+    if (!chooser) return;
+    const result = resolveUnderMapReading?.(chooser.aId, chooser.bId, optionText);
+    setChooser(null);
+    setSlotA(null); setSlotB(null);
+
+    if (result?.correctReading) {
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
-      setFeedback({ tone: 'reveal', text: result.revealed.node.revelation });
-      setRevealsThisVisit((n) => n + 1);
+      setFeedback({ tone: 'reveal', text: result.node?.revelation || 'The map reveals a truth.' });
+      if (!result.alreadyConnected || result.upgraded) setRevealsThisVisit((n) => n + 1);
       doReveal();
-      setSlotA(null); setSlotB(null);
     } else {
-      impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
-      setFeedback({ tone: 'none', text: 'No link here — at least not one you can see yet.' });
-      doShake();
+      impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
+      setFeedback({
+        tone: 'blur',
+        text: "The link holds — but its meaning won't settle. Read the scene again; you can return and re-read it.",
+      });
     }
-  }, [slotA, slotB, connectUnderMap, audio, doReveal, doShake]);
+  }, [chooser, resolveUnderMapReading, audio, doReveal]);
 
   // Generate-first, advance-on-success — mirrors the proven A/B advance contract.
-  // We never half-advance into an ungenerated scene; on failure we stay put and retry.
   const handleContinueDescent = useCallback(async () => {
     if (continuing || !asPuzzle || !gateCaseNumber) return;
     setContinuing(true);
     setGenError(null);
+
+    // Record the descent for the flawless-mapping streak BEFORE we leave.
+    recordUnderMapDescent?.({ hadMisstep });
 
     const { chapter, subchapter } = parseCaseNumber(gateCaseNumber);
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
@@ -158,7 +251,7 @@ export default function UnderMapScreen({ navigation, route }) {
 
     game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
     navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
-  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, progress?.storyCampaign?.currentPathKey, game, navigation]);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, hadMisstep, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
 
   const renderSlot = (id, side) => {
     const f = id ? fragById(id) : null;
@@ -185,6 +278,7 @@ export default function UnderMapScreen({ navigation, route }) {
   };
 
   const linkColor = linkGlow.interpolate({ inputRange: [0, 1], outputRange: ['rgba(157,150,141,0.35)', 'rgba(196,62,96,0.95)'] });
+  const probeTotal = initialBudgetRef.current;
 
   return (
     <ScreenSurface variant="default">
@@ -204,8 +298,32 @@ export default function UnderMapScreen({ navigation, route }) {
         <Text style={styles.status}>
           {map.fragments.length} {map.fragments.length === 1 ? 'fragment' : 'fragments'}
           {'  ·  '}{map.nodes.length} revealed
-          {remaining > 0 ? `  ·  ${remaining} connection${remaining === 1 ? '' : 's'} you can sense` : ''}
+          {remaining > 0 ? `  ·  ${remaining} link${remaining === 1 ? '' : 's'} you can sense` : ''}
         </Text>
+
+        {/* Probe budget + flawless streak */}
+        {map.fragments.length > 0 ? (
+          <View style={styles.metaRow}>
+            <View style={styles.probeWrap}>
+              {Array.from({ length: probeTotal }).map((_, i) => (
+                <MaterialCommunityIcons
+                  key={i}
+                  name={i < probesLeft ? 'rhombus' : 'rhombus-outline'}
+                  size={13}
+                  color={i < probesLeft ? COLORS.accentSecondary : COLORS.textMuted}
+                />
+              ))}
+              <Text style={styles.probeText}>{probesLeft} probe{probesLeft === 1 ? '' : 's'}</Text>
+            </View>
+            {streak > 0 ? (
+              <View style={styles.streakChip}>
+                <MaterialCommunityIcons name="fire" size={12} color={COLORS.amberLight || COLORS.accentSecondary} />
+                <Text style={styles.streakText}>{streak} flawless</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         {depth.total > 0 ? (
           <View style={styles.depthWrap}>
             <View style={styles.depthTrack}>
@@ -226,14 +344,39 @@ export default function UnderMapScreen({ navigation, route }) {
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           {/* Connection bench */}
-          <Text style={styles.sectionLabel}>DRAW A CONNECTION</Text>
+          <Text style={styles.sectionLabel}>PROBE A CONNECTION</Text>
           <View style={styles.bench}>
             {renderSlot(slotA, 'Pick one')}
             <Animated.View style={[styles.link, { backgroundColor: linkColor }]} />
             {renderSlot(slotB, 'Pick another')}
           </View>
 
-          {feedback ? (
+          {bondHint && !chooser && !feedback ? (
+            <Text style={styles.bondHint}>{bondHint}</Text>
+          ) : null}
+
+          {/* STEP 2 — choose-the-truth */}
+          {chooser ? (
+            <View style={styles.chooserCard}>
+              <View style={styles.chooserHeader}>
+                <MaterialCommunityIcons name="help-rhombus-outline" size={18} color={COLORS.accentSecondary} />
+                <Text style={styles.chooserKicker}>
+                  {chooser.unresolved ? 'READ IT AGAIN — WHAT DOES IT MEAN?' : 'A LINK. WHAT DOES IT MEAN?'}
+                </Text>
+              </View>
+              {chooser.options.map((opt, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => chooseReading(opt)}
+                  style={({ pressed }) => [styles.readingOption, pressed && { backgroundColor: COLORS.surfaceAlt }]}
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons name="circle-outline" size={14} color={COLORS.textMuted} />
+                  <Text style={styles.readingText}>{opt}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : feedback ? (
             feedback.tone === 'reveal' ? (
               <Animated.View style={[styles.revealCard, {
                 opacity: reveal.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
@@ -248,18 +391,25 @@ export default function UnderMapScreen({ navigation, route }) {
                 </View>
                 <Text style={styles.revealText}>{feedback.text}</Text>
               </Animated.View>
+            ) : feedback.tone === 'blur' ? (
+              <View style={styles.blurCard}>
+                <MaterialCommunityIcons name="blur" size={18} color={COLORS.amberLight || COLORS.accentSecondary} />
+                <Text style={styles.blurText}>{feedback.text}</Text>
+              </View>
             ) : (
               <Text style={[styles.feedback, feedback.tone === 'none' && styles.feedbackNone]}>{feedback.text}</Text>
             )
           ) : null}
 
-          <PrimaryButton
-            label="Connect"
-            onPress={attemptConnect}
-            disabled={!slotA || !slotB}
-            icon={<MaterialCommunityIcons name="vector-link" size={18} color={COLORS.textSecondary} />}
-            style={{ marginTop: SPACING.md }}
-          />
+          {!chooser ? (
+            <PrimaryButton
+              label="Probe"
+              onPress={attemptProbe}
+              disabled={!slotA || !slotB || probesLeft <= 0}
+              icon={<MaterialCommunityIcons name="vector-link" size={18} color={COLORS.textSecondary} />}
+              style={{ marginTop: SPACING.md }}
+            />
+          ) : null}
 
           {/* Fragments */}
           <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>FRAGMENTS</Text>
@@ -267,6 +417,7 @@ export default function UnderMapScreen({ navigation, route }) {
             {map.fragments.map((f) => {
               const m = metaFor(f.kind);
               const selected = f.id === slotA || f.id === slotB;
+              const hinted = hintIds.has(f.id);
               const linked = map.connections.some((c) => c.a === f.id || c.b === f.id);
               return (
                 <Pressable
@@ -274,8 +425,8 @@ export default function UnderMapScreen({ navigation, route }) {
                   onPress={() => loadSlot(f.id)}
                   style={[
                     styles.frag,
-                    { borderColor: selected ? m.color : COLORS.panelOutline, borderLeftColor: m.color },
-                    selected && { backgroundColor: COLORS.surfaceAlt },
+                    { borderColor: selected ? m.color : (hinted ? COLORS.accentSecondary : COLORS.panelOutline), borderLeftColor: m.color },
+                    (selected || hinted) && { backgroundColor: COLORS.surfaceAlt },
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={`${m.label}: ${f.label}`}
@@ -304,9 +455,15 @@ export default function UnderMapScreen({ navigation, route }) {
               <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>WHAT THE MAP HAS REVEALED</Text>
               <View style={styles.nodeList}>
                 {map.nodes.map((n) => (
-                  <View key={n.id} style={styles.nodeRow}>
-                    <MaterialCommunityIcons name="map-marker-check" size={16} color={COLORS.accentSecondary} />
-                    <Text style={styles.nodeText}>{n.revelation}</Text>
+                  <View key={n.id} style={[styles.nodeRow, n.unresolvedReading && styles.nodeRowBlur]}>
+                    <MaterialCommunityIcons
+                      name={n.unresolvedReading ? 'blur' : 'map-marker-check'}
+                      size={16}
+                      color={n.unresolvedReading ? COLORS.textMuted : COLORS.accentSecondary}
+                    />
+                    <Text style={[styles.nodeText, n.unresolvedReading && styles.nodeTextBlur]}>
+                      {n.unresolvedReading ? 'A link you haven’t read true yet — re-read it to settle its meaning.' : n.revelation}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -314,7 +471,7 @@ export default function UnderMapScreen({ navigation, route }) {
           ) : null}
 
           {remaining > 0 ? (
-            <Text style={styles.deeper}>The map runs deeper. {remaining} connection{remaining === 1 ? '' : 's'} wait to be drawn.</Text>
+            <Text style={styles.deeper}>The map runs deeper. {remaining} link{remaining === 1 ? '' : 's'} wait to be drawn.</Text>
           ) : null}
         </ScrollView>
       )}
@@ -323,9 +480,9 @@ export default function UnderMapScreen({ navigation, route }) {
         <View style={styles.gateFooter}>
           <Text style={styles.gateHint}>
             {revealsThisVisit > 0
-              ? `${revealsThisVisit} new ${revealsThisVisit === 1 ? 'connection' : 'connections'} drawn. The way down is open.`
+              ? `${revealsThisVisit} new ${revealsThisVisit === 1 ? 'truth' : 'truths'} drawn. The way down is open.`
               : remaining > 0
-                ? 'Draw a connection to pull the map open — or press on into the dark.'
+                ? 'Probe a connection to pull the map open — or press on into the dark.'
                 : 'Nothing new to link here yet. Press on.'}
           </Text>
           {genError ? <Text style={styles.gateError}>{genError}</Text> : null}
@@ -347,6 +504,12 @@ const styles = StyleSheet.create({
   kickerWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
   status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
+  // Probe meter + streak
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
+  probeWrap: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  probeText: { fontFamily: FONTS.monoBold, fontSize: 10, letterSpacing: 0.5, color: COLORS.textSecondary, marginLeft: SPACING.xs },
+  streakChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
+  streakText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
   // Map depth ("the map is taking shape")
   depthWrap: { marginTop: SPACING.sm, gap: 4 },
   depthTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceAlt, overflow: 'hidden' },
@@ -370,6 +533,19 @@ const styles = StyleSheet.create({
     width: 28, height: 3, borderRadius: 2,
     shadowColor: COLORS.bloodRed, shadowOpacity: 0.8, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
   },
+  bondHint: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.accentCyan, fontStyle: 'italic', marginTop: SPACING.sm, lineHeight: LINE_HEIGHTS.cozy },
+  // Choose-the-truth
+  chooserCard: {
+    marginTop: SPACING.md, backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.accentSoft, padding: SPACING.md, gap: SPACING.sm,
+  },
+  chooserHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
+  chooserKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.accentSecondary, flex: 1 },
+  readingOption: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.panelOutline, padding: SPACING.md,
+  },
+  readingText: { flex: 1, fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
   // Reveal
   revealCard: {
     marginTop: SPACING.md, backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg,
@@ -378,6 +554,12 @@ const styles = StyleSheet.create({
   revealHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   revealKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.accentSecondary },
   revealText: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.md, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.relaxed },
+  // Blurred (wrong reading)
+  blurCard: {
+    marginTop: SPACING.md, flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
+    backgroundColor: 'rgba(241,197,114,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(241,197,114,0.22)', padding: SPACING.md,
+  },
+  blurText: { flex: 1, fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: LINE_HEIGHTS.cozy },
   feedback: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.md, lineHeight: LINE_HEIGHTS.cozy },
   feedbackNone: { color: COLORS.textMuted, fontStyle: 'italic' },
   // Fragments
@@ -396,7 +578,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
     backgroundColor: 'rgba(241,197,114,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(241,197,114,0.25)', padding: SPACING.md,
   },
+  nodeRowBlur: { backgroundColor: 'rgba(157,150,141,0.06)', borderColor: COLORS.panelOutline },
   nodeText: { flex: 1, fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
+  nodeTextBlur: { color: COLORS.textMuted, fontStyle: 'italic' },
   deeper: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontStyle: 'italic', textAlign: 'center', marginTop: SPACING.lg },
   // Puzzle gate footer
   gateFooter: {

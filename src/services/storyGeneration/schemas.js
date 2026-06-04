@@ -364,13 +364,20 @@ export const STORY_CONTENT_SCHEMA = {
     },
     relations: {
       type: 'array',
-      description: 'How fragments connect to reveal a secret of the hidden world. Reference fragments by their EXACT label (from this scene or established earlier). Only assert connections that are true in your world and inferable by the player.',
+      description: 'How fragments connect to reveal a secret of the hidden world. Reference fragments by their EXACT label (from this scene or established earlier). Only assert connections that are true in your world and inferable by the player. Prefer pairs that follow the bond grammar where natural: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON.',
       items: {
         type: 'object',
         properties: {
           aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
           bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
-          revelation: { type: 'string', description: 'The secret this connection reveals (one sentence).' },
+          revelation: { type: 'string', description: 'The TRUE secret this connection reveals (one sentence).' },
+          falseReadings: {
+            type: 'array',
+            description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair — plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",
+            items: { type: 'string' },
+            minItems: 2,
+            maxItems: 2,
+          },
         },
         required: ['aLabel', 'bLabel', 'revelation'],
       },

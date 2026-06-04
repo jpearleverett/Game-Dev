@@ -12,6 +12,9 @@ import {
   addFragments as umAddFragments,
   addRelations as umAddRelations,
   connectFragments as umConnect,
+  senseConnection as umSense,
+  resolveReading as umResolveReading,
+  recordDescent as umRecordDescent,
   recordTheory as umRecordTheory,
   touchUnderMap as umTouch,
 } from '../data/underMap';
@@ -626,6 +629,39 @@ export function GameProvider({
     return result; // { revealed, valid, alreadyConnected } for the UI reveal
   }, [progress.storyCampaign, updateProgress]);
 
+  // CONNECT-as-deduction (Move 1): probe a pair WITHOUT mutating, so the UI can
+  // surface candidate readings (choose-the-truth) and spend a probe only on a miss.
+  const senseUnderMap = useCallback((aId, bId) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    return umSense(current.underMap, aId, bId);
+  }, [progress.storyCampaign]);
+
+  // Commit a connection with the player's chosen reading. Returns the result
+  // (node, correctReading, alreadyConnected, upgraded) for the reveal UI.
+  const resolveUnderMapReading = useCallback((aId, bId, chosenRevelation) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const result = umResolveReading(current.underMap, aId, bId, chosenRevelation);
+    if (result.map !== current.underMap) {
+      updateProgress((prev) => {
+        const c = normalizeStoryCampaignShape(prev.storyCampaign);
+        const r = umResolveReading(c.underMap, aId, bId, chosenRevelation);
+        if (r.map === c.underMap) return null;
+        return { storyCampaign: { ...c, underMap: r.map } };
+      });
+    }
+    return result;
+  }, [progress.storyCampaign, updateProgress]);
+
+  // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
+  const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umRecordDescent(current.underMap, { hadMisstep });
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
   const recordUnderMapTheory = useCallback((theory) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
@@ -887,6 +923,9 @@ export function GameProvider({
     addCaseClues,
     ingestSceneFragments,
     connectUnderMap,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
     recordUnderMapTheory,
     touchUnderMap,
     // Endings & Achievements
@@ -900,6 +939,9 @@ export function GameProvider({
     addCaseClues,
     ingestSceneFragments,
     connectUnderMap,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
     recordUnderMapTheory,
     touchUnderMap,
   }), [
@@ -934,6 +976,9 @@ export function GameProvider({
     addCaseClues,
     ingestSceneFragments,
     connectUnderMap,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
     recordUnderMapTheory,
     touchUnderMap,
   ]);

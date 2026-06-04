@@ -349,6 +349,7 @@ function _buildPlayerTheorySection(underMap) {
     'WEAVING (important):',
     '- In this scene\'s `relations`, author AT LEAST ONE connection that links a NEW fragment to a fragment THE PLAYER ALREADY HOLDS above (reference it by its exact label). This is how the map threads across chapters.',
     '- RE-SURFACE a recurring motif when it fits: reuse the EXACT label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
+    '- For EACH relation, also author its two `falseReadings`: tempting-but-FALSE one-sentence interpretations of the same pair that a careful player might wrongly believe (the player must pick the true reading from among them — make the wrong ones plausible, never absurd).',
     '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
   ].join('\n');
 }
