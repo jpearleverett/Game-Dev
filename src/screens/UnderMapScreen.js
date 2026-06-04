@@ -122,6 +122,15 @@ export default function UnderMapScreen({ navigation, route }) {
   const shake = useRef(new Animated.Value(0)).current;
   const bloom = useRef(new Animated.Value(0)).current;
   const [bloomAt, setBloomAt] = useState(null);
+  const ringPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reducedMotion) return undefined;
+    const loop = Animated.loop(Animated.timing(ringPulse, { toValue: 1, duration: 3600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [ringPulse, reducedMotion]);
+  const ringScale = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.5] });
+  const ringOpacity = ringPulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.4, 0] });
 
   const remaining = undiscoveredRelationCount(map);
   const depth = mapDepth(map);
@@ -302,16 +311,27 @@ export default function UnderMapScreen({ navigation, route }) {
             </Defs>
             {[0.22, 0.34, 0.46].map((r, i) => (
               <Ellipse key={i} cx={field.w / 2} cy={field.h * 0.42} rx={field.w * (r + 0.02)} ry={field.h * r}
-                fill="none" stroke="rgba(167,139,250,0.13)" strokeWidth="1" strokeDasharray="2 7" />
+                fill="none" stroke="rgba(167,139,250,0.18)" strokeWidth="1" strokeDasharray="2 7" />
             ))}
-            {connectionList.map((c, i) => (
-              <Path key={`c${i}`} d={arcPath(c.a, c.b)} fill="none"
-                stroke={c.unresolvedReading ? 'rgba(157,150,141,0.5)' : 'url(#arcgrad)'}
-                strokeWidth={c.scope === 'arc' ? 3 : 2.2} strokeLinecap="round" opacity={0.95}
-                strokeDasharray={c.unresolvedReading ? '4 6' : undefined} />
-            ))}
+            {connectionList.map((c, i) => {
+              const d = arcPath(c.a, c.b);
+              if (c.unresolvedReading) {
+                return <Path key={`c${i}`} d={d} fill="none" stroke="rgba(157,150,141,0.5)" strokeWidth={2} strokeLinecap="round" strokeDasharray="4 6" />;
+              }
+              return (
+                <React.Fragment key={`c${i}`}>
+                  {/* soft bloom under-stroke (fakes the SVG gaussian glow) */}
+                  <Path d={d} fill="none" stroke="url(#arcgrad)" strokeWidth={c.scope === 'arc' ? 9 : 7} strokeLinecap="round" opacity={0.22} />
+                  <Path d={d} fill="none" stroke="url(#arcgrad)" strokeWidth={c.scope === 'arc' ? 3 : 2.2} strokeLinecap="round" opacity={0.97} />
+                  <Path d={d} fill="none" stroke="#eee6ff" strokeWidth={0.8} strokeLinecap="round" opacity={0.5} />
+                </React.Fragment>
+              );
+            })}
             {selArc ? (
-              <Path d={selArc} fill="none" stroke="rgba(245,235,255,0.7)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" />
+              <React.Fragment>
+                <Path d={selArc} fill="none" stroke="rgba(245,235,255,0.35)" strokeWidth={6} strokeLinecap="round" />
+                <Path d={selArc} fill="none" stroke="rgba(245,235,255,0.85)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" />
+              </React.Fragment>
             ) : null}
           </Svg>
         ) : null}
@@ -332,17 +352,17 @@ export default function UnderMapScreen({ navigation, route }) {
             <Pressable
               key={f.id}
               onPress={() => handleTapStar(f.id)}
-              style={[styles.star, { left: x - 45, top: y - 7 }]}
+              style={[styles.star, { left: x - 45, top: y - 23 }]}
               accessibilityRole="button"
               accessibilityLabel={f.label}
             >
-              <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : mapped ? 0.6 : 0.34, width: isSel ? 44 : mapped ? 38 : 30, height: isSel ? 44 : mapped ? 38 : 30, borderRadius: 44 }]} />
-              <View style={[
-                styles.starCore,
-                { backgroundColor: kc, shadowColor: kc },
-                isSel && styles.starCoreSel,
-                mapped && { shadowRadius: 14 },
-              ]} />
+              <View style={styles.coreWrap}>
+                {!reducedMotion ? (
+                  <Animated.View pointerEvents="none" style={[styles.starRing, { borderColor: kc, opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
+                ) : null}
+                <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : mapped ? 0.65 : 0.36, transform: [{ scale: isSel ? 1.2 : mapped ? 1 : 0.8 }] }]} />
+                <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }]} />
+              </View>
               <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped]} numberOfLines={1}>{f.label}</Text>
             </Pressable>
           );
@@ -450,8 +470,10 @@ const styles = StyleSheet.create({
   field: { flex: 1, marginHorizontal: 6, position: 'relative', minHeight: 0 },
   bloom: { position: 'absolute', width: 8, height: 8, borderRadius: 8, backgroundColor: '#cfe6ff' },
 
-  star: { position: 'absolute', width: 90, alignItems: 'center', paddingTop: 0, gap: 8, zIndex: 3 },
-  starGlow: { position: 'absolute', top: -3 },
+  star: { position: 'absolute', width: 90, alignItems: 'center', gap: 7, zIndex: 3 },
+  coreWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  starGlow: { position: 'absolute', width: 40, height: 40, borderRadius: 20, top: 3, left: 3 },
+  starRing: { position: 'absolute', width: 26, height: 26, borderRadius: 13, top: 10, left: 10, borderWidth: 1 },
   starCore: {
     width: 13, height: 13, borderRadius: 7,
     shadowOpacity: 1, shadowRadius: 13, shadowOffset: { width: 0, height: 0 }, elevation: 8,
