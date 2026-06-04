@@ -29,6 +29,10 @@ import {
   isKeystone,
   keystoneCount,
   arcNodeCount,
+  drawDailyStir,
+  resolveDailyStir,
+  dailyStreak,
+  dailyStirFragment,
   mapDepth,
   FRAGMENT_KIND,
 } from '../../data/underMap';
@@ -299,6 +303,65 @@ describe('underMap — deduction', () => {
     expect(r.valid).toBe(true);
     expect(r.revealed.node.revelation).toBe('The ink marks who carries it.');
     expect(r.revealed.node.unresolvedReading).toBe(false); // auto-resolves the truth
+  });
+});
+
+// ---- Move 8: Daily on-ramp (the overnight stir) -----------------------------
+
+describe('underMap — daily stir', () => {
+  const seedFrags = () => addFragments(createBlankUnderMap(), [
+    { label: 'silver ink', kind: 'phenomenon', caseNumber: '001A' },
+    { label: 'the seal', kind: 'symbol', caseNumber: '001A' },
+  ]);
+
+  test('draws one fragment per day, idempotent within the day', () => {
+    let m = seedFrags();
+    m = drawDailyStir(m, '2026-06-04T08:00:00Z', () => 0);
+    expect(m.dailyStir.date).toBe('2026-06-04');
+    expect(m.dailyStir.resolved).toBe(false);
+    expect(dailyStirFragment(m)).toBeTruthy();
+    // Same day again -> unchanged stir.
+    const again = drawDailyStir(m, '2026-06-04T22:00:00Z', () => 0.99);
+    expect(again.dailyStir.fragmentId).toBe(m.dailyStir.fragmentId);
+  });
+
+  test('no fragments collected -> no stir', () => {
+    const m = drawDailyStir(createBlankUnderMap(), '2026-06-04T08:00:00Z');
+    expect(m.dailyStir).toBeNull();
+  });
+
+  test('prefers a recurring motif as the drifting fragment', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'plain', kind: 'place', caseNumber: '001A' }]);
+    m = addFragments(m, [{ label: 'motif', kind: 'symbol', caseNumber: '001A' }]);
+    m = addFragments(m, [{ label: 'motif', kind: 'symbol', caseNumber: '002A' }]); // seen=2 -> motif
+    m = drawDailyStir(m, '2026-06-04T08:00:00Z', () => 0);
+    expect(dailyStirFragment(m).label).toBe('motif');
+  });
+
+  test('resolving deepens the fragment and advances the streak; missed day resets', () => {
+    let m = seedFrags();
+    m = drawDailyStir(m, '2026-06-04T08:00:00Z', () => 0);
+    const fragId = m.dailyStir.fragmentId;
+    const before = m.fragments.find((f) => f.id === fragId).seen || 1;
+
+    m = resolveDailyStir(m, '2026-06-04T20:00:00Z');
+    expect(m.dailyStir.resolved).toBe(true);
+    expect(m.fragments.find((f) => f.id === fragId).seen).toBe(before + 1);
+    expect(dailyStreak(m)).toBe(1);
+    // Re-resolving the same day is a no-op.
+    expect(resolveDailyStir(m, '2026-06-04T21:00:00Z').dailyStreak).toBe(1);
+
+    // Next consecutive day -> streak 2.
+    m = drawDailyStir(m, '2026-06-05T08:00:00Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-05T20:00:00Z');
+    expect(dailyStreak(m)).toBe(2);
+
+    // Skip a day -> streak resets to 1.
+    m = drawDailyStir(m, '2026-06-07T08:00:00Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-07T20:00:00Z');
+    expect(dailyStreak(m)).toBe(1);
+    expect(m.bestDailyStreak).toBe(2);
   });
 });
 

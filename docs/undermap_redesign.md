@@ -354,10 +354,25 @@ map*:
 - **Cold-content safety.** The drifting fragment is drawn from already-collected motifs (re-surface
   to deepen) or from a small curated daily pool, so the daily never depends on un-generated
   campaign content and works even if the player is between chapters.
-- **Plumbing:** `underMap.js` (`lastDailyStirAt`, `drawDailyStir(map, today)`,
-  `resolveDailyStir(map)` — pure + tested); a notification scheduler (Expo notifications) gated by
-  settings; a thin bridge from `EvidenceBoardScreen` completion → `resolveDailyStir`; constellation
-  surfacing of the drifting node + streak. **No change to the daily puzzle's own rules.**
+- **Plumbing:** `underMap.js` (`drawDailyStir`/`resolveDailyStir` + `dailyStreak`/`dailyStir`
+  selectors — pure + tested); a notification scheduler (Expo notifications) gated by settings; a
+  thin bridge from `EvidenceBoardScreen` completion → `resolveDailyStir`; constellation surfacing
+  of the drifting node + streak. **No change to the daily puzzle's own rules.**
+
+**STATUS:**
+- `underMap.js` model (`drawDailyStir`, `resolveDailyStir`, `dailyStreak`/`dailyStir`/
+  `dailyStirFragment`, streak-with-missed-day-reset) — pure + tested. ✅ **DONE**
+- `GameContext`: `drawUnderMapDailyStir` / `resolveUnderMapDailyStir` (functional, churn-guarded). ✅ **DONE**
+- `UnderMapScreen`: draws the stir on open and shows a "THE UNDER-MAP STIRRED OVERNIGHT" banner;
+  tapping "trace it" advances the days-mapped streak and loads the fragment onto the bench. ✅ **DONE**
+- **Follow-ups (deliberately deferred):**
+  1. **Overnight push notification** — needs the `expo-notifications` dependency (currently NOT in
+     package.json). Adding a platform dependency + scheduler is a product decision; left for the
+     user to greenlight. Without it, the stir still surfaces in-app on open.
+  2. **Daily word-puzzle bridge** — call `resolveUnderMapDailyStir()` from `EvidenceBoardScreen`
+     completion so finishing the daily (rather than the in-app "trace it") resolves the stir, per
+     the original §8.1 design. Left out to avoid editing the shared `submitGuess` completion path
+     without on-device verification.
 
 ---
 

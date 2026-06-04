@@ -17,6 +17,8 @@ import {
   recordDescent as umRecordDescent,
   recordTheory as umRecordTheory,
   resolveTheory as umResolveTheory,
+  drawDailyStir as umDrawStir,
+  resolveDailyStir as umResolveStir,
   touchUnderMap as umTouch,
 } from '../data/underMap';
 // Removed: internal usePersistence hook call
@@ -680,6 +682,33 @@ export function GameProvider({
     });
   }, [updateProgress]);
 
+  // Daily on-ramp (§8.1): draw today's drifting fragment (idempotent per day) and
+  // resolve it (advances the days-mapped streak). Guarded against render churn.
+  const drawUnderMapDailyStir = useCallback(() => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umDrawStir(current.underMap);
+      const a = current.underMap?.dailyStir;
+      const b = um?.dailyStir;
+      const unchanged = (!a && !b)
+        || (a && b && a.date === b.date && a.fragmentId === b.fragmentId && a.resolved === b.resolved);
+      if (unchanged) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
+  const resolveUnderMapDailyStir = useCallback(() => {
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const before = current.underMap;
+      const um = umResolveStir(before);
+      if (um?.dailyStir?.resolved === before?.dailyStir?.resolved && um?.dailyStreak === before?.dailyStreak) {
+        return null;
+      }
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
   const recordUnderMapTheory = useCallback((theory) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
@@ -945,6 +974,8 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     resolveUnderMapBelief,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
     recordUnderMapTheory,
     touchUnderMap,
     // Endings & Achievements
@@ -962,6 +993,8 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     resolveUnderMapBelief,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
     recordUnderMapTheory,
     touchUnderMap,
   }), [
@@ -1000,6 +1033,8 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     resolveUnderMapBelief,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
     recordUnderMapTheory,
     touchUnderMap,
   ]);

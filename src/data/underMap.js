@@ -53,6 +53,12 @@ export const createBlankUnderMap = () => ({
   // CONNECT-as-deduction streak: consecutive descents mapped without a wrong probe.
   flawlessStreak: 0,
   bestFlawlessStreak: 0,
+  // Daily on-ramp (§8.1): the fragment that "drifted to the surface" today + the
+  // days-mapped streak.
+  dailyStir: null,        // { date:'YYYY-MM-DD', fragmentId, resolved }
+  dailyStreak: 0,
+  bestDailyStreak: 0,
+  lastDailyResolved: null, // 'YYYY-MM-DD'
   lastVisitedAt: null,
 });
 
@@ -69,6 +75,10 @@ export const normalizeUnderMap = (map) => {
     theories: Array.isArray(map.theories) ? map.theories : [],
     flawlessStreak: Number.isFinite(map.flawlessStreak) ? map.flawlessStreak : 0,
     bestFlawlessStreak: Number.isFinite(map.bestFlawlessStreak) ? map.bestFlawlessStreak : 0,
+    dailyStir: map.dailyStir && typeof map.dailyStir === 'object' ? map.dailyStir : null,
+    dailyStreak: Number.isFinite(map.dailyStreak) ? map.dailyStreak : 0,
+    bestDailyStreak: Number.isFinite(map.bestDailyStreak) ? map.bestDailyStreak : 0,
+    lastDailyResolved: map.lastDailyResolved || null,
   };
 };
 
@@ -324,6 +334,67 @@ export const resolveTheory = (map, chapter, correct) => {
     return t;
   });
   return changed ? { ...m, theories } : m;
+};
+
+// ---- Daily on-ramp (§8.1) -------------------------------------------------
+
+const dayKey = (iso) => String(iso || '').slice(0, 10); // 'YYYY-MM-DD'
+const dayDiff = (a, b) => {
+  const ta = Date.parse(`${a}T00:00:00Z`);
+  const tb = Date.parse(`${b}T00:00:00Z`);
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return null;
+  return Math.round((tb - ta) / 86400000);
+};
+
+/**
+ * Draw the day's "stir": one already-collected fragment drifts to the surface
+ * (preferring recurring motifs so the daily deepens the campaign map). Idempotent
+ * per day. Pure given `rng`. No-op if the player has collected nothing yet.
+ */
+export const drawDailyStir = (map, nowIso = new Date().toISOString(), rng = Math.random) => {
+  const m = normalizeUnderMap(map);
+  const today = dayKey(nowIso);
+  if (m.dailyStir && m.dailyStir.date === today) return m; // already stirred today
+  if (!m.fragments.length) return m;
+  const motifs = m.fragments.filter((f) => (f.seen || 1) > 1);
+  const pool = motifs.length ? motifs : m.fragments;
+  const pick = pool[Math.floor(rng() * pool.length) % pool.length];
+  return { ...m, dailyStir: { date: today, fragmentId: pick.id, resolved: false } };
+};
+
+/**
+ * Resolve today's stir (e.g. when the daily puzzle is completed): deepen the
+ * drifting fragment and advance the days-mapped streak (consecutive days; a
+ * missed day softly resets to 1). Idempotent once resolved.
+ */
+export const resolveDailyStir = (map, nowIso = new Date().toISOString()) => {
+  const m = normalizeUnderMap(map);
+  const today = dayKey(nowIso);
+  const stir = m.dailyStir;
+  if (!stir || stir.date !== today || stir.resolved) return m;
+  const streak = m.lastDailyResolved && dayDiff(m.lastDailyResolved, today) === 1
+    ? (m.dailyStreak || 0) + 1
+    : 1;
+  const fragments = m.fragments.map((f) =>
+    f.id === stir.fragmentId ? { ...f, seen: (f.seen || 1) + 1, lastSeenAt: new Date().toISOString() } : f,
+  );
+  return {
+    ...m,
+    fragments,
+    dailyStir: { ...stir, resolved: true },
+    dailyStreak: streak,
+    bestDailyStreak: Math.max(m.bestDailyStreak || 0, streak),
+    lastDailyResolved: today,
+  };
+};
+
+export const dailyStir = (map) => normalizeUnderMap(map).dailyStir || null;
+export const dailyStreak = (map) => normalizeUnderMap(map).dailyStreak || 0;
+/** The fragment object that drifted to the surface today (null if none / unresolved-source missing). */
+export const dailyStirFragment = (map) => {
+  const m = normalizeUnderMap(map);
+  if (!m.dailyStir) return null;
+  return m.fragments.find((f) => f.id === m.dailyStir.fragmentId) || null;
 };
 
 export const touchUnderMap = (map) => ({ ...normalizeUnderMap(map), lastVisitedAt: new Date().toISOString() });

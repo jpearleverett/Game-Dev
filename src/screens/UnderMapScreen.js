@@ -19,6 +19,9 @@ import {
   sensedRelations,
   readingChoices,
   flawlessStreak,
+  dailyStir,
+  dailyStreak,
+  dailyStirFragment,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
@@ -52,7 +55,15 @@ const bondHintFor = (kindA, kindB) => {
 export default function UnderMapScreen({ navigation, route }) {
   const game = useGame();
   const audio = useAudio();
-  const { progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap } = game;
+  const {
+    progress,
+    senseUnderMap,
+    resolveUnderMapReading,
+    recordUnderMapDescent,
+    touchUnderMap,
+    drawUnderMapDailyStir,
+    resolveUnderMapDailyStir,
+  } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
   // CONNECT beat: when opened as a puzzle gate (A/B subchapters), the Under-Map
@@ -70,7 +81,10 @@ export default function UnderMapScreen({ navigation, route }) {
     [progress?.storyCampaign?.underMap],
   );
 
-  useEffect(() => { touchUnderMap?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    touchUnderMap?.();
+    drawUnderMapDailyStir?.(); // §8.1: surface today's drifting fragment (idempotent)
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [slotA, setSlotA] = useState(null);
   const [slotB, setSlotB] = useState(null);
@@ -90,6 +104,12 @@ export default function UnderMapScreen({ navigation, route }) {
   useEffect(() => () => { if (hintTimer.current) clearTimeout(hintTimer.current); }, []);
 
   const streak = flawlessStreak(map);
+
+  // Daily on-ramp (§8.1): the fragment that drifted to the surface today.
+  const stir = dailyStir(map);
+  const stirFrag = dailyStirFragment(map);
+  const daysStreak = dailyStreak(map);
+  const showStir = !!stir && !stir.resolved && !!stirFrag;
 
   // Reveal + shake animations.
   const reveal = useRef(new Animated.Value(0)).current;
@@ -130,6 +150,14 @@ export default function UnderMapScreen({ navigation, route }) {
     // both full -> replace B
     setSlotB(id);
   }, [slotA, slotB]);
+
+  // Daily stir: acknowledge the drifting fragment — advance the days-mapped
+  // streak and load it onto the bench so the player can work it into the map.
+  const traceStir = useCallback(() => {
+    if (!stirFrag) return;
+    resolveUnderMapDailyStir?.();
+    loadSlot(stirFrag.id);
+  }, [stirFrag, resolveUnderMapDailyStir, loadSlot]);
 
   const doReveal = useCallback(() => {
     reveal.setValue(0);
@@ -348,6 +376,20 @@ export default function UnderMapScreen({ navigation, route }) {
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+          {/* Daily on-ramp — a fragment drifted to the surface overnight */}
+          {showStir ? (
+            <Pressable style={styles.stirCard} onPress={traceStir} accessibilityRole="button">
+              <View style={styles.stirHeader}>
+                <MaterialCommunityIcons name="weather-night" size={16} color={COLORS.amberLight || COLORS.accentSecondary} />
+                <Text style={styles.stirKicker}>THE UNDER-MAP STIRRED OVERNIGHT</Text>
+                {daysStreak > 0 ? <Text style={styles.stirStreak}>{daysStreak}-day streak</Text> : null}
+              </View>
+              <Text style={styles.stirBody}>
+                <Text style={styles.stirFrag}>{stirFrag.label}</Text> has drifted to the surface. Trace it back into the map.
+              </Text>
+            </Pressable>
+          ) : null}
+
           {/* The map, taking shape — tap a star to load it into the bench */}
           {map.fragments.length >= 2 ? (
             <View style={styles.constellationWrap}>
@@ -555,6 +597,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.panelOutline,
     backgroundColor: 'rgba(8,6,12,0.5)', overflow: 'hidden', marginBottom: SPACING.lg,
   },
+  // Daily stir
+  stirCard: {
+    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(241,197,114,0.4)',
+    backgroundColor: 'rgba(241,197,114,0.08)', padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.lg,
+  },
+  stirHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  stirKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 1.6, color: COLORS.amberLight || COLORS.accentSecondary, flex: 1 },
+  stirStreak: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
+  stirBody: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
+  stirFrag: { fontFamily: FONTS.primarySemiBold, color: COLORS.amberLight || COLORS.accentSecondary },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
   // Bench
   bench: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
