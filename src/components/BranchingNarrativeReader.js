@@ -297,32 +297,33 @@ const ChoiceButton = React.memo(function ChoiceButton({
     onSelect(option);
   }, [option, onSelect]);
 
+  // The design's fork choice-card: an ink-toned slip on the ledger with an A/B
+  // tag and a colored accent (amber for the first path, tide-cyan for the rest).
+  const pc = index === 0 ? '#97681a' : '#2f6f7e';
+  const tag = String.fromCharCode(65 + (index || 0));
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <Pressable
         style={({ pressed }) => [
-          styles.choiceButton,
-          {
-            borderRadius: scaleRadius(RADIUS.md),
-            paddingVertical: scaleSpacing(compact ? SPACING.sm : SPACING.md),
-            paddingHorizontal: scaleSpacing(SPACING.md),
-            opacity: isDisabled ? 0.5 : 1,
-          },
-          pressed && styles.choiceButtonPressed,
-          isSelected && styles.choiceButtonSelected,
+          styles.choiceCard,
+          { borderLeftColor: pc, opacity: isDisabled ? 0.5 : 1 },
+          pressed && styles.choiceCardPressed,
+          isSelected && { borderColor: pc, backgroundColor: 'rgba(255,250,235,0.92)' },
         ]}
         onPress={handlePress}
         disabled={isDisabled}
       >
+        <View style={[styles.choiceTag, { borderColor: pc }]}>
+          <Text style={[styles.choiceTagText, { color: pc }]}>{tag}</Text>
+        </View>
         <Text
-          style={[
-            styles.choiceLabel,
-            { fontSize: moderateScale(compact ? FONT_SIZES.sm : FONT_SIZES.md) },
-            isSelected && styles.choiceLabelSelected,
-          ]}
+          style={[styles.choiceCardLabel, { fontSize: moderateScale(compact ? FONT_SIZES.sm : FONT_SIZES.md) }]}
+          numberOfLines={2}
         >
           {option.label}
         </Text>
+        <Text style={[styles.choiceArrow, { color: pc }]}>→</Text>
       </Pressable>
     </Animated.View>
   );
@@ -1056,7 +1057,35 @@ const styles = StyleSheet.create({
   choiceButtonsRow: {
     flexDirection: 'column',
     width: '100%',
+    gap: 10,
   },
+  // Design's choice-card (ledger fork): cream slip + ink tag + colored accent.
+  choiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    width: '100%',
+    backgroundColor: 'rgba(247, 240, 224, 0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(120,95,60,0.3)',
+    borderLeftWidth: 3,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  choiceCardPressed: { transform: [{ scale: 0.985 }], opacity: 0.92 },
+  choiceTag: {
+    width: 30, height: 30, borderRadius: 8, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  choiceTagText: { fontFamily: FONTS.secondaryBold, fontSize: 15 },
+  choiceCardLabel: {
+    flex: 1,
+    fontFamily: FONTS.primarySemiBold,
+    color: '#2a2017',
+    letterSpacing: 0.2,
+  },
+  choiceArrow: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 16, fontWeight: 'bold' },
   choiceButton: {
     backgroundColor: '#1a120b',
     borderWidth: 2,
