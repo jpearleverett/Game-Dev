@@ -698,51 +698,18 @@ function _buildSceneStateSection(context, chapter, subchapter) {
   return section;
 }
 
-/**
- * Get the thought signature from the previous subchapter for reasoning continuity.
- * Per Gemini 3 docs: thought signatures maintain reasoning chain across multi-turn conversations.
- * @param {number} chapter - Current chapter
- * @param {number} subchapter - Current subchapter
- * @param {string} pathKey - Current path key
- * @returns {string|null} - The previous thought signature, or null if not available
- */
-function _getPreviousThoughtSignature(chapter, subchapter, pathKey) {
-  if (!this.generatedStory?.chapters) return null;
-
-  // Determine the previous subchapter key
-  let prevChapter = chapter;
-  let prevSubchapter = subchapter - 1;
-
-  if (prevSubchapter < 1) {
-    // Go to previous chapter's last subchapter (typically 3)
-    prevChapter = chapter - 1;
-    prevSubchapter = 3;
-  }
-
-  if (prevChapter < 1) return null; // No previous for first subchapter
-
-  // Find the matching entry from generated story
-  const entries = Object.values(this.generatedStory.chapters);
-
-  // For same chapter, use same pathKey; for previous chapter, derive from pathKey
-  const targetKey = prevChapter === chapter
-    ? pathKey
-    : pathKey.split('-').slice(0, -1).join('-') || 'ROOT'; // Go up one branch level
-
-  // Find entry matching chapter, subchapter, and closest path
-  const matchingEntry = entries.find(e =>
-    e.chapter === prevChapter &&
-    e.subchapter === prevSubchapter &&
-    (e.pathKey === targetKey || e.pathKey === 'ROOT' || targetKey === 'ROOT')
-  );
-
-  if (matchingEntry?.thoughtSignature) {
-    log.debug('StoryGenerationService', `🧠 Found thought signature from ${prevChapter}.${prevSubchapter}`);
-    return matchingEntry.thoughtSignature;
-  }
-
-  return null;
-}
+// NOTE: Cross-subchapter thought-signature replay was intentionally NOT wired up.
+// Per the Gemini 3.5 Flash thought-signatures contract, signatures are optional
+// for non-function-call JSON generation (omitting them does not error, only "may
+// degrade"), and carrying one forward requires replaying the prior model turn's
+// FULL unmodified content with the signature attached to that exact part. In this
+// pipeline each subchapter is a separate cached request (not turns of one
+// conversation), the persisted entry is the parsed/normalized story (not the raw
+// model part), and echoing the prior ~4k-token narrative re-triggers the
+// RECITATION safety filter. Continuity is instead carried by explicit levers:
+// the full story text, the ESTABLISHED FACTS ledger, the Under-Map state, and the
+// end-of-prompt <continuity_anchors> block. (The generic priorMessages plumbing in
+// LLMService remains available if a true multi-turn flow is ever added.)
 
 /**
  * Build character knowledge section
@@ -905,7 +872,6 @@ export const contextMethods = {
   _extractCharacterDialogueHistory,
   _buildDialogueHistorySection,
   _buildSceneStateSection,
-  _getPreviousThoughtSignature,
   _buildKnowledgeSection,
   _buildIndexedFacts,
   _getRelevantFacts,

@@ -415,9 +415,14 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           }
         );
 
-        // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
-        // Thought signatures must be returned with the exact model part that produced them.
-        // We don't persist full prior model responses, so skip signature replay for safety.
+        // ========== THOUGHT SIGNATURE CONTINUITY ==========
+        // Intentionally no signature replay. Per the Gemini 3.5 Flash contract,
+        // signatures are optional for non-function-call JSON (omitting them does not
+        // error, only "may degrade"), and carrying one forward would require replaying
+        // the prior subchapter's full unmodified response (it must stay attached to the
+        // exact part) — which doubles narrative tokens and re-triggers RECITATION.
+        // Continuity is carried by explicit context instead (full story text, the
+        // ESTABLISHED FACTS ledger, Under-Map state, and the <continuity_anchors> block).
         const priorMessages = [];
         const hasThoughtSignatureFromPrevious = false;
 
@@ -483,9 +488,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
         const prompt = this._buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint);
 
-        // ========== THOUGHT SIGNATURE CONTINUITY (Gemini 3) ==========
-        // Thought signatures must be returned with the exact model part that produced them.
-        // We don't persist full prior model responses, so skip signature replay for safety.
+        // No signature replay here either (see the cached-path note above): a fresh
+        // single-turn request, with continuity carried by the explicit context blocks.
         const messages = [{ role: 'user', content: prompt }];
 
         llmTrace('StoryGenerationService', traceId, 'prompt.built', {
@@ -538,7 +542,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         );
       }
 
-      // Capture thought signature for multi-call reasoning continuity (Gemini 3)
+      // Capture the thought signature for telemetry/debug only (not replayed; see
+      // the THOUGHT SIGNATURE CONTINUITY note above for why).
       const firstCallThoughtSignature = response?.thoughtSignature || null;
 
       // Log model thoughts if includeThoughts is enabled (debug mode)
@@ -1122,9 +1127,9 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
         generatedAt: new Date().toISOString(),
         wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
-        // Thought signature for multi-chapter reasoning continuity (Gemini 3)
-        // Persisted and passed to next chapter generation to maintain reasoning chain
-        thoughtSignature: firstCallThoughtSignature || null,
+        // NOTE: the thought signature is intentionally NOT persisted on the entry —
+        // it has no consumer (cross-subchapter replay is disabled by design; see the
+        // THOUGHT SIGNATURE CONTINUITY note above) and would only bloat stored JSON.
       };
 
       // Save the generated content
