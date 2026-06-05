@@ -14,6 +14,7 @@ import DeskScreen from '../screens/DeskScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
 import TheoryScreen from '../screens/TheoryScreen';
+import SealedScreen from '../screens/SealedScreen';
 import EndingScreen from '../screens/EndingScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
@@ -193,6 +194,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Ending" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <EndingScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Sealed" options={{ animation: 'fade' }}>
+        {({ navigation, route }) => (
+          <SealedScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 

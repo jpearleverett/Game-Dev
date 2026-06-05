@@ -212,8 +212,13 @@ export default function TheoryScreen({ navigation, route }) {
     }
 
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
-    navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
-  }, [continuing, caseNumber, caseId, map, unlockEnding, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
+    // Cross via the wax-seal chapter-close (design's Sealed screen).
+    navigation.replace('Sealed', {
+      beliefTitle: chosenBelief?.title || (map.theories[0] && map.theories[0].interpretation) || null,
+      chapter: sealedChapter,
+      nextCaseNumber,
+    });
+  }, [continuing, caseNumber, caseId, map, chosenBelief, unlockEnding, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
 
   const sealScale = sealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
   const sealOpacity = sealAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] });
