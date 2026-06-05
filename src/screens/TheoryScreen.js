@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Svg, { Line as SvgLine, Circle as SvgCircle } from 'react-native-svg';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
@@ -33,6 +34,28 @@ const KIND_META = {
   [FRAGMENT_KIND.PHENOMENON]: { icon: 'shimmer', color: COLORS.accentViolet },
 };
 const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];
+
+// Per-belief tone (the design cycles amber → violet → cyan across the cards).
+const BELIEF_TONES = [COLORS.amberLight, COLORS.underViolet, COLORS.underCyan];
+const toneFor = (i) => BELIEF_TONES[i % BELIEF_TONES.length];
+
+/** A small staked-fragment constellation glyph, tone-colored (design's belief-glyph). */
+function BeliefGlyph({ tone, on }) {
+  const pts = [
+    { x: 26, y: 10 }, { x: 42, y: 34 }, { x: 10, y: 34 },
+  ];
+  return (
+    <Svg width={52} height={52}>
+      {pts.map((p, i) => {
+        const q = pts[(i + 1) % pts.length];
+        return <SvgLine key={i} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke={on ? 'rgba(220,225,255,0.6)' : 'rgba(160,160,180,0.3)'} strokeWidth="1" />;
+      })}
+      {pts.map((p, i) => (
+        <SvgCircle key={`c${i}`} cx={p.x} cy={p.y} r={on ? 3 : 2.4} fill={tone} opacity={on ? 1 : 0.7} />
+      ))}
+    </Svg>
+  );
+}
 
 export default function TheoryScreen({ navigation, route }) {
   const game = useGame();
@@ -200,6 +223,8 @@ export default function TheoryScreen({ navigation, route }) {
       {!reducedMotion ? (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
       ) : null}
+      {/* light-shaft from above — the threshold (design) */}
+      <View pointerEvents="none" style={styles.lightShaft} />
 
       <View style={styles.header}>
         <View style={styles.kickerRow}>
@@ -260,25 +285,27 @@ export default function TheoryScreen({ navigation, route }) {
           <View style={styles.beliefList}>
             {beliefs.map((b, bi) => {
               const active = b.key === beliefKey;
+              const tone = toneFor(bi);
+              const body = b.focus || b.consequence;
               return (
                 <Reveal key={b.key} index={bi} reducedMotion={reducedMotion} distance={10}>
                 <PressableScale
                   reducedMotion={reducedMotion}
                   onPress={() => { if (!sealed) { setBeliefKey(b.key); setGenError(null); } }}
                   disabled={sealed}
-                  style={[styles.beliefCard, active && styles.beliefCardActive, sealed && !active && { opacity: 0.4 }]}
+                  style={[styles.beliefCard, active && { borderColor: tone, backgroundColor: `${tone}1f` }, sealed && !active && { opacity: 0.4 }]}
                   accessibilityLabel={b.title || 'A reading of the hidden world'}
                 >
                   <View style={styles.beliefTop}>
-                    <MaterialCommunityIcons
-                      name={active ? 'radiobox-marked' : 'radiobox-blank'}
-                      size={18}
-                      color={active ? COLORS.accentSecondary : COLORS.textMuted}
-                    />
-                    <Text style={[styles.beliefTitle, active && { color: COLORS.offWhite }]}>{b.title || 'A reading of the hidden world'}</Text>
+                    <BeliefGlyph tone={tone} on={active} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.beliefTitle, active && { color: COLORS.offWhite }]}>{b.title || 'A reading of the hidden world'}</Text>
+                      {!active ? <Text style={styles.beliefHint}>TAP TO WEIGH THIS READING</Text> : null}
+                    </View>
+                    <Text style={[styles.beliefMark, { color: tone, textShadowColor: tone }]}>{active ? '◆' : '◇'}</Text>
                   </View>
-                  {(b.focus || b.consequence) ? (
-                    <Text style={styles.beliefFocus}>{b.focus || b.consequence}</Text>
+                  {active && body ? (
+                    <Text style={styles.beliefBody}>{body}</Text>
                   ) : null}
                 </PressableScale>
                 </Reveal>
@@ -410,8 +437,11 @@ const styles = StyleSheet.create({
   },
   beliefCardActive: { borderColor: COLORS.underViolet, backgroundColor: 'rgba(167,139,250,0.12)' },
   beliefTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  beliefTitle: { flex: 1, fontFamily: FONTS.secondaryBold, fontSize: 18, lineHeight: 21, color: COLORS.textPrimary },
-  beliefFocus: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: LINE_HEIGHTS.cozy, marginLeft: 26 },
+  beliefTitle: { fontFamily: FONTS.secondaryBold, fontSize: 18, lineHeight: 21, color: COLORS.textPrimary },
+  beliefHint: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textSubtle, textTransform: 'uppercase', marginTop: 4 },
+  beliefMark: { fontSize: 16, marginLeft: 6, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  beliefBody: { fontFamily: FONTS.primary, fontSize: 13.5, lineHeight: 22, color: COLORS.textSecondary, marginTop: 12 },
+  lightShaft: { position: 'absolute', top: -60, alignSelf: 'center', width: 260, height: 360, borderRadius: 180, backgroundColor: 'rgba(167,139,250,0.08)' },
   // Fragments
   fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   frag: {
