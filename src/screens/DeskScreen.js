@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Line, Circle } from 'react-native-svg';
 
 import ScreenSurface from '../components/ScreenSurface';
-import NeonSign from '../components/NeonSign';
+import NeonWordmark from '../components/NeonWordmark';
 import PressableScale from '../components/PressableScale';
 import Stagger from '../components/motion/Stagger';
 import { COLORS } from '../constants/colors';
@@ -15,7 +15,6 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
 
 const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
-const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
 
 const BEATS = ['Read', 'Examine', 'Connect', 'Theory'];
 
@@ -95,8 +94,9 @@ export default function DeskScreen({
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.windowTint} pointerEvents="none" />
+          <Text style={styles.windowIdLeft} pointerEvents="none">ASHPORT · 2:14 AM</Text>
           <View style={styles.windowNeon} pointerEvents="none">
-            <NeonSign logoSource={DEAD_LETTERS_LOGO} style={styles.neon} />
+            <NeonWordmark reducedMotion={reducedMotion} size={42} />
           </View>
           <Pressable onPress={tap(onOpenSettings)} hitSlop={10} style={styles.settingsBtn}>
             <MaterialCommunityIcons name="cog-outline" size={20} color={COLORS.accentCyan} />
@@ -171,15 +171,15 @@ export default function DeskScreen({
             <Text style={styles.storyLinkArrow}>→</Text>
           </Pressable>
 
-          {/* stat tags (tappable: archive / stats) */}
+          {/* stat tags — Fragments / Truths / Chapter (per the design); tappable for nav */}
           <View style={styles.statRow}>
             <Pressable style={styles.statTag} onPress={tap(onOpenArchive)}>
-              <Text style={styles.statNum}>{String(completedSubchapters).padStart(2, '0')}</Text>
-              <Text style={styles.statLabel}>ARCHIVE</Text>
+              <Text style={styles.statNum}>{String(fragments).padStart(2, '0')}</Text>
+              <Text style={styles.statLabel}>FRAGMENTS</Text>
             </Pressable>
             <Pressable style={styles.statTag} onPress={tap(onOpenStats)}>
-              <Text style={styles.statNum}>{String(progress.streak || 0).padStart(2, '0')}</Text>
-              <Text style={styles.statLabel}>DAY STREAK</Text>
+              <Text style={styles.statNum}>{String(truths).padStart(2, '0')}</Text>
+              <Text style={styles.statLabel}>TRUTHS</Text>
             </Pressable>
             <View style={styles.statTag}>
               <Text style={styles.statNum}>{String(storyChapter).padStart(2, '0')}</Text>
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,9,14,0.36)',
   },
   windowNeon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  neon: { transform: [{ rotate: '-2deg' }] },
+  windowIdLeft: { position: 'absolute', top: 16, left: 16, fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1.6, color: COLORS.textMuted, zIndex: 5 },
   settingsBtn: { position: 'absolute', top: 16, right: 16, padding: 6, zIndex: 5 },
   windowSill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 14, backgroundColor: '#1c150e' },
 
