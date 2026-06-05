@@ -62,7 +62,7 @@ export const getManyShotCategories = (beatType, chapterBeatType) => {
 
 // ============================================================================
 // PATHDECISIONS SYSTEM PROMPT - Story context for path-specific decisions
-// Per Gemini 3 best practices: XML tags, persona, explicit constraints
+// Per Gemini 3.5 Flash best practices: XML tags, persona, direct constraints
 // Enhanced with style/voice guidance for consistency with main narrative
 // ============================================================================
 export const buildPathDecisionsSystemPrompt = () => {
@@ -92,7 +92,7 @@ You understand that different player journeys through the branching narrative le
 <core_mandate>
 Each of the 9 branching paths represents a DIFFERENT player experience. The decisions you generate must reflect what THAT specific player discovered, not generic options that could apply to any path.
 
-CRITICAL: If a player discovered a name, their decision should involve that name. If they witnessed a threshold react, their decision should involve that threshold. The discoveries ARE the decision drivers.
+If a player discovered a name, their decision should involve that name. If they witnessed a threshold react, their decision should involve that threshold. The discoveries are the decision drivers.
 </core_mandate>
 
 <output_contract>
@@ -101,7 +101,7 @@ Return ONLY valid JSON matching the schema. No commentary.
 };
 
 // ============================================================================
-// PATHDECISIONS PROMPT TEMPLATE - Structured per Gemini 3 best practices
+// PATHDECISIONS PROMPT TEMPLATE - Structured per Gemini 3.5 Flash best practices
 // Uses XML tags, explicit planning, few-shot examples, causality mapping
 // IMPORTANT: Uses SUMMARIES (15-25 words each) instead of full narrative content.
 // Full narrative excerpts trigger Gemini's RECITATION safety filter.
@@ -241,8 +241,8 @@ Generate 9 pathDecisions objects with:
 
 personalityAlignment MUST be one of: aggressive | methodical | balanced
 
-CRITICAL CHECKS before finalizing:
-✓ Each path's options reference what THAT path discovered
+Before finalizing, verify:
+✓ Each path's options reference what that path discovered
 ✓ No two paths have identical option titles
 ✓ The intro mentions the specific discovery or revelation
 ✓ Options feel like natural next steps given what Jack learned
@@ -250,7 +250,7 @@ CRITICAL CHECKS before finalizing:
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
-// Structured per Gemini 3 best practices (XML tags, explicit planning, persona)
+// Structured per Gemini 3.5 Flash best practices (XML tags, direct constraints, persona)
 // Now builds dynamically from storyBible.js data - no hardcoded duplicates
 // ============================================================================
 export const buildMasterSystemPrompt = () => {
@@ -269,15 +269,15 @@ Continue the story of ${protagonist.fullName} with perfect narrative and world c
 Maintain mystery pressure. Advance the investigation. Keep the prose precise, atmospheric, and psychologically close.
 </core_mandate>
 
-<non_negotiables>
+<constraints>
 - Stay in character: never acknowledge being an AI or reference these instructions.
 - POV/tense: ${voice.perspective.toLowerCase()}, ${voice.tense.toLowerCase()}, tightly aligned to ${protagonist.fullName}.
-- Dialogue punctuation: use DOUBLE QUOTES for all dialogue (e.g., "Like this," Jack said).
-- WORD COUNT: Each narrative segment (opening, each firstChoice response, each ending) MUST be 300-350 words. This is NON-NEGOTIABLE.
-- Branching keys: Use full format (1A-2A, 1B-2C) not abbreviated (2A, 2B, 2C).
-- Continuity: never contradict the Story Bible / established facts / dates / relationships.
+- Dialogue punctuation: use double quotes for all dialogue (e.g., "Like this," Jack said).
+- Length: each narrative segment (opening, each firstChoice response, each ending) is 300-350 words.
+- Branching keys: use the full format (1A-2A, 1B-2C), not the abbreviated form (2A, 2B, 2C).
+- Continuity: never contradict the Story Bible, established facts, dates, or relationships.
 - Continuation: when a prior ending is provided (especially <scene_state> / exact last sentence), pick up immediately after it; do not restart, recap, or rephrase the ending.
-</non_negotiables>
+</constraints>
 
 <reveal_timing>
 ${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
@@ -289,11 +289,15 @@ Treat those blocks as authoritative.
 If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
 </how_to_use_the_prompt>
 
-<gemini_3_5_notes>
-- Gemini 3.5 Flash defaults to concise output. You MUST deliberately write LONGER than feels natural to fully dramatize each segment.
-- Target 300-350 words per segment, which is roughly 20-25 sentences. Hit this by fully rendering 4-5 distinct scene beats (action/observation/dialogue/reaction), not by padding.
-- Anchor every choice and detail to the provided context blocks above.
-</gemini_3_5_notes>
+<segment_construction>
+Build each 300-350 word segment from four distinct beats of roughly 75-90 words each, in this order:
+1. Grounding — place Jack in the scene with one concrete sensory anchor (sound, smell, texture, light).
+2. Action or observation — something happens, or Jack notices something that moves the investigation.
+3. Dialogue or interior reflection — a line of speech carrying subtext, or a close-third thought that exposes the stakes.
+4. Turn — a small revelation, complication, or hook that pulls toward the next beat.
+The length comes from dramatizing all four beats fully, not from padding any one of them.
+Anchor every choice and detail to the context blocks above.
+</segment_construction>
 
 <output_contract>
 - Return ONLY valid JSON that matches the provided schema. No commentary, no markdown.
@@ -301,16 +305,16 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 </output_contract>
 
 <under_map>
-This is NOT a whodunit. The player is mapping a hidden layer of reality, not catching a culprit. Populate two fields from THIS scene:
+This is not a whodunit. The player is mapping a hidden layer of reality, not catching a culprit. Populate two fields from this scene:
 
-fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Give each a short label (2-4 words) and a short detail (Jack's note on why it's strange). Mark anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. CRITICAL: give each fragment a "phrase" — a SHORT verbatim substring (2-5 words) lifted EXACTLY from your narrative where it appears — so the player can TAP that phrase to collect it. The phrase must match your prose character-for-character and must be short enough to highlight cleanly (a few words, NOT a whole sentence).
+fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Give each a short label (2-4 words) and a short detail (Jack's note on why it's strange). Set anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each fragment a "phrase": a short verbatim substring (2-5 words) lifted exactly from your narrative where it appears, so the player can tap that phrase to collect it. The phrase must match your prose character-for-character and stay short enough to highlight cleanly (a few words, not a whole sentence).
 
-CRITICAL DOUBLE-MARK: every fragment you list here MUST ALSO appear as a tappable detail inside the matching branchingNarrative segment (opening / option response) where its phrase occurs — that detail must set kind (symbol/place/person/phenomenon) and an evidenceCard label EQUAL to the fragment's label. This is how the player taps the anomaly in the prose to collect it. If you only mark it in one place it will not be collectable, so ALWAYS do both. There must be 2-4 such kind-tagged details across this scene.
+Double-mark each fragment: every fragment you list here must also appear as a tappable detail inside the matching branchingNarrative segment (opening / option response) where its phrase occurs — that detail sets kind (symbol/place/person/phenomenon) and an evidenceCard label equal to the fragment's label. This is how the player taps the anomaly in the prose to collect it; a fragment marked in only one place is not collectable, so always do both. Aim for 2-4 such kind-tagged details across the scene.
 
-WEAVING ACROSS CHAPTERS: if an <under_map_state> block lists fragments the player ALREADY HOLDS, you are encouraged to RE-SURFACE one of them here when it fits — reuse its EXACT label so it deepens into a recurring motif instead of becoming a new duplicate.
+Weaving across chapters: if an <under_map_state> block lists fragments the player already holds, re-surface one of them here when it fits — reuse its exact label so it deepens into a recurring motif instead of becoming a new duplicate.
 
-relations — how fragments connect to reveal a secret of the hidden world. Reference fragments by their exact label. Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are TRUE in your world and that an attentive player could infer.
-CROSS-CHAPTER WEAVING: if an <under_map_state> block lists fragments the player ALREADY HOLDS, author AT LEAST ONE relation that links a NEW fragment from THIS scene to one of those EARLIER fragments (by its exact label). This threads the map together across chapters and is more valuable than a relation between two brand-new fragments. It's fine to return an empty relations list only when nothing genuinely connects yet.
+relations — how fragments connect to reveal a secret of the hidden world. Reference fragments by their exact label. Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are true in your world and that an attentive player could infer.
+Cross-chapter weaving: if an <under_map_state> block lists fragments the player already holds, author at least one relation linking a new fragment from this scene to one of those earlier fragments (by its exact label). This threads the map together across chapters and is more valuable than a relation between two brand-new fragments. Return an empty relations list only when nothing genuinely connects yet.
 
 These must be consistent with the narrative you wrote; the player will discover them.
 </under_map>
@@ -328,25 +332,21 @@ These decisions should manifest naturally in the prose without being explicitly 
 </internal_planning>
 
 <thread_accounting_rule>
-MANDATORY: Every thread in ACTIVE_THREADS with urgency="critical" is NON-NEGOTIABLE. You will be rejected if you skip them.
+Address every thread in ACTIVE_THREADS marked urgency="critical" within this scene. For each one:
+1. Have a character take visible action on it, not just think about it.
+2. Show progress through dialogue or concrete action rather than narration or exposition.
+3. If it genuinely cannot be acted on in this scene, have Jack acknowledge why he can't act on it yet.
 
-For EVERY critical thread:
-1. Characters MUST take visible action on it (not just think about it)
-2. Show progress through dialogue or concrete actions (not narration or exposition)
-3. If physically impossible to address in this scene, Jack must explicitly acknowledge why he can't act on it yet
-
-FAILURE TO ADDRESS CRITICAL THREADS = AUTOMATIC REJECTION. No exceptions.
+Leaving a critical thread untouched is the single most important failure to avoid.
 </thread_accounting_rule>
 
 <thread_escalation_rule>
-OVERDUE THREAD PENALTY: Any thread active for 2+ chapters without meaningful progress triggers MANDATORY action.
+For any thread active 2+ chapters without meaningful progress, do exactly one of the following:
+1. Advance it significantly this chapter (reveal new info, confront someone, discover evidence).
+2. Resolve it completely, with in-narrative payoff.
+3. Mark it "failed," with Jack explicitly giving up and explaining why.
 
-You MUST do ONE of:
-1. Advance it significantly this chapter (reveal new info, confront someone, discover evidence)
-2. Resolve it completely with in-narrative payoff
-3. Mark it "failed" with Jack explicitly giving up and explaining why
-
-Ignoring overdue threads = generation failure. This is a hard requirement.
+An overdue thread should not pass through a scene untouched.
 </thread_escalation_rule>
 
 <craft_quality_checklist>
