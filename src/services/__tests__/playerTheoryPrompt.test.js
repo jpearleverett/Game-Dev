@@ -69,6 +69,31 @@ describe('_buildPlayerTheorySection', () => {
   });
 });
 
+describe('_buildContinuityAnchorSection', () => {
+  const buildAnchor = (ctx, chapter) =>
+    promptAssemblyMethods._buildContinuityAnchorSection(ctx, chapter);
+
+  test('anchors immutable canon + timeline for the end-of-prompt position', () => {
+    const out = buildAnchor({}, 4);
+    // Core canon must be restated so long-context dilution does not drift names/roles.
+    expect(out).toContain('Jack Halloway');
+    expect(out).toContain('Victoria Blackwell');
+    expect(out).toContain('Ashport');
+    // Timeline anchor (Chapter N = Day N) keeps dates consistent across the campaign.
+    expect(out).toContain('Day 4 of');
+    // It must instruct the model not to contradict the established record.
+    expect(out.toLowerCase()).toContain('do not contradict');
+    // It stays an anchor, not a full ledger dump (kept compact).
+    expect(out.length).toBeLessThan(900);
+  });
+
+  test('omits the timeline line when chapter is not finite', () => {
+    const out = buildAnchor({}, NaN);
+    expect(out).toContain('Jack Halloway');
+    expect(out).not.toContain('Day NaN');
+  });
+});
+
 describe('puzzle mode routing (CONNECT / THEORY)', () => {
   test('A/B beats route to the Under-Map CONNECT beat', () => {
     expect(getPuzzleMode('001A', true)).toBe(PUZZLE_MODE.CONNECT);

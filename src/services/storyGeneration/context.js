@@ -693,8 +693,7 @@ function _buildSceneStateSection(context, chapter, subchapter) {
   section += `Previous subchapter: "${sceneState.previousTitle}"\n\n`;
   section += `**LAST PARAGRAPHS:**\n${sceneState.lastParagraphs}\n\n`;
   section += `**EXACT LAST SENTENCE:**\n"${sceneState.lastSentence}"\n\n`;
-  section += `>>> YOUR NARRATIVE MUST PICK UP IMMEDIATELY AFTER THIS SENTENCE <<<\n`;
-  section += `>>> DO NOT REPEAT OR REPHRASE THIS ENDING - CONTINUE FROM IT <<<\n`;
+  section += `Pick up immediately after this sentence. Do not repeat or rephrase the ending; continue from it.\n`;
 
   return section;
 }

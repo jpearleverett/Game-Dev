@@ -366,6 +366,38 @@ function _buildPlayerTheorySection(underMap) {
   ].join('\n');
 }
 
+/**
+ * Build a compact, high-salience continuity anchor for the END of the prompt
+ * (right before <task>). Gemini 3.5 Flash's long-context recall is a relative
+ * soft spot (MRCR v2 @128k ~77%), and immutable facts get diluted across the
+ * full story text dumped earlier. Restating the core canon in the highest-
+ * attention end position keeps names / roles / timeline from drifting across a
+ * 12-chapter campaign. Kept short on purpose: this anchors, it does not
+ * duplicate the full ESTABLISHED FACTS ledger above.
+ */
+function _buildContinuityAnchorSection(context, chapter) {
+  const { protagonist, antagonist, setting } = ABSOLUTE_FACTS || {};
+  const lines = [];
+  if (protagonist?.fullName) {
+    const role = protagonist.formerTitle ? protagonist.formerTitle.toLowerCase() : 'investigator';
+    lines.push(`- Protagonist: ${protagonist.fullName}${protagonist.age ? `, ${protagonist.age}` : ''}, ${role}. Narration stays close third-person on him, past tense.`);
+  }
+  if (antagonist?.trueName) {
+    lines.push(`- Antagonist: ${antagonist.trueName}${antagonist.occupation ? `, ${antagonist.occupation}` : ''}.`);
+  }
+  if (setting?.city) {
+    lines.push(`- Setting: ${setting.city}${setting.atmosphere ? `, ${setting.atmosphere}` : ''}. A hidden second layer of reality (the Under-Map) runs through it.`);
+  }
+  if (Number.isFinite(chapter)) {
+    lines.push(`- Timeline: this is Day ${chapter} of ${TOTAL_CHAPTERS} (Chapter N = Day N). Keep dates, names, and prior events consistent with the story text above.`);
+  }
+  if (!lines.length) return '';
+  return [
+    'Immutable canon for this scene. Do not contradict these, the ESTABLISHED FACTS list, or the story text above:',
+    ...lines,
+  ].join('\n');
+}
+
 function _buildDynamicPrompt(
   context,
   chapter,
@@ -377,7 +409,7 @@ function _buildDynamicPrompt(
   // The includeManyShot parameter was removed to prevent duplication.
   const parts = [];
 
-  // Per Gemini 3 docs: Use XML tags for structure clarity
+  // Per Gemini 3.5 Flash docs: use XML tags for structure clarity, and
   // "place your specific instructions or questions at the end of the prompt, after the data context"
 
   // Dynamic Part 1: Story context
@@ -460,16 +492,26 @@ function _buildDynamicPrompt(
     parts.push('</engagement_guidance>');
   }
 
-  // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
-  const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
-  // Note: beatType already declared earlier for many-shot examples (line 5049)
+  // Dynamic Part 7.5: Continuity anchor (immutable canon) in the high-attention
+  // end position, to counter Gemini 3.5 Flash's long-context dilution as the
+  // story grows across chapters.
+  const continuityAnchor = this._buildContinuityAnchorSection(context, chapter);
+  if (continuityAnchor) {
+    parts.push('<continuity_anchors>');
+    parts.push(continuityAnchor);
+    parts.push('</continuity_anchors>');
+  }
 
-  // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+  // Dynamic Part 8: Current Task Specification (LAST per Gemini 3.5 Flash best practice)
+  const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
+  // Note: beatType already declared earlier for many-shot examples.
+
+  // Anchor reasoning to the context above with a transition phrase.
   // NOTE: Self-critique checklist was moved to system prompt's <craft_quality_checklist>
-  // to avoid duplication. Gemini 3's native thinking handles quality validation internally.
+  // to avoid duplication. The model's native thinking handles quality validation internally.
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
+Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, continuity_anchors, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
 Before writing, plan internally (do not output the plan):
 1. What narrative threads from ACTIVE_THREADS must be addressed?
@@ -970,7 +1012,7 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     // Chapter header with emphasis for immediately previous
     if (isImmediatelyPrevious) {
       summary += `\n${'='.repeat(80)}\n`;
-      summary += '### >>> IMMEDIATELY PREVIOUS SUBCHAPTER - CONTINUE FROM HERE <<<\n';
+      summary += '### Immediately previous subchapter (continue from here)\n';
       summary += `### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n`;
       summary += `${'='.repeat(80)}\n\n`;
     } else {
@@ -1032,14 +1074,14 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     // Emphasize continuation point
     if (isImmediatelyPrevious) {
       summary += `\n${'='.repeat(80)}\n`;
-      summary += '>>> YOUR NARRATIVE MUST CONTINUE FROM THE END OF THIS TEXT <<<\n';
+      summary += 'Continue your narrative from the end of this text.\n';
 
       // Extract and highlight the last few sentences
       const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
       if (sentences.length > 0) {
         const lastSentences = sentences.slice(-3).join(' ').trim();
-        summary += `\nTHE STORY ENDED WITH:\n"${lastSentences}"\n`;
-        summary += '\n>>> PICK UP EXACTLY HERE. What happens NEXT? <<<\n';
+        summary += `\nThe story ended with:\n"${lastSentences}"\n`;
+        summary += '\nPick up exactly here: what happens next?\n';
       }
       summary += `${'='.repeat(80)}\n`;
     }
@@ -1505,12 +1547,12 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           section += `\n   Characters: ${t.characters.join(', ')}`;
         }
         if (t.dueChapter) {
-          section += `\n   Due by: Chapter ${t.dueChapter}${t.isOverdue ? ' (OVERDUE!)' : ''}`;
+          section += `\n   Due by: Chapter ${t.dueChapter}${t.isOverdue ? ' (overdue)' : ''}`;
         }
         section += '\n';
       });
 
-      section += '\n>>> YOU MUST address ALL threads above through dialogue or action, not just thoughts <<<';
+      section += '\nAddress each thread above through dialogue or action, not just thoughts.';
       section += `\n${'='.repeat(60)}`;
     }
 
@@ -1726,6 +1768,7 @@ export const promptAssemblyMethods = {
   _ensureChapterStartCache,
   _buildDynamicPrompt,
   _buildPlayerTheorySection,
+  _buildContinuityAnchorSection,
   _buildGenerationPrompt,
   _buildCraftTechniquesSection,
   _extractCharactersFromContext,
