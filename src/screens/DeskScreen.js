@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Line, Circle } from 'react-native-svg';
 
 import ScreenSurface from '../components/ScreenSurface';
-import NeonWordmark from '../components/NeonWordmark';
+import NeonSign from '../components/NeonSign';
 import PressableScale from '../components/PressableScale';
 import Stagger from '../components/motion/Stagger';
 import { COLORS } from '../constants/colors';
@@ -15,6 +15,7 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
 
 const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
+const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
 
 const BEATS = ['Read', 'Examine', 'Connect', 'Theory'];
 
@@ -96,7 +97,7 @@ export default function DeskScreen({
           <View style={styles.windowTint} pointerEvents="none" />
           <Text style={styles.windowIdLeft} pointerEvents="none">ASHPORT · 2:14 AM</Text>
           <View style={styles.windowNeon} pointerEvents="none">
-            <NeonWordmark reducedMotion={reducedMotion} size={42} />
+            <NeonSign logoSource={DEAD_LETTERS_LOGO} style={styles.neon} />
           </View>
           <Pressable onPress={tap(onOpenSettings)} hitSlop={10} style={styles.settingsBtn}>
             <MaterialCommunityIcons name="cog-outline" size={20} color={COLORS.accentCyan} />
@@ -207,6 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,9,14,0.36)',
   },
   windowNeon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  neon: { transform: [{ rotate: '-2deg' }] },
   windowIdLeft: { position: 'absolute', top: 16, left: 16, fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1.6, color: COLORS.textMuted, zIndex: 5 },
   settingsBtn: { position: 'absolute', top: 16, right: 16, padding: 6, zIndex: 5 },
   windowSill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 14, backgroundColor: '#1c150e' },
