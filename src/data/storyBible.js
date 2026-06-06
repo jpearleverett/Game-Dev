@@ -805,12 +805,15 @@ export const GENERATION_CONFIG = {
   },
 
   // Word count requirements - optimized for fast background generation
-  // NOTE: 3 segments (opening + firstChoice + ending) at 300-350 words each = 900-1050 words per path
+  // NOTE: 3 segments (opening + firstChoice + ending) per path. Validation floor stays
+  // at 900 (3×300); the TARGET is raised to ~1200 (3×400) because Gemini 3.5 Flash is
+  // constitutionally concise and anchors to the short style exemplars — asking higher
+  // pulls actual output up toward the real 380-420/segment goal.
   wordCount: {
-    minimum: 900,         // 3×300 word segments minimum
-    target: 1050,         // 3×350 word segments target
-    promptTargetMultiplier: 1.1, // Ask for ~10% more without raising validation minimum
-    maximum: 1400,        // Cap to ensure fast generation
+    minimum: 900,         // 3×300 word segments minimum (hard validation floor)
+    target: 1200,         // 3×400 word segments target
+    promptTargetMultiplier: 1.25, // Ask for ~25% more to counter 3.5 Flash undershoot
+    maximum: 1500,        // Headroom above the raised target
   },
 
   // Quality assurance settings

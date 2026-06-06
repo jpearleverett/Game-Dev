@@ -1167,8 +1167,8 @@ function _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
     baseTargetWords,
     Math.round(baseTargetWords * promptTargetMultiplier)
   );
-  const segmentMinWords = 300;
-  const segmentMaxWords = 350;
+  const segmentMinWords = 380; // target floor shown in-prompt (hard validation floor is 300/segment)
+  const segmentMaxWords = 420;
   const totalSegments = 13; // opening + 3 firstChoice + 9 endings
 
   let task = `## CURRENT TASK
@@ -1178,7 +1178,7 @@ Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 ### Requirements (read first)
 Meet these before writing:
 
-1. **Length:** each narrative segment is ${segmentMinWords}-${segmentMaxWords} words (13 segments = ~4,000-4,500 total)
+1. **Length:** each narrative segment is ${segmentMinWords}-${segmentMaxWords} words. The style examples are shorter than this on purpose — match their craft, not their length. If a drafted segment is under ${segmentMinWords} words, develop its thinnest beat further until it reaches the target.
 2. **POV/tense:** third-person limited, past tense, aligned to Jack Halloway
 3. **Dialogue:** all dialogue uses double quotes ("Like this," Jack said)
 4. **Continuation:** start immediately after the last sentence, with no recap, restart, or summary
@@ -1440,7 +1440,7 @@ Do not use these in your narrative:
 
 ### Final checklist (verify before submitting)
 Before outputting JSON, confirm:
-□ Each narrative segment is ${segmentMinWords}-${segmentMaxWords} words
+□ Each narrative segment reaches ${segmentMinWords}-${segmentMaxWords} words — re-read each one; if any is short, develop its thinnest beat before submitting
 □ Written in third-person limited, past tense
 □ All dialogue uses double quotes ("Like this")
 □ Continues directly from the previous subchapter, with no restart or recap
@@ -1449,7 +1449,7 @@ Before outputting JSON, confirm:
 □ Branching keys in full format (1A-2A, 1B-2C, etc.)
 □ Valid JSON output with no commentary or markdown wrapping
 
-Length target: ${segmentMinWords}-${segmentMaxWords} words per segment.`;
+Length target: ${segmentMinWords}-${segmentMaxWords} words per segment, every segment.`;
 
   return task;
 }

@@ -273,7 +273,7 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 - Stay in character: never acknowledge being an AI or reference these instructions.
 - POV/tense: ${voice.perspective.toLowerCase()}, ${voice.tense.toLowerCase()}, tightly aligned to ${protagonist.fullName}.
 - Dialogue punctuation: use double quotes for all dialogue (e.g., "Like this," Jack said).
-- Length: each narrative segment (opening, each firstChoice response, each ending) is 300-350 words.
+- Length: each narrative segment (opening, each firstChoice response, each ending) runs 380-420 words and is never below 320. Aim for the full target; a thin segment reads as unfinished.
 - Branching keys: use the full format (1A-2A, 1B-2C), not the abbreviated form (2A, 2B, 2C).
 - Continuity: never contradict the Story Bible, established facts, dates, or relationships.
 - Continuation: when a prior ending is provided (especially <scene_state> / exact last sentence), pick up immediately after it; do not restart, recap, or rephrase the ending.
@@ -290,12 +290,14 @@ If instructions conflict, prefer: <task> and schema requirements > continuity bl
 </how_to_use_the_prompt>
 
 <segment_construction>
-Build each 300-350 word segment from four distinct beats of roughly 75-90 words each, in this order:
+Build each 380-420 word segment from four distinct beats of roughly 100-110 words each, in this order:
 1. Grounding — place Jack in the scene with one concrete sensory anchor (sound, smell, texture, light).
 2. Action or observation — something happens, or Jack notices something that moves the investigation.
 3. Dialogue or interior reflection — a line of speech carrying subtext, or a close-third thought that exposes the stakes.
 4. Turn — a small revelation, complication, or hook that pulls toward the next beat.
 The length comes from dramatizing all four beats fully, not from padding any one of them.
+The style and many-shot examples illustrate voice and craft, NOT length — your segments run longer than those excerpts. Do not let a short example shorten your segment.
+Self-check before finalizing each segment: if it is under 380 words, you have under-written a beat — return to the thinnest beat and develop it (more sensory detail, another line of dialogue, a deeper interior turn) until the segment reaches its target. Do not stop at the minimum.
 Anchor every choice and detail to the context blocks above.
 </segment_construction>
 
@@ -403,7 +405,7 @@ Study these examples carefully. Note the:
 - Physical action interleaved with internal thought
 - Tension built through what's NOT said
 
-Your writing should feel like it belongs in the same novel as these passages.
+Your writing should feel like it belongs in the same novel as these passages. Match their VOICE and CRAFT, not their length: these are short excerpts, while each of your segments must run a full 380-420 words.
 `;
 
 // ============================================================================

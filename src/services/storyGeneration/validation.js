@@ -1226,8 +1226,8 @@ class ValidationMethods {
 
     // =========================================================================
     // CATEGORY 8.1: BRANCHING NARRATIVE WORD COUNT VALIDATION (WARNINGS ONLY)
-    // Each player path should meet the target word count (900-1050 words)
-    // Structure: opening (300-350) + firstChoice response (300-350) + secondChoice response (300-350)
+    // Each player path should meet the target word count (~1200 words, 900 floor)
+    // Structure: opening + firstChoice response + secondChoice response (380-420 target each, 300 floor)
     // NOTE: These are warnings, not errors - schema instructs correct lengths, retries are wasteful
     // =========================================================================
     const bn = content.branchingNarrative;
@@ -1235,7 +1235,7 @@ class ValidationMethods {
     // second-choice response bodies are intentionally generated on demand.
     if (bn && bn.opening && bn.firstChoice && bn.secondChoices && !isLayer1Partial(bn)) {
       const countWords = (text) => (text || '').split(/\s+/).filter(w => w.length > 0).length;
-      const MIN_SEGMENT_WORDS = 300;  // Minimum per segment (300-350 target). 3×300=900 word path minimum.
+      const MIN_SEGMENT_WORDS = 300;  // Warning floor per segment (target is 380-420). 3×300=900 word path minimum.
       const MIN_PATH_WORDS = MIN_WORDS_PER_SUBCHAPTER;  // Each complete path should meet subchapter minimum
 
       // Validate opening

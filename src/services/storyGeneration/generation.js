@@ -1326,7 +1326,7 @@ async function generateSecondChoiceResponses(afterChoice, branchingNarrative, op
 
   const userPrompt = [
     '<task>',
-    `Write the THREE ending segments for path ${target} of this scene. Each is 300-350 words and concludes that branch with momentum, in the established voice.`,
+    `Write the THREE ending segments for path ${target} of this scene. Each runs 380-420 words (never below 320) and concludes that branch with momentum, in the established voice. Develop each fully — a thin ending reads as unfinished.`,
     '</task>',
     '<scene_so_far>',
     opening,

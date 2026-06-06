@@ -41,7 +41,7 @@ export const CHOICE_OPTION_SCHEMA = {
     },
     response: {
       type: 'string',
-      description: 'The narrative response when player selects this option (300-350 words). Continue the scene based on this choice.',
+      description: 'The narrative response when player selects this option (target 380-420 words; never below 320). Continue the scene based on this choice.',
     },
     summary: {
       type: 'string',
@@ -106,7 +106,7 @@ export const SECOND_CHOICE_SCHEMA = {
           },
           response: {
             type: 'string',
-            description: 'The ending narrative segment (300-350 words). Conclude this path of the subchapter.',
+            description: 'The ending narrative segment (target 380-420 words; never below 320). Conclude this path of the subchapter.',
           },
           summary: {
             type: 'string',
@@ -135,11 +135,11 @@ export const BRANCHING_NARRATIVE_SCHEMA = {
   properties: {
     opening: {
       type: 'object',
-      description: 'The opening segment, shared by all paths (300-350 words)',
+      description: 'The opening segment, shared by all paths (target 380-420 words; never below 320)',
       properties: {
         text: {
           type: 'string',
-          description: 'Opening narrative that sets the scene and leads to the first choice (300-350 words)',
+          description: 'Opening narrative that sets the scene and leads to the first choice (target 380-420 words; never below 320)',
         },
         details: {
           type: 'array',
@@ -183,8 +183,8 @@ export const STORY_CONTENT_SCHEMA = {
       description: 'A concise 1-2 sentence recap of the previous subchapter (max 40 words), third-person past tense.',
     },
     // BRANCHING NARRATIVE - Interactive story with player choices
-    // Structure: Opening (300-350w) -> Choice1 (3 opts) -> Middles (3x 300-350w) -> Choice2 (3 each) -> Endings (9x 300-350w)
-    // Total: ~4000+ words generated, player experiences 850-950 words per path
+    // Structure: Opening (~400w) -> Choice1 (3 opts) -> Middles (3x ~400w) -> Choice2 (3 each) -> Endings (9x ~400w)
+    // Each segment targets 380-420 words (never below 320); player experiences ~1100-1200 words per path
     branchingNarrative: {
       type: 'object',
       description: 'Interactive branching narrative with 2 choice points and 9 possible paths',
@@ -194,7 +194,7 @@ export const STORY_CONTENT_SCHEMA = {
           properties: {
             text: {
               type: 'string',
-              description: 'Opening scene shared by all paths (300-350 words). Set the scene, build to first choice.',
+              description: 'Opening scene shared by all paths (target 380-420 words; never below 320). Set the scene, build to first choice.',
             },
             details: {
               type: 'array',
@@ -224,7 +224,7 @@ export const STORY_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string', description: '"1A", "1B", or "1C"' },
                   label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options, not same action with different intensity. NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                  response: { type: 'string', description: 'Narrative response (300-350 words)' },
+                  response: { type: 'string', description: 'Narrative response (target 380-420 words; never below 320)' },
                   details: {
                     type: 'array',
                     items: {
@@ -263,7 +263,7 @@ export const STORY_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string', description: '"1A-2A", "1A-2B", "1A-2C", etc.' },
                     label: { type: 'string', description: 'Action label (2-5 words). Different ACTION from other options. NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                    response: { type: 'string', description: 'Ending segment (300-350 words). Conclude this path.' },
+                    response: { type: 'string', description: 'Ending segment (target 380-420 words; never below 320). Conclude this path.' },
                     details: {
                       type: 'array',
                       items: {
@@ -501,7 +501,7 @@ export const SECOND_CHOICE_RESPONSES_SCHEMA = {
         type: 'object',
         properties: {
           key: { type: 'string', description: 'The option key this body belongs to, e.g. "1A-2B"' },
-          response: { type: 'string', description: 'The ending narrative segment (300-350 words). Conclude this path.' },
+          response: { type: 'string', description: 'The ending narrative segment (target 380-420 words; never below 320). Conclude this path.' },
           details: { type: 'array', items: DETAIL_SCHEMA, description: '0-2 tappable details in this ending' },
         },
         required: ['key', 'response'],
@@ -643,7 +643,7 @@ export const DECISION_CONTENT_SCHEMA = {
         opening: {
           type: 'object',
           properties: {
-            text: { type: 'string', description: 'Opening scene (300-350 words). Build tension toward the decision.' },
+            text: { type: 'string', description: 'Opening scene (target 380-420 words; never below 320). Build tension toward the decision.' },
             details: {
               type: 'array',
               items: {
@@ -672,7 +672,7 @@ export const DECISION_CONTENT_SCHEMA = {
                 properties: {
                   key: { type: 'string' },
                   label: { type: 'string', description: 'Action label (2-5 words). NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                  response: { type: 'string', description: 'Narrative response (300-350 words)' },
+                  response: { type: 'string', description: 'Narrative response (target 380-420 words; never below 320)' },
                   summary: { type: 'string', description: 'One-sentence summary of what happens (15-25 words). Used for decision context.' },
                   details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                 },
@@ -700,7 +700,7 @@ export const DECISION_CONTENT_SCHEMA = {
                   properties: {
                     key: { type: 'string' },
                     label: { type: 'string', description: 'Action label (2-5 words). NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
-                    response: { type: 'string', description: 'Ending segment (300-350 words). Conclude at the decision moment.' },
+                    response: { type: 'string', description: 'Ending segment (target 380-420 words; never below 320). Conclude at the decision moment.' },
                     summary: { type: 'string', description: 'One-sentence summary of this path ending (15-25 words). Used for decision context.' },
                     details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
                   },
