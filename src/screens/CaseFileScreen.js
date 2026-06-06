@@ -350,6 +350,20 @@ export default function CaseFileScreen({
     onResolveBelief({ chapter: Number(br.resolvesChapter), correct: br.correct });
   }, [storyMeta?.beliefResolution, storyMeta?.caseNumber, activeCase?.caseNumber, onResolveBelief]);
 
+  // BELIEF VERDICT (Consequence): when this scene resolves a belief the player
+  // sealed earlier, show the verdict up front — the reciprocity moment that makes
+  // the Theory beat matter ("you believed X; tonight it held / was subverted").
+  const beliefVerdict = useMemo(() => {
+    const br = storyMeta?.beliefResolution;
+    if (!isStoryMode || !br || typeof br.correct !== "boolean") return null;
+    const ch = Number(br.resolvesChapter);
+    if (!Number.isFinite(ch)) return null;
+    const theories = storyCampaign?.underMap?.theories || [];
+    const belief = (theories.find((t) => t.chapter === ch) || {}).interpretation || null;
+    if (!belief && !br.line) return null;
+    return { correct: br.correct, line: (br.line || "").trim(), belief };
+  }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, isStoryMode]);
+
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
   const examinableDetails = useMemo(() => {
@@ -1115,6 +1129,36 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
+                {/* BELIEF VERDICT — your sealed reading of the hidden world, borne out or subverted */}
+                {beliefVerdict && (
+                  <View
+                    style={[
+                      styles.verdictCard,
+                      beliefVerdict.correct ? styles.verdictTrue : styles.verdictFalse,
+                      { borderRadius: scaleRadius(RADIUS.lg), padding: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.xs) },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.verdictKicker,
+                        { color: beliefVerdict.correct ? COLORS.accentSecondary : COLORS.bloodRed, fontSize: slugSize },
+                      ]}
+                    >
+                      {beliefVerdict.correct ? "◆ YOUR READING HELD TRUE" : "◆ YOUR READING WAS SUBVERTED"}
+                    </Text>
+                    {beliefVerdict.belief ? (
+                      <Text style={[styles.verdictBelief, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={3}>
+                        You believed: “{beliefVerdict.belief}”
+                      </Text>
+                    ) : null}
+                    {beliefVerdict.line ? (
+                      <Text style={[styles.verdictLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
+                        {beliefVerdict.line}
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+
                 {/* UNDER-MAP ECHO — the loop made visible: this scene follows from what you mapped */}
                 {showEcho && (
                   <View
@@ -1374,6 +1418,12 @@ const styles = StyleSheet.create({
   echoKicker: { fontFamily: FONTS.monoBold, letterSpacing: 1.6, textTransform: "uppercase" },
   echoFrom: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.4 },
   echoLine: { fontFamily: FONTS.primary, letterSpacing: 0.4 },
+  verdictCard: { borderWidth: 1 },
+  verdictTrue: { backgroundColor: "rgba(26, 18, 4, 0.82)", borderColor: "rgba(241, 197, 114, 0.45)" },
+  verdictFalse: { backgroundColor: "rgba(26, 8, 6, 0.82)", borderColor: "rgba(200, 90, 80, 0.45)" },
+  verdictKicker: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
+  verdictBelief: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.4 },
+  verdictLine: { fontFamily: FONTS.primary, letterSpacing: 0.4 },
   storyPromptCard: { borderWidth: 1, backgroundColor: "rgba(8, 4, 2, 0.86)" },
   storyPromptLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   storyPromptBody: { fontFamily: FONTS.primary, letterSpacing: 0.6 },
