@@ -13,6 +13,8 @@ import {
   flawlessStreak,
   mapDepth,
   probeBudgetFor,
+  isMotif,
+  isKeystone,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
@@ -207,7 +209,7 @@ export default function UnderMapScreen({ navigation, route }) {
         audio?.playVictory?.();
         setRevealsThisVisit((n) => n + 1);
         setTimeout(() => {
-          setNode({ aId: pair[0], bId: pair[1], mode: 'revealed', revelation: res?.node?.revelation || sensed.readings.correct });
+          setNode({ aId: pair[0], bId: pair[1], mode: 'revealed', revelation: res?.node?.revelation || sensed.readings.correct, scope: res?.node?.scope || null });
           setSelected([]); lockRef.current = false;
         }, 480);
         return;
@@ -258,7 +260,7 @@ export default function UnderMapScreen({ navigation, route }) {
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
       if (!res.alreadyConnected || res.upgraded) setRevealsThisVisit((n) => n + 1);
-      setNode((nd) => ({ ...nd, mode: 'revealed', revelation: res.node?.revelation || '' }));
+      setNode((nd) => ({ ...nd, mode: 'revealed', revelation: res.node?.revelation || '', scope: res.node?.scope || null }));
     } else {
       hadMisstepRef.current = true;
       impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
@@ -378,6 +380,8 @@ export default function UnderMapScreen({ navigation, route }) {
           const kc = colorFor(f.kind);
           const isSel = selected.includes(f.id);
           const mapped = connectionList.some((c) => c.a === f.id || c.b === f.id);
+          const motif = isMotif(f);
+          const keystone = isKeystone(f);
           return (
             <Pressable
               key={f.id}
@@ -393,8 +397,10 @@ export default function UnderMapScreen({ navigation, route }) {
                 {!reducedMotion ? (
                   <Animated.View pointerEvents="none" style={[styles.starRing, { borderColor: kc, opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
                 ) : null}
+                {keystone ? <View pointerEvents="none" style={styles.keystoneRing} /> : null}
                 <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : mapped ? 0.65 : 0.36, transform: [{ scale: isSel ? 1.2 : mapped ? 1 : 0.8 }] }]} />
                 <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }]} />
+                {motif ? <View style={styles.motifBadge}><Text style={styles.motifBadgeText}>×{f.seen}</Text></View> : null}
               </View>
               <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped]} numberOfLines={2}>{f.label}</Text>
             </Pressable>
@@ -416,6 +422,9 @@ export default function UnderMapScreen({ navigation, route }) {
             {depthPct >= 100 ? 'The hidden world stands revealed' : depthPct >= 50 ? 'The map is taking shape' : 'Something is forming in the dark'} · {depthPct}%
             {streak > 0 ? `  ·  ${streak} flawless` : ''}
           </Text>
+          {remaining > 0 ? (
+            <Text style={styles.remainLabel}>{remaining} truth{remaining === 1 ? '' : 's'} still hidden in the dark</Text>
+          ) : null}
         </View>
         {asPuzzle && canContinue ? (
           <>
@@ -493,7 +502,12 @@ export default function UnderMapScreen({ navigation, route }) {
               </>
             ) : (
               <>
-                <Text style={styles.nodeTag}>◆ NODE SURFACED</Text>
+                <Text style={[styles.nodeTag, node.scope === 'arc' && styles.nodeTagArc]}>
+                  {node.scope === 'arc' ? '◆ AN ARC TRUTH SURFACES' : '◆ NODE SURFACED'}
+                </Text>
+                {node.scope === 'arc' ? (
+                  <Text style={styles.arcSub}>The payoff for your long attention — a truth that spans chapters.</Text>
+                ) : null}
                 <Text style={styles.nodeTitle}>{node.revelation}</Text>
                 <View style={styles.nodeFrags}>
                   {[node.aId, node.bId].map((id) => {
@@ -542,6 +556,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 13, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
   starCoreSel: { transform: [{ scale: 1.4 }], borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)' },
+  keystoneRing: { position: 'absolute', width: 30, height: 30, borderRadius: 15, top: 8, left: 8, borderWidth: 1, borderColor: 'rgba(241,197,114,0.7)' },
+  motifBadge: { position: 'absolute', top: 2, right: 2, minWidth: 15, height: 15, borderRadius: 8, paddingHorizontal: 3, backgroundColor: 'rgba(167,139,250,0.92)', alignItems: 'center', justifyContent: 'center' },
+  motifBadgeText: { fontFamily: FONTS.monoBold, fontSize: 8, color: '#120d0a' },
   starLabel: { fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
   starLabelSel: { color: '#fff', fontFamily: FONTS.monoBold },
   starLabelMapped: { color: COLORS.fogGrayLight },
@@ -554,6 +571,7 @@ const styles = StyleSheet.create({
   depthTrack: { height: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
   depthFill: { height: 6, borderRadius: 999, backgroundColor: COLORS.underViolet },
   depthLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underCyan },
+  remainLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.textMuted },
 
   continueBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14,
@@ -588,6 +606,8 @@ const styles = StyleSheet.create({
   },
   nodeSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: 'rgba(200,230,255,0.6)' },
   nodeTag: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 4, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
+  nodeTagArc: { color: COLORS.amberLight, textShadowColor: 'transparent' },
+  arcSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.4, color: COLORS.amberLight, marginTop: 6 },
   nodeTitle: { fontFamily: FONTS.secondaryBold, fontSize: 21, lineHeight: 26, color: '#f3eeff', marginTop: 12 },
   nodeRev: { fontFamily: FONTS.primary, fontSize: 14.5, lineHeight: 23, color: COLORS.textSecondary, marginTop: 12 },
   nodeFrags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16, marginBottom: 18 },
