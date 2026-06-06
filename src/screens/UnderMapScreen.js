@@ -111,6 +111,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const [field, setField] = useState({ w: 0, h: 0 });
   const [selected, setSelected] = useState([]);
   const [node, setNode] = useState(null); // { aId, bId, mode:'choose'|'revealed'|'blurred', options, revelation }
+  const [inspect, setInspect] = useState(null); // a fragment the player is reading (the full clue)
   const [toast, setToast] = useState(null);
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
@@ -288,7 +289,7 @@ export default function UnderMapScreen({ navigation, route }) {
         </View>
         <Text style={styles.umTitle}>The Under-Map</Text>
         <Text style={styles.umInstr}>
-          Trace a line between two fragments that belong together. A true pair surfaces a <Text style={{ color: COLORS.underCyan }}>node</Text> — a truth that does not want to be seen.
+          Trace a line between two fragments that belong together. A true pair surfaces a <Text style={{ color: COLORS.underCyan }}>node</Text> — a truth that does not want to be seen. <Text style={styles.umInstrHold}>Hold a fragment to read its clue.</Text>
         </Text>
       </View>
 
@@ -352,9 +353,12 @@ export default function UnderMapScreen({ navigation, route }) {
             <Pressable
               key={f.id}
               onPress={() => handleTapStar(f.id)}
+              onLongPress={() => { if (!node) { selectionHaptic(); setInspect(f); } }}
+              delayLongPress={240}
               style={[styles.star, { left: x - 45, top: y - 23 }]}
               accessibilityRole="button"
               accessibilityLabel={f.label}
+              accessibilityHint="Tap to connect, hold to read the clue"
             >
               <View style={styles.coreWrap}>
                 {!reducedMotion ? (
@@ -363,7 +367,7 @@ export default function UnderMapScreen({ navigation, route }) {
                 <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : mapped ? 0.65 : 0.36, transform: [{ scale: isSel ? 1.2 : mapped ? 1 : 0.8 }] }]} />
                 <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }]} />
               </View>
-              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped]} numberOfLines={1}>{f.label}</Text>
+              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped]} numberOfLines={2}>{f.label}</Text>
             </Pressable>
           );
         })}
@@ -408,6 +412,31 @@ export default function UnderMapScreen({ navigation, route }) {
 
       {toast ? (
         <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>
+      ) : null}
+
+      {/* Clue inspector — read the full fragment the player collected */}
+      {inspect ? (
+        <Pressable style={styles.nodeOverlay} onPress={() => setInspect(null)}>
+          <View style={styles.nodeCard} onStartShouldSetResponder={() => true}>
+            <View style={styles.nodeSheen} />
+            <View style={styles.inspectHead}>
+              <View style={[styles.kdot, { backgroundColor: colorFor(inspect.kind), shadowColor: colorFor(inspect.kind) }]} />
+              <Text style={[styles.inspectTag, { color: colorFor(inspect.kind) }]}>
+                {String(inspect.kind || 'anomaly').toUpperCase()}{inspect.anomalous ? ' · ANOMALY' : ''}
+              </Text>
+            </View>
+            <Text style={styles.nodeTitle}>{inspect.label}</Text>
+            {inspect.detail ? (
+              <Text style={styles.inspectDetail}>{inspect.detail}</Text>
+            ) : (
+              <Text style={[styles.inspectDetail, { color: COLORS.textMuted }]}>An anomaly Jack collected. Its meaning surfaces when you pair it with another fragment.</Text>
+            )}
+            {inspect.phrase ? (
+              <Text style={styles.inspectPhrase}>Spotted in the scene: “{inspect.phrase}”</Text>
+            ) : null}
+            <Pressable style={styles.ghostBtn} onPress={() => setInspect(null)}><Text style={styles.ghostText}>Close</Text></Pressable>
+          </View>
+        </Pressable>
       ) : null}
 
       {/* Node card overlay (choose-the-truth → revelation) */}
@@ -466,6 +495,7 @@ const styles = StyleSheet.create({
   kickerCyan: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
   umTitle: { fontFamily: FONTS.secondaryBold, fontSize: 31, lineHeight: 33, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 30, textShadowOffset: { width: 0, height: 0 } },
   umInstr: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.3, color: COLORS.textMuted, marginTop: 9, lineHeight: 17 },
+  umInstrHold: { color: COLORS.underCyan },
 
   field: { flex: 1, marginHorizontal: 6, position: 'relative', minHeight: 0 },
   bloom: { position: 'absolute', width: 8, height: 8, borderRadius: 8, backgroundColor: '#cfe6ff' },
@@ -531,6 +561,10 @@ const styles = StyleSheet.create({
   nodeFrag: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.25)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   nodeFragText: { fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary },
   kdot: { width: 7, height: 7, borderRadius: 4, shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  inspectHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  inspectTag: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 3.4 },
+  inspectDetail: { fontFamily: FONTS.primary, fontSize: 15, lineHeight: 23, color: COLORS.textSecondary, marginTop: 12 },
+  inspectPhrase: { fontFamily: FONTS.mono, fontSize: 11.5, fontStyle: 'italic', letterSpacing: 0.3, lineHeight: 18, color: COLORS.textMuted, marginTop: 14, marginBottom: 4 },
   readingOpt: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.25)', borderRadius: 12, padding: 14 },
   readingText: { fontFamily: FONTS.primary, fontSize: 14, lineHeight: 20, color: COLORS.textPrimary },
   ghostBtn: { marginTop: 6, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(245,230,205,0.2)', backgroundColor: 'rgba(26,21,16,0.55)', alignItems: 'center' },
