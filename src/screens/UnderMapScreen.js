@@ -12,6 +12,7 @@ import {
   readingChoices,
   flawlessStreak,
   mapDepth,
+  probeBudgetFor,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
@@ -112,6 +113,12 @@ export default function UnderMapScreen({ navigation, route }) {
   const [selected, setSelected] = useState([]);
   const [node, setNode] = useState(null); // { aId, bId, mode:'choose'|'revealed'|'blurred', options, revelation }
   const [inspect, setInspect] = useState(null); // a fragment the player is reading (the full clue)
+  // Probe economy (§3.1): a per-descent budget of attempts. A wrong pair costs a
+  // probe; correct pairs are free. Running out never blocks "Continue" — unfound
+  // links stay sensed for a later visit. Budget is fixed at descent start.
+  const [probeBudget] = useState(() => probeBudgetFor(map));
+  const [probesUsed, setProbesUsed] = useState(0);
+  const probesLeft = Math.max(0, probeBudget - probesUsed);
   const [toast, setToast] = useState(null);
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
@@ -209,19 +216,29 @@ export default function UnderMapScreen({ navigation, route }) {
       lockRef.current = false;
       return;
     }
-    // No resonance.
+    // No resonance — a wrong probe costs one from the budget.
     hadMisstepRef.current = true;
+    setProbesUsed((n) => n + 1);
+    const left = Math.max(0, probeBudget - (probesUsed + 1));
     impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
     doShake();
-    showToast('No resonance between these.');
+    showToast(left > 0
+      ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
+      : 'The dark falls silent. The rest stays sensed — continue the descent.');
     setSelected([]); lockRef.current = false;
-  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio]);
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed]);
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
     setSelected((sel) => {
       if (sel.includes(id)) return sel.filter((s) => s !== id);
       if (sel.length >= 2) return sel;
+      // Forming a pair (the probe) requires an unspent probe. Out of probes never
+      // blocks the descent — it just stops further guessing this visit.
+      if (sel.length === 1 && probesLeft <= 0) {
+        showToast('Out of probes. The rest stays sensed — continue the descent.');
+        return sel;
+      }
       const next = [...sel, id];
       if (next.length === 2) {
         lockRef.current = true;
@@ -231,7 +248,7 @@ export default function UnderMapScreen({ navigation, route }) {
       }
       return next;
     });
-  }, [node, evaluate]);
+  }, [node, evaluate, probesLeft, showToast]);
 
   const chooseReading = useCallback((opt) => {
     if (!node) return;
@@ -275,7 +292,11 @@ export default function UnderMapScreen({ navigation, route }) {
   const bloomScale = bloom.interpolate({ inputRange: [0, 1], outputRange: [0.2, 26] });
   const bloomOpacity = bloom.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 0] });
   const depthPct = Math.round(depth.ratio * 100);
-  const canContinue = revealsThisVisit > 0 || remaining === 0;
+  // Forgiving rule (§3.1): out of probes still advances the story.
+  const canContinue = revealsThisVisit > 0 || remaining === 0 || probesLeft <= 0;
+  const probeMeter = probeBudget <= 7
+    ? '◆'.repeat(probesLeft) + '◇'.repeat(Math.max(0, probeBudget - probesLeft))
+    : `${probesLeft}/${probeBudget}`;
 
   return (
     <ScreenSurface variant="default" glow="violet" frameless contentStyle={styles.surface}>
@@ -291,6 +312,14 @@ export default function UnderMapScreen({ navigation, route }) {
         <Text style={styles.umInstr}>
           Trace a line between two fragments that belong together. A true pair surfaces a <Text style={{ color: COLORS.underCyan }}>node</Text> — a truth that does not want to be seen. <Text style={styles.umInstrHold}>Hold a fragment to read its clue.</Text>
         </Text>
+        {map.fragments.length > 0 ? (
+          <View style={styles.probeRow}>
+            <Text style={[styles.probeGlyphs, probesLeft <= 1 && styles.probeGlyphsLow]}>{probeMeter}</Text>
+            <Text style={styles.probeLabel}>
+              {probesLeft === 0 ? 'no probes · the rest stays sensed' : `${probesLeft} probe${probesLeft === 1 ? '' : 's'} — a wrong link costs one`}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {/* Constellation field */}
@@ -496,6 +525,10 @@ const styles = StyleSheet.create({
   umTitle: { fontFamily: FONTS.secondaryBold, fontSize: 31, lineHeight: 33, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 30, textShadowOffset: { width: 0, height: 0 } },
   umInstr: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.3, color: COLORS.textMuted, marginTop: 9, lineHeight: 17 },
   umInstrHold: { color: COLORS.underCyan },
+  probeRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 12 },
+  probeGlyphs: { fontFamily: FONTS.mono, fontSize: 14, letterSpacing: 2, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } },
+  probeGlyphsLow: { color: COLORS.bloodRed, textShadowColor: 'transparent' },
+  probeLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textMuted, textTransform: 'uppercase', flexShrink: 1 },
 
   field: { flex: 1, marginHorizontal: 6, position: 'relative', minHeight: 0 },
   bloom: { position: 'absolute', width: 8, height: 8, borderRadius: 8, backgroundColor: '#cfe6ff' },
