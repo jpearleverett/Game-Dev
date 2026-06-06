@@ -40,6 +40,7 @@ export default function DeskScreen({
   onOpenSettings,
   onOpenStoryCampaign,
   onOpenCaseBoard,
+  onOpenCodex,
   onPickUpTrail,
   onBribe,
 }) {
@@ -165,6 +166,15 @@ export default function DeskScreen({
             <Text style={styles.apertureArrow}>↓</Text>
           </PressableScale>
 
+          {/* Codex — your reading of the hidden world */}
+          {onOpenCodex ? (
+            <Pressable onPress={tap(onOpenCodex)} style={styles.codexLink}>
+              <MaterialCommunityIcons name="book-open-variant" size={15} color={COLORS.underViolet} />
+              <Text style={styles.codexLinkText}>YOUR READING OF THE HIDDEN WORLD</Text>
+              <Text style={styles.codexLinkArrow}>→</Text>
+            </Pressable>
+          ) : null}
+
           {/* Story campaign — ghost entry */}
           <Pressable onPress={tap(onOpenStoryCampaign)} style={styles.storyLink}>
             <MaterialCommunityIcons name="book-open-page-variant-outline" size={16} color={COLORS.coral} />
@@ -275,6 +285,10 @@ const styles = StyleSheet.create({
   storyLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 18 },
   storyLinkText: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.coral },
   storyLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.coral },
+
+  codexLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 14 },
+  codexLinkText: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2, color: COLORS.underViolet },
+  codexLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.underViolet },
 
   // Stat tags
   statRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 18 },

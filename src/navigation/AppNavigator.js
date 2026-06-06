@@ -11,6 +11,7 @@ import SplashScreen from '../screens/SplashScreen';
 import PrologueScreen from '../screens/PrologueScreen';
 import TutorialScreen from '../screens/TutorialScreen';
 import DeskScreen from '../screens/DeskScreen';
+import CodexScreen from '../screens/CodexScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
 import TheoryScreen from '../screens/TheoryScreen';
@@ -142,6 +143,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
               onOpenCaseBoard={() => navigation.navigate('UnderMap')}
+              onOpenCodex={() => navigation.navigate('Codex')}
               onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
             />
@@ -182,6 +184,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="UnderMap" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <UnderMapScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Codex" options={{ animation: 'slide_from_bottom' }}>
+        {({ navigation }) => (
+          <CodexScreen navigation={navigation} />
         )}
       </Stack.Screen>
 
