@@ -20,6 +20,8 @@ import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
 import { COLORS } from "../constants/colors";
 import { useGame } from "../context/GameContext";
+import { useAudioOptional } from "../context/AudioContext";
+import { mapDepth } from "../data/underMap";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
 
@@ -447,6 +449,15 @@ export default function BranchingNarrativeReader({
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
   const { progress } = useGame();
   const reducedMotion = !!progress?.settings?.reducedMotion;
+  const audio = useAudioOptional?.();
+
+  // ATMOSPHERIC ESCALATION: the Under-Map bleeds through the page margins, deepening
+  // as the player maps more of the hidden world ("reality is thinning"). A baseline
+  // tint is always present; mapDepth pushes it further.
+  const bleed = useMemo(() => {
+    const r = progress?.storyCampaign?.underMap ? (mapDepth(progress.storyCampaign.underMap).ratio || 0) : 0;
+    return Math.min(0.32, 0.07 + r * 0.25);
+  }, [progress?.storyCampaign?.underMap]);
 
   // Refs
   const listRef = useRef(null);
@@ -693,8 +704,10 @@ export default function BranchingNarrativeReader({
     if (!detail.isRevealed) {
       setRevealedDetails(prev => new Set(prev).add(detail.phrase));
       if (detail.isFragment) {
-        // EXAMINE: pin this anomaly onto the Under-Map.
+        // EXAMINE: pin this anomaly onto the Under-Map — a haptic + a soft sting
+        // mark the discovery (the Under-Map noticing you noticing it).
         Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success).catch?.(() => {});
+        audio?.playSelect?.();
         onExamineFragment?.({
           label: detail.evidenceCard || detail.phrase,
           kind: detail.kind,
@@ -707,7 +720,7 @@ export default function BranchingNarrativeReader({
         onEvidenceCollected?.(newEvidence);
       }
     }
-  }, [onEvidenceCollected, onExamineFragment]);
+  }, [onEvidenceCollected, onExamineFragment, audio]);
 
   // Handle popup dismiss
   const handlePopupDismiss = useCallback(() => {
@@ -814,6 +827,17 @@ export default function BranchingNarrativeReader({
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.2)']}
             style={[styles.gradientOverlay, { borderRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+          {/* ATMOSPHERE: the Under-Map seeping through the margins (violet above, cyan below) */}
+          <LinearGradient
+            colors={[`rgba(167,139,250,${bleed})`, 'transparent']}
+            style={[styles.bleedTop, { borderTopLeftRadius: blockRadius, borderTopRightRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={['transparent', `rgba(103,232,249,${bleed})`]}
+            style={[styles.bleedBottom, { borderBottomLeftRadius: blockRadius, borderBottomRightRadius: blockRadius }]}
             pointerEvents="none"
           />
 
@@ -1087,6 +1111,20 @@ const styles = StyleSheet.create({
     textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
     fontWeight: 'bold',
     letterSpacing: 1.5,
+  },
+  bleedTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '22%',
+  },
+  bleedBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '22%',
   },
   anomalyMeter: {
     position: 'absolute',
