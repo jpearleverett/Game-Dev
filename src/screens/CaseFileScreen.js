@@ -31,6 +31,7 @@ import CaseSummary from "../components/case-file/CaseSummary";
 import DecisionPanel from "../components/case-file/DecisionPanel";
 
 import { FONTS, FONT_SIZES } from "../constants/typography";
+import { COLORS } from "../constants/colors";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
