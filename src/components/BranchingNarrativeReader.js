@@ -200,6 +200,7 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   revealedDetails,
   textStyle,
   reducedMotion,
+  dropCap, // raise the first letter into a versal — the scene "sets" like a printed page
 }) {
   const segments = useMemo(() => parseTextWithDetails(text, details), [text, details]);
   const shimmer = useRef(new Animated.Value(1)).current;
@@ -219,29 +220,42 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
     return () => loop.stop();
   }, [reducedMotion, hasUncollected, shimmer]);
 
-  return (
-    <Text style={textStyle}>
-      {segments.map((segment, index) => {
-        if (segment.type === 'text') {
-          return <Text key={index}>{segment.content}</Text>;
-        } else {
+  const renderSegment = (segment, index) => {
+    if (segment.type === 'text') {
+      // Drop-cap: raise the first letter of the scene opening into a versal.
+      if (index === 0 && dropCap) {
+        const ci = segment.content.search(/\S/);
+        if (ci !== -1) {
+          const pre = segment.content.slice(0, ci);
+          const cap = segment.content[ci];
+          const rest = segment.content.slice(ci + 1);
           return (
-            <InlineTappablePhrase
-              key={index}
-              phrase={segment.content}
-              note={segment.detail.note}
-              evidenceCard={segment.detail.evidenceCard}
-              kind={segment.detail.kind}
-              isFragment={!!segment.detail.__fragment}
-              onTap={onDetailTap}
-              isRevealed={revealedDetails.has(segment.detail.phrase)}
-              shimmer={shimmer}
-            />
+            <Text key={index}>
+              {pre ? <Text>{pre}</Text> : null}
+              <Text style={styles.dropCap}>{cap}</Text>
+              {rest}
+            </Text>
           );
         }
-      })}
-    </Text>
-  );
+      }
+      return <Text key={index}>{segment.content}</Text>;
+    }
+    return (
+      <InlineTappablePhrase
+        key={index}
+        phrase={segment.content}
+        note={segment.detail.note}
+        evidenceCard={segment.detail.evidenceCard}
+        kind={segment.detail.kind}
+        isFragment={!!segment.detail.__fragment}
+        onTap={onDetailTap}
+        isRevealed={revealedDetails.has(segment.detail.phrase)}
+        shimmer={shimmer}
+      />
+    );
+  };
+
+  return <Text style={textStyle}>{segments.map(renderSegment)}</Text>;
 });
 
 // Per-page anomaly meter — turns reading into a hunt. Ticks + flares a kind-colored
@@ -888,6 +902,7 @@ export default function BranchingNarrativeReader({
                     revealedDetails={revealedDetails}
                     textStyle={styles.noirText}
                     reducedMotion={reducedMotion}
+                    dropCap={index === 0}
                   />
                 )}
 
@@ -1157,6 +1172,12 @@ const styles = StyleSheet.create({
   anomalyMeterDone: {
     color: '#5b2a86',
     opacity: 1,
+  },
+  dropCap: {
+    fontFamily: FONTS.secondaryBold,
+    fontSize: Math.round(NOIR_TYPOGRAPHY.fontSize * 1.85),
+    fontWeight: 'bold',
+    color: '#3a2614',
   },
   arrow: {
     position: "absolute",
