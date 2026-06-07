@@ -82,7 +82,7 @@ export default function SealedScreen({ navigation, route }) {
     <ScreenSurface variant="desk" glow="amber" contentStyle={styles.surface}>
       <View style={styles.body}>
         <View style={styles.sealStage}>
-          {embers.map((e) => <Ember key={e.key} {...e} reducedMotion={reducedMotion} />)}
+          {embers.map(({ key, ...rest }) => <Ember key={key} {...rest} reducedMotion={reducedMotion} />)}
           <Animated.View pointerEvents="none" style={[styles.sealAura, { opacity: auraOpacity, transform: [{ scale: auraScale }] }]} />
           <Animated.View style={[styles.sealWax, { opacity: sealOpacity, transform: [{ scale: sealScale }] }]}>
             <LinearGradient
