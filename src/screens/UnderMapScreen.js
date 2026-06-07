@@ -121,6 +121,9 @@ export default function UnderMapScreen({ navigation, route }) {
   const [probeBudget] = useState(() => probeBudgetFor(map));
   const [probesUsed, setProbesUsed] = useState(0);
   const probesLeft = Math.max(0, probeBudget - probesUsed);
+  // Probes only meter the gated A/B descent. The Desk-opened freeform map is for
+  // reviewing/connecting at leisure — no budget, no lockout there.
+  const probesEnabled = asPuzzle;
   const [toast, setToast] = useState(null);
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
@@ -218,17 +221,22 @@ export default function UnderMapScreen({ navigation, route }) {
       lockRef.current = false;
       return;
     }
-    // No resonance — a wrong probe costs one from the budget.
+    // No resonance. In the gated descent a wrong probe costs one from the budget;
+    // in freeform review (from the Desk) connecting is unmetered.
     hadMisstepRef.current = true;
-    setProbesUsed((n) => n + 1);
-    const left = Math.max(0, probeBudget - (probesUsed + 1));
     impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
     doShake();
-    showToast(left > 0
-      ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
-      : 'The dark falls silent. The rest stays sensed — continue the descent.');
+    if (probesEnabled) {
+      setProbesUsed((n) => n + 1);
+      const left = Math.max(0, probeBudget - (probesUsed + 1));
+      showToast(left > 0
+        ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
+        : 'The dark falls silent. The rest stays sensed — continue the descent.');
+    } else {
+      showToast('No resonance between these.');
+    }
     setSelected([]); lockRef.current = false;
-  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed]);
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled]);
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
@@ -237,7 +245,7 @@ export default function UnderMapScreen({ navigation, route }) {
       if (sel.length >= 2) return sel;
       // Forming a pair (the probe) requires an unspent probe. Out of probes never
       // blocks the descent — it just stops further guessing this visit.
-      if (sel.length === 1 && probesLeft <= 0) {
+      if (sel.length === 1 && probesEnabled && probesLeft <= 0) {
         showToast('Out of probes. The rest stays sensed — continue the descent.');
         return sel;
       }
@@ -250,7 +258,7 @@ export default function UnderMapScreen({ navigation, route }) {
       }
       return next;
     });
-  }, [node, evaluate, probesLeft, showToast]);
+  }, [node, evaluate, probesEnabled, probesLeft, showToast]);
 
   const chooseReading = useCallback((opt) => {
     if (!node) return;
@@ -314,7 +322,7 @@ export default function UnderMapScreen({ navigation, route }) {
         <Text style={styles.umInstr}>
           Trace a line between two fragments that belong together. A true pair surfaces a <Text style={{ color: COLORS.underCyan }}>node</Text> — a truth that does not want to be seen. <Text style={styles.umInstrHold}>Hold a fragment to read its clue.</Text>
         </Text>
-        {map.fragments.length > 0 ? (
+        {probesEnabled && map.fragments.length > 0 ? (
           <View style={styles.probeRow}>
             <Text style={[styles.probeGlyphs, probesLeft <= 1 && styles.probeGlyphsLow]}>{probeMeter}</Text>
             <Text style={styles.probeLabel}>
