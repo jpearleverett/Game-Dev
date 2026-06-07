@@ -506,6 +506,31 @@ export function buildRealizedNarrative(branchingNarrative, firstChoiceKey, secon
 }
 
 /**
+ * PATH-SCOPED FRAGMENTS — keep only the scene fragments that belong to the branch
+ * the player actually walked, so content authored for branches they SKIPPED never
+ * enters the Under-Map (and so never steers Theory or future generation).
+ *
+ * A phrase-bearing fragment is on-path iff its verbatim `phrase` appears in the
+ * realized prose (from buildRealizedNarrative). Phrase-less fragments are
+ * scene-general (not tappable, not branch-attributable) and are always kept.
+ * When `realizedProse` is empty (non-branching or unreconstructable) every fragment
+ * is kept, so the CONNECT/THEORY board is never starved.
+ *
+ * @param {Array} fragments - the scene's collectable fragments (storyMeta.fragments)
+ * @param {string} realizedProse - buildRealizedNarrative(...) for the chosen path
+ * @returns {Array} the path-relevant subset
+ */
+export function fragmentsOnRealizedPath(fragments, realizedProse) {
+  const frags = Array.isArray(fragments) ? fragments : [];
+  const prose = String(realizedProse || '').toLowerCase();
+  if (!prose) return frags;
+  return frags.filter((f) => {
+    const p = f && typeof f.phrase === 'string' ? f.phrase.trim().toLowerCase() : '';
+    return !p || prose.includes(p);
+  });
+}
+
+/**
  * Get the realized narrative for a specific case number based on stored branching choices.
  * Falls back to canonical narrative if no branching choices are stored.
  *

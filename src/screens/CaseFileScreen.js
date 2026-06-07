@@ -35,7 +35,7 @@ import { COLORS } from "../constants/colors";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
-import { getStoryEntry, ROOT_PATH_KEY } from "../data/storyContent";
+import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
@@ -539,20 +539,33 @@ export default function CaseFileScreen({
       setNarrativeComplete(true);
     }
 
-    // UNDER-MAP backfill: collect ALL of the scene's fragments at the gate (not
-    // just the opening's), so every relation's endpoints exist and the CONNECT
-    // beat always has probeable pairs. Tapping during the read is still the
-    // EXAMINE reward; this guarantees the puzzle is never starved if the player
-    // didn't tap everything. (A fragment from a branch they skipped is a minor
-    // cost next to a connectable board.)
+    // UNDER-MAP backfill (PATH-SCOPED): collect the fragments the player's chosen
+    // path surfaced, so the CONNECT/THEORY beat is never starved if they didn't tap
+    // everything — WITHOUT bleeding in content from branches they skipped. A fragment
+    // is path-relevant when its verbatim phrase appears in the prose actually read
+    // (opening + the chosen first-choice response + the chosen ending). Phrase-less
+    // fragments are scene-general (not tappable, not branch-attributable) so they pass
+    // through. Relations self-scope: addRelations only materializes a relation once
+    // BOTH endpoints exist in the map, so a skipped branch's relations never form,
+    // while cross-chapter links (to fragments the player already holds) still resolve.
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
-      onIngestFragments(sceneFragments, sceneRelations, {
+      // Reconstruct the exact prose the player walked using the SAME helper the
+      // generation pipeline uses for continuity (opening + chosen first response +
+      // chosen ending), so the Under-Map and the next-scene prompt agree on what
+      // "happened". A phrase-bearing fragment only enters the map if its phrase is
+      // in that prose; phrase-less fragments are scene-general (not tappable, not
+      // branch-attributable) and pass through.
+      const prose = branchingNarrative
+        ? buildRealizedNarrative(branchingNarrative, result?.firstChoice, result?.path || result?.secondChoice)
+        : "";
+      const pathFragments = fragmentsOnRealizedPath(sceneFragments, prose);
+      onIngestFragments(pathFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter]);
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, branchingNarrative, storyMeta?.chapter, storyMeta?.subchapter]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
