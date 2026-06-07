@@ -391,6 +391,33 @@ function _buildContinuityAnchorSection(context, chapter) {
   if (Number.isFinite(chapter)) {
     lines.push(`- Timeline: this is Day ${chapter} of ${TOTAL_CHAPTERS} (Chapter N = Day N). Keep dates, names, and prior events consistent with the story text above.`);
   }
+
+  // Player-validated canon from the living Under-Map. Revealed nodes are truths the
+  // player has surfaced; sealed theories are beliefs they've committed. This is the
+  // dynamic fact spine (the old model-emitted consistencyFacts ledger is retired):
+  // it sits in the high-attention END position as HARD "do not contradict"
+  // constraints — distinct from <under_map_state> above, which is a generative
+  // "weave this in" instruction. The Under-Map model manages lifecycle (path-scoped;
+  // a subverted belief is flagged correct=false), so there is no stale-fact bug.
+  const um = this.currentUnderMap;
+  if (um) {
+    const nodes = (Array.isArray(um.nodes) ? um.nodes : [])
+      .filter((n) => n && n.revelation && !n.unresolvedReading);
+    nodes.slice(-8).forEach((n) => {
+      lines.push(`- Established truth the player has surfaced (do not contradict): ${n.revelation}${n.scope === 'arc' ? ' (a truth that spans chapters)' : ''}`);
+    });
+    const sealed = (Array.isArray(um.theories) ? um.theories : []).filter((t) => t && t.interpretation);
+    sealed.slice(-3).forEach((t) => {
+      if (t.correct === false) {
+        lines.push(`- The player believed: "${t.interpretation}" — but this was SUBVERTED. The hidden world is NOT as they believed; reflect the truth, not the false belief.`);
+      } else if (t.correct === true) {
+        lines.push(`- The player's belief has held true: "${t.interpretation}". Stay consistent with it.`);
+      } else {
+        lines.push(`- The player has staked a belief, as yet unproven: "${t.interpretation}". Do not silently confirm or deny it; let the world test it.`);
+      }
+    });
+  }
+
   if (!lines.length) return '';
   return [
     'Immutable canon for this scene. Do not contradict these, the ESTABLISHED FACTS list, or the story text above:',

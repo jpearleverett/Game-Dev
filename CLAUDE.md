@@ -102,6 +102,19 @@ theory**, and instructs the model to:
 The Under-Map is threaded in via `useStoryGeneration.js` (`underMapRef` →
 `options.underMap` → `this.currentUnderMap` in generation.js).
 
+**The Under-Map is also the dynamic CONSISTENCY spine.** `_buildContinuityAnchorSection`
+(promptAssembly.js) injects the player's **revealed node truths** and **sealed
+beliefs** (with their resolved status: held / subverted / unproven) into the
+end-of-prompt `<continuity_anchors>` block as HARD "do not contradict" canon — the
+high-attention position that counters Gemini 3.5 Flash's long-context dilution.
+This is distinct from `<under_map_state>` (a generative "weave this in" instruction).
+Note: the old model-emitted `consistencyFacts` ledger is **retired** — it was
+removed from the schemas (`schemas.js`), so the model no longer emits facts and the
+path-keyed `consistencyFactsByPathKey` persistence in `validation.js`/`context.js`
+is dead (kept only by `branchFacts.test.js`). The `ESTABLISHED FACTS` prompt
+section now renders only the static `CONSISTENCY_RULES`; dynamic facts come from the
+Under-Map canon above + `narrativeThreads` + the full realized story text.
+
 ### C-beat decisions are BELIEFS
 `prompts.js` pathDecisions section frames the 9 path-specific C decisions as
 competing **interpretations of the hidden world** (declarative beliefs like
