@@ -736,22 +736,27 @@ export default function BranchingNarrativeReader({
     flipLockRef.current = true;
     flipAnim.setValue(0);
 
-    Animated.sequence([
-      Animated.timing(flipAnim, {
-        toValue: direction > 0 ? -1 : 1,
-        duration: 160,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(flipAnim, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    if (reducedMotion) {
+      // No page-tilt under reduced motion — just settle the lock.
       flipLockRef.current = false;
-    });
+    } else {
+      Animated.sequence([
+        Animated.timing(flipAnim, {
+          toValue: direction > 0 ? -1 : 1,
+          duration: 170,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flipAnim, {
+          toValue: 0,
+          duration: 240,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        flipLockRef.current = false;
+      });
+    }
 
     if (listRef.current) {
       try {
@@ -763,7 +768,7 @@ export default function BranchingNarrativeReader({
       }
     }
     setActivePage(targetIndex);
-  }, [activePage, pages.length, flipAnim, pageWidth, pageGap]);
+  }, [activePage, pages.length, flipAnim, pageWidth, pageGap, reducedMotion]);
 
   const flipRotation = flipAnim.interpolate({
     inputRange: [-1, 0, 1],
@@ -871,6 +876,7 @@ export default function BranchingNarrativeReader({
                     delay={100}
                     isActive={true}
                     isFinished={false}
+                    reducedMotion={reducedMotion}
                     onComplete={() => setCompletedPages(prev => new Set(prev).add(item.globalIndex))}
                     style={styles.noirText}
                   />
