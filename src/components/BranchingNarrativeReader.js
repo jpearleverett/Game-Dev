@@ -18,6 +18,8 @@ import * as Haptics from "expo-haptics";
 import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
+import { COLORS } from "../constants/colors";
+import { useGame } from "../context/GameContext";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
 
@@ -84,6 +86,7 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   isFragment,
   onTap,
   isRevealed,
+  shimmer, // shared Animated.Value (0..1) — pulses uncollected anomalies to invite the tap
 }) {
   const handlePress = useCallback(() => {
     Haptics.impactAsync(
@@ -108,16 +111,26 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
       }
     : null;
 
+  const baseStyle = [
+    styles.inlineTappable,
+    isFragment
+      ? fragmentStyle
+      : isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
+  ];
+
+  // Uncollected anomalies breathe — a faint pulse that says "something here doesn't
+  // belong, tap me." Collected ones go solid. Ordinary observations never pulse.
+  if (isFragment && !isRevealed && shimmer) {
+    const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
+    return (
+      <Animated.Text onPress={handlePress} style={[...baseStyle, { opacity }]}>
+        {phrase}
+      </Animated.Text>
+    );
+  }
+
   return (
-    <Text
-      onPress={handlePress}
-      style={[
-        styles.inlineTappable,
-        isFragment
-          ? fragmentStyle
-          : isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
-      ]}
-    >
+    <Text onPress={handlePress} style={baseStyle}>
       {phrase}
     </Text>
   );
@@ -184,8 +197,25 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   onDetailTap,
   revealedDetails,
   textStyle,
+  reducedMotion,
 }) {
   const segments = useMemo(() => parseTextWithDetails(text, details), [text, details]);
+  const shimmer = useRef(new Animated.Value(1)).current;
+
+  // Run one shared pulse for the whole page while any anomaly is still uncollected.
+  const hasUncollected = useMemo(
+    () => segments.some((s) => s.type === 'tappable' && s.detail.__fragment && !revealedDetails.has(s.detail.phrase)),
+    [segments, revealedDetails],
+  );
+  useEffect(() => {
+    if (reducedMotion || !hasUncollected) { shimmer.setValue(1); return undefined; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 0, duration: 920, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 1, duration: 920, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [reducedMotion, hasUncollected, shimmer]);
 
   return (
     <Text style={textStyle}>
@@ -203,11 +233,53 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
               isFragment={!!segment.detail.__fragment}
               onTap={onDetailTap}
               isRevealed={revealedDetails.has(segment.detail.phrase)}
+              shimmer={shimmer}
             />
           );
         }
       })}
     </Text>
+  );
+});
+
+// Per-page anomaly meter — turns reading into a hunt. Ticks + flares a kind-colored
+// mote each time you sense one, and stamps the page once every anomaly is collected.
+const AnomalyMeter = React.memo(function AnomalyMeter({ total, found, reducedMotion }) {
+  const prev = useRef(found);
+  const pulse = useRef(new Animated.Value(0)).current;
+  const moteY = useRef(new Animated.Value(0)).current;
+  const moteO = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (found > prev.current) {
+      if (found >= total && total > 0) {
+        Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success).catch?.(() => {});
+      }
+      if (!reducedMotion) {
+        pulse.setValue(0); moteY.setValue(0); moteO.setValue(1);
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(pulse, { toValue: 1, duration: 150, useNativeDriver: true }),
+            Animated.timing(pulse, { toValue: 0, duration: 240, useNativeDriver: true }),
+          ]),
+          Animated.timing(moteY, { toValue: -26, duration: 720, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(moteO, { toValue: 0, duration: 720, useNativeDriver: true }),
+        ]).start();
+      }
+    }
+    prev.current = found;
+  }, [found, total, reducedMotion, pulse, moteY, moteO]);
+
+  if (!total) return null;
+  const complete = found >= total;
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] });
+  return (
+    <View style={styles.anomalyMeter} pointerEvents="none">
+      <Animated.Text style={[styles.anomalyMote, { opacity: moteO, transform: [{ translateY: moteY }] }]}>◆</Animated.Text>
+      <Animated.Text style={[styles.anomalyMeterText, complete && styles.anomalyMeterDone, { transform: [{ scale }] }]}>
+        {complete ? '✦ PAGE FULLY SENSED' : `◆ ANOMALIES SENSED ${found}/${total}`}
+      </Animated.Text>
+    </View>
   );
 });
 
@@ -373,6 +445,8 @@ export default function BranchingNarrativeReader({
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const { progress } = useGame();
+  const reducedMotion = !!progress?.settings?.reducedMotion;
 
   // Refs
   const listRef = useRef(null);
@@ -705,6 +779,14 @@ export default function BranchingNarrativeReader({
       index === 0 || completedPages.has(pages[index - 1]?.globalIndex)
     );
 
+    // EXAMINE hunt: count the anomalies actually present on this page + how many
+    // the player has sensed, for the per-page meter (only once the page is readable).
+    const pageAnoms = item.type === PAGE_TYPES.NARRATIVE
+      ? parseTextWithDetails(item.text, item.details).filter((s) => s.type === 'tappable' && s.detail.__fragment)
+      : [];
+    const anomTotal = pageAnoms.length;
+    const anomFound = pageAnoms.reduce((n, s) => n + (revealedDetails.has(s.detail.phrase) ? 1 : 0), 0);
+
     return (
       <View
         style={[
@@ -775,6 +857,7 @@ export default function BranchingNarrativeReader({
                     onDetailTap={handleDetailTap}
                     revealedDetails={revealedDetails}
                     textStyle={styles.noirText}
+                    reducedMotion={reducedMotion}
                   />
                 )}
 
@@ -812,6 +895,11 @@ export default function BranchingNarrativeReader({
             )}
           </ScrollView>
 
+          {/* EXAMINE hunt meter — only once the page is readable (anomalies tappable) */}
+          {item.type === PAGE_TYPES.NARRATIVE && isPageCompleted && anomTotal > 0 ? (
+            <AnomalyMeter total={anomTotal} found={anomFound} reducedMotion={reducedMotion} />
+          ) : null}
+
           {/* Page indicator */}
           <View style={styles.pageStamp} pointerEvents="none">
             <Text style={styles.noirPageStampText}>
@@ -840,6 +928,7 @@ export default function BranchingNarrativeReader({
     firstChoiceMade,
     secondChoiceMade,
     normalizePathKey,
+    reducedMotion,
   ]);
 
   if (!branchingNarrative) {
@@ -998,6 +1087,32 @@ const styles = StyleSheet.create({
     textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
     fontWeight: 'bold',
     letterSpacing: 1.5,
+  },
+  anomalyMeter: {
+    position: 'absolute',
+    bottom: 14,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  anomalyMote: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    fontSize: 13,
+    color: COLORS.underViolet,
+  },
+  anomalyMeterText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    fontWeight: 'bold',
+    color: NOIR_TYPOGRAPHY.color,
+    opacity: 0.7,
+  },
+  anomalyMeterDone: {
+    color: '#5b2a86',
+    opacity: 1,
   },
   arrow: {
     position: "absolute",
