@@ -215,7 +215,7 @@ export default function DeskScreen({
           {onOpenCodex ? (
             <Pressable onPress={tap(onOpenCodex)} style={styles.codexLink}>
               <MaterialCommunityIcons name="book-open-variant" size={15} color={COLORS.underViolet} />
-              <Text style={styles.codexLinkText}>YOUR READING OF THE HIDDEN WORLD</Text>
+              <Text style={styles.codexLinkText}>CODEX · HIDDEN WORLD</Text>
               <Text style={styles.codexLinkArrow}>→</Text>
             </Pressable>
           ) : null}
@@ -223,7 +223,7 @@ export default function DeskScreen({
           {/* Story campaign — ghost entry */}
           <Pressable onPress={tap(onOpenStoryCampaign)} style={styles.storyLink}>
             <MaterialCommunityIcons name="book-open-page-variant-outline" size={16} color={COLORS.coral} />
-            <Text style={styles.storyLinkText}>BRANCH HISTORY & UNLOCKS</Text>
+            <Text style={styles.storyLinkText}>BRANCH HISTORY</Text>
             <Text style={styles.storyLinkArrow}>→</Text>
           </Pressable>
 
