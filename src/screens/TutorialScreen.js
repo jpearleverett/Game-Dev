@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Svg, { Line, Circle } from 'react-native-svg';
+import Svg, { Path, Ellipse, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
@@ -18,6 +18,26 @@ const DEMO_FRAGMENTS = [
   { id: 'map', label: 'silver map', kind: 'symbol', x: 72, y: 58, color: COLORS.kindSymbol },
   { id: 'door', label: 'unmarked door', kind: 'place', x: 36, y: 78, color: COLORS.kindPlace },
 ];
+
+const DEMO_STARFIELD = Array.from({ length: 28 }).map((_, i) => ({
+  key: i,
+  left: `${8 + ((i * 37) % 84)}%`,
+  top: `${7 + ((i * 53) % 82)}%`,
+  size: 1 + ((i * 7) % 12) / 10,
+  opacity: 0.18 + ((i * 11) % 50) / 100,
+}));
+
+const demoArc = (a, b) => {
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const bow = Math.min(12, len * 0.22);
+  return `M ${a.x} ${a.y} Q ${mx + nx * bow} ${my + ny * bow} ${b.x} ${b.y}`;
+};
 
 const STEPS = [
   {
@@ -79,13 +99,11 @@ function DemoUnderMap({ onSolved, solved }) {
     }
   }, [selected, onSolved]);
 
-  const reveal = useCallback(() => {
-    setSelected(['rain', 'map']);
-    setMessage(null);
-    onSolved();
-  }, [onSolved]);
-
   const selectedSet = new Set(selected);
+  const rain = DEMO_FRAGMENTS.find((f) => f.id === 'rain');
+  const map = DEMO_FRAGMENTS.find((f) => f.id === 'map');
+  const showConnection = solved || (selectedSet.has('rain') && selectedSet.has('map'));
+  const arc = demoArc(rain, map);
   return (
     <View style={styles.demoWrap}>
       <View style={styles.readerDemo}>
@@ -96,9 +114,54 @@ function DemoUnderMap({ onSolved, solved }) {
       </View>
 
       <View style={styles.mapDemo}>
+        {DEMO_STARFIELD.map((star) => (
+          <View
+            key={star.key}
+            pointerEvents="none"
+            style={[
+              styles.demoStarSpeck,
+              {
+                left: star.left,
+                top: star.top,
+                width: star.size,
+                height: star.size,
+                borderRadius: star.size,
+                opacity: star.opacity,
+              },
+            ]}
+          />
+        ))}
+        <View style={styles.demoMapHeader} pointerEvents="none">
+          <Text style={styles.demoMapKicker}>◇ DESCENDED · TUTORIAL LAYER</Text>
+          <Text style={styles.demoMapProbe}>{selected.length}/2 FRAGMENTS HELD</Text>
+        </View>
         <Svg width="100%" height="100%" viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
-          {(solved || (selectedSet.has('rain') && selectedSet.has('map'))) ? (
-            <Line x1="28" y1="24" x2="72" y2="58" stroke={COLORS.underCyan} strokeWidth="2.4" />
+          <Defs>
+            <SvgGradient id="demoArcGrad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#c4b0ff" />
+              <Stop offset="0.55" stopColor={COLORS.underViolet} />
+              <Stop offset="1" stopColor={COLORS.underCyan} />
+            </SvgGradient>
+          </Defs>
+          {[0.24, 0.36, 0.48].map((r, i) => (
+            <Ellipse
+              key={i}
+              cx="50"
+              cy="47"
+              rx={r * 100}
+              ry={r * 72}
+              fill="none"
+              stroke="rgba(167,139,250,0.18)"
+              strokeWidth="0.6"
+              strokeDasharray="1.5 5"
+            />
+          ))}
+          {showConnection ? (
+            <>
+              <Path d={arc} fill="none" stroke="url(#demoArcGrad)" strokeWidth="6.5" strokeLinecap="round" opacity="0.24" />
+              <Path d={arc} fill="none" stroke="url(#demoArcGrad)" strokeWidth="2.2" strokeLinecap="round" opacity="0.96" />
+              <Path d={arc} fill="none" stroke="#eee6ff" strokeWidth="0.6" strokeLinecap="round" opacity="0.5" />
+            </>
           ) : null}
         </Svg>
         {DEMO_FRAGMENTS.map((fragment) => {
@@ -111,17 +174,20 @@ function DemoUnderMap({ onSolved, solved }) {
               style={({ pressed }) => [
                 styles.demoStar,
                 { left: `${fragment.x}%`, top: `${fragment.y}%` },
-                {
-                  borderColor: isSelected || solved ? fragment.color : COLORS.panelOutline,
-                  backgroundColor: isSelected || solved ? `${fragment.color}22` : 'rgba(20,16,32,0.72)',
-                },
                 pressed && !solved && styles.cellPressed,
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Under-Map fragment ${fragment.label}${isSelected ? ', selected' : ''}`}
             >
-              <CircleBadge color={fragment.color} />
-              <Text style={styles.starLabel}>{fragment.label}</Text>
+              <View style={styles.demoCoreWrap}>
+                <View style={[styles.demoStarRing, { borderColor: fragment.color, opacity: isSelected || solved ? 0.8 : 0.34 }]} />
+                <View style={[styles.demoStarGlow, { backgroundColor: fragment.color, opacity: isSelected || solved ? 0.82 : 0.38 }]} />
+                <View style={[styles.demoStarCore, { backgroundColor: fragment.color, shadowColor: fragment.color }, (isSelected || solved) && styles.demoStarCoreSelected]} />
+                {fragment.id === 'rain' ? (
+                  <View style={styles.demoMotifBadge}><Text style={styles.demoMotifText}>×1</Text></View>
+                ) : null}
+              </View>
+              <Text style={[styles.starLabel, (isSelected || solved) && styles.starLabelSelected]}>{fragment.label}</Text>
             </Pressable>
           );
         })}
@@ -130,28 +196,31 @@ function DemoUnderMap({ onSolved, solved }) {
       {message ? <Text style={styles.demoMessage}>{message}</Text> : null}
 
       {solved ? (
-        <View style={styles.demoSolvedRow}>
-          <MaterialCommunityIcons name="check-decagram" size={20} color={COLORS.accentSecondary} />
-          <Text style={styles.demoSolvedText}>Truth surfaced: the rain is drawing the map, not falling from the sky.</Text>
+        <View style={styles.demoSolvedCard}>
+          <View style={styles.demoSolvedSheen} />
+          <Text style={styles.demoSolvedTag}>◆ NODE SURFACED</Text>
+          <Text style={styles.demoSolvedTitle}>The rain is drawing the map, not falling from the sky.</Text>
+          <View style={styles.demoNodeFrags}>
+            {['wrong rain', 'silver map'].map((label) => (
+              <View key={label} style={styles.demoNodeFrag}>
+                <View style={styles.demoNodeDot} />
+                <Text style={styles.demoNodeFragText}>{label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       ) : (
         <View style={styles.demoActions}>
-          <SecondaryButton label="Read Connection" onPress={check} size="compact" />
-          <Pressable onPress={reveal} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.revealLink}>Reveal truth</Text>
-          </Pressable>
+          <PrimaryButton
+            label="Read Connection"
+            onPress={check}
+            disabled={selected.length !== 2}
+            fullWidth
+            arrow={false}
+          />
         </View>
       )}
     </View>
-  );
-}
-
-function CircleBadge({ color }) {
-  return (
-    <Svg width={22} height={22}>
-      <Circle cx={11} cy={11} r={8} fill={color} opacity={0.9} />
-      <Circle cx={11} cy={11} r={10} stroke={color} strokeWidth={1} fill="none" opacity={0.55} />
-    </Svg>
   );
 }
 
@@ -341,29 +410,114 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  demoStarSpeck: {
+    position: 'absolute',
+    backgroundColor: '#eae4ff',
+  },
+  demoMapHeader: {
+    position: 'absolute',
+    left: SPACING.md,
+    right: SPACING.md,
+    top: SPACING.sm,
+    zIndex: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  demoMapKicker: {
+    fontFamily: FONTS.mono,
+    fontSize: 8.5,
+    letterSpacing: 1.8,
+    color: COLORS.underCyan,
+    textShadowColor: COLORS.underCyanGlow,
+    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 0 },
+    flexShrink: 1,
+  },
+  demoMapProbe: {
+    fontFamily: FONTS.mono,
+    fontSize: 8,
+    letterSpacing: 1.2,
+    color: COLORS.textMuted,
+  },
   demoStar: {
     position: 'absolute',
-    width: 104,
+    width: 92,
     minHeight: 64,
-    marginLeft: -52,
-    marginTop: -32,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
+    marginLeft: -46,
+    marginTop: -30,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 6,
+    zIndex: 5,
+  },
+  demoCoreWrap: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoStarRing: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  demoStarGlow: {
+    position: 'absolute',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  demoStarCore: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    shadowOpacity: 1,
+    shadowRadius: 13,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+  demoStarCoreSelected: {
+    transform: [{ scale: 1.4 }],
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+  },
+  demoMotifBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: 'rgba(167,139,250,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoMotifText: {
+    fontFamily: FONTS.monoBold,
+    fontSize: 8,
+    color: '#120d0a',
   },
   cellPressed: {
     opacity: 0.85,
   },
   starLabel: {
     fontFamily: FONTS.mono,
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    fontSize: 9.5,
+    color: COLORS.textMuted,
     textAlign: 'center',
     letterSpacing: 0.4,
+    textShadowColor: '#000',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 1 },
+  },
+  starLabelSelected: {
+    color: '#fff',
+    fontFamily: FONTS.monoBold,
   },
   demoMessage: {
     fontFamily: FONTS.primary,
@@ -375,30 +529,77 @@ const styles = StyleSheet.create({
   },
   demoActions: {
     marginTop: SPACING.lg,
+    width: '100%',
+    maxWidth: 300,
     alignItems: 'center',
     gap: SPACING.sm,
   },
-  revealLink: {
-    fontFamily: FONTS.primaryMedium,
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    textDecorationLine: 'underline',
-    letterSpacing: 1,
-    marginTop: SPACING.xs,
+  demoSolvedCard: {
+    width: '100%',
+    maxWidth: 360,
+    marginTop: SPACING.lg,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.34)',
+    backgroundColor: 'rgba(20,16,34,0.92)',
+    overflow: 'hidden',
+    shadowColor: COLORS.underViolet,
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: -4 },
   },
-  demoSolvedRow: {
+  demoSolvedSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(200,230,255,0.6)',
+  },
+  demoSolvedTag: {
+    fontFamily: FONTS.mono,
+    fontSize: 9,
+    letterSpacing: 3,
+    color: COLORS.underCyan,
+    textShadowColor: COLORS.underCyanGlow,
+    textShadowRadius: 10,
+    textShadowOffset: { width: 0, height: 0 },
+  },
+  demoSolvedTitle: {
+    fontFamily: FONTS.secondaryBold,
+    fontSize: FONT_SIZES.lg,
+    lineHeight: LINE_HEIGHTS.cozy,
+    color: '#f3eeff',
+    marginTop: SPACING.sm,
+  },
+  demoNodeFrags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    marginTop: SPACING.md,
+  },
+  demoNodeFrag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.md,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.25)',
+    borderRadius: 999,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
   },
-  demoSolvedText: {
-    fontFamily: FONTS.primaryMedium,
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.accentSecondary,
-    flexShrink: 1,
-    textAlign: 'left',
+  demoNodeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: COLORS.underCyan,
+  },
+  demoNodeFragText: {
+    fontFamily: FONTS.mono,
+    fontSize: 10,
+    color: COLORS.textSecondary,
   },
   // Footer
   dotsRow: {
