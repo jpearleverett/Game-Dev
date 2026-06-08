@@ -18,21 +18,26 @@ import * as Haptics from "expo-haptics";
 import TypewriterText from "./TypewriterText";
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { SPACING, RADIUS } from "../constants/layout";
+import { COLORS } from "../constants/colors";
+import { useGame } from "../context/GameContext";
+import { useAudioOptional } from "../context/AudioContext";
+import { mapDepth } from "../data/underMap";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { paginateNarrativeSegments, calculatePaginationParams } from "../utils/textPagination";
 
 // Noir/Detective paper texture background
 const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jpg");
 
-// Noir aesthetic constants - "Dirty Typewriter" look
+// Tide-ledger prose: aged-paper ink in Work Sans, matching the design's
+// .prose-ink (16px / 1.9 line-height, deep ink #332617). Labels stay mono.
 const NOIR_TYPOGRAPHY = {
-  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  color: '#1a1a1a',
-  fontSize: 14,
-  lineHeight: 22,
-  textShadowColor: 'rgba(0, 0, 0, 0.25)',
-  textShadowOffset: { width: 0.5, height: 0.5 },
-  textShadowRadius: 1,
+  fontFamily: FONTS.primary,
+  color: '#332617',
+  fontSize: 16,
+  lineHeight: 30,
+  textShadowColor: 'transparent',
+  textShadowOffset: { width: 0, height: 0 },
+  textShadowRadius: 0,
 };
 
 // Heavy internal padding for paper margins
@@ -61,17 +66,25 @@ const PAGE_TYPES = {
 
 // Inline tappable phrase component
 // EXAMINE: ink-tones for fragment kinds, tuned to read on the aged-paper texture.
+// Anomaly inks matched to the design's k-text-* values (on aged paper).
 const KIND_INK = {
-  symbol: '#9a6b00',
-  place: '#1f6f7a',
-  person: '#8a2a22',
-  phenomenon: '#5b3a8a',
+  symbol: '#97681a',
+  place: '#2f6f7e',
+  person: '#9a3b2e',
+  phenomenon: '#6a4aa0',
 };
 const KIND_TINT = {
-  symbol: 'rgba(154,107,0,0.16)',
-  place: 'rgba(31,111,122,0.16)',
-  person: 'rgba(138,42,34,0.16)',
-  phenomenon: 'rgba(91,58,138,0.16)',
+  symbol: 'rgba(151,104,26,0.16)',
+  place: 'rgba(47,111,126,0.16)',
+  person: 'rgba(154,59,46,0.16)',
+  phenomenon: 'rgba(106,74,160,0.16)',
+};
+// rgb triples (for the shimmer's animated highlight — see InlineTappablePhrase).
+const KIND_RGB = {
+  symbol: '151,104,26',
+  place: '47,111,126',
+  person: '154,59,46',
+  phenomenon: '106,74,160',
 };
 
 const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
@@ -82,6 +95,7 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   isFragment,
   onTap,
   isRevealed,
+  shimmer, // shared Animated.Value (0..1) — pulses uncollected anomalies to invite the tap
 }) {
   const handlePress = useCallback(() => {
     Haptics.impactAsync(
@@ -106,16 +120,32 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
       }
     : null;
 
+  const baseStyle = [
+    styles.inlineTappable,
+    isFragment
+      ? fragmentStyle
+      : isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
+  ];
+
+  // Uncollected anomalies breathe — a kind-colored highlight that pulses up and back
+  // to say "something here doesn't belong, tap me." Collected ones go solid. Ordinary
+  // observations never pulse. NOTE: we animate backgroundColor (not opacity) because
+  // opacity on a nested <Text> is a no-op in RN — inline text isn't its own view layer.
+  if (isFragment && !isRevealed && shimmer) {
+    const rgb = KIND_RGB[kind] || KIND_RGB.phenomenon;
+    const backgroundColor = shimmer.interpolate({
+      inputRange: [0, 1],
+      outputRange: [`rgba(${rgb},0)`, `rgba(${rgb},0.32)`],
+    });
+    return (
+      <Animated.Text onPress={handlePress} style={[...baseStyle, { backgroundColor }]}>
+        {phrase}
+      </Animated.Text>
+    );
+  }
+
   return (
-    <Text
-      onPress={handlePress}
-      style={[
-        styles.inlineTappable,
-        isFragment
-          ? fragmentStyle
-          : isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
-      ]}
-    >
+    <Text onPress={handlePress} style={baseStyle}>
       {phrase}
     </Text>
   );
@@ -182,30 +212,104 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   onDetailTap,
   revealedDetails,
   textStyle,
+  reducedMotion,
+  dropCap, // raise the first letter into a versal — the scene "sets" like a printed page
 }) {
   const segments = useMemo(() => parseTextWithDetails(text, details), [text, details]);
+  const shimmer = useRef(new Animated.Value(0)).current;
 
-  return (
-    <Text style={textStyle}>
-      {segments.map((segment, index) => {
-        if (segment.type === 'text') {
-          return <Text key={index}>{segment.content}</Text>;
-        } else {
+  // Run one shared pulse for the whole page while any anomaly is still uncollected.
+  const hasUncollected = useMemo(
+    () => segments.some((s) => s.type === 'tappable' && s.detail.__fragment && !revealedDetails.has(s.detail.phrase)),
+    [segments, revealedDetails],
+  );
+  useEffect(() => {
+    // backgroundColor isn't native-drivable, so this loop runs on the JS driver.
+    if (reducedMotion || !hasUncollected) { shimmer.setValue(0); return undefined; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+      Animated.timing(shimmer, { toValue: 0, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [reducedMotion, hasUncollected, shimmer]);
+
+  const renderSegment = (segment, index) => {
+    if (segment.type === 'text') {
+      // Drop-cap: raise the first letter of the scene opening into a versal.
+      if (index === 0 && dropCap) {
+        const ci = segment.content.search(/\S/);
+        if (ci !== -1) {
+          const pre = segment.content.slice(0, ci);
+          const cap = segment.content[ci];
+          const rest = segment.content.slice(ci + 1);
           return (
-            <InlineTappablePhrase
-              key={index}
-              phrase={segment.content}
-              note={segment.detail.note}
-              evidenceCard={segment.detail.evidenceCard}
-              kind={segment.detail.kind}
-              isFragment={!!segment.detail.__fragment}
-              onTap={onDetailTap}
-              isRevealed={revealedDetails.has(segment.detail.phrase)}
-            />
+            <Text key={index}>
+              {pre ? <Text>{pre}</Text> : null}
+              <Text style={styles.dropCap}>{cap}</Text>
+              {rest}
+            </Text>
           );
         }
-      })}
-    </Text>
+      }
+      return <Text key={index}>{segment.content}</Text>;
+    }
+    return (
+      <InlineTappablePhrase
+        key={index}
+        phrase={segment.content}
+        note={segment.detail.note}
+        evidenceCard={segment.detail.evidenceCard}
+        kind={segment.detail.kind}
+        isFragment={!!segment.detail.__fragment}
+        onTap={onDetailTap}
+        isRevealed={revealedDetails.has(segment.detail.phrase)}
+        shimmer={shimmer}
+      />
+    );
+  };
+
+  return <Text style={textStyle}>{segments.map(renderSegment)}</Text>;
+});
+
+// Per-page anomaly meter — turns reading into a hunt. Ticks + flares a kind-colored
+// mote each time you sense one, and stamps the page once every anomaly is collected.
+const AnomalyMeter = React.memo(function AnomalyMeter({ total, found, reducedMotion }) {
+  const prev = useRef(found);
+  const pulse = useRef(new Animated.Value(0)).current;
+  const moteY = useRef(new Animated.Value(0)).current;
+  const moteO = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (found > prev.current) {
+      if (found >= total && total > 0) {
+        Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success).catch?.(() => {});
+      }
+      if (!reducedMotion) {
+        pulse.setValue(0); moteY.setValue(0); moteO.setValue(1);
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(pulse, { toValue: 1, duration: 150, useNativeDriver: true }),
+            Animated.timing(pulse, { toValue: 0, duration: 240, useNativeDriver: true }),
+          ]),
+          Animated.timing(moteY, { toValue: -26, duration: 720, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(moteO, { toValue: 0, duration: 720, useNativeDriver: true }),
+        ]).start();
+      }
+    }
+    prev.current = found;
+  }, [found, total, reducedMotion, pulse, moteY, moteO]);
+
+  if (!total) return null;
+  const complete = found >= total;
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] });
+  return (
+    <View style={styles.anomalyMeter} pointerEvents="none">
+      <Animated.Text style={[styles.anomalyMote, { opacity: moteO, transform: [{ translateY: moteY }] }]}>◆</Animated.Text>
+      <Animated.Text style={[styles.anomalyMeterText, complete && styles.anomalyMeterDone, { transform: [{ scale }] }]}>
+        {complete ? '✦ PAGE FULLY SENSED' : `◆ ANOMALIES SENSED ${found}/${total}`}
+      </Animated.Text>
+    </View>
   );
 });
 
@@ -295,32 +399,33 @@ const ChoiceButton = React.memo(function ChoiceButton({
     onSelect(option);
   }, [option, onSelect]);
 
+  // The design's fork choice-card: an ink-toned slip on the ledger with an A/B
+  // tag and a colored accent (amber for the first path, tide-cyan for the rest).
+  const pc = index === 0 ? '#97681a' : '#2f6f7e';
+  const tag = String.fromCharCode(65 + (index || 0));
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <Pressable
         style={({ pressed }) => [
-          styles.choiceButton,
-          {
-            borderRadius: scaleRadius(RADIUS.md),
-            paddingVertical: scaleSpacing(compact ? SPACING.sm : SPACING.md),
-            paddingHorizontal: scaleSpacing(SPACING.md),
-            opacity: isDisabled ? 0.5 : 1,
-          },
-          pressed && styles.choiceButtonPressed,
-          isSelected && styles.choiceButtonSelected,
+          styles.choiceCard,
+          { borderLeftColor: pc, opacity: isDisabled ? 0.5 : 1 },
+          pressed && styles.choiceCardPressed,
+          isSelected && { borderColor: pc, backgroundColor: 'rgba(255,250,235,0.92)' },
         ]}
         onPress={handlePress}
         disabled={isDisabled}
       >
+        <View style={[styles.choiceTag, { borderColor: pc }]}>
+          <Text style={[styles.choiceTagText, { color: pc }]}>{tag}</Text>
+        </View>
         <Text
-          style={[
-            styles.choiceLabel,
-            { fontSize: moderateScale(compact ? FONT_SIZES.sm : FONT_SIZES.md) },
-            isSelected && styles.choiceLabelSelected,
-          ]}
+          style={[styles.choiceCardLabel, { fontSize: moderateScale(compact ? FONT_SIZES.sm : FONT_SIZES.md) }]}
+          numberOfLines={2}
         >
           {option.label}
         </Text>
+        <Text style={[styles.choiceArrow, { color: pc }]}>→</Text>
       </Pressable>
     </Animated.View>
   );
@@ -370,6 +475,17 @@ export default function BranchingNarrativeReader({
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
+  const { progress } = useGame();
+  const reducedMotion = !!progress?.settings?.reducedMotion;
+  const audio = useAudioOptional?.();
+
+  // ATMOSPHERIC ESCALATION: the Under-Map bleeds through the page margins, deepening
+  // as the player maps more of the hidden world ("reality is thinning"). A baseline
+  // tint is always present; mapDepth pushes it further.
+  const bleed = useMemo(() => {
+    const r = progress?.storyCampaign?.underMap ? (mapDepth(progress.storyCampaign.underMap).ratio || 0) : 0;
+    return Math.min(0.32, 0.07 + r * 0.25);
+  }, [progress?.storyCampaign?.underMap]);
 
   // Refs
   const listRef = useRef(null);
@@ -616,8 +732,10 @@ export default function BranchingNarrativeReader({
     if (!detail.isRevealed) {
       setRevealedDetails(prev => new Set(prev).add(detail.phrase));
       if (detail.isFragment) {
-        // EXAMINE: pin this anomaly onto the Under-Map.
+        // EXAMINE: pin this anomaly onto the Under-Map — a haptic + a soft sting
+        // mark the discovery (the Under-Map noticing you noticing it).
         Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success).catch?.(() => {});
+        audio?.playSelect?.();
         onExamineFragment?.({
           label: detail.evidenceCard || detail.phrase,
           kind: detail.kind,
@@ -630,7 +748,7 @@ export default function BranchingNarrativeReader({
         onEvidenceCollected?.(newEvidence);
       }
     }
-  }, [onEvidenceCollected, onExamineFragment]);
+  }, [onEvidenceCollected, onExamineFragment, audio]);
 
   // Handle popup dismiss
   const handlePopupDismiss = useCallback(() => {
@@ -646,22 +764,27 @@ export default function BranchingNarrativeReader({
     flipLockRef.current = true;
     flipAnim.setValue(0);
 
-    Animated.sequence([
-      Animated.timing(flipAnim, {
-        toValue: direction > 0 ? -1 : 1,
-        duration: 160,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(flipAnim, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    if (reducedMotion) {
+      // No page-tilt under reduced motion — just settle the lock.
       flipLockRef.current = false;
-    });
+    } else {
+      Animated.sequence([
+        Animated.timing(flipAnim, {
+          toValue: direction > 0 ? -1 : 1,
+          duration: 170,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flipAnim, {
+          toValue: 0,
+          duration: 240,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        flipLockRef.current = false;
+      });
+    }
 
     if (listRef.current) {
       try {
@@ -673,7 +796,7 @@ export default function BranchingNarrativeReader({
       }
     }
     setActivePage(targetIndex);
-  }, [activePage, pages.length, flipAnim, pageWidth, pageGap]);
+  }, [activePage, pages.length, flipAnim, pageWidth, pageGap, reducedMotion]);
 
   const flipRotation = flipAnim.interpolate({
     inputRange: [-1, 0, 1],
@@ -702,6 +825,14 @@ export default function BranchingNarrativeReader({
       index === 0 || completedPages.has(pages[index - 1]?.globalIndex)
     );
 
+    // EXAMINE hunt: count the anomalies actually present on this page + how many
+    // the player has sensed, for the per-page meter (only once the page is readable).
+    const pageAnoms = item.type === PAGE_TYPES.NARRATIVE
+      ? parseTextWithDetails(item.text, item.details).filter((s) => s.type === 'tappable' && s.detail.__fragment)
+      : [];
+    const anomTotal = pageAnoms.length;
+    const anomFound = pageAnoms.reduce((n, s) => n + (revealedDetails.has(s.detail.phrase) ? 1 : 0), 0);
+
     return (
       <View
         style={[
@@ -729,6 +860,17 @@ export default function BranchingNarrativeReader({
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.2)']}
             style={[styles.gradientOverlay, { borderRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+          {/* ATMOSPHERE: the Under-Map seeping through the margins (violet above, cyan below) */}
+          <LinearGradient
+            colors={[`rgba(167,139,250,${bleed})`, 'transparent']}
+            style={[styles.bleedTop, { borderTopLeftRadius: blockRadius, borderTopRightRadius: blockRadius }]}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={['transparent', `rgba(103,232,249,${bleed})`]}
+            style={[styles.bleedBottom, { borderBottomLeftRadius: blockRadius, borderBottomRightRadius: blockRadius }]}
             pointerEvents="none"
           />
 
@@ -762,6 +904,7 @@ export default function BranchingNarrativeReader({
                     delay={100}
                     isActive={true}
                     isFinished={false}
+                    reducedMotion={reducedMotion}
                     onComplete={() => setCompletedPages(prev => new Set(prev).add(item.globalIndex))}
                     style={styles.noirText}
                   />
@@ -772,6 +915,8 @@ export default function BranchingNarrativeReader({
                     onDetailTap={handleDetailTap}
                     revealedDetails={revealedDetails}
                     textStyle={styles.noirText}
+                    reducedMotion={reducedMotion}
+                    dropCap={index === 0}
                   />
                 )}
 
@@ -809,6 +954,11 @@ export default function BranchingNarrativeReader({
             )}
           </ScrollView>
 
+          {/* EXAMINE hunt meter — only once the page is readable (anomalies tappable) */}
+          {item.type === PAGE_TYPES.NARRATIVE && isPageCompleted && anomTotal > 0 ? (
+            <AnomalyMeter total={anomTotal} found={anomFound} reducedMotion={reducedMotion} />
+          ) : null}
+
           {/* Page indicator */}
           <View style={styles.pageStamp} pointerEvents="none">
             <Text style={styles.noirPageStampText}>
@@ -837,6 +987,7 @@ export default function BranchingNarrativeReader({
     firstChoiceMade,
     secondChoiceMade,
     normalizePathKey,
+    reducedMotion,
   ]);
 
   if (!branchingNarrative) {
@@ -983,7 +1134,7 @@ const styles = StyleSheet.create({
   pageStamp: {
     position: "absolute",
     bottom: 16,
-    alignSelf: "center",
+    right: 16,
     opacity: 0.5,
   },
   noirPageStampText: {
@@ -995,6 +1146,52 @@ const styles = StyleSheet.create({
     textShadowRadius: NOIR_TYPOGRAPHY.textShadowRadius,
     fontWeight: 'bold',
     letterSpacing: 1.5,
+  },
+  bleedTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '22%',
+  },
+  bleedBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '22%',
+  },
+  anomalyMeter: {
+    position: 'absolute',
+    bottom: 14,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  anomalyMote: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    fontSize: 13,
+    color: COLORS.underViolet,
+  },
+  anomalyMeterText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    fontWeight: 'bold',
+    color: NOIR_TYPOGRAPHY.color,
+    opacity: 0.7,
+  },
+  anomalyMeterDone: {
+    color: '#5b2a86',
+    opacity: 1,
+  },
+  dropCap: {
+    fontFamily: FONTS.secondaryBold,
+    fontSize: Math.round(NOIR_TYPOGRAPHY.fontSize * 1.85),
+    fontWeight: 'bold',
+    color: '#3a2614',
   },
   arrow: {
     position: "absolute",
@@ -1054,7 +1251,35 @@ const styles = StyleSheet.create({
   choiceButtonsRow: {
     flexDirection: 'column',
     width: '100%',
+    gap: 10,
   },
+  // Design's choice-card (ledger fork): cream slip + ink tag + colored accent.
+  choiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    width: '100%',
+    backgroundColor: 'rgba(247, 240, 224, 0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(120,95,60,0.3)',
+    borderLeftWidth: 3,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  choiceCardPressed: { transform: [{ scale: 0.985 }], opacity: 0.92 },
+  choiceTag: {
+    width: 30, height: 30, borderRadius: 8, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  choiceTagText: { fontFamily: FONTS.secondaryBold, fontSize: 15 },
+  choiceCardLabel: {
+    flex: 1,
+    fontFamily: FONTS.primarySemiBold,
+    color: '#2a2017',
+    letterSpacing: 0.2,
+  },
+  choiceArrow: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 16, fontWeight: 'bold' },
   choiceButton: {
     backgroundColor: '#1a120b',
     borderWidth: 2,

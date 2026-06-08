@@ -45,27 +45,52 @@ describe('_buildPlayerTheorySection', () => {
     m = recordTheory(m, { chapter: 1, fragmentIds: [sealId, inkId], interpretation: 'The Under-Map is signalling to me directly.' });
 
     const out = build(m);
-    expect(out).toContain('SEALED');
+    expect(out).toContain('sealed this theory');
     expect(out).toContain('The Under-Map is signalling to me directly.');
     expect(out).toContain('The shifting seal');
     expect(out).toContain('Silver ink');
     expect(out).toContain('made to be seen only by Jack');
-    expect(out).toContain('NOT a whodunit');
+    expect(out).toContain('not a whodunit');
     // Cross-chapter weaving + motif instructions must be present so the model
     // links new anomalies to ones the player already holds.
-    expect(out).toContain('ALREADY HOLDS');
-    expect(out).toContain('WEAVING');
+    expect(out).toContain('already holds');
+    expect(out).toContain('Weaving');
     expect(out.toLowerCase()).toContain('recurring motif');
     // Fragment kinds are tagged so the model can reference them precisely.
     expect(out).toContain('[SYMBOL]');
     // Move 1: the model must author choose-the-truth decoys for each relation.
     expect(out).toContain('falseReadings');
-    // Move 2: emit an ECHO when a scene pays off a revealed truth.
-    expect(out).toContain('ECHO');
+    // Move 2: emit an echo when a scene pays off a revealed truth.
+    expect(out).toContain('Echo:');
     // Move 3: a sealed belief can be borne out / subverted via beliefResolution,
     // tagged with the chapter it was sealed in.
     expect(out).toContain('beliefResolution');
     expect(out).toContain('chapter 1');
+  });
+});
+
+describe('_buildContinuityAnchorSection', () => {
+  const buildAnchor = (ctx, chapter) =>
+    promptAssemblyMethods._buildContinuityAnchorSection(ctx, chapter);
+
+  test('anchors immutable canon + timeline for the end-of-prompt position', () => {
+    const out = buildAnchor({}, 4);
+    // Core canon must be restated so long-context dilution does not drift names/roles.
+    expect(out).toContain('Jack Halloway');
+    expect(out).toContain('Victoria Blackwell');
+    expect(out).toContain('Ashport');
+    // Timeline anchor (Chapter N = Day N) keeps dates consistent across the campaign.
+    expect(out).toContain('Day 4 of');
+    // It must instruct the model not to contradict the established record.
+    expect(out.toLowerCase()).toContain('do not contradict');
+    // It stays an anchor, not a full ledger dump (kept compact).
+    expect(out.length).toBeLessThan(900);
+  });
+
+  test('omits the timeline line when chapter is not finite', () => {
+    const out = buildAnchor({}, NaN);
+    expect(out).toContain('Jack Halloway');
+    expect(out).not.toContain('Day NaN');
   });
 });
 

@@ -14,6 +14,12 @@ import {
   resolveTheory,
   clarity,
   endingVariant,
+  foil,
+  foilPresence,
+  foilIsManifest,
+  nameFoil,
+  FOIL_PRESENCE_MIN,
+  FOIL_PRESENCE_MAX,
   fragmentCount,
   revealedNodeCount,
   areConnected,
@@ -495,5 +501,82 @@ describe('underMap — clarity & endings', () => {
     [1, 2].forEach((c) => { deceived = recordTheory(deceived, { chapter: c, fragmentIds: ['a'], interpretation: 'x' }); });
     deceived = resolveTheory(resolveTheory(deceived, 1, false), 2, false);
     expect(endingVariant(deceived)).toBe('deceived');
+  });
+});
+
+// ---- The Other Reader (foil) — the road not taken ---------------------------
+
+describe('underMap — the foil (Other Reader)', () => {
+  const seal = (map, chapter, interpretation, rejected) =>
+    recordTheory(map, { chapter, fragmentIds: ['a'], interpretation, rejected });
+
+  test('no rejected reading => no foil', () => {
+    const m = seal(createBlankUnderMap(), 1, 'It guides you in.');
+    expect(foil(m)).toBeNull();
+    expect(foilPresence(m)).toBe(0);
+    expect(foilIsManifest(m)).toBe(false);
+  });
+
+  test('the strongest rejected reading becomes the foil creed, presence starts at 0', () => {
+    const m = seal(createBlankUnderMap(), 1, 'It guides you in.', ['It is a tracking lock.', 'It is nothing.']);
+    expect(foil(m).belief).toBe('It is a tracking lock.');
+    expect(foil(m).fromChapter).toBe(1);
+    expect(foilPresence(m)).toBe(0);
+    expect(m.theories[0].rejected).toEqual(['It is a tracking lock.', 'It is nothing.']);
+  });
+
+  test('a subverted belief grows the foil; a held belief shrinks it', () => {
+    let m = seal(createBlankUnderMap(), 1, 'It guides you in.', ['It is a tracking lock.']);
+    m = resolveTheory(m, 1, false); // player wrong -> the other reader was right
+    expect(foilPresence(m)).toBe(1);
+    m = seal(m, 2, 'A guide.', ['A trap.']);
+    m = resolveTheory(m, 2, false);
+    expect(foilPresence(m)).toBe(2);
+    expect(foilIsManifest(m)).toBe(true); // manifest at >= 2
+    expect(foil(m).belief).toBe('A trap.'); // creed tracks the latest road not taken
+    m = seal(m, 3, 'X', ['Y']);
+    m = resolveTheory(m, 3, true); // player right -> foil recedes
+    expect(foilPresence(m)).toBe(1);
+  });
+
+  test('presence persists across C-beats and is clamped to the bounds', () => {
+    let m = createBlankUnderMap();
+    for (let c = 1; c <= 6; c += 1) {
+      m = seal(m, c, 'right', ['wrong']);
+      m = resolveTheory(m, c, false); // subvert every time
+    }
+    expect(foilPresence(m)).toBe(FOIL_PRESENCE_MAX); // clamped, not 6
+    for (let c = 7; c <= 16; c += 1) {
+      m = seal(m, c, 'right', ['wrong']);
+      m = resolveTheory(m, c, true); // hold every time
+    }
+    expect(foilPresence(m)).toBe(FOIL_PRESENCE_MIN); // clamped at the floor
+  });
+
+  test('resolving a non-existent / already-resolved belief does not move presence', () => {
+    let m = seal(createBlankUnderMap(), 1, 'right', ['wrong']);
+    m = resolveTheory(m, 1, false);
+    expect(foilPresence(m)).toBe(1);
+    m = resolveTheory(m, 1, false); // already resolved -> no-op
+    m = resolveTheory(m, 99, false); // no such chapter -> no-op
+    expect(foilPresence(m)).toBe(1);
+  });
+
+  test('normalizeUnderMap preserves a foil and defaults a missing one to null', () => {
+    expect(normalizeUnderMap({}).foil).toBeNull();
+    const withFoil = { foil: { belief: 'x', fromChapter: 2, presence: 2, name: null } };
+    expect(normalizeUnderMap(withFoil).foil).toEqual(withFoil.foil);
+  });
+
+  test('nameFoil pins the name once and never renames', () => {
+    let m = seal(createBlankUnderMap(), 1, 'right', ['wrong']);
+    expect(foil(m).name).toBeNull();
+    m = nameFoil(m, '  The Cartographer  ');
+    expect(foil(m).name).toBe('The Cartographer'); // trimmed
+    m = nameFoil(m, 'Someone Else'); // already named -> no-op
+    expect(foil(m).name).toBe('The Cartographer');
+    // no foil, or empty name -> no-op (no throw)
+    expect(foil(nameFoil(createBlankUnderMap(), 'X'))).toBeNull();
+    expect(nameFoil(m, '   ')).toEqual(m); // normalized clone, structurally unchanged
   });
 });

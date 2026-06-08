@@ -33,6 +33,30 @@ Puzzles (Board / UnderMap / Theory) and the Ending now **rise** into view
 
 Everything respects `settings.reducedMotion`.
 
+## READ-beat polish (the reader — `BranchingNarrativeReader` + `TypewriterText`)
+A focused pass to make reading itself a discovery hunt and the page feel haunted.
+All honor `settings.reducedMotion` (read from `GameContext`).
+- **Living anomalies** — uncollected anomaly phrases **shimmer** (a shared per-page
+  **backgroundColor** pulse — kind-tinted highlight breathing in/out) to invite the
+  tap; collected ones go solid. NB: animate backgroundColor, not opacity — opacity on
+  a nested `<Text>` is a no-op in RN (the first version used opacity and never showed).
+- **Anomaly meter** — a per-page "◆ ANOMALIES SENSED n/m" that ticks, flares a
+  kind-colored mote off the page on each collect, and stamps "✦ PAGE FULLY SENSED"
+  + a success haptic when a page is cleared.
+- **Atmosphere bleed** — the Under-Map seeps through the page margins (violet top,
+  cyan bottom), deepening with `mapDepth` (reality thinning as you chart more).
+- **Examine sting** — collecting an anomaly plays `playSelect` alongside the haptic
+  (the "UI tap SFX / ambient" remaining-item below, now partly done for EXAMINE).
+- **Dramatic pacing** — the typewriter lingers on the beats that carry dread (a held
+  pause after `.!?`, longer on `…`, a cut on `—`) via a punctuation-aware schedule;
+  tap-to-skip + blinking cursor already existed. Reduced motion renders instantly.
+- **Drop-cap** — the scene opening raises its first letter into a Playfair versal so
+  each chapter "sets like print."
+- **Verdict stamp** — when a chapter resolves the player's sealed belief, the verdict
+  card *stamps* onto the case file (`stampAnim`: back-eased scale-slam + notification
+  haptic + a slight tilt — held settles square, subverted askew), then rests compact.
+  Makes the "your reading mattered" payoff a beat instead of header chrome.
+
 ## Remaining opportunities (next passes)
 - **Unused assets**: Lottie JSONs exist (`assets/images/game/effects/*.json`) but
   `lottie-react-native` isn't installed; particle sprites + glitch overlay unused.

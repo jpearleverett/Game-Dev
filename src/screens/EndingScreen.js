@@ -68,6 +68,7 @@ export default function EndingScreen({ navigation, route }) {
               <Text key={i} style={styles.para}>{p}</Text>
             ))}
             {ending?.flavorLine ? <Text style={styles.flavor}>{ending.flavorLine}</Text> : null}
+            {ending?.foilLine ? <Text style={[styles.flavor, styles.foilFlavor]}>{ending.foilLine}</Text> : null}
           </Stagger>
         </View>
       </ScrollView>
@@ -99,5 +100,6 @@ const styles = StyleSheet.create({
   prose: { marginTop: SPACING.xl, gap: SPACING.md },
   para: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.md, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.relaxed },
   flavor: { fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: FONT_SIZES.md, color: COLORS.amberLight || COLORS.accentSecondary, lineHeight: LINE_HEIGHTS.relaxed, marginTop: SPACING.sm },
+  foilFlavor: { color: COLORS.bloodRed },
   footer: { paddingTop: SPACING.md, paddingBottom: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.panelOutline },
 });

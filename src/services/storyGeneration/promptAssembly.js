@@ -108,10 +108,10 @@ Tone: ${WRITING_STYLE.voice.tone}
 Influences:
 ${WRITING_STYLE.influences.map(i => `- ${i}`).join('\n')}
 
-### Forbidden Patterns (NEVER use):
+### Patterns to avoid:
 ${WRITING_STYLE.absolutelyForbidden.map(f => `- ${f}`).join('\n')}
 
-### Required Elements:
+### Elements to include:
 ${WRITING_STYLE.mustInclude.map(r => `- ${r}`).join('\n')}
 
 ${STYLE_EXAMPLES}
@@ -328,41 +328,142 @@ function _buildPlayerTheorySection(underMap) {
 
   if (latest?.interpretation) {
     const sealedChapter = Number.isFinite(latest.chapter) ? latest.chapter : null;
-    lines.push(`- The player just SEALED this theory of the hidden world${sealedChapter ? ` (chapter ${sealedChapter})` : ''}: "${latest.interpretation}". Let this chapter answer it — confirm it, complicate it, or reveal its cost.`);
-    lines.push(`- If THIS scene reveals whether that belief was RIGHT, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Be willing to SUBVERT a wrong reading — it makes a richer story and steers the player's ending.`);
+    lines.push(`- The player just sealed this theory of the hidden world${sealedChapter ? ` (chapter ${sealedChapter})` : ''}: "${latest.interpretation}". Let this chapter answer it: confirm it, complicate it, or reveal its cost.`);
+    lines.push(`- If this scene reveals whether that belief was right, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Feel free to subvert a wrong reading; it makes a richer story and steers the player's ending.`);
   }
 
   if (nodes.length) {
-    lines.push('- Truths the player has already pulled out of the Under-Map (treat these as ESTABLISHED and build the scene on them):');
+    lines.push('- Truths the player has already pulled out of the Under-Map (treat these as established and build the scene on them):');
     nodes.slice(0, 6).forEach((n) => { if (n?.revelation) lines.push(`  • ${n.revelation}`); });
   }
 
   let hasKeystone = false;
   if (fragments.length) {
-    lines.push('- Fragments the player ALREADY HOLDS (reference any of these by their EXACT label to weave this chapter into the map):');
+    lines.push('- Fragments the player already holds (reference any of these by their exact label to weave this chapter into the map):');
     fragments.slice(0, 14).forEach((f) => {
       if (!f?.label) return;
       const keystone = isKeystone(f);
       if (keystone) hasKeystone = true;
-      lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}${keystone ? ' (KEYSTONE — recurred across chapters)' : ''}`);
+      lines.push(`  • [${KIND_TAG[f.kind] || 'ANOMALY'}] ${f.label}${keystone ? ' (keystone: recurred across chapters)' : ''}`);
     });
   }
 
   if (!lines.length) return '';
 
   return [
-    "The player is assembling a hidden map of reality on their Under-Map (this is NOT a whodunit). Each chapter should make that map feel more interconnected, WITHOUT contradicting established canon or the Story Bible.",
+    "The player is assembling a hidden map of reality on their Under-Map (this is not a whodunit). Each chapter should make that map feel more interconnected, without contradicting established canon or the Story Bible.",
     ...lines,
-    'WEAVING (important):',
-    '- ALWAYS give the player something to connect: author AT LEAST TWO relations whose BOTH endpoints are fragments introduced in THIS scene (reference them by exact label), so the CONNECT beat is never empty.',
-    '- THEN, author at least one MORE connection that links a NEW fragment to a fragment THE PLAYER ALREADY HOLDS above (by its exact label). This is how the map threads across chapters.',
-    '- RE-SURFACE a recurring motif when it fits: reuse the EXACT label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
-    '- For EACH relation, also author its two `falseReadings`: tempting-but-FALSE one-sentence interpretations of the same pair that a careful player might wrongly believe (the player must pick the true reading from among them — make the wrong ones plausible, never absurd).',
+    'Weaving (important):',
+    '- Always give the player something to connect: author at least two relations whose endpoints are both fragments introduced in this scene (reference them by exact label), so the CONNECT beat is never empty.',
+    '- Then author at least one more connection that links a new fragment to a fragment the player already holds above (by its exact label). This is how the map threads across chapters.',
+    '- Re-surface a recurring motif when it fits: reuse the exact label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
+    '- For each relation, also author its two `falseReadings`: tempting but false one-sentence interpretations of the same pair that a careful player might wrongly believe (the player picks the true reading from among them, so make the wrong ones plausible, never absurd).',
     '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
-    '- ECHO: when this scene builds on one of the truths the player has ALREADY revealed (listed above), add an `echoes` entry — `nodeRef` quoting that truth, `line` = the exact sentence in THIS scene that pays it off — so the player SEES their mapping reshaping the story.',
+    '- Echo: when this scene builds on one of the truths the player has already revealed (listed above), add an `echoes` entry: `nodeRef` quoting that truth, `line` = the exact sentence in this scene that pays it off, so the player sees their mapping reshaping the story.',
     ...(hasKeystone
-      ? ['- KEYSTONE: a fragment above has recurred across chapters. If it now connects into a SERIES-LEVEL truth about the hidden world, author that relation with `scope: "arc"` (rare, big — the payoff for the player\'s long attention).']
+      ? ['- Keystone: a fragment above has recurred across chapters. If it now connects into a series-level truth about the hidden world, author that relation with `scope: "arc"` (rare and big, the payoff for the player\'s long attention).']
       : []),
+  ].join('\n');
+}
+
+/**
+ * "The Other Reader" — the foil born from the interpretation the player REJECTED at
+ * a C-beat (see underMap.foil). Gives the road-not-taken a recurring face whose
+ * presence in Ashport escalates as the player's beliefs are subverted. This is a
+ * generative steering block (like <under_map_state>), not hard canon. Returns '' when
+ * there is no foil (the player has never turned a reading away).
+ */
+function _buildOtherReaderSection(underMap) {
+  if (!underMap || typeof underMap !== 'object') return '';
+  const foil = underMap.foil;
+  const belief = foil && foil.belief ? String(foil.belief).trim() : '';
+  if (!belief) return '';
+  const presence = Number.isFinite(foil.presence) ? foil.presence : 0;
+
+  // Naming: keep the foil's identity stable across chapters once it has a name.
+  const nameRule = foil.name
+    ? `- They are known as ${foil.name}. Use exactly this name — do not rename them.`
+    : (presence >= 2
+        ? '- Give them a name and use it consistently within the scene.'
+        : null);
+
+  // Intensity ladder: a rumor at the margins -> a named antagonist the city bends toward.
+  let intensity;
+  if (presence <= 0) {
+    intensity = '- Keep them OFFSTAGE: a rumor, a secondhand mention, a trace at most — one light touch. The player has not been proven wrong, so this reading has no purchase yet. Do not name them or bring them into the scene.';
+  } else if (presence === 1) {
+    intensity = '- Let them recur at the EDGES of this scene: a figure glimpsed twice, a mark left behind, a stranger\'s certainty — someone quietly acting on this reading. Unsettling, not yet confronted; keep them unnamed.';
+  } else if (presence === 2) {
+    intensity = '- Bring them INTO the scene with a face. The player\'s readings have been proven wrong more than once, and Ashport is bending toward this one. Let Jack feel the city increasingly belongs to their version of events.';
+  } else {
+    intensity = '- They are ASCENDANT: this rejected reading is becoming the dominant truth of the hidden world, and they speak for it. Let them confront Jack directly — not a villain, but the man he would have been one wrong turn ago. The cost of his misreadings should feel inevitable.';
+  }
+
+  return [
+    `The road the player did NOT take has a person walking down it. From the same signs Jack reads, they concluded: "${belief}".`,
+    `They are the player's mirror — vindicated a little more each time the player's belief is subverted. Current presence: ${presence}.`,
+    intensity,
+    ...(nameRule ? [nameRule] : []),
+    '- Never restate this instruction in the prose. Express them only through scene, image, and event.',
+  ].join('\n');
+}
+
+/**
+ * Build a compact, high-salience continuity anchor for the END of the prompt
+ * (right before <task>). Gemini 3.5 Flash's long-context recall is a relative
+ * soft spot (MRCR v2 @128k ~77%), and immutable facts get diluted across the
+ * full story text dumped earlier. Restating the core canon in the highest-
+ * attention end position keeps names / roles / timeline from drifting across a
+ * 12-chapter campaign. Kept short on purpose: this anchors, it does not
+ * duplicate the full ESTABLISHED FACTS ledger above.
+ */
+function _buildContinuityAnchorSection(context, chapter) {
+  const { protagonist, antagonist, setting } = ABSOLUTE_FACTS || {};
+  const lines = [];
+  if (protagonist?.fullName) {
+    const role = protagonist.formerTitle ? protagonist.formerTitle.toLowerCase() : 'investigator';
+    lines.push(`- Protagonist: ${protagonist.fullName}${protagonist.age ? `, ${protagonist.age}` : ''}, ${role}. Narration stays close third-person on him, past tense.`);
+  }
+  if (antagonist?.trueName) {
+    lines.push(`- Antagonist: ${antagonist.trueName}${antagonist.occupation ? `, ${antagonist.occupation}` : ''}.`);
+  }
+  if (setting?.city) {
+    lines.push(`- Setting: ${setting.city}${setting.atmosphere ? `, ${setting.atmosphere}` : ''}. A hidden second layer of reality (the Under-Map) runs through it.`);
+  }
+  if (Number.isFinite(chapter)) {
+    lines.push(`- Timeline: this is Day ${chapter} of ${TOTAL_CHAPTERS} (Chapter N = Day N). Keep dates, names, and prior events consistent with the story text above.`);
+  }
+
+  // Player-validated canon from the living Under-Map. Revealed nodes are truths the
+  // player has surfaced; sealed theories are beliefs they've committed. This is the
+  // dynamic fact spine (the old model-emitted consistencyFacts ledger is retired):
+  // it sits in the high-attention END position as HARD "do not contradict"
+  // constraints — distinct from <under_map_state> above, which is a generative
+  // "weave this in" instruction. The Under-Map model manages lifecycle (path-scoped;
+  // a subverted belief is flagged correct=false), so there is no stale-fact bug.
+  const um = this.currentUnderMap;
+  if (um) {
+    const nodes = (Array.isArray(um.nodes) ? um.nodes : [])
+      .filter((n) => n && n.revelation && !n.unresolvedReading);
+    nodes.slice(-8).forEach((n) => {
+      lines.push(`- Established truth the player has surfaced (do not contradict): ${n.revelation}${n.scope === 'arc' ? ' (a truth that spans chapters)' : ''}`);
+    });
+    const sealed = (Array.isArray(um.theories) ? um.theories : []).filter((t) => t && t.interpretation);
+    sealed.slice(-3).forEach((t) => {
+      if (t.correct === false) {
+        lines.push(`- The player believed: "${t.interpretation}" — but this was SUBVERTED. The hidden world is NOT as they believed; reflect the truth, not the false belief.`);
+      } else if (t.correct === true) {
+        lines.push(`- The player's belief has held true: "${t.interpretation}". Stay consistent with it.`);
+      } else {
+        lines.push(`- The player has staked a belief, as yet unproven: "${t.interpretation}". Do not silently confirm or deny it; let the world test it.`);
+      }
+    });
+  }
+
+  if (!lines.length) return '';
+  return [
+    'Immutable canon for this scene. Do not contradict these, the ESTABLISHED FACTS list, or the story text above:',
+    ...lines,
   ].join('\n');
 }
 
@@ -377,7 +478,7 @@ function _buildDynamicPrompt(
   // The includeManyShot parameter was removed to prevent duplication.
   const parts = [];
 
-  // Per Gemini 3 docs: Use XML tags for structure clarity
+  // Per Gemini 3.5 Flash docs: use XML tags for structure clarity, and
   // "place your specific instructions or questions at the end of the prompt, after the data context"
 
   // Dynamic Part 1: Story context
@@ -432,6 +533,15 @@ function _buildDynamicPrompt(
     parts.push('</under_map_state>');
   }
 
+  // The Other Reader: the foil born from the player's rejected reading, escalating
+  // with foilPresence (the Station-Eleven "Prophet" mirror).
+  const otherReader = this._buildOtherReaderSection?.(this.currentUnderMap);
+  if (otherReader) {
+    parts.push('<the_other_reader>');
+    parts.push(otherReader);
+    parts.push('</the_other_reader>');
+  }
+
   // Dynamic Part 6: Current Scene State (exact continuation point)
   const sceneState = this._buildSceneStateSection(context, chapter, subchapter);
   if (sceneState) {
@@ -460,16 +570,26 @@ function _buildDynamicPrompt(
     parts.push('</engagement_guidance>');
   }
 
-  // Dynamic Part 8: Current Task Specification (LAST per Gemini 3 best practices)
-  const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
-  // Note: beatType already declared earlier for many-shot examples (line 5049)
+  // Dynamic Part 7.5: Continuity anchor (immutable canon) in the high-attention
+  // end position, to counter Gemini 3.5 Flash's long-context dilution as the
+  // story grows across chapters.
+  const continuityAnchor = this._buildContinuityAnchorSection(context, chapter);
+  if (continuityAnchor) {
+    parts.push('<continuity_anchors>');
+    parts.push(continuityAnchor);
+    parts.push('</continuity_anchors>');
+  }
 
-  // Gemini 3 best practice: Anchor reasoning to context with transition phrase
+  // Dynamic Part 8: Current Task Specification (LAST per Gemini 3.5 Flash best practice)
+  const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
+  // Note: beatType already declared earlier for many-shot examples.
+
+  // Anchor reasoning to the context above with a transition phrase.
   // NOTE: Self-critique checklist was moved to system prompt's <craft_quality_checklist>
-  // to avoid duplication. Gemini 3's native thinking handles quality validation internally.
+  // to avoid duplication. The model's native thinking handles quality validation internally.
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
+Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, continuity_anchors, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
 Before writing, plan internally (do not output the plan):
 1. What narrative threads from ACTIVE_THREADS must be addressed?
@@ -555,6 +675,14 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('<under_map_state>');
     parts.push(theorySectionGen);
     parts.push('</under_map_state>');
+  }
+
+  // The Other Reader: keep the rejected reading's champion steering path-decisions too.
+  const otherReaderGen = this._buildOtherReaderSection?.(this.currentUnderMap);
+  if (otherReaderGen) {
+    parts.push('<the_other_reader>');
+    parts.push(otherReaderGen);
+    parts.push('</the_other_reader>');
   }
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)
@@ -919,9 +1047,9 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     : '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
 
   let summary = header;
-  summary += '**CRITICAL: You are continuing an ongoing story. Read ALL of this carefully.**\n';
-  summary += '**Your new subchapter MUST continue EXACTLY from where the previous subchapter ended.**\n';
-  summary += '**DO NOT summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.**\n\n';
+  summary += 'You are continuing an ongoing story; read all of it carefully.\n';
+  summary += 'Your new subchapter should continue exactly from where the previous subchapter ended.\n';
+  summary += 'Do not summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.\n\n';
 
   // Build quick lookup: decision chapter -> choice object (from choice history)
   const choicesByChapter = new Map();
@@ -970,7 +1098,7 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     // Chapter header with emphasis for immediately previous
     if (isImmediatelyPrevious) {
       summary += `\n${'='.repeat(80)}\n`;
-      summary += '### >>> IMMEDIATELY PREVIOUS SUBCHAPTER - CONTINUE FROM HERE <<<\n';
+      summary += '### Immediately previous subchapter (continue from here)\n';
       summary += `### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n`;
       summary += `${'='.repeat(80)}\n\n`;
     } else {
@@ -1032,14 +1160,14 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     // Emphasize continuation point
     if (isImmediatelyPrevious) {
       summary += `\n${'='.repeat(80)}\n`;
-      summary += '>>> YOUR NARRATIVE MUST CONTINUE FROM THE END OF THIS TEXT <<<\n';
+      summary += 'Continue your narrative from the end of this text.\n';
 
       // Extract and highlight the last few sentences
       const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
       if (sentences.length > 0) {
         const lastSentences = sentences.slice(-3).join(' ').trim();
-        summary += `\nTHE STORY ENDED WITH:\n"${lastSentences}"\n`;
-        summary += '\n>>> PICK UP EXACTLY HERE. What happens NEXT? <<<\n';
+        summary += `\nThe story ended with:\n"${lastSentences}"\n`;
+        summary += '\nPick up exactly here: what happens next?\n';
       }
       summary += `${'='.repeat(80)}\n`;
     }
@@ -1125,23 +1253,23 @@ function _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
     baseTargetWords,
     Math.round(baseTargetWords * promptTargetMultiplier)
   );
-  const segmentMinWords = 300;
-  const segmentMaxWords = 350;
+  const segmentMinWords = 380; // target floor shown in-prompt (hard validation floor is 300/segment)
+  const segmentMaxWords = 420;
   const totalSegments = 13; // opening + 3 firstChoice + 9 endings
 
   let task = `## CURRENT TASK
 
 Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
 
-### ⚠️ CRITICAL REQUIREMENTS (Read First) ⚠️
-Before writing, ensure you will meet these NON-NEGOTIABLE requirements:
+### Requirements (read first)
+Meet these before writing:
 
-1. **WORD COUNT:** Each narrative segment MUST be ${segmentMinWords}-${segmentMaxWords} words (13 segments = ~4,000-4,500 total)
-2. **POV/TENSE:** Third-person limited, past tense, aligned to Jack Halloway
-3. **DIALOGUE:** All dialogue uses DOUBLE QUOTES only ("Like this," Jack said)
-4. **CONTINUATION:** Start immediately after the last sentence - NO recap, restart, or summary
-5. **OUTPUT:** Valid JSON only - no commentary, no markdown wrapping
-6. **BRANCHING KEYS:** Use full format: 1A-2A, 1B-2B, etc. (NOT just 2A/2B/2C)
+1. **Length:** each narrative segment is ${segmentMinWords}-${segmentMaxWords} words. The style examples are shorter than this on purpose — match their craft, not their length. If a drafted segment is under ${segmentMinWords} words, develop its thinnest beat further until it reaches the target.
+2. **POV/tense:** third-person limited, past tense, aligned to Jack Halloway
+3. **Dialogue:** all dialogue uses double quotes ("Like this," Jack said)
+4. **Continuation:** start immediately after the last sentence, with no recap, restart, or summary
+5. **Output:** valid JSON only, with no commentary or markdown wrapping
+6. **Branching keys:** use the full format (1A-2A, 1B-2B), not the abbreviated form (2A/2B/2C)
 
 ### STORY POSITION
 - Chapter ${chapter} of ${TOTAL_CHAPTERS} (${chaptersRemaining} remaining)
@@ -1153,17 +1281,17 @@ Before writing, ensure you will meet these NON-NEGOTIABLE requirements:
   if (beatType) {
     task += `
 
-### CHAPTER BEAT TYPE: ${beatType.type} (MANDATORY)
+### Chapter beat type: ${beatType.type}
 **${beatType.description}**
 
-This chapter MUST include:
+This chapter should include:
 ${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
 
     // Add beat-type-specific pacing instructions
     if (beatType.type === 'CHASE') {
       task += `
 
-**CHASE PACING MANDATE:**
+**Chase pacing:**
 - Keep paragraphs under 4 sentences
 - No internal monologue longer than 2 sentences
 - Use ACTION VERBS: ran, ducked, slammed, grabbed, dove
@@ -1174,7 +1302,7 @@ ${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
     } else if (beatType.type === 'BOTTLE_EPISODE') {
       task += `
 
-**BOTTLE EPISODE PACING MANDATE:**
+**Bottle episode pacing:**
 - Extended dialogue exchanges (5+ back-and-forth minimum)
 - Stay in ONE primary location the entire chapter
 - Deep character exploration through conversation
@@ -1185,9 +1313,9 @@ ${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
     } else if (beatType.type === 'CONFRONTATION' || beatType.type === 'BETRAYAL') {
       task += `
 
-**CONFRONTATION PACING MANDATE:**
+**Confrontation pacing:**
 - Build to the confrontation through the first half
-- The confrontation itself should be LONG and detailed
+- The confrontation itself should be long and detailed
 - Every word in the dialogue carries weight
 - Physical descriptions of tension (clenched jaw, white knuckles)
 - Allow for emotional gut-punches with space to breathe after`;
@@ -1260,13 +1388,13 @@ ${outline.narrativeThreads.map(t => `- ${t}`).join('\n')}`;
 
   task += `
 
-### PLAYER PATH PERSONALITY (CRITICAL FOR CONSISTENCY)
-Based on player's choices, the protagonist's behavior pattern is: **${personality.narrativeStyle}**
+### Player path personality (keep consistent)
+Based on the player's choices, the protagonist's behavior pattern is: **${personality.narrativeStyle}**
 - Dialogue tone should be ${personality.dialogueTone}
 - Risk tolerance: ${personality.riskTolerance}
 ${personality.scores ? `- Cumulative scores: Aggressive=${personality.scores.aggressive.toFixed(0)}, Methodical=${personality.scores.methodical.toFixed(0)}` : ''}
 
-**IMPORTANT:** ${ABSOLUTE_FACTS.protagonist.fullName}'s actions and dialogue MUST reflect this established personality pattern.`;
+${ABSOLUTE_FACTS.protagonist.fullName}'s actions and dialogue should reflect this established personality pattern.`;
 
   // Add personality-specific voice examples
   if (personality.riskTolerance === 'high') {
@@ -1304,7 +1432,7 @@ ${context.decisionConsequences?.immediate?.length > 0 ? context.decisionConseque
 ### ONGOING EFFECTS FROM CHOICES
 ${context.decisionConsequences?.ongoing?.length > 0 ? [...new Set(context.decisionConsequences.ongoing)].slice(0, 5).map(e => `- ${e}`).join('\n') : '- Starting fresh'}
 
-### MOST RECENT PLAYER DECISION (This MUST drive this subchapter)
+### Most recent player decision (let this drive this subchapter)
 ${context.lastDecision
   ? `- Decision: Chapter ${context.lastDecision.chapter} (${context.lastDecision.caseNumber}) => Option "${context.lastDecision.optionKey}"
 - Chosen action: ${context.lastDecision.chosenTitle || '(title unavailable)'}
@@ -1337,21 +1465,21 @@ ${pacing.requirements.map(r => `- ${r}`).join('\n')}
       const choiceTitle = lastChoice.optionTitle || `Option ${lastChoice.optionKey}`;
       const choiceFocus = lastChoice.optionFocus ? `\nFOCUS: ${lastChoice.optionFocus}` : '';
 
-      task += `\n\n### CRITICAL CONTEXT: PREVIOUS DECISION
-The player JUST made a crucial decision at the end of the previous chapter.
-You MUST SHOW THIS SCENE - do NOT skip it or summarize it as past events.
+      task += `\n\n### Previous decision (open on this scene)
+The player just made a crucial decision at the end of the previous chapter.
+Show this scene; do not skip it or summarize it as past events.
 
 PLAYER'S CHOICE: "${choiceTitle}"${choiceFocus}
 
-**MANDATORY REQUIREMENTS:**
-1. The chapter MUST OPEN with Jack actively pursuing this choice - we see the scene unfold in real-time
-2. DO NOT start with "After going to..." or "Having confronted..." - START IN THE MOMENT
-3. The FIRST 200+ WORDS should be the actual scene of the chosen action
-4. Show sensory details: what Jack sees, hears, feels as he takes this action
-5. Include dialogue and character reactions from whoever Jack encounters
+How to open:
+1. Open with Jack actively pursuing this choice, so we see the scene unfold in real time.
+2. Avoid starting with "After going to..." or "Having confronted..."; start in the moment.
+3. Let the first 200+ words be the actual scene of the chosen action.
+4. Show sensory details: what Jack sees, hears, and feels as he takes this action.
+5. Include dialogue and character reactions from whoever Jack encounters.
 
-Example of WRONG approach: "After Jack confronted his contact at the wharf, he returned to his office..."
-Example of CORRECT approach: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. A silhouette emerged from the fog..."`;
+Avoid: "After Jack confronted his contact at the wharf, he returned to his office..."
+Prefer: "The salt wind cut through Jack's coat as he stepped onto the weathered planks of the wharf. A silhouette emerged from the fog..."`;
     }
   }
 
@@ -1380,10 +1508,10 @@ Do NOT include pathDecisions in this response. Path-specific decisions are gener
   // ========== PINNED FORBIDDEN PATTERNS (Top violations) ==========
   task += `
 
-### ⛔ FORBIDDEN PATTERNS (Automatic Quality Failure)
-NEVER use these in your narrative:
-- Em dashes (—). Use commas, periods, or semicolons instead. NEVER use —
-- "It wasn't just X; it was Y" / "It didn't just X; it Y" constructions (common AI pattern - BANNED)
+### Patterns to avoid
+Do not use these in your narrative:
+- Em dashes (—). Use commas, periods, or semicolons instead.
+- "It wasn't just X; it was Y" / "It didn't just X; it Y" constructions (common AI pattern).
 - "not just...but" or "more than just" formulations with semicolons
 - "somehow" (vague, lazy writing)
 - "little did X know" (omniscient intrusion)
@@ -1393,21 +1521,21 @@ NEVER use these in your narrative:
 - "suddenly" at sentence start
 - Stating emotions directly ("He felt angry") instead of showing them`;
 
-  // ========== FINAL CHECKLIST (Per Gemini 3 best practice: restate at end) ==========
+  // ========== FINAL CHECKLIST (Per Gemini 3.5 Flash best practice: restate task at end) ==========
   task += `
 
-### ✅ FINAL CHECKLIST (Verify Before Submitting)
-Before outputting JSON, verify:
-□ Each narrative segment is ${segmentMinWords}-${segmentMaxWords} words (count them!)
+### Final checklist (verify before submitting)
+Before outputting JSON, confirm:
+□ Each narrative segment reaches ${segmentMinWords}-${segmentMaxWords} words — re-read each one; if any is short, develop its thinnest beat before submitting
 □ Written in third-person limited, past tense
 □ All dialogue uses double quotes ("Like this")
-□ Continues directly from previous subchapter - no restart/recap
-□ No forbidden phrases used (see list above)
+□ Continues directly from the previous subchapter, with no restart or recap
+□ No avoided phrases used (see list above)
 □ Critical threads from ACTIVE_THREADS addressed through action/dialogue
 □ Branching keys in full format (1A-2A, 1B-2C, etc.)
 □ Valid JSON output with no commentary or markdown wrapping
 
-**WORD COUNT IS NON-NEGOTIABLE: ${segmentMinWords}-${segmentMaxWords} words per segment.**`;
+Length target: ${segmentMinWords}-${segmentMaxWords} words per segment, every segment.`;
 
   return task;
 }
@@ -1486,12 +1614,12 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
     const mandatoryThreads = prioritizedThreads.filter(t => t.priority >= 4 || t.isOverdue);
     const optionalThreads = prioritizedThreads.filter(t => t.priority < 4 && !t.isOverdue);
 
-    // ========== MANDATORY THREAD REQUIREMENTS (Cannot be ignored) ==========
+    // ========== REQUIRED THREAD COVERAGE (highest-priority threads) ==========
     if (mandatoryThreads.length > 0) {
       section += `\n\n${'='.repeat(60)}`;
-      section += '\n### MANDATORY THREAD REQUIREMENTS';
+      section += '\n### Threads to address this scene';
       section += `\n${'='.repeat(60)}`;
-      section += '\n**These threads MUST be addressed in your narrative. Failure to address them is a consistency violation.**\n';
+      section += '\nAddress each of these threads in your narrative; leaving one untouched is a continuity gap.\n';
 
       mandatoryThreads.forEach((t, idx) => {
         const overdueTag = t.isOverdue ? '⚠️ OVERDUE' : '';
@@ -1505,12 +1633,12 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
           section += `\n   Characters: ${t.characters.join(', ')}`;
         }
         if (t.dueChapter) {
-          section += `\n   Due by: Chapter ${t.dueChapter}${t.isOverdue ? ' (OVERDUE!)' : ''}`;
+          section += `\n   Due by: Chapter ${t.dueChapter}${t.isOverdue ? ' (overdue)' : ''}`;
         }
         section += '\n';
       });
 
-      section += '\n>>> YOU MUST address ALL threads above through dialogue or action, not just thoughts <<<';
+      section += '\nAddress each thread above through dialogue or action, not just thoughts.';
       section += `\n${'='.repeat(60)}`;
     }
 
@@ -1633,8 +1761,8 @@ ${decisionStructure.keyMoments.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 ### EMOTIONAL ARC:
 ${decisionStructure.emotionalArc}
 
-### CRITICAL INSTRUCTION:
-Copy the decision object EXACTLY as provided above into your response. Do not modify the decision titles, focus, or intro. Your narrative should make these choices feel earned and natural, but the decision text itself is FIXED.`;
+### Decision object (copy verbatim):
+Copy the decision object exactly as provided above into your response. Do not modify the decision titles, focus, or intro. Your narrative should make these choices feel earned and natural; the decision text itself stays fixed.`;
 
   return basePrompt + decisionGuidance;
 }
@@ -1726,6 +1854,8 @@ export const promptAssemblyMethods = {
   _ensureChapterStartCache,
   _buildDynamicPrompt,
   _buildPlayerTheorySection,
+  _buildOtherReaderSection,
+  _buildContinuityAnchorSection,
   _buildGenerationPrompt,
   _buildCraftTechniquesSection,
   _extractCharactersFromContext,

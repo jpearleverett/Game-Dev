@@ -4,6 +4,41 @@ import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 
 // Memoized to prevent expensive re-renders in FlatList
+// Dramatic pacing: linger after the beats that carry dread, so the prose breathes
+// like noir narration instead of spooling at a flat rate. Multipliers of `speed`.
+function punctuationPause(ch, speed) {
+  switch (ch) {
+    case '.':
+    case '!':
+    case '?':
+      return speed * 14; // a full-stop beat
+    case '…': // …
+      return speed * 18; // trailing dread
+    case '—': // —
+    case '–': // –
+      return speed * 10; // a cut
+    case ',':
+    case ';':
+    case ':':
+      return speed * 5; // a soft breath
+    case '\n':
+      return speed * 12;
+    default:
+      return 0;
+  }
+}
+
+function buildSchedule(text, speed) {
+  const s = Math.max(1, speed);
+  const sched = new Array(text.length);
+  let t = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    t += s + punctuationPause(text[i], s);
+    sched[i] = t; // ms at which char i becomes visible
+  }
+  return sched;
+}
+
 function TypewriterText({
   text,
   style,
@@ -13,6 +48,7 @@ function TypewriterText({
   isActive = true,
   isFinished = false,
   inline = false,
+  reducedMotion = false,
 }) {
   const [displayedText, setDisplayedText] = useState('');
   const [cursorVisible, setCursorVisible] = useState(true);
@@ -28,6 +64,7 @@ function TypewriterText({
 
   const hapticThrottleRef = useRef(0);
   const cursorTimerRef = useRef(null);
+  const scheduleRef = useRef([]);
   
   // Update refs when props change
   useEffect(() => {
@@ -38,10 +75,13 @@ function TypewriterText({
 
   // Main Typing Logic
   useEffect(() => {
-    // 1. If finished, show full text immediately
-    if (isFinished) {
+    // 1. If finished — or reduced motion is on — show full text immediately.
+    //    (Reduced motion still fires onComplete so the page is marked read.)
+    if (isFinished || (reducedMotion && isActive)) {
       setDisplayedText(text);
+      lastRenderedIndexRef.current = text.length;
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (reducedMotion && !isFinished) onCompleteRef.current?.();
       return;
     }
 
@@ -58,7 +98,8 @@ function TypewriterText({
     setDisplayedText('');
     lastRenderedIndexRef.current = 0;
     startTimeRef.current = null;
-    
+    scheduleRef.current = buildSchedule(text, speedRef.current);
+
     let timeoutId;
 
     const animate = () => {
@@ -66,9 +107,14 @@ function TypewriterText({
       if (!startTimeRef.current) startTimeRef.current = now;
 
       const elapsed = now - startTimeRef.current;
-      // Use current speed from ref
-      const targetIndex = Math.floor(elapsed / Math.max(1, speedRef.current));
       const fullText = textRef.current;
+      const sched = scheduleRef.current;
+
+      // Advance through the punctuation-aware schedule (linger on dramatic beats).
+      let targetIndex = lastRenderedIndexRef.current;
+      while (targetIndex < fullText.length && sched[targetIndex] <= elapsed) {
+        targetIndex += 1;
+      }
 
       // Check for completion
       if (targetIndex >= fullText.length) {
@@ -122,7 +168,7 @@ function TypewriterText({
     // - isFinished: if finished status changes, show full/reset.
     // - delay: if delay changes, we restart (simplest safe behavior).
     // NOT including onComplete or speed to prevent restarts on prop churn.
-  }, [text, delay, isActive, isFinished]);
+  }, [text, delay, isActive, isFinished, reducedMotion]);
 
   // Track if typing is in progress
   const isTyping = displayedText.length < text.length;
@@ -193,6 +239,7 @@ export default React.memo(TypewriterText, (prevProps, nextProps) => {
     prevProps.isActive === nextProps.isActive &&
     prevProps.isFinished === nextProps.isFinished &&
     prevProps.inline === nextProps.inline &&
+    prevProps.reducedMotion === nextProps.reducedMotion &&
     prevProps.style === nextProps.style
   );
 });

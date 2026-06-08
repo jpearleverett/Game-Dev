@@ -11,9 +11,11 @@ import SplashScreen from '../screens/SplashScreen';
 import PrologueScreen from '../screens/PrologueScreen';
 import TutorialScreen from '../screens/TutorialScreen';
 import DeskScreen from '../screens/DeskScreen';
+import CodexScreen from '../screens/CodexScreen';
 import EvidenceBoardScreen from '../screens/EvidenceBoardScreen';
 import UnderMapScreen from '../screens/UnderMapScreen';
 import TheoryScreen from '../screens/TheoryScreen';
+import SealedScreen from '../screens/SealedScreen';
 import EndingScreen from '../screens/EndingScreen';
 import CaseSolvedScreen from '../screens/CaseSolvedScreen';
 import CaseFileScreen from '../screens/CaseFileScreen';
@@ -50,6 +52,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     ingestSceneFragments, // UNDER-MAP: collect fragments/relations from the scene
     resolveUnderMapBelief, // UNDER-MAP: bear out a sealed belief (Clarity)
+    nameUnderMapFoil, // UNDER-MAP: pin The Other Reader's name once a scene names them
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -141,6 +144,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenNarrative={() => navigation.navigate('CaseFile')}
               onOpenStoryCampaign={actions.handleOpenStoryHub}
               onOpenCaseBoard={() => navigation.navigate('UnderMap')}
+              onOpenCodex={() => navigation.navigate('Codex')}
               onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
             />
@@ -184,6 +188,12 @@ export default function AppNavigator({ fontsReady, audio }) {
         )}
       </Stack.Screen>
 
+      <Stack.Screen name="Codex" options={{ animation: 'slide_from_bottom' }}>
+        {({ navigation }) => (
+          <CodexScreen navigation={navigation} />
+        )}
+      </Stack.Screen>
+
       <Stack.Screen name="Theory" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <TheoryScreen navigation={navigation} route={route} />
@@ -193,6 +203,12 @@ export default function AppNavigator({ fontsReady, audio }) {
       <Stack.Screen name="Ending" options={{ animation: 'slide_from_bottom' }}>
         {({ navigation, route }) => (
           <EndingScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Sealed" options={{ animation: 'fade' }}>
+        {({ navigation, route }) => (
+          <SealedScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
@@ -311,6 +327,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onProceedToPuzzle={handleProceedToPuzzle}
               onIngestFragments={ingestSceneFragments}
               onResolveBelief={resolveUnderMapBelief}
+              onNameFoil={nameUnderMapFoil}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

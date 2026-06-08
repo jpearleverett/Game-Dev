@@ -1,6 +1,10 @@
 # Dead Letters — Under-Map Puzzle↔Story Redesign
 
-**Status:** Implemented (Moves 1–5, 8) + on-device playtest fixes. See §13.
+**Status:** Implemented (Moves 1–5, 8) + on-device playtest fixes (§13) + **Move 6 "The
+Other Reader" foil** (§5b) and a **READ-beat juice pass** (shimmer/anomaly-meter/atmosphere-
+bleed/dramatic-pacing/drop-cap — see `docs/game_feel_pass.md`). Chapter **1A static content
+rewritten** into the Under-Map register. The foil + reading polish are code-complete and
+unit-tested but **unverified on-device**.
 **Author:** design pass, 2026-06.
 
 > **§13 — Playtest fixes (on-device round 1).** Three issues surfaced playing on device:
@@ -60,6 +64,7 @@ The redesign is one reframe and five moves:
 - **Move 3 — Belief truth + Clarity** (P1): beliefs become right/wrong, accruing toward a true ending.
 - **Move 5 — Keystones** (P1): motifs that recur become arc-level truths.
 - **Move 4 — Constellation Under-Map** (P2): the list becomes a growing star-map artifact.
+- **Move 6 — The Other Reader** (post-ship): the rejected reading becomes a recurring foil whose presence escalates as the player is subverted (§5b).
 
 P0/P1 ride on a few cheap schema fields the model fills alongside what it already outputs, so
 generation latency barely moves.
@@ -80,9 +85,11 @@ generation latency barely moves.
   authored relation under the undirected key; match → reveals a `node` (the relation's
   `revelation`); miss → `{ valid:false }`, feedback *"No link here…"*, **no cost**. Footer:
   *"Draw a connection… — or press on into the dark."* "Continue the descent" generates + advances.
-- **THEORY (`TheoryScreen`):** pick a belief (the chapter decision framed as competing
-  interpretations), stake fragments, seal → records a theory (`correct` left `null`) and the
-  pre-decision that branches the next chapter → "Cross the threshold."
+- **THEORY (`TheoryScreen`):** review read-only evidence (fragments; tap to expand a clue),
+  pick a belief (the chapter decision framed as competing interpretations), seal → records a
+  theory (`correct` left `null`, all fragment ids attached silently) + the pre-decision that
+  branches the next chapter → "Cross the threshold." (Post-playtest: the belief is the lone
+  choice; the old fragment "staking" was a no-op and was removed — see CLAUDE.md §8.)
 
 ### 1.2 The data model (`src/data/underMap.js`)
 - `fragment { id, label, kind, detail, phrase, anomalous, seen, firstCaseNumber, lastCaseNumber, … }`,
@@ -309,6 +316,47 @@ held), and the prompt explicitly invites SUBVERSION so it isn't self-graded into
 
 ---
 
+## 5b. Move 6 — The Other Reader (foil): the road not taken gets a face ✅ DONE
+
+**The Station-Eleven "Prophet" mirror.** Extends Move 3: the interpretation the player
+**rejects** at each C-beat doesn't vanish — it gets a champion who is vindicated a little
+more each time the player's belief is subverted, escalating from a rumor into a named,
+recurring antagonist. Turns the abstract Clarity float into a *person*.
+
+**Model (`underMap.js`, pure + tested).** `underMap.foil = { belief, fromChapter, presence,
+name } | null`.
+- `recordTheory` now takes `theory.rejected`; the strongest rejected reading becomes the
+  foil's **creed** (one evolving foil across C-beats; `presence` persists).
+- `resolveTheory` moves `presence` **+1 on subverted, −1 on held**, clamped `[-3, 3]`.
+- `nameFoil(map, name)` pins the name once (idempotent; never renames).
+- Selectors `foil` / `foilPresence` / `foilIsManifest` (≥2 = give them a face).
+
+**Generation (`promptAssembly._buildOtherReaderSection`).** A presence-scaled
+`<the_other_reader>` block injected after `<under_map_state>` in both the narrative and
+path-decision prompts: `≤0` offstage rumor → `1` at the edges → `2` named, in-scene → `≥3`
+ascendant/confronting. Pins an existing `foil.name`; asks the model to name them at
+presence ≥2 and report it via the new `foilName` schema field.
+
+**Name capture.** `schemas.js` `foilName` → `validation._normalizeFoilName` →
+`generation.js` entry whitelist → `CaseFileScreen` captures `storyMeta.foilName` →
+`nameUnderMapFoil` (GameContext, idempotent) → pinned thereafter.
+
+**Wiring.** `TheoryScreen` seals `rejected` → `recordUnderMapTheory`. Surfaced to the
+player in three places: the **verdict banner** (a blood-red "The Other Reader gains ground"
+line on a subversion), the **Codex** (a dedicated card with the creed + a presence-scaled
+status), and the **ending** (`selectEnding.foilLine`, manifest at presence ≥2; the Deceived
+close hands the scene to them).
+
+**Tests.** `underMap.test.js` (creed/grow/shrink/clamp/no-op/name-pin),
+`otherReaderPrompt.test.js` (intensity ladder + name pinning), `endings.test.js` (manifest
+payoff), `validation.deriveFragments.test.js` (foilName normalize).
+
+**⚠️ Unverified on-device** (LLM-driven). Needs a playtest that deliberately seals-then-
+subverts a couple of beliefs to push `presence` to ≥2 and confirm the prompt yields a
+*coherent recurring antagonist with a stable name*, not a generic heavy.
+
+---
+
 ## 6. Move 5 — Keystones: cross-chapter mastery (P1)
 
 - **Decided — Keystone = `seen ≥ 3` AND the fragment spans ≥2 chapters** (i.e.
@@ -408,8 +456,9 @@ map*:
 | **P1** | 5 — keystones / arc-truths | Cross-chapter mastery + variable reward. | S |
 | **P2** | 4 — constellation map | Unique, shareable collection artifact. | L |
 | **P2** | 8 — daily on-ramp + streak surfacing | Habit formation. | S–M |
+| **post** | 6 — The Other Reader (foil) ✅ | Turns Clarity into a recurring antagonist (§5b). | M |
 
-Suggested build order: **1 → 2 → (tune on device) → 3 → 5 → 4 → 8.**
+Suggested build order: **1 → 2 → (tune on device) → 3 → 5 → 4 → 8 → 6.**
 
 ---
 

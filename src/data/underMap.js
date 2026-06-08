@@ -80,7 +80,13 @@ export const createBlankUnderMap = () => ({
   relations: [],     // { id, a, b, revelation, falseReadings } — discoverable truth (a/b are fragment ids)
   connections: [],   // { a, b, relationId, at, unresolvedReading } — player-made links
   nodes: [],         // { id, label, revelation, at, unresolvedReading } — revealed Under-Map nodes
-  theories: [],      // { chapter, fragmentIds, interpretation, correct, at }
+  theories: [],      // { chapter, fragmentIds, interpretation, rejected, correct, at }
+  // "The Other Reader" (the road not taken): a single evolving foil born from the
+  // interpretation the player REJECTED at each C-beat. `presence` accrues as the
+  // player's beliefs are subverted (the foil's worldview gaining ground in Ashport)
+  // and recedes as they hold true. null until a belief is sealed with a rejected
+  // reading. The Station-Eleven "Prophet" mirror — the same signs, read the other way.
+  foil: null,        // { belief, fromChapter, presence, name }
   // CONNECT-as-deduction streak: consecutive descents mapped without a wrong probe.
   flawlessStreak: 0,
   bestFlawlessStreak: 0,
@@ -104,6 +110,7 @@ export const normalizeUnderMap = (map) => {
     connections: Array.isArray(map.connections) ? map.connections : [],
     nodes: Array.isArray(map.nodes) ? map.nodes : [],
     theories: Array.isArray(map.theories) ? map.theories : [],
+    foil: map.foil && typeof map.foil === 'object' ? map.foil : null,
     flawlessStreak: Number.isFinite(map.flawlessStreak) ? map.flawlessStreak : 0,
     bestFlawlessStreak: Number.isFinite(map.bestFlawlessStreak) ? map.bestFlawlessStreak : 0,
     dailyStir: map.dailyStir && typeof map.dailyStir === 'object' ? map.dailyStir : null,
@@ -354,22 +361,55 @@ export const recordDescent = (map, { hadMisstep = false } = {}) => {
   return { ...m, flawlessStreak, bestFlawlessStreak };
 };
 
+// The Other Reader's presence is bounded so no single run of luck pins the foil
+// at an extreme — it stays a dial the late game can read, not a binary flag.
+export const FOIL_PRESENCE_MIN = -3;
+export const FOIL_PRESENCE_MAX = 3;
+const clampPresence = (n) =>
+  Math.max(FOIL_PRESENCE_MIN, Math.min(FOIL_PRESENCE_MAX, Number.isFinite(n) ? n : 0));
+
 export const recordTheory = (map, theory) => {
   const m = normalizeUnderMap(map);
   if (!theory || !Array.isArray(theory.fragmentIds) || theory.fragmentIds.length === 0) return m;
+  // The strongest reading the player turned away from becomes the foil's creed.
+  // `presence` persists across C-beats (one evolving antagonist, not one per chapter).
+  const rejected = cleanFalseReadings(theory.rejected);
+  const foilBelief = rejected[0] || null;
+  const nextFoil = foilBelief
+    ? {
+        belief: foilBelief,
+        fromChapter: theory.chapter ?? null,
+        presence: m.foil ? clampPresence(m.foil.presence) : 0,
+        name: (m.foil && m.foil.name) || null,
+      }
+    : m.foil;
   return {
     ...m,
+    foil: nextFoil,
     theories: [
       {
         chapter: theory.chapter ?? null,
         fragmentIds: theory.fragmentIds,
         interpretation: String(theory.interpretation || '').trim(),
+        rejected,
         correct: theory.correct != null ? !!theory.correct : null,
         at: new Date().toISOString(),
       },
       ...m.theories,
     ],
   };
+};
+
+/**
+ * Pin The Other Reader's name once the story names them (presence >= 2). Idempotent:
+ * a no-op if there is no foil, the name is empty, or the foil is already named — so
+ * the identity stays fixed across chapters once set.
+ */
+export const nameFoil = (map, name) => {
+  const m = normalizeUnderMap(map);
+  const clean = String(name || '').trim();
+  if (!m.foil || !clean || m.foil.name) return m;
+  return { ...m, foil: { ...m.foil, name: clean } };
 };
 
 /**
@@ -387,7 +427,15 @@ export const resolveTheory = (map, chapter, correct) => {
     }
     return t;
   });
-  return changed ? { ...m, theories } : m;
+  if (!changed) return m;
+  // The Other Reader gains ground when the player's reading is subverted (the city
+  // bends toward the road they didn't take) and recedes when it holds true. No foil
+  // yet (the player never turned a reading away) => nothing to move.
+  let foil = m.foil;
+  if (foil) {
+    foil = { ...foil, presence: clampPresence((foil.presence || 0) + (correct ? -1 : 1)) };
+  }
+  return { ...m, theories, foil };
 };
 
 // ---- Daily on-ramp (§8.1) -------------------------------------------------
@@ -481,6 +529,21 @@ export const endingVariant = (map) => {
   if (ratio >= CLARITY_PARTIAL) return 'half';
   return 'deceived';
 };
+
+/** The Other Reader, or null if the player has never turned a reading away. */
+export const foil = (map) => normalizeUnderMap(map).foil || null;
+
+/** How present the foil's worldview has become (FOIL_PRESENCE_MIN..MAX; 0 if none). */
+export const foilPresence = (map) => {
+  const f = normalizeUnderMap(map).foil;
+  return f ? clampPresence(f.presence) : 0;
+};
+
+/**
+ * Whether the foil has grown into a felt presence in Ashport — the threshold at
+ * which generation/UI should give the road-not-taken a face. Tunable.
+ */
+export const foilIsManifest = (map) => foilPresence(map) >= 2;
 
 // ---- selectors -----------------------------------------------------------
 

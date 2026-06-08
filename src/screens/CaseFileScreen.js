@@ -29,12 +29,14 @@ import BranchingNarrativeReader from "../components/BranchingNarrativeReader";
 import CaseHero from "../components/case-file/CaseHero";
 import CaseSummary from "../components/case-file/CaseSummary";
 import DecisionPanel from "../components/case-file/DecisionPanel";
+import { useGame } from "../context/GameContext";
 
 import { FONTS, FONT_SIZES } from "../constants/typography";
+import { COLORS } from "../constants/colors";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
-import { getStoryEntry, ROOT_PATH_KEY } from "../data/storyContent";
+import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
@@ -71,6 +73,7 @@ export default function CaseFileScreen({
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onIngestFragments, // UNDER-MAP: ingest scene fragments/relations into the board
   onResolveBelief, // UNDER-MAP: bear out a sealed belief when the scene resolves it (Clarity)
+  onNameFoil, // UNDER-MAP: pin The Other Reader's name when a scene first names them
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -86,6 +89,8 @@ export default function CaseFileScreen({
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
   const medium = sizeClass === "medium";
+  const { progress: gameProgress } = useGame();
+  const reducedMotion = !!gameProgress?.settings?.reducedMotion;
 
   // Audio: Ambient Background
   const [sound, setSound] = useState();
@@ -350,6 +355,68 @@ export default function CaseFileScreen({
     onResolveBelief({ chapter: Number(br.resolvesChapter), correct: br.correct });
   }, [storyMeta?.beliefResolution, storyMeta?.caseNumber, activeCase?.caseNumber, onResolveBelief]);
 
+  // THE OTHER READER: when a scene names the foil (presence >= 2), pin the name once
+  // so it stays fixed across chapters. nameUnderMapFoil is idempotent (skips if the
+  // foil is already named), so firing on every render with a name is safe.
+  useEffect(() => {
+    const name = storyMeta?.foilName;
+    if (typeof onNameFoil === "function" && typeof name === "string" && name.trim()) {
+      onNameFoil(name.trim());
+    }
+  }, [storyMeta?.foilName, onNameFoil]);
+
+  // BELIEF VERDICT (Consequence): when this scene resolves a belief the player
+  // sealed earlier, show the verdict up front — the reciprocity moment that makes
+  // the Theory beat matter ("you believed X; tonight it held / was subverted").
+  const beliefVerdict = useMemo(() => {
+    const br = storyMeta?.beliefResolution;
+    if (!isStoryMode || !br || typeof br.correct !== "boolean") return null;
+    const ch = Number(br.resolvesChapter);
+    if (!Number.isFinite(ch)) return null;
+    const theories = storyCampaign?.underMap?.theories || [];
+    const belief = (theories.find((t) => t.chapter === ch) || {}).interpretation || null;
+    if (!belief && !br.line) return null;
+    // When the reading is subverted, name the road not taken gaining ground.
+    const foilObj = storyCampaign?.underMap?.foil || null;
+    const foilBelief = !br.correct && foilObj && foilObj.belief ? foilObj.belief : null;
+    return { correct: br.correct, line: (br.line || "").trim(), belief, foilBelief };
+  }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, storyCampaign?.underMap?.foil, isStoryMode]);
+
+  // The echo banner shows the TRUTH the scene follows from (the player's mapping) —
+  // not the scene's own sentence, which they're about to read anyway. Require a
+  // nodeRef and de-dupe so we never stack the same callback twice.
+  const visibleEchoes = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const e of sceneEchoes) {
+      const ref = (e?.nodeRef || "").trim();
+      if (!ref) continue;
+      const key = ref.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(e);
+    }
+    return out;
+  }, [sceneEchoes]);
+  const showEchoCard = showEcho && visibleEchoes.length > 0;
+
+  // VERDICT AS A MOMENT: the belief payoff stamps onto the page when the scene opens
+  // (slam + haptic), so the player FEELS their reading mattered — then rests compact.
+  // Re-arms per chapter so each arrival earns its beat. Honors reduced motion.
+  const stampAnim = useRef(new Animated.Value(1)).current;
+  const stampedRef = useRef(false);
+  useEffect(() => { stampedRef.current = false; }, [storyMeta?.caseNumber, activeCase?.caseNumber]);
+  useEffect(() => {
+    if (!beliefVerdict || stampedRef.current) return;
+    stampedRef.current = true;
+    if (reducedMotion) { stampAnim.setValue(1); return; }
+    stampAnim.setValue(0);
+    Haptics.notificationAsync?.(
+      beliefVerdict.correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
+    ).catch?.(() => {});
+    Animated.timing(stampAnim, { toValue: 1, duration: 300, easing: Easing.out(Easing.back(2)), useNativeDriver: true }).start();
+  }, [beliefVerdict, reducedMotion, stampAnim]);
+
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
   const examinableDetails = useMemo(() => {
@@ -524,20 +591,33 @@ export default function CaseFileScreen({
       setNarrativeComplete(true);
     }
 
-    // UNDER-MAP backfill: collect ALL of the scene's fragments at the gate (not
-    // just the opening's), so every relation's endpoints exist and the CONNECT
-    // beat always has probeable pairs. Tapping during the read is still the
-    // EXAMINE reward; this guarantees the puzzle is never starved if the player
-    // didn't tap everything. (A fragment from a branch they skipped is a minor
-    // cost next to a connectable board.)
+    // UNDER-MAP backfill (PATH-SCOPED): collect the fragments the player's chosen
+    // path surfaced, so the CONNECT/THEORY beat is never starved if they didn't tap
+    // everything — WITHOUT bleeding in content from branches they skipped. A fragment
+    // is path-relevant when its verbatim phrase appears in the prose actually read
+    // (opening + the chosen first-choice response + the chosen ending). Phrase-less
+    // fragments are scene-general (not tappable, not branch-attributable) so they pass
+    // through. Relations self-scope: addRelations only materializes a relation once
+    // BOTH endpoints exist in the map, so a skipped branch's relations never form,
+    // while cross-chapter links (to fragments the player already holds) still resolve.
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
-      onIngestFragments(sceneFragments, sceneRelations, {
+      // Reconstruct the exact prose the player walked using the SAME helper the
+      // generation pipeline uses for continuity (opening + chosen first response +
+      // chosen ending), so the Under-Map and the next-scene prompt agree on what
+      // "happened". A phrase-bearing fragment only enters the map if its phrase is
+      // in that prose; phrase-less fragments are scene-general (not tappable, not
+      // branch-attributable) and pass through.
+      const prose = branchingNarrative
+        ? buildRealizedNarrative(branchingNarrative, result?.firstChoice, result?.path || result?.secondChoice)
+        : "";
+      const pathFragments = fragmentsOnRealizedPath(sceneFragments, prose);
+      onIngestFragments(pathFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
     }
-  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, storyMeta?.chapter, storyMeta?.subchapter]);
+  }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, branchingNarrative, storyMeta?.chapter, storyMeta?.subchapter]);
 
   const handleSecondChoice = useCallback((result) => {
     if (!result?.path) return;
@@ -1115,22 +1195,60 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
+                {/* BELIEF VERDICT — your sealed reading of the hidden world, borne out or
+                    subverted. Stamps onto the page on arrival (see stampAnim). */}
+                {beliefVerdict && (
+                  <Animated.View
+                    style={[
+                      styles.verdictCard,
+                      beliefVerdict.correct ? styles.verdictTrue : styles.verdictFalse,
+                      { borderRadius: scaleRadius(RADIUS.lg), paddingVertical: scaleSpacing(SPACING.xs), paddingHorizontal: scaleSpacing(SPACING.sm), gap: scaleSpacing(3) },
+                      {
+                        opacity: stampAnim,
+                        transform: [
+                          { scale: stampAnim.interpolate({ inputRange: [0, 1], outputRange: [1.22, 1] }) },
+                          { rotate: stampAnim.interpolate({ inputRange: [0, 1], outputRange: [beliefVerdict.correct ? "-3deg" : "4deg", beliefVerdict.correct ? "0deg" : "-1.5deg"] }) },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.verdictKicker,
+                        { color: beliefVerdict.correct ? COLORS.accentSecondary : COLORS.bloodRed, fontSize: slugSize },
+                      ]}
+                    >
+                      {beliefVerdict.correct ? "◆ YOUR READING HELD TRUE" : "◆ YOUR READING WAS SUBVERTED"}
+                    </Text>
+                    {beliefVerdict.belief ? (
+                      <Text style={[styles.verdictBelief, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>
+                        You believed: “{beliefVerdict.belief}”
+                      </Text>
+                    ) : null}
+                    {beliefVerdict.line ? (
+                      <Text style={[styles.verdictLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
+                        {beliefVerdict.line}
+                      </Text>
+                    ) : null}
+                    {beliefVerdict.foilBelief ? (
+                      <Text style={[styles.verdictBelief, { color: COLORS.bloodRed, fontStyle: "italic", fontSize: slugSize }]} numberOfLines={3}>
+                        The Other Reader gains ground — “{beliefVerdict.foilBelief}”
+                      </Text>
+                    ) : null}
+                  </Animated.View>
+                )}
+
                 {/* UNDER-MAP ECHO — the loop made visible: this scene follows from what you mapped */}
-                {showEcho && (
+                {showEchoCard && (
                   <View
                     style={[
                       styles.echoCard,
-                      { borderRadius: scaleRadius(RADIUS.lg), borderColor: palette.border, padding: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.xs) },
+                      { borderRadius: scaleRadius(RADIUS.lg), borderColor: palette.border, paddingVertical: scaleSpacing(SPACING.xs), paddingHorizontal: scaleSpacing(SPACING.sm), gap: scaleSpacing(3) },
                     ]}
                   >
                     <Text style={[styles.echoKicker, { color: palette.accent, fontSize: slugSize }]}>↳ THIS FOLLOWS FROM WHAT YOU MAPPED</Text>
-                    {sceneEchoes.map((e, i) => (
-                      <View key={i} style={{ gap: 2 }}>
-                        {e.nodeRef ? (
-                          <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>“{e.nodeRef}”</Text>
-                        ) : null}
-                        <Text style={[styles.echoLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>{e.line}</Text>
-                      </View>
+                    {visibleEchoes.map((e, i) => (
+                      <Text key={i} style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>“{e.nodeRef}”</Text>
                     ))}
                   </View>
                 )}
@@ -1374,6 +1492,12 @@ const styles = StyleSheet.create({
   echoKicker: { fontFamily: FONTS.monoBold, letterSpacing: 1.6, textTransform: "uppercase" },
   echoFrom: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.4 },
   echoLine: { fontFamily: FONTS.primary, letterSpacing: 0.4 },
+  verdictCard: { borderWidth: 1 },
+  verdictTrue: { backgroundColor: "rgba(26, 18, 4, 0.82)", borderColor: "rgba(241, 197, 114, 0.45)" },
+  verdictFalse: { backgroundColor: "rgba(26, 8, 6, 0.82)", borderColor: "rgba(200, 90, 80, 0.45)" },
+  verdictKicker: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
+  verdictBelief: { fontFamily: FONTS.primary, fontStyle: "italic", letterSpacing: 0.4 },
+  verdictLine: { fontFamily: FONTS.primary, letterSpacing: 0.4 },
   storyPromptCard: { borderWidth: 1, backgroundColor: "rgba(8, 4, 2, 0.86)" },
   storyPromptLabel: { fontFamily: FONTS.monoBold, letterSpacing: 2, textTransform: "uppercase" },
   storyPromptBody: { fontFamily: FONTS.primary, letterSpacing: 0.6 },

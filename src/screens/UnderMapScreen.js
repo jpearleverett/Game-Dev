@@ -1,229 +1,186 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
+import Svg, { Path, Ellipse, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import ScreenSurface from '../components/ScreenSurface';
-import SecondaryButton from '../components/SecondaryButton';
-import PrimaryButton from '../components/PrimaryButton';
-import DustLayer from '../components/DustLayer';
-import UnderMapConstellation from '../components/UnderMapConstellation';
-import { scheduleDailyStirReminder } from '../services/dailyStirNotifications';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, impactHaptic, notificationHaptic, Haptics } from '../utils/haptics';
 import {
   normalizeUnderMap,
   undiscoveredRelationCount,
-  isMotif,
-  isKeystone,
-  mapDepth,
-  probeBudgetFor,
   sensedRelations,
   readingChoices,
   flawlessStreak,
-  dailyStir,
-  dailyStreak,
-  dailyStirFragment,
+  mapDepth,
+  probeBudgetFor,
+  isMotif,
+  isKeystone,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
 import { COLORS } from '../constants/colors';
-import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
-import { SPACING, RADIUS } from '../constants/layout';
+import { FONTS } from '../constants/typography';
 
-const KIND_META = {
-  [FRAGMENT_KIND.SYMBOL]: { icon: 'star-four-points-outline', color: COLORS.accentSecondary, label: 'SYMBOL' },
-  [FRAGMENT_KIND.PLACE]: { icon: 'map-marker-outline', color: COLORS.accentCyan, label: 'PLACE' },
-  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.bloodRed, label: 'PERSON' },
-  [FRAGMENT_KIND.PHENOMENON]: { icon: 'shimmer', color: COLORS.accentViolet, label: 'ANOMALY' },
+const KIND_COLOR = {
+  [FRAGMENT_KIND.SYMBOL]: COLORS.kindSymbol,
+  [FRAGMENT_KIND.PLACE]: COLORS.kindPlace,
+  [FRAGMENT_KIND.PERSON]: COLORS.kindPerson,
+  [FRAGMENT_KIND.PHENOMENON]: COLORS.kindPhenomenon,
 };
-const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];
+const colorFor = (k) => KIND_COLOR[k] || COLORS.underViolet;
 
-// Kind-bond grammar (see docs/undermap_redesign.md §3.3): soft, learnable hints
-// that give the player a REASON to suspect a pair before spending a probe.
-const BOND_HINTS = {
-  'place|symbol': 'A mark is carved into somewhere — these often bond.',
-  'person|phenomenon': 'The wrongness clings to someone — these often bond.',
-  'person|place': 'Somewhere remembers someone — these can bond.',
-  'phenomenon|symbol': 'The mark is what makes the wrongness — these often bond.',
+const hash01 = (str, salt = 0) => {
+  let h = (2166136261 ^ salt) >>> 0;
+  const s = String(str);
+  for (let i = 0; i < s.length; i += 1) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 100000) / 100000;
 };
-const bondHintFor = (kindA, kindB) => {
-  if (!kindA || !kindB) return null;
-  if (kindA === kindB) return 'Two of a kind rarely touch directly — but the dark surprises.';
-  const key = [kindA, kindB].sort().join('|');
-  return BOND_HINTS[key] || 'An unusual pairing — probe it and see.';
+const fragNorm = (f) => {
+  if (f?.pos && Number.isFinite(f.pos.nx) && Number.isFinite(f.pos.ny)) return { nx: f.pos.nx, ny: f.pos.ny };
+  return { nx: 0.12 + hash01(f.id, 1) * 0.76, ny: 0.12 + hash01(f.id, 2) * 0.76 };
 };
+
+/** Twinkling starfield backdrop. */
+function Starfield({ reducedMotion }) {
+  const stars = useMemo(
+    () => Array.from({ length: 46 }).map((_, i) => ({
+      key: i,
+      left: `${((i * 2654435761) % 10000) / 100}%`,
+      top: `${((i * 40503) % 9973) / 99.73}%`,
+      size: 0.8 + ((i * 7) % 18) / 10,
+      dur: 2400 + ((i * 311) % 4000),
+      delay: (i * 137) % 6000,
+    })),
+    [],
+  );
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {stars.map(({ key, ...rest }) => <Twinkle key={key} {...rest} reducedMotion={reducedMotion} />)}
+    </View>
+  );
+}
+function Twinkle({ left, top, size, dur, delay, reducedMotion }) {
+  const o = useRef(new Animated.Value(reducedMotion ? 0.5 : 0.2)).current;
+  useEffect(() => {
+    if (reducedMotion) return undefined;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(o, { toValue: 0.9, duration: dur / 2, delay, useNativeDriver: true }),
+      Animated.timing(o, { toValue: 0.2, duration: dur / 2, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [o, dur, delay, reducedMotion]);
+  return (
+    <Animated.View style={{ position: 'absolute', left, top, width: size, height: size, borderRadius: size, backgroundColor: '#eae4ff', opacity: o }} />
+  );
+}
 
 export default function UnderMapScreen({ navigation, route }) {
   const game = useGame();
   const audio = useAudio();
   const {
-    progress,
-    senseUnderMap,
-    resolveUnderMapReading,
-    recordUnderMapDescent,
-    touchUnderMap,
+    progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap,
     drawUnderMapDailyStir,
-    resolveUnderMapDailyStir,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
-  // CONNECT beat: when opened as a puzzle gate (A/B subchapters), the Under-Map
-  // stands between the scene just read and the next one. Drawing connections is
-  // the puzzle; "Continue the descent" generates + advances to the next scene.
   const asPuzzle = !!route?.params?.asPuzzle;
   const gateCaseNumber = route?.params?.caseNumber || progress?.storyCampaign?.activeCaseNumber || null;
   const gateCaseId = route?.params?.caseId || null;
+
+  const map = useMemo(() => normalizeUnderMap(progress?.storyCampaign?.underMap), [progress?.storyCampaign?.underMap]);
+
+  // Spread fragments across the field like the design's star-field — a stable
+  // golden-angle (sunflower) distribution so stars fill the space evenly and
+  // never bunch up. Stable: keyed by sorted id, independent of collection order.
+  const placed = useMemo(() => {
+    const frags = [...map.fragments].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const N = Math.max(1, frags.length);
+    const GA = Math.PI * (3 - Math.sqrt(5));
+    const byId = {};
+    frags.forEach((f, i) => {
+      const r = Math.sqrt((i + 0.5) / N) * (N <= 1 ? 0 : 0.42);
+      const th = i * GA;
+      byId[f.id] = {
+        nx: Math.min(0.9, Math.max(0.1, 0.5 + r * Math.cos(th))),
+        ny: Math.min(0.9, Math.max(0.12, 0.46 + r * Math.sin(th))),
+      };
+    });
+    return byId;
+  }, [map.fragments]);
+
+  useEffect(() => { touchUnderMap?.(); drawUnderMapDailyStir?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [field, setField] = useState({ w: 0, h: 0 });
+  const [selected, setSelected] = useState([]);
+  const [node, setNode] = useState(null); // { aId, bId, mode:'choose'|'revealed'|'blurred', options, revelation }
+  const [inspect, setInspect] = useState(null); // a fragment the player is reading (the full clue)
+  // Probe economy (§3.1): a per-descent budget of attempts. A wrong pair costs a
+  // probe; correct pairs are free. Running out never blocks "Continue" — unfound
+  // links stay sensed for a later visit. Budget is fixed at descent start.
+  const [probeBudget] = useState(() => probeBudgetFor(map));
+  const [probesUsed, setProbesUsed] = useState(0);
+  const probesLeft = Math.max(0, probeBudget - probesUsed);
+  // Probes only meter the gated A/B descent. The Desk-opened freeform map is for
+  // reviewing/connecting at leisure — no budget, no lockout there.
+  const probesEnabled = asPuzzle;
+  const [toast, setToast] = useState(null);
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
   const [genError, setGenError] = useState(null);
+  const hadMisstepRef = useRef(false);
+  const lockRef = useRef(false);
+  const toastTimer = useRef(null);
 
-  const map = useMemo(
-    () => normalizeUnderMap(progress?.storyCampaign?.underMap),
-    [progress?.storyCampaign?.underMap],
-  );
-
-  useEffect(() => {
-    touchUnderMap?.();
-    drawUnderMapDailyStir?.(); // §8.1: surface today's drifting fragment (idempotent)
-    // Schedule the daily "stirred overnight" reminder once the player is invested
-    // (has collected something). Opt-out via settings; the service is a no-op on
-    // web / denied permission and only does real work once per session.
-    const hasFragments = (progress?.storyCampaign?.underMap?.fragments?.length || 0) > 0;
-    if (hasFragments && !progress?.settings?.dailyStirRemindersDisabled) {
-      scheduleDailyStirReminder().catch(() => {});
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const [slotA, setSlotA] = useState(null);
-  const [slotB, setSlotB] = useState(null);
-  const [feedback, setFeedback] = useState(null); // { tone:'reveal'|'known'|'none'|'blur', text }
-  // Choose-the-truth: { aId, bId, options:[...], unresolved:bool } when a relation is found.
-  const [chooser, setChooser] = useState(null);
-  // Tame the growing list: show only connectable fragments by default.
-  const [showAllFrags, setShowAllFrags] = useState(false);
-
-  // Probe budget for THIS descent (tense-but-forgiving): fixed at entry, never
-  // hard-blocks "Continue the descent" when spent — unfound links stay sensed.
-  const initialBudgetRef = useRef(null);
-  if (initialBudgetRef.current == null) initialBudgetRef.current = Math.max(1, probeBudgetFor(map));
-  const [probesLeft, setProbesLeft] = useState(initialBudgetRef.current);
-  const [hadMisstep, setHadMisstep] = useState(false);
-  // Sensed-assist: after a miss, faintly pulse two fragments that DO share an unfound link.
-  const [hintIds, setHintIds] = useState(() => new Set());
-  const hintTimer = useRef(null);
-  useEffect(() => () => { if (hintTimer.current) clearTimeout(hintTimer.current); }, []);
-
-  const streak = flawlessStreak(map);
-
-  // Daily on-ramp (§8.1): the fragment that drifted to the surface today.
-  const stir = dailyStir(map);
-  const stirFrag = dailyStirFragment(map);
-  const daysStreak = dailyStreak(map);
-  const showStir = !!stir && !stir.resolved && !!stirFrag;
-
-  // Reveal + shake animations.
-  const reveal = useRef(new Animated.Value(0)).current;
   const shake = useRef(new Animated.Value(0)).current;
-  const linkGlow = useRef(new Animated.Value(0)).current;
+  const bloom = useRef(new Animated.Value(0)).current;
+  const [bloomAt, setBloomAt] = useState(null);
+  const ringPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reducedMotion) return undefined;
+    const loop = Animated.loop(Animated.timing(ringPulse, { toValue: 1, duration: 3600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [ringPulse, reducedMotion]);
+  const ringScale = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.5] });
+  const ringOpacity = ringPulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.4, 0] });
+
+  const remaining = undiscoveredRelationCount(map);
+  // DECLUTTER: as the map grows, let "inert" fragments (those not part of any
+  // still-unfound relation) recede so the threads you can still pull stay vivid.
+  // Falls back to showing everything at full strength when nothing is sensed yet.
+  const liveFragmentIds = useMemo(() => {
+    const ids = new Set();
+    sensedRelations(map).forEach((r) => { if (r.a) ids.add(r.a); if (r.b) ids.add(r.b); });
+    return ids;
+  }, [map]);
+  const depth = mapDepth(map);
+  const streak = flawlessStreak(map);
+  const beat = gateCaseNumber ? gateCaseNumber.slice(3, 4) : 'A';
 
   const fragById = useCallback((id) => map.fragments.find((f) => f.id === id) || null, [map.fragments]);
-  const remaining = undiscoveredRelationCount(map);
-  const depth = mapDepth(map);
-  const depthPct = Math.round(depth.ratio * 100);
-  const depthLabel = depthPct >= 100 ? 'The hidden world stands revealed'
-    : depthPct >= 75 ? 'The shape of it is unmistakable now'
-    : depthPct >= 50 ? 'The map is taking shape'
-    : depthPct >= 25 ? 'Something is forming in the dark'
-    : 'The map runs deeper than this';
+  const posPx = useCallback((id) => {
+    const p = placed[id];
+    if (!p || !field.w) return { x: 0, y: 0 };
+    return { x: p.nx * field.w, y: p.ny * field.h };
+  }, [placed, field]);
 
-  const slotFragA = slotA ? fragById(slotA) : null;
-  const slotFragB = slotB ? fragById(slotB) : null;
-  const bondHint = slotFragA && slotFragB ? bondHintFor(slotFragA.kind, slotFragB.kind) : null;
+  const arcPath = useCallback((aId, bId) => {
+    const a = posPx(aId); const b = posPx(bId);
+    const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
+    const dx = b.x - a.x; const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len; const ny = dx / len;
+    const bow = Math.min(40, len * 0.17);
+    return `M ${a.x} ${a.y} Q ${mx + nx * bow} ${my + ny * bow} ${b.x} ${b.y}`;
+  }, [posPx]);
 
-  // Partition the (cumulative, ever-growing) fragments so the player sees what's
-  // still CONNECTABLE up front, and everything else collapses into an archive.
-  const { connectableFrags, otherFrags } = useMemo(() => {
-    const ids = new Set();
-    sensedRelations(map).forEach((r) => { ids.add(r.a); ids.add(r.b); });
-    const connectable = [];
-    const other = [];
-    map.fragments.forEach((f) => (ids.has(f.id) ? connectable : other).push(f));
-    return { connectableFrags: connectable, otherFrags: other };
-  }, [map]);
-
-  useEffect(() => {
-    // Link line glows when both slots are filled.
-    Animated.timing(linkGlow, {
-      toValue: slotA && slotB ? 1 : 0,
-      duration: reducedMotion ? 0 : 240,
-      useNativeDriver: false,
-    }).start();
-  }, [slotA, slotB, linkGlow, reducedMotion]);
-
-  const loadSlot = useCallback((id) => {
-    selectionHaptic();
-    setFeedback(null);
-    setChooser(null);
-    if (slotA === id) { setSlotA(null); return; }
-    if (slotB === id) { setSlotB(null); return; }
-    if (!slotA) { setSlotA(id); return; }
-    if (!slotB) { setSlotB(id); return; }
-    // both full -> replace B
-    setSlotB(id);
-  }, [slotA, slotB]);
-
-  const renderFrag = useCallback((f) => {
-    const m = metaFor(f.kind);
-    const selected = f.id === slotA || f.id === slotB;
-    const hinted = hintIds.has(f.id);
-    const linked = map.connections.some((c) => c.a === f.id || c.b === f.id);
-    return (
-      <Pressable
-        key={f.id}
-        onPress={() => loadSlot(f.id)}
-        style={[
-          styles.frag,
-          { borderColor: selected ? m.color : (hinted ? COLORS.accentSecondary : COLORS.panelOutline), borderLeftColor: m.color },
-          (selected || hinted) && { backgroundColor: COLORS.surfaceAlt },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={`${m.label}: ${f.label}`}
-      >
-        <View style={styles.fragTop}>
-          <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
-          <Text style={[styles.fragKind, { color: m.color }]}>{m.label}</Text>
-          {isKeystone(f) ? (
-            <View style={[styles.keystoneBadge, { marginLeft: 'auto' }]}>
-              <MaterialCommunityIcons name="star-circle" size={11} color={COLORS.amberLight || COLORS.accentSecondary} />
-              <Text style={styles.keystoneText}>KEYSTONE</Text>
-            </View>
-          ) : isMotif(f) ? (
-            <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
-              <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
-              <Text style={styles.motifText}>×{f.seen}</Text>
-            </View>
-          ) : null}
-          {linked ? <MaterialCommunityIcons name="vector-link" size={12} color={COLORS.accentSecondary} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} /> : null}
-        </View>
-        <Text style={styles.fragLabel}>{f.label}</Text>
-        {f.detail ? <Text style={styles.fragDetail} numberOfLines={2}>{f.detail}</Text> : null}
-      </Pressable>
-    );
-  }, [slotA, slotB, hintIds, map.connections, loadSlot]);
-
-  // Daily stir: acknowledge the drifting fragment — advance the days-mapped
-  // streak and load it onto the bench so the player can work it into the map.
-  const traceStir = useCallback(() => {
-    if (!stirFrag) return;
-    resolveUnderMapDailyStir?.();
-    loadSlot(stirFrag.id);
-  }, [stirFrag, resolveUnderMapDailyStir, loadSlot]);
-
-  const doReveal = useCallback(() => {
-    reveal.setValue(0);
-    if (reducedMotion) { reveal.setValue(1); return; }
-    Animated.spring(reveal, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }).start();
-  }, [reveal, reducedMotion]);
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 1700);
+  }, []);
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const doShake = useCallback(() => {
     if (reducedMotion) return;
@@ -236,502 +193,455 @@ export default function UnderMapScreen({ navigation, route }) {
     ]).start();
   }, [shake, reducedMotion]);
 
-  // After a wrong probe, faintly mark a real unfound pair so the player isn't lost.
-  const pulseAssist = useCallback(() => {
-    const sensed = sensedRelations(map);
-    if (!sensed.length) return;
-    const pick = sensed[Math.floor(Math.random() * sensed.length)];
-    setHintIds(new Set([pick.a, pick.b]));
-    if (hintTimer.current) clearTimeout(hintTimer.current);
-    hintTimer.current = setTimeout(() => setHintIds(new Set()), 2600);
-  }, [map]);
+  const triggerBloom = useCallback((aId, bId) => {
+    const a = posPx(aId); const b = posPx(bId);
+    setBloomAt({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    bloom.setValue(0);
+    if (reducedMotion) { setBloomAt(null); return; }
+    Animated.timing(bloom, { toValue: 1, duration: 760, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+      .start(() => setBloomAt(null));
+  }, [posPx, bloom, reducedMotion]);
 
-  // STEP 1 — probe the pair. A miss spends a probe (tense). A hit opens choose-the-truth (free).
-  const attemptProbe = useCallback(() => {
-    if (!slotA || !slotB) return;
-    const sensed = senseUnderMap?.(slotA, slotB);
-
+  const evaluate = useCallback((pair) => {
+    const sensed = senseUnderMap?.(pair[0], pair[1]);
     if (sensed?.valid && sensed.alreadyConnected && !sensed.unresolved) {
-      setFeedback({ tone: 'known', text: 'Already mapped.' });
-      selectionHaptic();
-      setSlotA(null); setSlotB(null);
+      showToast('Already mapped — this truth is known.');
+      setSelected([]); lockRef.current = false;
       return;
     }
     if (sensed?.valid && sensed.readings) {
+      selectionHaptic();
       const options = readingChoices(sensed.readings);
-      // No decoys authored (e.g. a prose-derived relation) → there's nothing to
-      // deduce; reveal the single truth cleanly rather than faking a choice.
       if (options.length < 2) {
-        const res = resolveUnderMapReading?.(slotA, slotB, sensed.readings.correct);
-        setSlotA(null); setSlotB(null);
+        // No decoys → reveal directly (matches the design's tap-connect-reveal).
+        const res = resolveUnderMapReading?.(pair[0], pair[1], sensed.readings.correct);
+        triggerBloom(pair[0], pair[1]);
         notificationHaptic(Haptics.NotificationFeedbackType.Success);
         audio?.playVictory?.();
-        setFeedback({ tone: 'reveal', text: res?.node?.revelation || sensed.readings.correct });
-        if (!res?.alreadyConnected || res?.upgraded) setRevealsThisVisit((n) => n + 1);
-        doReveal();
+        setRevealsThisVisit((n) => n + 1);
+        setTimeout(() => {
+          setNode({ aId: pair[0], bId: pair[1], mode: 'revealed', revelation: res?.node?.revelation || sensed.readings.correct, scope: res?.node?.scope || null });
+          setSelected([]); lockRef.current = false;
+        }, 480);
         return;
       }
-      // A link is here — now READ it. (Re-reading an unresolved link is free too.)
-      selectionHaptic();
-      setFeedback(null);
-      setChooser({ aId: slotA, bId: slotB, options, unresolved: !!sensed.unresolved });
+      setNode({ aId: pair[0], bId: pair[1], mode: 'choose', options, unresolved: !!sensed.unresolved });
+      lockRef.current = false;
       return;
     }
-
-    // Miss — the dark doesn't answer. Spend a probe (forgiving: never blocks progress).
-    const left = Math.max(0, probesLeft - 1);
-    setProbesLeft(left);
-    setHadMisstep(true);
+    // No resonance. In the gated descent a wrong probe costs one from the budget;
+    // in freeform review (from the Desk) connecting is unmetered.
+    hadMisstepRef.current = true;
     impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
-    setFeedback({
-      tone: 'none',
-      text: left > 0
-        ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
-        : "The dark goes quiet. You're out of probes — the rest stays sensed for later. Press on when ready.",
-    });
     doShake();
-    pulseAssist();
-    setSlotA(null); setSlotB(null);
-  }, [slotA, slotB, senseUnderMap, probesLeft, doShake, pulseAssist]);
+    if (probesEnabled) {
+      setProbesUsed((n) => n + 1);
+      const left = Math.max(0, probeBudget - (probesUsed + 1));
+      showToast(left > 0
+        ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
+        : 'The dark falls silent. The rest stays sensed — continue the descent.');
+    } else {
+      showToast('No resonance between these.');
+    }
+    setSelected([]); lockRef.current = false;
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled]);
 
-  // STEP 2 — commit the chosen reading. Correct = sharp reveal; wrong = blurred (still drawn).
-  const chooseReading = useCallback((optionText) => {
-    if (!chooser) return;
-    const result = resolveUnderMapReading?.(chooser.aId, chooser.bId, optionText);
-    setChooser(null);
-    setSlotA(null); setSlotB(null);
+  const handleTapStar = useCallback((id) => {
+    if (node || lockRef.current) return;
+    setSelected((sel) => {
+      if (sel.includes(id)) return sel.filter((s) => s !== id);
+      if (sel.length >= 2) return sel;
+      // Forming a pair (the probe) requires an unspent probe. Out of probes never
+      // blocks the descent — it just stops further guessing this visit.
+      if (sel.length === 1 && probesEnabled && probesLeft <= 0) {
+        showToast('Out of probes. The rest stays sensed — continue the descent.');
+        return sel;
+      }
+      const next = [...sel, id];
+      if (next.length === 2) {
+        lockRef.current = true;
+        setTimeout(() => evaluate(next), 300);
+      } else {
+        selectionHaptic();
+      }
+      return next;
+    });
+  }, [node, evaluate, probesEnabled, probesLeft, showToast]);
 
-    if (result?.correctReading) {
+  const chooseReading = useCallback((opt) => {
+    if (!node) return;
+    const res = resolveUnderMapReading?.(node.aId, node.bId, opt);
+    if (res?.correctReading) {
+      triggerBloom(node.aId, node.bId);
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
-      setFeedback({ tone: 'reveal', text: result.node?.revelation || 'The map reveals a truth.' });
-      if (!result.alreadyConnected || result.upgraded) setRevealsThisVisit((n) => n + 1);
-      doReveal();
+      if (!res.alreadyConnected || res.upgraded) setRevealsThisVisit((n) => n + 1);
+      setNode((nd) => ({ ...nd, mode: 'revealed', revelation: res.node?.revelation || '', scope: res.node?.scope || null }));
     } else {
+      hadMisstepRef.current = true;
       impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
-      setFeedback({
-        tone: 'blur',
-        text: "The link holds — but its meaning won't settle. Read the scene again; you can return and re-read it.",
-      });
+      setNode((nd) => ({ ...nd, mode: 'blurred' }));
     }
-  }, [chooser, resolveUnderMapReading, audio, doReveal]);
+  }, [node, resolveUnderMapReading, triggerBloom, audio]);
 
-  // Generate-first, advance-on-success — mirrors the proven A/B advance contract.
-  const handleContinueDescent = useCallback(async () => {
+  const closeNode = useCallback(() => { setNode(null); setSelected([]); }, []);
+
+  const handleContinue = useCallback(async () => {
     if (continuing || !asPuzzle || !gateCaseNumber) return;
-    setContinuing(true);
-    setGenError(null);
-
-    // Record the descent for the flawless-mapping streak BEFORE we leave — but
-    // only if the player actually engaged (probed or revealed). Skipping the
-    // board entirely neither builds nor breaks the streak.
-    const engaged = hadMisstep || revealsThisVisit > 0;
-    if (engaged) recordUnderMapDescent?.({ hadMisstep });
-
+    setContinuing(true); setGenError(null);
+    if (hadMisstepRef.current || revealsThisVisit > 0) recordUnderMapDescent?.({ hadMisstep: hadMisstepRef.current });
     const { chapter, subchapter } = parseCaseNumber(gateCaseNumber);
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
     const nextPathKey = progress?.storyCampaign?.currentPathKey || 'ROOT';
-
     try {
-      if (nextCase) {
-        await game.ensureStoryContent?.(nextCase, nextPathKey);
-      }
+      if (nextCase) await game.ensureStoryContent?.(nextCase, nextPathKey);
     } catch (_e) {
       setContinuing(false);
       setGenError('The descent stalled before the next scene took shape. Tap to try again.');
       return;
     }
-
     game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
     navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
-  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, hadMisstep, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
 
-  const renderSlot = (id, side) => {
-    const f = id ? fragById(id) : null;
-    const m = f ? metaFor(f.kind) : null;
-    return (
-      <Animated.View style={[
-        styles.slot,
-        f && {
-          borderColor: m.color,
-          backgroundColor: COLORS.surfaceAlt,
-          transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) }],
-        },
-      ]}>
-        {f ? (
-          <>
-            <MaterialCommunityIcons name={m.icon} size={18} color={m.color} />
-            <Text style={styles.slotLabel} numberOfLines={2}>{f.label}</Text>
-          </>
-        ) : (
-          <Text style={styles.slotEmpty}>{side}</Text>
-        )}
-      </Animated.View>
-    );
-  };
-
-  const linkColor = linkGlow.interpolate({ inputRange: [0, 1], outputRange: ['rgba(157,150,141,0.35)', 'rgba(196,62,96,0.95)'] });
-  const probeTotal = initialBudgetRef.current;
+  const connectionList = map.connections;
+  const selArc = selected.length === 2 && field.w ? arcPath(selected[0], selected[1]) : null;
+  const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] });
+  const bloomScale = bloom.interpolate({ inputRange: [0, 1], outputRange: [0.2, 26] });
+  const bloomOpacity = bloom.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 0] });
+  const depthPct = Math.round(depth.ratio * 100);
+  // Forgiving rule (§3.1): out of probes still advances the story.
+  const canContinue = revealsThisVisit > 0 || remaining === 0 || probesLeft <= 0;
+  const probeMeter = probeBudget <= 7
+    ? '◆'.repeat(probesLeft) + '◇'.repeat(Math.max(0, probeBudget - probesLeft))
+    : `${probesLeft}/${probeBudget}`;
 
   return (
-    <ScreenSurface variant="default" glow="violet">
-      {!reducedMotion ? (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
-      ) : null}
+    <ScreenSurface variant="default" glow="violet" frameless contentStyle={styles.surface}>
+      <Starfield reducedMotion={reducedMotion} />
 
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={styles.kickerWrap}>
-            <MaterialCommunityIcons name="map-marker-path" size={18} color={COLORS.underViolet} />
-            <Text style={styles.kicker}>THE UNDER-MAP</Text>
-          </View>
-          <SecondaryButton label={asPuzzle ? 'Re-read' : 'Close'} size="compact" onPress={() => navigation.goBack()}
-            icon={<MaterialCommunityIcons name={asPuzzle ? 'book-open-variant' : 'close'} size={16} color={COLORS.textSecondary} />} />
+        <View style={styles.headRow}>
+          <Text style={styles.kickerCyan}>◇ DESCENDED · THE LAYER BENEATH</Text>
+          <Text style={styles.kicker}>{(gateCaseNumber || '001A').slice(0, 3)} · {beat}</Text>
         </View>
-        <Text style={styles.status}>
-          {map.fragments.length} {map.fragments.length === 1 ? 'fragment' : 'fragments'}
-          {'  ·  '}{map.nodes.length} revealed
-          {remaining > 0 ? `  ·  ${remaining} link${remaining === 1 ? '' : 's'} you can sense` : ''}
+        <Text style={styles.umTitle}>The Under-Map</Text>
+        <Text style={styles.umInstr}>
+          Trace a line between two fragments that belong together. A true pair surfaces a <Text style={{ color: COLORS.underCyan }}>node</Text> — a truth that does not want to be seen. <Text style={styles.umInstrHold}>Hold a fragment to read its clue.</Text>
         </Text>
-
-        {/* Probe budget + flawless streak */}
-        {map.fragments.length > 0 ? (
-          <View style={styles.metaRow}>
-            <View style={styles.probeWrap}>
-              {Array.from({ length: probeTotal }).map((_, i) => (
-                <MaterialCommunityIcons
-                  key={i}
-                  name={i < probesLeft ? 'rhombus' : 'rhombus-outline'}
-                  size={13}
-                  color={i < probesLeft ? COLORS.accentSecondary : COLORS.textMuted}
-                />
-              ))}
-              <Text style={styles.probeText}>{probesLeft} probe{probesLeft === 1 ? '' : 's'}</Text>
-            </View>
-            {streak > 0 ? (
-              <View style={styles.streakChip}>
-                <MaterialCommunityIcons name="fire" size={12} color={COLORS.amberLight || COLORS.accentSecondary} />
-                <Text style={styles.streakText}>{streak} flawless</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {depth.total > 0 ? (
-          <View style={styles.depthWrap}>
-            <View style={styles.depthTrack}>
-              <View style={[styles.depthFill, { width: `${Math.max(4, depthPct)}%` }]} />
-            </View>
-            <Text style={styles.depthLabel}>{depthLabel} · {depthPct}% charted</Text>
+        {probesEnabled && map.fragments.length > 0 ? (
+          <View style={styles.probeRow}>
+            <Text style={[styles.probeGlyphs, probesLeft <= 1 && styles.probeGlyphsLow]}>{probeMeter}</Text>
+            <Text style={styles.probeLabel}>
+              {probesLeft === 0 ? 'no probes · the rest stays sensed' : `${probesLeft} probe${probesLeft === 1 ? '' : 's'} — a wrong link costs one`}
+            </Text>
           </View>
         ) : null}
       </View>
 
-      {map.fragments.length === 0 ? (
-        <View style={styles.empty}>
-          <MaterialCommunityIcons name="map-search-outline" size={28} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>
-            Nothing pinned yet. Examine the scenes — the things that don't belong are the threads into the Under-Map.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-          {/* Daily on-ramp — a fragment drifted to the surface overnight */}
-          {showStir ? (
-            <Pressable style={styles.stirCard} onPress={traceStir} accessibilityRole="button">
-              <View style={styles.stirHeader}>
-                <MaterialCommunityIcons name="weather-night" size={16} color={COLORS.amberLight || COLORS.accentSecondary} />
-                <Text style={styles.stirKicker}>THE UNDER-MAP STIRRED OVERNIGHT</Text>
-                {daysStreak > 0 ? <Text style={styles.stirStreak}>{daysStreak}-day streak</Text> : null}
+      {/* Constellation field */}
+      <Animated.View
+        style={[styles.field, { transform: [{ translateX: shakeX }] }]}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setField((p) => (Math.abs(p.w - width) > 1 || Math.abs(p.h - height) > 1 ? { w: width, h: height } : p));
+        }}
+      >
+        {field.w > 0 ? (
+          <Svg width={field.w} height={field.h} style={StyleSheet.absoluteFill}>
+            <Defs>
+              <SvgGradient id="arcgrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#c4b0ff" />
+                <Stop offset="0.5" stopColor={COLORS.underViolet} />
+                <Stop offset="1" stopColor={COLORS.underCyan} />
+              </SvgGradient>
+            </Defs>
+            {[0.22, 0.34, 0.46].map((r, i) => (
+              <Ellipse key={i} cx={field.w / 2} cy={field.h * 0.42} rx={field.w * (r + 0.02)} ry={field.h * r}
+                fill="none" stroke="rgba(167,139,250,0.18)" strokeWidth="1" strokeDasharray="2 7" />
+            ))}
+            {connectionList.map((c, i) => {
+              const d = arcPath(c.a, c.b);
+              if (c.unresolvedReading) {
+                return <Path key={`c${i}`} d={d} fill="none" stroke="rgba(157,150,141,0.5)" strokeWidth={2} strokeLinecap="round" strokeDasharray="4 6" />;
+              }
+              return (
+                <React.Fragment key={`c${i}`}>
+                  {/* soft bloom under-stroke (fakes the SVG gaussian glow) */}
+                  <Path d={d} fill="none" stroke="url(#arcgrad)" strokeWidth={c.scope === 'arc' ? 9 : 7} strokeLinecap="round" opacity={0.22} />
+                  <Path d={d} fill="none" stroke="url(#arcgrad)" strokeWidth={c.scope === 'arc' ? 3 : 2.2} strokeLinecap="round" opacity={0.97} />
+                  <Path d={d} fill="none" stroke="#eee6ff" strokeWidth={0.8} strokeLinecap="round" opacity={0.5} />
+                </React.Fragment>
+              );
+            })}
+            {selArc ? (
+              <React.Fragment>
+                <Path d={selArc} fill="none" stroke="rgba(245,235,255,0.35)" strokeWidth={6} strokeLinecap="round" />
+                <Path d={selArc} fill="none" stroke="rgba(245,235,255,0.85)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" />
+              </React.Fragment>
+            ) : null}
+          </Svg>
+        ) : null}
+
+        {/* node bloom */}
+        {bloomAt ? (
+          <Animated.View pointerEvents="none" style={[styles.bloom, { left: bloomAt.x - 4, top: bloomAt.y - 4, opacity: bloomOpacity, transform: [{ scale: bloomScale }] }]} />
+        ) : null}
+
+        {/* stars */}
+        {field.w > 0 && map.fragments.map((f) => {
+          const p = placed[f.id] || { nx: 0.5, ny: 0.5 };
+          const x = p.nx * field.w; const y = p.ny * field.h;
+          const kc = colorFor(f.kind);
+          const isSel = selected.includes(f.id);
+          const mapped = connectionList.some((c) => c.a === f.id || c.b === f.id);
+          // Inert = no remaining unfound relation touches this fragment (and we have
+          // live info to go on). These recede into the background of the map.
+          const inert = liveFragmentIds.size > 0 && !liveFragmentIds.has(f.id) && !isSel;
+          const motif = isMotif(f);
+          const keystone = isKeystone(f);
+          return (
+            <Pressable
+              key={f.id}
+              onPress={() => handleTapStar(f.id)}
+              onLongPress={() => { if (!node) { selectionHaptic(); setInspect(f); } }}
+              delayLongPress={240}
+              style={[styles.star, { left: x - 45, top: y - 23 }, inert && styles.starInert]}
+              accessibilityRole="button"
+              accessibilityLabel={f.label}
+              accessibilityHint="Tap to connect, hold to read the clue"
+            >
+              <View style={styles.coreWrap}>
+                {!reducedMotion ? (
+                  <Animated.View pointerEvents="none" style={[styles.starRing, { borderColor: kc, opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
+                ) : null}
+                {keystone ? <View pointerEvents="none" style={styles.keystoneRing} /> : null}
+                <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : inert ? 0.14 : mapped ? 0.65 : 0.42, transform: [{ scale: isSel ? 1.2 : inert ? 0.6 : mapped ? 1 : 0.82 }] }]} />
+                <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }, inert && styles.starCoreInert]} />
+                {motif ? <View style={styles.motifBadge}><Text style={styles.motifBadgeText}>×{f.seen}</Text></View> : null}
               </View>
-              <Text style={styles.stirBody}>
-                <Text style={styles.stirFrag}>{stirFrag.label}</Text> has drifted to the surface. Trace it back into the map.
-              </Text>
+              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped, inert && styles.starLabelInert]} numberOfLines={2}>{f.label}</Text>
             </Pressable>
-          ) : null}
+          );
+        })}
 
-          {/* The map, taking shape — tap a star to load it into the bench */}
-          {map.fragments.length >= 2 ? (
-            <View style={styles.constellationWrap}>
-              <UnderMapConstellation
-                map={map}
-                height={200}
-                selectedIds={[slotA, slotB]}
-                onTapNode={loadSlot}
-              />
-            </View>
-          ) : null}
+        {map.fragments.length === 0 ? (
+          <View style={styles.empty}><Text style={styles.emptyText}>No fragments yet. Examine the scenes — the things that don’t belong are the threads into the Under-Map.</Text></View>
+        ) : null}
+      </Animated.View>
 
-          {/* Connection bench */}
-          <Text style={styles.sectionLabel}>PROBE A CONNECTION</Text>
-          <View style={styles.bench}>
-            {renderSlot(slotA, 'Pick one')}
-            <Animated.View style={[styles.link, { backgroundColor: linkColor }]} />
-            {renderSlot(slotB, 'Pick another')}
+      {/* Depth meter + continue / bench */}
+      <View style={styles.footer}>
+        <View style={styles.depthWrap}>
+          <View style={styles.depthTrack}>
+            <View style={[styles.depthFill, { width: `${Math.max(4, depthPct)}%` }]} />
           </View>
-
-          {bondHint && !chooser && !feedback ? (
-            <Text style={styles.bondHint}>{bondHint}</Text>
-          ) : null}
-
-          {/* STEP 2 — choose-the-truth */}
-          {chooser ? (
-            <View style={styles.chooserCard}>
-              <View style={styles.chooserHeader}>
-                <MaterialCommunityIcons name="help-rhombus-outline" size={18} color={COLORS.accentSecondary} />
-                <Text style={styles.chooserKicker}>
-                  {chooser.unresolved ? 'READ IT AGAIN — WHAT DOES IT MEAN?' : 'A LINK. WHAT DOES IT MEAN?'}
-                </Text>
-              </View>
-              {chooser.options.map((opt, i) => (
-                <Pressable
-                  key={i}
-                  onPress={() => chooseReading(opt)}
-                  style={({ pressed }) => [styles.readingOption, pressed && { backgroundColor: COLORS.surfaceAlt }]}
-                  accessibilityRole="button"
-                >
-                  <MaterialCommunityIcons name="circle-outline" size={14} color={COLORS.textMuted} />
-                  <Text style={styles.readingText}>{opt}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : feedback ? (
-            feedback.tone === 'reveal' ? (
-              <Animated.View style={[styles.revealCard, {
-                opacity: reveal.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
-                transform: [
-                  { translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
-                  { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) },
-                ],
-              }]}>
-                <View style={styles.revealHeader}>
-                  <MaterialCommunityIcons name="map-marker-star" size={20} color={COLORS.underViolet} />
-                  <Text style={styles.revealKicker}>THE MAP REVEALS</Text>
-                </View>
-                <Text style={styles.revealText}>{feedback.text}</Text>
-              </Animated.View>
-            ) : feedback.tone === 'blur' ? (
-              <View style={styles.blurCard}>
-                <MaterialCommunityIcons name="blur" size={18} color={COLORS.amberLight || COLORS.accentSecondary} />
-                <Text style={styles.blurText}>{feedback.text}</Text>
-              </View>
-            ) : (
-              <Text style={[styles.feedback, feedback.tone === 'none' && styles.feedbackNone]}>{feedback.text}</Text>
-            )
-          ) : null}
-
-          {!chooser ? (
-            <PrimaryButton
-              label="Probe"
-              onPress={attemptProbe}
-              disabled={!slotA || !slotB || probesLeft <= 0}
-              icon={<MaterialCommunityIcons name="vector-link" size={18} color={COLORS.textSecondary} />}
-              style={{ marginTop: SPACING.md }}
-            />
-          ) : null}
-
-          {/* Fragments — connectable first, the rest collapsed into an archive */}
-          <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>
-            {connectableFrags.length ? 'THREADS YOU CAN STILL LINK' : 'FRAGMENTS'}
+          <Text style={styles.depthLabel}>
+            {depthPct >= 100 ? 'The hidden world stands revealed' : depthPct >= 50 ? 'The map is taking shape' : 'Something is forming in the dark'} · {depthPct}%
+            {streak > 0 ? `  ·  ${streak} flawless` : ''}
           </Text>
-          {connectableFrags.length ? (
-            <View style={styles.fragWrap}>{connectableFrags.map(renderFrag)}</View>
-          ) : (
-            <Text style={styles.allMapped}>
-              Every thread here is mapped. Press on — or open the full map below.
-            </Text>
-          )}
-
-          {otherFrags.length ? (
-            <>
-              <Pressable
-                onPress={() => setShowAllFrags((v) => !v)}
-                style={styles.archiveToggle}
-                accessibilityRole="button"
-              >
-                <MaterialCommunityIcons
-                  name={showAllFrags ? 'chevron-down' : 'chevron-right'}
-                  size={16}
-                  color={COLORS.textSecondary}
-                />
-                <Text style={styles.archiveToggleText}>
-                  {showAllFrags ? 'Hide' : 'Show'} the rest of the map · {otherFrags.length} {otherFrags.length === 1 ? 'fragment' : 'fragments'}
-                </Text>
-              </Pressable>
-              {showAllFrags ? <View style={styles.fragWrap}>{otherFrags.map(renderFrag)}</View> : null}
-            </>
-          ) : null}
-
-          {/* Revealed nodes */}
-          {map.nodes.length > 0 ? (
-            <>
-              <Text style={[styles.sectionLabel, { marginTop: SPACING.xl }]}>WHAT THE MAP HAS REVEALED</Text>
-              <View style={styles.nodeList}>
-                {map.nodes.map((n) => {
-                  const arc = n.scope === 'arc' && !n.unresolvedReading;
-                  return (
-                    <View key={n.id} style={[styles.nodeRow, n.unresolvedReading && styles.nodeRowBlur, arc && styles.nodeRowArc]}>
-                      <MaterialCommunityIcons
-                        name={n.unresolvedReading ? 'blur' : arc ? 'star-circle' : 'map-marker-check'}
-                        size={16}
-                        color={n.unresolvedReading ? COLORS.textMuted : arc ? (COLORS.amberLight || COLORS.accentSecondary) : COLORS.accentSecondary}
-                      />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        {arc ? <Text style={styles.arcLabel}>ARC TRUTH</Text> : null}
-                        <Text style={[styles.nodeText, n.unresolvedReading && styles.nodeTextBlur]}>
-                          {n.unresolvedReading ? 'A link you haven’t read true yet — re-read it to settle its meaning.' : n.revelation}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </>
-          ) : null}
-
           {remaining > 0 ? (
-            <Text style={styles.deeper}>The map runs deeper. {remaining} link{remaining === 1 ? '' : 's'} wait to be drawn.</Text>
+            <Text style={styles.remainLabel}>{remaining} truth{remaining === 1 ? '' : 's'} still hidden in the dark</Text>
           ) : null}
-        </ScrollView>
-      )}
-
-      {asPuzzle ? (
-        <View style={styles.gateFooter}>
-          <Text style={styles.gateHint}>
-            {revealsThisVisit > 0
-              ? `${revealsThisVisit} new ${revealsThisVisit === 1 ? 'truth' : 'truths'} drawn. The way down is open.`
-              : remaining > 0
-                ? 'Probe a connection to pull the map open — or press on into the dark.'
-                : 'Nothing new to link here yet. Press on.'}
-          </Text>
-          {genError ? <Text style={styles.gateError}>{genError}</Text> : null}
-          <PrimaryButton
-            label={continuing ? 'Descending…' : genError ? 'Retry' : 'Continue the descent'}
-            onPress={handleContinueDescent}
-            disabled={continuing}
-            icon={<MaterialCommunityIcons name="stairs-down" size={18} color={COLORS.textSecondary} />}
-          />
         </View>
+        {asPuzzle && canContinue ? (
+          <>
+            {genError ? <Text style={styles.genError}>{genError}</Text> : null}
+            <Pressable onPress={handleContinue} disabled={continuing} style={[styles.continueBtn, continuing && { opacity: 0.6 }]}>
+              <Text style={styles.continueText}>{continuing ? 'Descending…' : genError ? 'Retry' : 'Continue the descent'}</Text>
+              <Text style={styles.continueArrow}>↓</Text>
+            </Pressable>
+          </>
+        ) : (
+          <View style={styles.bench}>
+            {selected.length === 0 && <Text style={styles.benchText}>Tap a fragment to begin a connection.</Text>}
+            {selected.length === 1 && <Text style={styles.benchText}>Holding <Text style={styles.benchStrong}>{fragById(selected[0])?.label}</Text> — choose its pair.</Text>}
+            {selected.length === 2 && <Text style={[styles.benchText, styles.benchReading]}>Reading the resonance…</Text>}
+          </View>
+        )}
+        {asPuzzle ? (
+          <Pressable onPress={() => navigation.goBack()} style={styles.reread}><Text style={styles.rereadText}>‹ Re-read the scene</Text></Pressable>
+        ) : (
+          <Pressable onPress={() => navigation.goBack()} style={styles.reread}><Text style={styles.rereadText}>‹ Close</Text></Pressable>
+        )}
+      </View>
+
+      {toast ? (
+        <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>
+      ) : null}
+
+      {/* Clue inspector — read the full fragment the player collected */}
+      {inspect ? (
+        <Pressable style={styles.nodeOverlay} onPress={() => setInspect(null)}>
+          <View style={styles.nodeCard} onStartShouldSetResponder={() => true}>
+            <View style={styles.nodeSheen} />
+            <View style={styles.inspectHead}>
+              <View style={[styles.kdot, { backgroundColor: colorFor(inspect.kind), shadowColor: colorFor(inspect.kind) }]} />
+              <Text style={[styles.inspectTag, { color: colorFor(inspect.kind) }]}>
+                {String(inspect.kind || 'anomaly').toUpperCase()}{inspect.anomalous ? ' · ANOMALY' : ''}
+              </Text>
+            </View>
+            <Text style={styles.nodeTitle}>{inspect.label}</Text>
+            {inspect.detail ? (
+              <Text style={styles.inspectDetail}>{inspect.detail}</Text>
+            ) : (
+              <Text style={[styles.inspectDetail, { color: COLORS.textMuted }]}>An anomaly Jack collected. Its meaning surfaces when you pair it with another fragment.</Text>
+            )}
+            {inspect.phrase ? (
+              <Text style={styles.inspectPhrase}>Spotted in the scene: “{inspect.phrase}”</Text>
+            ) : null}
+            <Pressable style={styles.ghostBtn} onPress={() => setInspect(null)}><Text style={styles.ghostText}>Close</Text></Pressable>
+          </View>
+        </Pressable>
+      ) : null}
+
+      {/* Node card overlay (choose-the-truth → revelation) */}
+      {node ? (
+        <Pressable style={styles.nodeOverlay} onPress={node.mode === 'choose' ? undefined : closeNode}>
+          <View style={styles.nodeCard} onStartShouldSetResponder={() => true}>
+            <View style={styles.nodeSheen} />
+            {node.mode === 'choose' ? (
+              <>
+                <Text style={styles.nodeTag}>◆ A NODE STIRS</Text>
+                <Text style={styles.nodeTitle}>{node.unresolved ? 'Read it again — what does it mean?' : 'What does this connection mean?'}</Text>
+                <View style={{ gap: 10, marginTop: 6 }}>
+                  {node.options.map((opt, i) => (
+                    <Pressable key={i} style={styles.readingOpt} onPress={() => chooseReading(opt)}>
+                      <Text style={styles.readingText}>{opt}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : node.mode === 'blurred' ? (
+              <>
+                <Text style={[styles.nodeTag, { color: COLORS.textMuted }]}>◇ THE LINK WON’T SETTLE</Text>
+                <Text style={styles.nodeRev}>The connection holds — but its meaning blurs. Read the scene again; return and read it true.</Text>
+                <Pressable style={styles.ghostBtn} onPress={closeNode}><Text style={styles.ghostText}>Return to the map</Text></Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.nodeTag, node.scope === 'arc' && styles.nodeTagArc]}>
+                  {node.scope === 'arc' ? '◆ AN ARC TRUTH SURFACES' : '◆ NODE SURFACED'}
+                </Text>
+                {node.scope === 'arc' ? (
+                  <Text style={styles.arcSub}>The payoff for your long attention — a truth that spans chapters.</Text>
+                ) : null}
+                <Text style={styles.nodeTitle}>{node.revelation}</Text>
+                <View style={styles.nodeFrags}>
+                  {[node.aId, node.bId].map((id) => {
+                    const f = fragById(id);
+                    return f ? (
+                      <View key={id} style={styles.nodeFrag}>
+                        <View style={[styles.kdot, { backgroundColor: colorFor(f.kind), shadowColor: colorFor(f.kind) }]} />
+                        <Text style={styles.nodeFragText}>{f.label}</Text>
+                      </View>
+                    ) : null;
+                  })}
+                </View>
+                <Pressable style={styles.ghostBtn} onPress={closeNode}><Text style={styles.ghostText}>Return to the map</Text></Pressable>
+              </>
+            )}
+          </View>
+        </Pressable>
       ) : null}
     </ScreenSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { marginBottom: SPACING.sm },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  kickerWrap: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
-  status: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.xs, letterSpacing: 0.5 },
-  // Probe meter + streak
-  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
-  probeWrap: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  probeText: { fontFamily: FONTS.monoBold, fontSize: 10, letterSpacing: 0.5, color: COLORS.textSecondary, marginLeft: SPACING.xs },
-  streakChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
-  streakText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
-  // Map depth ("the map is taking shape")
-  depthWrap: { marginTop: SPACING.sm, gap: 4 },
-  depthTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceAlt, overflow: 'hidden' },
-  depthFill: { height: 4, borderRadius: 2, backgroundColor: COLORS.underViolet },
-  depthLabel: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.underViolet, fontStyle: 'italic', letterSpacing: 0.3 },
-  // Motif badge
-  motifBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.12)' },
-  motifText: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
-  // Keystone badge (a motif that recurred across chapters)
-  keystoneBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, backgroundColor: 'rgba(241,197,114,0.18)', borderWidth: 1, borderColor: 'rgba(241,197,114,0.4)' },
-  keystoneText: { fontFamily: FONTS.monoBold, fontSize: 8.5, letterSpacing: 0.8, color: COLORS.amberLight || COLORS.accentSecondary },
-  scroll: { flex: 1 },
-  body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
-  constellationWrap: {
-    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.panelOutline,
-    backgroundColor: 'rgba(8,6,12,0.5)', overflow: 'hidden', marginBottom: SPACING.lg,
+  surface: { paddingHorizontal: 0, paddingVertical: 0 },
+  header: { paddingHorizontal: 22, paddingTop: 30, paddingBottom: 12 },
+  headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  kicker: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 3, color: COLORS.textMuted },
+  kickerCyan: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
+  umTitle: { fontFamily: FONTS.secondaryBold, fontSize: 31, lineHeight: 33, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 30, textShadowOffset: { width: 0, height: 0 } },
+  umInstr: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.3, color: COLORS.textMuted, marginTop: 9, lineHeight: 17 },
+  umInstrHold: { color: COLORS.underCyan },
+  probeRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 12 },
+  probeGlyphs: { fontFamily: FONTS.mono, fontSize: 14, letterSpacing: 2, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } },
+  probeGlyphsLow: { color: COLORS.bloodRed, textShadowColor: 'transparent' },
+  probeLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textMuted, textTransform: 'uppercase', flexShrink: 1 },
+
+  field: { flex: 1, marginHorizontal: 6, position: 'relative', minHeight: 0 },
+  bloom: { position: 'absolute', width: 8, height: 8, borderRadius: 8, backgroundColor: '#cfe6ff' },
+
+  star: { position: 'absolute', width: 90, alignItems: 'center', gap: 7, zIndex: 3 },
+  coreWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  starGlow: { position: 'absolute', width: 40, height: 40, borderRadius: 20, top: 3, left: 3 },
+  starRing: { position: 'absolute', width: 26, height: 26, borderRadius: 13, top: 10, left: 10, borderWidth: 1 },
+  starCore: {
+    width: 13, height: 13, borderRadius: 7,
+    shadowOpacity: 1, shadowRadius: 13, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
-  // Daily stir
-  stirCard: {
-    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(241,197,114,0.4)',
-    backgroundColor: 'rgba(241,197,114,0.08)', padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.lg,
+  starCoreSel: { transform: [{ scale: 1.4 }], borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)' },
+  keystoneRing: { position: 'absolute', width: 30, height: 30, borderRadius: 15, top: 8, left: 8, borderWidth: 1, borderColor: 'rgba(241,197,114,0.7)' },
+  motifBadge: { position: 'absolute', top: 2, right: 2, minWidth: 15, height: 15, borderRadius: 8, paddingHorizontal: 3, backgroundColor: 'rgba(167,139,250,0.92)', alignItems: 'center', justifyContent: 'center' },
+  motifBadgeText: { fontFamily: FONTS.monoBold, fontSize: 8, color: '#120d0a' },
+  starLabel: { fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
+  starLabelSel: { color: '#fff', fontFamily: FONTS.monoBold },
+  starLabelMapped: { color: COLORS.fogGrayLight },
+  starInert: { opacity: 0.55 },
+  starCoreInert: { opacity: 0.45 },
+  starLabelInert: { opacity: 0.4, fontSize: 8.5 },
+
+  empty: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  emptyText: { fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textMuted, textAlign: 'center', lineHeight: 18 },
+
+  footer: { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 16 },
+  depthWrap: { marginBottom: 13, gap: 6 },
+  depthTrack: { height: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  depthFill: { height: 6, borderRadius: 999, backgroundColor: COLORS.underViolet },
+  depthLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underCyan },
+  remainLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.textMuted },
+
+  continueBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14,
+    backgroundColor: COLORS.underViolet, shadowColor: COLORS.underViolet, shadowOpacity: 0.5, shadowRadius: 22, shadowOffset: { width: 0, height: 8 },
   },
-  stirHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
-  stirKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 1.6, color: COLORS.amberLight || COLORS.accentSecondary, flex: 1 },
-  stirStreak: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 0.5, color: COLORS.amberLight || COLORS.accentSecondary },
-  stirBody: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
-  stirFrag: { fontFamily: FONTS.primarySemiBold, color: COLORS.amberLight || COLORS.accentSecondary },
-  sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
-  // Bench
-  bench: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
-  slot: {
-    flex: 1, minHeight: 64, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.panelOutline,
-    backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center', padding: SPACING.sm, gap: 4,
+  continueText: { fontFamily: FONTS.primarySemiBold, fontWeight: '700', fontSize: 14, color: '#15101f' },
+  continueArrow: { fontFamily: FONTS.mono, fontSize: 14, color: '#15101f' },
+  genError: { fontFamily: FONTS.mono, fontSize: 11, color: COLORS.bloodRed, textAlign: 'center', marginBottom: 8 },
+
+  bench: {
+    minHeight: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18,
+    borderWidth: 1, borderColor: 'rgba(167,139,250,0.2)', borderRadius: 14, backgroundColor: 'rgba(20,16,32,0.4)',
   },
-  slotLabel: { fontFamily: FONTS.primaryMedium, fontSize: FONT_SIZES.xs, color: COLORS.offWhite, textAlign: 'center' },
-  slotEmpty: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
-  link: {
-    width: 28, height: 3, borderRadius: 2,
-    shadowColor: COLORS.bloodRed, shadowOpacity: 0.8, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
+  benchText: { fontFamily: FONTS.mono, fontSize: 11.5, color: COLORS.textMuted, textAlign: 'center', lineHeight: 17 },
+  benchStrong: { color: COLORS.textPrimary, fontFamily: FONTS.monoBold },
+  benchReading: { color: COLORS.underCyan },
+
+  reread: { alignSelf: 'center', paddingVertical: 10 },
+  rereadText: { fontFamily: FONTS.mono, fontSize: 12, letterSpacing: 0.6, color: COLORS.textMuted },
+
+  toast: {
+    position: 'absolute', bottom: 150, alignSelf: 'center', backgroundColor: 'rgba(14,11,24,0.92)',
+    borderWidth: 1, borderColor: 'rgba(167,139,250,0.3)', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10,
   },
-  bondHint: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.accentCyan, fontStyle: 'italic', marginTop: SPACING.sm, lineHeight: LINE_HEIGHTS.cozy },
-  // Choose-the-truth
-  chooserCard: {
-    marginTop: SPACING.md, backgroundColor: COLORS.glassTintStrong, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.glassEdge, padding: SPACING.md, gap: SPACING.sm,
+  toastText: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.4, color: COLORS.textSecondary },
+
+  nodeOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(7,6,14,0.66)', justifyContent: 'flex-end', zIndex: 40 },
+  nodeCard: {
+    margin: 14, padding: 24, borderRadius: 24, overflow: 'hidden',
+    backgroundColor: 'rgba(20,16,34,0.92)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.34)',
+    shadowColor: COLORS.underViolet, shadowOpacity: 0.5, shadowRadius: 40, shadowOffset: { width: 0, height: -8 },
   },
-  chooserHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
-  chooserKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 2, color: COLORS.underViolet, flex: 1 },
-  readingOption: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.panelOutline, padding: SPACING.md,
-  },
-  readingText: { flex: 1, fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
-  // Reveal
-  revealCard: {
-    marginTop: SPACING.md, backgroundColor: COLORS.glassTintStrong, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.glassEdge, padding: SPACING.lg, gap: SPACING.sm,
-    shadowColor: COLORS.underViolet, shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
-  },
-  revealHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  revealKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
-  revealText: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.md, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.relaxed },
-  // Blurred (wrong reading)
-  blurCard: {
-    marginTop: SPACING.md, flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-    backgroundColor: 'rgba(241,197,114,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(241,197,114,0.22)', padding: SPACING.md,
-  },
-  blurText: { flex: 1, fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: LINE_HEIGHTS.cozy },
-  feedback: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.md, lineHeight: LINE_HEIGHTS.cozy },
-  feedbackNone: { color: COLORS.textMuted, fontStyle: 'italic' },
-  // Fragments
-  allMapped: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, fontStyle: 'italic', lineHeight: LINE_HEIGHTS.cozy },
-  archiveToggle: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: SPACING.md, marginBottom: SPACING.sm },
-  archiveToggleText: { fontFamily: FONTS.primaryMedium, fontSize: FONT_SIZES.xs, letterSpacing: 0.5, color: COLORS.textSecondary },
-  fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  frag: {
-    width: '47%', flexGrow: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
-    borderWidth: 1, borderLeftWidth: 3, borderColor: COLORS.panelOutline, padding: SPACING.md, gap: 4,
-  },
-  fragTop: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  fragKind: { fontFamily: FONTS.monoBold, fontSize: 10, letterSpacing: 1.5 },
-  fragLabel: { fontFamily: FONTS.primarySemiBold, fontSize: FONT_SIZES.sm, color: COLORS.offWhite },
-  fragDetail: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, lineHeight: LINE_HEIGHTS.cozy },
-  // Nodes
-  nodeList: { gap: SPACING.sm },
-  nodeRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-    backgroundColor: 'rgba(241,197,114,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(241,197,114,0.25)', padding: SPACING.md,
-  },
-  nodeRowBlur: { backgroundColor: 'rgba(157,150,141,0.06)', borderColor: COLORS.panelOutline },
-  nodeRowArc: { backgroundColor: 'rgba(241,197,114,0.12)', borderColor: 'rgba(241,197,114,0.5)' },
-  arcLabel: { fontFamily: FONTS.monoBold, fontSize: 9, letterSpacing: 1.5, color: COLORS.amberLight || COLORS.accentSecondary },
-  nodeText: { fontFamily: FONTS.secondary, fontSize: FONT_SIZES.sm, color: COLORS.offWhite, lineHeight: LINE_HEIGHTS.cozy },
-  nodeTextBlur: { color: COLORS.textMuted, fontStyle: 'italic' },
-  deeper: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontStyle: 'italic', textAlign: 'center', marginTop: SPACING.lg },
-  // Puzzle gate footer
-  gateFooter: {
-    paddingTop: SPACING.md, paddingBottom: SPACING.sm, gap: SPACING.sm,
-    borderTopWidth: 1, borderTopColor: COLORS.panelOutline,
-  },
-  gateHint: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center', lineHeight: LINE_HEIGHTS.cozy },
-  gateError: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.bloodRed, textAlign: 'center' },
-  // Empty
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.md, paddingHorizontal: SPACING.lg },
-  emptyText: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textMuted, textAlign: 'center', lineHeight: LINE_HEIGHTS.relaxed },
+  nodeSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: 'rgba(200,230,255,0.6)' },
+  nodeTag: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 4, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
+  nodeTagArc: { color: COLORS.amberLight, textShadowColor: 'transparent' },
+  arcSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.4, color: COLORS.amberLight, marginTop: 6 },
+  nodeTitle: { fontFamily: FONTS.secondaryBold, fontSize: 21, lineHeight: 26, color: '#f3eeff', marginTop: 12 },
+  nodeRev: { fontFamily: FONTS.primary, fontSize: 14.5, lineHeight: 23, color: COLORS.textSecondary, marginTop: 12 },
+  nodeFrags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16, marginBottom: 18 },
+  nodeFrag: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.25)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  nodeFragText: { fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary },
+  kdot: { width: 7, height: 7, borderRadius: 4, shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  inspectHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  inspectTag: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 3.4 },
+  inspectDetail: { fontFamily: FONTS.primary, fontSize: 15, lineHeight: 23, color: COLORS.textSecondary, marginTop: 12 },
+  inspectPhrase: { fontFamily: FONTS.mono, fontSize: 11.5, fontStyle: 'italic', letterSpacing: 0.3, lineHeight: 18, color: COLORS.textMuted, marginTop: 14, marginBottom: 4 },
+  readingOpt: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.25)', borderRadius: 12, padding: 14 },
+  readingText: { fontFamily: FONTS.primary, fontSize: 14, lineHeight: 20, color: COLORS.textPrimary },
+  ghostBtn: { marginTop: 6, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(245,230,205,0.2)', backgroundColor: 'rgba(26,21,16,0.55)', alignItems: 'center' },
+  ghostText: { fontFamily: FONTS.primarySemiBold, fontSize: 14, color: COLORS.textPrimary },
 });

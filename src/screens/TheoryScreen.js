@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Svg, { Line as SvgLine, Circle as SvgCircle } from 'react-native-svg';
 import ScreenSurface from '../components/ScreenSurface';
 import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
@@ -29,10 +30,32 @@ import { SPACING, RADIUS } from '../constants/layout';
 const KIND_META = {
   [FRAGMENT_KIND.SYMBOL]: { icon: 'star-four-points-outline', color: COLORS.accentSecondary },
   [FRAGMENT_KIND.PLACE]: { icon: 'map-marker-outline', color: COLORS.accentCyan },
-  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.bloodRed },
+  [FRAGMENT_KIND.PERSON]: { icon: 'account-outline', color: COLORS.kindPerson },
   [FRAGMENT_KIND.PHENOMENON]: { icon: 'shimmer', color: COLORS.accentViolet },
 };
 const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON];
+
+// Per-belief tone (the design cycles amber → violet → cyan across the cards).
+const BELIEF_TONES = [COLORS.amberLight, COLORS.underViolet, COLORS.underCyan];
+const toneFor = (i) => BELIEF_TONES[i % BELIEF_TONES.length];
+
+/** A small staked-fragment constellation glyph, tone-colored (design's belief-glyph). */
+function BeliefGlyph({ tone, on }) {
+  const pts = [
+    { x: 26, y: 10 }, { x: 42, y: 34 }, { x: 10, y: 34 },
+  ];
+  return (
+    <Svg width={52} height={52}>
+      {pts.map((p, i) => {
+        const q = pts[(i + 1) % pts.length];
+        return <SvgLine key={i} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke={on ? 'rgba(220,225,255,0.6)' : 'rgba(160,160,180,0.3)'} strokeWidth="1" />;
+      })}
+      {pts.map((p, i) => (
+        <SvgCircle key={`c${i}`} cx={p.x} cy={p.y} r={on ? 3 : 2.4} fill={tone} opacity={on ? 1 : 0.7} />
+      ))}
+    </Svg>
+  );
+}
 
 export default function TheoryScreen({ navigation, route }) {
   const game = useGame();
@@ -92,7 +115,7 @@ export default function TheoryScreen({ navigation, route }) {
   }, [route?.params?.decisionOptions, game.activeCase, caseNumber, chapter, storyCampaign.pathHistory, storyCampaign.currentPathKey, storyCampaign.branchingChoices]);
 
   const [beliefKey, setBeliefKey] = useState(null);
-  const [selected, setSelected] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set()); // fragments whose clue is opened
   const [sealed, setSealed] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const [genError, setGenError] = useState(null);
@@ -100,15 +123,16 @@ export default function TheoryScreen({ navigation, route }) {
   const sealAnim = useRef(new Animated.Value(0)).current;
   const chosenBelief = beliefs.find((b) => b.key === beliefKey) || null;
 
-  const toggleFragment = useCallback((id) => {
-    if (sealed) return;
+  // Evidence is read-only reference: tapping a fragment expands its full clue to help
+  // the player weigh their reading. It is NOT staked/graded — the belief is the choice.
+  const toggleExpand = useCallback((id) => {
     selectionHaptic();
-    setSelected((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-  }, [sealed]);
+  }, []);
 
   const sealTheory = useCallback(() => {
     if (sealed) return;
@@ -118,8 +142,16 @@ export default function TheoryScreen({ navigation, route }) {
       setGenError('Choose what you believe before you seal it.');
       return;
     }
-    const fragmentIds = selected.size > 0 ? Array.from(selected) : map.fragments.map((f) => f.id);
+    // All collected fragments are recorded with the sealed reading (for the record /
+    // Codex). There is no player-facing staking — evidence is reference, not a choice.
+    const fragmentIds = map.fragments.map((f) => f.id);
     const interpretation = chosenBelief?.title || chosenBelief?.focus || 'A reading of the hidden world.';
+    // The readings the player turned away from — these seed "The Other Reader" (the
+    // foil born from the road not taken). underMap.recordTheory takes the strongest.
+    const rejected = beliefs
+      .filter((b) => b && b.key !== chosenBelief?.key)
+      .map((b) => b.title || b.focus || '')
+      .filter(Boolean);
 
     // The belief is the chapter decision: store it as the pre-decision (drives the
     // branch into the next chapter) AND record it on the Under-Map as a sealed theory.
@@ -129,7 +161,7 @@ export default function TheoryScreen({ navigation, route }) {
       caseNumber,
     );
     if (fragmentIds.length) {
-      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation });
+      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected });
     }
 
     setGenError(null);
@@ -139,7 +171,7 @@ export default function TheoryScreen({ navigation, route }) {
     sealAnim.setValue(0);
     if (reducedMotion) { sealAnim.setValue(1); }
     else { Animated.spring(sealAnim, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start(); }
-  }, [sealed, beliefs.length, chosenBelief, selected, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
+  }, [sealed, beliefs, chosenBelief, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
 
   // Cross into the next chapter: pre-warm generation under the SAME key the advance
   // will set, then apply the sealed decision (clobber-safe) and navigate.
@@ -189,8 +221,13 @@ export default function TheoryScreen({ navigation, route }) {
     }
 
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
-    navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
-  }, [continuing, caseNumber, caseId, map, unlockEnding, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
+    // Cross via the wax-seal chapter-close (design's Sealed screen).
+    navigation.replace('Sealed', {
+      beliefTitle: chosenBelief?.title || (map.theories[0] && map.theories[0].interpretation) || null,
+      chapter: sealedChapter,
+      nextCaseNumber,
+    });
+  }, [continuing, caseNumber, caseId, map, chosenBelief, unlockEnding, storyCampaign.preDecision, storyCampaign.choiceHistory, game, completeLogicPuzzle, navigation]);
 
   const sealScale = sealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
   const sealOpacity = sealAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] });
@@ -200,15 +237,17 @@ export default function TheoryScreen({ navigation, route }) {
       {!reducedMotion ? (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}><DustLayer /></View>
       ) : null}
+      {/* light-shaft from above — the threshold (design) */}
+      <View pointerEvents="none" style={styles.lightShaft} />
 
       <View style={styles.header}>
         <View style={styles.kickerRow}>
           <MaterialCommunityIcons name="eye-circle-outline" size={18} color={COLORS.underViolet} />
           <Text style={styles.kicker}>THE THEORY{chapter ? ` · CHAPTER ${chapter}` : ''}</Text>
         </View>
-        <Text style={styles.title}>What is the Under-Map?</Text>
+        <Text style={styles.title}>What do you believe?</Text>
         <Text style={styles.lede}>
-          Commit to a reading of the hidden world. The belief you stake decides which way it pulls you next — and what it lets you see.
+          Choose what you believe is really happening beneath Ashport. The chapter ahead bears your reading out — or subverts it — and steers where the story goes.
         </Text>
       </View>
 
@@ -237,97 +276,98 @@ export default function TheoryScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* What the map has revealed so far */}
+        {/* What the map has revealed so far (context for the choice; full list in the Codex) */}
         {map.nodes.length > 0 ? (
           <>
             <Text style={styles.sectionLabel}>WHAT THE MAP HAS REVEALED</Text>
+            <Text style={styles.sectionHint}>The truths you've pulled from the Under-Map — what your reading rests on.</Text>
             <View style={styles.nodeList}>
-              {map.nodes.slice(0, 6).map((n) => (
+              {map.nodes.slice(0, 3).map((n) => (
                 <View key={n.id} style={styles.nodeRow}>
                   <MaterialCommunityIcons name="map-marker-star" size={15} color={COLORS.accentSecondary} />
                   <Text style={styles.nodeText}>{n.revelation}</Text>
                 </View>
               ))}
+              {map.nodes.length > 3 ? (
+                <Text style={styles.nodeMore}>+{map.nodes.length - 3} more truth{map.nodes.length - 3 === 1 ? '' : 's'} you've uncovered</Text>
+              ) : null}
             </View>
           </>
         ) : null}
 
-        {/* The competing beliefs — this is the chapter decision */}
-        <Text style={[styles.sectionLabel, { marginTop: map.nodes.length ? SPACING.lg : 0 }]}>WHAT DO YOU BELIEVE?</Text>
+        {/* YOUR EVIDENCE — read-only reference to weigh BEFORE the choice. Tap to read a clue. */}
+        <Text style={[styles.sectionLabel, { marginTop: map.nodes.length ? SPACING.lg : 0 }]}>YOUR EVIDENCE</Text>
+        {map.fragments.length === 0 ? (
+          <Text style={styles.muted}>You collected no fragments this chapter — the map stays dark. You can still commit a read.</Text>
+        ) : (
+          <>
+            <Text style={styles.sectionHint}>Everything you've gathered. Tap a fragment to re-read its clue, then choose your reading below.</Text>
+            <View style={styles.fragWrap}>
+              {map.fragments.map((f) => {
+                const m = metaFor(f.kind);
+                const open = expanded.has(f.id);
+                return (
+                  <Pressable
+                    key={f.id}
+                    onPress={() => toggleExpand(f.id)}
+                    style={[styles.frag, { borderLeftColor: m.color, borderColor: COLORS.panelOutline }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={f.label}
+                    accessibilityHint="Tap to read the full clue"
+                  >
+                    <View style={styles.fragTop}>
+                      <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
+                      {isMotif(f) ? (
+                        <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
+                          <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
+                          <Text style={styles.motifText}>×{f.seen}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.fragLabel}>{f.label}</Text>
+                    {f.detail ? <Text style={styles.fragDetail} numberOfLines={open ? undefined : 2}>{f.detail}</Text> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* WHAT DO YOU BELIEVE? — the chapter's one decision, the climax (last, above SEAL) */}
+        <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>WHAT DO YOU BELIEVE?</Text>
+        {beliefs.length > 0 ? (
+          <Text style={styles.sectionHint}>Your one real choice. The chapter ahead bears it out — or subverts it.</Text>
+        ) : null}
         {beliefs.length === 0 ? (
           <Text style={styles.muted}>The way forward is yours to take. Seal your read and press on.</Text>
         ) : (
           <View style={styles.beliefList}>
             {beliefs.map((b, bi) => {
               const active = b.key === beliefKey;
+              const tone = toneFor(bi);
+              const body = b.focus || b.consequence;
               return (
                 <Reveal key={b.key} index={bi} reducedMotion={reducedMotion} distance={10}>
                 <PressableScale
                   reducedMotion={reducedMotion}
                   onPress={() => { if (!sealed) { setBeliefKey(b.key); setGenError(null); } }}
                   disabled={sealed}
-                  style={[styles.beliefCard, active && styles.beliefCardActive, sealed && !active && { opacity: 0.4 }]}
+                  style={[styles.beliefCard, active && { borderColor: tone, backgroundColor: `${tone}1f` }, sealed && !active && { opacity: 0.4 }]}
                   accessibilityLabel={b.title || 'A reading of the hidden world'}
                 >
                   <View style={styles.beliefTop}>
-                    <MaterialCommunityIcons
-                      name={active ? 'radiobox-marked' : 'radiobox-blank'}
-                      size={18}
-                      color={active ? COLORS.accentSecondary : COLORS.textMuted}
-                    />
-                    <Text style={[styles.beliefTitle, active && { color: COLORS.offWhite }]}>{b.title || 'A reading of the hidden world'}</Text>
+                    <BeliefGlyph tone={tone} on={active} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.beliefTitle, active && { color: COLORS.offWhite }]}>{b.title || 'A reading of the hidden world'}</Text>
+                      {!active ? <Text style={styles.beliefHint}>TAP TO WEIGH THIS READING</Text> : null}
+                    </View>
+                    <Text style={[styles.beliefMark, { color: tone, textShadowColor: tone }]}>{active ? '◆' : '◇'}</Text>
                   </View>
-                  {(b.focus || b.consequence) ? (
-                    <Text style={styles.beliefFocus}>{b.focus || b.consequence}</Text>
+                  {active && body ? (
+                    <Text style={styles.beliefBody}>{body}</Text>
                   ) : null}
                 </PressableScale>
                 </Reveal>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Stake the fragments as evidence */}
-        <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>
-          {sealed ? 'THE EVIDENCE YOU STAKED' : 'STAKE YOUR EVIDENCE'}
-        </Text>
-        {map.fragments.length === 0 ? (
-          <Text style={styles.muted}>You collected no fragments this chapter — the map stays dark. You can still commit a read.</Text>
-        ) : (
-          <View style={styles.fragWrap}>
-            {map.fragments.map((f) => {
-              const m = metaFor(f.kind);
-              const active = selected.has(f.id);
-              const dim = sealed && !active && selected.size > 0;
-              return (
-                <Pressable
-                  key={f.id}
-                  onPress={() => toggleFragment(f.id)}
-                  disabled={sealed}
-                  style={[
-                    styles.frag,
-                    { borderLeftColor: m.color, borderColor: active ? m.color : COLORS.panelOutline },
-                    active && { backgroundColor: COLORS.surfaceAlt },
-                    dim && { opacity: 0.4 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                >
-                  <View style={styles.fragTop}>
-                    <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
-                    {isMotif(f) ? (
-                      <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
-                        <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
-                        <Text style={styles.motifText}>×{f.seen}</Text>
-                      </View>
-                    ) : null}
-                    {active ? (
-                      <MaterialCommunityIcons name="check-circle" size={14} color={m.color} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} />
-                    ) : null}
-                  </View>
-                  <Text style={styles.fragLabel}>{f.label}</Text>
-                  {f.detail ? <Text style={styles.fragDetail} numberOfLines={2}>{f.detail}</Text> : null}
-                </Pressable>
               );
             })}
           </View>
@@ -381,11 +421,13 @@ const styles = StyleSheet.create({
   header: { marginBottom: SPACING.sm },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
-  title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: COLORS.offWhite, marginTop: SPACING.sm },
+  title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: '#f3eeff', marginTop: SPACING.sm, textShadowColor: COLORS.underGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 26 },
   lede: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, lineHeight: LINE_HEIGHTS.cozy },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
+  sectionHint: { fontFamily: FONTS.primary, fontSize: 11.5, color: COLORS.textMuted, marginTop: -SPACING.xs, marginBottom: SPACING.sm, lineHeight: 16 },
+  nodeMore: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.4, color: COLORS.textSubtle, marginTop: 2, marginLeft: 22 },
   // Clarity / belief resolution (Move 3)
   resolvedCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.sm },
   resolvedTrue: { backgroundColor: 'rgba(241,197,114,0.07)', borderColor: COLORS.accentSoft },
@@ -405,13 +447,16 @@ const styles = StyleSheet.create({
   // Beliefs
   beliefList: { gap: SPACING.sm },
   beliefCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.panelOutline,
-    padding: SPACING.lg, gap: SPACING.xs,
+    backgroundColor: 'rgba(34,28,52,0.5)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(167,139,250,0.16)',
+    padding: 17, gap: SPACING.xs,
   },
-  beliefCardActive: { borderColor: COLORS.accentSecondary, backgroundColor: COLORS.surfaceAlt },
+  beliefCardActive: { borderColor: COLORS.underViolet, backgroundColor: 'rgba(167,139,250,0.12)' },
   beliefTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  beliefTitle: { flex: 1, fontFamily: FONTS.primarySemiBold, fontSize: FONT_SIZES.md, color: COLORS.textSecondary },
-  beliefFocus: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.xs, color: COLORS.textMuted, lineHeight: LINE_HEIGHTS.cozy, marginLeft: 26 },
+  beliefTitle: { fontFamily: FONTS.secondaryBold, fontSize: 18, lineHeight: 21, color: COLORS.textPrimary },
+  beliefHint: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textSubtle, textTransform: 'uppercase', marginTop: 4 },
+  beliefMark: { fontSize: 16, marginLeft: 6, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  beliefBody: { fontFamily: FONTS.primary, fontSize: 13.5, lineHeight: 22, color: COLORS.textSecondary, marginTop: 12 },
+  lightShaft: { position: 'absolute', top: -60, alignSelf: 'center', width: 260, height: 360, borderRadius: 180, backgroundColor: 'rgba(167,139,250,0.08)' },
   // Fragments
   fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   frag: {
