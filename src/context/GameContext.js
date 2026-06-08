@@ -683,7 +683,8 @@ export function GameProvider({
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
-      const um = umRecordDescent(current.underMap, { hadMisstep });
+      const afterDescent = umRecordDescent(current.underMap, { hadMisstep });
+      const um = umResolveStir(afterDescent);
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
@@ -869,6 +870,7 @@ export function GameProvider({
       ['HALF_BLIND', endings.includes('ending_half')],
       ['DECEIVED', endings.includes('ending_deceived')],
       ['NIGHT_READER', hour >= 0 && hour < 4],
+      ['SEVEN_DAYS_MAPPED', (underMap.bestDailyStreak || underMap.dailyStreak || 0) >= 7],
     ];
 
     const newUnlocks = candidates

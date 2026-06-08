@@ -148,6 +148,8 @@ export default function AppNavigator({ fontsReady, audio }) {
               onOpenCodex={() => navigation.navigate('Codex')}
               onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
+              onDrawDailyStir={game.drawUnderMapDailyStir}
+              onResolveDailyStir={game.resolveUnderMapDailyStir}
             />
           );
         }}

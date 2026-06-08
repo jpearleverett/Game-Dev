@@ -206,6 +206,16 @@ export const ACHIEVEMENTS = {
     rarity: 'common',
     hidden: true,
   },
+  SEVEN_DAYS_MAPPED: {
+    id: 'SEVEN_DAYS_MAPPED',
+    title: 'The Map Remembers You',
+    description: 'Settle a drifting fragment on seven different days.',
+    hint: 'Return when the Under-Map stirs.',
+    icon: '🗓️',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 125,
+    rarity: 'rare',
+  },
 };
 
 export const ACHIEVEMENTS_LIST = Object.values(ACHIEVEMENTS);

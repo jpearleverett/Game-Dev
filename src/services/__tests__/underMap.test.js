@@ -218,6 +218,28 @@ describe('underMap', () => {
     m = connectFragments(m, a, b).map;
     expect(mapDepth(m)).toEqual({ drawn: 1, total: 2, ratio: 0.5 });
   });
+
+  test('daily stir draws an unresolved fragment and resolves consecutive mapping streaks idempotently', () => {
+    let m = seed();
+    m = drawDailyStir(m, '2026-06-08T10:00:00Z', () => 0);
+    expect(m.dailyStir).toMatchObject({ date: '2026-06-08', resolved: false });
+    expect(dailyStirFragment(m)?.label).toBe('Silver ink that moves');
+
+    const drawnAgain = drawDailyStir(m, '2026-06-08T15:00:00Z', () => 0.9);
+    expect(drawnAgain.dailyStir).toEqual(m.dailyStir);
+
+    m = resolveDailyStir(m, '2026-06-08T16:00:00Z');
+    expect(m.dailyStir.resolved).toBe(true);
+    expect(dailyStreak(m)).toBe(1);
+    const seenAfterFirst = dailyStirFragment(m).seen;
+    m = resolveDailyStir(m, '2026-06-08T17:00:00Z');
+    expect(dailyStirFragment(m).seen).toBe(seenAfterFirst);
+
+    m = drawDailyStir(m, '2026-06-09T10:00:00Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-09T11:00:00Z');
+    expect(dailyStreak(m)).toBe(2);
+    expect(m.bestDailyStreak).toBe(2);
+  });
 });
 
 // ---- Move 1: CONNECT-as-deduction (probes, choose-the-truth, streak) --------

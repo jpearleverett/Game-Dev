@@ -15,6 +15,7 @@ import {
   keystoneCount,
   arcNodeCount,
   bestFlawlessStreak,
+  dailyStreak,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { COLORS } from '../constants/colors';
@@ -150,6 +151,7 @@ export default function CodexScreen({ navigation }) {
             [keystoneCount(map), 'KEYSTONES'],
             [arcNodeCount(map), 'ARC TRUTHS'],
             [bestFlawlessStreak(map), 'BEST STREAK'],
+            [Math.max(dailyStreak(map), map.bestDailyStreak || 0), 'DAYS MAPPED'],
           ].map(([n, l]) => (
             <View key={l} style={styles.stat}>
               <Text style={styles.statNum}>{n}</Text>

@@ -13,7 +13,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
-import { mapDepth, foilPresence } from '../data/underMap';
+import { mapDepth, foilPresence, dailyStirFragment, dailyStreak } from '../data/underMap';
 
 const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
 const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
@@ -45,6 +45,8 @@ export default function DeskScreen({
   onOpenCodex,
   onPickUpTrail,
   onBribe,
+  onDrawDailyStir,
+  onResolveDailyStir,
 }) {
   const storyCampaign = progress.storyCampaign || {};
   const reducedMotion = !!progress?.settings?.reducedMotion;
@@ -55,8 +57,15 @@ export default function DeskScreen({
   const depth = mapDepth(underMap);
   const depthPct = Math.round(depth.ratio * 100);
   const foilHeat = foilPresence(underMap);
+  const stir = underMap?.dailyStir || null;
+  const stirFragment = dailyStirFragment(underMap);
+  const mappingStreak = dailyStreak(underMap);
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
+
+  useEffect(() => {
+    onDrawDailyStir?.();
+  }, [onDrawDailyStir]);
 
   useEffect(() => {
     if (!nextStoryUnlockAt) { setCountdown(null); return undefined; }
@@ -112,6 +121,10 @@ export default function DeskScreen({
 
   const tap = (cb) => () => { Haptics.selectionAsync().catch(() => {}); cb?.(); };
   const onPrimary = storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
+  const onDailyStirPress = tap(() => {
+    onResolveDailyStir?.();
+    onOpenCaseBoard?.();
+  });
 
   const { moderateScale } = useResponsiveLayout();
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
@@ -190,6 +203,31 @@ export default function DeskScreen({
             </View>
           </View>
 
+          {stirFragment && !stir?.resolved ? (
+            <PressableScale
+              onPress={onDailyStirPress}
+              reducedMotion={reducedMotion}
+              style={styles.dailyStir}
+              containerStyle={styles.dailyStirWrap}
+              haptic={false}
+            >
+              <View style={styles.dailyStirGlow} pointerEvents="none" />
+              <View style={styles.dailyStirMark}><Text style={styles.dailyStirGlyph}>◆</Text></View>
+              <View style={styles.dailyStirText}>
+                <Text style={styles.dailyStirKicker}>THE MAP REMEMBERS</Text>
+                <Text style={styles.dailyStirTitle}>“{stirFragment.label}” drifted back up.</Text>
+                <Text style={styles.dailyStirSub}>
+                  Map today’s thread{mappingStreak > 0 ? ` · ${mappingStreak} day${mappingStreak === 1 ? '' : 's'} mapped` : ''}
+                </Text>
+              </View>
+              <Text style={styles.dailyStirArrow}>↓</Text>
+            </PressableScale>
+          ) : mappingStreak > 0 ? (
+            <View style={styles.dailyStirResolved}>
+              <Text style={styles.dailyStirResolvedText}>◆ {mappingStreak} day{mappingStreak === 1 ? '' : 's'} mapped · today’s thread settled</Text>
+            </View>
+          ) : null}
+
           {/* Under-Map descent aperture */}
           <PressableScale onPress={tap(onOpenCaseBoard)} reducedMotion={reducedMotion} style={styles.aperture} containerStyle={styles.apertureWrap}>
             <View style={styles.apertureGlow} pointerEvents="none" />
@@ -233,7 +271,7 @@ export default function DeskScreen({
               <Text style={styles.statNum}>{String(fragments).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>FRAGMENTS</Text>
             </Pressable>
-            <Pressable style={styles.statTag} onPress={tap(onOpenStats)}>
+            <Pressable style={styles.statTag} onPress={tap(onOpenCodex || onOpenStats)}>
               <Text style={styles.statNum}>{String(truths).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>TRUTHS</Text>
             </Pressable>
@@ -314,6 +352,29 @@ const styles = StyleSheet.create({
   lockNote: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1, color: '#7a5a3a', textAlign: 'center', marginTop: 10 },
   bribeNote: { fontFamily: FONTS.mono, fontSize: 11, color: '#9a3b2e', textAlign: 'center', marginTop: 8, textDecorationLine: 'underline' },
   mapPulse: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.8, color: '#6c4d85', textAlign: 'center', marginTop: 10 },
+
+  // Daily return hook
+  dailyStirWrap: { paddingHorizontal: 20, marginTop: 14 },
+  dailyStir: {
+    flexDirection: 'row', alignItems: 'center', gap: 13, padding: 15, borderRadius: 16, overflow: 'hidden',
+    backgroundColor: 'rgba(18,14,30,0.78)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.3)',
+  },
+  dailyStirGlow: {
+    position: 'absolute', right: -24, top: '50%', width: 130, height: 130, borderRadius: 130,
+    transform: [{ translateY: -65 }], backgroundColor: COLORS.underGlowSoft,
+  },
+  dailyStirMark: {
+    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(125,211,252,0.14)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.38)',
+  },
+  dailyStirGlyph: { color: COLORS.underCyan, fontFamily: FONTS.monoBold, fontSize: 15 },
+  dailyStirText: { flex: 1 },
+  dailyStirKicker: { fontFamily: FONTS.mono, fontSize: 9, letterSpacing: 2.2, color: COLORS.underCyan },
+  dailyStirTitle: { fontFamily: FONTS.secondaryBold, fontSize: 17, lineHeight: 20, color: COLORS.textPrimary, marginTop: 3 },
+  dailyStirSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.6, color: COLORS.textMuted, marginTop: 5 },
+  dailyStirArrow: { fontFamily: FONTS.mono, fontSize: 16, color: COLORS.underCyan },
+  dailyStirResolved: { paddingHorizontal: 20, marginTop: 12, alignItems: 'center' },
+  dailyStirResolvedText: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.8, color: COLORS.textMuted },
 
   // Aperture
   apertureWrap: { paddingHorizontal: 20, marginTop: 18 },
