@@ -255,4 +255,50 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
     }, false);
     expect(tooLong.foilName).toBeNull();
   });
+
+  test('playability validation flags fragment phrases that are not in prose', () => {
+    const issues = validationMethods._validateUnderMapPlayability({
+      title: 'x',
+      branchingNarrative: {
+        opening: { text: 'The rain rose through the station lights.' },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+      fragments: [{ label: 'Missing phrase', kind: 'phenomenon', phrase: 'silver staircase' }],
+      relations: [],
+    });
+    expect(issues).toEqual([
+      'UNDERMAP PLAYABILITY: fragment phrase missing from prose: "silver staircase"',
+    ]);
+  });
+
+  test('playability validation requires cross-chapter relations when held fragments exist', () => {
+    validationMethods.currentUnderMap = {
+      fragments: [{ label: 'Old Rain', kind: 'phenomenon' }],
+    };
+    const issues = validationMethods._validateUnderMapPlayability({
+      title: 'x',
+      branchingNarrative: {
+        opening: { text: 'The new door opened under the bridge.' },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+      fragments: [{ label: 'New Door', kind: 'place', phrase: 'new door' }],
+      relations: [{ aLabel: 'New Door', bLabel: 'Bridge Shadow', revelation: 'They share a lock.' }],
+    });
+    expect(issues).toContain('UNDERMAP PLAYABILITY: no relation links a new fragment to a fragment the player already holds');
+
+    const fixed = validationMethods._validateUnderMapPlayability({
+      title: 'x',
+      branchingNarrative: {
+        opening: { text: 'The new door opened under the old rain.' },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+      fragments: [{ label: 'New Door', kind: 'place', phrase: 'new door' }],
+      relations: [{ aLabel: 'New Door', bLabel: 'Old Rain', revelation: 'The door opens only when the old rain returns.' }],
+    });
+    expect(fixed).toEqual([]);
+    validationMethods.currentUnderMap = null;
+  });
 });
