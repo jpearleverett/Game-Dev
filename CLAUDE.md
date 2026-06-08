@@ -44,9 +44,11 @@ CONNECT   (A & B beats) Descend into the Under-Map and draw connections between
           fragments. A connection that matches a known relation reveals a NODE
           (a truth about the hidden world). Then "Continue the descent" → next.
 THEORY    (C beat = chapter climax) Commit a BELIEF about the hidden world —
-          the chapter's decision is framed as competing interpretations. Stake
-          the fragments behind it, seal it, then "Cross the threshold" → next
-          chapter. The sealed belief steers the next chapter's generation.
+          the chapter's decision is framed as competing interpretations. Review
+          your evidence (read-only reference; tap a fragment to re-read its clue),
+          pick the belief, seal it, then "Cross the threshold" → next chapter. The
+          sealed belief steers the next chapter's generation. (The belief is the
+          only choice; fragments are not staked/graded — see §8.)
 ```
 
 Fragments are **cumulative** across the whole campaign and **recur as motifs**
@@ -200,7 +202,11 @@ scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time too
 
 **Belief payoff is SHIPPED (don't re-build it).** A sealed belief is borne out or subverted and accrues into the ending reached. The model emits `beliefResolution { resolvesChapter, correct, line }` (schema + `promptAssembly.js` prompt pressure to subvert); `CaseFileScreen` shows an in-scene verdict banner ("YOUR READING HELD TRUE / WAS SUBVERTED") and calls `onResolveBelief` → `resolveTheory`; `clarity()`/`endingVariant()` drive the 3-variant finale in `src/data/endings.js` (`EndingScreen`, `CodexScreen` worldview readout). The whole spine lives on `theory.correct`.
 
-**READ-beat polish (shipped, in `BranchingNarrativeReader` + `TypewriterText`):** uncollected anomalies shimmer; a per-page "ANOMALIES SENSED n/m" meter ticks + flares a mote and stamps "PAGE FULLY SENSED"; the Under-Map bleeds violet/cyan through the page margins, deepening with `mapDepth`; an examine sting (`playSelect`); punctuation-aware "dramatic pacing" in the typewriter; a Playfair drop-cap on the scene opening. All honor `reducedMotion` (read from `GameContext`).
+**READ-beat polish (shipped, in `BranchingNarrativeReader` + `TypewriterText`):** uncollected anomalies shimmer (a **backgroundColor** pulse — do NOT change it to `opacity`; opacity on a nested `<Text>` is a no-op in RN, which is why the first version never animated); a per-page "ANOMALIES SENSED n/m" meter ticks + flares a mote and stamps "PAGE FULLY SENSED"; the Under-Map bleeds violet/cyan through the page margins, deepening with `mapDepth`; an examine sting (`playSelect`); punctuation-aware "dramatic pacing" in the typewriter; a Playfair drop-cap on the scene opening. All honor `reducedMotion` (read from `GameContext`).
+
+**Theory screen is read-only evidence + one decision (post-playtest).** The C-beat shows WHAT YOU UNCOVERED (truths) → YOUR EVIDENCE (fragments, **read-only**; tap to expand a clue) → WHAT DO YOU BELIEVE? (the lone decision, last/above SEAL). The old "stake your evidence" selection was a fake choice — `theory.fragmentIds` is recorded but never read by clarity/generation/foil — so it's gone; all fragments are recorded silently. The belief is the only thing the chapter answers.
+
+**Verdict & echo presentation (post-playtest).** The belief verdict **stamps** onto the case file on arrival (`stampAnim`: scale-slam + haptic + slight tilt — held square, subverted askew) then rests compact, so the payoff feels earned without being a wall. The verdict shows kicker + your belief + a one-line summary; the echo is lean (the mapped-truth `nodeRef` only, de-duped) — neither previews the scene's own sentences anymore. The Under-Map constellation also de-emphasizes "inert" fragments (those in no still-unfound relation) so the connectable threads stay vivid.
 
 **The Other Reader (foil) is SHIPPED end to end (Phases 1-5).** The Station-Eleven "Prophet" mirror: the reading the player rejects at a C-beat gets a champion who is vindicated each time the player is subverted, escalating from a rumor to a named, recurring antagonist, and paying off in the verdict banner / Codex / ending. See the `foil` entry in §3. **Unverified on-device** — it's LLM-driven; needs a playtest that deliberately seals-then-subverts a couple of beliefs to push `presence` to ≥2 and confirm the prompt yields a coherent recurring antagonist (not a generic thug) with a stable name.
 

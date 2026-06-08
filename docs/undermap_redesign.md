@@ -85,9 +85,11 @@ generation latency barely moves.
   authored relation under the undirected key; match → reveals a `node` (the relation's
   `revelation`); miss → `{ valid:false }`, feedback *"No link here…"*, **no cost**. Footer:
   *"Draw a connection… — or press on into the dark."* "Continue the descent" generates + advances.
-- **THEORY (`TheoryScreen`):** pick a belief (the chapter decision framed as competing
-  interpretations), stake fragments, seal → records a theory (`correct` left `null`) and the
-  pre-decision that branches the next chapter → "Cross the threshold."
+- **THEORY (`TheoryScreen`):** review read-only evidence (fragments; tap to expand a clue),
+  pick a belief (the chapter decision framed as competing interpretations), seal → records a
+  theory (`correct` left `null`, all fragment ids attached silently) + the pre-decision that
+  branches the next chapter → "Cross the threshold." (Post-playtest: the belief is the lone
+  choice; the old fragment "staking" was a no-op and was removed — see CLAUDE.md §8.)
 
 ### 1.2 The data model (`src/data/underMap.js`)
 - `fragment { id, label, kind, detail, phrase, anomalous, seen, firstCaseNumber, lastCaseNumber, … }`,
