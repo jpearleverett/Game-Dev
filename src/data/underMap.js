@@ -401,6 +401,18 @@ export const recordTheory = (map, theory) => {
 };
 
 /**
+ * Pin The Other Reader's name once the story names them (presence >= 2). Idempotent:
+ * a no-op if there is no foil, the name is empty, or the foil is already named — so
+ * the identity stays fixed across chapters once set.
+ */
+export const nameFoil = (map, name) => {
+  const m = normalizeUnderMap(map);
+  const clean = String(name || '').trim();
+  if (!m.foil || !clean || m.foil.name) return m;
+  return { ...m, foil: { ...m.foil, name: clean } };
+};
+
+/**
  * Resolve a sealed belief once the story bears it out (Move 3). Marks the named
  * chapter's still-unresolved theory correct/incorrect — wrong beliefs are NOT a
  * fail-state, they just steer the player down the clarity spectrum.

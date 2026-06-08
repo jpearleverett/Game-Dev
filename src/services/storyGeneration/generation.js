@@ -1121,6 +1121,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         echoes: Array.isArray(generatedContent.echoes) ? generatedContent.echoes : [],
         // BELIEF RESOLUTION: whether a sealed belief was borne out here (drives Clarity).
         beliefResolution: generatedContent.beliefResolution || null,
+        // THE OTHER READER: the name the model gave the foil, captured once.
+        foilName: generatedContent.foilName || null,
         board: shouldGenerateBoard
           ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
           : null,

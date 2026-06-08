@@ -72,6 +72,7 @@ export default function CaseFileScreen({
   onProceedToPuzzle, // NARRATIVE-FIRST FLOW: Navigate to puzzle after narrative complete
   onIngestFragments, // UNDER-MAP: ingest scene fragments/relations into the board
   onResolveBelief, // UNDER-MAP: bear out a sealed belief when the scene resolves it (Clarity)
+  onNameFoil, // UNDER-MAP: pin The Other Reader's name when a scene first names them
   onBack,
   isStoryMode = false,
   onContinueStory,
@@ -350,6 +351,16 @@ export default function CaseFileScreen({
     resolvedBeliefRef.current = applyKey;
     onResolveBelief({ chapter: Number(br.resolvesChapter), correct: br.correct });
   }, [storyMeta?.beliefResolution, storyMeta?.caseNumber, activeCase?.caseNumber, onResolveBelief]);
+
+  // THE OTHER READER: when a scene names the foil (presence >= 2), pin the name once
+  // so it stays fixed across chapters. nameUnderMapFoil is idempotent (skips if the
+  // foil is already named), so firing on every render with a name is safe.
+  useEffect(() => {
+    const name = storyMeta?.foilName;
+    if (typeof onNameFoil === "function" && typeof name === "string" && name.trim()) {
+      onNameFoil(name.trim());
+    }
+  }, [storyMeta?.foilName, onNameFoil]);
 
   // BELIEF VERDICT (Consequence): when this scene resolves a belief the player
   // sealed earlier, show the verdict up front — the reciprocity moment that makes

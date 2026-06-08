@@ -52,6 +52,7 @@ export default function AppNavigator({ fontsReady, audio }) {
     ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     ingestSceneFragments, // UNDER-MAP: collect fragments/relations from the scene
     resolveUnderMapBelief, // UNDER-MAP: bear out a sealed belief (Clarity)
+    nameUnderMapFoil, // UNDER-MAP: pin The Other Reader's name once a scene names them
     unlockNextCaseIfReady,
     openStoryCase,
     mode,
@@ -326,6 +327,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               onProceedToPuzzle={handleProceedToPuzzle}
               onIngestFragments={ingestSceneFragments}
               onResolveBelief={resolveUnderMapBelief}
+              onNameFoil={nameUnderMapFoil}
               isStoryMode={effectivelyStoryMode}
               onContinueStory={actions.handleStoryContinue}
               onReturnHome={actions.handleReturnHome}

@@ -17,6 +17,7 @@ import {
   recordDescent as umRecordDescent,
   recordTheory as umRecordTheory,
   resolveTheory as umResolveTheory,
+  nameFoil as umNameFoil,
   drawDailyStir as umDrawStir,
   resolveDailyStir as umResolveStir,
   touchUnderMap as umTouch,
@@ -699,6 +700,19 @@ export function GameProvider({
     });
   }, [updateProgress]);
 
+  // THE OTHER READER: pin the foil's name the first time a scene names them.
+  // Idempotent: skip if there's no foil or it's already named.
+  const nameUnderMapFoil = useCallback((name) => {
+    const clean = String(name || '').trim();
+    if (!clean) return;
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const f = current.underMap?.foil;
+      if (!f || f.name) return null;
+      return { storyCampaign: { ...current, underMap: umNameFoil(current.underMap, clean) } };
+    });
+  }, [updateProgress]);
+
   // Daily on-ramp (§8.1): draw today's drifting fragment (idempotent per day) and
   // resolve it (advances the days-mapped streak). Guarded against render churn.
   const drawUnderMapDailyStir = useCallback(() => {
@@ -991,6 +1005,7 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     resolveUnderMapBelief,
+    nameUnderMapFoil,
     drawUnderMapDailyStir,
     resolveUnderMapDailyStir,
     recordUnderMapTheory,
@@ -1010,6 +1025,7 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     resolveUnderMapBelief,
+    nameUnderMapFoil,
     drawUnderMapDailyStir,
     resolveUnderMapDailyStir,
     recordUnderMapTheory,
@@ -1050,6 +1066,7 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     resolveUnderMapBelief,
+    nameUnderMapFoil,
     drawUnderMapDailyStir,
     resolveUnderMapDailyStir,
     recordUnderMapTheory,

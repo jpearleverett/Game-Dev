@@ -240,4 +240,19 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
     const none = validationMethods._parseGeneratedContent({ title: 'x', branchingNarrative: baseBN }, false);
     expect(none.beliefResolution).toBeNull();
   });
+
+  test('foilName is captured (trimmed) when present, null otherwise', () => {
+    const named = validationMethods._parseGeneratedContent({
+      title: 'x', branchingNarrative: baseBN, foilName: '  The Cartographer  ',
+    }, false);
+    expect(named.foilName).toBe('The Cartographer');
+
+    const none = validationMethods._parseGeneratedContent({ title: 'x', branchingNarrative: baseBN }, false);
+    expect(none.foilName).toBeNull();
+
+    const tooLong = validationMethods._parseGeneratedContent({
+      title: 'x', branchingNarrative: baseBN, foilName: 'z'.repeat(200),
+    }, false);
+    expect(tooLong.foilName).toBeNull();
+  });
 });

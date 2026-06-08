@@ -416,6 +416,10 @@ export const STORY_CONTENT_SCHEMA = {
       },
       required: ['resolvesChapter', 'correct'],
     },
+    // THE OTHER READER (foil): when <the_other_reader> asks you to give the
+    // road-not-taken a face (presence >= 2) and you name them, report that name
+    // here ONCE so it stays fixed across chapters. Omit otherwise.
+    foilName: { type: 'string', description: 'OMIT unless <the_other_reader> told you to name the foil and you did. The name you gave them, so future chapters keep it.' },
   },
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads', 'fragments', 'relations'],
 };

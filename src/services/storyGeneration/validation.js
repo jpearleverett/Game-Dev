@@ -128,6 +128,8 @@ class ValidationMethods {
         echoes: this._normalizeEchoes(parsed.echoes),
         // BELIEF RESOLUTION: did a sealed belief bear out here? (drives Clarity)
         beliefResolution: this._normalizeBeliefResolution(parsed.beliefResolution),
+        // THE OTHER READER: the name the model gave the foil, if any.
+        foilName: this._normalizeFoilName(parsed.foilName),
         pathDecisions: null,
       };
 
@@ -500,6 +502,14 @@ class ValidationMethods {
     if (typeof raw.correct !== 'boolean') return null;
     const line = String(raw.line || '').trim();
     return { resolvesChapter, correct: raw.correct, line };
+  }
+
+  // THE OTHER READER: the name the model gave the foil (presence >= 2), captured
+  // once so it stays fixed across chapters. Trimmed + length-capped; null if absent.
+  _normalizeFoilName(raw) {
+    const name = String(raw || '').trim();
+    if (!name || name.length > 80) return null;
+    return name;
   }
 
   /**

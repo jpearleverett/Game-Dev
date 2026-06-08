@@ -17,6 +17,7 @@ import {
   foil,
   foilPresence,
   foilIsManifest,
+  nameFoil,
   FOIL_PRESENCE_MIN,
   FOIL_PRESENCE_MAX,
   fragmentCount,
@@ -565,5 +566,17 @@ describe('underMap — the foil (Other Reader)', () => {
     expect(normalizeUnderMap({}).foil).toBeNull();
     const withFoil = { foil: { belief: 'x', fromChapter: 2, presence: 2, name: null } };
     expect(normalizeUnderMap(withFoil).foil).toEqual(withFoil.foil);
+  });
+
+  test('nameFoil pins the name once and never renames', () => {
+    let m = seal(createBlankUnderMap(), 1, 'right', ['wrong']);
+    expect(foil(m).name).toBeNull();
+    m = nameFoil(m, '  The Cartographer  ');
+    expect(foil(m).name).toBe('The Cartographer'); // trimmed
+    m = nameFoil(m, 'Someone Else'); // already named -> no-op
+    expect(foil(m).name).toBe('The Cartographer');
+    // no foil, or empty name -> no-op (no throw)
+    expect(foil(nameFoil(createBlankUnderMap(), 'X'))).toBeNull();
+    expect(nameFoil(m, '   ')).toEqual(m); // normalized clone, structurally unchanged
   });
 });
