@@ -913,7 +913,7 @@ export default function CaseFileScreen({
   }, [caseNumber, hasLockedDecision, lastDecision, lockCelebrationOpacity, lockCelebrationScale]);
 
   const choiceStatusText = awaitingDecision
-    ? "Choose the intel dossier to branch this subchapter."
+    ? "Choose the reading that branches this subchapter."
     : resolvedSelectionKey
     ? "Branch locked."
     : "Awaiting HQ update.";
@@ -955,8 +955,8 @@ export default function CaseFileScreen({
           // Legacy/non-theory C beat: decision already made on this screen.
           return {
             title: "Path Chosen",
-            body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
-            hint: "The puzzle awaits to complete this chapter.",
+            body: "Your decision is sealed. Now read the Under-Map to confirm your fate.",
+            hint: "The descent completes this chapter.",
             actionLabel: puzzleActionLabel,
             actionIcon: "🔍",
             onPress: onProceedToPuzzle,
@@ -989,8 +989,8 @@ export default function CaseFileScreen({
     if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked && !hideContinueInvestigationCTA) {
       return {
         title: "Next Chapter Ready",
-        body: `${nextStoryLabel} is staged on the evidence board.`,
-        hint: "Continue when you're ready to keep chasing the Confessor.",
+        body: `${nextStoryLabel} is waiting under the city.`,
+        hint: "Continue when you're ready to follow the map deeper.",
         actionLabel: "Continue Investigation",
         actionIcon: "▶",
         onPress: typeof onContinueStory === "function" ? onContinueStory : null,
@@ -999,7 +999,7 @@ export default function CaseFileScreen({
     if (isThirdSubchapter && (storyLocked || hasLockedDecision)) {
       return {
         title: "Chapter Locked",
-        body: "You've completed all three subchapters. HQ needs you home until the next chapter unlocks.",
+        body: "You've completed all three subchapters. The Under-Map needs time to answer.",
         hint: countdown ? `Unlocks in ${countdown}` : "Unlock window opens soon.",
         actionLabel: "Return Home",
         actionIcon: "🏠",
@@ -1188,9 +1188,9 @@ export default function CaseFileScreen({
                       },
                     ]}
                   >
-                    <Text style={[styles.choiceSignalLabel, { color: palette.accent, fontSize: slugSize }]}>Pathfork Advisory</Text>
+                    <Text style={[styles.choiceSignalLabel, { color: palette.accent, fontSize: slugSize }]}>UNDER-MAP SIGNAL</Text>
                     <Text style={[styles.choiceSignalBody, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
-                      Finish the journal entry. Once every page is turned, choose the path that rewrites this case.
+                      Finish the letter. Once every page is turned, choose the thread that rewrites this reading.
                     </Text>
                   </View>
                 )}

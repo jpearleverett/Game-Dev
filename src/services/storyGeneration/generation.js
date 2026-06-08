@@ -930,6 +930,14 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       generatedContent = this._fixTyposLocally(generatedContent);
 
       let validationResult = this._validateConsistency(generatedContent, context);
+      const underMapPlayabilityIssues = this._validateUnderMapPlayability(generatedContent);
+      if (underMapPlayabilityIssues.length > 0) {
+        validationResult = {
+          ...validationResult,
+          valid: false,
+          issues: [...(validationResult.issues || []), ...underMapPlayabilityIssues],
+        };
+      }
       const baseQualitySettings = GENERATION_CONFIG?.qualitySettings || {};
       const overrideQualitySettings = options?.qualitySettingsOverride || {};
       const resolveQualityFlag = (key, fallback = true) => {

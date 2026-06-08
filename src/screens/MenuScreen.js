@@ -13,8 +13,8 @@ import { SPACING, RADIUS } from '../constants/layout';
 
 const SHARE_MESSAGE = [
   'Dead Letters',
-  'A daily noir deduction ritual.',
-  'Play today and solve the conspiracy.',
+  'Map a hidden reality beneath Ashport.',
+  'Read the letters, sense anomalies, and seal what you believe.',
   'https://deadletters.app/game',
 ].join('\n');
 
@@ -50,15 +50,15 @@ export default function MenuScreen({
         {/* Replayability Features Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <MaterialCommunityIcons name="trophy" size={18} color={COLORS.amberLight} /> Case Archives
+            <MaterialCommunityIcons name="trophy" size={18} color={COLORS.amberLight} /> Under-Map Records
           </Text>
           <Text style={styles.body}>
-            Track your progress, discover all endings, and replay from key decision points.
+            Track mapped truths, belief outcomes, endings, and replay branches from key thresholds.
           </Text>
           
           <View style={styles.featureButtons}>
             <SecondaryButton 
-              label={`Ending Gallery (${endingsCount}/16)`}
+              label={`Ending Gallery (${endingsCount})`}
               icon={<MaterialCommunityIcons name="view-grid" size={16} color={COLORS.textSecondary} />}
               onPress={onOpenEndingGallery}
               style={styles.featureButton}
@@ -90,16 +90,15 @@ export default function MenuScreen({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About Dead Letters</Text>
           <Text style={styles.body}>
-            Dead Letters is a three-minute daily ritual. Solve one noir word case each day, follow the conspiracy,
-            and return to the desk tomorrow. When the city sleeps, dive into the Story Campaign and discover 16 unique endings.
+            Dead Letters is a branching sci-fi mystery about mapping a hidden layer of Ashport. Read the letters, collect impossible fragments, connect them on the Under-Map, and commit beliefs the story can bear out or subvert.
           </Text>
-          <Text style={styles.body}>Version 1.0.0 - Season 1: The Vanishing</Text>
+          <Text style={styles.body}>Version 1.0.0 - Season 1: The Under-Map</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Need a refresher?</Text>
           <Text style={styles.body}>
-            Study the evidence. Select the outliers. Submit guesses to confirm what does not belong. Four attempts, three outliers, one truth.
+            Read carefully. Tap colored anomalies to pin fragments, connect related fragments to surface truths, then seal the belief Ashport will test.
           </Text>
           <PrimaryButton label="Replay Tutorial" onPress={onReplayTutorial} />
         </View>
@@ -107,7 +106,7 @@ export default function MenuScreen({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Share Dead Letters</Text>
           <Text style={styles.body}>
-            Invite a fellow detective. Your daily ritual becomes stronger when the case board grows.
+            Invite another reader. Every map of Ashport tells a different truth.
           </Text>
           <PrimaryButton label="Share the Game" onPress={handleShare} />
         </View>

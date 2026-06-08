@@ -13,6 +13,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
+import { mapDepth, foilPresence } from '../data/underMap';
 
 const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
 const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
@@ -38,6 +39,7 @@ export default function DeskScreen({
   onOpenArchive,
   onOpenStats,
   onOpenSettings,
+  onOpenMenu,
   onOpenStoryCampaign,
   onOpenCaseBoard,
   onOpenCodex,
@@ -50,6 +52,9 @@ export default function DeskScreen({
   const fragments = underMap?.fragments?.length || 0;
   const truths = underMap?.nodes?.length || 0;
   const totalRelations = underMap?.relations?.length || 0;
+  const depth = mapDepth(underMap);
+  const depthPct = Math.round(depth.ratio * 100);
+  const foilHeat = foilPresence(underMap);
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
 
@@ -68,12 +73,42 @@ export default function DeskScreen({
   const completedSubchapters = Array.isArray(storyCampaign.completedCaseNumbers) ? storyCampaign.completedCaseNumbers.length : 0;
   const awaitingDecision = Boolean(storyCampaign.awaitingDecision && storyCampaign.pendingDecisionCase);
   const storyLocked = Boolean(!awaitingDecision && nextStoryUnlockAt);
+  const completedCaseNumbers = Array.isArray(storyCampaign.completedCaseNumbers) ? storyCampaign.completedCaseNumbers : [];
+  const branchingChoices = Array.isArray(storyCampaign.branchingChoices) ? storyCampaign.branchingChoices : [];
+  const caseRead = branchingChoices.some((bc) => bc?.caseNumber === caseNumber) || completedCaseNumbers.includes(caseNumber);
+  const caseCompleted = completedCaseNumbers.includes(caseNumber);
+  const activeBeatIndex = caseCompleted
+    ? 0
+    : !caseRead
+      ? 0
+      : letter.toUpperCase() === 'C'
+        ? 3
+        : 2;
+  const beatStates = BEATS.map((beat, index) => ({
+    label: beat,
+    active: index === activeBeatIndex || (!caseRead && index === 1),
+    done: caseRead && index < activeBeatIndex,
+  }));
 
-  const solved = progress.solvedCaseIds.includes(activeCase.id);
-  const teaser = (typeof activeCase?.briefing?.summary === 'string' && activeCase.briefing.summary.trim())
-    || 'A new file lands on the desk. Read it through, mark what doesn’t belong, and follow the thread down.';
+  const solved = activeCase?.id ? progress.solvedCaseIds.includes(activeCase.id) : false;
+  const latestTheory = Array.isArray(underMap?.theories) && underMap.theories.length ? underMap.theories[0] : null;
+  const teaser = storyLocked && latestTheory?.interpretation
+    ? `When the lock lifts, Ashport tests what you believed: "${latestTheory.interpretation}".`
+    : !caseRead
+      ? 'Read the next letter. Sense the phrases that do not belong, and pin them to the Under-Map.'
+      : letter.toUpperCase() === 'C'
+        ? 'The chapter has shown its signs. Commit the belief the hidden world will answer.'
+        : 'The scene left fragments behind. Descend and connect them before they sink out of sight.';
 
-  const primaryLabel = storyLocked ? 'Locked — pick up the trail' : solved ? 'Review the case file' : 'Continue reading';
+  const primaryLabel = storyLocked
+    ? 'Pick up the trail'
+    : solved
+      ? 'Review the case file'
+      : !caseRead
+        ? 'Read & sense anomalies'
+        : letter.toUpperCase() === 'C'
+          ? 'Seal your belief'
+          : 'Descend into the Under-Map';
 
   const tap = (cb) => () => { Haptics.selectionAsync().catch(() => {}); cb?.(); };
   const onPrimary = storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
@@ -103,6 +138,11 @@ export default function DeskScreen({
           <Pressable onPress={tap(onOpenSettings)} hitSlop={10} style={styles.settingsBtn}>
             <MaterialCommunityIcons name="cog-outline" size={20} color={COLORS.accentCyan} />
           </Pressable>
+          {onOpenMenu ? (
+            <Pressable onPress={tap(onOpenMenu)} hitSlop={10} style={styles.manualBtn}>
+              <MaterialCommunityIcons name="book-open-variant" size={20} color={COLORS.amberLight} />
+            </Pressable>
+          ) : null}
           <View style={styles.windowSill} pointerEvents="none" />
         </View>
 
@@ -121,11 +161,11 @@ export default function DeskScreen({
               <Text style={styles.teaser}>{teaser}</Text>
 
               <View style={styles.beatTrack}>
-                {BEATS.map((b, i) => (
-                  <React.Fragment key={b}>
+                {beatStates.map((b, i) => (
+                  <React.Fragment key={b.label}>
                     <View style={styles.beatNode}>
-                      <View style={[styles.beatDot, i === 0 && styles.beatDotOn]} />
-                      <Text style={[styles.beatName, i === 0 && styles.beatNameOn]}>{b.toUpperCase()}</Text>
+                      <View style={[styles.beatDot, b.done && styles.beatDotDone, b.active && styles.beatDotOn]} />
+                      <Text style={[styles.beatName, b.done && styles.beatNameDone, b.active && styles.beatNameOn]}>{b.label.toUpperCase()}</Text>
                     </View>
                     {i < BEATS.length - 1 ? <View style={styles.beatLine} /> : null}
                   </React.Fragment>
@@ -141,6 +181,11 @@ export default function DeskScreen({
               ) : null}
               {storyLocked && onBribe ? (
                 <Pressable onPress={tap(onBribe)}><Text style={styles.bribeNote}>Bribe the clerk to rush it ($0.99)</Text></Pressable>
+              ) : null}
+              {depth.total > 0 ? (
+                <Text style={styles.mapPulse}>
+                  Under-Map {depthPct}% drawn{foilHeat >= 2 ? ' · The Other Reader has a face' : foilHeat >= 1 ? ' · another reading stirs' : ''}
+                </Text>
               ) : null}
             </View>
           </View>
@@ -178,7 +223,7 @@ export default function DeskScreen({
           {/* Story campaign — ghost entry */}
           <Pressable onPress={tap(onOpenStoryCampaign)} style={styles.storyLink}>
             <MaterialCommunityIcons name="book-open-page-variant-outline" size={16} color={COLORS.coral} />
-            <Text style={styles.storyLinkText}>ENTER THE FULL CAMPAIGN</Text>
+            <Text style={styles.storyLinkText}>BRANCH HISTORY & UNLOCKS</Text>
             <Text style={styles.storyLinkArrow}>→</Text>
           </Pressable>
 
@@ -221,6 +266,7 @@ const styles = StyleSheet.create({
   neon: { transform: [{ rotate: '-2deg' }] },
   windowIdLeft: { position: 'absolute', top: 16, left: 16, fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1.6, color: COLORS.textMuted, zIndex: 5 },
   settingsBtn: { position: 'absolute', top: 16, right: 16, padding: 6, zIndex: 5 },
+  manualBtn: { position: 'absolute', top: 16, right: 52, padding: 6, zIndex: 5 },
   windowSill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 14, backgroundColor: '#1c150e' },
 
   idStrip: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.textMuted, textAlign: 'center', paddingTop: 16, paddingHorizontal: 24 },
@@ -251,8 +297,10 @@ const styles = StyleSheet.create({
   beatTrack: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   beatNode: { alignItems: 'center', gap: 6 },
   beatDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#c4af86', borderWidth: 1, borderColor: '#9a8460' },
+  beatDotDone: { backgroundColor: '#6d7b62', borderColor: '#516447' },
   beatDotOn: { backgroundColor: '#c0563f', borderColor: '#c0563f' },
   beatName: { fontFamily: FONTS.mono, fontSize: 8.5, letterSpacing: 0.8, color: '#8a7656' },
+  beatNameDone: { color: '#587047' },
   beatNameOn: { color: '#9a3b2e' },
   beatLine: { flex: 1, height: 1, marginBottom: 14, marginHorizontal: 2, backgroundColor: 'rgba(169,144,102,0.5)' },
 
@@ -265,6 +313,7 @@ const styles = StyleSheet.create({
   btnStampArrow: { fontFamily: FONTS.mono, fontSize: 14, color: '#fce7d9' },
   lockNote: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1, color: '#7a5a3a', textAlign: 'center', marginTop: 10 },
   bribeNote: { fontFamily: FONTS.mono, fontSize: 11, color: '#9a3b2e', textAlign: 'center', marginTop: 8, textDecorationLine: 'underline' },
+  mapPulse: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.8, color: '#6c4d85', textAlign: 'center', marginTop: 10 },
 
   // Aperture
   apertureWrap: { paddingHorizontal: 20, marginTop: 18 },

@@ -1,10 +1,8 @@
 /**
- * Dead Letters: Achievements System
- * 
- * Achievements are organized into categories:
- * - Story: Reaching specific endings and paths
- * - Gameplay: Performance-based achievements
- * - Hidden: Secret achievements discovered through specific actions
+ * Dead Letters: Under-Map achievements.
+ *
+ * These reward the shipped campaign loop: EXAMINE fragments, CONNECT truths,
+ * commit BELIEFS, and watch The Other Reader answer from the road not taken.
  */
 
 export const ACHIEVEMENT_CATEGORIES = {
@@ -14,359 +12,211 @@ export const ACHIEVEMENT_CATEGORIES = {
 };
 
 export const ACHIEVEMENTS = {
-  // === STORY ACHIEVEMENTS ===
-  
-  // Ending-specific achievements
-  THE_TYRANTS_CROWN: {
-    id: 'THE_TYRANTS_CROWN',
-    title: "The Tyrant's Crown",
-    description: 'Reach The Tyrant ending',
-    hint: 'Seize power at every opportunity',
-    icon: '👑',
+  THE_BEGINNING: {
+    id: 'THE_BEGINNING',
+    title: 'The First Letter',
+    description: 'Read the prologue and step into Ashport.',
+    hint: 'Begin the story.',
+    icon: '✉️',
     category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'TYRANT' },
+    points: 10,
+    rarity: 'common',
+  },
+  FIRST_FRAGMENT: {
+    id: 'FIRST_FRAGMENT',
+    title: 'Pinned to the Map',
+    description: 'Collect your first anomaly fragment.',
+    hint: 'Tap a colored phrase while reading.',
+    icon: '◆',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 25,
+    rarity: 'common',
+  },
+  FIRST_TRUTH: {
+    id: 'FIRST_TRUTH',
+    title: 'Truth Surfaced',
+    description: 'Reveal your first Under-Map node.',
+    hint: 'Connect two related fragments.',
+    icon: '🗺️',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 40,
+    rarity: 'common',
+  },
+  CLEAN_DESCENT: {
+    id: 'CLEAN_DESCENT',
+    title: 'Clean Descent',
+    description: 'Surface a truth without a wrong probe.',
+    hint: 'Read the clues before pairing fragments.',
+    icon: '🕯️',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 40,
+    rarity: 'common',
+  },
+  FLAWLESS_THREE: {
+    id: 'FLAWLESS_THREE',
+    title: 'Cartographer Nerves',
+    description: 'Build a three-descent flawless streak.',
+    hint: 'Keep reading the map true.',
+    icon: '🧭',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 75,
+    rarity: 'uncommon',
+  },
+  FIRST_BELIEF: {
+    id: 'FIRST_BELIEF',
+    title: 'Belief Committed',
+    description: 'Seal your first theory of the hidden world.',
+    hint: 'Reach a chapter C beat.',
+    icon: '🔮',
+    category: ACHIEVEMENT_CATEGORIES.STORY,
+    points: 50,
+    rarity: 'common',
+  },
+  READING_HELD: {
+    id: 'READING_HELD',
+    title: 'Read True',
+    description: 'Have a sealed belief borne out by the story.',
+    hint: 'Let the next chapter test your theory.',
+    icon: '☀️',
+    category: ACHIEVEMENT_CATEGORIES.STORY,
+    points: 75,
+    rarity: 'uncommon',
+  },
+  READING_SUBVERTED: {
+    id: 'READING_SUBVERTED',
+    title: 'The Map Lied Back',
+    description: 'Have a sealed belief subverted.',
+    hint: 'A wrong reading still shapes Ashport.',
+    icon: '🌘',
+    category: ACHIEVEMENT_CATEGORIES.STORY,
+    points: 75,
+    rarity: 'uncommon',
+  },
+  MOTIF_DEEPENED: {
+    id: 'MOTIF_DEEPENED',
+    title: 'It Came Back',
+    description: 'Deepen a recurring motif.',
+    hint: 'Notice an anomaly when it returns.',
+    icon: '🌀',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 75,
+    rarity: 'uncommon',
+  },
+  KEYSTONE_FOUND: {
+    id: 'KEYSTONE_FOUND',
+    title: 'Keystone',
+    description: 'Find a motif that spans chapters.',
+    hint: 'Track a recurring fragment across days.',
+    icon: '💠',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
+    points: 125,
+    rarity: 'rare',
+  },
+  MAP_TAKING_SHAPE: {
+    id: 'MAP_TAKING_SHAPE',
+    title: 'The Map Takes Shape',
+    description: 'Draw at least half of the known Under-Map relations.',
+    hint: 'Return to unfinished connections.',
+    icon: '🌌',
+    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
     points: 100,
     rarity: 'rare',
   },
-  CLEAN_HANDS: {
-    id: 'CLEAN_HANDS',
-    title: 'Clean Hands',
-    description: 'Reach The Martyr ending',
-    hint: 'Some prices are worth paying',
-    icon: '🕊️',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'MARTYR_A' },
+  OTHER_READER_STIRS: {
+    id: 'OTHER_READER_STIRS',
+    title: 'Road Not Taken',
+    description: 'Give The Other Reader a foothold.',
+    hint: 'Rejected beliefs have consequences.',
+    icon: '👁️',
+    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
     points: 100,
     rarity: 'rare',
+    hidden: true,
   },
-  GHOST_PROTOCOL: {
-    id: 'GHOST_PROTOCOL',
-    title: 'Ghost Protocol',
-    description: 'Reach The Wandering Ghost ending',
-    hint: 'Disappear completely',
-    icon: '👻',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'WANDERING_GHOST' },
-    points: 100,
-    rarity: 'rare',
-  },
-  SHADOW_HEIR: {
-    id: 'SHADOW_HEIR',
-    title: 'Shadow Heir',
-    description: 'Reach The Overseer ending',
-    hint: 'Inherit the shadow network',
+  OTHER_READER_MANIFEST: {
+    id: 'OTHER_READER_MANIFEST',
+    title: 'A Face in the Rain',
+    description: 'Bring The Other Reader fully into Ashport.',
+    hint: '???',
     icon: '🎭',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'OVERSEER_A' },
-    points: 100,
-    rarity: 'rare',
-  },
-  SCALES_OF_JUSTICE: {
-    id: 'SCALES_OF_JUSTICE',
-    title: 'Scales of Justice',
-    description: 'Reach The Reformer ending',
-    hint: 'Work within the system',
-    icon: '⚖️',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'REFORMER_A' },
-    points: 100,
-    rarity: 'rare',
-  },
-  QUIET_WISDOM: {
-    id: 'QUIET_WISDOM',
-    title: 'Quiet Wisdom',
-    description: 'Reach The Quiet Man ending',
-    hint: 'Speak softly and carry influence',
-    icon: '🤫',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'QUIET_MAN' },
-    points: 100,
-    rarity: 'rare',
-  },
-  MASTER_BUILDER: {
-    id: 'MASTER_BUILDER',
-    title: 'Master Builder',
-    description: 'Reach The Architect ending',
-    hint: 'Build something lasting',
-    icon: '🏛️',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'ARCHITECT' },
-    points: 100,
-    rarity: 'rare',
-  },
-  CASTAWAY: {
-    id: 'CASTAWAY',
-    title: 'Castaway',
-    description: 'Reach The Isolate ending',
-    hint: 'Cut all ties',
-    icon: '🏝️',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending', endingId: 'ISOLATE' },
-    points: 100,
-    rarity: 'rare',
-  },
-  
-  // Path completion achievements
-  COMPLETIONIST: {
-    id: 'COMPLETIONIST',
-    title: 'Completionist',
-    description: 'Unlock all 16 endings',
-    hint: 'See every possible future',
-    icon: '🏆',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'all_endings' },
-    points: 500,
+    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
+    points: 150,
     rarity: 'legendary',
+    hidden: true,
   },
-  THE_LONG_ROAD: {
-    id: 'THE_LONG_ROAD',
-    title: 'The Long Road',
-    description: 'Complete the Methodical super-path',
-    hint: 'Patience is a virtue',
-    icon: '🛤️',
+  CHAPTER_THREE: {
+    id: 'CHAPTER_THREE',
+    title: 'No Longer Coincidence',
+    description: 'Reach Chapter 3 of the campaign.',
+    hint: 'Keep following the letters.',
+    icon: '📚',
     category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'superpath', superPath: 'Methodical' },
-    points: 150,
-    rarity: 'uncommon',
-  },
-  BURN_IT_DOWN: {
-    id: 'BURN_IT_DOWN',
-    title: 'Burn It Down',
-    description: 'Complete the Aggressive super-path',
-    hint: 'Sometimes you have to break things',
-    icon: '🔥',
-    category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'superpath', superPath: 'Aggressive' },
-    points: 150,
-    rarity: 'uncommon',
+    points: 60,
+    rarity: 'common',
   },
   FIRST_ENDING: {
     id: 'FIRST_ENDING',
-    title: 'The First Truth',
-    description: 'Reach your first ending',
-    hint: 'Complete the story campaign',
-    icon: '📖',
+    title: 'A Worldview Sealed',
+    description: 'Reach any ending.',
+    hint: 'Finish the campaign.',
+    icon: '🏁',
     category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'any_ending' },
-    points: 50,
-    rarity: 'common',
+    points: 150,
+    rarity: 'rare',
   },
-  HALFWAY_THERE: {
-    id: 'HALFWAY_THERE',
-    title: 'Halfway There',
-    description: 'Unlock 8 different endings',
-    hint: 'Explore half the possibilities',
-    icon: '📊',
+  CLEAR_EYED: {
+    id: 'CLEAR_EYED',
+    title: 'Clear-Eyed',
+    description: 'Reach The Map Made Whole.',
+    hint: 'Read the hidden world true.',
+    icon: '✨',
     category: ACHIEVEMENT_CATEGORIES.STORY,
-    condition: { type: 'ending_count', count: 8 },
     points: 200,
-    rarity: 'rare',
-  },
-  
-  // === GAMEPLAY ACHIEVEMENTS ===
-  
-  PERFECT_DETECTIVE: {
-    id: 'PERFECT_DETECTIVE',
-    title: 'Perfect Detective',
-    description: 'Solve a case in 1 attempt',
-    hint: 'Trust your instincts',
-    icon: '🎯',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'solve_attempts', attempts: 1 },
-    points: 75,
-    rarity: 'uncommon',
-  },
-  NO_STONE_UNTURNED: {
-    id: 'NO_STONE_UNTURNED',
-    title: 'No Stone Unturned',
-    description: 'Find all outliers on your first guess',
-    hint: 'Spot all the anomalies at once',
-    icon: '🔍',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'first_guess_complete' },
-    points: 100,
-    rarity: 'rare',
-  },
-  AGAINST_THE_CLOCK: {
-    id: 'AGAINST_THE_CLOCK',
-    title: 'Against the Clock',
-    description: 'Complete a case in under 60 seconds',
-    hint: 'Speed is of the essence',
-    icon: '⏱️',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'time_limit', seconds: 60 },
-    points: 75,
-    rarity: 'uncommon',
-  },
-  MARATHON_MAN: {
-    id: 'MARATHON_MAN',
-    title: 'Marathon Man',
-    description: 'Complete full story in one session',
-    hint: 'Dedicate an evening to justice',
-    icon: '🏃',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'single_session' },
-    points: 150,
-    rarity: 'rare',
-  },
-  CASE_CRACKER: {
-    id: 'CASE_CRACKER',
-    title: 'Case Cracker',
-    description: 'Solve 10 cases',
-    hint: 'Practice makes perfect',
-    icon: '📁',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'total_solved', count: 10 },
-    points: 50,
-    rarity: 'common',
-  },
-  VETERAN_INVESTIGATOR: {
-    id: 'VETERAN_INVESTIGATOR',
-    title: 'Veteran Investigator',
-    description: 'Solve 50 cases',
-    hint: 'A true professional',
-    icon: '🏅',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'total_solved', count: 50 },
-    points: 150,
-    rarity: 'rare',
-  },
-  STREAK_FIVE: {
-    id: 'STREAK_FIVE',
-    title: 'Hot Streak',
-    description: 'Solve 5 cases in a row',
-    hint: 'Keep the momentum going',
-    icon: '🔥',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'streak', count: 5 },
-    points: 50,
-    rarity: 'common',
-  },
-  STREAK_TEN: {
-    id: 'STREAK_TEN',
-    title: 'Unstoppable',
-    description: 'Solve 10 cases in a row',
-    hint: 'A legend in the making',
-    icon: '💫',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'streak', count: 10 },
-    points: 100,
-    rarity: 'uncommon',
-  },
-  DAILY_RITUAL: {
-    id: 'DAILY_RITUAL',
-    title: 'Daily Ritual',
-    description: 'Play for 7 consecutive days',
-    hint: 'Make it a habit',
-    icon: '📅',
-    category: ACHIEVEMENT_CATEGORIES.GAMEPLAY,
-    condition: { type: 'consecutive_days', count: 7 },
-    points: 100,
-    rarity: 'uncommon',
-  },
-  
-  // === HIDDEN ACHIEVEMENTS ===
-  
-  TRUST_ISSUES: {
-    id: 'TRUST_ISSUES',
-    title: 'Trust Issues',
-    description: 'Reach 0 Sarah Trust',
-    hint: '???',
-    icon: '💔',
-    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'sarah_trust', value: 0 },
-    points: 50,
-    rarity: 'rare',
-    hidden: true,
-  },
-  VICTORIAS_FAVORITE: {
-    id: 'VICTORIAS_FAVORITE',
-    title: "Victoria's Favorite",
-    description: 'Side with Victoria in every decision',
-    hint: '???',
-    icon: '🖤',
-    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'all_victoria' },
-    points: 100,
-    rarity: 'rare',
-    hidden: true,
-  },
-  THE_THIRD_OPTION: {
-    id: 'THE_THIRD_OPTION',
-    title: 'The Third Option',
-    description: 'Find the hidden path',
-    hint: '???',
-    icon: '🚪',
-    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'secret_path' },
-    points: 150,
     rarity: 'legendary',
+  },
+  HALF_BLIND: {
+    id: 'HALF_BLIND',
+    title: 'Half-Blind',
+    description: 'Reach A Map Half-Drawn.',
+    hint: 'Some truths hold; some bend.',
+    icon: '◐',
+    category: ACHIEVEMENT_CATEGORIES.STORY,
+    points: 150,
+    rarity: 'rare',
+  },
+  DECEIVED: {
+    id: 'DECEIVED',
+    title: 'The Shape You Wanted',
+    description: 'Reach the deceived ending.',
+    hint: 'Let the hidden world flatter you.',
+    icon: '🕳️',
+    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
+    points: 150,
+    rarity: 'rare',
     hidden: true,
   },
-  NIGHT_OWL: {
-    id: 'NIGHT_OWL',
-    title: 'Night Owl',
-    description: 'Solve a case between midnight and 4 AM',
-    hint: '???',
+  NIGHT_READER: {
+    id: 'NIGHT_READER',
+    title: 'Night Reader',
+    description: 'Open the map between midnight and 4 AM.',
+    hint: 'Ashport is louder after midnight.',
     icon: '🦉',
     category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'time_of_day', start: 0, end: 4 },
     points: 25,
-    rarity: 'common',
-    hidden: true,
-  },
-  EARLY_BIRD: {
-    id: 'EARLY_BIRD',
-    title: 'Early Bird',
-    description: 'Solve a case between 5 AM and 7 AM',
-    hint: '???',
-    icon: '🐦',
-    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'time_of_day', start: 5, end: 7 },
-    points: 25,
-    rarity: 'common',
-    hidden: true,
-  },
-  PERSISTENT: {
-    id: 'PERSISTENT',
-    title: 'Persistent',
-    description: 'Retry a failed case and solve it',
-    hint: '???',
-    icon: '🔄',
-    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'retry_success' },
-    points: 50,
-    rarity: 'common',
-    hidden: true,
-  },
-  THE_BEGINNING: {
-    id: 'THE_BEGINNING',
-    title: 'The Beginning',
-    description: 'Read the full prologue',
-    hint: '???',
-    icon: '📜',
-    category: ACHIEVEMENT_CATEGORIES.HIDDEN,
-    condition: { type: 'prologue_complete' },
-    points: 10,
     rarity: 'common',
     hidden: true,
   },
 };
 
-// Array format for easy iteration
 export const ACHIEVEMENTS_LIST = Object.values(ACHIEVEMENTS);
-
-// Total achievement count
 export const ACHIEVEMENT_COUNT = ACHIEVEMENTS_LIST.length;
 
-// Group by category
 export const ACHIEVEMENTS_BY_CATEGORY = {
-  [ACHIEVEMENT_CATEGORIES.STORY]: ACHIEVEMENTS_LIST.filter(a => a.category === ACHIEVEMENT_CATEGORIES.STORY),
-  [ACHIEVEMENT_CATEGORIES.GAMEPLAY]: ACHIEVEMENTS_LIST.filter(a => a.category === ACHIEVEMENT_CATEGORIES.GAMEPLAY),
-  [ACHIEVEMENT_CATEGORIES.HIDDEN]: ACHIEVEMENTS_LIST.filter(a => a.category === ACHIEVEMENT_CATEGORIES.HIDDEN),
+  [ACHIEVEMENT_CATEGORIES.STORY]: ACHIEVEMENTS_LIST.filter((a) => a.category === ACHIEVEMENT_CATEGORIES.STORY),
+  [ACHIEVEMENT_CATEGORIES.GAMEPLAY]: ACHIEVEMENTS_LIST.filter((a) => a.category === ACHIEVEMENT_CATEGORIES.GAMEPLAY),
+  [ACHIEVEMENT_CATEGORIES.HIDDEN]: ACHIEVEMENTS_LIST.filter((a) => a.category === ACHIEVEMENT_CATEGORIES.HIDDEN),
 };
 
-// Rarity definitions for UI styling
 export const RARITY_CONFIG = {
   common: {
     label: 'Common',
@@ -394,40 +244,22 @@ export const RARITY_CONFIG = {
   },
 };
 
-/**
- * Get achievement by ID
- */
 export function getAchievementById(id) {
   return ACHIEVEMENTS[id] || null;
 }
 
-/**
- * Calculate total possible points
- */
 export function getTotalPossiblePoints() {
   return ACHIEVEMENTS_LIST.reduce((sum, a) => sum + a.points, 0);
 }
 
-/**
- * Calculate earned points from unlocked achievements
- */
 export function calculateEarnedPoints(unlockedIds = []) {
-  return unlockedIds.reduce((sum, id) => {
-    const achievement = ACHIEVEMENTS[id];
-    return sum + (achievement?.points || 0);
-  }, 0);
+  return unlockedIds.reduce((sum, id) => sum + (ACHIEVEMENTS[id]?.points || 0), 0);
 }
 
-/**
- * Get visible achievements (excludes hidden until unlocked)
- */
 export function getVisibleAchievements(unlockedIds = []) {
-  return ACHIEVEMENTS_LIST.filter(a => !a.hidden || unlockedIds.includes(a.id));
+  return ACHIEVEMENTS_LIST.filter((a) => !a.hidden || unlockedIds.includes(a.id));
 }
 
-/**
- * Get achievement progress percentage
- */
 export function getAchievementProgress(unlockedIds = []) {
   return Math.round((unlockedIds.length / ACHIEVEMENT_COUNT) * 100);
 }

@@ -28,6 +28,7 @@ import StoryCampaignScreen from '../screens/StoryCampaignScreen';
 import EndingGalleryScreen from '../screens/EndingGalleryScreen';
 import ChapterSelectScreen from '../screens/ChapterSelectScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
+import { ACHIEVEMENT_COUNT } from '../data/achievementsData';
 
 const Stack = createNativeStackNavigator();
 
@@ -398,7 +399,7 @@ export default function AppNavigator({ fontsReady, audio }) {
               hasCompletedStory={hasCompletedStory}
               endingsCount={endingsCount}
               achievementsCount={achievementsCount}
-              totalAchievements={30}
+              totalAchievements={ACHIEVEMENT_COUNT}
             />
           );
         }}

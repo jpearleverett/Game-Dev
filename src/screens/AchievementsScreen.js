@@ -216,7 +216,7 @@ export default function AchievementsScreen({
             ACHIEVEMENTS
           </Text>
           <Text style={[styles.subtitle, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
-            Your detective accomplishments
+            Your Under-Map milestones
           </Text>
         </View>
 

@@ -1484,24 +1484,30 @@ Prefer: "The salt wind cut through Jack's coat as he stepped onto the weathered 
   }
 
   if (isDecisionPoint) {
+    const heldFragments = (Array.isArray(this.currentUnderMap?.fragments) ? this.currentUnderMap.fragments : [])
+      .filter((f) => f?.label)
+      .slice(0, 5)
+      .map((f) => `- [${String(f.kind || 'anomaly').toUpperCase()}] ${f.label}${f.detail ? `: ${String(f.detail).slice(0, 120)}` : ''}`)
+      .join('\n');
     task += `
 
 ### DECISION POINT REQUIREMENTS
-This subchapter ends with a binary choice that becomes the chapter-ending decision.
+This subchapter ends with competing BELIEFS about the hidden world. The player's choice becomes the chapter-ending theory.
 
 **Return ONLY the base decision in the "decision" field** (intro, optionA, optionB).
 Do NOT include pathDecisions in this response. Path-specific decisions are generated in a second call.
 
 **DECISION DESIGN REQUIREMENTS:**
-1. Present TWO distinct, defensible paths (Option A and Option B)
-2. Both options must be morally complex - NO obvious "right" answer
+1. Present TWO distinct, defensible interpretations of what is really happening (Option A and Option B)
+2. Both beliefs must be plausible readings of the same evidence - NO obvious "right" answer
 3. The decision must feel EARNED by the current narrative
 4. Connect to the themes of perception vs reality, the cost of naming, patterns as traps/lifelines, and institutional erasure
 5. The intro should frame the dilemma in 1-2 sentences (max 50 words)
+${heldFragments ? `6. Ground the options in the player's held fragments. At least one option should explicitly interpret one of these fragments:\n${heldFragments}` : ''}
 
 **For EACH option:**
-- title: Action statement in imperative mood (3-8 words)
-- focus: What this path prioritizes and what it risks (1 sentence)
+- title: Declarative belief, not an action (3-10 words)
+- focus: What this reading explains and what it risks blinding Jack to (1 sentence)
 - personalityAlignment: aggressive | methodical | balanced`;
   }
 
