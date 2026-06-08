@@ -379,14 +379,22 @@ export default function CaseFileScreen({
     return { correct: br.correct, line: (br.line || "").trim(), belief, foilBelief };
   }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, storyCampaign?.underMap?.foil, isStoryMode]);
 
-  // De-dupe: the model often reuses the SAME sentence for the belief verdict AND the
-  // echo (e.g. both quoting the scene's opening), which read as a redundant stacked
-  // box. Drop any echo whose payoff line matches the verdict's — the verdict wins.
+  // The echo banner shows the TRUTH the scene follows from (the player's mapping) —
+  // not the scene's own sentence, which they're about to read anyway. Require a
+  // nodeRef and de-dupe so we never stack the same callback twice.
   const visibleEchoes = useMemo(() => {
-    const vl = (beliefVerdict?.line || "").trim().toLowerCase();
-    if (!vl) return sceneEchoes;
-    return sceneEchoes.filter((e) => (e.line || "").trim().toLowerCase() !== vl);
-  }, [sceneEchoes, beliefVerdict]);
+    const seen = new Set();
+    const out = [];
+    for (const e of sceneEchoes) {
+      const ref = (e?.nodeRef || "").trim();
+      if (!ref) continue;
+      const key = ref.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(e);
+    }
+    return out;
+  }, [sceneEchoes]);
   const showEchoCard = showEcho && visibleEchoes.length > 0;
 
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
@@ -1189,11 +1197,6 @@ export default function CaseFileScreen({
                         You believed: “{beliefVerdict.belief}”
                       </Text>
                     ) : null}
-                    {beliefVerdict.line ? (
-                      <Text style={[styles.verdictLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
-                        {beliefVerdict.line}
-                      </Text>
-                    ) : null}
                     {beliefVerdict.foilBelief ? (
                       <Text style={[styles.verdictBelief, { color: COLORS.bloodRed, fontStyle: "italic", fontSize: slugSize }]} numberOfLines={3}>
                         The Other Reader gains ground — “{beliefVerdict.foilBelief}”
@@ -1212,12 +1215,7 @@ export default function CaseFileScreen({
                   >
                     <Text style={[styles.echoKicker, { color: palette.accent, fontSize: slugSize }]}>↳ THIS FOLLOWS FROM WHAT YOU MAPPED</Text>
                     {visibleEchoes.map((e, i) => (
-                      <View key={i} style={{ gap: 2 }}>
-                        {e.nodeRef ? (
-                          <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={1}>“{e.nodeRef}”</Text>
-                        ) : null}
-                        <Text style={[styles.echoLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>{e.line}</Text>
-                      </View>
+                      <Text key={i} style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>“{e.nodeRef}”</Text>
                     ))}
                   </View>
                 )}
