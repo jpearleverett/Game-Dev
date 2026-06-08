@@ -331,12 +331,12 @@ const styles = StyleSheet.create({
   apertureSub: { fontFamily: FONTS.mono, fontSize: 10.5, color: COLORS.textMuted, marginTop: 3 },
   apertureArrow: { color: COLORS.underViolet, fontSize: 20 },
 
-  storyLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 18 },
-  storyLinkText: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.coral },
+  storyLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 4, marginTop: 14 },
+  storyLinkText: { fontFamily: FONTS.mono, fontSize: 11, lineHeight: 16, letterSpacing: 2.4, color: COLORS.coral },
   storyLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.coral },
 
-  codexLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 14 },
-  codexLinkText: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2, color: COLORS.underViolet },
+  codexLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 5, marginTop: 16 },
+  codexLinkText: { fontFamily: FONTS.mono, fontSize: 10.5, lineHeight: 16, letterSpacing: 2, color: COLORS.underViolet },
   codexLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.underViolet },
 
   // Stat tags
