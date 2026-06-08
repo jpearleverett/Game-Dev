@@ -67,11 +67,12 @@ Fragments are **cumulative** across the whole campaign and **recur as motifs**
 (`src/services/__tests__/underMap.test.js`). A campaign holds one Under-Map at
 `progress.storyCampaign.underMap`.
 
-Shape: `{ fragments, relations, connections, nodes, theories, lastVisitedAt }`.
+Shape: `{ fragments, relations, connections, nodes, theories, foil, lastVisitedAt }`.
 - **fragment**: `{ id, label, kind, detail, phrase, anomalous, seen, firstCaseNumber, lastCaseNumber, ... }`. `kind ∈ {symbol, place, person, phenomenon}`. `id = frag_<kind>_<label-slug>`. `phrase` is the verbatim prose substring the player taps.
 - **relation**: `{ id, a, b, revelation }` — the discoverable connection *truth* (a/b are fragment ids; the model authors these by label, resolved to ids).
 - **connection**: a player-made correct link. **node**: the revelation a connection unlocks.
-- **theory**: `{ chapter, fragmentIds, interpretation, ... }` — the sealed C-beat belief.
+- **theory**: `{ chapter, fragmentIds, interpretation, rejected, correct, at }` — the sealed C-beat belief. `correct` is tri-state (null = unproven, true = held, false = subverted); `rejected` is the competing readings the player turned away from.
+- **foil**: `{ belief, fromChapter, presence, name } | null` — "The Other Reader," a single evolving antagonist born from the rejected reading. `presence` (clamped [-3,3]) grows when a belief is subverted, recedes when it holds. **Model layer only so far (Phase 1)** — not yet wired into generation/UI. Selectors `foil`/`foilPresence`/`foilIsManifest` in `underMap.js`.
 
 Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepens a motif** — bumps `seen`), `addRelations` (resolves labels→ids, re-resolves as more fragments arrive), `connectFragments` (returns `{ map, revealed:{node}|null, valid, alreadyConnected }`), `recordTheory`. Selectors: `isMotif`, `motifCount`, `mapDepth` (share of relations drawn), `undiscoveredRelationCount`.
 
@@ -162,7 +163,7 @@ src/
   data/
     underMap.js                  Under-Map pure model (the spine)
     storyContent.js              getStoryEntry, generatedCache, path keys, parseCaseNumber, computeBranchPathKey
-    storyNarrative.json          STATIC chapter-1A content (incl. seeded fragments/relations)
+    storyNarrative.json          STATIC chapter-1A content (full 13-node branch tree, written in the Under-Map register; seeded fragments/relations). Only 001A.ROOT is authored; other keys are generated/cached.
     cases.js                     SEASON_ONE_CASES placeholders
     caseBoard.js                 LEGACY (retired alibi board) — kept only for save back-compat + EvidenceBoard constants
     manyShot/                    live generation exemplars
@@ -192,11 +193,15 @@ scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time too
 
 ## 8. Where we left off / open threads
 
-**Working & verified on-device:** full loop A→B→C→next chapter; campaign advance (no 1C→1A reset); EXAMINE fragments appear and are tappable in generated chapters; belief-framed C climax; cross-chapter weaving + revealed-truth steering + recurring motifs + a "map is taking shape" depth meter (just shipped — Phases A-C of the fragment-system upgrade).
+**Working & verified on-device:** full loop A→B→C→next chapter; campaign advance (no 1C→1A reset); EXAMINE fragments appear and are tappable in generated chapters; belief-framed C climax; cross-chapter weaving + revealed-truth steering + recurring motifs + a "map is taking shape" depth meter.
+
+**Belief payoff is SHIPPED (don't re-build it).** A sealed belief is borne out or subverted and accrues into the ending reached. The model emits `beliefResolution { resolvesChapter, correct, line }` (schema + `promptAssembly.js` prompt pressure to subvert); `CaseFileScreen` shows an in-scene verdict banner ("YOUR READING HELD TRUE / WAS SUBVERTED") and calls `onResolveBelief` → `resolveTheory`; `clarity()`/`endingVariant()` drive the 3-variant finale in `src/data/endings.js` (`EndingScreen`, `CodexScreen` worldview readout). The whole spine lives on `theory.correct`.
+
+**READ-beat polish (shipped, in `BranchingNarrativeReader` + `TypewriterText`):** uncollected anomalies shimmer; a per-page "ANOMALIES SENSED n/m" meter ticks + flares a mote and stamps "PAGE FULLY SENSED"; the Under-Map bleeds violet/cyan through the page margins, deepening with `mapDepth`; an examine sting (`playSelect`); punctuation-aware "dramatic pacing" in the typewriter; a Playfair drop-cap on the scene opening. All honor `reducedMotion` (read from `GameContext`).
 
 **Open / candidate next work:**
+- **The Other Reader (foil) — Phases 2-4.** Phase 1 (the `underMap.foil` model + lifecycle + tests) is shipped. Remaining: (2) wire `TheoryScreen`/`recordUnderMapTheory` to pass `rejected` so the foil populates; (3) inject a `<the_other_reader>` block in `promptAssembly.js` scaled by `foilPresence`; (4) surface the foil in the verdict banner / Codex / ending (the *Deceived* close already gestures at it).
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.
-- **Theory payoff / accuracy.** A sealed belief currently *steers* the next chapter but has no notion of being right/wrong. A long-game feature: beliefs accrue into a worldview that bears out or is subverted, and ultimately steers which ending you reach.
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.
 - **Legacy cleanup (optional):** `caseBoard.js` and the `GameContext` case-board actions are retired but kept for save back-compat; `EvidenceBoardScreen`/daily mode is independent. Remove only with intent.
 
