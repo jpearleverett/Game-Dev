@@ -244,7 +244,7 @@ export default function TheoryScreen({ navigation, route }) {
         </View>
         <Text style={styles.title}>What do you believe?</Text>
         <Text style={styles.lede}>
-          Commit to a reading of the hidden world. The belief you stake decides which way it pulls you next — and what it lets you see.
+          Choose what you believe is really happening beneath Ashport. The chapter ahead bears your reading out — or subverts it — and steers where the story goes.
         </Text>
       </View>
 
@@ -273,23 +273,30 @@ export default function TheoryScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* What the map has revealed so far */}
+        {/* What the map has revealed so far (context for the choice; full list in the Codex) */}
         {map.nodes.length > 0 ? (
           <>
             <Text style={styles.sectionLabel}>WHAT THE MAP HAS REVEALED</Text>
+            <Text style={styles.sectionHint}>The truths you've pulled from the Under-Map — what your reading rests on.</Text>
             <View style={styles.nodeList}>
-              {map.nodes.slice(0, 6).map((n) => (
+              {map.nodes.slice(0, 3).map((n) => (
                 <View key={n.id} style={styles.nodeRow}>
                   <MaterialCommunityIcons name="map-marker-star" size={15} color={COLORS.accentSecondary} />
                   <Text style={styles.nodeText}>{n.revelation}</Text>
                 </View>
               ))}
+              {map.nodes.length > 3 ? (
+                <Text style={styles.nodeMore}>+{map.nodes.length - 3} more truth{map.nodes.length - 3 === 1 ? '' : 's'} you've uncovered</Text>
+              ) : null}
             </View>
           </>
         ) : null}
 
-        {/* The competing beliefs — this is the chapter decision */}
+        {/* The competing beliefs — THIS is the chapter decision */}
         <Text style={[styles.sectionLabel, { marginTop: map.nodes.length ? SPACING.lg : 0 }]}>WHAT DO YOU BELIEVE?</Text>
+        {beliefs.length > 0 ? (
+          <Text style={styles.sectionHint}>Your one real choice. The chapter ahead bears it out — or subverts it.</Text>
+        ) : null}
         {beliefs.length === 0 ? (
           <Text style={styles.muted}>The way forward is yours to take. Seal your read and press on.</Text>
         ) : (
@@ -325,10 +332,14 @@ export default function TheoryScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Stake the fragments as evidence */}
+        {/* Stake the fragments as evidence — the ritual of committing; the BELIEF is the
+            mechanical choice (staked fragments are recorded with your reading, not graded). */}
         <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>
           {sealed ? 'THE EVIDENCE YOU STAKED' : 'STAKE YOUR EVIDENCE'}
         </Text>
+        {!sealed ? (
+          <Text style={styles.sectionHint}>The fragments behind your reading — the case you're making. Optional; the belief above is the choice that counts. Leave all unpicked to stake the whole map.</Text>
+        ) : null}
         {map.fragments.length === 0 ? (
           <Text style={styles.muted}>You collected no fragments this chapter — the map stays dark. You can still commit a read.</Text>
         ) : (
@@ -424,6 +435,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
+  sectionHint: { fontFamily: FONTS.primary, fontSize: 11.5, color: COLORS.textMuted, marginTop: -SPACING.xs, marginBottom: SPACING.sm, lineHeight: 16 },
+  nodeMore: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.4, color: COLORS.textSubtle, marginTop: 2, marginLeft: 22 },
   // Clarity / belief resolution (Move 3)
   resolvedCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.sm },
   resolvedTrue: { backgroundColor: 'rgba(241,197,114,0.07)', borderColor: COLORS.accentSoft },

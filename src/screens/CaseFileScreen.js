@@ -379,6 +379,16 @@ export default function CaseFileScreen({
     return { correct: br.correct, line: (br.line || "").trim(), belief, foilBelief };
   }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, storyCampaign?.underMap?.foil, isStoryMode]);
 
+  // De-dupe: the model often reuses the SAME sentence for the belief verdict AND the
+  // echo (e.g. both quoting the scene's opening), which read as a redundant stacked
+  // box. Drop any echo whose payoff line matches the verdict's — the verdict wins.
+  const visibleEchoes = useMemo(() => {
+    const vl = (beliefVerdict?.line || "").trim().toLowerCase();
+    if (!vl) return sceneEchoes;
+    return sceneEchoes.filter((e) => (e.line || "").trim().toLowerCase() !== vl);
+  }, [sceneEchoes, beliefVerdict]);
+  const showEchoCard = showEcho && visibleEchoes.length > 0;
+
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
   const examinableDetails = useMemo(() => {
@@ -1193,7 +1203,7 @@ export default function CaseFileScreen({
                 )}
 
                 {/* UNDER-MAP ECHO — the loop made visible: this scene follows from what you mapped */}
-                {showEcho && (
+                {showEchoCard && (
                   <View
                     style={[
                       styles.echoCard,
@@ -1201,7 +1211,7 @@ export default function CaseFileScreen({
                     ]}
                   >
                     <Text style={[styles.echoKicker, { color: palette.accent, fontSize: slugSize }]}>↳ THIS FOLLOWS FROM WHAT YOU MAPPED</Text>
-                    {sceneEchoes.map((e, i) => (
+                    {visibleEchoes.map((e, i) => (
                       <View key={i} style={{ gap: 2 }}>
                         {e.nodeRef ? (
                           <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={1}>“{e.nodeRef}”</Text>
