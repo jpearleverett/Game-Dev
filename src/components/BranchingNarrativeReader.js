@@ -1120,7 +1120,7 @@ const styles = StyleSheet.create({
   pageStamp: {
     position: "absolute",
     bottom: 16,
-    alignSelf: "center",
+    right: 16,
     opacity: 0.5,
   },
   noirPageStampText: {

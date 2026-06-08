@@ -14,21 +14,21 @@
             "anomalous": true
           },
           {
-            "label": "Silver ink that leans toward a light that isn't there",
+            "label": "The shifting silver ink",
             "kind": "phenomenon",
             "detail": "Metallic ink throws back a light source — basic forgery tell. Except the lamp was behind him, and the shimmer leaned the other way, toward something he could not see.",
             "phrase": "silver ink that shifted",
             "anomalous": true
           },
           {
-            "label": "His own hand on a letter he never wrote",
+            "label": "A letter in his own hand",
             "kind": "phenomenon",
             "detail": "Not a good forgery. His. The looped J, the lean he never fixed. You can copy a signature. You cannot copy the hand of a man who did not write.",
             "phrase": "The handwriting was his",
             "anomalous": true
           },
           {
-            "label": "Marco, who carried it up by hand",
+            "label": "Marco from the front desk",
             "kind": "person",
             "detail": "Usually slides the mail under the door. Tonight he climbed three flights to hand-deliver one envelope and could not say why. Held it like it was warm. It wasn't.",
             "phrase": "the kid from the front desk",
@@ -38,7 +38,7 @@
         "relations": [
           {
             "aLabel": "A seal that was never warm",
-            "bLabel": "Silver ink that leans toward a light that isn't there",
+            "bLabel": "The shifting silver ink",
             "revelation": "It wasn't sent to you. It was addressed to you — wax that won't warm to any hand, ink that only resolves toward a light kept out of this room. The way a lock is addressed to a key.",
             "falseReadings": [
               "A wealthy eccentric is using novelty materials to seem mysterious.",
@@ -46,7 +46,7 @@
             ]
           },
           {
-            "aLabel": "His own hand on a letter he never wrote",
+            "aLabel": "A letter in his own hand",
             "bLabel": "A seal that was never warm",
             "revelation": "Whoever sealed this already owns the inside of you, down to the lean of your letters. The mark isn't a signature. It's a measurement — and you have already been measured.",
             "falseReadings": [
