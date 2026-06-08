@@ -223,7 +223,7 @@ export function useNavigationActions(navigation, game, audio) {
   }, [setPremiumUnlocked]);
 
   const handleReplayTutorial = useCallback(() => {
-    navigation.navigate('Prologue');
+    navigation.navigate('Tutorial');
   }, [navigation]);
 
   const handleOpenStoryHub = useCallback(() => {

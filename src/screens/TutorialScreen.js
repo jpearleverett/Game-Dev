@@ -279,6 +279,9 @@ const styles = StyleSheet.create({
     color: COLORS.offWhite,
     textAlign: 'center',
     marginBottom: SPACING.md,
+    width: '100%',
+    maxWidth: 380,
+    paddingHorizontal: SPACING.sm,
   },
   bodyText: {
     fontFamily: FONTS.primary,
@@ -287,6 +290,8 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     paddingHorizontal: SPACING.sm,
+    width: '100%',
+    maxWidth: 420,
   },
   // Under-Map demo
   demoWrap: {
@@ -391,6 +396,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.accentSecondary,
     flexShrink: 1,
+    textAlign: 'left',
   },
   // Footer
   dotsRow: {
