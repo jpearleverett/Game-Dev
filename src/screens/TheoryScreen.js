@@ -143,6 +143,12 @@ export default function TheoryScreen({ navigation, route }) {
     }
     const fragmentIds = selected.size > 0 ? Array.from(selected) : map.fragments.map((f) => f.id);
     const interpretation = chosenBelief?.title || chosenBelief?.focus || 'A reading of the hidden world.';
+    // The readings the player turned away from — these seed "The Other Reader" (the
+    // foil born from the road not taken). underMap.recordTheory takes the strongest.
+    const rejected = beliefs
+      .filter((b) => b && b.key !== chosenBelief?.key)
+      .map((b) => b.title || b.focus || '')
+      .filter(Boolean);
 
     // The belief is the chapter decision: store it as the pre-decision (drives the
     // branch into the next chapter) AND record it on the Under-Map as a sealed theory.
@@ -152,7 +158,7 @@ export default function TheoryScreen({ navigation, route }) {
       caseNumber,
     );
     if (fragmentIds.length) {
-      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation });
+      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected });
     }
 
     setGenError(null);
@@ -162,7 +168,7 @@ export default function TheoryScreen({ navigation, route }) {
     sealAnim.setValue(0);
     if (reducedMotion) { sealAnim.setValue(1); }
     else { Animated.spring(sealAnim, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start(); }
-  }, [sealed, beliefs.length, chosenBelief, selected, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
+  }, [sealed, beliefs, chosenBelief, selected, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
 
   // Cross into the next chapter: pre-warm generation under the SAME key the advance
   // will set, then apply the sealed decision (clobber-safe) and navigate.
