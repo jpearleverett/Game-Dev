@@ -1163,7 +1163,7 @@ export default function CaseFileScreen({
                     style={[
                       styles.verdictCard,
                       beliefVerdict.correct ? styles.verdictTrue : styles.verdictFalse,
-                      { borderRadius: scaleRadius(RADIUS.lg), padding: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.xs) },
+                      { borderRadius: scaleRadius(RADIUS.lg), paddingVertical: scaleSpacing(SPACING.xs), paddingHorizontal: scaleSpacing(SPACING.sm), gap: scaleSpacing(3) },
                     ]}
                   >
                     <Text
@@ -1175,7 +1175,7 @@ export default function CaseFileScreen({
                       {beliefVerdict.correct ? "◆ YOUR READING HELD TRUE" : "◆ YOUR READING WAS SUBVERTED"}
                     </Text>
                     {beliefVerdict.belief ? (
-                      <Text style={[styles.verdictBelief, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={3}>
+                      <Text style={[styles.verdictBelief, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>
                         You believed: “{beliefVerdict.belief}”
                       </Text>
                     ) : null}
@@ -1197,14 +1197,14 @@ export default function CaseFileScreen({
                   <View
                     style={[
                       styles.echoCard,
-                      { borderRadius: scaleRadius(RADIUS.lg), borderColor: palette.border, padding: scaleSpacing(SPACING.sm), gap: scaleSpacing(SPACING.xs) },
+                      { borderRadius: scaleRadius(RADIUS.lg), borderColor: palette.border, paddingVertical: scaleSpacing(SPACING.xs), paddingHorizontal: scaleSpacing(SPACING.sm), gap: scaleSpacing(3) },
                     ]}
                   >
                     <Text style={[styles.echoKicker, { color: palette.accent, fontSize: slugSize }]}>↳ THIS FOLLOWS FROM WHAT YOU MAPPED</Text>
                     {sceneEchoes.map((e, i) => (
                       <View key={i} style={{ gap: 2 }}>
                         {e.nodeRef ? (
-                          <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={2}>“{e.nodeRef}”</Text>
+                          <Text style={[styles.echoFrom, { color: palette.badgeText, fontSize: slugSize }]} numberOfLines={1}>“{e.nodeRef}”</Text>
                         ) : null}
                         <Text style={[styles.echoLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>{e.line}</Text>
                       </View>

@@ -79,6 +79,13 @@ const KIND_TINT = {
   person: 'rgba(154,59,46,0.16)',
   phenomenon: 'rgba(106,74,160,0.16)',
 };
+// rgb triples (for the shimmer's animated highlight — see InlineTappablePhrase).
+const KIND_RGB = {
+  symbol: '151,104,26',
+  place: '47,111,126',
+  person: '154,59,46',
+  phenomenon: '106,74,160',
+};
 
 const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   phrase,
@@ -120,12 +127,18 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
       : isRevealed ? styles.inlineTappableRevealed : styles.inlineTappableUnrevealed,
   ];
 
-  // Uncollected anomalies breathe — a faint pulse that says "something here doesn't
-  // belong, tap me." Collected ones go solid. Ordinary observations never pulse.
+  // Uncollected anomalies breathe — a kind-colored highlight that pulses up and back
+  // to say "something here doesn't belong, tap me." Collected ones go solid. Ordinary
+  // observations never pulse. NOTE: we animate backgroundColor (not opacity) because
+  // opacity on a nested <Text> is a no-op in RN — inline text isn't its own view layer.
   if (isFragment && !isRevealed && shimmer) {
-    const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
+    const rgb = KIND_RGB[kind] || KIND_RGB.phenomenon;
+    const backgroundColor = shimmer.interpolate({
+      inputRange: [0, 1],
+      outputRange: [`rgba(${rgb},0)`, `rgba(${rgb},0.32)`],
+    });
     return (
-      <Animated.Text onPress={handlePress} style={[...baseStyle, { opacity }]}>
+      <Animated.Text onPress={handlePress} style={[...baseStyle, { backgroundColor }]}>
         {phrase}
       </Animated.Text>
     );
@@ -203,7 +216,7 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   dropCap, // raise the first letter into a versal — the scene "sets" like a printed page
 }) {
   const segments = useMemo(() => parseTextWithDetails(text, details), [text, details]);
-  const shimmer = useRef(new Animated.Value(1)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
 
   // Run one shared pulse for the whole page while any anomaly is still uncollected.
   const hasUncollected = useMemo(
@@ -211,10 +224,11 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
     [segments, revealedDetails],
   );
   useEffect(() => {
-    if (reducedMotion || !hasUncollected) { shimmer.setValue(1); return undefined; }
+    // backgroundColor isn't native-drivable, so this loop runs on the JS driver.
+    if (reducedMotion || !hasUncollected) { shimmer.setValue(0); return undefined; }
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(shimmer, { toValue: 0, duration: 920, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      Animated.timing(shimmer, { toValue: 1, duration: 920, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 1, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+      Animated.timing(shimmer, { toValue: 0, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
     ]));
     loop.start();
     return () => loop.stop();

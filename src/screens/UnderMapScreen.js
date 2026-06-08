@@ -146,6 +146,14 @@ export default function UnderMapScreen({ navigation, route }) {
   const ringOpacity = ringPulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.4, 0] });
 
   const remaining = undiscoveredRelationCount(map);
+  // DECLUTTER: as the map grows, let "inert" fragments (those not part of any
+  // still-unfound relation) recede so the threads you can still pull stay vivid.
+  // Falls back to showing everything at full strength when nothing is sensed yet.
+  const liveFragmentIds = useMemo(() => {
+    const ids = new Set();
+    sensedRelations(map).forEach((r) => { if (r.a) ids.add(r.a); if (r.b) ids.add(r.b); });
+    return ids;
+  }, [map]);
   const depth = mapDepth(map);
   const streak = flawlessStreak(map);
   const beat = gateCaseNumber ? gateCaseNumber.slice(3, 4) : 'A';
@@ -388,6 +396,9 @@ export default function UnderMapScreen({ navigation, route }) {
           const kc = colorFor(f.kind);
           const isSel = selected.includes(f.id);
           const mapped = connectionList.some((c) => c.a === f.id || c.b === f.id);
+          // Inert = no remaining unfound relation touches this fragment (and we have
+          // live info to go on). These recede into the background of the map.
+          const inert = liveFragmentIds.size > 0 && !liveFragmentIds.has(f.id) && !isSel;
           const motif = isMotif(f);
           const keystone = isKeystone(f);
           return (
@@ -396,7 +407,7 @@ export default function UnderMapScreen({ navigation, route }) {
               onPress={() => handleTapStar(f.id)}
               onLongPress={() => { if (!node) { selectionHaptic(); setInspect(f); } }}
               delayLongPress={240}
-              style={[styles.star, { left: x - 45, top: y - 23 }]}
+              style={[styles.star, { left: x - 45, top: y - 23 }, inert && styles.starInert]}
               accessibilityRole="button"
               accessibilityLabel={f.label}
               accessibilityHint="Tap to connect, hold to read the clue"
@@ -406,11 +417,11 @@ export default function UnderMapScreen({ navigation, route }) {
                   <Animated.View pointerEvents="none" style={[styles.starRing, { borderColor: kc, opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
                 ) : null}
                 {keystone ? <View pointerEvents="none" style={styles.keystoneRing} /> : null}
-                <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : mapped ? 0.65 : 0.36, transform: [{ scale: isSel ? 1.2 : mapped ? 1 : 0.8 }] }]} />
-                <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }]} />
+                <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : inert ? 0.14 : mapped ? 0.65 : 0.42, transform: [{ scale: isSel ? 1.2 : inert ? 0.6 : mapped ? 1 : 0.82 }] }]} />
+                <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }, inert && styles.starCoreInert]} />
                 {motif ? <View style={styles.motifBadge}><Text style={styles.motifBadgeText}>×{f.seen}</Text></View> : null}
               </View>
-              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped]} numberOfLines={2}>{f.label}</Text>
+              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped, inert && styles.starLabelInert]} numberOfLines={2}>{f.label}</Text>
             </Pressable>
           );
         })}
@@ -570,6 +581,9 @@ const styles = StyleSheet.create({
   starLabel: { fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
   starLabelSel: { color: '#fff', fontFamily: FONTS.monoBold },
   starLabelMapped: { color: COLORS.fogGrayLight },
+  starInert: { opacity: 0.55 },
+  starCoreInert: { opacity: 0.45 },
+  starLabelInert: { opacity: 0.4, fontSize: 8.5 },
 
   empty: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   emptyText: { fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textMuted, textAlign: 'center', lineHeight: 18 },
