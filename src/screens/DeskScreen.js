@@ -223,7 +223,7 @@ export default function DeskScreen({
           {/* Story campaign — ghost entry */}
           <Pressable onPress={tap(onOpenStoryCampaign)} style={styles.storyLink}>
             <MaterialCommunityIcons name="book-open-page-variant-outline" size={16} color={COLORS.coral} />
-            <Text style={styles.storyLinkText}>BRANCH HISTORY</Text>
+            <Text style={styles.storyLinkText}>HISTORY</Text>
             <Text style={styles.storyLinkArrow}>→</Text>
           </Pressable>
 
