@@ -37,5 +37,17 @@ describe('selectEnding', () => {
     expect(e.variant).toBe('deceived');
     expect(e.id).toBe('ending_deceived');
     expect(e.flavorLine).toContain('shape it wanted');
+    expect(e.foilLine).toBeNull(); // withBeliefs seals no rejected readings -> no foil
+  });
+
+  test('a manifest foil (presence >= 2) pays off in the close', () => {
+    let m = createBlankUnderMap();
+    m = recordTheory(m, { chapter: 1, fragmentIds: ['a'], interpretation: 'right 1', rejected: ['the door is a mouth'] });
+    m = recordTheory(m, { chapter: 2, fragmentIds: ['a'], interpretation: 'right 2', rejected: ['the door is a mouth'] });
+    m = resolveTheory(m, 1, false);
+    m = resolveTheory(m, 2, false); // both subverted -> presence 2 (manifest), deceived (0/2)
+    const e = selectEnding(m);
+    expect(e.variant).toBe('deceived');
+    expect(e.foilLine).toContain('the door is a mouth');
   });
 });

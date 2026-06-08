@@ -362,8 +362,11 @@ export default function CaseFileScreen({
     const theories = storyCampaign?.underMap?.theories || [];
     const belief = (theories.find((t) => t.chapter === ch) || {}).interpretation || null;
     if (!belief && !br.line) return null;
-    return { correct: br.correct, line: (br.line || "").trim(), belief };
-  }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, isStoryMode]);
+    // When the reading is subverted, name the road not taken gaining ground.
+    const foilObj = storyCampaign?.underMap?.foil || null;
+    const foilBelief = !br.correct && foilObj && foilObj.belief ? foilObj.belief : null;
+    return { correct: br.correct, line: (br.line || "").trim(), belief, foilBelief };
+  }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, storyCampaign?.underMap?.foil, isStoryMode]);
 
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
@@ -1168,6 +1171,11 @@ export default function CaseFileScreen({
                     {beliefVerdict.line ? (
                       <Text style={[styles.verdictLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
                         {beliefVerdict.line}
+                      </Text>
+                    ) : null}
+                    {beliefVerdict.foilBelief ? (
+                      <Text style={[styles.verdictBelief, { color: COLORS.bloodRed, fontStyle: "italic", fontSize: slugSize }]} numberOfLines={3}>
+                        The Other Reader gains ground — “{beliefVerdict.foilBelief}”
                       </Text>
                     ) : null}
                   </View>

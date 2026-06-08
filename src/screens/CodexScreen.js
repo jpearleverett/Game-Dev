@@ -6,6 +6,8 @@ import {
   normalizeUnderMap,
   clarity,
   endingVariant,
+  foil,
+  foilPresence,
   mapDepth,
   isMotif,
   isKeystone,
@@ -73,6 +75,12 @@ export default function CodexScreen({ navigation }) {
 
   const cl = useMemo(() => clarity(map), [map]);
   const variant = useMemo(() => endingVariant(map), [map]);
+  const fl = useMemo(() => foil(map), [map]);
+  const flPresence = useMemo(() => foilPresence(map), [map]);
+  const flLine = flPresence >= 3 ? 'Ascendant. Their reading is becoming the truth of the hidden world.'
+    : flPresence === 2 ? 'Walking Ashport with a face now. The city is bending toward their reading.'
+    : flPresence === 1 ? 'Glimpsed twice at the edges. Gaining ground each time you read wrong.'
+    : 'A rumor at the margins — the road you did not take, waiting.';
   const depth = useMemo(() => mapDepth(map), [map]);
   const depthPct = Math.round(depth.ratio * 100);
   const v = VARIANT[variant] || VARIANT.unproven;
@@ -123,6 +131,15 @@ export default function CodexScreen({ navigation }) {
           ) : null}
           <Text style={styles.worldviewLine}>{v.line}</Text>
         </View>
+
+        {/* The Other Reader — the road not taken, given a face */}
+        {fl ? (
+          <View style={styles.foilCard}>
+            <Text style={styles.foilKicker}>◆ THE OTHER READER</Text>
+            <Text style={styles.foilBelief}>“{fl.belief}”</Text>
+            <Text style={styles.foilLine}>{flLine}</Text>
+          </View>
+        ) : null}
 
         {/* Stat strip */}
         <View style={styles.statStrip}>
@@ -241,6 +258,10 @@ const styles = StyleSheet.create({
   worldviewLabel: { fontFamily: FONTS.secondaryBold, fontSize: 26, marginTop: 6 },
   worldviewClarity: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.4, color: COLORS.textSecondary, marginTop: 8 },
   worldviewLine: { fontFamily: FONTS.primary, fontSize: 13.5, lineHeight: 21, color: COLORS.textSecondary, marginTop: 10 },
+  foilCard: { borderWidth: 1, borderColor: COLORS.bloodRed + '55', borderRadius: 16, padding: 18, backgroundColor: 'rgba(30,14,16,0.55)', marginTop: 12 },
+  foilKicker: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 2.4, color: COLORS.bloodRed },
+  foilBelief: { fontFamily: FONTS.secondaryBold, fontSize: 17, lineHeight: 24, color: COLORS.textPrimary, marginTop: 8 },
+  foilLine: { fontFamily: FONTS.primary, fontSize: 13, lineHeight: 20, color: COLORS.textSecondary, marginTop: 8 },
 
   statStrip: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 18, marginHorizontal: -6 },
   stat: { width: '33.33%', paddingHorizontal: 6, paddingVertical: 8, alignItems: 'center' },

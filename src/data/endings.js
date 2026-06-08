@@ -5,7 +5,7 @@
  * final belief they sealed. Templated + deterministic (no LLM at the finale),
  * so the ending is stable and the selection is unit-testable.
  */
-import { clarity, endingVariant } from './underMap';
+import { clarity, endingVariant, foil, foilPresence } from './underMap';
 
 export const ENDING_VARIANTS = {
   CLEAR: 'clear',
@@ -63,7 +63,7 @@ const ENDINGS = {
 /**
  * Choose the ending for a finished campaign.
  * @returns {{ id, variant, title, kicker, body: string[], flavorLine: string|null,
- *            clarity: {resolved,correct,ratio} }}
+ *            foilLine: string|null, clarity: {resolved,correct,ratio} }}
  */
 export function selectEnding(map) {
   const variant = endingVariant(map);
@@ -80,5 +80,14 @@ export function selectEnding(map) {
     else if (variant === 'deceived') flavorLine = `Your last reading — "${lastBelief}" — was the shape it wanted you to settle on.`;
   }
 
-  return { ...base, flavorLine, clarity: cl };
+  // The Other Reader pays off the road not taken once they have grown into a presence.
+  const fl = foil(map);
+  let foilLine = null;
+  if (fl && fl.belief && foilPresence(map) >= 2) {
+    if (variant === 'deceived') foilLine = `And the one who read it the other way — "${fl.belief}" — is already standing where you are only now arriving.`;
+    else if (variant === 'half') foilLine = `The other reader, who held to "${fl.belief}", kept the half of it you let go.`;
+    else if (variant === 'clear') foilLine = `The one who read it as "${fl.belief}" is nowhere to be found now. Where they were certain, you were right.`;
+  }
+
+  return { ...base, flavorLine, foilLine, clarity: cl };
 }
