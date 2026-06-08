@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(167,139,250,0.28)',
     backgroundColor: 'rgba(20,16,32,0.55)',
     padding: SPACING.md,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   readerLine: {
     fontFamily: FONTS.primary,
@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     height: 220,
+    marginTop: SPACING.xs,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: 'rgba(167,139,250,0.32)',
