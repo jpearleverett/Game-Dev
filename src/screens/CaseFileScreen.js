@@ -29,6 +29,7 @@ import BranchingNarrativeReader from "../components/BranchingNarrativeReader";
 import CaseHero from "../components/case-file/CaseHero";
 import CaseSummary from "../components/case-file/CaseSummary";
 import DecisionPanel from "../components/case-file/DecisionPanel";
+import { useGame } from "../context/GameContext";
 
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { COLORS } from "../constants/colors";
@@ -88,6 +89,8 @@ export default function CaseFileScreen({
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
   const medium = sizeClass === "medium";
+  const { progress: gameProgress } = useGame();
+  const reducedMotion = !!gameProgress?.settings?.reducedMotion;
 
   // Audio: Ambient Background
   const [sound, setSound] = useState();
@@ -396,6 +399,23 @@ export default function CaseFileScreen({
     return out;
   }, [sceneEchoes]);
   const showEchoCard = showEcho && visibleEchoes.length > 0;
+
+  // VERDICT AS A MOMENT: the belief payoff stamps onto the page when the scene opens
+  // (slam + haptic), so the player FEELS their reading mattered — then rests compact.
+  // Re-arms per chapter so each arrival earns its beat. Honors reduced motion.
+  const stampAnim = useRef(new Animated.Value(1)).current;
+  const stampedRef = useRef(false);
+  useEffect(() => { stampedRef.current = false; }, [storyMeta?.caseNumber, activeCase?.caseNumber]);
+  useEffect(() => {
+    if (!beliefVerdict || stampedRef.current) return;
+    stampedRef.current = true;
+    if (reducedMotion) { stampAnim.setValue(1); return; }
+    stampAnim.setValue(0);
+    Haptics.notificationAsync?.(
+      beliefVerdict.correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
+    ).catch?.(() => {});
+    Animated.timing(stampAnim, { toValue: 1, duration: 300, easing: Easing.out(Easing.back(2)), useNativeDriver: true }).start();
+  }, [beliefVerdict, reducedMotion, stampAnim]);
 
   // Build detail-shaped "examinables" from fragments that name a verbatim prose
   // phrase, so the reader can highlight + collect them inline (the EXAMINE beat).
@@ -1175,13 +1195,21 @@ export default function CaseFileScreen({
                   </View>
                 )}
 
-                {/* BELIEF VERDICT — your sealed reading of the hidden world, borne out or subverted */}
+                {/* BELIEF VERDICT — your sealed reading of the hidden world, borne out or
+                    subverted. Stamps onto the page on arrival (see stampAnim). */}
                 {beliefVerdict && (
-                  <View
+                  <Animated.View
                     style={[
                       styles.verdictCard,
                       beliefVerdict.correct ? styles.verdictTrue : styles.verdictFalse,
                       { borderRadius: scaleRadius(RADIUS.lg), paddingVertical: scaleSpacing(SPACING.xs), paddingHorizontal: scaleSpacing(SPACING.sm), gap: scaleSpacing(3) },
+                      {
+                        opacity: stampAnim,
+                        transform: [
+                          { scale: stampAnim.interpolate({ inputRange: [0, 1], outputRange: [1.22, 1] }) },
+                          { rotate: stampAnim.interpolate({ inputRange: [0, 1], outputRange: [beliefVerdict.correct ? "-3deg" : "4deg", beliefVerdict.correct ? "0deg" : "-1.5deg"] }) },
+                        ],
+                      },
                     ]}
                   >
                     <Text
@@ -1207,7 +1235,7 @@ export default function CaseFileScreen({
                         The Other Reader gains ground — “{beliefVerdict.foilBelief}”
                       </Text>
                     ) : null}
-                  </View>
+                  </Animated.View>
                 )}
 
                 {/* UNDER-MAP ECHO — the loop made visible: this scene follows from what you mapped */}
