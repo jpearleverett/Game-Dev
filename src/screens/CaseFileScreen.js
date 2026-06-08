@@ -1197,6 +1197,11 @@ export default function CaseFileScreen({
                         You believed: “{beliefVerdict.belief}”
                       </Text>
                     ) : null}
+                    {beliefVerdict.line ? (
+                      <Text style={[styles.verdictLine, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
+                        {beliefVerdict.line}
+                      </Text>
+                    ) : null}
                     {beliefVerdict.foilBelief ? (
                       <Text style={[styles.verdictBelief, { color: COLORS.bloodRed, fontStyle: "italic", fontSize: slugSize }]} numberOfLines={3}>
                         The Other Reader gains ground — “{beliefVerdict.foilBelief}”
