@@ -76,7 +76,7 @@ Shape: `{ fragments, relations, connections, nodes, theories, foil, lastVisitedA
 
 Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepens a motif** — bumps `seen`), `addRelations` (resolves labels→ids, re-resolves as more fragments arrive), `connectFragments` (returns `{ map, revealed:{node}|null, valid, alreadyConnected }`), `recordTheory`. Selectors: `isMotif`, `motifCount`, `mapDepth` (share of relations drawn), `undiscoveredRelationCount`.
 
-**Screens:** `src/screens/UnderMapScreen.js` (CONNECT board — also opened freeform from the Desk), `src/screens/TheoryScreen.js` (C climax belief commit). `GameContext` exposes `ingestSceneFragments`, `connectUnderMap`, `recordUnderMapTheory`, `touchUnderMap`.
+**Screens:** `src/screens/UnderMapScreen.js` (CONNECT board — also opened freeform from the Desk), `src/screens/TheoryScreen.js` (C climax belief commit). `GameContext` exposes `ingestSceneFragments`, `connectUnderMap`, `recordUnderMapTheory` (takes `rejected` → seeds the foil), `resolveUnderMapBelief`, `nameUnderMapFoil`, `touchUnderMap`.
 
 **EXAMINE wiring:** `CaseFileScreen` builds `examinableDetails` from `storyMeta.fragments` (those with a `phrase`) and merges them into the branching reader's per-segment `details`. `BranchingNarrativeReader` highlights fragment phrases (kind-colored ink) and, on tap, calls `onExamineFragment` → `ingestSceneFragments`. On narrative completion it backfills the opening's fragments so the CONNECT/THEORY beat always has material.
 
@@ -102,6 +102,9 @@ theory**, and instructs the model to:
 
 The Under-Map is threaded in via `useStoryGeneration.js` (`underMapRef` →
 `options.underMap` → `this.currentUnderMap` in generation.js).
+
+Alongside it, `_buildOtherReaderSection(underMap)` injects a separate, presence-scaled
+`<the_other_reader>` block (the foil — see §3) into both prompts.
 
 **The Under-Map is also the dynamic CONSISTENCY spine.** `_buildContinuityAnchorSection`
 (promptAssembly.js) injects the player's **revealed node truths** and **sealed
