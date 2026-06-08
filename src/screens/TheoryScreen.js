@@ -115,7 +115,7 @@ export default function TheoryScreen({ navigation, route }) {
   }, [route?.params?.decisionOptions, game.activeCase, caseNumber, chapter, storyCampaign.pathHistory, storyCampaign.currentPathKey, storyCampaign.branchingChoices]);
 
   const [beliefKey, setBeliefKey] = useState(null);
-  const [selected, setSelected] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set()); // fragments whose clue is opened
   const [sealed, setSealed] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const [genError, setGenError] = useState(null);
@@ -123,15 +123,16 @@ export default function TheoryScreen({ navigation, route }) {
   const sealAnim = useRef(new Animated.Value(0)).current;
   const chosenBelief = beliefs.find((b) => b.key === beliefKey) || null;
 
-  const toggleFragment = useCallback((id) => {
-    if (sealed) return;
+  // Evidence is read-only reference: tapping a fragment expands its full clue to help
+  // the player weigh their reading. It is NOT staked/graded — the belief is the choice.
+  const toggleExpand = useCallback((id) => {
     selectionHaptic();
-    setSelected((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-  }, [sealed]);
+  }, []);
 
   const sealTheory = useCallback(() => {
     if (sealed) return;
@@ -141,7 +142,9 @@ export default function TheoryScreen({ navigation, route }) {
       setGenError('Choose what you believe before you seal it.');
       return;
     }
-    const fragmentIds = selected.size > 0 ? Array.from(selected) : map.fragments.map((f) => f.id);
+    // All collected fragments are recorded with the sealed reading (for the record /
+    // Codex). There is no player-facing staking — evidence is reference, not a choice.
+    const fragmentIds = map.fragments.map((f) => f.id);
     const interpretation = chosenBelief?.title || chosenBelief?.focus || 'A reading of the hidden world.';
     // The readings the player turned away from — these seed "The Other Reader" (the
     // foil born from the road not taken). underMap.recordTheory takes the strongest.
@@ -168,7 +171,7 @@ export default function TheoryScreen({ navigation, route }) {
     sealAnim.setValue(0);
     if (reducedMotion) { sealAnim.setValue(1); }
     else { Animated.spring(sealAnim, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start(); }
-  }, [sealed, beliefs, chosenBelief, selected, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
+  }, [sealed, beliefs, chosenBelief, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
 
   // Cross into the next chapter: pre-warm generation under the SAME key the advance
   // will set, then apply the sealed decision (clobber-safe) and navigate.
@@ -292,8 +295,46 @@ export default function TheoryScreen({ navigation, route }) {
           </>
         ) : null}
 
-        {/* The competing beliefs — THIS is the chapter decision */}
-        <Text style={[styles.sectionLabel, { marginTop: map.nodes.length ? SPACING.lg : 0 }]}>WHAT DO YOU BELIEVE?</Text>
+        {/* YOUR EVIDENCE — read-only reference to weigh BEFORE the choice. Tap to read a clue. */}
+        <Text style={[styles.sectionLabel, { marginTop: map.nodes.length ? SPACING.lg : 0 }]}>YOUR EVIDENCE</Text>
+        {map.fragments.length === 0 ? (
+          <Text style={styles.muted}>You collected no fragments this chapter — the map stays dark. You can still commit a read.</Text>
+        ) : (
+          <>
+            <Text style={styles.sectionHint}>Everything you've gathered. Tap a fragment to re-read its clue, then choose your reading below.</Text>
+            <View style={styles.fragWrap}>
+              {map.fragments.map((f) => {
+                const m = metaFor(f.kind);
+                const open = expanded.has(f.id);
+                return (
+                  <Pressable
+                    key={f.id}
+                    onPress={() => toggleExpand(f.id)}
+                    style={[styles.frag, { borderLeftColor: m.color, borderColor: COLORS.panelOutline }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={f.label}
+                    accessibilityHint="Tap to read the full clue"
+                  >
+                    <View style={styles.fragTop}>
+                      <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
+                      {isMotif(f) ? (
+                        <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
+                          <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
+                          <Text style={styles.motifText}>×{f.seen}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.fragLabel}>{f.label}</Text>
+                    {f.detail ? <Text style={styles.fragDetail} numberOfLines={open ? undefined : 2}>{f.detail}</Text> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* WHAT DO YOU BELIEVE? — the chapter's one decision, the climax (last, above SEAL) */}
+        <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>WHAT DO YOU BELIEVE?</Text>
         {beliefs.length > 0 ? (
           <Text style={styles.sectionHint}>Your one real choice. The chapter ahead bears it out — or subverts it.</Text>
         ) : null}
@@ -327,56 +368,6 @@ export default function TheoryScreen({ navigation, route }) {
                   ) : null}
                 </PressableScale>
                 </Reveal>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Stake the fragments as evidence — the ritual of committing; the BELIEF is the
-            mechanical choice (staked fragments are recorded with your reading, not graded). */}
-        <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>
-          {sealed ? 'THE EVIDENCE YOU STAKED' : 'STAKE YOUR EVIDENCE'}
-        </Text>
-        {!sealed ? (
-          <Text style={styles.sectionHint}>The fragments behind your reading — the case you're making. Optional; the belief above is the choice that counts. Leave all unpicked to stake the whole map.</Text>
-        ) : null}
-        {map.fragments.length === 0 ? (
-          <Text style={styles.muted}>You collected no fragments this chapter — the map stays dark. You can still commit a read.</Text>
-        ) : (
-          <View style={styles.fragWrap}>
-            {map.fragments.map((f) => {
-              const m = metaFor(f.kind);
-              const active = selected.has(f.id);
-              const dim = sealed && !active && selected.size > 0;
-              return (
-                <Pressable
-                  key={f.id}
-                  onPress={() => toggleFragment(f.id)}
-                  disabled={sealed}
-                  style={[
-                    styles.frag,
-                    { borderLeftColor: m.color, borderColor: active ? m.color : COLORS.panelOutline },
-                    active && { backgroundColor: COLORS.surfaceAlt },
-                    dim && { opacity: 0.4 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                >
-                  <View style={styles.fragTop}>
-                    <MaterialCommunityIcons name={m.icon} size={14} color={m.color} />
-                    {isMotif(f) ? (
-                      <View style={[styles.motifBadge, { marginLeft: 'auto' }]}>
-                        <MaterialCommunityIcons name="refresh" size={10} color={COLORS.amberLight || COLORS.accentSecondary} />
-                        <Text style={styles.motifText}>×{f.seen}</Text>
-                      </View>
-                    ) : null}
-                    {active ? (
-                      <MaterialCommunityIcons name="check-circle" size={14} color={m.color} style={{ marginLeft: isMotif(f) ? SPACING.xs : 'auto' }} />
-                    ) : null}
-                  </View>
-                  <Text style={styles.fragLabel}>{f.label}</Text>
-                  {f.detail ? <Text style={styles.fragDetail} numberOfLines={2}>{f.detail}</Text> : null}
-                </Pressable>
               );
             })}
           </View>
