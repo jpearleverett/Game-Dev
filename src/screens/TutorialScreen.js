@@ -383,6 +383,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textDecorationLine: 'underline',
     letterSpacing: 1,
+    marginTop: SPACING.xs,
   },
   demoSolvedRow: {
     flexDirection: 'row',
