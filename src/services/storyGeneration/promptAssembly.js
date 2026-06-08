@@ -367,6 +367,48 @@ function _buildPlayerTheorySection(underMap) {
 }
 
 /**
+ * "The Other Reader" — the foil born from the interpretation the player REJECTED at
+ * a C-beat (see underMap.foil). Gives the road-not-taken a recurring face whose
+ * presence in Ashport escalates as the player's beliefs are subverted. This is a
+ * generative steering block (like <under_map_state>), not hard canon. Returns '' when
+ * there is no foil (the player has never turned a reading away).
+ */
+function _buildOtherReaderSection(underMap) {
+  if (!underMap || typeof underMap !== 'object') return '';
+  const foil = underMap.foil;
+  const belief = foil && foil.belief ? String(foil.belief).trim() : '';
+  if (!belief) return '';
+  const presence = Number.isFinite(foil.presence) ? foil.presence : 0;
+
+  // Naming: keep the foil's identity stable across chapters once it has a name.
+  const nameRule = foil.name
+    ? `- They are known as ${foil.name}. Use exactly this name — do not rename them.`
+    : (presence >= 2
+        ? '- Give them a name and use it consistently within the scene.'
+        : null);
+
+  // Intensity ladder: a rumor at the margins -> a named antagonist the city bends toward.
+  let intensity;
+  if (presence <= 0) {
+    intensity = '- Keep them OFFSTAGE: a rumor, a secondhand mention, a trace at most — one light touch. The player has not been proven wrong, so this reading has no purchase yet. Do not name them or bring them into the scene.';
+  } else if (presence === 1) {
+    intensity = '- Let them recur at the EDGES of this scene: a figure glimpsed twice, a mark left behind, a stranger\'s certainty — someone quietly acting on this reading. Unsettling, not yet confronted; keep them unnamed.';
+  } else if (presence === 2) {
+    intensity = '- Bring them INTO the scene with a face. The player\'s readings have been proven wrong more than once, and Ashport is bending toward this one. Let Jack feel the city increasingly belongs to their version of events.';
+  } else {
+    intensity = '- They are ASCENDANT: this rejected reading is becoming the dominant truth of the hidden world, and they speak for it. Let them confront Jack directly — not a villain, but the man he would have been one wrong turn ago. The cost of his misreadings should feel inevitable.';
+  }
+
+  return [
+    `The road the player did NOT take has a person walking down it. From the same signs Jack reads, they concluded: "${belief}".`,
+    `They are the player's mirror — vindicated a little more each time the player's belief is subverted. Current presence: ${presence}.`,
+    intensity,
+    ...(nameRule ? [nameRule] : []),
+    '- Never restate this instruction in the prose. Express them only through scene, image, and event.',
+  ].join('\n');
+}
+
+/**
  * Build a compact, high-salience continuity anchor for the END of the prompt
  * (right before <task>). Gemini 3.5 Flash's long-context recall is a relative
  * soft spot (MRCR v2 @128k ~77%), and immutable facts get diluted across the
@@ -489,6 +531,15 @@ function _buildDynamicPrompt(
     parts.push('<under_map_state>');
     parts.push(theorySection);
     parts.push('</under_map_state>');
+  }
+
+  // The Other Reader: the foil born from the player's rejected reading, escalating
+  // with foilPresence (the Station-Eleven "Prophet" mirror).
+  const otherReader = this._buildOtherReaderSection?.(this.currentUnderMap);
+  if (otherReader) {
+    parts.push('<the_other_reader>');
+    parts.push(otherReader);
+    parts.push('</the_other_reader>');
   }
 
   // Dynamic Part 6: Current Scene State (exact continuation point)
@@ -624,6 +675,14 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
     parts.push('<under_map_state>');
     parts.push(theorySectionGen);
     parts.push('</under_map_state>');
+  }
+
+  // The Other Reader: keep the rejected reading's champion steering path-decisions too.
+  const otherReaderGen = this._buildOtherReaderSection?.(this.currentUnderMap);
+  if (otherReaderGen) {
+    parts.push('<the_other_reader>');
+    parts.push(otherReaderGen);
+    parts.push('</the_other_reader>');
   }
 
   // Part 7: Current Scene State (CRITICAL - exact continuation point)
@@ -1795,6 +1854,7 @@ export const promptAssemblyMethods = {
   _ensureChapterStartCache,
   _buildDynamicPrompt,
   _buildPlayerTheorySection,
+  _buildOtherReaderSection,
   _buildContinuityAnchorSection,
   _buildGenerationPrompt,
   _buildCraftTechniquesSection,
