@@ -13,6 +13,11 @@ import StoryGenerationOverlay from './src/components/StoryGenerationOverlay';
 import LLMDebugOverlay from './src/components/LLMDebugOverlay';
 import AchievementToast from './src/components/AchievementToast';
 import { usePersistence } from './src/hooks/usePersistence';
+import { installGlobalErrorReporting } from './src/services/ErrorReporting';
+
+// Capture uncaught errors / unhandled rejections into a persisted ring buffer
+// (production failures must be diagnosable, not vanish into console.error).
+installGlobalErrorReporting();
 
 const ROUTE_TO_AUDIO_KEY = {
   Splash: 'splash',

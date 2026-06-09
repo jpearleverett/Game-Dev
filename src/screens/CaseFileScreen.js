@@ -584,7 +584,12 @@ export default function CaseFileScreen({
           const cn = `${String(ch).padStart(3, '0')}${['A', 'B', 'C'][sub - 1]}`;
           // eslint-disable-next-line no-await-in-loop
           const entry = await getStoryEntryAsync(cn, pathKey);
-          if (!entry) continue;
+          if (!entry) {
+            // A missing entry silently shortens "The Case So Far" — usually a
+            // path-key mismatch between generation and replay. Surface it.
+            console.warn(`[CaseFile] read-back skipped ${cn} (no entry at pathKey ${pathKey})`);
+            continue;
+          }
           const bc = branchingChoices.find((b) => b.caseNumber === cn);
           const text = (bc && entry.branchingNarrative)
             ? buildRealizedNarrative(entry.branchingNarrative, bc.firstChoice, bc.secondChoice)

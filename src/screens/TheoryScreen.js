@@ -40,6 +40,33 @@ const metaFor = (kind) => KIND_META[kind] || KIND_META[FRAGMENT_KIND.PHENOMENON]
 const BELIEF_TONES = [COLORS.amberLight, COLORS.underViolet, COLORS.underCyan];
 const toneFor = (i) => BELIEF_TONES[i % BELIEF_TONES.length];
 
+// Diegetic hold while the next chapter finishes taking shape (usually an instant
+// cache hit via the prefetch; on a cold cache this dresses the honest wait as the
+// threshold itself instead of a spinner).
+const CROSSING_LINES = [
+  'The threshold takes what it is owed.',
+  'The city is answering your reading.',
+  'The Under-Map is settling into its next shape.',
+  'Hold. Something on the other side is finishing its sentence.',
+];
+function ThresholdHold({ active, reducedMotion }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (!active) return undefined;
+    setIdx(0);
+    const t = setInterval(() => setIdx((n) => (n + 1) % CROSSING_LINES.length), reducedMotion ? 5200 : 3400);
+    return () => clearInterval(t);
+  }, [active, reducedMotion]);
+  if (!active) return null;
+  return (
+    <View style={styles.crossingOverlay} pointerEvents="none">
+      <MaterialCommunityIcons name="door-open" size={26} color={COLORS.underViolet} />
+      <Text style={styles.crossingKicker}>CROSSING THE THRESHOLD</Text>
+      <Text style={styles.crossingLine}>{CROSSING_LINES[idx]}</Text>
+    </View>
+  );
+}
+
 /** A small staked-fragment constellation glyph, tone-colored (design's belief-glyph). */
 function BeliefGlyph({ tone, on }) {
   const pts = [
@@ -136,8 +163,29 @@ export default function TheoryScreen({ navigation, route }) {
       .filter((b) => b && b.key !== belief.key)
       .map((b) => b.title || b.focus || '')
       .filter(Boolean);
-    return umRecordTheory(map, { chapter, fragmentIds, interpretation, rejected });
+    // `grounded` (did the player pick the evidence-supported reading?) steers
+    // beliefResolution in the prefetched generation, so it must be on the map here.
+    return umRecordTheory(map, { chapter, fragmentIds, interpretation, rejected, grounded: belief.grounded ?? null });
   }, [beliefs, chapter, map]);
+
+  // EVIDENCE ECHOES: does a belief's cited evidence match a truth the player has
+  // actually surfaced? Matched lines burn solid (the map vouches for them);
+  // unmatched ones stay hollow — the reading leans on something never mapped.
+  const evidenceSurfaced = useCallback((ev) => {
+    const normTxt = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const e = normTxt(ev);
+    if (!e) return false;
+    return map.nodes.some((n) => {
+      if (n.unresolvedReading) return false; // a blurred node vouches for nothing
+      const r = normTxt(n.revelation);
+      if (!r) return false;
+      if (r.includes(e) || e.includes(r)) return true;
+      const ew = new Set(e.split(' ').filter((w) => w.length >= 5));
+      let hits = 0;
+      r.split(' ').forEach((w) => { if (w.length >= 5 && ew.has(w)) hits += 1; });
+      return hits >= 2;
+    });
+  }, [map.nodes]);
 
   useEffect(() => {
     if (!caseNumber || !beliefs.length || chapter >= TOTAL_CHAPTERS) return;
@@ -206,7 +254,7 @@ export default function TheoryScreen({ navigation, route }) {
       { underMap: sealedMap },
     );
     if (fragmentIds.length) {
-      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected });
+      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected, grounded: chosenBelief?.grounded ?? null });
     }
 
     setGenError(null);
@@ -240,6 +288,9 @@ export default function TheoryScreen({ navigation, route }) {
         clarityRatio: ending.clarity?.ratio ?? 0,
         finalChapter: sealedChapter,
       });
+      // Freeze the campaign in its post-game state: marks 012C complete and clears
+      // the pre-decision so the ending can't be re-sealed/re-triggered from here.
+      game.markCampaignComplete?.({ caseNumber, endingId: ending.id });
       navigation.replace('Ending', { ending });
       return;
     }
@@ -420,6 +471,25 @@ export default function TheoryScreen({ navigation, route }) {
                   {active && body ? (
                     <Text style={styles.beliefBody}>{body}</Text>
                   ) : null}
+                  {active && Array.isArray(b.evidence) && b.evidence.length ? (
+                    <View style={styles.evidenceWrap}>
+                      <Text style={styles.evidenceKicker}>WHAT THIS READING LEANS ON</Text>
+                      {b.evidence.slice(0, 2).map((ev, ei) => {
+                        const surfaced = evidenceSurfaced(ev);
+                        return (
+                          <View key={ei} style={styles.evidenceRow}>
+                            <Text style={[styles.evidenceMark, surfaced ? styles.evidenceMarkOn : styles.evidenceMarkOff]}>
+                              {surfaced ? '◆' : '◇'}
+                            </Text>
+                            <Text style={[styles.evidenceText, !surfaced && styles.evidenceTextOff]}>
+                              {ev}
+                              {surfaced ? '' : '  — you never surfaced this'}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : null}
                 </PressableScale>
                 </Reveal>
               );
@@ -464,6 +534,9 @@ export default function TheoryScreen({ navigation, route }) {
           />
         )}
       </View>
+
+      {/* Diegetic hold while the next chapter finishes generating (cold cache). */}
+      <ThresholdHold active={continuing} reducedMotion={reducedMotion} />
 
       {/* Committing a belief is the chapter's weight-bearing moment — mark it. */}
       <Celebration active={sealed} reducedMotion={reducedMotion} count={48} />
@@ -510,6 +583,22 @@ const styles = StyleSheet.create({
   beliefHint: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textSubtle, textTransform: 'uppercase', marginTop: 4 },
   beliefMark: { fontSize: 16, marginLeft: 6, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
   beliefBody: { fontFamily: FONTS.primary, fontSize: 13.5, lineHeight: 22, color: COLORS.textSecondary, marginTop: 12 },
+  // Evidence echoes: which surfaced truths a reading leans on (◆ mapped, ◇ never surfaced)
+  evidenceWrap: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(167,139,250,0.18)', gap: 7 },
+  evidenceKicker: { fontFamily: FONTS.mono, fontSize: 9, letterSpacing: 2, color: COLORS.textSubtle },
+  evidenceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  evidenceMark: { fontSize: 11, lineHeight: 17 },
+  evidenceMarkOn: { color: COLORS.amberLight || COLORS.accentSecondary },
+  evidenceMarkOff: { color: COLORS.textSubtle },
+  evidenceText: { flex: 1, fontFamily: FONTS.primary, fontSize: 12, lineHeight: 17, color: COLORS.textSecondary },
+  evidenceTextOff: { color: COLORS.textSubtle, fontStyle: 'italic' },
+  // Crossing hold (diegetic wait while the next chapter takes shape)
+  crossingOverlay: {
+    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm,
+    backgroundColor: 'rgba(8,6,16,0.88)', zIndex: 60, paddingHorizontal: 36,
+  },
+  crossingKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3.4, color: COLORS.underViolet },
+  crossingLine: { fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: FONT_SIZES.md, lineHeight: LINE_HEIGHTS.relaxed, color: COLORS.offWhite, textAlign: 'center' },
   lightShaft: { position: 'absolute', top: -60, alignSelf: 'center', width: 260, height: 360, borderRadius: 180, backgroundColor: 'rgba(167,139,250,0.08)' },
   // Fragments
   fragWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },

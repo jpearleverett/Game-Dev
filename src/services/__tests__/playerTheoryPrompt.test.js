@@ -67,6 +67,47 @@ describe('_buildPlayerTheorySection', () => {
     expect(out).toContain('beliefResolution');
     expect(out).toContain('chapter 1');
   });
+
+  test('grounded beliefs steer resolution: mapping well must buy clarity', () => {
+    const seal = (grounded) => {
+      let m = createBlankUnderMap();
+      m = addFragments(m, [{ label: 'The seal', kind: 'symbol' }]);
+      return recordTheory(m, {
+        chapter: 2,
+        fragmentIds: [fragmentId('symbol', 'The seal')],
+        interpretation: 'The map is reaching for me.',
+        grounded,
+      });
+    };
+    const held = build(seal(true));
+    expect(held).toContain('SUPPORTED');
+    expect(held).toContain('correct: true');
+    const against = build(seal(false));
+    expect(against).toContain('AGAINST');
+    expect(against).toContain('correct: false');
+    // No grounding signal -> neither directive appears.
+    const neutral = build(seal(null));
+    expect(neutral).not.toContain('SUPPORTED');
+    expect(neutral).not.toContain('AGAINST');
+  });
+
+  test('a stale unresolved belief gets a hard resolve-now instruction', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'The seal', kind: 'symbol' }]);
+    m = recordTheory(m, {
+      chapter: 2,
+      fragmentIds: [fragmentId('symbol', 'The seal')],
+      interpretation: 'The map is reaching for me.',
+    });
+    // Two chapters later, still unresolved -> this scene must answer it.
+    const stale = promptAssemblyMethods._buildPlayerTheorySection(m, 4);
+    expect(stale).toContain('unanswered since chapter 2');
+    expect(stale).toContain('THIS chapter');
+    // Fresh seal -> only the soft lifecycle nudge.
+    const fresh = promptAssemblyMethods._buildPlayerTheorySection(m, 3);
+    expect(fresh).not.toContain('unanswered since');
+    expect(fresh).toContain('within a chapter or two');
+  });
 });
 
 describe('_buildContinuityAnchorSection', () => {

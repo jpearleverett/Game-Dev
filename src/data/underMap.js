@@ -35,6 +35,19 @@ export const PROBE_PER_FRAGMENTS = 3;
 export const KEYSTONE_SEEN = 3;
 export const KEYSTONE_MIN_CHAPTER_SPAN = 2;
 
+// SENSE TIERS: Jack's feel for the Under-Map sharpens as he maps it. Tiers are
+// earned by TRUTHS DRAWN (total connections made across the campaign) so the
+// power curve tracks real mastery, not board size. Each tier unlocks a felt
+// ability on the CONNECT board:
+//   tier 1 — ATTUNED: holding a fragment makes its still-hidden partners glimmer.
+//   tier 2 — THE MAP REMEMBERS: a missed probe involving a motif costs nothing.
+//   tier 3 — DEEPSIGHT: the first missed probe of each descent is forgiven.
+export const SENSE_TIER_THRESHOLDS = [3, 8, 15];
+
+// Daily-stir reward: resolving the day's thread banks bonus probes for the next
+// gated descent (capped so it stays a nudge, not a stockpile).
+export const MAX_PROBE_BONUS = 2;
+
 const slug = (v, fb = 'x') =>
   String(v || fb).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fb;
 
@@ -96,6 +109,10 @@ export const createBlankUnderMap = () => ({
   dailyStreak: 0,
   bestDailyStreak: 0,
   lastDailyResolved: null, // 'YYYY-MM-DD'
+  // Bonus probes banked by resolving the daily stir; spent (zeroed) by the next
+  // gated descent. This is the one mechanical thread from the daily loop into
+  // the campaign economy.
+  pendingProbeBonus: 0,
   lastVisitedAt: null,
 });
 
@@ -117,6 +134,9 @@ export const normalizeUnderMap = (map) => {
     dailyStreak: Number.isFinite(map.dailyStreak) ? map.dailyStreak : 0,
     bestDailyStreak: Number.isFinite(map.bestDailyStreak) ? map.bestDailyStreak : 0,
     lastDailyResolved: map.lastDailyResolved || null,
+    pendingProbeBonus: Number.isFinite(map.pendingProbeBonus)
+      ? Math.max(0, Math.min(MAX_PROBE_BONUS, map.pendingProbeBonus))
+      : 0,
   };
 };
 
@@ -221,7 +241,16 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
     const aId = raw.a || resolveLabel(raw.aLabel);
     const bId = raw.b || resolveLabel(raw.bLabel);
     const revelation = String(raw.revelation || '').trim();
-    if (!aId || !bId || aId === bId || !revelation) return;
+    if (!aId || !bId || aId === bId || !revelation) {
+      // A silently-dropped relation thins the cross-chapter weave invisibly —
+      // the #1 way label drift degrades the game. Surface it so it's diagnosable.
+      if ((!aId || !bId) && revelation && typeof console !== 'undefined') {
+        console.warn(
+          `[underMap] relation dropped — unresolved label(s): ${!aId ? `a="${raw.aLabel}"` : ''}${!aId && !bId ? ' ' : ''}${!bId ? `b="${raw.bLabel}"` : ''} (case ${caseNumber || '?'})`,
+        );
+      }
+      return;
+    }
     const key = relationKey(aId, bId);
     if (have.has(key)) return;
     have.add(key);
@@ -358,7 +387,9 @@ export const recordDescent = (map, { hadMisstep = false } = {}) => {
   const m = normalizeUnderMap(map);
   const flawlessStreak = hadMisstep ? 0 : (m.flawlessStreak || 0) + 1;
   const bestFlawlessStreak = Math.max(m.bestFlawlessStreak || 0, flawlessStreak);
-  return { ...m, flawlessStreak, bestFlawlessStreak };
+  // The banked daily-stir probe bonus is spent by this descent (its budget was
+  // computed at descent start) — zero it so it never double-applies.
+  return { ...m, flawlessStreak, bestFlawlessStreak, pendingProbeBonus: 0 };
 };
 
 // The Other Reader's presence is bounded so no single run of luck pins the foil
@@ -393,6 +424,11 @@ export const recordTheory = (map, theory) => {
         interpretation: String(theory.interpretation || '').trim(),
         rejected,
         correct: theory.correct != null ? !!theory.correct : null,
+        // EVIDENCE-GROUNDED BELIEFS: whether the player chose the reading the
+        // revealed truths better supported (true), chose against the evidence
+        // (false), or there was no grounding signal (null). Steers resolution:
+        // mapping well should causally buy clarity.
+        grounded: theory.grounded != null ? !!theory.grounded : null,
         at: new Date().toISOString(),
       },
       ...m.theories,
@@ -487,6 +523,8 @@ export const resolveDailyStir = (map, nowIso = new Date().toISOString()) => {
     dailyStreak: streak,
     bestDailyStreak: Math.max(m.bestDailyStreak || 0, streak),
     lastDailyResolved: today,
+    // The daily thread pays into the campaign: +1 probe banked for the next descent.
+    pendingProbeBonus: Math.min(MAX_PROBE_BONUS, (m.pendingProbeBonus || 0) + 1),
   };
 };
 
@@ -575,9 +613,69 @@ export const connectableFragmentCount = (map) => {
   return ids.size;
 };
 
-/** Probe budget for a descent: base + one per N connectable fragments (see §3.1). */
-export const probeBudgetFor = (map) =>
-  PROBE_BASE + Math.floor(connectableFragmentCount(map) / PROBE_PER_FRAGMENTS);
+/**
+ * Probe budget for a descent: base + one per N connectable fragments (see §3.1)
+ * + any bonus banked from the daily stir (consumed by recordDescent).
+ */
+export const probeBudgetFor = (map) => {
+  const m = normalizeUnderMap(map);
+  return PROBE_BASE
+    + Math.floor(connectableFragmentCount(m) / PROBE_PER_FRAGMENTS)
+    + (m.pendingProbeBonus || 0);
+};
+
+/** Bonus probes banked from the daily stir (shown as "+N from the daily thread"). */
+export const pendingProbeBonus = (map) => normalizeUnderMap(map).pendingProbeBonus || 0;
+
+/**
+ * Jack's earned sense of the Under-Map (0..3), from total truths drawn across the
+ * campaign. See SENSE_TIER_THRESHOLDS for what each tier unlocks on the board.
+ */
+export const senseTier = (map) => {
+  const { drawn } = mapDepth(map);
+  let tier = 0;
+  SENSE_TIER_THRESHOLDS.forEach((need) => { if (drawn >= need) tier += 1; });
+  return tier;
+};
+
+/**
+ * ATTUNED (sense tier 1): the fragments that share a still-hidden relation with
+ * the given fragment — the board makes them glimmer while it is held. Pure; the
+ * screen gates this on senseTier >= 1.
+ */
+export const attunedPartners = (map, fragmentId) => {
+  if (!fragmentId) return [];
+  const out = new Set();
+  sensedRelations(map).forEach((r) => {
+    if (r.a === fragmentId) out.add(r.b);
+    if (r.b === fragmentId) out.add(r.a);
+  });
+  return [...out];
+};
+
+/**
+ * Honest sonar for a missed probe: whether each fragment of the failed pair still
+ * participates in ANY undiscovered relation ("live" = still hums with something
+ * unfound; not live = its threads are already drawn). A spent probe should always
+ * teach — this is the information it buys.
+ */
+export const missWhisper = (map, aId, bId) => {
+  const live = new Set();
+  sensedRelations(map).forEach((r) => { live.add(r.a); live.add(r.b); });
+  return { aLive: live.has(aId), bLive: live.has(bId) };
+};
+
+/**
+ * THE OTHER READER's pressure on the board: how many still-hidden threads the
+ * foil is "ahead" by. Honest (never exceeds what remains undiscovered) and scaled
+ * by presence, so the rival's lead is felt exactly when the player is being
+ * out-read. 0 until the foil stirs (presence >= 1).
+ */
+export const foilThreadsAhead = (map) => {
+  const presence = foilPresence(map);
+  if (presence < 1) return 0;
+  return Math.min(undiscoveredRelationCount(map), 1 + presence);
+};
 
 /** Connections drawn but whose meaning the player hasn't yet read correctly (blurred nodes). */
 export const unresolvedReadingCount = (map) =>

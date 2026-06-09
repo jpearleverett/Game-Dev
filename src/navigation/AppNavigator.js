@@ -29,6 +29,7 @@ import EndingGalleryScreen from '../screens/EndingGalleryScreen';
 import ChapterSelectScreen from '../screens/ChapterSelectScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
 import { ACHIEVEMENT_COUNT } from '../data/achievementsData';
+import { selectEnding } from '../data/endings';
 
 const Stack = createNativeStackNavigator();
 
@@ -150,6 +151,11 @@ export default function AppNavigator({ fontsReady, audio }) {
               onBribe={purchaseBribe}
               onDrawDailyStir={game.drawUnderMapDailyStir}
               onResolveDailyStir={game.resolveUnderMapDailyStir}
+              onViewEnding={() => {
+                // POST-GAME: recompute the reached ending from the frozen map.
+                const ending = selectEnding(progress.storyCampaign?.underMap);
+                navigation.navigate('Ending', { ending });
+              }}
             />
           );
         }}

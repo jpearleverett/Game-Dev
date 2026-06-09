@@ -41,16 +41,27 @@ export function resolveStoryDecision({
   return metaPathDecisions[pathKey] || metaPathDecisions[DEFAULT_PATH_KEY] || fallback;
 }
 
-/** Normalize a resolved decision into a [{ key, title, focus, ... }] option list. */
+/**
+ * Normalize a resolved decision into a [{ key, title, focus, ... }] option list.
+ * Each option also carries `grounded` (true | false | null): whether the player's
+ * revealed truths better support THIS reading (from the model's `groundedKey`).
+ * It rides on the option so it survives being passed via route params into the
+ * Theory screen, where it steers `theory.grounded` → beliefResolution.
+ */
 export function decisionOptionsFrom(storyDecision) {
   if (!storyDecision) return [];
+  const gk = storyDecision.groundedKey === 'A' || storyDecision.groundedKey === 'B'
+    ? storyDecision.groundedKey
+    : null;
+  const groundedFor = (key) => (gk ? key === gk : null);
   if (storyDecision.optionA || storyDecision.optionB) {
     const out = [];
-    if (storyDecision.optionA) out.push({ key: 'A', ...storyDecision.optionA });
-    if (storyDecision.optionB) out.push({ key: 'B', ...storyDecision.optionB });
+    if (storyDecision.optionA) out.push({ key: 'A', ...storyDecision.optionA, grounded: groundedFor('A') });
+    if (storyDecision.optionB) out.push({ key: 'B', ...storyDecision.optionB, grounded: groundedFor('B') });
     return out;
   }
-  return Array.isArray(storyDecision.options) ? storyDecision.options : [];
+  if (!Array.isArray(storyDecision.options)) return [];
+  return storyDecision.options.map((o) => ({ ...o, grounded: o && o.key ? groundedFor(o.key) : null }));
 }
 
 export { DEFAULT_PATH_KEY };

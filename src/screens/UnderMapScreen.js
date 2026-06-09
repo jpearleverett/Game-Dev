@@ -13,6 +13,11 @@ import {
   flawlessStreak,
   mapDepth,
   probeBudgetFor,
+  pendingProbeBonus,
+  senseTier,
+  attunedPartners,
+  missWhisper,
+  foilThreadsAhead,
   isMotif,
   isKeystone,
   FRAGMENT_KIND,
@@ -126,8 +131,11 @@ export default function UnderMapScreen({ navigation, route }) {
   const [inspect, setInspect] = useState(null); // a fragment the player is reading (the full clue)
   // Probe economy (§3.1): a per-descent budget of attempts. A wrong pair costs a
   // probe; correct pairs are free. Running out never blocks "Continue" — unfound
-  // links stay sensed for a later visit. Budget is fixed at descent start.
+  // links stay sensed for a later visit. Budget is fixed at descent start (and
+  // includes any bonus the daily thread banked — surfaced so the daily loop is
+  // FELT paying into the campaign).
   const [probeBudget] = useState(() => probeBudgetFor(map));
+  const [probeBonus] = useState(() => pendingProbeBonus(map));
   const [probesUsed, setProbesUsed] = useState(0);
   const probesLeft = Math.max(0, probeBudget - probesUsed);
   // Probes only meter the gated A/B descent. The Desk-opened freeform map is for
@@ -166,8 +174,33 @@ export default function UnderMapScreen({ navigation, route }) {
   const depth = mapDepth(map);
   const streak = flawlessStreak(map);
   const beat = gateCaseNumber ? gateCaseNumber.slice(3, 4) : 'A';
+  // SENSE TIERS: Jack's earned feel for the map (see underMap.SENSE_TIER_THRESHOLDS).
+  const tier = senseTier(map);
+  // THE OTHER READER's pressure: hidden threads the rival is ahead by.
+  const foilAhead = foilThreadsAhead(map);
+  // DEEPSIGHT (tier 3): the first missed probe of each descent is forgiven.
+  const firstMissForgivenRef = useRef(false);
 
   const fragById = useCallback((id) => map.fragments.find((f) => f.id === id) || null, [map.fragments]);
+
+  // ATTUNED (tier 1+): while one fragment is held, its still-hidden partners
+  // glimmer — pre-guess information the player has EARNED by mapping.
+  const attunedIds = useMemo(() => {
+    if (tier < 1 || selected.length !== 1) return new Set();
+    return new Set(attunedPartners(map, selected[0]));
+  }, [tier, selected, map]);
+
+  // Honest sonar on a miss: a spent probe always teaches which of the two
+  // fragments still hums with something unfound.
+  const whisperFor = useCallback((aId, bId) => {
+    const { aLive, bLive } = missWhisper(map, aId, bId);
+    const a = fragById(aId)?.label || 'The first';
+    const b = fragById(bId)?.label || 'the second';
+    if (aLive && bLive) return 'No thread between these two — yet each still hums with something unfound.';
+    if (aLive) return `“${a}” still hums with an unfound thread. “${b}” lies quiet.`;
+    if (bLive) return `“${b}” still hums with an unfound thread. “${a}” lies quiet.`;
+    return 'Both lie quiet — their threads are already drawn.';
+  }, [map, fragById]);
   const posPx = useCallback((id) => {
     const p = placed[id];
     if (!p || !field.w) return { x: 0, y: 0 };
@@ -187,7 +220,8 @@ export default function UnderMapScreen({ navigation, route }) {
   const showToast = useCallback((msg) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 1700);
+    // Whisper toasts carry real information — give them time to be read.
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
@@ -239,21 +273,36 @@ export default function UnderMapScreen({ navigation, route }) {
       return;
     }
     // No resonance. In the gated descent a wrong probe costs one from the budget;
-    // in freeform review (from the Desk) connecting is unmetered.
+    // in freeform review (from the Desk) connecting is unmetered. Either way the
+    // miss TEACHES: the whisper says which of the pair still hums (honest sonar).
     hadMisstepRef.current = true;
     impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
     doShake();
+    const whisper = whisperFor(pair[0], pair[1]);
     if (probesEnabled) {
-      setProbesUsed((n) => n + 1);
-      const left = Math.max(0, probeBudget - (probesUsed + 1));
-      showToast(left > 0
-        ? `The dark doesn't answer. ${left} probe${left === 1 ? '' : 's'} left.`
-        : 'The dark falls silent. The rest stays sensed — continue the descent.');
+      // Earned forgiveness: tier 2 shields misses that involve a motif ("the map
+      // remembers"); tier 3 forgives the first misstep of each descent.
+      const motifShield = tier >= 2 && (isMotif(fragById(pair[0])) || isMotif(fragById(pair[1])));
+      const firstFree = !motifShield && tier >= 3 && !firstMissForgivenRef.current;
+      if (firstFree) firstMissForgivenRef.current = true;
+      const spend = !(motifShield || firstFree);
+      if (spend) setProbesUsed((n) => n + 1);
+      const left = Math.max(0, probeBudget - (probesUsed + (spend ? 1 : 0)));
+      const grace = motifShield
+        ? 'The map remembers this one — no probe spent.'
+        : firstFree
+          ? 'The map forgives the first misstep.'
+          : null;
+      showToast(grace
+        ? `${whisper} ${grace}`
+        : left > 0
+          ? `${whisper} ${left} probe${left === 1 ? '' : 's'} left.`
+          : `${whisper} The dark falls silent — continue the descent.`);
     } else {
-      showToast('No resonance between these.');
+      showToast(whisper);
     }
     setSelected([]); lockRef.current = false;
-  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled]);
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled, tier, whisperFor, fragById]);
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
@@ -345,9 +394,20 @@ export default function UnderMapScreen({ navigation, route }) {
           <View style={styles.probeRow}>
             <Text style={[styles.probeGlyphs, probesLeft <= 1 && styles.probeGlyphsLow]}>{probeMeter}</Text>
             <Text style={styles.probeLabel}>
-              {probesLeft === 0 ? 'no probes · the rest stays sensed' : `${probesLeft} probe${probesLeft === 1 ? '' : 's'} — a wrong link costs one`}
+              {probesLeft === 0
+                ? 'no probes · the rest stays sensed'
+                : `${probesLeft} probe${probesLeft === 1 ? '' : 's'} — a wrong link costs one${probeBonus > 0 ? ` · +${probeBonus} from the daily thread` : ''}`}
             </Text>
           </View>
+        ) : null}
+        {tier > 0 ? (
+          <Text style={styles.senseLine}>
+            {tier >= 3
+              ? '◆◆◆ SENSE · DEEPSIGHT — the first misstep of each descent is forgiven'
+              : tier === 2
+                ? '◆◆ SENSE · THE MAP REMEMBERS — a missed probe on a motif costs nothing'
+                : '◆ SENSE · ATTUNED — a held fragment makes its hidden partners glimmer'}
+          </Text>
         ) : null}
       </View>
 
@@ -410,6 +470,8 @@ export default function UnderMapScreen({ navigation, route }) {
           // Inert = no remaining unfound relation touches this fragment (and we have
           // live info to go on). These recede into the background of the map.
           const inert = liveFragmentIds.size > 0 && !liveFragmentIds.has(f.id) && !isSel;
+          // ATTUNED (earned at sense tier 1): a hidden partner of the held fragment.
+          const attuned = !isSel && attunedIds.has(f.id);
           const motif = isMotif(f);
           const keystone = isKeystone(f);
           return (
@@ -418,7 +480,7 @@ export default function UnderMapScreen({ navigation, route }) {
               onPress={() => handleTapStar(f.id)}
               onLongPress={() => { if (!node) { selectionHaptic(); setInspect(f); } }}
               delayLongPress={240}
-              style={[styles.star, { left: x - 45, top: y - 23 }, inert && styles.starInert]}
+              style={[styles.star, { left: x - 45, top: y - 23 }, inert && !attuned && styles.starInert]}
               accessibilityRole="button"
               accessibilityLabel={f.label}
               accessibilityHint="Tap to connect, hold to read the clue"
@@ -428,11 +490,12 @@ export default function UnderMapScreen({ navigation, route }) {
                   <Animated.View pointerEvents="none" style={[styles.starRing, { borderColor: kc, opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
                 ) : null}
                 {keystone ? <View pointerEvents="none" style={styles.keystoneRing} /> : null}
-                <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : inert ? 0.14 : mapped ? 0.65 : 0.42, transform: [{ scale: isSel ? 1.2 : inert ? 0.6 : mapped ? 1 : 0.82 }] }]} />
-                <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }, inert && styles.starCoreInert]} />
+                {attuned ? <View pointerEvents="none" style={styles.attunedRing} /> : null}
+                <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : attuned ? 0.85 : inert ? 0.14 : mapped ? 0.65 : 0.42, transform: [{ scale: isSel ? 1.2 : attuned ? 1.12 : inert ? 0.6 : mapped ? 1 : 0.82 }] }]} />
+                <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }, inert && !attuned && styles.starCoreInert]} />
                 {motif ? <View style={styles.motifBadge}><Text style={styles.motifBadgeText}>×{f.seen}</Text></View> : null}
               </View>
-              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped, inert && styles.starLabelInert]} numberOfLines={2}>{f.label}</Text>
+              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped, inert && !attuned && styles.starLabelInert, attuned && styles.starLabelAttuned]} numberOfLines={2}>{f.label}</Text>
             </Pressable>
           );
         })}
@@ -455,6 +518,11 @@ export default function UnderMapScreen({ navigation, route }) {
           {remaining > 0 ? (
             <Text style={styles.remainLabel}>{remaining} truth{remaining === 1 ? '' : 's'} still hidden in the dark</Text>
           ) : null}
+          {foilAhead > 0 ? (
+            <Text style={styles.foilLabel}>
+              THE OTHER READER HAS MAPPED {foilAhead} THREAD{foilAhead === 1 ? '' : 'S'} YOU HAVEN’T
+            </Text>
+          ) : null}
         </View>
         {asPuzzle && canContinue ? (
           <>
@@ -475,7 +543,12 @@ export default function UnderMapScreen({ navigation, route }) {
         ) : (
           <View style={styles.bench}>
             {selected.length === 0 && <Text style={styles.benchText}>Tap a fragment to begin a connection.</Text>}
-            {selected.length === 1 && <Text style={styles.benchText}>Holding <Text style={styles.benchStrong}>{fragById(selected[0])?.label}</Text> — choose its pair.</Text>}
+            {selected.length === 1 && (
+              <Text style={styles.benchText}>
+                Holding <Text style={styles.benchStrong}>{fragById(selected[0])?.label}</Text> — choose its pair.
+                {attunedIds.size > 0 ? ' Something on the board answers it.' : ''}
+              </Text>
+            )}
             {selected.length === 2 && <Text style={[styles.benchText, styles.benchReading]}>Reading the resonance…</Text>}
           </View>
         )}
@@ -581,6 +654,7 @@ const styles = StyleSheet.create({
   probeGlyphs: { fontFamily: FONTS.mono, fontSize: 14, letterSpacing: 2, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } },
   probeGlyphsLow: { color: COLORS.bloodRed, textShadowColor: 'transparent' },
   probeLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textMuted, textTransform: 'uppercase', flexShrink: 1 },
+  senseLine: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1, color: COLORS.underCyan, marginTop: 9, opacity: 0.9 },
 
   field: { flex: 1, marginHorizontal: 6, position: 'relative', minHeight: 0 },
   bloom: { position: 'absolute', width: 8, height: 8, borderRadius: 8, backgroundColor: '#cfe6ff' },
@@ -595,6 +669,9 @@ const styles = StyleSheet.create({
   },
   starCoreSel: { transform: [{ scale: 1.4 }], borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)' },
   keystoneRing: { position: 'absolute', width: 30, height: 30, borderRadius: 15, top: 8, left: 8, borderWidth: 1, borderColor: 'rgba(241,197,114,0.7)' },
+  // ATTUNED glimmer: a hidden partner of the held fragment (earned at sense tier 1).
+  attunedRing: { position: 'absolute', width: 34, height: 34, borderRadius: 17, top: 6, left: 6, borderWidth: 1.2, borderColor: 'rgba(125,211,252,0.85)' },
+  starLabelAttuned: { color: '#dff3ff', fontFamily: FONTS.monoBold },
   motifBadge: { position: 'absolute', top: 2, right: 2, minWidth: 15, height: 15, borderRadius: 8, paddingHorizontal: 3, backgroundColor: 'rgba(167,139,250,0.92)', alignItems: 'center', justifyContent: 'center' },
   motifBadgeText: { fontFamily: FONTS.monoBold, fontSize: 8, color: '#120d0a' },
   starLabel: { fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
@@ -613,6 +690,7 @@ const styles = StyleSheet.create({
   depthFill: { height: 6, borderRadius: 999, backgroundColor: COLORS.underViolet },
   depthLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underCyan },
   remainLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.textMuted },
+  foilLabel: { fontFamily: FONTS.monoBold, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.bloodRed, opacity: 0.92 },
 
   visitWin: {
     borderWidth: 1,

@@ -33,6 +33,11 @@ import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { analytics } from '../services/AnalyticsService';
 import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 import { purchaseService } from '../services/PurchaseService';
+import {
+  scheduleDailyStirReminder,
+  scheduleUnlockNotification,
+  cancelUnlockNotification,
+} from '../services/dailyStirNotifications';
 import { ACHIEVEMENTS } from '../data/achievementsData';
 import { useAudio } from './AudioContext';
 import { useStory } from './StoryContext';
@@ -62,6 +67,23 @@ export function GameProvider({
   useEffect(() => {
     analytics.init();
   }, []);
+
+  // RETENTION: local notifications (fully defensive no-ops on web / denial).
+  // 1) Daily stir reminder — the once-a-day "the map stirred" habit hook.
+  useEffect(() => {
+    if (hydrationComplete) scheduleDailyStirReminder();
+  }, [hydrationComplete]);
+  // 2) The unlock VERDICT hook: coming back to a verdict on your own sealed
+  // reading is a far stronger re-entry than "next chapter available". Scheduled
+  // at nextStoryUnlockAt; cancelled if the lock is consumed early (trail/bribe)
+  // or the campaign completes.
+  const nextStoryUnlockAtIso = progress?.storyCampaign?.nextStoryUnlockAt || null;
+  const latestSealedBelief = progress?.storyCampaign?.underMap?.theories?.[0]?.interpretation || null;
+  useEffect(() => {
+    if (!hydrationComplete) return;
+    if (nextStoryUnlockAtIso) scheduleUnlockNotification(nextStoryUnlockAtIso, latestSealedBelief);
+    else cancelUnlockNotification();
+  }, [hydrationComplete, nextStoryUnlockAtIso, latestSealedBelief]);
 
   const {
     gameState,
@@ -773,6 +795,37 @@ export function GameProvider({
     });
   }, [updateProgress]);
 
+  // FINALE: after chapter 12's belief is sealed there is no chapter to advance to —
+  // the campaign freezes in its post-game state instead of erroring toward a
+  // nonexistent "013A". Marks the final case complete, clears the pre-decision so
+  // the Theory screen can't re-seal/re-trigger the ending, and stamps completion.
+  // Functional + idempotent (clobber-safe, per the campaign-advance invariant).
+  const markCampaignComplete = useCallback(({ caseNumber, endingId = null } = {}) => {
+    const nowIso = new Date().toISOString();
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      if (current.completed) return null;
+      return {
+        storyCampaign: {
+          ...current,
+          completedCaseNumbers: Array.from(new Set([
+            ...(current.completedCaseNumbers || []),
+            ...(caseNumber ? [caseNumber] : []),
+          ])),
+          preDecision: null,
+          awaitingDecision: false,
+          pendingDecisionCase: null,
+          nextStoryUnlockAt: null,
+          completed: true,
+          completedAt: nowIso,
+          endingId: endingId || current.endingId || null,
+          endingReachedAt: nowIso,
+        },
+        nextUnlockAt: null,
+      };
+    });
+  }, [updateProgress]);
+
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========
 
   const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
@@ -1061,6 +1114,7 @@ export function GameProvider({
     recordUnderMapTheory,
     touchUnderMap,
     // Endings & Achievements
+    markCampaignComplete,
     unlockEnding,
     unlockAchievement,
     checkAchievements,
@@ -1103,6 +1157,7 @@ export function GameProvider({
     story,
     purchaseBribe,
     purchaseFullUnlock,
+    markCampaignComplete,
     unlockEnding,
     unlockAchievement,
     checkAchievements,

@@ -310,7 +310,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 }
 
 
-function _buildPlayerTheorySection(underMap) {
+function _buildPlayerTheorySection(underMap, currentChapter = null) {
   // Surfaces the player's living Under-Map so each new scene WEAVES into it: the
   // fragments they've collected (so the model can link new anomalies back to old
   // ones across chapters), the hidden-world nodes they've revealed by connecting
@@ -330,6 +330,23 @@ function _buildPlayerTheorySection(underMap) {
     const sealedChapter = Number.isFinite(latest.chapter) ? latest.chapter : null;
     lines.push(`- The player just sealed this theory of the hidden world${sealedChapter ? ` (chapter ${sealedChapter})` : ''}: "${latest.interpretation}". Let this chapter answer it: confirm it, complicate it, or reveal its cost.`);
     lines.push(`- If this scene reveals whether that belief was right, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Feel free to subvert a wrong reading; it makes a richer story and steers the player's ending.`);
+    // EVIDENCE-GROUNDED RESOLUTION: the player's mapping must causally buy clarity.
+    // `grounded` records whether they chose the reading their revealed truths
+    // supported (set at seal time from the decision's groundedKey).
+    if (latest.grounded === true) {
+      lines.push('- The player chose the reading their revealed truths SUPPORTED. When this belief resolves, it should normally HOLD (`beliefResolution.correct: true`). Subvert it only for a strong, earned story reason — never casually; mapping well must pay off.');
+    } else if (latest.grounded === false) {
+      lines.push('- The player chose AGAINST the weight of the truths they had revealed. When this belief resolves, it should normally be SUBVERTED (`beliefResolution.correct: false`) — the evidence already pointed the other way. Let the truth they ignored be the one that answers them.');
+    }
+    // BELIEF LIFECYCLE: a sealed reading must never be left permanently hanging.
+    const staleness = Number.isFinite(currentChapter) && Number.isFinite(latest.chapter)
+      ? currentChapter - latest.chapter
+      : null;
+    if (latest.correct == null && staleness != null && staleness >= 2) {
+      lines.push(`- This belief has gone unanswered since chapter ${latest.chapter}. Resolve it in THIS chapter — emit \`beliefResolution\`. A sealed reading left hanging cheats the player of their verdict.`);
+    } else if (latest.correct == null) {
+      lines.push('- Resolve a sealed belief within a chapter or two of its sealing. Do not leave it permanently unanswered.');
+    }
   }
 
   if (nodes.length) {
@@ -526,7 +543,7 @@ function _buildDynamicPrompt(
 
   // Dynamic Part 4.6: Player's living Under-Map (collected fragments, revealed
   // nodes, sealed theory) so this scene WEAVES into it across chapters.
-  const theorySection = this._buildPlayerTheorySection?.(this.currentUnderMap);
+  const theorySection = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter);
   if (theorySection) {
     parts.push('<under_map_state>');
     parts.push(theorySection);
@@ -670,7 +687,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push('</active_threads>');
 
   // Part 6.6: Player's living Under-Map so this scene WEAVES into it across chapters.
-  const theorySectionGen = this._buildPlayerTheorySection?.(this.currentUnderMap);
+  const theorySectionGen = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter);
   if (theorySectionGen) {
     parts.push('<under_map_state>');
     parts.push(theorySectionGen);

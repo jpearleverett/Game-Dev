@@ -73,10 +73,10 @@ Shape: `{ fragments, relations, connections, nodes, theories, foil, lastVisitedA
 - **fragment**: `{ id, label, kind, detail, phrase, anomalous, seen, firstCaseNumber, lastCaseNumber, ... }`. `kind ∈ {symbol, place, person, phenomenon}`. `id = frag_<kind>_<label-slug>`. `phrase` is the verbatim prose substring the player taps.
 - **relation**: `{ id, a, b, revelation }` — the discoverable connection *truth* (a/b are fragment ids; the model authors these by label, resolved to ids).
 - **connection**: a player-made correct link. **node**: the revelation a connection unlocks.
-- **theory**: `{ chapter, fragmentIds, interpretation, rejected, correct, at }` — the sealed C-beat belief. `correct` is tri-state (null = unproven, true = held, false = subverted); `rejected` is the competing readings the player turned away from.
+- **theory**: `{ chapter, fragmentIds, interpretation, rejected, correct, grounded, at }` — the sealed C-beat belief. `correct` is tri-state (null = unproven, true = held, false = subverted); `rejected` is the competing readings the player turned away from; `grounded` is tri-state (did the player choose the reading the revealed truths supported? — drives resolution steering, see §8 "Evidence-grounded beliefs").
 - **foil**: `{ belief, fromChapter, presence, name } | null` — "The Other Reader," a single evolving antagonist born from the rejected reading. `presence` (clamped [-3,3]) grows when a belief is subverted, recedes when it holds. **Wired end to end:** `TheoryScreen` seals `rejected` → `recordTheory` sets the creed → `resolveTheory` moves `presence` → `promptAssembly._buildOtherReaderSection` steers generation (presence-scaled) → the model names them (`foilName` → captured by `nameFoil`, pinned thereafter) → surfaced in the verdict banner, the Codex card, and the ending. Selectors `foil`/`foilPresence`/`foilIsManifest`/`nameFoil` in `underMap.js`.
 
-Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepens a motif** — bumps `seen`), `addRelations` (resolves labels→ids, re-resolves as more fragments arrive), `connectFragments` (returns `{ map, revealed:{node}|null, valid, alreadyConnected }`), `recordTheory`. Selectors: `isMotif`, `motifCount`, `mapDepth` (share of relations drawn), `undiscoveredRelationCount`.
+Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepens a motif** — bumps `seen`), `addRelations` (resolves labels→ids, re-resolves as more fragments arrive; **console-warns when a relation drops because a label fails to resolve** — label-drift telemetry), `connectFragments` (returns `{ map, revealed:{node}|null, valid, alreadyConnected }`), `recordTheory` (stores `grounded`). Selectors: `isMotif`, `motifCount`, `mapDepth` (share of relations drawn), `undiscoveredRelationCount`, plus mastery/economy selectors: `senseTier` (0-3 from truths drawn, thresholds `SENSE_TIER_THRESHOLDS=[3,8,15]`), `attunedPartners`, `missWhisper`, `foilThreadsAhead`, `pendingProbeBonus` (daily-stir probe bank, cap `MAX_PROBE_BONUS=2`: granted by `resolveDailyStir`, included in `probeBudgetFor`, consumed/zeroed by `recordDescent`). NOTE: the generation cache signature (`src/utils/underMapGeneration.js`) deliberately excludes `pendingProbeBonus` and `theory.grounded`, so economy/grounding changes never cause spurious regenerations.
 
 **Screens:** `src/screens/UnderMapScreen.js` (CONNECT board — also opened freeform from the Desk), `src/screens/TheoryScreen.js` (C climax belief commit). `GameContext` exposes `ingestSceneFragments`, `connectUnderMap`, `recordUnderMapTheory` (takes `rejected` → seeds the foil), `resolveUnderMapBelief`, `nameUnderMapFoil`, `touchUnderMap`.
 
@@ -94,13 +94,15 @@ Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepe
 - **Thinking level:** narrative uses `medium`; path-decisions / personality use `low`. No temperature/topP. Latency is dominated by thinking (TTFT).
 
 ### Under-Map steers generation (`<under_map_state>`)
-`promptAssembly.js` `_buildPlayerTheorySection(underMap)` builds a block injected
-into the main narrative prompt AND the pathDecisions prompt. It lists the
-player's **collected fragments (with kinds)**, **revealed nodes**, and **sealed
-theory**, and instructs the model to:
+`promptAssembly.js` `_buildPlayerTheorySection(underMap, currentChapter)` builds a
+block injected into the main narrative prompt AND the pathDecisions prompt. It
+lists the player's **collected fragments (with kinds)**, **revealed nodes**, and
+**sealed theory**, and instructs the model to:
 1. Author at least one relation linking a NEW fragment to one the player ALREADY HOLDS (cross-chapter weaving).
 2. Build the prose on truths the player has revealed.
 3. Re-surface recurring motifs by reusing an earlier fragment's exact label.
+4. **Resolve grounded beliefs causally**: if the sealed theory's `grounded` is true the resolution should normally HOLD; if false it should normally be SUBVERTED (mapping well must buy clarity).
+5. **Belief lifecycle**: resolve a sealed belief within ~2 chapters; if one has gone unanswered ≥2 chapters (computed from `currentChapter`), the prompt escalates to "resolve it in THIS chapter".
 
 The Under-Map is threaded in via `useStoryGeneration.js` (`underMapRef` →
 `options.underMap` → `this.currentUnderMap` in generation.js).
@@ -121,11 +123,25 @@ is dead (kept only by `branchFacts.test.js`). The `ESTABLISHED FACTS` prompt
 section now renders only the static `CONSISTENCY_RULES`; dynamic facts come from the
 Under-Map canon above + `narrativeThreads` + the full realized story text.
 
-### C-beat decisions are BELIEFS
+### C-beat decisions are BELIEFS — and they are EVIDENCE-GROUNDED
 `prompts.js` pathDecisions section frames the 9 path-specific C decisions as
 competing **interpretations of the hidden world** (declarative beliefs like
 *"Blackwell is guiding you in"* vs *"The symbol is a tracking lock"*), not
 imperative actions.
+
+**Evidence grounding (the puzzle→story causal link):** each pathDecision also
+emits `groundedKey` ('A'|'B', required — which reading the player's REVEALED
+truths better support) and per-option `evidence` (up to 2 short references to
+revealed truths the reading leans on). The chain:
+`schemas.js` (PATHDECISIONS_ONLY_SCHEMA) → `validation._convertDecisionFormat`
+(carries `evidence` + `groundedKey`) → `storyDecision.decisionOptionsFrom`
+(stamps per-option `grounded` tri-state so it survives route params) →
+`TheoryScreen` (renders evidence echoes per belief: ◆ if it matches a revealed
+node — `evidenceSurfaced`, blurred nodes vouch for nothing — ◇ "you never
+surfaced this" otherwise; records `grounded` on the sealed theory) →
+`_buildPlayerTheorySection` steers `beliefResolution` (grounded→hold,
+ungrounded→subvert). **A player who maps more sees more at the THEORY beat and
+earns clarity causally** — do not break this chain.
 
 ---
 
@@ -283,8 +299,56 @@ refs are recreated by `normalizeStoryCampaignShape` on EVERY campaign write (inc
 Under-Map write), which used to rebuild `caseHistory` mid-read → `liveStartIndex` flips → the
 reader jumps into an earlier subchapter and flickers. Keep that effect keyed on the signature.
 
+**Evidence-grounded beliefs are SHIPPED (the puzzle→story causal link).** See §4
+"C-beat decisions are BELIEFS". The headline: connecting more truths now literally
+buys a better-informed THEORY choice (evidence echoes mark which readings the
+player's own surfaced truths vouch for), and choosing the grounded reading steers
+resolution toward HOLD (ungrounded → SUBVERT). `theory.grounded` is the spine.
+**Unverified on-device** (LLM-driven): needs a playtest confirming the model sets
+`groundedKey` sensibly and the echoes feel fair. Also added belief-lifecycle prompt
+pressure (resolve within ~2 chapters; hard "resolve NOW" once stale).
+
+**CONNECT is a mastery system (sense tiers), not a slot machine.** Shipped in
+`underMap.js` + `UnderMapScreen`:
+- **Misses teach (always):** a failed probe whispers honestly which of the two
+  fragments still "hums" with an unfound thread (`missWhisper`) — a spent probe
+  always buys information.
+- **Sense tiers** (earned by total truths drawn, `SENSE_TIER_THRESHOLDS=[3,8,15]`):
+  tier 1 ATTUNED — holding a fragment makes its still-hidden partners glimmer
+  (`attunedPartners`); tier 2 THE MAP REMEMBERS — a missed probe involving a motif
+  costs nothing; tier 3 DEEPSIGHT — first miss of each descent forgiven. A header
+  line on the board names the current tier.
+- **The daily stir pays the campaign:** resolving it banks +1 probe (cap 2) for the
+  next gated descent (`pendingProbeBonus`), surfaced in the probe meter label.
+- **Foil pressure on the board:** when presence ≥1, the footer shows "THE OTHER
+  READER HAS MAPPED N THREADS YOU HAVEN'T" (`foilThreadsAhead` — honest, capped by
+  what actually remains undiscovered).
+
+**Finale/post-game is COMPLETE.** `TheoryScreen.crossThreshold`'s chapter-12 path now
+calls `GameContext.markCampaignComplete` (sets `storyCampaign.completed/completedAt/
+endingId`, marks 012C complete, clears `preDecision` so the ending can't be re-sealed)
+before `navigation.replace('Ending')`. `DeskScreen` has a post-game state (file
+CLOSED, "Revisit the ending" → `selectEnding` recomputed from the frozen map, wired in
+`AppNavigator`). Restart-for-NG+ stays on `StoryCampaignScreen`.
+
+**Retention hooks wired.** `src/services/dailyStirNotifications.js` (previously dead
+code) is now wired in `GameContext`: the daily stir reminder, plus a one-shot
+**unlock-verdict notification** at `nextStoryUnlockAt` ("The Under-Map has answered —
+your reading is about to be tested"), cancelled when the lock is consumed early or the
+campaign completes. Desk lock copy is now belief-framed ("The city answers in HH:MM:SS").
+The THEORY cross has a diegetic `ThresholdHold` overlay (cycling lines) for the cold-cache wait.
+
+**Ops floor:** `eas.json` exists (dev/preview/production profiles). The proxy supports
+`REQUIRE_APP_TOKEN=true` (refuses to run open in production; logs a warning per-request
+when running open). `src/services/ErrorReporting.js` captures uncaught errors +
+unhandled rejections into a persisted AsyncStorage ring buffer (installed in `App.js`,
+fed by `ErrorBoundary`); point it at Sentry when one is added. **Operator TODO (not in
+repo):** set `APP_TOKEN` + `REQUIRE_APP_TOKEN=true` in Vercel, set EAS secrets
+(`GEMINI_PROXY_URL`, `APP_TOKEN`), and add store metadata/privacy-policy URL before submission.
+
 **Open / candidate next work:**
-- **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.
+- **On-device playtest of the new loop mechanics** (all code-complete but LLM/feel-dependent): evidence echoes + groundedKey fairness at a C-beat; sense-tier pacing (do tiers land ~ch2/ch4/ch7?); the unlock-verdict notification firing on a real device; the post-game Desk after finishing chapter 12.
+- **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step. (The new `addRelations` console warning makes dropped/unresolved relations visible.)
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.
 - **Legacy cleanup (optional):** `caseBoard.js` and the `GameContext` case-board actions are retired but kept for save back-compat; `EvidenceBoardScreen`/daily mode is independent. Remove only with intent.
 

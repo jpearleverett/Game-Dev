@@ -40,6 +40,14 @@ import {
   dailyStreak,
   dailyStirFragment,
   mapDepth,
+  senseTier,
+  attunedPartners,
+  missWhisper,
+  foilThreadsAhead,
+  pendingProbeBonus,
+  SENSE_TIER_THRESHOLDS,
+  MAX_PROBE_BONUS,
+  PROBE_BASE,
   FRAGMENT_KIND,
 } from '../../data/underMap';
 
@@ -600,5 +608,147 @@ describe('underMap — the foil (Other Reader)', () => {
     // no foil, or empty name -> no-op (no throw)
     expect(foil(nameFoil(createBlankUnderMap(), 'X'))).toBeNull();
     expect(nameFoil(m, '   ')).toEqual(m); // normalized clone, structurally unchanged
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sense tiers, miss whispers, probe economy, foil pressure (CONNECT-as-mastery)
+// ---------------------------------------------------------------------------
+
+describe('underMap — sense tiers & whispers', () => {
+  // Build a map with `n` drawn connections (n relations, all connected).
+  const withDrawn = (n) => {
+    let m = createBlankUnderMap();
+    const frags = [];
+    for (let i = 0; i < n + 1; i += 1) frags.push({ label: `Frag ${i}`, kind: 'phenomenon' });
+    m = addFragments(m, frags);
+    const rels = [];
+    for (let i = 0; i < n; i += 1) {
+      rels.push({ aLabel: `Frag ${i}`, bLabel: `Frag ${i + 1}`, revelation: `Truth ${i}.` });
+    }
+    m = addRelations(m, rels);
+    for (let i = 0; i < n; i += 1) {
+      const a = fragmentId('phenomenon', `Frag ${i}`);
+      const b = fragmentId('phenomenon', `Frag ${i + 1}`);
+      m = connectFragments(m, a, b).map;
+    }
+    return m;
+  };
+
+  test('senseTier climbs with truths drawn at the published thresholds', () => {
+    expect(senseTier(createBlankUnderMap())).toBe(0);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[0] - 1))).toBe(0);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[0]))).toBe(1);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[1]))).toBe(2);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[2]))).toBe(3);
+  });
+
+  test('attunedPartners surfaces only still-hidden partners', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'The ink marks who carries it.' },
+      { aLabel: 'Silver ink that moves', bLabel: '14 Acheron Avenue', revelation: 'The ink pools toward the address.' },
+    ]);
+    const ink = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+    const stain = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+    const addr = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
+    expect(attunedPartners(m, ink).sort()).toEqual([addr, stain].sort());
+    // Draw one — it stops glimmering; the unfound one remains.
+    m = connectFragments(m, ink, stain).map;
+    expect(attunedPartners(m, ink)).toEqual([addr]);
+    expect(attunedPartners(m, null)).toEqual([]);
+  });
+
+  test('missWhisper reports honestly which fragments still hum', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'The ink marks who carries it.' },
+    ]);
+    const ink = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+    const customs = fragmentId(FRAGMENT_KIND.PLACE, 'Old Customs House');
+    // ink is in an unfound relation; customs is in none.
+    expect(missWhisper(m, ink, customs)).toEqual({ aLive: true, bLive: false });
+    // After drawing it, both lie quiet.
+    const stain = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+    m = connectFragments(m, ink, stain).map;
+    expect(missWhisper(m, ink, customs)).toEqual({ aLive: false, bLive: false });
+  });
+});
+
+describe('underMap — probe economy (daily thread pays the descent)', () => {
+  test('resolving the daily stir banks a probe bonus, capped', () => {
+    let m = seed();
+    m = drawDailyStir(m, '2026-06-09T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-09T09:00:00.000Z');
+    expect(pendingProbeBonus(m)).toBe(1);
+    m = drawDailyStir(m, '2026-06-10T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-10T09:00:00.000Z');
+    m = drawDailyStir(m, '2026-06-11T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-11T09:00:00.000Z');
+    expect(pendingProbeBonus(m)).toBe(MAX_PROBE_BONUS); // capped
+  });
+
+  test('the bonus raises the descent budget and is spent by recordDescent', () => {
+    let m = seed();
+    const base = probeBudgetFor(m);
+    m = drawDailyStir(m, '2026-06-09T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-09T09:00:00.000Z');
+    expect(probeBudgetFor(m)).toBe(base + 1);
+    m = recordDescent(m, { hadMisstep: false });
+    expect(pendingProbeBonus(m)).toBe(0);
+    expect(probeBudgetFor(m)).toBe(base);
+  });
+
+  test('normalizeUnderMap clamps a corrupt bonus into range', () => {
+    expect(normalizeUnderMap({ pendingProbeBonus: 99 }).pendingProbeBonus).toBe(MAX_PROBE_BONUS);
+    expect(normalizeUnderMap({ pendingProbeBonus: -4 }).pendingProbeBonus).toBe(0);
+    expect(normalizeUnderMap({}).pendingProbeBonus).toBe(0);
+    expect(probeBudgetFor(createBlankUnderMap())).toBe(PROBE_BASE);
+  });
+});
+
+describe('underMap — foil pressure & grounded beliefs', () => {
+  const seal = (m, chapter, interpretation, rejected, grounded = null) =>
+    recordTheory(addFragments(m, [{ label: `t${chapter}`, kind: 'symbol' }]), {
+      chapter,
+      fragmentIds: [fragmentId('symbol', `t${chapter}`)],
+      interpretation,
+      rejected,
+      grounded,
+    });
+
+  test('foilThreadsAhead is 0 until the foil stirs, then honest and presence-scaled', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'A.' },
+      { aLabel: 'Old Customs House', bLabel: '14 Acheron Avenue', revelation: 'B.' },
+      { aLabel: 'Silver ink that moves', bLabel: '14 Acheron Avenue', revelation: 'C.' },
+    ]);
+    expect(foilThreadsAhead(m)).toBe(0); // no foil
+    m = seal(m, 1, 'mine', ['theirs']);
+    expect(foilThreadsAhead(m)).toBe(0); // presence 0
+    m = resolveTheory(m, 1, false); // subverted -> presence 1
+    expect(foilThreadsAhead(m)).toBe(2); // min(3 undiscovered, 1+1)
+    m = seal(m, 2, 'mine again', ['theirs again']);
+    m = resolveTheory(m, 2, false); // presence 2
+    expect(foilThreadsAhead(m)).toBe(3); // min(3, 3)
+    // Never exceeds what actually remains hidden.
+    const ink = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+    const stain = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+    m = connectFragments(m, ink, stain).map;
+    const addr = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
+    m = connectFragments(m, ink, addr).map;
+    const customs = fragmentId(FRAGMENT_KIND.PLACE, 'Old Customs House');
+    m = connectFragments(m, customs, addr).map;
+    expect(foilThreadsAhead(m)).toBe(0);
+  });
+
+  test('recordTheory stores the grounded flag tri-state', () => {
+    let m = seal(createBlankUnderMap(), 1, 'a', ['b'], true);
+    expect(m.theories[0].grounded).toBe(true);
+    m = seal(m, 2, 'c', ['d'], false);
+    expect(m.theories[0].grounded).toBe(false);
+    m = seal(m, 3, 'e', ['f']);
+    expect(m.theories[0].grounded).toBeNull();
   });
 });
