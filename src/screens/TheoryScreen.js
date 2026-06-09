@@ -146,11 +146,15 @@ export default function TheoryScreen({ navigation, route }) {
     beliefs.forEach((belief) => {
       if (belief?.key) underMapByOption[belief.key] = buildTheoryMapForBelief(belief);
     });
-    const key = `${caseNumber}:${Object.keys(underMapByOption).sort().map((optionKey) => `${optionKey}:${underMapGenerationSignature(underMapByOption[optionKey])}`).join('|')}`;
+    const branchingSignature = (storyCampaign.branchingChoices || [])
+      .map((choice) => `${choice?.caseNumber || ''}:${choice?.firstChoice || ''}:${choice?.secondChoice || ''}:${choice?.isComplete ? '1' : '0'}`)
+      .sort()
+      .join('|');
+    const key = `${caseNumber}:${branchingSignature}:${Object.keys(underMapByOption).sort().map((optionKey) => `${optionKey}:${underMapGenerationSignature(underMapByOption[optionKey])}`).join('|')}`;
     if (prefetchKeyRef.current === key) return;
     prefetchKeyRef.current = key;
     prefetchTheoryBranches(caseNumber, underMapByOption);
-  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, prefetchTheoryBranches]);
+  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, prefetchTheoryBranches, storyCampaign.branchingChoices]);
 
   // Evidence is read-only reference: tapping a fragment expands its full clue to help
   // the player weigh their reading. It is NOT staked/graded — the belief is the choice.
