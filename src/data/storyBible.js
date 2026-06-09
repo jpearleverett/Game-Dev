@@ -793,7 +793,7 @@ export const GENERATION_CONFIG = {
   // structured story output.
   // Gemini 3.5 Flash: 1M input / 64k output
   maxTokens: {
-    subchapter: 16000,    // Main narrative generation; enough for ~900-1500 words + thinking
+    subchapter: 65536,    // Main narrative generation; enough for ~900-1500 words + thinking
     expansion: 32000,     // For expansion requests (currently disabled)
     validation: 8000,     // For simple validation passes (uses 'low' thinking)
     pathDecisions: 65536, // Same as subchapter - complex multi-path generation
