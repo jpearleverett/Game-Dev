@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Line as SvgLine, Circle as SvgCircle } from 'react-native-svg';
@@ -12,7 +12,7 @@ import Reveal from '../components/motion/Reveal';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../context/AudioContext';
 import { selectionHaptic, notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
-import { normalizeUnderMap, FRAGMENT_KIND, isMotif, clarity, endingVariant } from '../data/underMap';
+import { normalizeUnderMap, FRAGMENT_KIND, isMotif, clarity, endingVariant, recordTheory as umRecordTheory } from '../data/underMap';
 import { selectEnding } from '../data/endings';
 import { TOTAL_CHAPTERS } from '../services/storyGeneration/constants';
 import {
@@ -65,6 +65,7 @@ export default function TheoryScreen({ navigation, route }) {
     recordUnderMapTheory,
     completeLogicPuzzle,
     selectDecisionBeforePuzzle,
+    prefetchTheoryBranches,
     unlockEnding,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
@@ -122,6 +123,32 @@ export default function TheoryScreen({ navigation, route }) {
 
   const sealAnim = useRef(new Animated.Value(0)).current;
   const chosenBelief = beliefs.find((b) => b.key === beliefKey) || null;
+  const prefetchKeyRef = useRef(null);
+
+  const buildTheoryMapForBelief = useCallback((belief) => {
+    if (!belief) return map;
+    const fragmentIds = map.fragments.map((f) => f.id);
+    if (!fragmentIds.length) return map;
+    const interpretation = belief.title || belief.focus || 'A reading of the hidden world.';
+    const rejected = beliefs
+      .filter((b) => b && b.key !== belief.key)
+      .map((b) => b.title || b.focus || '')
+      .filter(Boolean);
+    return umRecordTheory(map, { chapter, fragmentIds, interpretation, rejected });
+  }, [beliefs, chapter, map]);
+
+  useEffect(() => {
+    if (!caseNumber || !beliefs.length || chapter >= TOTAL_CHAPTERS) return;
+    if (typeof prefetchTheoryBranches !== 'function') return;
+    const key = `${caseNumber}:${beliefs.map((b) => `${b.key}:${b.title || b.focus || ''}`).join('|')}:${map.fragments.length}:${map.theories.length}`;
+    if (prefetchKeyRef.current === key) return;
+    prefetchKeyRef.current = key;
+    const underMapByOption = {};
+    beliefs.forEach((belief) => {
+      if (belief?.key) underMapByOption[belief.key] = buildTheoryMapForBelief(belief);
+    });
+    prefetchTheoryBranches(caseNumber, underMapByOption);
+  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, map.fragments.length, map.theories.length, prefetchTheoryBranches]);
 
   // Evidence is read-only reference: tapping a fragment expands its full clue to help
   // the player weigh their reading. It is NOT staked/graded — the belief is the choice.
@@ -152,6 +179,7 @@ export default function TheoryScreen({ navigation, route }) {
       .filter((b) => b && b.key !== chosenBelief?.key)
       .map((b) => b.title || b.focus || '')
       .filter(Boolean);
+    const sealedMap = chosenBelief ? buildTheoryMapForBelief(chosenBelief) : map;
 
     // The belief is the chapter decision: store it as the pre-decision (drives the
     // branch into the next chapter) AND record it on the Under-Map as a sealed theory.
@@ -159,6 +187,7 @@ export default function TheoryScreen({ navigation, route }) {
       chosenBelief?.key || 'A',
       { title: chosenBelief?.title, focus: chosenBelief?.focus },
       caseNumber,
+      { underMap: sealedMap },
     );
     if (fragmentIds.length) {
       recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected });
@@ -171,7 +200,7 @@ export default function TheoryScreen({ navigation, route }) {
     sealAnim.setValue(0);
     if (reducedMotion) { sealAnim.setValue(1); }
     else { Animated.spring(sealAnim, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start(); }
-  }, [sealed, beliefs, chosenBelief, map.fragments, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
+  }, [sealed, beliefs, chosenBelief, map, buildTheoryMapForBelief, selectDecisionBeforePuzzle, caseNumber, recordUnderMapTheory, chapter, audio, sealAnim, reducedMotion]);
 
   // Cross into the next chapter: pre-warm generation under the SAME key the advance
   // will set, then apply the sealed decision (clobber-safe) and navigate.

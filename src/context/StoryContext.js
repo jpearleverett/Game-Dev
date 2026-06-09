@@ -53,6 +53,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC,
     triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch after player completes branching narrative
+    prefetchNextSubchapterWithUnderMap,
     // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     cancelGeneration,
     clearError: clearGenerationError,
@@ -490,7 +491,36 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * @param {object} optionDetails - Details about the selected option (title, focus, etc.)
    * @param {string} explicitCaseNumber - The case number from the UI (to avoid stale state issues)
    */
-  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null) => {
+  const prefetchAfterUnderMapReveal = useCallback((caseNumber, underMapSnapshot = null) => {
+    if (!isLLMConfigured || !caseNumber || !underMapSnapshot) return;
+    const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
+    const { subchapter } = parseCaseNumber(caseNumber);
+    if (subchapter >= 3) return;
+    const pathKey = resolveStoryPathKey(caseNumber, currentCampaign);
+    prefetchNextSubchapterWithUnderMap(
+      caseNumber,
+      pathKey,
+      currentCampaign.choiceHistory || [],
+      currentCampaign.branchingChoices || [],
+      underMapSnapshot,
+    );
+  }, [isLLMConfigured, parseCaseNumber, progress.storyCampaign, prefetchNextSubchapterWithUnderMap]);
+
+  const prefetchTheoryBranches = useCallback((caseNumber, underMapByOption = {}) => {
+    if (!isLLMConfigured || !caseNumber) return;
+    const currentCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+    if (subchapter !== 3) return;
+    prefetchNextChapterBranchesAfterC(
+      chapter,
+      currentCampaign.choiceHistory || [],
+      'theory-screen:optimistic-beliefs',
+      currentCampaign.branchingChoices || [],
+      { underMapByOption },
+    );
+  }, [isLLMConfigured, parseCaseNumber, progress.storyCampaign, prefetchNextChapterBranchesAfterC]);
+
+  const selectDecisionBeforePuzzleAndGenerate = useCallback((optionKey, optionDetails = {}, explicitCaseNumber = null, generationOptions = {}) => {
     if (!optionKey) return;
 
     // STALE STATE FIX: Use explicit caseNumber from UI if provided, fall back to state
@@ -537,7 +567,9 @@ export function StoryProvider({ children, progress, updateProgress }) {
       log.debug('StoryContext', `Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}, triggering ${nextCaseNumber}`);
 
       // Generate in background - don't await
-      generateForCase(nextCaseNumber, nextPathKey, nextChoiceHistory, branchingChoices)
+      generateForCase(nextCaseNumber, nextPathKey, nextChoiceHistory, branchingChoices, {
+        underMap: generationOptions.underMap || null,
+      })
         .then((result) => {
           if (result) {
             log.debug('StoryContext', `Pre-puzzle generation complete for ${nextCaseNumber}`);
@@ -560,6 +592,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
     selectDecisionBeforePuzzle: selectDecisionBeforePuzzleAndGenerate, // NARRATIVE-FIRST: Pre-puzzle decision + immediate generation
     applyPreDecision, // NARRATIVE-FIRST: Apply pre-made decision after puzzle
     saveBranchingChoice: saveBranchingChoiceAndPrefetch, // TRUE INFINITE BRANCHING: Save + prefetch
+    prefetchAfterUnderMapReveal,
+    prefetchTheoryBranches,
     ensureStoryContent,
     ensureSecondChoiceResponses, // LAZY BRANCHING: fill second-choice responses on demand
     handleBackgroundGeneration, // Exposed for GameContext
@@ -579,6 +613,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
     selectDecisionBeforePuzzleAndGenerate,
     applyPreDecision,
     saveBranchingChoiceAndPrefetch,
+    prefetchAfterUnderMapReveal,
+    prefetchTheoryBranches,
     ensureStoryContent,
     ensureSecondChoiceResponses,
     handleBackgroundGeneration,

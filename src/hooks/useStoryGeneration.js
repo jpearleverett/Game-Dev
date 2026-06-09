@@ -44,6 +44,43 @@ export const CACHE_MISS_TYPE = {
   UNEXPECTED: 'unexpected', // Player chose unpredicted path, content not ready
 };
 
+const UNDER_MAP_PREFETCH_DEBOUNCE_MS = 1200;
+
+export function underMapGenerationSignature(underMap) {
+  if (!underMap || typeof underMap !== 'object') return 'empty';
+  const normalizeList = (items, pick) => (Array.isArray(items) ? items : [])
+    .map(pick)
+    .filter(Boolean)
+    .sort()
+    .join('|');
+  const nodes = normalizeList(
+    underMap.nodes,
+    (n) => n?.revelation && !n?.unresolvedReading
+      ? `${n.id || ''}:${n.revelation}:${n.scope || 'chapter'}`
+      : null,
+  );
+  const theories = normalizeList(
+    underMap.theories,
+    (t) => t?.interpretation
+      ? `${t.chapter || ''}:${t.interpretation}:${t.correct == null ? 'pending' : t.correct ? 'true' : 'false'}`
+      : null,
+  );
+  const foil = underMap.foil?.belief
+    ? `${underMap.foil.belief}:${underMap.foil.presence || 0}:${underMap.foil.name || ''}`
+    : '';
+  return `${nodes}::${theories}::${foil}` || 'empty';
+}
+
+const compactSignature = (signature) => {
+  let hash = 2166136261;
+  const text = String(signature || 'empty');
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `um_${(hash >>> 0).toString(36)}`;
+};
+
 /**
  * Hook for managing story generation
  */
@@ -57,6 +94,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
   const generationRef = useRef(null);
   const lastPredictionRef = useRef(null); // Track what we predicted
   const branchPrefetchInFlightRef = useRef(new Set()); // Prevent duplicate dual-path prefetch bursts
+  const underMapPrefetchJobsRef = useRef(new Map()); // key -> latest requested Under-Map refresh job
+  const generatedUnderMapSignaturesRef = useRef(new Map()); // key -> signature known to be cached
   const branchingChoicesRef = useRef([]); // TRUE INFINITE BRANCHING: Track player's path through branching narratives
   const underMapRef = useRef(null);  // UNDER-MAP: player's collected fragments, revealed nodes, sealed theories for prompt context
 
@@ -170,7 +209,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
    * TRUE INFINITE BRANCHING: Now accepts branchingChoices to pass the player's actual
    * path through previous subchapters' branching narratives for proper context.
    */
-  const prefetchNextChapterBranchesAfterC = useCallback(async (currentChapter, choiceHistory = [], source = 'unknown', branchingChoices = []) => {
+  const prefetchNextChapterBranchesAfterC = useCallback(async (currentChapter, choiceHistory = [], source = 'unknown', branchingChoices = [], options = {}) => {
     if (!isConfigured) return;
     if (!currentChapter || currentChapter >= 12) return;
 
@@ -276,6 +315,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
       try {
         // TRUE INFINITE BRANCHING: Pass branchingChoices so context includes realized narratives
+        const underMapForOption = options?.underMapByOption?.[optionKey] || underMapRef.current;
         const entry = await storyGenerationService.generateSubchapter(
           nextChapter,
           1,
@@ -285,7 +325,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             traceId: createTraceId(`sg_${nextCaseNumber}_${nextPathKey}`),
             reason: `prefetch-next-chapter-branches:${source}`,
             branchingChoices, // Player's actual path through previous subchapters
-            underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+            underMap: underMapForOption, // UNDER-MAP: steer next scene by collected fragments + sealed theory
           })
         );
 
@@ -341,6 +381,10 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       // Clear all pending timeouts
       pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
       pendingTimeoutsRef.current.clear();
+      underMapPrefetchJobsRef.current.forEach((job) => {
+        if (job?.timeoutId) clearTimeout(job.timeoutId);
+      });
+      underMapPrefetchJobsRef.current.clear();
       // Reset refs
       generationRef.current = null;
       lastPredictionRef.current = null;
@@ -398,7 +442,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
    * so we should always have something to return.
    */
   // TRUE INFINITE BRANCHING: Added branchingChoices for realized narrative context
-  const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = null) => {
+  const generateForCase = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = null, generationOptions = {}) => {
     const genId = `gen_${Date.now().toString(36)}`;
     const startTime = Date.now();
 
@@ -493,7 +537,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           reason: 'immediate-generateForCase',
           isUserFacing: true, // Never show fallback to player
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
-          underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+          underMap: generationOptions.underMap || underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
         })
       );
 
@@ -811,6 +855,92 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       log.debug('useStoryGeneration', `⏭️ ${nextCaseNumber} already exists, skipping generation`);
     }
   }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC, withQualitySettings]);
+
+  const runUnderMapPrefetchJob = useCallback(async (key) => {
+    const job = underMapPrefetchJobsRef.current.get(key);
+    if (!job || job.inFlight || !job.latestArgs) return;
+
+    const args = job.latestArgs;
+    const targetSignature = job.desiredSignature;
+    job.inFlight = true;
+    job.timeoutId = null;
+    underMapPrefetchJobsRef.current.set(key, job);
+
+    const { chapter, subchapter } = parseCaseNumber(args.caseNumber);
+    const nextSubIndex = subchapter + 1;
+    const nextCaseNumber = formatCaseNumber(chapter, nextSubIndex);
+    const refreshKey = compactSignature(targetSignature);
+    const traceId = createTraceId(`um_prefetch_${nextCaseNumber}_${refreshKey}`);
+
+    try {
+      setStatus(GENERATION_STATUS.GENERATING);
+      setGenerationType(GENERATION_TYPE.PRELOAD);
+
+      const entry = await storyGenerationService.generateSubchapter(
+        chapter,
+        nextSubIndex,
+        args.pathKey,
+        args.choiceHistory,
+        withQualitySettings({
+          traceId,
+          reason: 'under-map-reveal-prefetch',
+          branchingChoices: args.branchingChoices,
+          underMap: args.underMap,
+          // A read-complete chain prefetch may already be in flight for the same
+          // subchapter without the revealed node. This refresh deliberately
+          // overwrites that older version when the player's map changes.
+          forceRegenerate: true,
+          refreshKey,
+        }),
+      );
+
+      if (entry && isMountedRef.current) {
+        updateGeneratedCache(nextCaseNumber, entry.pathKey || args.pathKey, entry);
+        generatedUnderMapSignaturesRef.current.set(key, targetSignature);
+        log.debug('useStoryGeneration', `Under-Map prefetch cached ${nextCaseNumber} (${refreshKey})`);
+      }
+    } catch (err) {
+      console.warn(`[useStoryGeneration] Under-Map prefetch failed for ${nextCaseNumber}:`, err.message);
+    } finally {
+      const current = underMapPrefetchJobsRef.current.get(key);
+      if (current) {
+        current.inFlight = false;
+        if (current.desiredSignature && current.desiredSignature !== targetSignature && isMountedRef.current) {
+          current.timeoutId = setTimeout(() => runUnderMapPrefetchJob(key), 0);
+          underMapPrefetchJobsRef.current.set(key, current);
+        } else {
+          underMapPrefetchJobsRef.current.set(key, current);
+        }
+      }
+    }
+  }, [withQualitySettings]);
+
+  const prefetchNextSubchapterWithUnderMap = useCallback((caseNumber, pathKey, choiceHistory = [], branchingChoices = [], underMapSnapshot = null) => {
+    if (!isConfigured || !caseNumber || !underMapSnapshot) return;
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+    if (subchapter >= 3) return;
+
+    const nextCaseNumber = formatCaseNumber(chapter, subchapter + 1);
+    const key = `${nextCaseNumber}_${pathKey || 'ROOT'}`;
+    const signature = underMapGenerationSignature(underMapSnapshot);
+    if (generatedUnderMapSignaturesRef.current.get(key) === signature) return;
+
+    const current = underMapPrefetchJobsRef.current.get(key) || {};
+    if (current.timeoutId) clearTimeout(current.timeoutId);
+    const nextJob = {
+      ...current,
+      desiredSignature: signature,
+      latestArgs: {
+        caseNumber,
+        pathKey,
+        choiceHistory,
+        branchingChoices,
+        underMap: underMapSnapshot,
+      },
+    };
+    nextJob.timeoutId = setTimeout(() => runUnderMapPrefetchJob(key), UNDER_MAP_PREFETCH_DEBOUNCE_MS);
+    underMapPrefetchJobsRef.current.set(key, nextJob);
+  }, [isConfigured, runUnderMapPrefetchJob]);
 
   /**
    * TRUE INFINITE BRANCHING: Speculative prefetch after first choice is made.
@@ -1307,6 +1437,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     pregenerateCurrentChapterSiblings,
     prefetchNextChapterBranchesAfterC, // Prefetch both decision paths when entering subchapter C
     triggerPrefetchAfterBranchingComplete, // TRUE INFINITE BRANCHING: Prefetch siblings after branching choice is made
+    prefetchNextSubchapterWithUnderMap, // UNDER-MAP: refresh next scene when revealed truths change
     speculativePrefetchForFirstChoice, // TRUE INFINITE BRANCHING: Prefetch 3 second-choice paths after first choice
     cancelGeneration,
     clearError,

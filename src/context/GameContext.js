@@ -675,9 +675,12 @@ export function GameProvider({
         if (r.map === c.underMap) return null;
         return { storyCampaign: { ...c, underMap: r.map } };
       });
+      if (result.correctReading && (result.revealed?.node || result.upgraded)) {
+        story.prefetchAfterUnderMapReveal?.(current.activeCaseNumber, result.map);
+      }
     }
     return result;
-  }, [progress.storyCampaign, updateProgress]);
+  }, [progress.storyCampaign, updateProgress, story]);
 
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
@@ -1017,6 +1020,7 @@ export function GameProvider({
     ensureDailyStoryCase,
     selectStoryDecision: story.selectStoryDecision,
     selectDecisionBeforePuzzle: story.selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
+    prefetchTheoryBranches: story.prefetchTheoryBranches,
     saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
     // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
