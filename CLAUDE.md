@@ -223,20 +223,33 @@ behind cover the player is already spending:
   `crossThreshold`'s signature check missed and the player ate a full regen. The effect now
   bails when `sealed` (`if (sealed) return;`), so the pre-seal signature survives and the
   cross is an instant cache hit. This is THE fix for the post-seal wait.
-- **Cross is decoupled from generation.** `crossThreshold` no longer `await`s
-  `ensureStoryContent` before navigating; it fires it (still with the sealed-belief map +
-  `requireFreshUnderMap`, so the lookup is keyed to *this* belief, never a stale pre-seal
-  prefetch) and navigates to `Sealed` immediately. The wax-seal animation + the "Cross into
-  Chapter" tap cover any residual work; the `CaseFile` entry awaits whatever is ready (its
-  existing retry UI handles a genuine failure).
+- **Cross WAITS for the next chapter (no fallback flash).** `crossThreshold` `await`s
+  `ensureStoryContent` (keyed to the sealed-belief map + `requireFreshUnderMap`) before
+  navigating to `Sealed`. With the prefetch-clobber fix above this is usually an instant
+  cache hit; the honest "Crossing…" hold on a cold cache is still preferable to navigating
+  early and rendering placeholder/fallback prose (which an earlier decouple attempt did —
+  reverted). NOTE: the real bottleneck is raw generation latency (~70s/scene, single slot),
+  not gateway positioning — see the latency caveat below.
 - **The CONNECT beat warms the next subchapter on open.** `UnderMapScreen` calls
   `prefetchAfterUnderMapReveal(gateCaseNumber, map)` on mount (not just on first reveal), so
   the whole connection-drawing puzzle is cover. Deduped; `handleContinue` already hits the
   cache without forcing a regen.
-Net cost is **lower**, not higher: the speculative per-belief generation already ran (and
-was being thrown away). The cache-key contract these rely on lives in
-`src/utils/underMapGeneration.js` (`underMapGenerationSignature`). **Unverified on-device** —
-confirm a sealed belief lands the next chapter instantly on a real network.
+The cache-key contract these rely on lives in `src/utils/underMapGeneration.js`
+(`underMapGenerationSignature`).
+
+**LATENCY REALITY (on-device, 2026-06-09):** the above only hides generation when the
+generation FITS inside the cover window. On a Pixel 10 Pro a single scene takes **~70s**
+(`gemini-3.5-flash`, `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion tokens)
+and `maxConcurrentGenerations` is **1** (serialized). Cover windows (a CONNECT puzzle, a
+THEORY deliberation) are ~20-40s — so the prefetch is *correct* (logs show all duplicate
+requests dedupe onto one in-flight generation) but starts only ~1 beat ahead and can't
+cover 70s with 20s. Worse, with a single slot a speculative prefetch of the *wrong* belief
+can hold the slot and force the needed generation to queue behind it. The genuine levers are
+(a) cut generation time — `thinkingLevel` `medium`→`low` in `generation.js` (~475/531) is the
+biggest, at a prose-quality cost; (b) raise `maxConcurrentGenerations` to 2 so speculation
+runs in parallel, at a mobile-network-reliability cost; (c) deeper lookahead (start each
+prefetch a full beat earlier), which for the CONNECT path trades realized-branching context.
+These are product tradeoffs — do not change them blindly.
 
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.

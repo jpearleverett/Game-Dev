@@ -257,19 +257,22 @@ export default function TheoryScreen({ navigation, route }) {
     ];
     const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
 
-    // Don't BLOCK the player on generation. The sealed-belief prefetch (kicked the
-    // moment this screen mounted, and again at seal) has usually finished by now, so
-    // this resolves instantly via the signature-matching cache hit. When it hasn't,
-    // the Sealed wax-seal transition + the "Cross into Chapter" tap give it cover, and
-    // the CaseFile entry awaits whatever is ready (with its own retry UI on failure).
-    // We still pass the sealed-belief map + requireFreshUnderMap so the cache lookup
-    // is keyed to THIS belief, never an earlier pre-seal prefetch of the same path.
-    Promise.resolve(
-      game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
+    // Wait for the next chapter to be READY before crossing — navigating early drops
+    // the player into placeholder/fallback prose, which reads as broken. The sealed-
+    // belief prefetch (kicked on mount, kept correctly-signed by the `sealed` guard
+    // above) means this is usually an instant cache hit; when it isn't, the honest
+    // "Crossing…" hold is still better than fallback text. We pass the sealed-belief
+    // map + requireFreshUnderMap so the lookup is keyed to THIS belief.
+    try {
+      await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
         underMap: sealedMapRef.current || map,
         requireFreshUnderMap: true,
-      }),
-    ).catch(() => {});
+      });
+    } catch (_e) {
+      setContinuing(false);
+      setGenError('The next chapter would not take shape. Tap to try again.');
+      return;
+    }
 
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
     // Cross via the wax-seal chapter-close (design's Sealed screen).
