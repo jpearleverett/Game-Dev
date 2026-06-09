@@ -788,9 +788,9 @@ export const GENERATION_CONFIG = {
   },
 
   // Token limits - Gemini 3.5 Flash supports up to 65,536 tokens output (64k)
-  // IMPORTANT: Thinking tokens consume output budget! With 'high' thinking on core
-  // narrative, the model may use 50-80% of tokens for reasoning before output.
-  // Values below are generous to ensure quality output with full reasoning depth.
+  // IMPORTANT: Thinking tokens consume output budget. Core narrative uses medium
+  // thinking for gameplay latency; values below leave headroom for reasoning +
+  // structured story output.
   // Gemini 3.5 Flash: 1M input / 64k output
   maxTokens: {
     subchapter: 65536,    // Gemini 3.5 max output - main narrative generation

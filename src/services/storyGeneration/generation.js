@@ -469,13 +469,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           options: {
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
-            // Core narrative: 'high' for the deepest creative reasoning on the
-            // main scene the player reads. Gemini 3.5 Flash's default is 'medium';
-            // for long-form creative prose the extra reasoning depth materially
-            // improves quality (latency cost is acceptable here). Path-decisions /
-            // personality / validation stay 'low' — short, structural calls where
-            // 3.5's improved low tier is fast and sufficient.
-            thinkingLevel: 'high',
+            // Core narrative uses Gemini's medium reasoning tier to keep TTFT low
+            // enough for background generation to finish while the player reads /
+            // maps. Path-decisions / personality / validation stay low.
+            thinkingLevel: options?.thinkingLevel || 'medium',
           },
         });
       } catch (cacheError) {
@@ -531,6 +528,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
             systemPrompt: buildMasterSystemPrompt(),
             maxTokens: GENERATION_CONFIG.maxTokens.subchapter,
             responseSchema: schema,
+            thinkingLevel: options?.thinkingLevel || 'medium',
             traceId,
             requestContext: {
               caseNumber,
