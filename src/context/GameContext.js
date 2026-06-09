@@ -21,6 +21,11 @@ import {
   drawDailyStir as umDrawStir,
   resolveDailyStir as umResolveStir,
   touchUnderMap as umTouch,
+  motifCount,
+  keystoneCount,
+  mapDepth,
+  foilPresence,
+  bestFlawlessStreak,
 } from '../data/underMap';
 // Removed: internal usePersistence hook call
 import { useGameLogic } from '../hooks/useGameLogic';
@@ -70,6 +75,7 @@ export function GameProvider({
   } = useGameLogic(SEASON_ONE_CASES, progress, updateProgress);
 
   const [mode, setMode] = useState('daily');
+  const [achievementToast, setAchievementToast] = useState(null);
 
   // Initialize game state when persistence is ready
   useEffect(() => {
@@ -623,7 +629,13 @@ export function GameProvider({
   const ingestSceneFragments = useCallback((fragments, relations, meta = {}) => {
     const frags = Array.isArray(fragments) ? fragments : [];
     const rels = Array.isArray(relations) ? relations : [];
-    if (!frags.length && !rels.length) return;
+    if (!frags.length && !rels.length) return null;
+    const currentSnapshot = normalizeStoryCampaignShape(progress.storyCampaign);
+    let snapshotMap = currentSnapshot.underMap;
+    if (frags.length) {
+      snapshotMap = umAddFragments(snapshotMap, frags.map((f) => umMakeFragment({ ...f, caseNumber: meta.caseNumber, chapter: meta.chapter })));
+    }
+    if (rels.length) snapshotMap = umAddRelations(snapshotMap, rels, { caseNumber: meta.caseNumber });
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       let um = current.underMap;
@@ -634,7 +646,8 @@ export function GameProvider({
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
-  }, [updateProgress]);
+    return snapshotMap;
+  }, [progress.storyCampaign, updateProgress]);
 
   const connectUnderMap = useCallback((aId, bId) => {
     const current = normalizeStoryCampaignShape(progress.storyCampaign);
@@ -669,15 +682,19 @@ export function GameProvider({
         if (r.map === c.underMap) return null;
         return { storyCampaign: { ...c, underMap: r.map } };
       });
+      if (result.correctReading && (result.revealed?.node || result.upgraded)) {
+        story.prefetchAfterUnderMapReveal?.(current.activeCaseNumber, result.map);
+      }
     }
     return result;
-  }, [progress.storyCampaign, updateProgress]);
+  }, [progress.storyCampaign, updateProgress, story]);
 
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
-      const um = umRecordDescent(current.underMap, { hadMisstep });
+      const afterDescent = umRecordDescent(current.underMap, { hadMisstep });
+      const um = umResolveStir(afterDescent);
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
@@ -798,90 +815,121 @@ export function GameProvider({
     return !alreadyUnlocked;
   }, [progress.endings, progress.chapterCheckpoints, updateProgress]);
 
+  const dismissAchievementToast = useCallback(() => {
+    setAchievementToast(null);
+  }, []);
+
   const unlockAchievement = useCallback((achievementId, context = {}) => {
-    const nowIso = new Date().toISOString();
-    const currentAchievements = progress.achievements || { unlockedAchievementIds: [], achievementDetails: {}, totalPoints: 0 };
-
-    if (currentAchievements.unlockedAchievementIds.includes(achievementId)) {
-      return false;
-    }
-
     const achievement = ACHIEVEMENTS[achievementId];
-    const points = achievement?.points || 0;
-
-    const updatedAchievements = {
-      ...currentAchievements,
-      unlockedAchievementIds: [...currentAchievements.unlockedAchievementIds, achievementId],
-      achievementDetails: {
-        ...currentAchievements.achievementDetails,
-        [achievementId]: {
-          unlockedAt: nowIso,
-          ...context,
+    if (!achievement) return false;
+    const nowIso = new Date().toISOString();
+    updateProgress((prev) => {
+      const currentAchievements = prev.achievements || { unlockedAchievementIds: [], achievementDetails: {}, totalPoints: 0 };
+      if (currentAchievements.unlockedAchievementIds.includes(achievementId)) return null;
+      return {
+        achievements: {
+          ...currentAchievements,
+          unlockedAchievementIds: [...currentAchievements.unlockedAchievementIds, achievementId],
+          achievementDetails: {
+            ...currentAchievements.achievementDetails,
+            [achievementId]: {
+              unlockedAt: nowIso,
+              ...context,
+            },
+          },
+          totalPoints: (currentAchievements.totalPoints || 0) + (achievement.points || 0),
+          lastCheckedAt: nowIso,
         },
-      },
-      totalPoints: currentAchievements.totalPoints + points,
-      lastCheckedAt: nowIso,
-    };
-
-    updateProgress({ achievements: updatedAchievements });
+      };
+    });
+    setAchievementToast({ id: achievementId, achievement, at: nowIso });
     notificationHaptic(Haptics.NotificationFeedbackType.Success);
-    analytics.logEvent?.('achievement_unlocked', { achievementId, points });
-
+    analytics.logEvent?.('achievement_unlocked', { achievementId, points: achievement.points || 0 });
     return true;
-  }, [progress.achievements, updateProgress]);
+  }, [updateProgress]);
 
   const checkAchievements = useCallback(() => {
     const currentAchievements = progress.achievements?.unlockedAchievementIds || [];
-    const newUnlocks = [];
-
-    if (progress.seenPrologue && !currentAchievements.includes('THE_BEGINNING')) {
-      if (unlockAchievement('THE_BEGINNING')) newUnlocks.push('THE_BEGINNING');
-    }
-
-    if (progress.streak >= 5 && !currentAchievements.includes('STREAK_FIVE')) {
-      if (unlockAchievement('STREAK_FIVE')) newUnlocks.push('STREAK_FIVE');
-    }
-    if (progress.streak >= 10 && !currentAchievements.includes('STREAK_TEN')) {
-      if (unlockAchievement('STREAK_TEN')) newUnlocks.push('STREAK_TEN');
-    }
-
-    const totalSolved = progress.solvedCaseIds?.length || 0;
-    if (totalSolved >= 10 && !currentAchievements.includes('CASE_CRACKER')) {
-      if (unlockAchievement('CASE_CRACKER')) newUnlocks.push('CASE_CRACKER');
-    }
-    if (totalSolved >= 50 && !currentAchievements.includes('VETERAN_INVESTIGATOR')) {
-      if (unlockAchievement('VETERAN_INVESTIGATOR')) newUnlocks.push('VETERAN_INVESTIGATOR');
-    }
-
-    const perfectSolves = progress.attemptsDistribution?.[1] || 0;
-    if (perfectSolves > 0 && !currentAchievements.includes('PERFECT_DETECTIVE')) {
-      if (unlockAchievement('PERFECT_DETECTIVE')) newUnlocks.push('PERFECT_DETECTIVE');
-    }
-
-    const unlockedEndings = progress.endings?.unlockedEndingIds || [];
-    
-    if (unlockedEndings.length >= 1 && !currentAchievements.includes('FIRST_ENDING')) {
-      if (unlockAchievement('FIRST_ENDING')) newUnlocks.push('FIRST_ENDING');
-    }
-    
-    if (unlockedEndings.length >= 8 && !currentAchievements.includes('HALFWAY_THERE')) {
-      if (unlockAchievement('HALFWAY_THERE')) newUnlocks.push('HALFWAY_THERE');
-    }
-    
-    if (unlockedEndings.length >= 16 && !currentAchievements.includes('COMPLETIONIST')) {
-      if (unlockAchievement('COMPLETIONIST')) newUnlocks.push('COMPLETIONIST');
-    }
-
+    const unlocked = new Set(currentAchievements);
+    const storyCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
+    const underMap = storyCampaign.underMap;
+    const fragments = Array.isArray(underMap.fragments) ? underMap.fragments : [];
+    const nodes = (Array.isArray(underMap.nodes) ? underMap.nodes : []).filter((n) => !n.unresolvedReading);
+    const theories = Array.isArray(underMap.theories) ? underMap.theories : [];
+    const endings = progress.endings?.unlockedEndingIds || [];
+    const depth = mapDepth(underMap);
     const hour = new Date().getHours();
-    if (hour >= 0 && hour < 4 && !currentAchievements.includes('NIGHT_OWL')) {
-      if (unlockAchievement('NIGHT_OWL')) newUnlocks.push('NIGHT_OWL');
-    }
-    if (hour >= 5 && hour < 7 && !currentAchievements.includes('EARLY_BIRD')) {
-      if (unlockAchievement('EARLY_BIRD')) newUnlocks.push('EARLY_BIRD');
-    }
 
+    const candidates = [
+      ['THE_BEGINNING', progress.seenPrologue],
+      ['FIRST_FRAGMENT', fragments.length >= 1],
+      ['FIRST_TRUTH', nodes.length >= 1],
+      ['CLEAN_DESCENT', bestFlawlessStreak(underMap) >= 1],
+      ['FLAWLESS_THREE', bestFlawlessStreak(underMap) >= 3],
+      ['FIRST_BELIEF', theories.length >= 1],
+      ['READING_HELD', theories.some((t) => t.correct === true)],
+      ['READING_SUBVERTED', theories.some((t) => t.correct === false)],
+      ['MOTIF_DEEPENED', motifCount(underMap) >= 1],
+      ['KEYSTONE_FOUND', keystoneCount(underMap) >= 1],
+      ['MAP_TAKING_SHAPE', depth.total > 0 && depth.ratio >= 0.5],
+      ['OTHER_READER_STIRS', foilPresence(underMap) >= 1],
+      ['OTHER_READER_MANIFEST', foilPresence(underMap) >= 2],
+      ['CHAPTER_THREE', (storyCampaign.chapter || 1) >= 3],
+      ['FIRST_ENDING', endings.length >= 1],
+      ['CLEAR_EYED', endings.includes('ending_clear')],
+      ['HALF_BLIND', endings.includes('ending_half')],
+      ['DECEIVED', endings.includes('ending_deceived')],
+      ['NIGHT_READER', hour >= 0 && hour < 4],
+      ['SEVEN_DAYS_MAPPED', (underMap.bestDailyStreak || underMap.dailyStreak || 0) >= 7],
+    ];
+
+    const newUnlocks = candidates
+      .filter(([id, ok]) => ok && ACHIEVEMENTS[id] && !unlocked.has(id))
+      .map(([id]) => id);
+    if (!newUnlocks.length) return [];
+
+    const nowIso = new Date().toISOString();
+    updateProgress((prev) => {
+      const current = prev.achievements || { unlockedAchievementIds: [], achievementDetails: {}, totalPoints: 0 };
+      const existing = new Set(current.unlockedAchievementIds || []);
+      const ids = newUnlocks.filter((id) => !existing.has(id));
+      if (!ids.length) return null;
+      const details = { ...(current.achievementDetails || {}) };
+      let points = current.totalPoints || 0;
+      ids.forEach((id) => {
+        details[id] = { unlockedAt: nowIso };
+        points += ACHIEVEMENTS[id]?.points || 0;
+      });
+      return {
+        achievements: {
+          ...current,
+          unlockedAchievementIds: [...(current.unlockedAchievementIds || []), ...ids],
+          achievementDetails: details,
+          totalPoints: points,
+          lastCheckedAt: nowIso,
+        },
+      };
+    });
+
+    const latestId = newUnlocks[newUnlocks.length - 1];
+    setAchievementToast({ id: latestId, achievement: ACHIEVEMENTS[latestId], at: nowIso, count: newUnlocks.length });
+    notificationHaptic(Haptics.NotificationFeedbackType.Success);
+    newUnlocks.forEach((achievementId) => {
+      analytics.logEvent?.('achievement_unlocked', { achievementId, points: ACHIEVEMENTS[achievementId]?.points || 0 });
+    });
     return newUnlocks;
-  }, [progress, unlockAchievement]);
+  }, [progress, updateProgress]);
+
+  useEffect(() => {
+    if (!hydrationComplete) return;
+    checkAchievements();
+  }, [
+    hydrationComplete,
+    checkAchievements,
+    progress.seenPrologue,
+    progress.storyCampaign,
+    progress.endings,
+  ]);
 
   const saveChapterCheckpoint = useCallback((chapter, subchapter, pathKey) => {
     const nowIso = new Date().toISOString();
@@ -979,6 +1027,7 @@ export function GameProvider({
     ensureDailyStoryCase,
     selectStoryDecision: story.selectStoryDecision,
     selectDecisionBeforePuzzle: story.selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
+    prefetchTheoryBranches: story.prefetchTheoryBranches,
     saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
     // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?
@@ -1014,6 +1063,8 @@ export function GameProvider({
     unlockEnding,
     unlockAchievement,
     checkAchievements,
+    achievementToast,
+    dismissAchievementToast,
     saveChapterCheckpoint,
     startFromChapter,
     updateGameplayStats,
@@ -1054,6 +1105,8 @@ export function GameProvider({
     unlockEnding,
     unlockAchievement,
     checkAchievements,
+    achievementToast,
+    dismissAchievementToast,
     saveChapterCheckpoint,
     startFromChapter,
     updateGameplayStats,

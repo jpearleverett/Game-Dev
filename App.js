@@ -11,6 +11,7 @@ import { ErrorBoundary } from './src/components/ErrorBoundary';
 import useCachedResources from './src/hooks/useCachedResources';
 import StoryGenerationOverlay from './src/components/StoryGenerationOverlay';
 import LLMDebugOverlay from './src/components/LLMDebugOverlay';
+import AchievementToast from './src/components/AchievementToast';
 import { usePersistence } from './src/hooks/usePersistence';
 
 const ROUTE_TO_AUDIO_KEY = {
@@ -78,6 +79,8 @@ function AppContent({ fontsReady, audioController, onStateChange }) {
     clearGenerationError,
     exitStoryCampaign,
     updateSettings,
+    achievementToast,
+    dismissAchievementToast,
   } = game;
 
   const navigationRef = useRef(null);
@@ -143,6 +146,11 @@ function AppContent({ fontsReady, audioController, onStateChange }) {
         onRetry={handleRetry}
         onGoToSettings={handleGoToSettings}
         onBackToHub={handleBackToHub}
+      />
+      <AchievementToast
+        toast={achievementToast}
+        onDismiss={dismissAchievementToast}
+        reducedMotion={!!progress?.settings?.reducedMotion}
       />
     </View>
   );

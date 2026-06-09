@@ -42,6 +42,7 @@ export default function SealedScreen({ navigation, route }) {
   const beliefTitle = route?.params?.beliefTitle
     || (map.theories[0] && map.theories[0].interpretation)
     || 'A reading of the hidden world';
+  const surfacedTruths = map.nodes.filter((n) => n && !n.unresolvedReading).length;
 
   // Stamp + seal entrance.
   const stamp = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
@@ -109,7 +110,7 @@ export default function SealedScreen({ navigation, route }) {
         <Text style={styles.sub}>The Under-Map holds your reading. It will bend the next chapter toward what you believe.</Text>
 
         <View style={styles.statRow}>
-          {[['+3', 'FRAGMENTS'], ['+1', 'TRUTH'], ['▸', `CHAPTER ${String(nextChapter).padStart(3, '0')}`]].map(([n, l]) => (
+          {[[map.fragments.length, 'FRAGMENTS'], [surfacedTruths, 'TRUTHS'], ['▸', `CHAPTER ${String(nextChapter).padStart(3, '0')}`]].map(([n, l]) => (
             <View key={l} style={styles.stat}>
               <Text style={styles.statNum}>{n}</Text>
               <Text style={styles.statLabel}>{l}</Text>

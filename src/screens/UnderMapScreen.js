@@ -294,7 +294,9 @@ export default function UnderMapScreen({ navigation, route }) {
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
     const nextPathKey = progress?.storyCampaign?.currentPathKey || 'ROOT';
     try {
-      if (nextCase) await game.ensureStoryContent?.(nextCase, nextPathKey);
+      if (nextCase) {
+        await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, { underMap: map });
+      }
     } catch (_e) {
       setContinuing(false);
       setGenError('The descent stalled before the next scene took shape. Tap to try again.');
@@ -302,7 +304,7 @@ export default function UnderMapScreen({ navigation, route }) {
     }
     game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
     navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
-  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation, map]);
 
   const connectionList = map.connections;
   const selArc = selected.length === 2 && field.w ? arcPath(selected[0], selected[1]) : null;
@@ -447,6 +449,14 @@ export default function UnderMapScreen({ navigation, route }) {
         </View>
         {asPuzzle && canContinue ? (
           <>
+            <View style={styles.visitWin}>
+              <Text style={styles.visitWinKicker}>{revealsThisVisit > 0 ? 'TRUTH SURFACED' : 'THREADS STILL SENSED'}</Text>
+              <Text style={styles.visitWinText}>
+                {revealsThisVisit > 0
+                  ? `${revealsThisVisit} node${revealsThisVisit === 1 ? '' : 's'} revealed this descent · map ${depthPct}% drawn`
+                  : 'The dark has gone quiet for now. Unfinished relations stay on the map.'}
+              </Text>
+            </View>
             {genError ? <Text style={styles.genError}>{genError}</Text> : null}
             <Pressable onPress={handleContinue} disabled={continuing} style={[styles.continueBtn, continuing && { opacity: 0.6 }]}>
               <Text style={styles.continueText}>{continuing ? 'Descending…' : genError ? 'Retry' : 'Continue the descent'}</Text>
@@ -594,6 +604,18 @@ const styles = StyleSheet.create({
   depthFill: { height: 6, borderRadius: 999, backgroundColor: COLORS.underViolet },
   depthLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underCyan },
   remainLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.textMuted },
+
+  visitWin: {
+    borderWidth: 1,
+    borderColor: 'rgba(125,211,252,0.28)',
+    borderRadius: 14,
+    backgroundColor: 'rgba(14,20,32,0.62)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  visitWinKicker: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 2.2, color: COLORS.underCyan },
+  visitWinText: { fontFamily: FONTS.primary, fontSize: 12.5, lineHeight: 18, color: COLORS.textSecondary, marginTop: 3 },
 
   continueBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14,

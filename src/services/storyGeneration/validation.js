@@ -393,6 +393,57 @@ class ValidationMethods {
     return out;
   }
 
+  _collectBranchingText(bn) {
+    if (!bn || typeof bn !== 'object') return '';
+    const parts = [];
+    if (bn.opening?.text) parts.push(bn.opening.text);
+    (Array.isArray(bn.firstChoice?.options) ? bn.firstChoice.options : []).forEach((o) => {
+      if (o?.response) parts.push(o.response);
+    });
+    (Array.isArray(bn.secondChoices) ? bn.secondChoices : []).forEach((sc) => {
+      (Array.isArray(sc?.options) ? sc.options : []).forEach((o) => {
+        if (o?.response) parts.push(o.response);
+      });
+    });
+    return parts.join('\n\n');
+  }
+
+  _validateUnderMapPlayability(content) {
+    const issues = [];
+    if (!content || typeof content !== 'object') return issues;
+
+    const prose = [
+      content.narrative || '',
+      this._collectBranchingText(content.branchingNarrative),
+    ].join('\n\n').toLowerCase();
+
+    (Array.isArray(content.fragments) ? content.fragments : []).forEach((f) => {
+      const phrase = String(f?.phrase || '').trim();
+      if (phrase && !prose.includes(phrase.toLowerCase())) {
+        issues.push(`UNDERMAP PLAYABILITY: fragment phrase missing from prose: "${phrase}"`);
+      }
+    });
+
+    const heldLabels = new Set(
+      (Array.isArray(this.currentUnderMap?.fragments) ? this.currentUnderMap.fragments : [])
+        .map((f) => String(f?.label || '').trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const sceneRelations = Array.isArray(content.relations) ? content.relations : [];
+    if (heldLabels.size > 0 && sceneRelations.length > 0) {
+      const linksHeldFragment = sceneRelations.some((r) => {
+        const a = String(r?.aLabel || r?.a || '').trim().toLowerCase();
+        const b = String(r?.bLabel || r?.b || '').trim().toLowerCase();
+        return heldLabels.has(a) || heldLabels.has(b);
+      });
+      if (!linksHeldFragment) {
+        issues.push('UNDERMAP PLAYABILITY: no relation links a new fragment to a fragment the player already holds');
+      }
+    }
+
+    return issues;
+  }
+
   /**
    * CONNECT GUARANTEE: a templated kind-bond relation between two fragments,
    * used as a deterministic fallback so a CONNECT beat is never empty. Lower
@@ -1634,6 +1685,7 @@ class ValidationMethods {
     // --- TIER 4: STORY DAY CONSISTENCY ---
     // The story spans exactly 12 days, one per chapter. Wrong day = confusion.
     if (s.startsWith('STORY DAY MISMATCH:')) return true;
+    if (s.startsWith('UNDERMAP PLAYABILITY:')) return true;
 
     // --- TIER 6: PREMATURE REVELATIONS ---
     // The mystery has a carefully designed revelation gradient.

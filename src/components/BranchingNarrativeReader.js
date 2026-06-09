@@ -309,6 +309,9 @@ const AnomalyMeter = React.memo(function AnomalyMeter({ total, found, reducedMot
       <Animated.Text style={[styles.anomalyMeterText, complete && styles.anomalyMeterDone, { transform: [{ scale }] }]}>
         {complete ? '✦ PAGE FULLY SENSED' : `◆ ANOMALIES SENSED ${found}/${total}`}
       </Animated.Text>
+      {!complete && found === 0 ? (
+        <Text style={styles.anomalyHint}>Tap colored phrases to pin fragments.</Text>
+      ) : null}
     </View>
   );
 });
@@ -1165,8 +1168,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 14,
     left: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   anomalyMote: {
     position: 'absolute',
@@ -1186,6 +1188,14 @@ const styles = StyleSheet.create({
   anomalyMeterDone: {
     color: '#5b2a86',
     opacity: 1,
+  },
+  anomalyHint: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 8.5,
+    letterSpacing: 0.5,
+    color: '#5b2a86',
+    opacity: 0.72,
+    marginTop: 2,
   },
   dropCap: {
     fontFamily: FONTS.secondaryBold,

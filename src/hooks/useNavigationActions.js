@@ -33,6 +33,7 @@ export function useNavigationActions(navigation, game, audio) {
     exitStoryCampaign,
     ensureDailyStoryCase,
     selectStoryDecision,
+    startFromChapter,
   } = game;
 
   const isStoryMode = game.mode === 'story';
@@ -170,6 +171,20 @@ export function useNavigationActions(navigation, game, audio) {
     navigation.navigate('Board');
   }, [advanceToCase, navigation]);
 
+  const handleChapterSelect = useCallback((chapter) => {
+    const checkpoints = progress.chapterCheckpoints?.checkpoints || [];
+    const chapterNumber = typeof chapter === 'number' ? chapter : chapter?.chapter;
+    const checkpoint = checkpoints
+      .filter((cp) => cp?.chapter === chapterNumber)
+      .sort((a, b) => new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime())[0];
+    if (!checkpoint) return false;
+    const ok = startFromChapter?.(checkpoint);
+    if (ok) {
+      navigation.navigate('CaseFile', { caseNumber: checkpoint.storyCampaignSnapshot?.activeCaseNumber });
+    }
+    return !!ok;
+  }, [navigation, progress.chapterCheckpoints?.checkpoints, startFromChapter]);
+
   const handleToggleWord = useCallback((word) => {
     audio?.playSelect();
     toggleWordSelection(word);
@@ -208,7 +223,7 @@ export function useNavigationActions(navigation, game, audio) {
   }, [setPremiumUnlocked]);
 
   const handleReplayTutorial = useCallback(() => {
-    navigation.navigate('Prologue');
+    navigation.navigate('Tutorial');
   }, [navigation]);
 
   const handleOpenStoryHub = useCallback(() => {
@@ -311,6 +326,7 @@ export function useNavigationActions(navigation, game, audio) {
     handleSplashContinue,
     handleStartCase,
     handleSelectArchiveCase,
+    handleChapterSelect,
     handleToggleWord,
     handleSubmit,
     handleShareResults,

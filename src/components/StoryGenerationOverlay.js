@@ -22,39 +22,39 @@ import { SPACING, RADIUS } from '../constants/layout';
 import { GENERATION_STATUS, GENERATION_TYPE } from '../hooks/useStoryGeneration';
 
 const QUOTES = [
-  '"The past is never dead. It\'s not even past." - Faulkner',
-  '"In the end, we only regret the chances we didn\'t take."',
-  '"Every villain is a hero in their own mind."',
-  '"The truth is rarely pure and never simple." - Wilde',
-  '"What\'s done cannot be undone." - Shakespeare',
-  '"We are what we pretend to be." - Vonnegut',
-  '"Memory is the mother of all wisdom." - Aeschylus',
-  '"Justice delayed is justice denied."',
+  'The map is not found. It answers.',
+  'A wrong reading still leaves a line.',
+  'Ashport keeps two versions of every street.',
+  'What returns as a motif is asking to be named.',
+  'The Other Reader walks the road you refused.',
+  'Every belief is a lantern and a blindfold.',
+  'The hidden world hates a clean outline.',
+  'Some doors open only after you misread them.',
 ];
 
 // Diegetic loading messages for unexpected path choices (cache misses)
 // These make the loading delay feel like part of the investigation
 const CACHE_MISS_MESSAGES = {
   titles: [
-    'Following a New Lead',
-    'Changing Course',
-    'Taking the Road Less Traveled',
-    'Re-examining the Evidence',
-    'Pursuing an Unexpected Thread',
+    'Reading a New Line',
+    'The Map is Redrawing',
+    'Following the Road Not Taken',
+    'Letting Ashport Answer',
+    'Tracing an Unexpected Thread',
   ],
   progress: [
-    'Cross-referencing new evidence...',
-    'Tracking down a different angle...',
-    'Following the trail you\'ve chosen...',
-    'Uncovering what this path reveals...',
-    'Piecing together the unexpected connection...',
+    'Listening for the next anomaly...',
+    'Threading your fragments through the dark...',
+    'Following the belief you sealed...',
+    'Finding what this path reveals...',
+    'Letting the Under-Map settle...',
   ],
   hints: [
-    'Sometimes the case takes you where you least expect...',
-    'A good detective follows the evidence, not the obvious path...',
-    'The truth rarely travels in straight lines...',
-    'Every choice opens new doors and closes others...',
-    'You\'ve surprised us. Let\'s see where this leads...',
+    'The hidden world rarely travels in straight lines...',
+    'A fragment can return sharper than it arrived...',
+    'Every belief opens one door and darkens another...',
+    'The map remembers what you connected...',
+    'You surprised Ashport. Now it has to answer...',
   ],
 };
 
@@ -81,9 +81,9 @@ const ERROR_MESSAGES = {
     "Content blocked—someone's pulling strings from the shadows.",
   ],
   generic: [
-    "The trail went cold. But every case has another angle.",
-    "Dead end. Even the best detectives hit walls sometimes.",
-    "Something went wrong in the dark. Try again, gumshoe.",
+    "The line went dim. The map still has another angle.",
+    "The descent stalled. Even hidden worlds hit locked doors.",
+    "Something went wrong in the dark. Try the reading again.",
   ],
 };
 

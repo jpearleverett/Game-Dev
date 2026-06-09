@@ -559,7 +559,7 @@ export default function CaseFileScreen({
     return { firstChoice, secondChoice: deduped };
   }, []);
 
-  const persistBranchingChoice = useCallback((result, { isComplete = true } = {}) => {
+  const persistBranchingChoice = useCallback((result, { isComplete = true, underMapSnapshot = null } = {}) => {
     if (!onSaveBranchingChoice || !caseNumber) return;
     const rawPath = result?.path || result?.secondChoice || '';
     const rawFirst = result?.firstChoice || '';
@@ -572,7 +572,7 @@ export default function CaseFileScreen({
       });
       return;
     }
-    onSaveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete });
+    onSaveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete, underMapSnapshot });
   }, [onSaveBranchingChoice, caseNumber, normalizeBranchingPath]);
 
   const handleBranchingComplete = useCallback((result) => {
@@ -580,10 +580,6 @@ export default function CaseFileScreen({
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
-    if (result?.path && !branchingChoiceComplete) {
-      persistBranchingChoice(result, { isComplete: true });
-    }
-
     // NARRATIVE-FIRST FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
     // Applies to ALL subchapters with branching narrative (including 1A)
     // Note: Prefetch is triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
@@ -600,6 +596,7 @@ export default function CaseFileScreen({
     // through. Relations self-scope: addRelations only materializes a relation once
     // BOTH endpoints exist in the map, so a skipped branch's relations never form,
     // while cross-chapter links (to fragments the player already holds) still resolve.
+    let underMapSnapshot = null;
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
       // Reconstruct the exact prose the player walked using the SAME helper the
       // generation pipeline uses for continuity (opening + chosen first response +
@@ -611,11 +608,15 @@ export default function CaseFileScreen({
         ? buildRealizedNarrative(branchingNarrative, result?.firstChoice, result?.path || result?.secondChoice)
         : "";
       const pathFragments = fragmentsOnRealizedPath(sceneFragments, prose);
-      onIngestFragments(pathFragments, sceneRelations, {
+      underMapSnapshot = onIngestFragments(pathFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
+    }
+
+    if (result?.path && !branchingChoiceComplete) {
+      persistBranchingChoice(result, { isComplete: true, underMapSnapshot });
     }
   }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, branchingNarrative, storyMeta?.chapter, storyMeta?.subchapter]);
 
@@ -913,7 +914,7 @@ export default function CaseFileScreen({
   }, [caseNumber, hasLockedDecision, lastDecision, lockCelebrationOpacity, lockCelebrationScale]);
 
   const choiceStatusText = awaitingDecision
-    ? "Choose the intel dossier to branch this subchapter."
+    ? "Choose the reading that branches this subchapter."
     : resolvedSelectionKey
     ? "Branch locked."
     : "Awaiting HQ update.";
@@ -955,8 +956,8 @@ export default function CaseFileScreen({
           // Legacy/non-theory C beat: decision already made on this screen.
           return {
             title: "Path Chosen",
-            body: "Your decision is sealed. Now solve the evidence board to confirm your fate.",
-            hint: "The puzzle awaits to complete this chapter.",
+            body: "Your decision is sealed. Now read the Under-Map to confirm your fate.",
+            hint: "The descent completes this chapter.",
             actionLabel: puzzleActionLabel,
             actionIcon: "🔍",
             onPress: onProceedToPuzzle,
@@ -989,8 +990,8 @@ export default function CaseFileScreen({
     if (pendingStoryAdvance && !showNextBriefingCTA && !storyLocked && !hideContinueInvestigationCTA) {
       return {
         title: "Next Chapter Ready",
-        body: `${nextStoryLabel} is staged on the evidence board.`,
-        hint: "Continue when you're ready to keep chasing the Confessor.",
+        body: `${nextStoryLabel} is waiting under the city.`,
+        hint: "Continue when you're ready to follow the map deeper.",
         actionLabel: "Continue Investigation",
         actionIcon: "▶",
         onPress: typeof onContinueStory === "function" ? onContinueStory : null,
@@ -999,7 +1000,7 @@ export default function CaseFileScreen({
     if (isThirdSubchapter && (storyLocked || hasLockedDecision)) {
       return {
         title: "Chapter Locked",
-        body: "You've completed all three subchapters. HQ needs you home until the next chapter unlocks.",
+        body: "You've completed all three subchapters. The Under-Map needs time to answer.",
         hint: countdown ? `Unlocks in ${countdown}` : "Unlock window opens soon.",
         actionLabel: "Return Home",
         actionIcon: "🏠",
@@ -1188,9 +1189,9 @@ export default function CaseFileScreen({
                       },
                     ]}
                   >
-                    <Text style={[styles.choiceSignalLabel, { color: palette.accent, fontSize: slugSize }]}>Pathfork Advisory</Text>
+                    <Text style={[styles.choiceSignalLabel, { color: palette.accent, fontSize: slugSize }]}>UNDER-MAP SIGNAL</Text>
                     <Text style={[styles.choiceSignalBody, { color: palette.highlightText, fontSize: narrativeSize, lineHeight: narrativeLineHeight }]}>
-                      Finish the journal entry. Once every page is turned, choose the path that rewrites this case.
+                      Finish the letter. Once every page is turned, choose the thread that rewrites this reading.
                     </Text>
                   </View>
                 )}

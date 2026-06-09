@@ -108,7 +108,11 @@ export default function StoryCampaignScreen({
     <ScreenSurface variant="default">
       <View style={[styles.headerRow, compact && styles.headerRowCompact]}>
         <SecondaryButton label="Desk" arrow onPress={onBack} />
-        <SecondaryButton label="Daily Mode" icon="???" onPress={onExitToDesk} />
+        <SecondaryButton
+          label="Return to Desk"
+          icon={<MaterialCommunityIcons name="desk" size={18} color={COLORS.textSecondary} />}
+          onPress={onExitToDesk}
+        />
       </View>
 
       <Reveal reducedMotion={reducedMotion} distance={16} style={[styles.heroCard, compact && styles.heroCardCompact]}>
@@ -127,7 +131,7 @@ export default function StoryCampaignScreen({
             { fontSize: moderateScale(FONT_SIZES.md), letterSpacing: compact ? 1.2 : 2 },
           ]}
         >
-          All fourteen cases. No clocks, just clues.
+          Twelve chapters. Branching letters, impossible fragments, and beliefs the city answers.
         </Text>
           <Text
             style={[

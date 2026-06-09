@@ -214,7 +214,7 @@ export default function EndingGalleryScreen({
 
   const [selectedEnding, setSelectedEnding] = React.useState(null);
 
-  // Calculate card size for 4x4 grid
+  // Calculate compact gallery card size
   const gridPadding = scaleSpacing(SPACING.md);
   const gridGap = scaleSpacing(compact ? SPACING.xs : SPACING.sm);
   const availableWidth = width - gridPadding * 2;
@@ -272,7 +272,7 @@ export default function EndingGalleryScreen({
             ENDING GALLERY
           </Text>
           <Text style={[styles.subtitle, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
-            Season 1 · The Vanishing
+            Season 1 · The Under-Map
           </Text>
         </View>
 
@@ -291,7 +291,7 @@ export default function EndingGalleryScreen({
           </Text>
         </View>
 
-        {/* 4x4 Grid */}
+        {/* Ending grid */}
         <View style={[styles.grid, { gap: gridGap }]}>
           {enrichedEndings.map((ending) => (
             <EndingCard
@@ -311,7 +311,7 @@ export default function EndingGalleryScreen({
           <View style={styles.hintSection}>
             <MaterialCommunityIcons name="information-outline" size={18} color={COLORS.textMuted} />
             <Text style={styles.hintText}>
-              Tap any card to see hints for discovering new endings. Your choices in the story campaign determine which endings you can reach.
+              Tap any card to see hints. Your sealed beliefs and their verdicts decide which worldview you reach.
             </Text>
           </View>
         )}
@@ -322,7 +322,7 @@ export default function EndingGalleryScreen({
             <Text style={styles.completionIcon}>🏆</Text>
             <Text style={styles.completionTitle}>Completionist!</Text>
             <Text style={styles.completionText}>
-              You've discovered all 16 endings. Every path has been walked, every truth revealed.
+              You've discovered every worldview the Under-Map can leave you with.
             </Text>
           </View>
         )}

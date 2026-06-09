@@ -13,6 +13,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
+import { mapDepth, foilPresence, dailyStirFragment, dailyStreak } from '../data/underMap';
 
 const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
 const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
@@ -38,11 +39,14 @@ export default function DeskScreen({
   onOpenArchive,
   onOpenStats,
   onOpenSettings,
+  onOpenMenu,
   onOpenStoryCampaign,
   onOpenCaseBoard,
   onOpenCodex,
   onPickUpTrail,
   onBribe,
+  onDrawDailyStir,
+  onResolveDailyStir,
 }) {
   const storyCampaign = progress.storyCampaign || {};
   const reducedMotion = !!progress?.settings?.reducedMotion;
@@ -50,8 +54,18 @@ export default function DeskScreen({
   const fragments = underMap?.fragments?.length || 0;
   const truths = underMap?.nodes?.length || 0;
   const totalRelations = underMap?.relations?.length || 0;
+  const depth = mapDepth(underMap);
+  const depthPct = Math.round(depth.ratio * 100);
+  const foilHeat = foilPresence(underMap);
+  const stir = underMap?.dailyStir || null;
+  const stirFragment = dailyStirFragment(underMap);
+  const mappingStreak = dailyStreak(underMap);
   const nextStoryUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const [countdown, setCountdown] = useState(formatCountdown(nextStoryUnlockAt));
+
+  useEffect(() => {
+    onDrawDailyStir?.();
+  }, [onDrawDailyStir]);
 
   useEffect(() => {
     if (!nextStoryUnlockAt) { setCountdown(null); return undefined; }
@@ -68,15 +82,49 @@ export default function DeskScreen({
   const completedSubchapters = Array.isArray(storyCampaign.completedCaseNumbers) ? storyCampaign.completedCaseNumbers.length : 0;
   const awaitingDecision = Boolean(storyCampaign.awaitingDecision && storyCampaign.pendingDecisionCase);
   const storyLocked = Boolean(!awaitingDecision && nextStoryUnlockAt);
+  const completedCaseNumbers = Array.isArray(storyCampaign.completedCaseNumbers) ? storyCampaign.completedCaseNumbers : [];
+  const branchingChoices = Array.isArray(storyCampaign.branchingChoices) ? storyCampaign.branchingChoices : [];
+  const caseRead = branchingChoices.some((bc) => bc?.caseNumber === caseNumber) || completedCaseNumbers.includes(caseNumber);
+  const caseCompleted = completedCaseNumbers.includes(caseNumber);
+  const activeBeatIndex = caseCompleted
+    ? 0
+    : !caseRead
+      ? 0
+      : letter.toUpperCase() === 'C'
+        ? 3
+        : 2;
+  const beatStates = BEATS.map((beat, index) => ({
+    label: beat,
+    active: index === activeBeatIndex || (!caseRead && index === 1),
+    done: caseRead && index < activeBeatIndex,
+  }));
 
-  const solved = progress.solvedCaseIds.includes(activeCase.id);
-  const teaser = (typeof activeCase?.briefing?.summary === 'string' && activeCase.briefing.summary.trim())
-    || 'A new file lands on the desk. Read it through, mark what doesn’t belong, and follow the thread down.';
+  const solved = activeCase?.id ? progress.solvedCaseIds.includes(activeCase.id) : false;
+  const latestTheory = Array.isArray(underMap?.theories) && underMap.theories.length ? underMap.theories[0] : null;
+  const teaser = storyLocked && latestTheory?.interpretation
+    ? `When the lock lifts, Ashport tests what you believed: "${latestTheory.interpretation}".`
+    : !caseRead
+      ? 'Read the next letter. Sense the phrases that do not belong, and pin them to the Under-Map.'
+      : letter.toUpperCase() === 'C'
+        ? 'The chapter has shown its signs. Commit the belief the hidden world will answer.'
+        : 'The scene left fragments behind. Descend and connect them before they sink out of sight.';
 
-  const primaryLabel = storyLocked ? 'Locked — pick up the trail' : solved ? 'Review the case file' : 'Continue reading';
+  const primaryLabel = storyLocked
+    ? 'Pick up the trail'
+    : solved
+      ? 'Review the case file'
+      : !caseRead
+        ? 'Read & sense anomalies'
+        : letter.toUpperCase() === 'C'
+          ? 'Seal your belief'
+          : 'Descend into the Under-Map';
 
   const tap = (cb) => () => { Haptics.selectionAsync().catch(() => {}); cb?.(); };
   const onPrimary = storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
+  const onDailyStirPress = tap(() => {
+    onResolveDailyStir?.();
+    onOpenCaseBoard?.();
+  });
 
   const { moderateScale } = useResponsiveLayout();
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);
@@ -103,6 +151,11 @@ export default function DeskScreen({
           <Pressable onPress={tap(onOpenSettings)} hitSlop={10} style={styles.settingsBtn}>
             <MaterialCommunityIcons name="cog-outline" size={20} color={COLORS.accentCyan} />
           </Pressable>
+          {onOpenMenu ? (
+            <Pressable onPress={tap(onOpenMenu)} hitSlop={10} style={styles.manualBtn}>
+              <MaterialCommunityIcons name="book-open-variant" size={20} color={COLORS.amberLight} />
+            </Pressable>
+          ) : null}
           <View style={styles.windowSill} pointerEvents="none" />
         </View>
 
@@ -121,11 +174,11 @@ export default function DeskScreen({
               <Text style={styles.teaser}>{teaser}</Text>
 
               <View style={styles.beatTrack}>
-                {BEATS.map((b, i) => (
-                  <React.Fragment key={b}>
+                {beatStates.map((b, i) => (
+                  <React.Fragment key={b.label}>
                     <View style={styles.beatNode}>
-                      <View style={[styles.beatDot, i === 0 && styles.beatDotOn]} />
-                      <Text style={[styles.beatName, i === 0 && styles.beatNameOn]}>{b.toUpperCase()}</Text>
+                      <View style={[styles.beatDot, b.done && styles.beatDotDone, b.active && styles.beatDotOn]} />
+                      <Text style={[styles.beatName, b.done && styles.beatNameDone, b.active && styles.beatNameOn]}>{b.label.toUpperCase()}</Text>
                     </View>
                     {i < BEATS.length - 1 ? <View style={styles.beatLine} /> : null}
                   </React.Fragment>
@@ -142,8 +195,38 @@ export default function DeskScreen({
               {storyLocked && onBribe ? (
                 <Pressable onPress={tap(onBribe)}><Text style={styles.bribeNote}>Bribe the clerk to rush it ($0.99)</Text></Pressable>
               ) : null}
+              {depth.total > 0 ? (
+                <Text style={styles.mapPulse}>
+                  Under-Map {depthPct}% drawn{foilHeat >= 2 ? ' · The Other Reader has a face' : foilHeat >= 1 ? ' · another reading stirs' : ''}
+                </Text>
+              ) : null}
             </View>
           </View>
+
+          {stirFragment && !stir?.resolved ? (
+            <PressableScale
+              onPress={onDailyStirPress}
+              reducedMotion={reducedMotion}
+              style={styles.dailyStir}
+              containerStyle={styles.dailyStirWrap}
+              haptic={false}
+            >
+              <View style={styles.dailyStirGlow} pointerEvents="none" />
+              <View style={styles.dailyStirMark}><Text style={styles.dailyStirGlyph}>◆</Text></View>
+              <View style={styles.dailyStirText}>
+                <Text style={styles.dailyStirKicker}>THE MAP REMEMBERS</Text>
+                <Text style={styles.dailyStirTitle}>“{stirFragment.label}” drifted back up.</Text>
+                <Text style={styles.dailyStirSub}>
+                  Map today’s thread{mappingStreak > 0 ? ` · ${mappingStreak} day${mappingStreak === 1 ? '' : 's'} mapped` : ''}
+                </Text>
+              </View>
+              <Text style={styles.dailyStirArrow}>↓</Text>
+            </PressableScale>
+          ) : mappingStreak > 0 ? (
+            <View style={styles.dailyStirResolved}>
+              <Text style={styles.dailyStirResolvedText}>◆ {mappingStreak} day{mappingStreak === 1 ? '' : 's'} mapped · today’s thread settled</Text>
+            </View>
+          ) : null}
 
           {/* Under-Map descent aperture */}
           <PressableScale onPress={tap(onOpenCaseBoard)} reducedMotion={reducedMotion} style={styles.aperture} containerStyle={styles.apertureWrap}>
@@ -170,7 +253,7 @@ export default function DeskScreen({
           {onOpenCodex ? (
             <Pressable onPress={tap(onOpenCodex)} style={styles.codexLink}>
               <MaterialCommunityIcons name="book-open-variant" size={15} color={COLORS.underViolet} />
-              <Text style={styles.codexLinkText}>YOUR READING OF THE HIDDEN WORLD</Text>
+              <Text style={styles.codexLinkText}>CODEX · HIDDEN WORLD</Text>
               <Text style={styles.codexLinkArrow}>→</Text>
             </Pressable>
           ) : null}
@@ -178,7 +261,7 @@ export default function DeskScreen({
           {/* Story campaign — ghost entry */}
           <Pressable onPress={tap(onOpenStoryCampaign)} style={styles.storyLink}>
             <MaterialCommunityIcons name="book-open-page-variant-outline" size={16} color={COLORS.coral} />
-            <Text style={styles.storyLinkText}>ENTER THE FULL CAMPAIGN</Text>
+            <Text style={styles.storyLinkText}>HISTORY</Text>
             <Text style={styles.storyLinkArrow}>→</Text>
           </Pressable>
 
@@ -188,7 +271,7 @@ export default function DeskScreen({
               <Text style={styles.statNum}>{String(fragments).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>FRAGMENTS</Text>
             </Pressable>
-            <Pressable style={styles.statTag} onPress={tap(onOpenStats)}>
+            <Pressable style={styles.statTag} onPress={tap(onOpenCodex || onOpenStats)}>
               <Text style={styles.statNum}>{String(truths).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>TRUTHS</Text>
             </Pressable>
@@ -221,6 +304,7 @@ const styles = StyleSheet.create({
   neon: { transform: [{ rotate: '-2deg' }] },
   windowIdLeft: { position: 'absolute', top: 16, left: 16, fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1.6, color: COLORS.textMuted, zIndex: 5 },
   settingsBtn: { position: 'absolute', top: 16, right: 16, padding: 6, zIndex: 5 },
+  manualBtn: { position: 'absolute', top: 16, right: 52, padding: 6, zIndex: 5 },
   windowSill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 14, backgroundColor: '#1c150e' },
 
   idStrip: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.textMuted, textAlign: 'center', paddingTop: 16, paddingHorizontal: 24 },
@@ -251,8 +335,10 @@ const styles = StyleSheet.create({
   beatTrack: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   beatNode: { alignItems: 'center', gap: 6 },
   beatDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#c4af86', borderWidth: 1, borderColor: '#9a8460' },
+  beatDotDone: { backgroundColor: '#6d7b62', borderColor: '#516447' },
   beatDotOn: { backgroundColor: '#c0563f', borderColor: '#c0563f' },
   beatName: { fontFamily: FONTS.mono, fontSize: 8.5, letterSpacing: 0.8, color: '#8a7656' },
+  beatNameDone: { color: '#587047' },
   beatNameOn: { color: '#9a3b2e' },
   beatLine: { flex: 1, height: 1, marginBottom: 14, marginHorizontal: 2, backgroundColor: 'rgba(169,144,102,0.5)' },
 
@@ -265,6 +351,30 @@ const styles = StyleSheet.create({
   btnStampArrow: { fontFamily: FONTS.mono, fontSize: 14, color: '#fce7d9' },
   lockNote: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1, color: '#7a5a3a', textAlign: 'center', marginTop: 10 },
   bribeNote: { fontFamily: FONTS.mono, fontSize: 11, color: '#9a3b2e', textAlign: 'center', marginTop: 8, textDecorationLine: 'underline' },
+  mapPulse: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.8, color: '#6c4d85', textAlign: 'center', marginTop: 10 },
+
+  // Daily return hook
+  dailyStirWrap: { paddingHorizontal: 20, marginTop: 14 },
+  dailyStir: {
+    flexDirection: 'row', alignItems: 'center', gap: 13, padding: 15, borderRadius: 16, overflow: 'hidden',
+    backgroundColor: 'rgba(18,14,30,0.78)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.3)',
+  },
+  dailyStirGlow: {
+    position: 'absolute', right: -24, top: '50%', width: 130, height: 130, borderRadius: 130,
+    transform: [{ translateY: -65 }], backgroundColor: COLORS.underGlowSoft,
+  },
+  dailyStirMark: {
+    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(125,211,252,0.14)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.38)',
+  },
+  dailyStirGlyph: { color: COLORS.underCyan, fontFamily: FONTS.monoBold, fontSize: 15 },
+  dailyStirText: { flex: 1 },
+  dailyStirKicker: { fontFamily: FONTS.mono, fontSize: 9, letterSpacing: 2.2, color: COLORS.underCyan },
+  dailyStirTitle: { fontFamily: FONTS.secondaryBold, fontSize: 17, lineHeight: 20, color: COLORS.textPrimary, marginTop: 3 },
+  dailyStirSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.6, color: COLORS.textMuted, marginTop: 5 },
+  dailyStirArrow: { fontFamily: FONTS.mono, fontSize: 16, color: COLORS.underCyan },
+  dailyStirResolved: { paddingHorizontal: 20, marginTop: 12, alignItems: 'center' },
+  dailyStirResolvedText: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.8, color: COLORS.textMuted },
 
   // Aperture
   apertureWrap: { paddingHorizontal: 20, marginTop: 18 },
@@ -282,12 +392,12 @@ const styles = StyleSheet.create({
   apertureSub: { fontFamily: FONTS.mono, fontSize: 10.5, color: COLORS.textMuted, marginTop: 3 },
   apertureArrow: { color: COLORS.underViolet, fontSize: 20 },
 
-  storyLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 18 },
-  storyLinkText: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 2.4, color: COLORS.coral },
+  storyLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 4, marginTop: 14 },
+  storyLinkText: { fontFamily: FONTS.mono, fontSize: 11, lineHeight: 16, letterSpacing: 2.4, color: COLORS.coral },
   storyLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.coral },
 
-  codexLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, marginTop: 14 },
-  codexLinkText: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2, color: COLORS.underViolet },
+  codexLink: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 5, marginTop: 16 },
+  codexLinkText: { fontFamily: FONTS.mono, fontSize: 10.5, lineHeight: 16, letterSpacing: 2, color: COLORS.underViolet },
   codexLinkArrow: { fontFamily: FONTS.mono, fontSize: 13, color: COLORS.underViolet },
 
   // Stat tags

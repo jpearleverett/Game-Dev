@@ -189,7 +189,8 @@ scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time too
 ## 7. Running, building, and testing
 
 - **Run on device:** Expo Go (tested on Pixel 10 Pro via Termux, and iOS). `npx expo start -c` (the `-c` clears the cache — needed after content/prompt changes so chapters regenerate). Requires the proxy URL in `.env` (`GEMINI_PROXY_URL=https://game-dev-tan.vercel.app/api/gemini`).
-- **This environment cannot run the RN UI or the live model.** Verify changes with:
+- **Cursor Cloud can run the RN UI and live model when the environment is configured.** Use Expo (`npx expo start -c`) for UI/manual testing and the configured `GEMINI_PROXY_URL` for live generation checks when a task needs end-to-end validation.
+- Baseline automated verification still applies:
   - `npx jest` — unit/integration tests (incl. a real `usePersistence`+`useStoryEngine` advance test via `react-test-renderer`).
   - Babel parse-check any RN file you edit: `node -e 'require("@babel/core").transformFileSync("<path>")'`.
 - After changing generation/content, the player must start a **fresh** run (cached pre-change entries won't reflect changes).
