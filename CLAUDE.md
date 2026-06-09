@@ -267,13 +267,15 @@ hard-stops paging at page 1 of the current subchapter. Paging back from there (l
 subchapter's *realized* prose (oldest→newest, opened scrolled to the most-recent so it reads
 continuously back from where you were; "jump to the beginning" + "Return to where you left
 off" = snap to latest). `CaseFileScreen` assembles it (`caseHistory` useMemo) from
-`getRealizedNarrativeForCase(caseNumber, pathKey, branchingChoices)` for every case before the
-current one, reading each chapter at the branch the player took (`computeBranchPathKey`). It's
-deliberately inert — no choices, no EXAMINE — so it can't disturb the live reader or the
-Under-Map. The current subchapter stays owned by the live reader (you can already page back to
-its own opening). Caveat: assembly uses the **sync** `getStoryEntry`, so on a freshly resumed
-session a not-yet-loaded prior entry is silently skipped (fine for continuous play; switch to
-`getRealizedNarrativeForCaseAsync` if that becomes an issue).
+every case before the current one, reading each chapter at the branch the player took
+(`computeBranchPathKey`). It's deliberately inert — no choices, no EXAMINE — so it can't disturb
+the live reader or the Under-Map. The current subchapter stays owned by the live reader (you can
+already page back to its own opening). Assembly is **async** (`getStoryEntryAsync`), so it
+hydrates entries from persistent storage that aren't in the in-memory cache yet (e.g. a freshly
+resumed session) — **no prior subchapter is skipped**. The affordance is gated by a sync,
+position-based `hasPriorHistory` (chapter>1 || subchapter>1), and the overlay shows a brief
+"Gathering…" state (`loading={!historyReady}`) until the load lands, so the button is reliable
+even before assembly finishes.
 
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.

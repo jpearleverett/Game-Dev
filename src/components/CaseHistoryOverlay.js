@@ -32,7 +32,7 @@ const PAPER_LABEL_FONT = Platform.OS === 'ios' ? 'Courier' : 'monospace';
  * @param {Array<{caseNumber, chapter, letter, title, text}>} history - ordered oldest→newest
  * @param {Function} onClose - return to the live page ("snap to latest")
  */
-export default function CaseHistoryOverlay({ visible, history = [], onClose }) {
+export default function CaseHistoryOverlay({ visible, history = [], loading = false, onClose }) {
   const scrollRef = useRef(null);
   const snapBottomRef = useRef(true);
 
@@ -40,12 +40,14 @@ export default function CaseHistoryOverlay({ visible, history = [], onClose }) {
     if (visible) snapBottomRef.current = true;
   }, [visible]);
 
+  // Only consume the "open at the latest" snap once real content has loaded — otherwise it
+  // fires on the "Gathering…" placeholder and won't re-snap when the history arrives.
   const handleContentSize = useCallback(() => {
-    if (snapBottomRef.current && scrollRef.current) {
+    if (snapBottomRef.current && scrollRef.current && history.length > 0) {
       snapBottomRef.current = false;
       scrollRef.current.scrollToEnd({ animated: false });
     }
-  }, []);
+  }, [history.length]);
 
   const jumpToStart = useCallback(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -81,7 +83,9 @@ export default function CaseHistoryOverlay({ visible, history = [], onClose }) {
           showsVerticalScrollIndicator={false}
         >
           {history.length === 0 ? (
-            <Text style={[styles.body, { opacity: 0.7 }]}>The case has only just begun. There's nothing behind you yet.</Text>
+            <Text style={[styles.body, { opacity: 0.7 }]}>
+              {loading ? 'Gathering the case so far…' : "The case has only just begun. There's nothing behind you yet."}
+            </Text>
           ) : (
             history.map((item) => (
               <View key={item.caseNumber} style={styles.entry}>
