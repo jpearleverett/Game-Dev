@@ -251,6 +251,7 @@ export default function TheoryScreen({ navigation, route }) {
     try {
       await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
         underMap: sealedMapRef.current || map,
+        requireFreshUnderMap: true,
       });
     } catch (_e) {
       setContinuing(false);

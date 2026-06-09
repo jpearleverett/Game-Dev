@@ -119,7 +119,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Check if content exists (either generated or cached) under the canonical key.
     const hasContent = await hasStoryContent(caseNumber, canonicalPathKey);
-    const requiresFreshUnderMap = !!(generationOptions?.underMap || generationOptions?.requiredUnderMapSignature);
+    const requiresFreshUnderMap = !!generationOptions?.requireFreshUnderMap
+      && !!(generationOptions?.underMap || generationOptions?.requiredUnderMapSignature);
     if (hasContent && !requiresFreshUnderMap) {
       llmTrace('StoryContext', traceId, 'ensureStoryContent.cache.hit', {
         caseNumber,

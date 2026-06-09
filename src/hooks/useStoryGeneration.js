@@ -434,9 +434,11 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
     const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
     const contentKey = `${caseNumber}_${canonicalPathKey}`;
-    const requiredUnderMapSignature = generationOptions.underMap
+    const requiredUnderMapSignature = generationOptions.requireFreshUnderMap && generationOptions.underMap
       ? underMapGenerationSignature(generationOptions.underMap)
-      : generationOptions.requiredUnderMapSignature || null;
+      : generationOptions.requireFreshUnderMap
+        ? generationOptions.requiredUnderMapSignature || null
+        : null;
 
     // Skip if not dynamic
     if (!isDynamicChapter(caseNumber)) {
@@ -806,13 +808,9 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
     // Check if generation is needed (should be true since we don't prefetch anymore)
     const underMapSnapshot = options?.underMapSnapshot || null;
-    const requiredSignature = underMapSnapshot ? underMapGenerationSignature(underMapSnapshot) : null;
-    const contentKey = `${nextCaseNumber}_${pathKey}`;
     const needsGen = await needsGeneration(nextCaseNumber, pathKey);
-    const needsUnderMapRefresh = !!requiredSignature
-      && generatedUnderMapSignaturesRef.current.get(contentKey) !== requiredSignature;
 
-    if ((needsGen || needsUnderMapRefresh) && isMountedRef.current) {
+    if (needsGen && isMountedRef.current) {
       const genStartTime = Date.now();
       try {
         setStatus(GENERATION_STATUS.GENERATING);
@@ -830,17 +828,12 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             reason: underMapSnapshot
               ? 'triggerPrefetchAfterBranchingComplete:post-backfill-under-map'
               : 'triggerPrefetchAfterBranchingComplete:with-branching-context',
-            forceRegenerate: needsUnderMapRefresh,
-            refreshKey: requiredSignature ? compactUnderMapSignature(requiredSignature) : null,
           })
         );
 
         const genDuration = Date.now() - genStartTime;
         if (entry && isMountedRef.current) {
           updateGeneratedCache(nextCaseNumber, pathKey, entry);
-          if (requiredSignature) {
-            generatedUnderMapSignaturesRef.current.set(contentKey, requiredSignature);
-          }
           console.log(`[useStoryGeneration] ✅ CHAIN COMPLETE: ${nextCaseNumber} generated in ${(genDuration/1000).toFixed(1)}s`);
         }
       } catch (err) {
@@ -882,17 +875,11 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           reason: 'under-map-reveal-prefetch',
           branchingChoices: args.branchingChoices,
           underMap: args.underMap,
-          // A read-complete chain prefetch may already be in flight for the same
-          // subchapter without the revealed node. This refresh deliberately
-          // overwrites that older version when the player's map changes.
-          forceRegenerate: true,
-          refreshKey,
         }),
       );
 
       if (entry && isMountedRef.current) {
         updateGeneratedCache(nextCaseNumber, entry.pathKey || args.pathKey, entry);
-        generatedUnderMapSignaturesRef.current.set(key, targetSignature);
         log.debug('useStoryGeneration', `Under-Map prefetch cached ${nextCaseNumber} (${refreshKey})`);
       }
     } catch (err) {
