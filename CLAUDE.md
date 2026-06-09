@@ -211,6 +211,33 @@ scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time too
 
 **The Other Reader (foil) is SHIPPED end to end (Phases 1-5).** The Station-Eleven "Prophet" mirror: the reading the player rejects at a C-beat gets a champion who is vindicated each time the player is subverted, escalating from a rumor to a named, recurring antagonist, and paying off in the verdict banner / Codex / ending. See the `foil` entry in §3. **Unverified on-device** — it's LLM-driven; needs a playtest that deliberately seals-then-subverts a couple of beliefs to push `presence` to ≥2 and confirm the prompt yields a coherent recurring antagonist (not a generic thug) with a stable name.
 
+**Perceived-latency / seamless generation (shipped).** The two gateways that used to
+expose generation time — finishing the CONNECT beat and sealing a THEORY — are now hidden
+behind cover the player is already spending:
+- **Theory prefetch no longer self-clobbers.** `TheoryScreen` speculatively prefetches the
+  next chapter for *each* candidate belief on mount (`prefetchTheoryBranches` →
+  `prefetchNextChapterBranchesAfterC`, keyed by `underMapByOption` + a per-belief
+  `underMapGenerationSignature`). Sealing calls `recordUnderMapTheory`, which mutates the
+  campaign Under-Map (M0→M1) and re-renders the screen — which **re-fired the prefetch
+  effect with a double-recorded map**, overwriting the correctly-signed prefetch so
+  `crossThreshold`'s signature check missed and the player ate a full regen. The effect now
+  bails when `sealed` (`if (sealed) return;`), so the pre-seal signature survives and the
+  cross is an instant cache hit. This is THE fix for the post-seal wait.
+- **Cross is decoupled from generation.** `crossThreshold` no longer `await`s
+  `ensureStoryContent` before navigating; it fires it (still with the sealed-belief map +
+  `requireFreshUnderMap`, so the lookup is keyed to *this* belief, never a stale pre-seal
+  prefetch) and navigates to `Sealed` immediately. The wax-seal animation + the "Cross into
+  Chapter" tap cover any residual work; the `CaseFile` entry awaits whatever is ready (its
+  existing retry UI handles a genuine failure).
+- **The CONNECT beat warms the next subchapter on open.** `UnderMapScreen` calls
+  `prefetchAfterUnderMapReveal(gateCaseNumber, map)` on mount (not just on first reveal), so
+  the whole connection-drawing puzzle is cover. Deduped; `handleContinue` already hits the
+  cache without forcing a regen.
+Net cost is **lower**, not higher: the speculative per-belief generation already ran (and
+was being thrown away). The cache-key contract these rely on lives in
+`src/utils/underMapGeneration.js` (`underMapGenerationSignature`). **Unverified on-device** —
+confirm a sealed belief lands the next chapter instantly on a real network.
+
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.

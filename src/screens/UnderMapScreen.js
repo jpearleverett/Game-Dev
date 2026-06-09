@@ -80,7 +80,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const audio = useAudio();
   const {
     progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap,
-    drawUnderMapDailyStir,
+    drawUnderMapDailyStir, prefetchAfterUnderMapReveal,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
@@ -110,6 +110,15 @@ export default function UnderMapScreen({ navigation, route }) {
   }, [map.fragments]);
 
   useEffect(() => { touchUnderMap?.(); drawUnderMapDailyStir?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warm the NEXT subchapter the instant the descent opens, so the whole
+  // connection-drawing puzzle becomes cover for generation rather than only the
+  // window after the first reveal. Deduped (skips if already cached/in-flight) and
+  // only for the gated A/B descent — `handleContinue` then hits this cache instantly.
+  useEffect(() => {
+    if (!asPuzzle || !gateCaseNumber) return;
+    prefetchAfterUnderMapReveal?.(gateCaseNumber, map);
+  }, [asPuzzle, gateCaseNumber, prefetchAfterUnderMapReveal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [field, setField] = useState({ w: 0, h: 0 });
   const [selected, setSelected] = useState([]);
