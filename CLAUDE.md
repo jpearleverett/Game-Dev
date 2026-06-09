@@ -277,7 +277,11 @@ assembles `caseHistory` **async** via `getStoryEntryAsync` (hydrates from persis
 **no prior subchapter is skipped**, even on a freshly resumed session), reading each chapter at
 the branch the player took (`computeBranchPathKey`), and passes it as the `history` prop. The
 current subchapter stays owned by the live reader. (The earlier modal `CaseHistoryOverlay` was
-replaced by this and deleted.)
+replaced by this and deleted.) ⚠️ The assembly effect is keyed on a **stable string signature**
+(`historyDepKey`), NOT on `storyCampaign.choiceHistory`/`branchingChoices` array refs — those
+refs are recreated by `normalizeStoryCampaignShape` on EVERY campaign write (incl. an EXAMINE
+Under-Map write), which used to rebuild `caseHistory` mid-read → `liveStartIndex` flips → the
+reader jumps into an earlier subchapter and flickers. Keep that effect keyed on the signature.
 
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.

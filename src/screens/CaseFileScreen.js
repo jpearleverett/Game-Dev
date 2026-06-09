@@ -552,10 +552,23 @@ export default function CaseFileScreen({
     return chapter > 1 || subchapter > 1;
   }, [isStoryMode, caseNumber]);
 
+  // STABLE content signature for the read-back history. The prior subchapters' realized
+  // paths only change when the player advances or makes a branching choice — NOT when they
+  // tap a fragment. But every campaign write (incl. an EXAMINE Under-Map write) recreates
+  // the choiceHistory/branchingChoices array refs via normalizeStoryCampaignShape, so keying
+  // the assembly effect on those refs made EXAMINE rebuild history → liveStartIndex flips →
+  // the reader jumps. This signature is identical when the content is identical, so the
+  // effect (and the reader's page layout) stays put while you read.
+  const historyDepKey = useMemo(() => {
+    if (!hasPriorHistory || !caseNumber) return '';
+    const ch = (storyCampaign?.choiceHistory || []).map((c) => `${c?.caseNumber}:${c?.optionKey}`).join(',');
+    const bc = (storyCampaign?.branchingChoices || []).map((b) => `${b?.caseNumber}:${b?.firstChoice}:${b?.secondChoice}`).join(',');
+    return `${caseNumber}|${storyCampaign?.currentPathKey || ''}|${ch}|${bc}`;
+  }, [hasPriorHistory, caseNumber, storyCampaign?.choiceHistory, storyCampaign?.branchingChoices, storyCampaign?.currentPathKey]);
+
   useEffect(() => {
     let cancelled = false;
-    setCaseHistory([]);
-    if (!hasPriorHistory || !caseNumber) { return () => { cancelled = true; }; }
+    if (!hasPriorHistory || !caseNumber) { setCaseHistory([]); return () => { cancelled = true; }; }
     const { chapter: curChapter, subchapter: curSub } = parseCaseNumber(caseNumber);
     const choiceHistory = storyCampaign?.choiceHistory || [];
     const branchingChoices = storyCampaign?.branchingChoices || [];
@@ -584,7 +597,9 @@ export default function CaseFileScreen({
       if (!cancelled) { setCaseHistory(out); }
     })();
     return () => { cancelled = true; };
-  }, [hasPriorHistory, caseNumber, storyCampaign?.choiceHistory, storyCampaign?.branchingChoices, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
+    // Keyed on the stable content signature so an EXAMINE/Under-Map write never rebuilds it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyDepKey]);
 
   const branchingChoiceSeed = useMemo(() => {
     if (!existingBranchingChoice) return null;
