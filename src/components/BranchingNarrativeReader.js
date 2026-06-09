@@ -475,7 +475,7 @@ export default function BranchingNarrativeReader({
   initialChoice,
   style,
   secondChoiceLoading = false, // LAZY BRANCHING: true while a chosen path's ending is still generating
-  onRequestHistory, // READ-BACK: paging back past page 1 opens the read-only "case so far"
+  history = [], // READ-BACK: prior subchapters' realized prose, prepended as read-only pages
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -672,6 +672,79 @@ export default function BranchingNarrativeReader({
     return result;
   }, [branchingNarrative, firstChoiceMade, secondChoiceMade, currentMiddleSegment, currentSecondChoice, currentEndingSegment, paginationParams, secondChoiceLoading]);
 
+  // READ-BACK: paginate each PRIOR subchapter's realized prose into read-only pages and
+  // prepend them, so paging back from page 1 walks continuously into the earlier case —
+  // same paper, same flip — all the way to the start. `liveStartIndex` is where the live,
+  // interactive current-subchapter pages begin.
+  const historyPages = useMemo(() => {
+    if (!Array.isArray(history) || history.length === 0) return [];
+    const out = [];
+    let h = 0;
+    history.forEach((entry) => {
+      const text = String(entry?.text || '').trim();
+      if (!text) return;
+      const paged = paginateNarrativeSegments([text], paginationParams);
+      const label = `CHAPTER ${String(entry.chapter).padStart(2, '0')} · ${entry.letter}${entry.title ? `  —  ${String(entry.title).toUpperCase()}` : ''}`;
+      paged.forEach((pg, idx) => {
+        h += 1;
+        out.push({
+          key: `hist-${entry.caseNumber}-${idx}`,
+          type: PAGE_TYPES.NARRATIVE,
+          readonly: true,
+          text: pg.text,
+          details: [],
+          histLabel: idx === 0 ? label : null,
+          histStamp: `${String(entry.chapter).padStart(2, '0')}${entry.letter} · EARLIER`,
+          isLastOfSegment: idx === paged.length - 1,
+          globalIndex: -h, // negative space so it can never collide with live globalIndex
+        });
+      });
+    });
+    return out;
+  }, [history, paginationParams]);
+
+  const allPages = useMemo(() => [...historyPages, ...pages], [historyPages, pages]);
+  const liveStartIndex = historyPages.length;
+
+  // Position the reader on the LIVE page (not the start of history) on first layout, and
+  // preserve the page under the player if history arrives late (async): shift by the delta
+  // so the same content stays put rather than jumping into the prepended pages.
+  const prevLiveStartRef = useRef(0);
+  const didInitPosRef = useRef(false);
+  useEffect(() => {
+    if (!pageWidth || allPages.length === 0) return;
+    const scrollTo = (idx) => requestAnimationFrame(() => {
+      try { listRef.current?.scrollToIndex({ index: idx, animated: false }); } catch (_e) { /* getItemLayout fallback */ }
+    });
+    if (!didInitPosRef.current) {
+      didInitPosRef.current = true;
+      prevLiveStartRef.current = liveStartIndex;
+      setActivePage(liveStartIndex);
+      scrollTo(liveStartIndex);
+      return;
+    }
+    const delta = liveStartIndex - prevLiveStartRef.current;
+    if (delta !== 0) {
+      prevLiveStartRef.current = liveStartIndex;
+      setActivePage((p) => {
+        const np = Math.min(allPages.length - 1, Math.max(0, p + delta));
+        scrollTo(np);
+        return np;
+      });
+    }
+  }, [pageWidth, liveStartIndex, allPages.length]);
+
+  const itemStride = (pageWidth || 1) + pageGap;
+  const getItemLayout = useCallback(
+    (_data, index) => ({ length: itemStride, offset: itemStride * index, index }),
+    [itemStride],
+  );
+  const inHistory = activePage < liveStartIndex;
+  const snapToLatest = useCallback(() => {
+    try { listRef.current?.scrollToIndex({ index: liveStartIndex, animated: true }); } catch (_e) { /* noop */ }
+    setActivePage(liveStartIndex);
+  }, [liveStartIndex]);
+
   // Handle first choice
   const handleFirstChoice = useCallback((option) => {
     setFirstChoiceMade(option.key);
@@ -682,10 +755,10 @@ export default function BranchingNarrativeReader({
     setTimeout(() => {
       if (listRef.current) {
         const nextIndex = activePage + 1;
-        listRef.current.scrollToIndex({ index: Math.min(nextIndex, pages.length - 1), animated: true });
+        listRef.current.scrollToIndex({ index: Math.min(nextIndex, allPages.length - 1), animated: true });
       }
     }, 300);
-  }, [onFirstChoice, activePage, pages.length]);
+  }, [onFirstChoice, activePage, allPages.length]);
 
   // Handle second choice
   const handleSecondChoice = useCallback((option) => {
@@ -703,10 +776,10 @@ export default function BranchingNarrativeReader({
     setTimeout(() => {
       if (listRef.current) {
         const nextIndex = activePage + 1;
-        listRef.current.scrollToIndex({ index: Math.min(nextIndex, pages.length - 1), animated: true });
+        listRef.current.scrollToIndex({ index: Math.min(nextIndex, allPages.length - 1), animated: true });
       }
     }, 300);
-  }, [firstChoiceMade, normalizePathKey, activePage, pages.length, onSecondChoice]);
+  }, [firstChoiceMade, normalizePathKey, activePage, allPages.length, onSecondChoice]);
 
   // Handle narrative complete (when reaching last page of ending)
   const onCompleteCalledRef = useRef(false);
@@ -763,13 +836,8 @@ export default function BranchingNarrativeReader({
   const triggerPageFlip = useCallback((direction) => {
     if (!direction || flipLockRef.current) return;
     const targetIndex = activePage + direction;
-    // Paging back from the very first page of this subchapter opens the read-only
-    // "case so far" (everything prior), instead of dead-ending. Forward stays clamped.
-    if (targetIndex < 0) {
-      if (direction < 0 && typeof onRequestHistory === 'function') onRequestHistory();
-      return;
-    }
-    if (targetIndex > pages.length - 1) return;
+    // Clamps across the WHOLE reader (prepended read-back history + live pages).
+    if (targetIndex < 0 || targetIndex > allPages.length - 1) return;
 
     flipLockRef.current = true;
     flipAnim.setValue(0);
@@ -806,7 +874,7 @@ export default function BranchingNarrativeReader({
       }
     }
     setActivePage(targetIndex);
-  }, [activePage, pages.length, flipAnim, pageWidth, pageGap, reducedMotion, onRequestHistory]);
+  }, [activePage, allPages.length, flipAnim, pageWidth, pageGap, reducedMotion]);
 
   const flipRotation = flipAnim.interpolate({
     inputRange: [-1, 0, 1],
@@ -826,18 +894,20 @@ export default function BranchingNarrativeReader({
 
   // Render individual page
   const renderItem = useCallback(({ item, index }) => {
-    const isLastPage = index === pages.length - 1;
+    const isLastPage = index === allPages.length - 1;
     const isActive = index === activePage;
-    const isPageCompleted = completedPages.has(item.globalIndex);
+    // Read-back history pages are always "completed" (static, never typewritten).
+    const isPageCompleted = item.readonly ? true : completedPages.has(item.globalIndex);
 
     // For choice pages, check if preceding narrative segment is complete
     const canShowChoice = item.type === PAGE_TYPES.CHOICE && (
-      index === 0 || completedPages.has(pages[index - 1]?.globalIndex)
+      index === 0 || completedPages.has(allPages[index - 1]?.globalIndex)
     );
 
     // EXAMINE hunt: count the anomalies actually present on this page + how many
     // the player has sensed, for the per-page meter (only once the page is readable).
-    const pageAnoms = item.type === PAGE_TYPES.NARRATIVE
+    // Skipped for read-only history pages (they carry no live fragments).
+    const pageAnoms = item.type === PAGE_TYPES.NARRATIVE && !item.readonly
       ? parseTextWithDetails(item.text, item.details).filter((s) => s.type === 'tappable' && s.detail.__fragment)
       : [];
     const anomTotal = pageAnoms.length;
@@ -884,19 +954,13 @@ export default function BranchingNarrativeReader({
             pointerEvents="none"
           />
 
-          {/* Tap Zones for navigation. On the very first page the left zone opens the
-              read-only "case so far" (when there's prior history to read back into). */}
+          {/* Tap Zones for navigation. Paging left walks back through earlier subchapters
+              (read-only history pages) all the way to the start; right is clamped/at choices. */}
           <Pressable
             style={[styles.tapZone, styles.tapZoneLeft]}
-            disabled={index === 0 && typeof onRequestHistory !== 'function'}
+            disabled={index === 0}
             onPress={() => triggerPageFlip(-1)}
           />
-          {index === 0 && typeof onRequestHistory === 'function' ? (
-            <Pressable style={styles.readBackHint} onPress={() => triggerPageFlip(-1)} hitSlop={8}>
-              <Text style={styles.readBackChevron}>‹</Text>
-              <Text style={styles.readBackText}>THE CASE{'\n'}SO FAR</Text>
-            </Pressable>
-          ) : null}
           <Pressable
             style={[styles.tapZone, styles.tapZoneRight]}
             disabled={isLastPage || item.type === PAGE_TYPES.CHOICE}
@@ -914,6 +978,9 @@ export default function BranchingNarrativeReader({
           >
             {item.type === PAGE_TYPES.NARRATIVE ? (
               <>
+                {item.readonly && item.histLabel ? (
+                  <Text style={styles.histLabel}>{item.histLabel}</Text>
+                ) : null}
                 {isActive && !isPageCompleted ? (
                   <TypewriterText
                     text={item.text}
@@ -928,12 +995,12 @@ export default function BranchingNarrativeReader({
                 ) : (
                   <NarrativeTextWithDetails
                     text={item.text}
-                    details={item.details}
-                    onDetailTap={handleDetailTap}
+                    details={item.readonly ? [] : item.details}
+                    onDetailTap={item.readonly ? undefined : handleDetailTap}
                     revealedDetails={revealedDetails}
                     textStyle={styles.noirText}
                     reducedMotion={reducedMotion}
-                    dropCap={index === 0}
+                    dropCap={item.key === 'opening-0' || index === 0}
                   />
                 )}
 
@@ -976,17 +1043,18 @@ export default function BranchingNarrativeReader({
             <AnomalyMeter total={anomTotal} found={anomFound} reducedMotion={reducedMotion} />
           ) : null}
 
-          {/* Page indicator */}
+          {/* Page indicator — chapter tag for read-back history, live page number otherwise */}
           <View style={styles.pageStamp} pointerEvents="none">
             <Text style={styles.noirPageStampText}>
-              {`PAGE ${String(index + 1).padStart(2, "0")}`}
+              {item.readonly ? item.histStamp : `PAGE ${String(Math.max(1, index - liveStartIndex + 1)).padStart(2, "0")}`}
             </Text>
           </View>
         </ImageBackground>
       </View>
     );
   }, [
-    pages,
+    allPages,
+    liveStartIndex,
     activePage,
     completedPages,
     pageWidth,
@@ -1005,7 +1073,6 @@ export default function BranchingNarrativeReader({
     secondChoiceMade,
     normalizePathKey,
     reducedMotion,
-    onRequestHistory,
   ]);
 
   if (!branchingNarrative) {
@@ -1026,7 +1093,7 @@ export default function BranchingNarrativeReader({
       >
         <FlatList
           ref={listRef}
-          data={pages}
+          data={allPages}
           keyExtractor={(item) => item.key}
           horizontal
           pagingEnabled
@@ -1035,6 +1102,14 @@ export default function BranchingNarrativeReader({
           snapToAlignment="center"
           decelerationRate="fast"
           renderItem={renderItem}
+          getItemLayout={getItemLayout}
+          initialScrollIndex={Math.min(liveStartIndex, Math.max(0, allPages.length - 1))}
+          onScrollToIndexFailed={(info) => {
+            // getItemLayout makes this rare; fall back to an offset scroll.
+            requestAnimationFrame(() => {
+              try { listRef.current?.scrollToOffset({ offset: info.index * itemStride, animated: false }); } catch (_e) { /* noop */ }
+            });
+          }}
           viewabilityConfig={viewabilityConfig.current}
           onViewableItemsChanged={handleViewableItemsChanged.current}
           initialNumToRender={1}
@@ -1077,13 +1152,22 @@ export default function BranchingNarrativeReader({
             borderRadius: arrowSize / 2,
             transform: [{ translateY: -arrowSize / 2 }],
           },
-          (activePage === pages.length - 1 || pages[activePage]?.type === PAGE_TYPES.CHOICE) && styles.arrowDisabled
+          (activePage === allPages.length - 1 || allPages[activePage]?.type === PAGE_TYPES.CHOICE) && styles.arrowDisabled
         ]}
         onPress={() => triggerPageFlip(1)}
-        disabled={activePage === pages.length - 1 || pages[activePage]?.type === PAGE_TYPES.CHOICE}
+        disabled={activePage === allPages.length - 1 || allPages[activePage]?.type === PAGE_TYPES.CHOICE}
       >
         <Text style={[styles.arrowLabel, { fontSize: arrowFontSize }]}>{">"}</Text>
       </Pressable>
+
+      {/* READ-BACK: while paging through earlier subchapters, a one-tap jump back to the
+          live page the player was on. */}
+      {inHistory ? (
+        <Pressable style={styles.returnToNow} onPress={snapToLatest} accessibilityRole="button" accessibilityLabel="Return to the latest page">
+          <Text style={styles.returnToNowText}>RETURN TO NOW</Text>
+          <Text style={styles.returnToNowArrow}>››</Text>
+        </Pressable>
+      ) : null}
 
       {/* Observation Popup */}
       {activePopup && (
@@ -1098,16 +1182,21 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "relative",
   },
-  // "Read back" affordance on page 1's left edge — taps open the case-so-far overlay.
-  readBackHint: {
-    position: 'absolute', left: 0, top: '42%',
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    paddingVertical: 8, paddingRight: 8, paddingLeft: 4,
-    borderTopRightRadius: 8, borderBottomRightRadius: 8,
-    backgroundColor: 'rgba(51,38,23,0.07)',
+  // READ-BACK: header label on the first page of each earlier subchapter.
+  histLabel: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 10.5, letterSpacing: 1.4, fontWeight: 'bold',
+    color: 'rgba(51,38,23,0.62)', marginBottom: 14,
   },
-  readBackChevron: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 22, color: 'rgba(51,38,23,0.55)', marginTop: -2 },
-  readBackText: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 8, lineHeight: 10, letterSpacing: 0.8, color: 'rgba(51,38,23,0.5)' },
+  // READ-BACK: floating "return to now" pill, only while paging through earlier pages.
+  returnToNow: {
+    position: 'absolute', bottom: 14, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 7, paddingHorizontal: 14, borderRadius: 18,
+    backgroundColor: 'rgba(34,28,52,0.92)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.5)',
+  },
+  returnToNowText: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11, letterSpacing: 1.6, color: '#e9e3ff', fontWeight: 'bold' },
+  returnToNowArrow: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 12, color: '#a78bfa' },
   page: {
     overflow: "hidden",
     borderWidth: 1,

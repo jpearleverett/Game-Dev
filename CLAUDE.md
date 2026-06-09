@@ -260,22 +260,24 @@ self-block. The remaining levers (NOT taken, by choice): `thinkingLevel` `medium
 (`generation.js` ~475/531) for raw speed at a prose-quality cost; deeper-than-1-beat lookahead
 for more cover at a branching-coherence cost.
 
-**Read-back "THE CASE SO FAR" (shipped).** The live reader (`BranchingNarrativeReader`)
-hard-stops paging at page 1 of the current subchapter. Paging back from there (left tap zone
-/ the "‹ THE CASE SO FAR" edge hint) now fires `onRequestHistory`, which opens
-`src/components/CaseHistoryOverlay.js` — a **read-only** Modal showing every PRIOR
-subchapter's *realized* prose (oldest→newest, opened scrolled to the most-recent so it reads
-continuously back from where you were; "jump to the beginning" + "Return to where you left
-off" = snap to latest). `CaseFileScreen` assembles it (`caseHistory` useMemo) from
-every case before the current one, reading each chapter at the branch the player took
-(`computeBranchPathKey`). It's deliberately inert — no choices, no EXAMINE — so it can't disturb
-the live reader or the Under-Map. The current subchapter stays owned by the live reader (you can
-already page back to its own opening). Assembly is **async** (`getStoryEntryAsync`), so it
-hydrates entries from persistent storage that aren't in the in-memory cache yet (e.g. a freshly
-resumed session) — **no prior subchapter is skipped**. The affordance is gated by a sync,
-position-based `hasPriorHistory` (chapter>1 || subchapter>1), and the overlay shows a brief
-"Gathering…" state (`loading={!historyReady}`) until the load lands, so the button is reliable
-even before assembly finishes.
+**Read-back "THE CASE SO FAR" (shipped, in-reader paging).** Paging back used to dead-end at
+page 1 of the current subchapter. Now `BranchingNarrativeReader` **prepends every PRIOR
+subchapter's *realized* prose as read-only pages** (`historyPages`), so the left tap zone / `‹`
+arrow flips continuously back through the earlier case — same paper, same flip, same `PAGE`
+chrome (history pages show a `NN<letter> · EARLIER` stamp + a chapter label) — all the way to
+the very start, and a floating **"RETURN TO NOW ››"** pill (shown only while `activePage <
+liveStartIndex`) jumps back to the live page. Read-only pages are inert: `details: []`, no
+typewriter, no EXAMINE, `isPageCompleted` forced true. The reader composes `allPages =
+[...historyPages, ...pages]`; index-sensitive logic (clamps, arrows, choice scroll targets,
+`PAGE` numbering = `index - liveStartIndex + 1`) is relative to `allPages`/`liveStartIndex`,
+while completion detection still keys off the LIVE `pages`. It opens positioned on the live
+page (`initialScrollIndex` + `getItemLayout`) and, if history arrives a beat late (async load),
+a delta-shift effect preserves the page under the player instead of jumping. `CaseFileScreen`
+assembles `caseHistory` **async** via `getStoryEntryAsync` (hydrates from persistent storage —
+**no prior subchapter is skipped**, even on a freshly resumed session), reading each chapter at
+the branch the player took (`computeBranchPathKey`), and passes it as the `history` prop. The
+current subchapter stays owned by the live reader. (The earlier modal `CaseHistoryOverlay` was
+replaced by this and deleted.)
 
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.

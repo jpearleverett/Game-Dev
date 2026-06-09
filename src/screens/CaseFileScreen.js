@@ -37,7 +37,6 @@ import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
 import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath, getStoryEntryAsync, parseCaseNumber, computeBranchPathKey } from "../data/storyContent";
-import CaseHistoryOverlay from "../components/CaseHistoryOverlay";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
@@ -536,19 +535,17 @@ export default function CaseFileScreen({
   }, [caseNumber, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
 
   // READ-BACK: assemble the realized prose of every subchapter BEFORE the current one,
-  // oldest→newest, so the player can re-read the whole case so far (the live reader still
-  // owns the current subchapter). Each chapter is read at the branch the player took.
+  // oldest→newest. These are handed to BranchingNarrativeReader, which prepends them as
+  // read-only pages so the player can page back through the whole case (the live reader
+  // still owns the current subchapter). Each chapter is read at the branch the player took.
   //
   // Built ASYNC via getStoryEntryAsync so it hydrates entries from persistent storage that
   // aren't in the in-memory cache yet (e.g. a freshly resumed session) — this GUARANTEES no
-  // prior subchapter is silently skipped. `historyReady` flips false→true when the (fast)
-  // load completes, so the overlay can show a brief "gathering…" state instead of a gap.
-  const [historyOpen, setHistoryOpen] = useState(false);
+  // prior subchapter is silently skipped. The reader preserves the player's live page if the
+  // history arrives a beat late.
   const [caseHistory, setCaseHistory] = useState([]);
-  const [historyReady, setHistoryReady] = useState(false);
 
-  // Position-based gate (sync): is there ANY prior subchapter to read back into? Drives the
-  // affordance regardless of whether the async assembly has finished yet.
+  // Position-based gate (sync): is there ANY prior subchapter to read back into?
   const hasPriorHistory = useMemo(() => {
     if (!isStoryMode || !caseNumber) return false;
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
@@ -557,9 +554,8 @@ export default function CaseFileScreen({
 
   useEffect(() => {
     let cancelled = false;
-    setHistoryReady(false);
     setCaseHistory([]);
-    if (!hasPriorHistory || !caseNumber) { setHistoryReady(true); return () => { cancelled = true; }; }
+    if (!hasPriorHistory || !caseNumber) { return () => { cancelled = true; }; }
     const { chapter: curChapter, subchapter: curSub } = parseCaseNumber(caseNumber);
     const choiceHistory = storyCampaign?.choiceHistory || [];
     const branchingChoices = storyCampaign?.branchingChoices || [];
@@ -585,7 +581,7 @@ export default function CaseFileScreen({
           }
         }
       }
-      if (!cancelled) { setCaseHistory(out); setHistoryReady(true); }
+      if (!cancelled) { setCaseHistory(out); }
     })();
     return () => { cancelled = true; };
   }, [hasPriorHistory, caseNumber, storyCampaign?.choiceHistory, storyCampaign?.branchingChoices, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
@@ -1324,7 +1320,7 @@ export default function CaseFileScreen({
                       onEvidenceCollected={handleEvidenceCollected}
                       onExamineFragment={handleExamineFragment}
                       initialChoice={branchingChoiceSeed}
-                      onRequestHistory={hasPriorHistory ? () => setHistoryOpen(true) : undefined}
+                      history={caseHistory}
                     />
                   </View>
                 ) : narrativePages.length > 0 && (
@@ -1344,14 +1340,6 @@ export default function CaseFileScreen({
                     />
                   </View>
                 )}
-
-                {/* READ-BACK: the read-only "case so far" — paging back from page 1 opens it */}
-                <CaseHistoryOverlay
-                  visible={historyOpen}
-                  history={caseHistory}
-                  loading={!historyReady}
-                  onClose={() => setHistoryOpen(false)}
-                />
 
                 {/* CTA for next briefing */}
                 {showNextBriefingCTA && (
