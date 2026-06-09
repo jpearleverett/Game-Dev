@@ -13,6 +13,12 @@ export function underMapGenerationSignature(underMap) {
       ? `${n.id || ''}:${n.revelation}:${n.scope || 'chapter'}`
       : null,
   );
+  const fragments = normalizeList(
+    underMap.fragments,
+    (f) => f?.id && f?.label
+      ? `${f.id}:${f.label}:${f.kind || ''}:${f.seen || 1}`
+      : null,
+  );
   const theories = normalizeList(
     underMap.theories,
     (t) => t?.interpretation
@@ -22,8 +28,8 @@ export function underMapGenerationSignature(underMap) {
   const foil = underMap.foil?.belief
     ? `${underMap.foil.belief}:${underMap.foil.presence || 0}:${underMap.foil.name || ''}`
     : '';
-  const signature = `${nodes}::${theories}::${foil}`;
-  return signature === '::' ? UNDER_MAP_EMPTY_SIGNATURE : signature;
+  const signature = `${fragments}::${nodes}::${theories}::${foil}`;
+  return signature === ':::' ? UNDER_MAP_EMPTY_SIGNATURE : signature;
 }
 
 export function compactUnderMapSignature(signature) {

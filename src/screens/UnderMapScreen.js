@@ -294,7 +294,9 @@ export default function UnderMapScreen({ navigation, route }) {
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
     const nextPathKey = progress?.storyCampaign?.currentPathKey || 'ROOT';
     try {
-      if (nextCase) await game.ensureStoryContent?.(nextCase, nextPathKey);
+      if (nextCase) {
+        await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, { underMap: map });
+      }
     } catch (_e) {
       setContinuing(false);
       setGenError('The descent stalled before the next scene took shape. Tap to try again.');
@@ -302,7 +304,7 @@ export default function UnderMapScreen({ navigation, route }) {
     }
     game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
     navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
-  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation]);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation, map]);
 
   const connectionList = map.connections;
   const selArc = selected.length === 2 && field.w ? arcPath(selected[0], selected[1]) : null;

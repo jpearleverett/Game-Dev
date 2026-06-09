@@ -559,7 +559,7 @@ export default function CaseFileScreen({
     return { firstChoice, secondChoice: deduped };
   }, []);
 
-  const persistBranchingChoice = useCallback((result, { isComplete = true } = {}) => {
+  const persistBranchingChoice = useCallback((result, { isComplete = true, underMapSnapshot = null } = {}) => {
     if (!onSaveBranchingChoice || !caseNumber) return;
     const rawPath = result?.path || result?.secondChoice || '';
     const rawFirst = result?.firstChoice || '';
@@ -572,7 +572,7 @@ export default function CaseFileScreen({
       });
       return;
     }
-    onSaveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete });
+    onSaveBranchingChoice(caseNumber, firstChoice, secondChoice, { isComplete, underMapSnapshot });
   }, [onSaveBranchingChoice, caseNumber, normalizeBranchingPath]);
 
   const handleBranchingComplete = useCallback((result) => {
@@ -580,10 +580,6 @@ export default function CaseFileScreen({
 
     // TRUE INFINITE BRANCHING: Persist the player's actual path through the narrative
     // This enables future content to continue from their actual experience, not the canonical path
-    if (result?.path && !branchingChoiceComplete) {
-      persistBranchingChoice(result, { isComplete: true });
-    }
-
     // NARRATIVE-FIRST FLOW: Mark narrative as complete so we can show "Proceed to Puzzle" button
     // Applies to ALL subchapters with branching narrative (including 1A)
     // Note: Prefetch is triggered by onSaveBranchingChoice -> saveBranchingChoiceAndPrefetch
@@ -600,6 +596,7 @@ export default function CaseFileScreen({
     // through. Relations self-scope: addRelations only materializes a relation once
     // BOTH endpoints exist in the map, so a skipped branch's relations never form,
     // while cross-chapter links (to fragments the player already holds) still resolve.
+    let underMapSnapshot = null;
     if (typeof onIngestFragments === "function" && (sceneFragments.length || sceneRelations.length)) {
       // Reconstruct the exact prose the player walked using the SAME helper the
       // generation pipeline uses for continuity (opening + chosen first response +
@@ -611,11 +608,15 @@ export default function CaseFileScreen({
         ? buildRealizedNarrative(branchingNarrative, result?.firstChoice, result?.path || result?.secondChoice)
         : "";
       const pathFragments = fragmentsOnRealizedPath(sceneFragments, prose);
-      onIngestFragments(pathFragments, sceneRelations, {
+      underMapSnapshot = onIngestFragments(pathFragments, sceneRelations, {
         caseNumber,
         chapter: storyMeta?.chapter,
         subchapter: storyMeta?.subchapter,
       });
+    }
+
+    if (result?.path && !branchingChoiceComplete) {
+      persistBranchingChoice(result, { isComplete: true, underMapSnapshot });
     }
   }, [caseNumber, hasBranchingNarrative, persistBranchingChoice, branchingChoiceComplete, onIngestFragments, sceneFragments, sceneRelations, branchingNarrative, storyMeta?.chapter, storyMeta?.subchapter]);
 

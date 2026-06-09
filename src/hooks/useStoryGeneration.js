@@ -212,7 +212,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       let d = null;
       if (decisionEntry?.pathDecisions) {
         // Find player's branching choice for this case
-        const branchingChoice = storyCampaign?.branchingChoices?.find(
+        const branchingChoice = branchingChoices?.find(
           bc => bc.caseNumber === decisionCaseNumber
         );
         // Use their path (e.g., "1B-2C") or fall back to canonical path
@@ -282,6 +282,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       try {
         // TRUE INFINITE BRANCHING: Pass branchingChoices so context includes realized narratives
         const underMapForOption = options?.underMapByOption?.[optionKey] || underMapRef.current;
+        const underMapSignature = underMapForOption ? underMapGenerationSignature(underMapForOption) : null;
         const entry = await storyGenerationService.generateSubchapter(
           nextChapter,
           1,
@@ -298,6 +299,9 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         if (entry && isMountedRef.current) {
           // Cache under the actual returned pathKey (should equal nextPathKey, but treat as source of truth)
           updateGeneratedCache(nextCaseNumber, entry.pathKey || nextPathKey, entry);
+          if (underMapSignature) {
+            generatedUnderMapSignaturesRef.current.set(`${nextCaseNumber}_${entry.pathKey || nextPathKey}`, underMapSignature);
+          }
         }
         llmTrace('useStoryGeneration', traceId, 'prefetch.branch.complete', {
           key,
@@ -429,6 +433,10 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
     const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
+    const contentKey = `${caseNumber}_${canonicalPathKey}`;
+    const requiredUnderMapSignature = generationOptions.underMap
+      ? underMapGenerationSignature(generationOptions.underMap)
+      : generationOptions.requiredUnderMapSignature || null;
 
     // Skip if not dynamic
     if (!isDynamicChapter(caseNumber)) {
@@ -438,7 +446,9 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
     // Check if already generated
     const hasContent = await hasStoryContent(caseNumber, canonicalPathKey);
-    if (hasContent) {
+    const cachedUnderMapSignature = generatedUnderMapSignaturesRef.current.get(contentKey);
+    const cacheSatisfiesUnderMap = !requiredUnderMapSignature || cachedUnderMapSignature === requiredUnderMapSignature;
+    if (hasContent && cacheSatisfiesUnderMap) {
       log.debug('useStoryGeneration', `[${genId}] Content already exists in cache`);
       setIsCacheMiss(false);
       llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.hit', {
@@ -454,6 +464,9 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       // IMPORTANT: Return the cached entry so callers (ensureStoryContent) don't treat this as a failure.
       // hasStoryContent() loads the entry into the storyContent cache; retrieve it explicitly.
       return await getStoryEntryAsync(caseNumber, canonicalPathKey);
+    }
+    if (hasContent && requiredUnderMapSignature) {
+      log.debug('useStoryGeneration', `[${genId}] Cached content is older than required Under-Map snapshot; refreshing`);
     }
 
     // Determine if this is a cache miss (player chose unexpected path)
@@ -504,6 +517,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           isUserFacing: true, // Never show fallback to player
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
           underMap: generationOptions.underMap || underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+          forceRegenerate: !!requiredUnderMapSignature,
+          refreshKey: requiredUnderMapSignature ? compactUnderMapSignature(requiredUnderMapSignature) : null,
         })
       );
 
@@ -520,6 +535,9 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
       // Update cache
       updateGeneratedCache(caseNumber, entry?.pathKey || canonicalPathKey, entry);
+      if (requiredUnderMapSignature) {
+        generatedUnderMapSignaturesRef.current.set(`${caseNumber}_${entry?.pathKey || canonicalPathKey}`, requiredUnderMapSignature);
+      }
       llmTrace('useStoryGeneration', traceId, 'generateForCase.cache.write', {
         caseNumber,
         pathKey: entry?.pathKey || pathKey,
@@ -750,7 +768,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
    * @param {Array} choiceHistory - Chapter-level decision history
    * @param {Array} branchingChoices - Intra-subchapter branching choices
    */
-  const triggerPrefetchAfterBranchingComplete = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = []) => {
+  const triggerPrefetchAfterBranchingComplete = useCallback(async (caseNumber, pathKey, choiceHistory = [], branchingChoices = [], options = {}) => {
     if (!isConfigured) {
       return;
     }
@@ -787,9 +805,14 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     }
 
     // Check if generation is needed (should be true since we don't prefetch anymore)
+    const underMapSnapshot = options?.underMapSnapshot || null;
+    const requiredSignature = underMapSnapshot ? underMapGenerationSignature(underMapSnapshot) : null;
+    const contentKey = `${nextCaseNumber}_${pathKey}`;
     const needsGen = await needsGeneration(nextCaseNumber, pathKey);
+    const needsUnderMapRefresh = !!requiredSignature
+      && generatedUnderMapSignaturesRef.current.get(contentKey) !== requiredSignature;
 
-    if (needsGen && isMountedRef.current) {
+    if ((needsGen || needsUnderMapRefresh) && isMountedRef.current) {
       const genStartTime = Date.now();
       try {
         setStatus(GENERATION_STATUS.GENERATING);
@@ -803,14 +826,21 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           choiceHistory,
           withQualitySettings({
             branchingChoices,
-            underMap: underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
-            reason: 'triggerPrefetchAfterBranchingComplete:with-branching-context'
+            underMap: underMapSnapshot || underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+            reason: underMapSnapshot
+              ? 'triggerPrefetchAfterBranchingComplete:post-backfill-under-map'
+              : 'triggerPrefetchAfterBranchingComplete:with-branching-context',
+            forceRegenerate: needsUnderMapRefresh,
+            refreshKey: requiredSignature ? compactUnderMapSignature(requiredSignature) : null,
           })
         );
 
         const genDuration = Date.now() - genStartTime;
         if (entry && isMountedRef.current) {
           updateGeneratedCache(nextCaseNumber, pathKey, entry);
+          if (requiredSignature) {
+            generatedUnderMapSignaturesRef.current.set(contentKey, requiredSignature);
+          }
           console.log(`[useStoryGeneration] ✅ CHAIN COMPLETE: ${nextCaseNumber} generated in ${(genDuration/1000).toFixed(1)}s`);
         }
       } catch (err) {

@@ -629,7 +629,13 @@ export function GameProvider({
   const ingestSceneFragments = useCallback((fragments, relations, meta = {}) => {
     const frags = Array.isArray(fragments) ? fragments : [];
     const rels = Array.isArray(relations) ? relations : [];
-    if (!frags.length && !rels.length) return;
+    if (!frags.length && !rels.length) return null;
+    const currentSnapshot = normalizeStoryCampaignShape(progress.storyCampaign);
+    let snapshotMap = currentSnapshot.underMap;
+    if (frags.length) {
+      snapshotMap = umAddFragments(snapshotMap, frags.map((f) => umMakeFragment({ ...f, caseNumber: meta.caseNumber, chapter: meta.chapter })));
+    }
+    if (rels.length) snapshotMap = umAddRelations(snapshotMap, rels, { caseNumber: meta.caseNumber });
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       let um = current.underMap;
@@ -640,7 +646,8 @@ export function GameProvider({
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
-  }, [updateProgress]);
+    return snapshotMap;
+  }, [progress.storyCampaign, updateProgress]);
 
   const connectUnderMap = useCallback((aId, bId) => {
     const current = normalizeStoryCampaignShape(progress.storyCampaign);

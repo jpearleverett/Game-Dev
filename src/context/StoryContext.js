@@ -94,7 +94,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
    * success if ANY content (including fallback) is available.
    */
   // TRUE INFINITE BRANCHING: Added branchingChoices parameter for realized narrative context
-  const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null, branchingChoices = null) => {
+  const ensureStoryContent = useCallback(async (caseNumber, pathKey, optimisticChoiceHistory = null, branchingChoices = null, generationOptions = {}) => {
     const traceId = createTraceId(`ensure_${caseNumber}_${pathKey}`);
     llmTrace('StoryContext', traceId, 'ensureStoryContent.start', {
       caseNumber,
@@ -145,7 +145,8 @@ export function StoryProvider({ children, progress, updateProgress }) {
         caseNumber,
         canonicalPathKey,
         history,
-        effectiveBranchingChoices
+        effectiveBranchingChoices,
+        generationOptions,
       );
 
       if (entry) {
@@ -453,7 +454,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // 1. handleSecondChoice saves with isComplete:false (player made choice, still reading) - TRIGGER HERE
     // 2. handleBranchingComplete saves with isComplete:true (finished reading) - DON'T trigger again
     // Triggering on the first call gives more generation time while player reads the ending text.
-    if (isComplete) {
+    if (isComplete && !options?.underMapSnapshot) {
       return;
     }
 
@@ -477,7 +478,9 @@ export function StoryProvider({ children, progress, updateProgress }) {
 
     // Trigger prefetch for next subchapter with the updated branchingChoices
     if (isLLMConfigured) {
-      triggerPrefetchAfterBranchingComplete(caseNumber, pathKey, choiceHistory, branchingChoices);
+      triggerPrefetchAfterBranchingComplete(caseNumber, pathKey, choiceHistory, branchingChoices, {
+        underMapSnapshot: options?.underMapSnapshot || null,
+      });
     }
   }, [saveBranchingChoice, progress.storyCampaign, isLLMConfigured, triggerPrefetchAfterBranchingComplete]);
 

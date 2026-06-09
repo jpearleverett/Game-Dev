@@ -23,6 +23,7 @@ import {
   ROOT_PATH_KEY,
 } from '../data/storyContent';
 import { resolveStoryDecision, decisionOptionsFrom } from '../utils/storyDecision';
+import { underMapGenerationSignature } from '../utils/underMapGeneration';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -124,6 +125,7 @@ export default function TheoryScreen({ navigation, route }) {
   const sealAnim = useRef(new Animated.Value(0)).current;
   const chosenBelief = beliefs.find((b) => b.key === beliefKey) || null;
   const prefetchKeyRef = useRef(null);
+  const sealedMapRef = useRef(null);
 
   const buildTheoryMapForBelief = useCallback((belief) => {
     if (!belief) return map;
@@ -140,15 +142,15 @@ export default function TheoryScreen({ navigation, route }) {
   useEffect(() => {
     if (!caseNumber || !beliefs.length || chapter >= TOTAL_CHAPTERS) return;
     if (typeof prefetchTheoryBranches !== 'function') return;
-    const key = `${caseNumber}:${beliefs.map((b) => `${b.key}:${b.title || b.focus || ''}`).join('|')}:${map.fragments.length}:${map.theories.length}`;
-    if (prefetchKeyRef.current === key) return;
-    prefetchKeyRef.current = key;
     const underMapByOption = {};
     beliefs.forEach((belief) => {
       if (belief?.key) underMapByOption[belief.key] = buildTheoryMapForBelief(belief);
     });
+    const key = `${caseNumber}:${Object.keys(underMapByOption).sort().map((optionKey) => `${optionKey}:${underMapGenerationSignature(underMapByOption[optionKey])}`).join('|')}`;
+    if (prefetchKeyRef.current === key) return;
+    prefetchKeyRef.current = key;
     prefetchTheoryBranches(caseNumber, underMapByOption);
-  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, map.fragments.length, map.theories.length, prefetchTheoryBranches]);
+  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, prefetchTheoryBranches]);
 
   // Evidence is read-only reference: tapping a fragment expands its full clue to help
   // the player weigh their reading. It is NOT staked/graded — the belief is the choice.
@@ -180,6 +182,7 @@ export default function TheoryScreen({ navigation, route }) {
       .map((b) => b.title || b.focus || '')
       .filter(Boolean);
     const sealedMap = chosenBelief ? buildTheoryMapForBelief(chosenBelief) : map;
+    sealedMapRef.current = sealedMap;
 
     // The belief is the chapter decision: store it as the pre-decision (drives the
     // branch into the next chapter) AND record it on the Under-Map as a sealed theory.
@@ -242,7 +245,9 @@ export default function TheoryScreen({ navigation, route }) {
     const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
 
     try {
-      await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory);
+      await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
+        underMap: sealedMapRef.current || map,
+      });
     } catch (_e) {
       setContinuing(false);
       setGenError('The next chapter would not take shape. Tap to try again.');
