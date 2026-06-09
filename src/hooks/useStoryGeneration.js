@@ -830,7 +830,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
               : 'triggerPrefetchAfterBranchingComplete:with-branching-context',
             // A/B preloads are latency-critical; if they are still running when
             // the player continues, the app waits on this same request.
-            thinkingLevel: 'low',
+            thinkingLevel: 'medium',
           })
         );
 
