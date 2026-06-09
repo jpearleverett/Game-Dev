@@ -787,13 +787,13 @@ export const GENERATION_CONFIG = {
     expansion: 1.0,
   },
 
-  // Token limits - Gemini 3.5 Flash supports up to 65,536 tokens output (64k)
+  // Token limits - keep subchapter output bounded for mobile latency.
   // IMPORTANT: Thinking tokens consume output budget. Core narrative uses medium
   // thinking for gameplay latency; values below leave headroom for reasoning +
   // structured story output.
   // Gemini 3.5 Flash: 1M input / 64k output
   maxTokens: {
-    subchapter: 65536,    // Gemini 3.5 max output - main narrative generation
+    subchapter: 16000,    // Main narrative generation; enough for ~900-1500 words + thinking
     expansion: 32000,     // For expansion requests (currently disabled)
     validation: 8000,     // For simple validation passes (uses 'low' thinking)
     pathDecisions: 65536, // Same as subchapter - complex multi-path generation

@@ -828,6 +828,9 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             reason: underMapSnapshot
               ? 'triggerPrefetchAfterBranchingComplete:post-backfill-under-map'
               : 'triggerPrefetchAfterBranchingComplete:with-branching-context',
+            // A/B preloads are latency-critical; if they are still running when
+            // the player continues, the app waits on this same request.
+            thinkingLevel: 'low',
           })
         );
 
