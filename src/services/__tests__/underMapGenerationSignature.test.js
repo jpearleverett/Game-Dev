@@ -1,4 +1,4 @@
-import { underMapGenerationSignature } from '../../hooks/useStoryGeneration';
+import { underMapGenerationSignature } from '../../utils/underMapGeneration';
 import {
   addFragments,
   addRelations,
