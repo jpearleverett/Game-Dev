@@ -293,6 +293,11 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
             reason: `prefetch-next-chapter-branches:${source}`,
             branchingChoices, // Player's actual path through previous subchapters
             underMap: underMapForOption, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+            // Key this prefetch by the belief's Under-Map signature so that when the
+            // player SEALS this belief, crossThreshold's generation (same signature →
+            // same refreshKey → same generationKey) DEDUPES onto this in-flight prefetch
+            // instead of starting a wasteful duplicate that would queue behind it.
+            refreshKey: underMapSignature ? compactUnderMapSignature(underMapSignature) : null,
           })
         );
 
@@ -320,21 +325,15 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       }
     };
 
-    // Fire prefetches SEQUENTIALLY to avoid overwhelming mobile network connections.
-    // Mobile networks often struggle with concurrent long-running requests, causing one to fail.
-    // By running A first and B after, we ensure both complete reliably.
-    try {
-      await startOne('A');
-    } catch (e) {
-      // Log but continue - we still want to try path B even if A fails
-      llmTrace('useStoryGeneration', traceId, 'prefetch.branch.A.failed', { error: e?.message }, 'warn');
-    }
-
-    try {
-      await startOne('B');
-    } catch (e) {
-      llmTrace('useStoryGeneration', traceId, 'prefetch.branch.B.failed', { error: e?.message }, 'warn');
-    }
+    // Fire both belief branches CONCURRENTLY. maxConcurrentGenerations is 2, so both
+    // prewarm in parallel during the player's deliberation rather than one-after-another
+    // (sequential never finished the second branch in time). Whichever belief is sealed,
+    // crossThreshold dedupes onto its in-flight prefetch (signature-keyed refreshKey),
+    // so there's no duplicate and no queuing. Independent failures are isolated.
+    await Promise.allSettled([
+      startOne('A').catch((e) => llmTrace('useStoryGeneration', traceId, 'prefetch.branch.A.failed', { error: e?.message }, 'warn')),
+      startOne('B').catch((e) => llmTrace('useStoryGeneration', traceId, 'prefetch.branch.B.failed', { error: e?.message }, 'warn')),
+    ]);
   }, [isConfigured, withQualitySettings]);
 
   // Track mounted state to prevent state updates on unmounted component

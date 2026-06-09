@@ -239,17 +239,26 @@ The cache-key contract these rely on lives in `src/utils/underMapGeneration.js`
 
 **LATENCY REALITY (on-device, 2026-06-09):** the above only hides generation when the
 generation FITS inside the cover window. On a Pixel 10 Pro a single scene takes **~70s**
-(`gemini-3.5-flash`, `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion tokens)
-and `maxConcurrentGenerations` is **1** (serialized). Cover windows (a CONNECT puzzle, a
-THEORY deliberation) are ~20-40s — so the prefetch is *correct* (logs show all duplicate
-requests dedupe onto one in-flight generation) but starts only ~1 beat ahead and can't
-cover 70s with 20s. Worse, with a single slot a speculative prefetch of the *wrong* belief
-can hold the slot and force the needed generation to queue behind it. The genuine levers are
-(a) cut generation time — `thinkingLevel` `medium`→`low` in `generation.js` (~475/531) is the
-biggest, at a prose-quality cost; (b) raise `maxConcurrentGenerations` to 2 so speculation
-runs in parallel, at a mobile-network-reliability cost; (c) deeper lookahead (start each
-prefetch a full beat earlier), which for the CONNECT path trades realized-branching context.
-These are product tradeoffs — do not change them blindly.
+(`gemini-3.5-flash`, `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion tokens),
+nearly all of it model *thinking* (TTFT). Cover windows (a CONNECT puzzle, a THEORY
+deliberation) are ~20-40s — so the prefetch is *correct* (logs show all duplicate requests
+dedupe onto one in-flight generation) but starts only ~1 beat ahead and **cannot fully cover
+70s with 20-40s**. This is a hard ceiling while thinking stays at `medium` and lookahead stays
+context-accurate (both deliberate product choices — keep prose quality, keep branching
+coherence). Don't expect the gateway wait to vanish; expect it reduced and never *worse*.
+
+What IS done within those choices: **`maxConcurrentGenerations` is now 2** (was 1). This
+guarantees the urgent scene the player waits for always has a free slot instead of queuing
+behind a speculative prefetch, and lets the two C-beat belief branches prewarm in PARALLEL
+(`prefetchNextChapterBranchesAfterC` now fires `startOne('A')`/`startOne('B')` via
+`Promise.allSettled`). To keep that safe, each belief prefetch is keyed by its Under-Map
+signature `refreshKey` (`compactUnderMapSignature`), so a SEAL's `crossThreshold` generation
+(same signature → same `generationKey`) **dedupes onto the in-flight prefetch** rather than
+starting a duplicate that would fill the second slot. Do NOT raise concurrency above 2 on
+mobile, and do NOT drop the prefetch `refreshKey` alignment or parallel speculation becomes a
+self-block. The remaining levers (NOT taken, by choice): `thinkingLevel` `medium`→`low`
+(`generation.js` ~475/531) for raw speed at a prose-quality cost; deeper-than-1-beat lookahead
+for more cover at a branching-coherence cost.
 
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.

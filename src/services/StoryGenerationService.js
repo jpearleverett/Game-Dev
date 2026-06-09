@@ -76,10 +76,14 @@ class StoryGenerationService {
     this.maxGenerationAttempts = 3; // Max attempts before failing
 
     // ========== Generation Concurrency Limiter ==========
-    // Sequential only - no concurrent LLM requests
-    // Concurrent requests cause network issues on mobile (connections killed after ~4 min)
-    // and React Native doesn't support streaming so heartbeats don't help
-    this.maxConcurrentGenerations = 1; // Sequential LLM calls only
+    // Two concurrent generations. This lets the two speculative belief branches at a
+    // C-beat prewarm in PARALLEL during deliberation (instead of one-after-another,
+    // which never finished in time), and — critically — guarantees the urgent scene
+    // the player is waiting for always has a free slot rather than queuing behind a
+    // speculative prefetch. The original SSE-on-mobile reliability worry is mitigated:
+    // the app streams via react-native-sse with heartbeats (the old expo/fetch
+    // no-streaming caveat doesn't apply). Do NOT raise above 2 on mobile networks.
+    this.maxConcurrentGenerations = 2;
     this.activeGenerationCount = 0; // Current in-flight generations
     this.generationWaitQueue = []; // Queue of { resolve, reject, key } for waiting generations
 
