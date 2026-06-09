@@ -211,6 +211,78 @@ scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time too
 
 **The Other Reader (foil) is SHIPPED end to end (Phases 1-5).** The Station-Eleven "Prophet" mirror: the reading the player rejects at a C-beat gets a champion who is vindicated each time the player is subverted, escalating from a rumor to a named, recurring antagonist, and paying off in the verdict banner / Codex / ending. See the `foil` entry in §3. **Unverified on-device** — it's LLM-driven; needs a playtest that deliberately seals-then-subverts a couple of beliefs to push `presence` to ≥2 and confirm the prompt yields a coherent recurring antagonist (not a generic thug) with a stable name.
 
+**Perceived-latency / seamless generation (shipped).** The two gateways that used to
+expose generation time — finishing the CONNECT beat and sealing a THEORY — are now hidden
+behind cover the player is already spending:
+- **Theory prefetch no longer self-clobbers.** `TheoryScreen` speculatively prefetches the
+  next chapter for *each* candidate belief on mount (`prefetchTheoryBranches` →
+  `prefetchNextChapterBranchesAfterC`, keyed by `underMapByOption` + a per-belief
+  `underMapGenerationSignature`). Sealing calls `recordUnderMapTheory`, which mutates the
+  campaign Under-Map (M0→M1) and re-renders the screen — which **re-fired the prefetch
+  effect with a double-recorded map**, overwriting the correctly-signed prefetch so
+  `crossThreshold`'s signature check missed and the player ate a full regen. The effect now
+  bails when `sealed` (`if (sealed) return;`), so the pre-seal signature survives and the
+  cross is an instant cache hit. This is THE fix for the post-seal wait.
+- **Cross WAITS for the next chapter (no fallback flash).** `crossThreshold` `await`s
+  `ensureStoryContent` (keyed to the sealed-belief map + `requireFreshUnderMap`) before
+  navigating to `Sealed`. With the prefetch-clobber fix above this is usually an instant
+  cache hit; the honest "Crossing…" hold on a cold cache is still preferable to navigating
+  early and rendering placeholder/fallback prose (which an earlier decouple attempt did —
+  reverted). NOTE: the real bottleneck is raw generation latency (~70s/scene, single slot),
+  not gateway positioning — see the latency caveat below.
+- **The CONNECT beat warms the next subchapter on open.** `UnderMapScreen` calls
+  `prefetchAfterUnderMapReveal(gateCaseNumber, map)` on mount (not just on first reveal), so
+  the whole connection-drawing puzzle is cover. Deduped; `handleContinue` already hits the
+  cache without forcing a regen.
+The cache-key contract these rely on lives in `src/utils/underMapGeneration.js`
+(`underMapGenerationSignature`).
+
+**LATENCY REALITY (on-device, 2026-06-09):** the above only hides generation when the
+generation FITS inside the cover window. On a Pixel 10 Pro a single scene takes **~70s**
+(`gemini-3.5-flash`, `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion tokens),
+nearly all of it model *thinking* (TTFT). Cover windows (a CONNECT puzzle, a THEORY
+deliberation) are ~20-40s — so the prefetch is *correct* (logs show all duplicate requests
+dedupe onto one in-flight generation) but starts only ~1 beat ahead and **cannot fully cover
+70s with 20-40s**. This is a hard ceiling while thinking stays at `medium` and lookahead stays
+context-accurate (both deliberate product choices — keep prose quality, keep branching
+coherence). Don't expect the gateway wait to vanish; expect it reduced and never *worse*.
+
+What IS done within those choices: **`maxConcurrentGenerations` is now 2** (was 1). This
+guarantees the urgent scene the player waits for always has a free slot instead of queuing
+behind a speculative prefetch, and lets the two C-beat belief branches prewarm in PARALLEL
+(`prefetchNextChapterBranchesAfterC` now fires `startOne('A')`/`startOne('B')` via
+`Promise.allSettled`). To keep that safe, each belief prefetch is keyed by its Under-Map
+signature `refreshKey` (`compactUnderMapSignature`), so a SEAL's `crossThreshold` generation
+(same signature → same `generationKey`) **dedupes onto the in-flight prefetch** rather than
+starting a duplicate that would fill the second slot. Do NOT raise concurrency above 2 on
+mobile, and do NOT drop the prefetch `refreshKey` alignment or parallel speculation becomes a
+self-block. The remaining levers (NOT taken, by choice): `thinkingLevel` `medium`→`low`
+(`generation.js` ~475/531) for raw speed at a prose-quality cost; deeper-than-1-beat lookahead
+for more cover at a branching-coherence cost.
+
+**Read-back "THE CASE SO FAR" (shipped, in-reader paging).** Paging back used to dead-end at
+page 1 of the current subchapter. Now `BranchingNarrativeReader` **prepends every PRIOR
+subchapter's *realized* prose as read-only pages** (`historyPages`), so the left tap zone / `‹`
+arrow flips continuously back through the earlier case — same paper, same flip, same `PAGE`
+chrome (history pages show a `NN<letter> · EARLIER` stamp + a chapter label) — all the way to
+the very start, and a floating **"RETURN TO NOW ››"** pill (shown only while `activePage <
+liveStartIndex`) jumps back to the live page. Read-only pages are inert: `details: []`, no
+typewriter, no EXAMINE, `isPageCompleted` forced true. The reader composes `allPages =
+[...historyPages, ...pages]`; index-sensitive logic (clamps, arrows, choice scroll targets,
+`PAGE` numbering = `index - liveStartIndex + 1`) is relative to `allPages`/`liveStartIndex`,
+while completion detection still keys off the LIVE `pages`. It opens positioned on the live
+page (`initialScrollIndex` + `getItemLayout`) and, if history arrives a beat late (async load),
+a delta-shift effect preserves the page under the player instead of jumping. `CaseFileScreen`
+assembles `caseHistory` **async** via `getStoryEntryAsync` (hydrates from persistent storage —
+**no prior subchapter is skipped**, even on a freshly resumed session), reading each chapter at
+the branch the player took (`computeBranchPathKey`), and passes it as the `history` prop. The
+current subchapter stays owned by the live reader. (The earlier modal `CaseHistoryOverlay` was
+replaced by this and deleted.) ⚠️ The assembly effect is keyed on a **stable string signature**
+(`historyDepKey`), NOT on `storyCampaign.choiceHistory`/`branchingChoices` array refs — those
+refs are recreated by `normalizeStoryCampaignShape` on EVERY campaign write (incl. an EXAMINE
+Under-Map write), which used to rebuild `caseHistory` mid-read → `liveStartIndex` flips → the
+reader jumps into an earlier subchapter and flickers. Keep that effect keyed on the signature.
+
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.

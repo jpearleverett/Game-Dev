@@ -906,11 +906,13 @@ function _buildEngagementGuidanceSection(context, chapter, subchapter) {
     section += `- Hook: End with a question or complication that demands continuation\n`;
   } else if (subchapter === 2) {
     section += `- This is the MIDDLE of the chapter\n`;
+    section += `- Continue DIRECTLY from the final moment of the previous subchapter (see "Immediately previous subchapter (continue from here)" above) — same scene, same continuous moment. No time-skip, no relocation, no recap, no re-introduction.\n`;
     section += `- Escalate the tension established in A\n`;
     section += `- Deliver at least one micro-revelation\n`;
     section += `- Hook: End with raised stakes or a turning point\n`;
   } else {
     section += `- This is the CLIMAX/DECISION of the chapter\n`;
+    section += `- Continue DIRECTLY from the final moment of the previous subchapter (see "Immediately previous subchapter (continue from here)" above) — same scene, same continuous moment. No time-skip, no relocation, no recap, no re-introduction.\n`;
     section += `- Deliver the emotional anchor moment\n`;
     section += `- Build to an impossible choice\n`;
     section += `- Hook: The decision itself is the ultimate cliffhanger\n`;

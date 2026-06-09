@@ -1028,6 +1028,7 @@ export function GameProvider({
     selectStoryDecision: story.selectStoryDecision,
     selectDecisionBeforePuzzle: story.selectDecisionBeforePuzzle, // NARRATIVE-FIRST: Pre-puzzle decision for C subchapters
     prefetchTheoryBranches: story.prefetchTheoryBranches,
+    prefetchAfterUnderMapReveal: story.prefetchAfterUnderMapReveal, // CONNECT beat: warm the next subchapter while the player draws connections
     saveBranchingChoice: story.saveBranchingChoice, // TRUE INFINITE BRANCHING: Save player's interactive narrative path
     // NOTE: speculativePrefetchForFirstChoice removed - no longer needed with narrative-first flow
     // Audio is handled via AudioContext but exposed here if needed for backward compatibility or direct calls?

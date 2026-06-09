@@ -36,7 +36,7 @@ import { COLORS } from "../constants/colors";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
-import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath } from "../data/storyContent";
+import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath, getStoryEntryAsync, parseCaseNumber, computeBranchPathKey } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
@@ -533,6 +533,73 @@ export default function CaseFileScreen({
       || storyCampaign?.currentPathKey
       || ROOT_PATH_KEY;
   }, [caseNumber, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
+
+  // READ-BACK: assemble the realized prose of every subchapter BEFORE the current one,
+  // oldest→newest. These are handed to BranchingNarrativeReader, which prepends them as
+  // read-only pages so the player can page back through the whole case (the live reader
+  // still owns the current subchapter). Each chapter is read at the branch the player took.
+  //
+  // Built ASYNC via getStoryEntryAsync so it hydrates entries from persistent storage that
+  // aren't in the in-memory cache yet (e.g. a freshly resumed session) — this GUARANTEES no
+  // prior subchapter is silently skipped. The reader preserves the player's live page if the
+  // history arrives a beat late.
+  const [caseHistory, setCaseHistory] = useState([]);
+
+  // Position-based gate (sync): is there ANY prior subchapter to read back into?
+  const hasPriorHistory = useMemo(() => {
+    if (!isStoryMode || !caseNumber) return false;
+    const { chapter, subchapter } = parseCaseNumber(caseNumber);
+    return chapter > 1 || subchapter > 1;
+  }, [isStoryMode, caseNumber]);
+
+  // STABLE content signature for the read-back history. The prior subchapters' realized
+  // paths only change when the player advances or makes a branching choice — NOT when they
+  // tap a fragment. But every campaign write (incl. an EXAMINE Under-Map write) recreates
+  // the choiceHistory/branchingChoices array refs via normalizeStoryCampaignShape, so keying
+  // the assembly effect on those refs made EXAMINE rebuild history → liveStartIndex flips →
+  // the reader jumps. This signature is identical when the content is identical, so the
+  // effect (and the reader's page layout) stays put while you read.
+  const historyDepKey = useMemo(() => {
+    if (!hasPriorHistory || !caseNumber) return '';
+    const ch = (storyCampaign?.choiceHistory || []).map((c) => `${c?.caseNumber}:${c?.optionKey}`).join(',');
+    const bc = (storyCampaign?.branchingChoices || []).map((b) => `${b?.caseNumber}:${b?.firstChoice}:${b?.secondChoice}`).join(',');
+    return `${caseNumber}|${storyCampaign?.currentPathKey || ''}|${ch}|${bc}`;
+  }, [hasPriorHistory, caseNumber, storyCampaign?.choiceHistory, storyCampaign?.branchingChoices, storyCampaign?.currentPathKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!hasPriorHistory || !caseNumber) { setCaseHistory([]); return () => { cancelled = true; }; }
+    const { chapter: curChapter, subchapter: curSub } = parseCaseNumber(caseNumber);
+    const choiceHistory = storyCampaign?.choiceHistory || [];
+    const branchingChoices = storyCampaign?.branchingChoices || [];
+    const pathHistory = storyCampaign?.pathHistory || {};
+    (async () => {
+      const out = [];
+      for (let ch = 1; ch <= curChapter; ch += 1) {
+        const pathKey = ch === 1
+          ? ROOT_PATH_KEY
+          : (computeBranchPathKey(choiceHistory, ch) || pathHistory[ch] || storyCampaign?.currentPathKey || ROOT_PATH_KEY);
+        const maxSub = ch < curChapter ? 3 : curSub - 1; // stop before the current subchapter
+        for (let sub = 1; sub <= maxSub; sub += 1) {
+          const cn = `${String(ch).padStart(3, '0')}${['A', 'B', 'C'][sub - 1]}`;
+          // eslint-disable-next-line no-await-in-loop
+          const entry = await getStoryEntryAsync(cn, pathKey);
+          if (!entry) continue;
+          const bc = branchingChoices.find((b) => b.caseNumber === cn);
+          const text = (bc && entry.branchingNarrative)
+            ? buildRealizedNarrative(entry.branchingNarrative, bc.firstChoice, bc.secondChoice)
+            : (entry.narrative || '');
+          if (text && text.trim()) {
+            out.push({ caseNumber: cn, chapter: ch, letter: ['A', 'B', 'C'][sub - 1], title: entry.title || null, text: text.trim() });
+          }
+        }
+      }
+      if (!cancelled) { setCaseHistory(out); }
+    })();
+    return () => { cancelled = true; };
+    // Keyed on the stable content signature so an EXAMINE/Under-Map write never rebuilds it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyDepKey]);
 
   const branchingChoiceSeed = useMemo(() => {
     if (!existingBranchingChoice) return null;
@@ -1268,6 +1335,7 @@ export default function CaseFileScreen({
                       onEvidenceCollected={handleEvidenceCollected}
                       onExamineFragment={handleExamineFragment}
                       initialChoice={branchingChoiceSeed}
+                      history={caseHistory}
                     />
                   </View>
                 ) : narrativePages.length > 0 && (

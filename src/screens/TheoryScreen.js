@@ -142,6 +142,15 @@ export default function TheoryScreen({ navigation, route }) {
   useEffect(() => {
     if (!caseNumber || !beliefs.length || chapter >= TOTAL_CHAPTERS) return;
     if (typeof prefetchTheoryBranches !== 'function') return;
+    // CRITICAL: do NOT re-run after the belief is sealed. Sealing calls
+    // recordUnderMapTheory, which mutates the campaign Under-Map (M0 → M1). That
+    // re-renders this screen with a new `map`, which would otherwise re-fire this
+    // effect and prefetch the next chapter from a DOUBLE-recorded map (M1 already
+    // holds the theory). That overwrites the correctly-signed speculative prefetch
+    // with a wrong-signature one, so crossThreshold's signature check misses and the
+    // player eats a full from-scratch regeneration. Freezing the prefetch at the
+    // pre-seal map keeps the signatures aligned so the cross is an instant cache hit.
+    if (sealed) return;
     const underMapByOption = {};
     beliefs.forEach((belief) => {
       if (belief?.key) underMapByOption[belief.key] = buildTheoryMapForBelief(belief);
@@ -154,7 +163,7 @@ export default function TheoryScreen({ navigation, route }) {
     if (prefetchKeyRef.current === key) return;
     prefetchKeyRef.current = key;
     prefetchTheoryBranches(caseNumber, underMapByOption);
-  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, prefetchTheoryBranches, storyCampaign.branchingChoices]);
+  }, [beliefs, buildTheoryMapForBelief, caseNumber, chapter, prefetchTheoryBranches, storyCampaign.branchingChoices, sealed]);
 
   // Evidence is read-only reference: tapping a fragment expands its full clue to help
   // the player weigh their reading. It is NOT staked/graded — the belief is the choice.
@@ -248,6 +257,12 @@ export default function TheoryScreen({ navigation, route }) {
     ];
     const nextPathKey = computeBranchPathKey(nextChoiceHistory, nextChapter);
 
+    // Wait for the next chapter to be READY before crossing — navigating early drops
+    // the player into placeholder/fallback prose, which reads as broken. The sealed-
+    // belief prefetch (kicked on mount, kept correctly-signed by the `sealed` guard
+    // above) means this is usually an instant cache hit; when it isn't, the honest
+    // "Crossing…" hold is still better than fallback text. We pass the sealed-belief
+    // map + requireFreshUnderMap so the lookup is keyed to THIS belief.
     try {
       await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
         underMap: sealedMapRef.current || map,
