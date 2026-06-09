@@ -260,6 +260,21 @@ self-block. The remaining levers (NOT taken, by choice): `thinkingLevel` `medium
 (`generation.js` ~475/531) for raw speed at a prose-quality cost; deeper-than-1-beat lookahead
 for more cover at a branching-coherence cost.
 
+**Read-back "THE CASE SO FAR" (shipped).** The live reader (`BranchingNarrativeReader`)
+hard-stops paging at page 1 of the current subchapter. Paging back from there (left tap zone
+/ the "‹ THE CASE SO FAR" edge hint) now fires `onRequestHistory`, which opens
+`src/components/CaseHistoryOverlay.js` — a **read-only** Modal showing every PRIOR
+subchapter's *realized* prose (oldest→newest, opened scrolled to the most-recent so it reads
+continuously back from where you were; "jump to the beginning" + "Return to where you left
+off" = snap to latest). `CaseFileScreen` assembles it (`caseHistory` useMemo) from
+`getRealizedNarrativeForCase(caseNumber, pathKey, branchingChoices)` for every case before the
+current one, reading each chapter at the branch the player took (`computeBranchPathKey`). It's
+deliberately inert — no choices, no EXAMINE — so it can't disturb the live reader or the
+Under-Map. The current subchapter stays owned by the live reader (you can already page back to
+its own opening). Caveat: assembly uses the **sync** `getStoryEntry`, so on a freshly resumed
+session a not-yet-loaded prior entry is silently skipped (fine for continuous play; switch to
+`getRealizedNarrativeForCaseAsync` if that becomes an issue).
+
 **Open / candidate next work:**
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step.
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.

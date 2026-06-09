@@ -36,7 +36,8 @@ import { COLORS } from "../constants/colors";
 import { SPACING, RADIUS } from "../constants/layout";
 import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
-import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath } from "../data/storyContent";
+import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath, getRealizedNarrativeForCase, parseCaseNumber, computeBranchPathKey } from "../data/storyContent";
+import CaseHistoryOverlay from "../components/CaseHistoryOverlay";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
 import {
@@ -533,6 +534,40 @@ export default function CaseFileScreen({
       || storyCampaign?.currentPathKey
       || ROOT_PATH_KEY;
   }, [caseNumber, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
+
+  // READ-BACK: assemble the realized prose of every subchapter BEFORE the current one,
+  // oldest→newest, so the player can re-read the whole case so far (the live reader still
+  // owns the current subchapter). Each chapter is read at the branch the player took.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const caseHistory = useMemo(() => {
+    if (!isStoryMode || !caseNumber) return [];
+    const { chapter: curChapter, subchapter: curSub } = parseCaseNumber(caseNumber);
+    if (!curChapter) return [];
+    const choiceHistory = storyCampaign?.choiceHistory || [];
+    const branchingChoices = storyCampaign?.branchingChoices || [];
+    const pathHistory = storyCampaign?.pathHistory || {};
+    const out = [];
+    for (let ch = 1; ch <= curChapter; ch += 1) {
+      const pathKey = ch === 1
+        ? ROOT_PATH_KEY
+        : (computeBranchPathKey(choiceHistory, ch) || pathHistory[ch] || storyCampaign?.currentPathKey || ROOT_PATH_KEY);
+      const maxSub = ch < curChapter ? 3 : curSub - 1; // stop before the current subchapter
+      for (let sub = 1; sub <= maxSub; sub += 1) {
+        const cn = `${String(ch).padStart(3, '0')}${['A', 'B', 'C'][sub - 1]}`;
+        const text = getRealizedNarrativeForCase(cn, pathKey, branchingChoices);
+        if (text && text.trim()) {
+          out.push({
+            caseNumber: cn,
+            chapter: ch,
+            letter: ['A', 'B', 'C'][sub - 1],
+            title: getStoryEntry(cn, pathKey)?.title || null,
+            text: text.trim(),
+          });
+        }
+      }
+    }
+    return out;
+  }, [isStoryMode, caseNumber, storyCampaign?.choiceHistory, storyCampaign?.branchingChoices, storyCampaign?.pathHistory, storyCampaign?.currentPathKey]);
 
   const branchingChoiceSeed = useMemo(() => {
     if (!existingBranchingChoice) return null;
@@ -1268,6 +1303,7 @@ export default function CaseFileScreen({
                       onEvidenceCollected={handleEvidenceCollected}
                       onExamineFragment={handleExamineFragment}
                       initialChoice={branchingChoiceSeed}
+                      onRequestHistory={caseHistory.length > 0 ? () => setHistoryOpen(true) : undefined}
                     />
                   </View>
                 ) : narrativePages.length > 0 && (
@@ -1287,6 +1323,13 @@ export default function CaseFileScreen({
                     />
                   </View>
                 )}
+
+                {/* READ-BACK: the read-only "case so far" — paging back from page 1 opens it */}
+                <CaseHistoryOverlay
+                  visible={historyOpen}
+                  history={caseHistory}
+                  onClose={() => setHistoryOpen(false)}
+                />
 
                 {/* CTA for next briefing */}
                 {showNextBriefingCTA && (

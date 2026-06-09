@@ -475,6 +475,7 @@ export default function BranchingNarrativeReader({
   initialChoice,
   style,
   secondChoiceLoading = false, // LAZY BRANCHING: true while a chosen path's ending is still generating
+  onRequestHistory, // READ-BACK: paging back past page 1 opens the read-only "case so far"
 }) {
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
@@ -762,7 +763,13 @@ export default function BranchingNarrativeReader({
   const triggerPageFlip = useCallback((direction) => {
     if (!direction || flipLockRef.current) return;
     const targetIndex = activePage + direction;
-    if (targetIndex < 0 || targetIndex > pages.length - 1) return;
+    // Paging back from the very first page of this subchapter opens the read-only
+    // "case so far" (everything prior), instead of dead-ending. Forward stays clamped.
+    if (targetIndex < 0) {
+      if (direction < 0 && typeof onRequestHistory === 'function') onRequestHistory();
+      return;
+    }
+    if (targetIndex > pages.length - 1) return;
 
     flipLockRef.current = true;
     flipAnim.setValue(0);
@@ -799,7 +806,7 @@ export default function BranchingNarrativeReader({
       }
     }
     setActivePage(targetIndex);
-  }, [activePage, pages.length, flipAnim, pageWidth, pageGap, reducedMotion]);
+  }, [activePage, pages.length, flipAnim, pageWidth, pageGap, reducedMotion, onRequestHistory]);
 
   const flipRotation = flipAnim.interpolate({
     inputRange: [-1, 0, 1],
@@ -877,12 +884,19 @@ export default function BranchingNarrativeReader({
             pointerEvents="none"
           />
 
-          {/* Tap Zones for navigation */}
+          {/* Tap Zones for navigation. On the very first page the left zone opens the
+              read-only "case so far" (when there's prior history to read back into). */}
           <Pressable
             style={[styles.tapZone, styles.tapZoneLeft]}
-            disabled={index === 0}
+            disabled={index === 0 && typeof onRequestHistory !== 'function'}
             onPress={() => triggerPageFlip(-1)}
           />
+          {index === 0 && typeof onRequestHistory === 'function' ? (
+            <Pressable style={styles.readBackHint} onPress={() => triggerPageFlip(-1)} hitSlop={8}>
+              <Text style={styles.readBackChevron}>‹</Text>
+              <Text style={styles.readBackText}>THE CASE{'\n'}SO FAR</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             style={[styles.tapZone, styles.tapZoneRight]}
             disabled={isLastPage || item.type === PAGE_TYPES.CHOICE}
@@ -991,6 +1005,7 @@ export default function BranchingNarrativeReader({
     secondChoiceMade,
     normalizePathKey,
     reducedMotion,
+    onRequestHistory,
   ]);
 
   if (!branchingNarrative) {
@@ -1083,6 +1098,16 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "relative",
   },
+  // "Read back" affordance on page 1's left edge — taps open the case-so-far overlay.
+  readBackHint: {
+    position: 'absolute', left: 0, top: '42%',
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    paddingVertical: 8, paddingRight: 8, paddingLeft: 4,
+    borderTopRightRadius: 8, borderBottomRightRadius: 8,
+    backgroundColor: 'rgba(51,38,23,0.07)',
+  },
+  readBackChevron: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 22, color: 'rgba(51,38,23,0.55)', marginTop: -2 },
+  readBackText: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 8, lineHeight: 10, letterSpacing: 0.8, color: 'rgba(51,38,23,0.5)' },
   page: {
     overflow: "hidden",
     borderWidth: 1,
