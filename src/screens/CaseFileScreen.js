@@ -30,6 +30,8 @@ import CaseHero from "../components/case-file/CaseHero";
 import CaseSummary from "../components/case-file/CaseSummary";
 import DecisionPanel from "../components/case-file/DecisionPanel";
 import { useGame } from "../context/GameContext";
+import { FIELD_NOTES } from "../data/fieldNotes";
+import FieldNoteCard from "../components/FieldNoteCard";
 
 import { FONTS, FONT_SIZES } from "../constants/typography";
 import { COLORS } from "../constants/colors";
@@ -89,7 +91,7 @@ export default function CaseFileScreen({
   const { width: screenWidth, sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
   const medium = sizeClass === "medium";
-  const { progress: gameProgress } = useGame();
+  const { progress: gameProgress, markLessonSeen } = useGame();
   const reducedMotion = !!gameProgress?.settings?.reducedMotion;
 
   // Audio: Ambient Background
@@ -381,6 +383,17 @@ export default function CaseFileScreen({
     const foilBelief = !br.correct && foilObj && foilObj.belief ? foilObj.belief : null;
     return { correct: br.correct, line: (br.line || "").trim(), belief, foilBelief };
   }, [storyMeta?.beliefResolution, storyCampaign?.underMap?.theories, storyCampaign?.underMap?.foil, isStoryMode]);
+
+  // FIELD NOTE: the first time a reading is SUBVERTED, stop and introduce The
+  // Other Reader properly — the player just created their antagonist and the
+  // ambient copy alone does not teach that. One-time (persisted).
+  const [fieldNote, setFieldNote] = useState(null);
+  useEffect(() => {
+    if (!beliefVerdict || beliefVerdict.correct !== false) return;
+    if ((gameProgress?.seenLessons || {})[FIELD_NOTES.otherReader.key]) return;
+    setFieldNote(FIELD_NOTES.otherReader);
+    markLessonSeen?.(FIELD_NOTES.otherReader.key);
+  }, [beliefVerdict, gameProgress?.seenLessons, markLessonSeen]);
 
   // The echo banner shows the TRUTH the scene follows from (the player's mapping) —
   // not the scene's own sentence, which they're about to read anyway. Require a
@@ -1488,6 +1501,9 @@ export default function CaseFileScreen({
           </LinearGradient>
         </View>
       </ScrollView>
+
+      {/* One-time teaching card: The Other Reader, at the first subverted verdict. */}
+      <FieldNoteCard note={fieldNote} visible={!!fieldNote} onDismiss={() => setFieldNote(null)} reducedMotion={reducedMotion} />
     </ScreenSurface>
   );
 }

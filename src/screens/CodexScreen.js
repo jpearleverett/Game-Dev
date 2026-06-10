@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import ScreenSurface from '../components/ScreenSurface';
 import ShareCard from '../components/ShareCard';
+import { FIELD_NOTE_LIST } from '../data/fieldNotes';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useGame } from '../context/GameContext';
 import {
   normalizeUnderMap,
@@ -242,6 +244,18 @@ export default function CodexScreen({ navigation }) {
         ) : null}
 
         <View style={{ height: 28 }} />
+        {/* FIELD NOTES glossary: every system lesson, re-readable any time. */}
+        <Section title="Field notes" count={FIELD_NOTE_LIST.length}>
+          {FIELD_NOTE_LIST.map((n) => (
+            <View key={n.key} style={styles.fieldNote}>
+              <View style={styles.fieldNoteHead}>
+                <MaterialCommunityIcons name={n.icon || 'notebook-outline'} size={14} color={COLORS.underCyan} />
+                <Text style={styles.fieldNoteTitle}>{n.title}</Text>
+              </View>
+              <Text style={styles.fieldNoteBody}>{n.body}</Text>
+            </View>
+          ))}
+        </Section>
       </ScrollView>
 
       <ShareCard
@@ -262,6 +276,13 @@ const styles = StyleSheet.create({
   close: { fontFamily: FONTS.mono, fontSize: 18, color: COLORS.textMuted },
   headActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   shareLink: { fontFamily: FONTS.monoBold, fontSize: 10.5, letterSpacing: 2, color: COLORS.underCyan },
+  fieldNote: {
+    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(125,211,252,0.18)',
+    backgroundColor: 'rgba(14,18,28,0.5)', padding: 13, gap: 6, marginBottom: 8,
+  },
+  fieldNoteHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fieldNoteTitle: { fontFamily: FONTS.primarySemiBold, fontSize: 13.5, color: COLORS.textPrimary },
+  fieldNoteBody: { fontFamily: FONTS.primary, fontSize: 12, lineHeight: 18, color: COLORS.textMuted },
   title: { fontFamily: FONTS.secondaryBold, fontSize: 29, lineHeight: 32, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 26, textShadowOffset: { width: 0, height: 0 } },
 
   depthWrap: { marginTop: 16 },

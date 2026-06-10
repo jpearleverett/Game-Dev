@@ -734,6 +734,18 @@ export function GameProvider({
     return result;
   }, [progress.storyCampaign, updateProgress, story]);
 
+  // FIELD NOTES: mark a one-time just-in-time lesson as shown (idempotent).
+  // Screens check progress.seenLessons[key] before surfacing a card.
+  const markLessonSeen = useCallback((key) => {
+    if (!key) return;
+    updateProgress((prev) => {
+      const seen = prev.seenLessons || {};
+      if (seen[key]) return null;
+      analytics.logEvent('field_note_shown', { key });
+      return { seenLessons: { ...seen, [key]: new Date().toISOString() } };
+    });
+  }, [updateProgress]);
+
   // FOIL INCURSION: at presence >= 2, The Other Reader claims one hidden thread
   // when a chapter's gated descent opens (at most once per chapter). Returns the
   // claim ({ relation, node }) or null so the board can announce it.
@@ -1160,6 +1172,7 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     claimUnderMapByFoil,
+    markLessonSeen,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
@@ -1184,6 +1197,7 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     claimUnderMapByFoil,
+    markLessonSeen,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
@@ -1229,6 +1243,7 @@ export function GameProvider({
     resolveUnderMapReading,
     recordUnderMapDescent,
     claimUnderMapByFoil,
+    markLessonSeen,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,

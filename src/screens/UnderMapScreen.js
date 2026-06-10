@@ -26,6 +26,8 @@ import {
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
 import { analytics } from '../services/AnalyticsService';
+import { FIELD_NOTES } from '../data/fieldNotes';
+import FieldNoteCard from '../components/FieldNoteCard';
 import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 
@@ -114,8 +116,20 @@ export default function UnderMapScreen({ navigation, route }) {
   const audio = useAudio();
   const {
     progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap,
-    drawUnderMapDailyStir, prefetchAfterUnderMapReveal, claimUnderMapByFoil,
+    drawUnderMapDailyStir, prefetchAfterUnderMapReveal, claimUnderMapByFoil, markLessonSeen,
   } = game;
+
+  // FIELD NOTES: one-time teaching cards at first contact with a system.
+  const [fieldNote, setFieldNote] = useState(null);
+  const seenLessonsRef = useRef(progress?.seenLessons || {});
+  seenLessonsRef.current = progress?.seenLessons || {};
+  const maybeNote = useCallback((noteKey) => {
+    const note = FIELD_NOTES[noteKey];
+    if (!note || seenLessonsRef.current[note.key]) return false;
+    setFieldNote(note);
+    markLessonSeen?.(note.key);
+    return true;
+  }, [markLessonSeen]);
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
   const asPuzzle = !!route?.params?.asPuzzle;
@@ -163,9 +177,19 @@ export default function UnderMapScreen({ navigation, route }) {
     const claimed = claimUnderMapByFoil(chapter);
     if (claimed) {
       impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
-      showToast('The Other Reader got here first — one thread is drawn in their ink.');
+      // First incursion gets the full field note; later ones a toast.
+      if (!maybeNote('incursion')) {
+        showToast('The Other Reader got here first — one thread is drawn in their ink.');
+      }
     }
   }, [asPuzzle, gateCaseNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // First-contact lessons on entering the board (one per visit, priority order):
+  // a dangling thread is the rarer/stranger sight, then the earned sense tier.
+  useEffect(() => {
+    if (latentCount > 0 && maybeNote('latent')) return;
+    if (tier >= 1) maybeNote('sense');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [field, setField] = useState({ w: 0, h: 0 });
   const [selected, setSelected] = useState([]);
@@ -360,8 +384,10 @@ export default function UnderMapScreen({ navigation, route }) {
     } else {
       showToast(whisper);
     }
+    // First miss ever: teach what the whisper is buying them.
+    maybeNote('whisper');
     setSelected([]); lockRef.current = false;
-  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled, tier, whisperFor, fragById]);
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled, tier, whisperFor, fragById, maybeNote]);
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
@@ -673,6 +699,9 @@ export default function UnderMapScreen({ navigation, route }) {
 
       {/* Diegetic hold for a cold-cache continue (the prefetch usually makes this instant). */}
       <DescentHold active={continuing} reducedMotion={reducedMotion} />
+
+      {/* One-time just-in-time teaching card (whisper / sense / latent / incursion). */}
+      <FieldNoteCard note={fieldNote} visible={!!fieldNote} onDismiss={() => setFieldNote(null)} reducedMotion={reducedMotion} />
 
       {/* Clue inspector — read the full fragment the player collected */}
       {inspect ? (

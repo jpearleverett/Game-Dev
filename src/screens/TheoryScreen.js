@@ -25,6 +25,8 @@ import {
 import { resolveStoryDecision, decisionOptionsFrom } from '../utils/storyDecision';
 import { underMapGenerationSignature } from '../utils/underMapGeneration';
 import { analytics } from '../services/AnalyticsService';
+import { FIELD_NOTES } from '../data/fieldNotes';
+import FieldNoteCard from '../components/FieldNoteCard';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -96,6 +98,7 @@ export default function TheoryScreen({ navigation, route }) {
     selectDecisionBeforePuzzle,
     prefetchTheoryBranches,
     unlockEnding,
+    markLessonSeen,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
@@ -145,6 +148,15 @@ export default function TheoryScreen({ navigation, route }) {
   }, [route?.params?.decisionOptions, game.activeCase, caseNumber, chapter, storyCampaign.pathHistory, storyCampaign.currentPathKey, storyCampaign.branchingChoices]);
 
   const [beliefKey, setBeliefKey] = useState(null);
+  // FIELD NOTE: first contact with evidence echoes (the ◆/◇ marks) — teach what
+  // they mean the first time a belief actually carries evidence.
+  const [fieldNote, setFieldNote] = useState(null);
+  useEffect(() => {
+    if (!beliefs.some((b) => Array.isArray(b.evidence) && b.evidence.length)) return;
+    if ((progress?.seenLessons || {})[FIELD_NOTES.echoes.key]) return;
+    setFieldNote(FIELD_NOTES.echoes);
+    markLessonSeen?.(FIELD_NOTES.echoes.key);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [expanded, setExpanded] = useState(() => new Set()); // fragments whose clue is opened
   const [sealed, setSealed] = useState(false);
   const [continuing, setContinuing] = useState(false);
@@ -541,6 +553,9 @@ export default function TheoryScreen({ navigation, route }) {
 
       {/* Diegetic hold while the next chapter finishes generating (cold cache). */}
       <ThresholdHold active={continuing} reducedMotion={reducedMotion} />
+
+      {/* One-time teaching card: what the evidence echoes mean. */}
+      <FieldNoteCard note={fieldNote} visible={!!fieldNote} onDismiss={() => setFieldNote(null)} reducedMotion={reducedMotion} />
 
       {/* Committing a belief is the chapter's weight-bearing moment — mark it. */}
       <Celebration active={sealed} reducedMotion={reducedMotion} count={48} />

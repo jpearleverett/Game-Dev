@@ -138,6 +138,9 @@ export const createBlankProgress = () => ({
   solvedCaseIds: [],
   failedCaseIds: [],
   seenBriefings: {},
+  // FIELD NOTES: one-time just-in-time lessons the player has been shown
+  // ({ [key]: isoTimestamp }). See src/data/fieldNotes.js.
+  seenLessons: {},
   streak: 0,
   bestStreak: 0,
   attemptsDistribution: {
