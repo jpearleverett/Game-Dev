@@ -25,9 +25,17 @@ const MAX_NODES = 60;
 
 // CONNECT-as-deduction tuning (see docs/undermap_redesign.md §3.1).
 // Probe budget = base + one extra per N "connectable" fragments, so it scales
-// with how much there is to find, never with noise.
-export const PROBE_BASE = 3;
+// with how much there is to find, never with noise. Base is deliberately TIGHT
+// (misses always whisper, so few probes still play fair) — scarcity is the
+// tension engine; the daily-stir bonus is meant to be coveted.
+export const PROBE_BASE = 2;
 export const PROBE_PER_FRAGMENTS = 3;
+
+// Latent (dangling) threads: relations authored with an endpoint the player
+// does not hold yet. They wait here and auto-promote to real relations the
+// moment the missing fragment is collected — the mechanical open loop that
+// pulls the player into the next scene. Capped so they stay a hunger, not a pile.
+export const MAX_LATENT_RELATIONS = 12;
 
 // KEYSTONE tuning (Move 5, see docs §6): a fragment becomes a Keystone once it
 // has recurred enough AND spanned enough chapters — rewarding cross-chapter
@@ -91,9 +99,13 @@ const assignPosition = (id, caseNumber) => {
 export const createBlankUnderMap = () => ({
   fragments: [],     // { id, label, kind, detail, anomalous, caseNumber, chapter, discoveredAt }
   relations: [],     // { id, a, b, revelation, falseReadings } — discoverable truth (a/b are fragment ids)
-  connections: [],   // { a, b, relationId, at, unresolvedReading } — player-made links
-  nodes: [],         // { id, label, revelation, at, unresolvedReading } — revealed Under-Map nodes
-  theories: [],      // { chapter, fragmentIds, interpretation, rejected, correct, at }
+  // Dangling threads: authored relations waiting on a fragment the player does
+  // not hold yet ({ aLabel, bLabel, revelation, falseReadings, scope, caseNumber, at }).
+  // Promoted to real relations automatically as fragments arrive.
+  latentRelations: [],
+  connections: [],   // { a, b, relationId, at, unresolvedReading, foilClaimed? } — player-made links
+  nodes: [],         // { id, label, revelation, at, unresolvedReading, foilClaimed?, foilReading? } — revealed Under-Map nodes
+  theories: [],      // { chapter, fragmentIds, interpretation, rejected, correct, grounded, at }
   // "The Other Reader" (the road not taken): a single evolving foil born from the
   // interpretation the player REJECTED at each C-beat. `presence` accrues as the
   // player's beliefs are subverted (the foil's worldview gaining ground in Ashport)
@@ -113,6 +125,9 @@ export const createBlankUnderMap = () => ({
   // gated descent. This is the one mechanical thread from the daily loop into
   // the campaign economy.
   pendingProbeBonus: 0,
+  // FOIL INCURSION: the chapter in which The Other Reader last claimed a thread
+  // on the board (one claim max per chapter, at presence >= 2).
+  lastFoilClaimChapter: null,
   lastVisitedAt: null,
 });
 
@@ -124,6 +139,7 @@ export const normalizeUnderMap = (map) => {
     ...map,
     fragments: Array.isArray(map.fragments) ? map.fragments : [],
     relations: Array.isArray(map.relations) ? map.relations : [],
+    latentRelations: Array.isArray(map.latentRelations) ? map.latentRelations : [],
     connections: Array.isArray(map.connections) ? map.connections : [],
     nodes: Array.isArray(map.nodes) ? map.nodes : [],
     theories: Array.isArray(map.theories) ? map.theories : [],
@@ -137,6 +153,7 @@ export const normalizeUnderMap = (map) => {
     pendingProbeBonus: Number.isFinite(map.pendingProbeBonus)
       ? Math.max(0, Math.min(MAX_PROBE_BONUS, map.pendingProbeBonus))
       : 0,
+    lastFoilClaimChapter: Number.isFinite(map.lastFoilClaimChapter) ? map.lastFoilClaimChapter : null,
   };
 };
 
@@ -204,7 +221,70 @@ export const addFragments = (map, fragments = []) => {
   if (!changed) return m;
   // Keep existing order (with deepened updates applied), prepend the brand-new ones.
   const updatedExisting = m.fragments.map((f) => byId.get(f.id) || f);
-  return { ...m, fragments: [...incoming, ...updatedExisting].slice(0, MAX_FRAGMENTS) };
+  const next = { ...m, fragments: [...incoming, ...updatedExisting].slice(0, MAX_FRAGMENTS) };
+  // New fragments may be the missing endpoint of a dangling thread — promote.
+  return incoming.length ? promoteLatentRelations(next) : next;
+};
+
+/**
+ * Label→id resolver shared by addRelations and latent-thread promotion. Tolerant
+ * of the model's wording drift: exact (normalized) -> slug -> fuzzy contains.
+ */
+const makeLabelResolver = (fragments) => {
+  const byNorm = new Map(fragments.map((f) => [norm(f.label), f.id]));
+  const bySlug = new Map(fragments.map((f) => [slug(f.label), f.id]));
+  return (label) => {
+    if (!label) return null;
+    const n = norm(label);
+    if (byNorm.has(n)) return byNorm.get(n);
+    const s = slug(label);
+    if (bySlug.has(s)) return bySlug.get(s);
+    if (n.length >= 4) {
+      const hit = fragments.find((f) => {
+        const fn = norm(f.label);
+        return fn.length >= 4 && (fn.includes(n) || n.includes(fn));
+      });
+      if (hit) return hit.id;
+    }
+    return null;
+  };
+};
+
+const latentKey = (aLabel, bLabel) => [norm(aLabel), norm(bLabel)].sort().join('::');
+
+/**
+ * Promote latent (dangling) threads whose endpoints can now BOTH be resolved
+ * into real relations. Called whenever fragments or relations arrive. Pure.
+ */
+export const promoteLatentRelations = (map) => {
+  const m = normalizeUnderMap(map);
+  if (!m.latentRelations.length) return m;
+  const resolveLabel = makeLabelResolver(m.fragments);
+  const have = new Set(m.relations.map((r) => relationKey(r.a, r.b)));
+  const promoted = [];
+  const remaining = [];
+  m.latentRelations.forEach((lat, idx) => {
+    const aId = resolveLabel(lat.aLabel);
+    const bId = resolveLabel(lat.bLabel);
+    if (aId && bId && aId !== bId) {
+      const key = relationKey(aId, bId);
+      if (!have.has(key)) {
+        have.add(key);
+        promoted.push({
+          id: `rel_${slug(lat.caseNumber || 'x')}_lat${idx}_${slug(lat.revelation).slice(0, 24)}`,
+          a: aId,
+          b: bId,
+          revelation: lat.revelation,
+          falseReadings: cleanFalseReadings(lat.falseReadings),
+          scope: lat.scope === 'arc' ? 'arc' : 'chapter',
+        });
+      }
+      return; // resolved (or duplicate) — drop from latents either way
+    }
+    remaining.push(lat);
+  });
+  if (!promoted.length && remaining.length === m.latentRelations.length) return m;
+  return { ...m, relations: [...m.relations, ...promoted], latentRelations: remaining };
 };
 
 /**
@@ -213,41 +293,39 @@ export const addFragments = (map, fragments = []) => {
  */
 export const addRelations = (map, relations = [], { caseNumber = null } = {}) => {
   const m = normalizeUnderMap(map);
-  const byNorm = new Map(m.fragments.map((f) => [norm(f.label), f.id]));
-  const bySlug = new Map(m.fragments.map((f) => [slug(f.label), f.id]));
   // Resolve a relation's label to a fragment id, tolerant of the model's wording
-  // drift: exact (normalized) -> slug -> fuzzy contains. This recovers many
-  // relations that would otherwise silently fail to resolve (the #1 cause of a
-  // CONNECT beat having "nothing to link").
-  const resolveLabel = (label) => {
-    if (!label) return null;
-    const n = norm(label);
-    if (byNorm.has(n)) return byNorm.get(n);
-    const s = slug(label);
-    if (bySlug.has(s)) return bySlug.get(s);
-    if (n.length >= 4) {
-      const hit = m.fragments.find((f) => {
-        const fn = norm(f.label);
-        return fn.length >= 4 && (fn.includes(n) || n.includes(fn));
-      });
-      if (hit) return hit.id;
-    }
-    return null;
-  };
+  // drift. A relation whose endpoint can't resolve YET is not dropped — it is
+  // held as a LATENT thread and promoted when the missing fragment arrives
+  // (the "this thread dives deeper" open loop).
+  const resolveLabel = makeLabelResolver(m.fragments);
   const have = new Set(m.relations.map((r) => relationKey(r.a, r.b)));
+  const haveLatent = new Set(m.latentRelations.map((l) => latentKey(l.aLabel, l.bLabel)));
   const next = [...m.relations];
+  const nextLatent = [...m.latentRelations];
   (Array.isArray(relations) ? relations : []).forEach((raw, idx) => {
     if (!raw) return;
     const aId = raw.a || resolveLabel(raw.aLabel);
     const bId = raw.b || resolveLabel(raw.bLabel);
     const revelation = String(raw.revelation || '').trim();
-    if (!aId || !bId || aId === bId || !revelation) {
-      // A silently-dropped relation thins the cross-chapter weave invisibly —
-      // the #1 way label drift degrades the game. Surface it so it's diagnosable.
-      if ((!aId || !bId) && revelation && typeof console !== 'undefined') {
-        console.warn(
-          `[underMap] relation dropped — unresolved label(s): ${!aId ? `a="${raw.aLabel}"` : ''}${!aId && !bId ? ' ' : ''}${!bId ? `b="${raw.bLabel}"` : ''} (case ${caseNumber || '?'})`,
-        );
+    if (!revelation || (aId && bId && aId === bId)) return;
+    if (!aId || !bId) {
+      // One (or both) endpoints aren't held yet — keep the thread latent.
+      if (raw.aLabel && raw.bLabel && !haveLatent.has(latentKey(raw.aLabel, raw.bLabel))) {
+        haveLatent.add(latentKey(raw.aLabel, raw.bLabel));
+        nextLatent.push({
+          aLabel: String(raw.aLabel).trim(),
+          bLabel: String(raw.bLabel).trim(),
+          revelation,
+          falseReadings: cleanFalseReadings(raw.falseReadings),
+          scope: raw.scope === 'arc' ? 'arc' : 'chapter',
+          caseNumber,
+          at: new Date().toISOString(),
+        });
+        if (typeof console !== 'undefined') {
+          console.warn(
+            `[underMap] relation held LATENT — unresolved label(s): ${!aId ? `a="${raw.aLabel}"` : ''}${!aId && !bId ? ' ' : ''}${!bId ? `b="${raw.bLabel}"` : ''} (case ${caseNumber || '?'})`,
+          );
+        }
       }
       return;
     }
@@ -264,8 +342,12 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
       scope: raw.scope === 'arc' ? 'arc' : 'chapter',
     });
   });
-  if (next.length === m.relations.length) return m;
-  return { ...m, relations: next };
+  const latentTrimmed = nextLatent.slice(-MAX_LATENT_RELATIONS); // keep newest
+  if (next.length === m.relations.length && latentTrimmed.length === m.latentRelations.length) {
+    // Still attempt promotion: a previously-latent thread may now resolve.
+    return promoteLatentRelations(m);
+  }
+  return promoteLatentRelations({ ...m, relations: next, latentRelations: latentTrimmed });
 };
 
 /**
@@ -312,7 +394,7 @@ export const senseConnection = (map, aId, bId) => {
  */
 export const resolveReading = (map, aId, bId, chosenRevelation = null) => {
   const m = normalizeUnderMap(map);
-  const miss = { map: m, valid: false, node: null, revealed: null, alreadyConnected: false, correctReading: false, upgraded: false };
+  const miss = { map: m, valid: false, node: null, revealed: null, alreadyConnected: false, correctReading: false, upgraded: false, reclaimed: false };
   if (!aId || !bId || aId === bId) return miss;
   const key = relationKey(aId, bId);
   const relation = m.relations.find((r) => relationKey(r.a, r.b) === key);
@@ -326,16 +408,18 @@ export const resolveReading = (map, aId, bId, chosenRevelation = null) => {
   const existingConn = m.connections.find((c) => relationKey(c.a, c.b) === key) || null;
 
   if (existingConn) {
-    // Already drawn. A correct reading can UPGRADE a previously-blurred node.
+    // Already drawn. A correct reading can UPGRADE a previously-blurred node —
+    // including RECLAIMING one The Other Reader claimed first (their ink clears).
     if (correctReading && existingNode?.unresolvedReading) {
-      const nodes = m.nodes.map((n) => (n.id === nodeId ? { ...n, unresolvedReading: false } : n));
+      const reclaimed = !!existingNode.foilClaimed;
+      const nodes = m.nodes.map((n) => (n.id === nodeId ? { ...n, unresolvedReading: false, foilClaimed: false } : n));
       const connections = m.connections.map((c) =>
-        relationKey(c.a, c.b) === key ? { ...c, unresolvedReading: false } : c,
+        relationKey(c.a, c.b) === key ? { ...c, unresolvedReading: false, foilClaimed: false } : c,
       );
-      const upgraded = { ...existingNode, unresolvedReading: false };
-      return { map: { ...m, nodes, connections }, valid: true, node: upgraded, revealed: null, alreadyConnected: true, correctReading: true, upgraded: true };
+      const upgraded = { ...existingNode, unresolvedReading: false, foilClaimed: false };
+      return { map: { ...m, nodes, connections }, valid: true, node: upgraded, revealed: null, alreadyConnected: true, correctReading: true, upgraded: true, reclaimed };
     }
-    return { map: m, valid: true, node: existingNode, revealed: null, alreadyConnected: true, correctReading, upgraded: false };
+    return { map: m, valid: true, node: existingNode, revealed: null, alreadyConnected: true, correctReading, upgraded: false, reclaimed: false };
   }
 
   const node = {
@@ -351,7 +435,7 @@ export const resolveReading = (map, aId, bId, chosenRevelation = null) => {
     { a: aId, b: bId, relationId: relation.id, at: now, unresolvedReading: !correctReading, scope: node.scope },
     ...m.connections,
   ];
-  return { map: { ...m, connections, nodes }, valid: true, node, revealed: { node }, alreadyConnected: false, correctReading, upgraded: false };
+  return { map: { ...m, connections, nodes }, valid: true, node, revealed: { node }, alreadyConnected: false, correctReading, upgraded: false, reclaimed: false };
 };
 
 /**
@@ -433,6 +517,72 @@ export const recordTheory = (map, theory) => {
       },
       ...m.theories,
     ],
+  };
+};
+
+/**
+ * FOIL INCURSION: at presence >= 2, The Other Reader claims one still-hidden
+ * thread when a chapter's descent opens — the connection appears already drawn
+ * in THEIR ink, its node blurred and carrying their (false) reading. The player
+ * reclaims it by probing the pair and choosing the TRUE reading (resolveReading's
+ * upgrade path clears the claim). At most one claim per chapter; deterministic
+ * pick so it is stable across re-renders. Pure.
+ *
+ * Returns { map, claimed: { relation, node } | null }.
+ */
+export const claimByFoil = (map, { chapter } = {}) => {
+  const m = normalizeUnderMap(map);
+  const none = { map: m, claimed: null };
+  if (foilPresence(m) < 2) return none;
+  if (!Number.isFinite(chapter) || m.lastFoilClaimChapter === chapter) return none;
+  const candidates = sensedRelations(m);
+  if (!candidates.length) return none;
+  const rel = [...candidates].sort((a, b) => (a.id < b.id ? -1 : 1))[0];
+  const nodeId = `node_${rel.id}`;
+  if (m.nodes.some((n) => n.id === nodeId)) return none;
+  const now = new Date().toISOString();
+  const scope = rel.scope === 'arc' ? 'arc' : 'chapter';
+  const node = {
+    id: nodeId,
+    label: rel.revelation,
+    revelation: rel.revelation,
+    // What the foil believes this connection means — shown until reclaimed.
+    foilReading: (rel.falseReadings || [])[0] || null,
+    unresolvedReading: true,
+    foilClaimed: true,
+    scope,
+    at: now,
+  };
+  const connection = { a: rel.a, b: rel.b, relationId: rel.id, at: now, unresolvedReading: true, foilClaimed: true, scope };
+  return {
+    map: {
+      ...m,
+      nodes: [node, ...m.nodes].slice(0, MAX_NODES),
+      connections: [connection, ...m.connections],
+      lastFoilClaimChapter: chapter,
+    },
+    claimed: { relation: rel, node },
+  };
+};
+
+/**
+ * NEW GAME+: a fresh campaign that remembers being read. If the previous
+ * (completed) run produced a foil, they carry over — named, at presence 1
+ * (EDGES) — so the rival is part of this city from the first chapter.
+ * `fromChapter: null` marks them as a prior-season reader for the prompt.
+ */
+export const seedNewGamePlus = (prevMap) => {
+  const prev = normalizeUnderMap(prevMap);
+  const blank = createBlankUnderMap();
+  if (!prev.foil || !prev.foil.belief) return blank;
+  return {
+    ...blank,
+    foil: {
+      belief: prev.foil.belief,
+      fromChapter: null,
+      presence: 1,
+      name: prev.foil.name || null,
+    },
   };
 };
 
@@ -604,6 +754,29 @@ export const sensedRelations = (map) => {
   const m = normalizeUnderMap(map);
   const made = new Set(m.connections.map((c) => relationKey(c.a, c.b)));
   return m.relations.filter((r) => !made.has(relationKey(r.a, r.b)));
+};
+
+/** How many authored threads still wait on a fragment the player doesn't hold. */
+export const latentThreadCount = (map) => normalizeUnderMap(map).latentRelations.length;
+
+/**
+ * Held fragments that are one end of a latent (dangling) thread — the board
+ * shows these with a thread trailing off into the dark ("its other end isn't
+ * here yet"). Returns a Set of fragment ids.
+ */
+export const latentFragmentIds = (map) => {
+  const m = normalizeUnderMap(map);
+  if (!m.latentRelations.length) return new Set();
+  const resolveLabel = makeLabelResolver(m.fragments);
+  const out = new Set();
+  m.latentRelations.forEach((lat) => {
+    const aId = resolveLabel(lat.aLabel);
+    const bId = resolveLabel(lat.bLabel);
+    // Exactly one end held => that end visibly trails into the dark.
+    if (aId && !bId) out.add(aId);
+    if (bId && !aId) out.add(bId);
+  });
+  return out;
 };
 
 /** Distinct fragments that participate in at least one still-unfound relation. */

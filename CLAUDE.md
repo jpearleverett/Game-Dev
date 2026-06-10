@@ -69,7 +69,7 @@ Fragments are **cumulative** across the whole campaign and **recur as motifs**
 (`src/services/__tests__/underMap.test.js`). A campaign holds one Under-Map at
 `progress.storyCampaign.underMap`.
 
-Shape: `{ fragments, relations, connections, nodes, theories, foil, lastVisitedAt }`.
+Shape: `{ fragments, relations, latentRelations, connections, nodes, theories, foil, lastFoilClaimChapter, pendingProbeBonus, ... }` (see §8 for the economy/foil fields).
 - **fragment**: `{ id, label, kind, detail, phrase, anomalous, seen, firstCaseNumber, lastCaseNumber, ... }`. `kind ∈ {symbol, place, person, phenomenon}`. `id = frag_<kind>_<label-slug>`. `phrase` is the verbatim prose substring the player taps.
 - **relation**: `{ id, a, b, revelation }` — the discoverable connection *truth* (a/b are fragment ids; the model authors these by label, resolved to ids).
 - **connection**: a player-made correct link. **node**: the revelation a connection unlocks.
@@ -345,6 +345,72 @@ unhandled rejections into a persisted AsyncStorage ring buffer (installed in `Ap
 fed by `ErrorBoundary`); point it at Sentry when one is added. **Operator TODO (not in
 repo):** set `APP_TOKEN` + `REQUIRE_APP_TOKEN=true` in Vercel, set EAS secrets
 (`GEMINI_PROXY_URL`, `APP_TOKEN`), and add store metadata/privacy-policy URL before submission.
+
+**Tension economy + open loops (shipped — "greatest game" pass, round 2).**
+- **Probes are tight now:** `PROBE_BASE` is 2 (was 3). Misses whisper, so scarcity
+  plays fair; the daily-stir +1 is meant to be coveted.
+- **Latent (dangling) threads** — the mechanical open loop. `addRelations` no longer
+  drops a relation whose endpoint isn't held: it's stored in `map.latentRelations`
+  and **auto-promotes** to a real relation when the missing fragment arrives
+  (`promoteLatentRelations`, called from both `addFragments` and `addRelations`).
+  Selectors `latentThreadCount` / `latentFragmentIds`. The board draws a dashed stub
+  trailing off latent fragments ("N threads dive deeper") and `<under_map_state>`
+  lists hanging threads with the EXACT missing label so the model pays them off.
+  The prompt also asks every A/B scene to author ONE dangling thread on purpose.
+  This doubles as label-drift recovery (relations wait instead of dying).
+- **Full-clear is celebrated, rare by design:** "CHAPTER MAPPED CLEAN" stamp in the
+  descent summary when remaining===0.
+- **Gate cadence starts early:** `FIRST_GATED_CHAPTER=3` with a 6h gate (chapters
+  3-5), 12h from chapter 6 (`storyAdvance.js`). Chapters 1-2 binge-able. The prompt
+  now instructs the verdict to land in the chapter's A-beat OPENING (the return reward).
+- **Motif drift:** prompt asks for one line of changed meaning when a motif recurs.
+- **THE QUAKE (ch 7):** `_buildPlayerTheorySection` injects a recontextualization
+  instruction against the player's OLDEST motif at `currentChapter === 7` — reframe,
+  never contradict, revealed node truths.
+
+**Foil incursion + New Game+ (shipped).**
+- **Incursion:** at presence ≥2, opening a gated descent lets the foil claim ONE
+  still-hidden relation (`claimByFoil`, once per chapter via `lastFoilClaimChapter`):
+  the connection appears in blood-red ink, its node blurred with `foilClaimed` +
+  `foilReading` (their false reading). Reclaim = probe the pair and choose the TRUE
+  reading — `resolveReading`'s upgrade path clears the claim and returns
+  `reclaimed: true` ("RECLAIMED FROM THE OTHER READER" card). Wired:
+  `GameContext.claimUnderMapByFoil` ← `UnderMapScreen` mount effect.
+- **NG+:** restarting after a COMPLETED campaign (`enterStoryCampaign({reset:true})`)
+  seeds the fresh map via `seedNewGamePlus` — the foil carries over named at
+  presence 1 with `fromChapter: null`, which `_buildOtherReaderSection` renders as a
+  prior-season reader ("they know how Jack reads"). `storyCampaign.ngPlus` counts runs.
+  The presence ≤1 "keep unnamed" prompt clauses now defer to an existing name.
+- **Re-read gate:** a reading the player blurs is locked for the rest of that descent
+  (per-mount `blockedPairsRef` in `UnderMapScreen`) — "Re-read the scene, then return"
+  is now mechanics, fused with the read-back pager.
+
+**Identity & measurement (shipped).**
+- **Share card:** `src/components/ShareCard.js` (react-native-view-shot + expo-sharing,
+  both Expo Go-safe) renders the player's constellation + stats + latest belief +
+  foil line to an image and opens the share sheet. Wired: Codex header SHARE link,
+  Ending screen Share button.
+- **Closing report:** `endings.closingReport(map, ending)` — deterministic case-file
+  last page (each sealed belief + verdict, top motifs, the foil's last entry, final
+  clarity), rendered on `EndingScreen`.
+- **Analytics sink:** `AnalyticsService` now has an optional PostHog-compatible HTTP
+  transport (no SDK dependency; batched; bounded buffer; silently local without
+  `POSTHOG_API_KEY` — see `.env.example` / `app.config.js` extra). Funnel events wired:
+  `examine_fragment`, `probe_miss`, `node_revealed`, `descent_complete`,
+  `generation_wait` (real wait ms at both gateways), `theory_sealed` (with grounded),
+  `belief_resolved`, `campaign_complete` (clarity), `foil_claim`, `ng_plus_start`,
+  `share_card`, `notification_open` (via `installNotificationOpenListener`),
+  `app_error` (ErrorReporting forwards). DescentHold/ThresholdHold cover the cold-cache
+  waits diegetically at both gateways.
+- **FTUE:** Tutorial now teaches whispers/sense tiers/daily-thread probe and frames
+  the Other Reader. (5 steps.)
+
+**Chapter-1 pre-bundling was evaluated and REJECTED:** generated 001B/001C content is
+cached per `(caseNumber, pathKey)` but written to continue the player's REALIZED 001A
+branch — bundling one continuation would break continuity for 8 of 9 paths (same
+rationale as rejecting deeper lookahead). First-session cover instead relies on
+prefetch-at-second-choice (already in place) + the DescentHold. Season 2 scaffolding:
+`docs/SEASON_2_ARCHITECTURE.md`.
 
 **Open / candidate next work:**
 - **On-device playtest of the new loop mechanics** (all code-complete but LLM/feel-dependent): evidence echoes + groundedKey fairness at a C-beat; sense-tier pacing (do tiers land ~ch2/ch4/ch7?); the unlock-verdict notification firing on a real device; the post-game Desk after finishing chapter 12.

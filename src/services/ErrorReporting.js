@@ -11,6 +11,7 @@
  * never crash the app or break tests.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { analytics } from './AnalyticsService';
 
 const STORAGE_KEY = '@dead_letters/error_log';
 const MAX_ENTRIES = 20;
@@ -32,6 +33,9 @@ const serialize = (error) => {
 /** Append an error to the persisted ring buffer. Never throws. */
 export function recordError(error, { fatal = false, source = 'manual' } = {}) {
   const entry = { ...serialize(error), fatal: !!fatal, source, at: new Date().toISOString() };
+  // Also surface through the analytics sink (no-op without a configured key) so
+  // production failure rates are visible in the same place as the funnels.
+  try { analytics.logEvent('app_error', { message: entry.message, source, fatal: !!fatal }); } catch (_e) { /* never recurse */ }
   // Serialize writes so concurrent errors can't clobber each other's read-modify-write.
   writeChain = writeChain
     .then(async () => {

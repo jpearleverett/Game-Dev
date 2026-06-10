@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import ScreenSurface from '../components/ScreenSurface';
+import ShareCard from '../components/ShareCard';
 import { useGame } from '../context/GameContext';
 import {
   normalizeUnderMap,
@@ -73,6 +74,7 @@ function Section({ title, count, children }) {
 export default function CodexScreen({ navigation }) {
   const { progress } = useGame();
   const map = useMemo(() => normalizeUnderMap(progress?.storyCampaign?.underMap), [progress?.storyCampaign?.underMap]);
+  const [sharing, setSharing] = useState(false);
 
   const cl = useMemo(() => clarity(map), [map]);
   const variant = useMemo(() => endingVariant(map), [map]);
@@ -105,7 +107,14 @@ export default function CodexScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headRow}>
           <Text style={styles.kicker}>◇ THE UNDER-MAP</Text>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={10}><Text style={styles.close}>✕</Text></Pressable>
+          <View style={styles.headActions}>
+            {map.fragments.length > 0 ? (
+              <Pressable onPress={() => setSharing(true)} hitSlop={10}>
+                <Text style={styles.shareLink}>SHARE</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => navigation.goBack()} hitSlop={10}><Text style={styles.close}>✕</Text></Pressable>
+          </View>
         </View>
         <Text style={styles.title}>Your Reading of{'\n'}the Hidden World</Text>
         <View style={styles.depthWrap}>
@@ -234,6 +243,13 @@ export default function CodexScreen({ navigation }) {
 
         <View style={{ height: 28 }} />
       </ScrollView>
+
+      <ShareCard
+        visible={sharing}
+        map={map}
+        chapter={progress?.storyCampaign?.chapter || null}
+        onClose={() => setSharing(false)}
+      />
     </ScreenSurface>
   );
 }
@@ -244,6 +260,8 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   kicker: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
   close: { fontFamily: FONTS.mono, fontSize: 18, color: COLORS.textMuted },
+  headActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  shareLink: { fontFamily: FONTS.monoBold, fontSize: 10.5, letterSpacing: 2, color: COLORS.underCyan },
   title: { fontFamily: FONTS.secondaryBold, fontSize: 29, lineHeight: 32, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 26, textShadowOffset: { width: 0, height: 0 } },
 
   depthWrap: { marginTop: 16 },

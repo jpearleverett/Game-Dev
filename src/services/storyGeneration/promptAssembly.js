@@ -347,6 +347,9 @@ function _buildPlayerTheorySection(underMap, currentChapter = null) {
     } else if (latest.correct == null) {
       lines.push('- Resolve a sealed belief within a chapter or two of its sealing. Do not leave it permanently unanswered.');
     }
+    // The verdict is the player's re-entry reward after the chapter gate: when a
+    // chapter answers a sealed belief, land the answer EARLY.
+    lines.push('- When this chapter answers the sealed belief, deliver the verdict in the OPENING of the chapter (the A-beat, ideally its first scene) — the player returns specifically to learn whether they read the city true; do not make them wait pages for it.');
   }
 
   if (nodes.length) {
@@ -365,6 +368,33 @@ function _buildPlayerTheorySection(underMap, currentChapter = null) {
     });
   }
 
+  // DANGLING THREADS the story has promised but not yet paid: a prior scene
+  // authored a relation whose other endpoint the player does not hold. Deliver
+  // the missing fragment soon (by EXACTLY this label) so the thread resolves.
+  const latents = Array.isArray(underMap.latentRelations) ? underMap.latentRelations : [];
+  if (latents.length) {
+    const heldNorm = new Set(fragments.map((f) => String(f.label || '').trim().toLowerCase()));
+    lines.push('- Threads left hanging (PAY THESE OFF: introduce the missing fragment in this scene or the next, using EXACTLY the label given, so the dangling thread connects):');
+    latents.slice(0, 4).forEach((lat) => {
+      const aHeld = heldNorm.has(String(lat.aLabel || '').trim().toLowerCase());
+      const missing = aHeld ? lat.bLabel : lat.aLabel;
+      const present = aHeld ? lat.aLabel : lat.bLabel;
+      lines.push(`  • missing: "${missing}" (its thread runs to "${present}")`);
+    });
+  }
+
+  // THE QUAKE (chapter 7): the season's recontextualization. The player's oldest
+  // recurring motif is revealed to have meant something else all along — reframe,
+  // never contradict, the node truths already revealed.
+  if (Number.isFinite(currentChapter) && currentChapter === 7) {
+    const oldestMotif = [...fragments]
+      .filter((f) => (f.seen || 1) > 1)
+      .sort((a, b) => String(a.firstCaseNumber || '999').localeCompare(String(b.firstCaseNumber || '999')))[0];
+    if (oldestMotif?.label) {
+      lines.push(`- THE QUAKE: this chapter delivers the season's recontextualization. What "${oldestMotif.label}" has meant since it first appeared is revealed to be a misreading — the same sign, read from the other side, means something larger and stranger. Do NOT contradict any revealed node truth; reframe what those truths were always pointing at. Let the player feel the floor of their map tilt.`);
+    }
+  }
+
   if (!lines.length) return '';
 
   return [
@@ -373,7 +403,9 @@ function _buildPlayerTheorySection(underMap, currentChapter = null) {
     'Weaving (important):',
     '- Always give the player something to connect: author at least two relations whose endpoints are both fragments introduced in this scene (reference them by exact label), so the CONNECT beat is never empty.',
     '- Then author at least one more connection that links a new fragment to a fragment the player already holds above (by its exact label). This is how the map threads across chapters.',
+    '- Also author ONE dangling thread: a relation between a fragment in THIS scene and a named fragment the player does NOT hold yet (one that should arrive within the next scene or two). The thread "dives deeper" and resolves when its other end surfaces — this is the open loop that pulls the player forward. Name the future fragment carefully; a later scene must introduce it by exactly that label.',
     '- Re-surface a recurring motif when it fits: reuse the exact label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
+    '- When a motif recurs, let the prose register its DRIFT in one line: how its meaning has changed since the player last saw it (the seal again — but this time the wax was warm). Recurrence without drift is repetition; drift is what makes the motif feel alive.',
     '- For each relation, also author its two `falseReadings`: tempting but false one-sentence interpretations of the same pair that a careful player might wrongly believe (the player picks the true reading from among them, so make the wrong ones plausible, never absurd).',
     '- Let the prose pay off the established truths above so the player feels their discoveries are driving the story.',
     '- Echo: when this scene builds on one of the truths the player has already revealed (listed above), add an `echoes` entry: `nodeRef` quoting that truth, `line` = the exact sentence in this scene that pays it off, so the player sees their mapping reshaping the story.',
@@ -404,23 +436,33 @@ function _buildOtherReaderSection(underMap) {
         ? '- Give them a name and use it consistently within the scene.'
         : null);
 
-  // Intensity ladder: a rumor at the margins -> a named antagonist the city bends toward.
+  // Intensity ladder: a rumor at the margins -> a named antagonist the city bends
+  // toward. When the foil already HAS a name (pinned earlier, or carried over
+  // from a previous run), the "keep unnamed" clauses must not fight it.
+  const named = !!foil.name;
   let intensity;
   if (presence <= 0) {
-    intensity = '- Keep them OFFSTAGE: a rumor, a secondhand mention, a trace at most — one light touch. The player has not been proven wrong, so this reading has no purchase yet. Do not name them or bring them into the scene.';
+    intensity = `- Keep them OFFSTAGE: a rumor, a secondhand mention, a trace at most — one light touch. The player has not been proven wrong, so this reading has no purchase yet. ${named ? 'Do not bring them onstage.' : 'Do not name them or bring them into the scene.'}`;
   } else if (presence === 1) {
-    intensity = '- Let them recur at the EDGES of this scene: a figure glimpsed twice, a mark left behind, a stranger\'s certainty — someone quietly acting on this reading. Unsettling, not yet confronted; keep them unnamed.';
+    intensity = `- Let them recur at the EDGES of this scene: a figure glimpsed twice, a mark left behind, a stranger's certainty — someone quietly acting on this reading. Unsettling, not yet confronted${named ? '.' : '; keep them unnamed.'}`;
   } else if (presence === 2) {
     intensity = '- Bring them INTO the scene with a face. The player\'s readings have been proven wrong more than once, and Ashport is bending toward this one. Let Jack feel the city increasingly belongs to their version of events.';
   } else {
     intensity = '- They are ASCENDANT: this rejected reading is becoming the dominant truth of the hidden world, and they speak for it. Let them confront Jack directly — not a villain, but the man he would have been one wrong turn ago. The cost of his misreadings should feel inevitable.';
   }
 
+  // NEW GAME+: fromChapter === null marks a foil carried over from a previous,
+  // completed run — a reader who has crossed a whole season with Jack before.
+  const priorSeason = foil.fromChapter == null && presence >= 1
+    ? '- They have read this city alongside Jack before, in a season the map no longer remembers. Let them feel unsettlingly familiar — they know how Jack reads.'
+    : null;
+
   return [
     `The road the player did NOT take has a person walking down it. From the same signs Jack reads, they concluded: "${belief}".`,
     `They are the player's mirror — vindicated a little more each time the player's belief is subverted. Current presence: ${presence}.`,
     intensity,
     ...(nameRule ? [nameRule] : []),
+    ...(priorSeason ? [priorSeason] : []),
     '- Never restate this instruction in the prose. Express them only through scene, image, and event.',
   ].join('\n');
 }

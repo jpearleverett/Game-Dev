@@ -18,11 +18,14 @@ import {
   attunedPartners,
   missWhisper,
   foilThreadsAhead,
+  latentThreadCount,
+  latentFragmentIds,
   isMotif,
   isKeystone,
   FRAGMENT_KIND,
 } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
+import { analytics } from '../services/AnalyticsService';
 import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 
@@ -80,12 +83,38 @@ function Twinkle({ left, top, size, dur, delay, reducedMotion }) {
   );
 }
 
+// Diegetic hold for the rare cold-cache wait at "Continue the descent" — the
+// fast-reader case where the prefetch hasn't finished. Dressed as the descent
+// itself, never a spinner.
+const DESCENT_LINES = [
+  'The next layer is still drawing itself.',
+  'The threads you pulled are rearranging the dark.',
+  'Hold. The city is deciding what to show you.',
+  'Something below is finishing its sentence.',
+];
+function DescentHold({ active, reducedMotion }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (!active) return undefined;
+    setIdx(0);
+    const t = setInterval(() => setIdx((n) => (n + 1) % DESCENT_LINES.length), reducedMotion ? 5200 : 3400);
+    return () => clearInterval(t);
+  }, [active, reducedMotion]);
+  if (!active) return null;
+  return (
+    <View style={styles.descentOverlay} pointerEvents="none">
+      <Text style={styles.descentKicker}>DESCENDING</Text>
+      <Text style={styles.descentLine}>{DESCENT_LINES[idx]}</Text>
+    </View>
+  );
+}
+
 export default function UnderMapScreen({ navigation, route }) {
   const game = useGame();
   const audio = useAudio();
   const {
     progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap,
-    drawUnderMapDailyStir, prefetchAfterUnderMapReveal,
+    drawUnderMapDailyStir, prefetchAfterUnderMapReveal, claimUnderMapByFoil,
   } = game;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
@@ -124,6 +153,19 @@ export default function UnderMapScreen({ navigation, route }) {
     if (!asPuzzle || !gateCaseNumber) return;
     prefetchAfterUnderMapReveal?.(gateCaseNumber, map);
   }, [asPuzzle, gateCaseNumber, prefetchAfterUnderMapReveal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // FOIL INCURSION: when the gated descent opens at presence >= 2, The Other
+  // Reader may have gotten here first — one thread arrives already drawn in
+  // their ink (once per chapter; reclaim it by reading the pair TRUE).
+  useEffect(() => {
+    if (!asPuzzle || !gateCaseNumber || typeof claimUnderMapByFoil !== 'function') return;
+    const { chapter } = parseCaseNumber(gateCaseNumber);
+    const claimed = claimUnderMapByFoil(chapter);
+    if (claimed) {
+      impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
+      showToast('The Other Reader got here first — one thread is drawn in their ink.');
+    }
+  }, [asPuzzle, gateCaseNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [field, setField] = useState({ w: 0, h: 0 });
   const [selected, setSelected] = useState([]);
@@ -180,6 +222,14 @@ export default function UnderMapScreen({ navigation, route }) {
   const foilAhead = foilThreadsAhead(map);
   // DEEPSIGHT (tier 3): the first missed probe of each descent is forgiven.
   const firstMissForgivenRef = useRef(false);
+  // RE-READ GATE: pairs whose meaning the player blurred THIS visit stay locked
+  // until they leave to re-read the scene (unmount clears the set).
+  const blockedPairsRef = useRef(new Set());
+  const pairKeyOf = (a, b) => [a, b].sort().join('::');
+  // DANGLING THREADS: held fragments whose authored thread dives deeper — its
+  // other end hasn't been collected yet. Drawn trailing off into the dark.
+  const latentIds = useMemo(() => latentFragmentIds(map), [map]);
+  const latentCount = latentThreadCount(map);
 
   const fragById = useCallback((id) => map.fragments.find((f) => f.id === id) || null, [map.fragments]);
 
@@ -252,6 +302,14 @@ export default function UnderMapScreen({ navigation, route }) {
       setSelected([]); lockRef.current = false;
       return;
     }
+    // RE-READ GATE: a meaning the player just blurred won't settle by force —
+    // they must leave and re-read the scene before trying this pair again.
+    if (sensed?.valid && sensed.unresolved && blockedPairsRef.current.has(pairKeyOf(pair[0], pair[1]))) {
+      impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
+      showToast('The meaning won’t settle by force. Re-read the scene, then return.');
+      setSelected([]); lockRef.current = false;
+      return;
+    }
     if (sensed?.valid && sensed.readings) {
       selectionHaptic();
       const options = readingChoices(sensed.readings);
@@ -293,6 +351,7 @@ export default function UnderMapScreen({ navigation, route }) {
         : firstFree
           ? 'The map forgives the first misstep.'
           : null;
+      analytics.logEvent('probe_miss', { spent: spend, tier, left });
       showToast(grace
         ? `${whisper} ${grace}`
         : left > 0
@@ -333,11 +392,15 @@ export default function UnderMapScreen({ navigation, route }) {
       triggerBloom(node.aId, node.bId);
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
       audio?.playVictory?.();
+      blockedPairsRef.current.delete(pairKeyOf(node.aId, node.bId));
       if (!res.alreadyConnected || res.upgraded) setRevealsThisVisit((n) => n + 1);
-      setNode((nd) => ({ ...nd, mode: 'revealed', revelation: res.node?.revelation || '', scope: res.node?.scope || null }));
+      analytics.logEvent('node_revealed', { reclaimed: !!res.reclaimed, upgraded: !!res.upgraded });
+      setNode((nd) => ({ ...nd, mode: 'revealed', revelation: res.node?.revelation || '', scope: res.node?.scope || null, reclaimed: !!res.reclaimed }));
     } else {
       hadMisstepRef.current = true;
       impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
+      // The pair stays connected but its meaning is locked behind a re-read.
+      blockedPairsRef.current.add(pairKeyOf(node.aId, node.bId));
       setNode((nd) => ({ ...nd, mode: 'blurred' }));
     }
   }, [node, resolveUnderMapReading, triggerBloom, audio]);
@@ -348,9 +411,17 @@ export default function UnderMapScreen({ navigation, route }) {
     if (continuing || !asPuzzle || !gateCaseNumber) return;
     setContinuing(true); setGenError(null);
     if (hadMisstepRef.current || revealsThisVisit > 0) recordUnderMapDescent?.({ hadMisstep: hadMisstepRef.current });
+    analytics.logEvent('descent_complete', {
+      caseNumber: gateCaseNumber,
+      reveals: revealsThisVisit,
+      probesUsed,
+      remaining,
+      flawless: !hadMisstepRef.current && revealsThisVisit > 0,
+    });
     const { chapter, subchapter } = parseCaseNumber(gateCaseNumber);
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
     const nextPathKey = progress?.storyCampaign?.currentPathKey || 'ROOT';
+    const waitStart = Date.now();
     try {
       if (nextCase) {
         await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, { underMap: map });
@@ -360,9 +431,11 @@ export default function UnderMapScreen({ navigation, route }) {
       setGenError('The descent stalled before the next scene took shape. Tap to try again.');
       return;
     }
+    // How long the player ACTUALLY waited at this gateway (cache hit ≈ 0).
+    analytics.logEvent('generation_wait', { where: 'descent-continue', ms: Date.now() - waitStart });
     game.completeLogicPuzzle?.({ caseId: gateCaseId || game.activeCase?.id, caseNumber: gateCaseNumber, mistakes: 0 });
     navigation.replace('CaseFile', nextCase ? { caseNumber: nextCase } : undefined);
-  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation, map]);
+  }, [continuing, asPuzzle, gateCaseNumber, gateCaseId, revealsThisVisit, probesUsed, remaining, recordUnderMapDescent, progress?.storyCampaign?.currentPathKey, game, navigation, map]);
 
   const connectionList = map.connections;
   const selArc = selected.length === 2 && field.w ? arcPath(selected[0], selected[1]) : null;
@@ -434,6 +507,16 @@ export default function UnderMapScreen({ navigation, route }) {
             ))}
             {connectionList.map((c, i) => {
               const d = arcPath(c.a, c.b);
+              if (c.foilClaimed) {
+                // THE OTHER READER'S INK: a thread they mapped first. Probe the
+                // pair and choose the TRUE reading to reclaim it.
+                return (
+                  <React.Fragment key={`c${i}`}>
+                    <Path d={d} fill="none" stroke="rgba(196,62,96,0.30)" strokeWidth={6} strokeLinecap="round" />
+                    <Path d={d} fill="none" stroke="rgba(196,62,96,0.95)" strokeWidth={2} strokeLinecap="round" strokeDasharray="7 4" />
+                  </React.Fragment>
+                );
+              }
               if (c.unresolvedReading) {
                 return <Path key={`c${i}`} d={d} fill="none" stroke="rgba(157,150,141,0.5)" strokeWidth={2} strokeLinecap="round" strokeDasharray="4 6" />;
               }
@@ -452,6 +535,20 @@ export default function UnderMapScreen({ navigation, route }) {
                 <Path d={selArc} fill="none" stroke="rgba(245,235,255,0.85)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" />
               </React.Fragment>
             ) : null}
+            {/* DANGLING THREADS: a fragment whose authored thread dives deeper —
+                its other end isn't on the board yet. A stub trails into the dark. */}
+            {[...latentIds].map((id) => {
+              const p = posPx(id);
+              if (!p.x && !p.y) return null;
+              const ang = hash01(id, 7) * Math.PI * 2;
+              return (
+                <Path
+                  key={`lat-${id}`}
+                  d={`M ${p.x} ${p.y} L ${p.x + Math.cos(ang) * 34} ${p.y + Math.sin(ang) * 34}`}
+                  stroke="rgba(167,139,250,0.5)" strokeWidth={1.4} strokeDasharray="2 5" strokeLinecap="round"
+                />
+              );
+            })}
           </Svg>
         ) : null}
 
@@ -518,6 +615,11 @@ export default function UnderMapScreen({ navigation, route }) {
           {remaining > 0 ? (
             <Text style={styles.remainLabel}>{remaining} truth{remaining === 1 ? '' : 's'} still hidden in the dark</Text>
           ) : null}
+          {latentCount > 0 ? (
+            <Text style={styles.latentLabel}>
+              {latentCount} thread{latentCount === 1 ? ' dives' : 's dive'} deeper — the other end isn’t here yet
+            </Text>
+          ) : null}
           {foilAhead > 0 ? (
             <Text style={styles.foilLabel}>
               THE OTHER READER HAS MAPPED {foilAhead} THREAD{foilAhead === 1 ? '' : 'S'} YOU HAVEN’T
@@ -526,12 +628,18 @@ export default function UnderMapScreen({ navigation, route }) {
         </View>
         {asPuzzle && canContinue ? (
           <>
-            <View style={styles.visitWin}>
-              <Text style={styles.visitWinKicker}>{revealsThisVisit > 0 ? 'TRUTH SURFACED' : 'THREADS STILL SENSED'}</Text>
+            <View style={[styles.visitWin, remaining === 0 && revealsThisVisit > 0 && styles.visitWinClean]}>
+              <Text style={[styles.visitWinKicker, remaining === 0 && revealsThisVisit > 0 && styles.visitWinKickerClean]}>
+                {remaining === 0 && revealsThisVisit > 0
+                  ? '✦ CHAPTER MAPPED CLEAN'
+                  : revealsThisVisit > 0 ? 'TRUTH SURFACED' : 'THREADS STILL SENSED'}
+              </Text>
               <Text style={styles.visitWinText}>
-                {revealsThisVisit > 0
-                  ? `${revealsThisVisit} node${revealsThisVisit === 1 ? '' : 's'} revealed this descent · map ${depthPct}% drawn`
-                  : 'The dark has gone quiet for now. Unfinished relations stay on the map.'}
+                {remaining === 0 && revealsThisVisit > 0
+                  ? `Every thread this chapter offered, drawn. ${streak > 0 ? `${streak} flawless descent${streak === 1 ? '' : 's'} and counting.` : 'The hidden world has nothing left to hide here.'}`
+                  : revealsThisVisit > 0
+                    ? `${revealsThisVisit} node${revealsThisVisit === 1 ? '' : 's'} revealed this descent · map ${depthPct}% drawn`
+                    : 'The dark has gone quiet for now. Unfinished relations stay on the map.'}
               </Text>
             </View>
             {genError ? <Text style={styles.genError}>{genError}</Text> : null}
@@ -562,6 +670,9 @@ export default function UnderMapScreen({ navigation, route }) {
       {toast ? (
         <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>
       ) : null}
+
+      {/* Diegetic hold for a cold-cache continue (the prefetch usually makes this instant). */}
+      <DescentHold active={continuing} reducedMotion={reducedMotion} />
 
       {/* Clue inspector — read the full fragment the player collected */}
       {inspect ? (
@@ -613,9 +724,12 @@ export default function UnderMapScreen({ navigation, route }) {
               </>
             ) : (
               <>
-                <Text style={[styles.nodeTag, node.scope === 'arc' && styles.nodeTagArc]}>
-                  {node.scope === 'arc' ? '◆ AN ARC TRUTH SURFACES' : '◆ NODE SURFACED'}
+                <Text style={[styles.nodeTag, node.scope === 'arc' && styles.nodeTagArc, node.reclaimed && styles.nodeTagReclaim]}>
+                  {node.reclaimed ? '◆ RECLAIMED FROM THE OTHER READER' : node.scope === 'arc' ? '◆ AN ARC TRUTH SURFACES' : '◆ NODE SURFACED'}
                 </Text>
+                {node.reclaimed ? (
+                  <Text style={styles.reclaimSub}>Their ink burns off the thread. The truth was yours to read.</Text>
+                ) : null}
                 {node.scope === 'arc' ? (
                   <Text style={styles.arcSub}>The payoff for your long attention — a truth that spans chapters.</Text>
                 ) : null}
@@ -690,6 +804,7 @@ const styles = StyleSheet.create({
   depthFill: { height: 6, borderRadius: 999, backgroundColor: COLORS.underViolet },
   depthLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underCyan },
   remainLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.textMuted },
+  latentLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underViolet, opacity: 0.9 },
   foilLabel: { fontFamily: FONTS.monoBold, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.bloodRed, opacity: 0.92 },
 
   visitWin: {
@@ -703,6 +818,9 @@ const styles = StyleSheet.create({
   },
   visitWinKicker: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 2.2, color: COLORS.underCyan },
   visitWinText: { fontFamily: FONTS.primary, fontSize: 12.5, lineHeight: 18, color: COLORS.textSecondary, marginTop: 3 },
+  // Full-clear: every thread the chapter offered, drawn — celebrated, rare.
+  visitWinClean: { borderColor: 'rgba(241,197,114,0.5)', backgroundColor: 'rgba(38,28,14,0.6)' },
+  visitWinKickerClean: { color: COLORS.amberLight, letterSpacing: 2.6 },
 
   continueBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14,
@@ -738,7 +856,16 @@ const styles = StyleSheet.create({
   nodeSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: 'rgba(200,230,255,0.6)' },
   nodeTag: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 4, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
   nodeTagArc: { color: COLORS.amberLight, textShadowColor: 'transparent' },
+  nodeTagReclaim: { color: COLORS.bloodRed, textShadowColor: 'transparent' },
+  reclaimSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.4, color: COLORS.bloodRed, marginTop: 6, opacity: 0.9 },
   arcSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.4, color: COLORS.amberLight, marginTop: 6 },
+  // Descent hold (diegetic cold-cache wait)
+  descentOverlay: {
+    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: 'rgba(8,6,16,0.88)', zIndex: 60, paddingHorizontal: 36,
+  },
+  descentKicker: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 3.4, color: COLORS.underCyan },
+  descentLine: { fontFamily: FONTS.secondary, fontStyle: 'italic', fontSize: 15, lineHeight: 23, color: '#f3eeff', textAlign: 'center' },
   nodeTitle: { fontFamily: FONTS.secondaryBold, fontSize: 21, lineHeight: 26, color: '#f3eeff', marginTop: 12 },
   nodeRev: { fontFamily: FONTS.primary, fontSize: 14.5, lineHeight: 23, color: COLORS.textSecondary, marginTop: 12 },
   nodeFrags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16, marginBottom: 18 },

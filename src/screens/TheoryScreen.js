@@ -24,6 +24,7 @@ import {
 } from '../data/storyContent';
 import { resolveStoryDecision, decisionOptionsFrom } from '../utils/storyDecision';
 import { underMapGenerationSignature } from '../utils/underMapGeneration';
+import { analytics } from '../services/AnalyticsService';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -314,6 +315,7 @@ export default function TheoryScreen({ navigation, route }) {
     // above) means this is usually an instant cache hit; when it isn't, the honest
     // "Crossing…" hold is still better than fallback text. We pass the sealed-belief
     // map + requireFreshUnderMap so the lookup is keyed to THIS belief.
+    const waitStart = Date.now();
     try {
       await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
         underMap: sealedMapRef.current || map,
@@ -324,6 +326,8 @@ export default function TheoryScreen({ navigation, route }) {
       setGenError('The next chapter would not take shape. Tap to try again.');
       return;
     }
+    // How long the player ACTUALLY waited at the threshold (cache hit ≈ 0).
+    analytics.logEvent('generation_wait', { where: 'cross-threshold', ms: Date.now() - waitStart });
 
     completeLogicPuzzle?.({ caseId, caseNumber, mistakes: 0 });
     // Cross via the wax-seal chapter-close (design's Sealed screen).

@@ -130,3 +130,24 @@ export async function cancelUnlockNotification() {
     // Not scheduled / unavailable — nothing to do.
   }
 }
+
+/**
+ * Listen for the player OPENING the app from one of our notifications — the
+ * measurement that tells us whether the verdict hook actually brings people
+ * back. `onOpen({ kind })` receives the notification's data.kind. Returns an
+ * unsubscribe fn; safe no-op on web / unavailable module.
+ */
+export function installNotificationOpenListener(onOpen) {
+  if (Platform.OS === 'web' || typeof onOpen !== 'function') return () => {};
+  try {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      try {
+        const kind = response?.notification?.request?.content?.data?.kind || 'unknown';
+        onOpen({ kind });
+      } catch (_e) { /* never crash on a tap */ }
+    });
+    return () => { try { sub.remove(); } catch (_e) { /* noop */ } };
+  } catch (_e) {
+    return () => {};
+  }
+}

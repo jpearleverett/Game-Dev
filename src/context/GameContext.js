@@ -21,6 +21,9 @@ import {
   drawDailyStir as umDrawStir,
   resolveDailyStir as umResolveStir,
   touchUnderMap as umTouch,
+  claimByFoil as umClaimByFoil,
+  seedNewGamePlus as umSeedNewGamePlus,
+  clarity as umClarity,
   motifCount,
   keystoneCount,
   mapDepth,
@@ -37,6 +40,7 @@ import {
   scheduleDailyStirReminder,
   scheduleUnlockNotification,
   cancelUnlockNotification,
+  installNotificationOpenListener,
 } from '../services/dailyStirNotifications';
 import { ACHIEVEMENTS } from '../data/achievementsData';
 import { useAudio } from './AudioContext';
@@ -84,6 +88,10 @@ export function GameProvider({
     if (nextStoryUnlockAtIso) scheduleUnlockNotification(nextStoryUnlockAtIso, latestSealedBelief);
     else cancelUnlockNotification();
   }, [hydrationComplete, nextStoryUnlockAtIso, latestSealedBelief]);
+  // 3) Measure whether the hooks WORK: app opens that came from a notification.
+  useEffect(() => installNotificationOpenListener(({ kind }) => {
+    analytics.logEvent('notification_open', { kind });
+  }), []);
 
   const {
     gameState,
@@ -227,7 +235,19 @@ export function GameProvider({
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
     if (reset) {
-        updateProgress({ storyCampaign: normalizeStoryCampaignShape(null) });
+        // NEW GAME+: restarting after a COMPLETED run carries The Other Reader
+        // over (named, presence 1) — the city remembers being read. A restart
+        // mid-campaign stays a clean slate.
+        updateProgress((prev) => {
+          const old = normalizeStoryCampaignShape(prev.storyCampaign);
+          const fresh = normalizeStoryCampaignShape(null);
+          if (old.completed) {
+            fresh.underMap = umSeedNewGamePlus(old.underMap);
+            fresh.ngPlus = (old.ngPlus || 0) + 1;
+            analytics.logEvent('ng_plus_start', { run: fresh.ngPlus });
+          }
+          return { storyCampaign: fresh };
+        });
         return true;
     }
     return activateStoryCase({ mode: 'story' });
@@ -668,6 +688,9 @@ export function GameProvider({
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
+    if (frags.length) {
+      analytics.logEvent('examine_fragment', { count: frags.length, caseNumber: meta.caseNumber || null });
+    }
     return snapshotMap;
   }, [progress.storyCampaign, updateProgress]);
 
@@ -711,6 +734,23 @@ export function GameProvider({
     return result;
   }, [progress.storyCampaign, updateProgress, story]);
 
+  // FOIL INCURSION: at presence >= 2, The Other Reader claims one hidden thread
+  // when a chapter's gated descent opens (at most once per chapter). Returns the
+  // claim ({ relation, node }) or null so the board can announce it.
+  const claimUnderMapByFoil = useCallback((chapter) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const probe = umClaimByFoil(current.underMap, { chapter });
+    if (!probe.claimed) return null;
+    updateProgress((prev) => {
+      const c = normalizeStoryCampaignShape(prev.storyCampaign);
+      const r = umClaimByFoil(c.underMap, { chapter });
+      if (!r.claimed) return null;
+      return { storyCampaign: { ...c, underMap: r.map } };
+    });
+    analytics.logEvent('foil_claim', { chapter });
+    return probe.claimed;
+  }, [progress.storyCampaign, updateProgress]);
+
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
     updateProgress((prev) => {
@@ -737,6 +777,7 @@ export function GameProvider({
       if (!hasUnresolved) return null;
       return { storyCampaign: { ...current, underMap: umResolveTheory(um, chapter, correct) } };
     });
+    analytics.logEvent('belief_resolved', { chapter, correct });
   }, [updateProgress]);
 
   // THE OTHER READER: pin the foil's name the first time a scene names them.
@@ -786,6 +827,10 @@ export function GameProvider({
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
+    analytics.logEvent('theory_sealed', {
+      chapter: theory?.chapter ?? null,
+      grounded: theory?.grounded ?? null,
+    });
   }, [updateProgress]);
 
   const touchUnderMap = useCallback(() => {
@@ -805,6 +850,13 @@ export function GameProvider({
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       if (current.completed) return null;
+      const cl = umClarity(current.underMap);
+      analytics.logEvent('campaign_complete', {
+        endingId: endingId || null,
+        clarityRatio: cl.ratio,
+        resolvedBeliefs: cl.resolved,
+        ngPlus: current.ngPlus || 0,
+      });
       return {
         storyCampaign: {
           ...current,
@@ -1107,6 +1159,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    claimUnderMapByFoil,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
@@ -1130,6 +1183,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    claimUnderMapByFoil,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
@@ -1174,6 +1228,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    claimUnderMapByFoil,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,

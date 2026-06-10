@@ -60,6 +60,8 @@ export const createBlankStoryCampaign = () => ({
   startedAt: null,
   completedAt: null,
   completed: false,
+  // NEW GAME+: how many completed runs preceded this one (0 = first run).
+  ngPlus: 0,
   // Ending reached on completion
   endingId: null,
   endingReachedAt: null,
