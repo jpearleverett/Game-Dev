@@ -21,22 +21,43 @@ class AnalyticsService {
     this.queue = [];
     this.userId = null;
     this.userProperties = {};
-    // Remote sink state (config baked at bundle time via app.config.js extra).
-    this.apiKey = Constants.expoConfig?.extra?.posthogApiKey || null;
-    this.host = (Constants.expoConfig?.extra?.posthogHost || 'https://us.i.posthog.com').replace(/\/$/, '');
+    // Remote sink state. IMPORTANT: no config reads here — the constructor runs
+    // at module load ("runtime not ready"), where touching expo-constants can
+    // crash the app before anything renders. Config is read lazily in init().
+    this.apiKey = null;
+    this.host = 'https://us.i.posthog.com';
     this.distinctId = null;
     this.buffer = [];
     this.flushTimer = null;
   }
 
+  _readRemoteConfig() {
+    // Defensive to the point of paranoia: analytics must never crash the game.
+    try {
+      const extra = (Constants?.expoConfig || Constants?.manifest || {})?.extra || {};
+      const key = extra.posthogApiKey;
+      this.apiKey = typeof key === 'string' && key.trim().length ? key.trim() : null;
+      const host = extra.posthogHost;
+      this.host = (typeof host === 'string' && host.trim().length ? host.trim() : 'https://us.i.posthog.com')
+        .replace(/\/+$/, '');
+    } catch (_e) {
+      this.apiKey = null;
+      this.host = 'https://us.i.posthog.com';
+    }
+  }
+
   init() {
-    const deviceInfo = {
+    let deviceInfo = {};
+    try {
+      deviceInfo = {
         deviceModel: Device.modelName,
         osVersion: Device.osVersion,
         manufacturer: Device.manufacturer
-    };
+      };
+    } catch (_e) { /* device info is nice-to-have */ }
 
     this.setUserProperties(deviceInfo);
+    this._readRemoteConfig();
 
     console.log(`[Analytics] Initialized (remote sink: ${this.apiKey ? 'PostHog' : 'none'})`);
     this.initialized = true;
