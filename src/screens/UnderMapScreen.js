@@ -708,17 +708,24 @@ export default function UnderMapScreen({ navigation, route }) {
           const motif = isMotif(f);
           const keystone = isKeystone(f);
           return (
-            <Pressable
+            // The touch target is the CORE, not the whole 90px box. The box
+            // includes a two-line label, so neighbouring stars' boxes overlap on
+            // a crowded board and a tap meant for one star landed on whichever
+            // rendered last — a mis-tap that costs a probe and teaches nothing.
+            <View
               key={f.id}
-              onPress={() => handleTapStar(f.id)}
-              onLongPress={() => { if (!node) { selectionHaptic(); setInspect(f); } }}
-              delayLongPress={240}
+              pointerEvents="box-none"
               style={[styles.star, { left: x - 45, top: y - 23 }, inert && !attuned && styles.starInert]}
-              accessibilityRole="button"
-              accessibilityLabel={f.label}
-              accessibilityHint="Tap to connect, hold to read the clue"
             >
-              <View style={styles.coreWrap}>
+              <Pressable
+                onPress={() => handleTapStar(f.id)}
+                onLongPress={() => { if (!node) { selectionHaptic(); setInspect(f); } }}
+                delayLongPress={240}
+                style={styles.coreWrap}
+                accessibilityRole="button"
+                accessibilityLabel={f.label}
+                accessibilityHint="Tap to connect, hold to read the clue"
+              >
                 {!reducedMotion ? (
                   <Animated.View pointerEvents="none" style={[styles.starRing, { borderColor: kc, opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
                 ) : null}
@@ -727,9 +734,15 @@ export default function UnderMapScreen({ navigation, route }) {
                 <View style={[styles.starGlow, { backgroundColor: kc, opacity: isSel ? 0.95 : attuned ? 0.85 : inert ? 0.14 : mapped ? 0.65 : 0.42, transform: [{ scale: isSel ? 1.2 : attuned ? 1.12 : inert ? 0.6 : mapped ? 1 : 0.82 }] }]} />
                 <View style={[styles.starCore, { backgroundColor: kc, shadowColor: kc }, isSel && styles.starCoreSel, mapped && { shadowRadius: 16 }, inert && !attuned && styles.starCoreInert]} />
                 {motif ? <View style={styles.motifBadge}><Text style={styles.motifBadgeText}>×{f.seen}</Text></View> : null}
-              </View>
-              <Text style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped, inert && !attuned && styles.starLabelInert, attuned && styles.starLabelAttuned]} numberOfLines={2}>{f.label}</Text>
-            </Pressable>
+              </Pressable>
+              <Text
+                pointerEvents="none"
+                style={[styles.starLabel, isSel && styles.starLabelSel, mapped && styles.starLabelMapped, inert && !attuned && styles.starLabelInert, attuned && styles.starLabelAttuned]}
+                numberOfLines={2}
+              >
+                {f.label}
+              </Text>
+            </View>
           );
         })}
 
@@ -790,7 +803,14 @@ export default function UnderMapScreen({ navigation, route }) {
               </Text>
             </View>
             {genError ? <Text style={styles.genError}>{genError}</Text> : null}
-            <Pressable onPress={handleContinue} disabled={continuing} style={[styles.continueBtn, continuing && { opacity: 0.6 }]}>
+            <Pressable
+              onPress={handleContinue}
+              disabled={continuing}
+              style={[styles.continueBtn, continuing && { opacity: 0.6 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Continue the descent"
+              accessibilityState={{ disabled: continuing }}
+            >
               <Text style={styles.continueText}>{continuing ? 'Descending…' : genError ? 'Retry' : 'Continue the descent'}</Text>
               <Text style={styles.continueArrow}>↓</Text>
             </Pressable>
@@ -827,7 +847,12 @@ export default function UnderMapScreen({ navigation, route }) {
       {/* Clue inspector — read the full fragment the player collected */}
       {inspect ? (
         <Pressable style={styles.nodeOverlay} onPress={() => setInspect(null)}>
-          <View style={styles.nodeCard} onStartShouldSetResponder={() => true}>
+          <View
+            style={styles.nodeCard}
+            onStartShouldSetResponder={() => true}
+            accessibilityViewIsModal
+            accessibilityRole="alert"
+          >
             <View style={styles.nodeSheen} />
             <View style={styles.inspectHead}>
               <View style={[styles.kdot, { backgroundColor: colorFor(inspect.kind), shadowColor: colorFor(inspect.kind) }]} />
@@ -852,7 +877,12 @@ export default function UnderMapScreen({ navigation, route }) {
       {/* Node card overlay (choose-the-truth → revelation) */}
       {node ? (
         <Pressable style={styles.nodeOverlay} onPress={node.mode === 'choose' ? undefined : closeNode}>
-          <View style={styles.nodeCard} onStartShouldSetResponder={() => true}>
+          <View
+            style={styles.nodeCard}
+            onStartShouldSetResponder={() => true}
+            accessibilityViewIsModal
+            accessibilityRole="alert"
+          >
             <View style={styles.nodeSheen} />
             {node.mode === 'choose' ? (
               <>
@@ -869,7 +899,13 @@ export default function UnderMapScreen({ navigation, route }) {
                 ) : null}
                 <View style={{ gap: 10, marginTop: 6 }}>
                   {node.options.map((opt, i) => (
-                    <Pressable key={i} style={styles.readingOpt} onPress={() => chooseReading(opt)}>
+                    <Pressable
+                      key={i}
+                      style={styles.readingOpt}
+                      onPress={() => chooseReading(opt)}
+                      accessibilityRole="button"
+                      accessibilityLabel={opt}
+                    >
                       <Text style={styles.readingText}>{opt}</Text>
                     </Pressable>
                   ))}

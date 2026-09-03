@@ -20,6 +20,7 @@ import {
   formatCaseNumber,
   computeBranchPathKey,
   getStoryEntry,
+  getStoryEntryAsync,
   ROOT_PATH_KEY,
 } from '../data/storyContent';
 import { resolveStoryDecision, decisionOptionsFrom, decisionIntroFrom } from '../utils/storyDecision';
@@ -139,14 +140,29 @@ export default function TheoryScreen({ navigation, route }) {
   // The competing beliefs (the chapter decision, framed as interpretations of the
   // hidden world). Prefer options passed from the CaseFile; otherwise resolve them
   // ourselves so a direct/resumed entry still works.
+  // getStoryEntry is the SYNCHRONOUS in-memory lookup, which is empty on a
+  // resumed session: entering the climax straight from the Desk found no
+  // pathDecisions and rendered "the chapter's competing readings did not come
+  // through" over a chapter that had them on disk all along. Hydrate the same
+  // way the Case File builds its read-back, and hold the screen while it lands.
+  const [hydratedMeta, setHydratedMeta] = useState(null);
+  const [metaPending, setMetaPending] = useState(false);
+  const metaPathKey = storyCampaign.pathHistory?.[chapter] || storyCampaign.currentPathKey || ROOT_PATH_KEY;
+  useEffect(() => {
+    if (game.activeCase?.storyMeta || !caseNumber) { setMetaPending(false); return undefined; }
+    const sync = getStoryEntry(caseNumber, metaPathKey, null);
+    if (sync) { setHydratedMeta(sync); setMetaPending(false); return undefined; }
+    let cancelled = false;
+    setMetaPending(true);
+    getStoryEntryAsync(caseNumber, metaPathKey)
+      .then((entry) => { if (!cancelled) setHydratedMeta(entry || null); })
+      .catch(() => { if (!cancelled) setHydratedMeta(null); })
+      .finally(() => { if (!cancelled) setMetaPending(false); });
+    return () => { cancelled = true; };
+  }, [caseNumber, metaPathKey, game.activeCase?.storyMeta]);
+
   const resolvedDecision = useMemo(() => {
-    const storyMeta = game.activeCase?.storyMeta
-      || getStoryEntry(
-        caseNumber,
-        storyCampaign.pathHistory?.[chapter] || storyCampaign.currentPathKey || ROOT_PATH_KEY,
-        null,
-      )
-      || null;
+    const storyMeta = game.activeCase?.storyMeta || hydratedMeta || null;
     const branchingPath = (storyCampaign.branchingChoices || [])
       .find((bc) => bc.caseNumber === caseNumber)?.secondChoice || null;
     return resolveStoryDecision({
@@ -156,7 +172,7 @@ export default function TheoryScreen({ navigation, route }) {
       subchapterLetter: caseNumber ? caseNumber.slice(3, 4) : null,
       branchingPath,
     });
-  }, [game.activeCase, caseNumber, chapter, storyCampaign.pathHistory, storyCampaign.currentPathKey, storyCampaign.branchingChoices]);
+  }, [game.activeCase, hydratedMeta, caseNumber, storyCampaign.branchingChoices]);
 
   const beliefs = useMemo(() => {
     const passed = route?.params?.decisionOptions;
@@ -519,7 +535,9 @@ export default function TheoryScreen({ navigation, route }) {
               : 'Your one real choice. The chapter ahead bears it out — or subverts it.'}
           </Text>
         ) : null}
-        {beliefs.length === 0 ? (
+        {beliefs.length === 0 && metaPending ? (
+          <Text style={styles.sectionHint}>Reading the chapter…</Text>
+        ) : beliefs.length === 0 ? (
           <Text style={styles.error}>
             The chapter's competing readings did not come through. Nothing is sealed yet.
             Go back and re-enter the climax to try again; sealing an empty reading would
