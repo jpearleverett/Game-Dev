@@ -611,7 +611,8 @@ full-season state and asserts on the sentinels that come out:
 - **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
   unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
   prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
-- **Tests: 383.** New: `audioController.expoAudio` (pins the expo-audio migration),
+- **Tests: 391.** New: `notificationsExpoGo` (pins the lazy expo-notifications import),
+  `audioController.expoAudio` (pins the expo-audio migration),
   `absoluteFillContract` (guards the removed `StyleSheet.absoluteFillObject`),
   `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,
   `decisionConsequences.derivation`, plus additions to `continuityAnchorUnderMap`,
@@ -683,12 +684,24 @@ clean with zero warnings, `expo-doctor` 21/21, dev server advertises `exposdk:57
 - The `expo-audio` config plugin defaults to `recordAudioAndroid: true` and
   `enableBackgroundPlayback: true`, which put a **Microphone** permission on the store
   listing for a game that never records. It is configured off in `app.config.js`.
-- **Checked and NOT a problem** (recorded so nobody re-investigates): `expo-notifications`
-  does NOT crash in Expo Go. Its Android throw lives in `warnOfExpoGoPushUsage()`,
-  called only from `getDevicePushTokenAsync`, `addPushTokenListener` and the topic
-  subscribe/unsubscribe functions — never at module scope. This game uses only LOCAL
-  notifications (`scheduleNotificationAsync`, permissions, channels, response
-  listeners) and calls none of those four.
+- ⚠️ **`expo-notifications` must be imported LAZILY** (`getNotifications()` in
+  `src/services/dailyStirNotifications.js`) and must stay that way. Importing it AT
+  ALL red-screens the app at boot in Expo Go on Android — "[runtime not ready]",
+  before a pixel renders. The throw is nowhere near anything this game calls: it is a
+  module-scope SIDE EFFECT. `DevicePushTokenAutoRegistration.fx.js` registers a global
+  push-token subscription when it loads (`addPushTokenListener(...)` at ~line 78,
+  guarded only by the native module existing), `index.js` re-exports from that module,
+  and `addPushTokenListener` calls `warnOfExpoGoPushUsage()`, which throws on Android
+  in Expo Go because remote push left Expo Go in SDK 53. So the game crashed over a
+  push feature it never uses. Deferring the require keeps that module from evaluating
+  at startup; in Expo Go on Android the service reports `notificationsAvailable()`
+  false and every entry point degrades to the silent no-op it already had for a denied
+  permission (the reminder and unlock verdict are lost, the game is not). A
+  development build has no such restriction. Guarded by `notificationsExpoGo.test.js`,
+  which makes the module throw on require and asserts the service still imports.
+  (An earlier pass recorded the OPPOSITE conclusion here — that this was checked and
+  fine — by verifying only that the GAME calls none of the four throwing functions,
+  and never checking whether expo-notifications calls them itself at import. It does.)
 - **Unverified on device:** the audio migration is behavioral. Listen for the desk/board/
   narrative music beds, the rain/lamp ambience, the page-flip SFX and the Settings volume
   sliders actually taking effect.

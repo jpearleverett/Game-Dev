@@ -9,7 +9,57 @@
  * before re-scheduling), keyed by a stable identifier.
  */
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
+
+/**
+ * ⚠️ expo-notifications is imported LAZILY and must stay that way.
+ *
+ * Importing it AT ALL crashes the app in Expo Go on Android. The throw is not
+ * in any function this service calls — it is a module-scope side effect:
+ * `DevicePushTokenAutoRegistration.fx.js` registers a global push-token
+ * subscription when it loads (line ~78, `addPushTokenListener(...)` guarded
+ * only by the native module existing), `index.js` re-exports from that module,
+ * and `addPushTokenListener` calls `warnOfExpoGoPushUsage()`, which THROWS on
+ * Android in Expo Go because remote push was removed from Expo Go in SDK 53.
+ *
+ * So a static `import * as Notifications from 'expo-notifications'` red-screens
+ * at boot with "[runtime not ready]" before a single pixel renders — even
+ * though this game only ever uses LOCAL notifications and never touches push.
+ *
+ * Deferring the require means the offending module never evaluates during
+ * bundle startup. In Expo Go on Android we skip it entirely and every function
+ * below degrades to the same silent no-op it already had for a denied
+ * permission: the player loses the reminder and the unlock verdict, and keeps
+ * the whole game. A development build has no such restriction and gets both.
+ */
+let notificationsModule = null;
+let notificationsResolved = false;
+
+function getNotifications() {
+  if (notificationsResolved) return notificationsModule;
+  notificationsResolved = true;
+  notificationsModule = null;
+
+  if (Platform.OS === 'web') return null;
+  try {
+    if (Platform.OS === 'android' && isRunningInExpoGo()) return null;
+  } catch (_e) {
+    // If we cannot even tell, fall through: the require below is guarded too.
+  }
+  try {
+    // eslint-disable-next-line global-require
+    notificationsModule = require('expo-notifications');
+  } catch (_e) {
+    // Any import-time failure degrades to "notifications unavailable".
+    notificationsModule = null;
+  }
+  return notificationsModule;
+}
+
+/** True when local notifications can actually be scheduled on this runtime. */
+export function notificationsAvailable() {
+  return !!getNotifications();
+}
 
 const REMINDER_ID = 'undermap-daily-stir';
 const DEFAULT_HOUR = 9; // 9am local
@@ -29,6 +79,8 @@ let channelReady = false;
  */
 async function ensureChannel() {
   if (Platform.OS !== 'android' || channelReady) return;
+  const Notifications = getNotifications();
+  if (!Notifications) return;
   try {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'The Under-Map',
@@ -45,6 +97,8 @@ async function ensureChannel() {
 /** Ask for permission once; resolves false on any error / web / denial. */
 async function ensurePermission() {
   if (Platform.OS === 'web') return false;
+  const Notifications = getNotifications();
+  if (!Notifications) return false;
   try {
     const settings = await Notifications.getPermissionsAsync();
     if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus?.PROVISIONAL) {
@@ -66,6 +120,8 @@ async function ensurePermission() {
 export async function scheduleDailyStirReminder({ hour = DEFAULT_HOUR, minute = DEFAULT_MINUTE, force = false } = {}) {
   if (Platform.OS === 'web') return false;
   if (scheduledThisSession && !force) return true;
+  const Notifications = getNotifications();
+  if (!Notifications) return false;
   try {
     const ok = await ensurePermission();
     if (!ok) return false;
@@ -96,6 +152,8 @@ export async function scheduleDailyStirReminder({ hour = DEFAULT_HOUR, minute = 
 /** Cancel our daily reminder (e.g. when the player opts out). Never throws. */
 export async function cancelDailyStirReminder() {
   if (Platform.OS === 'web') return;
+  const Notifications = getNotifications();
+  if (!Notifications) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(REMINDER_ID);
   } catch (_e) {
@@ -119,6 +177,8 @@ const UNLOCK_ID = 'undermap-chapter-unlock';
  */
 export async function scheduleUnlockNotification(unlockAtIso, beliefText = null) {
   if (Platform.OS === 'web') return false;
+  const Notifications = getNotifications();
+  if (!Notifications) return false;
   try {
     const at = new Date(unlockAtIso);
     if (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) return false;
@@ -151,6 +211,8 @@ export async function scheduleUnlockNotification(unlockAtIso, beliefText = null)
 /** Cancel the unlock notification (unlock consumed early, bribe, campaign end). */
 export async function cancelUnlockNotification() {
   if (Platform.OS === 'web') return;
+  const Notifications = getNotifications();
+  if (!Notifications) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(UNLOCK_ID);
   } catch (_e) {
@@ -166,6 +228,8 @@ export async function cancelUnlockNotification() {
  */
 export function installNotificationOpenListener(onOpen) {
   if (Platform.OS === 'web' || typeof onOpen !== 'function') return () => {};
+  const Notifications = getNotifications();
+  if (!Notifications) return () => {};
   try {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       try {
