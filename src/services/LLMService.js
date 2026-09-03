@@ -67,12 +67,33 @@ function isPermanentApiStatus(status) {
 /** +/-25% so concurrent retries spread out instead of synchronizing. */
 const withJitter = (ms) => Math.round(ms * (0.75 + Math.random() * 0.5));
 
+/**
+ * A bare "Unauthorized" says nothing about what to change, and it arrives
+ * identically from every path (stream, cache creation, cache lifecycle), so the
+ * logs fill with 401s that look like a server outage. The proxy returns 401 for
+ * exactly one reason: APP_TOKEN is set on the deployment and the token this
+ * client sent did not match it. Say that once, with the fix.
+ */
+let explainedAuthFailure = false;
+function explainAuthFailureOnce() {
+  if (explainedAuthFailure) return;
+  explainedAuthFailure = true;
+  console.error(
+    '[LLMService] The proxy rejected this app (401/403). That means APP_TOKEN is set on '
+    + 'the Vercel deployment and this build sent no matching token. Fix: add the same '
+    + 'APP_TOKEN=<value> to .env (it reaches the app via app.config.js extra.appToken) '
+    + 'and restart with `npx expo start -c`; or set EAS secret APP_TOKEN for a build. '
+    + 'Every generation will keep failing until the tokens match.'
+  );
+}
+
 /** Tag an error with the API status so the retry loop can stop on permanent failures. */
 function applicationError(message, { status = null, details = null, permanent = null } = {}) {
   const err = new Error(message || 'Server returned error');
   err.isApplicationError = true;
   if (status != null) err.geminiStatus = status;
   if (details) err.details = details;
+  if (status === 401 || status === 403) explainAuthFailureOnce();
   // `permanent` lets the server mark a refusal that carries a 200: a safety or
   // recitation block is the model's answer, and retrying the same prompt only
   // buys the same refusal again.

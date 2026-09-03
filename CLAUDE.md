@@ -84,7 +84,7 @@ Shape: `{ fragments, relations, latentRelations, connections, nodes, theories, f
 - **theory**: `{ chapter, fragmentIds, interpretation, rejected, correct, grounded, at }` — the sealed C-beat belief. `correct` is tri-state (null = unproven, true = held, false = subverted); `rejected` is the competing readings the player turned away from; `grounded` is tri-state (did the player choose the reading the revealed truths supported? — drives resolution steering, see §8 "Evidence-grounded beliefs").
 - **foil**: `{ belief, fromChapter, presence, name } | null` — "The Other Reader," a single evolving antagonist born from the rejected reading. `presence` (clamped [-3,3]) grows when a belief is subverted, recedes when it holds. **Wired end to end:** `TheoryScreen` seals `rejected` → `recordTheory` sets the creed → `resolveTheory` moves `presence` → `promptAssembly._buildOtherReaderSection` steers generation (presence-scaled) → the model names them (`foilName` → captured by `nameFoil`, pinned thereafter) → surfaced in the verdict banner, the Codex card, and the ending. Selectors `foil`/`foilPresence`/`foilIsManifest`/`nameFoil` in `underMap.js`.
 
-Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepens a motif** — bumps `seen`), `addRelations` (resolves labels→ids, re-resolves as more fragments arrive; **console-warns when a relation drops because a label fails to resolve** — label-drift telemetry), `connectFragments` (returns `{ map, revealed:{node}|null, valid, alreadyConnected }`), `recordTheory` (stores `grounded`). Selectors: `isMotif`, `motifCount`, `mapDepth` (share of relations drawn), `undiscoveredRelationCount`, plus mastery/economy selectors: `senseTier` (0-3 from truths drawn, thresholds `SENSE_TIER_THRESHOLDS=[3,8,15]`), `attunedPartners`, `missWhisper`, `foilThreadsAhead`, `pendingProbeBonus` (daily-stir probe bank, cap `MAX_PROBE_BONUS=2`: granted by `resolveDailyStir`, included in `probeBudgetFor`, consumed/zeroed by `recordDescent`). NOTE: the generation cache signature (`src/utils/underMapGeneration.js`) deliberately excludes `pendingProbeBonus` and `theory.grounded`, so economy/grounding changes never cause spurious regenerations.
+Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepens a motif** — bumps `seen`), `addRelations` (resolves labels→ids, re-resolves as more fragments arrive; **console-DEBUGs when a relation is held latent** — a latent hold is the designed open loop, not a fault, and it fires on nearly every EXAMINE (twice, since `ingestSceneFragments` computes the map synchronously AND in the functional updater), so it must never be a `warn`), `connectFragments` (returns `{ map, revealed:{node}|null, valid, alreadyConnected }`), `recordTheory` (stores `grounded`). Selectors: `isMotif`, `motifCount`, `mapDepth` (share of relations drawn), `undiscoveredRelationCount`, plus mastery/economy selectors: `senseTier` (0-3 from truths drawn, thresholds `SENSE_TIER_THRESHOLDS=[3,8,15]`), `attunedPartners`, `missWhisper`, `foilThreadsAhead`, `pendingProbeBonus` (daily-stir probe bank, cap `MAX_PROBE_BONUS=2`: granted by `resolveDailyStir`, included in `probeBudgetFor`, consumed/zeroed by `recordDescent`). NOTE: the generation cache signature (`src/utils/underMapGeneration.js`) deliberately excludes `pendingProbeBonus` and `theory.grounded`, so economy/grounding changes never cause spurious regenerations.
 
 **Screens:** `src/screens/UnderMapScreen.js` (CONNECT board — also opened freeform from the Desk), `src/screens/TheoryScreen.js` (C climax belief commit). `GameContext` exposes `ingestSceneFragments`, `connectUnderMap`, `recordUnderMapTheory` (takes `rejected` → seeds the foil), `resolveUnderMapBelief`, `nameUnderMapFoil`, `touchUnderMap`.
 
@@ -611,7 +611,7 @@ full-season state and asserts on the sentinels that come out:
 - **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
   unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
   prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
-- **Tests: 391.** New: `notificationsExpoGo` (pins the lazy expo-notifications import),
+- **Tests: 393.** New: `notificationsExpoGo` (pins the lazy expo-notifications import),
   `audioController.expoAudio` (pins the expo-audio migration),
   `absoluteFillContract` (guards the removed `StyleSheet.absoluteFillObject`),
   `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,
@@ -705,6 +705,17 @@ clean with zero warnings, `expo-doctor` 21/21, dev server advertises `exposdk:57
 - **Unverified on device:** the audio migration is behavioral. Listen for the desk/board/
   narrative music beds, the rain/lamp ambience, the page-flip SFX and the Settings volume
   sliders actually taking effect.
+
+**OPS: a 401 from the proxy means APP_TOKEN mismatch, nothing else.** The proxy
+returns 401 for exactly one reason — `APP_TOKEN` is set on the Vercel deployment and
+the token the client sent did not match (`proxy/api/gemini.js`: `if (appToken) { if
+(providedToken !== appToken) 401 }`). It hits EVERY path identically (SSE stream,
+`createCache`, cache lifecycle), so the logs look like an outage while the real fix is
+one line of config: `APP_TOKEN=<value>` in `.env` (reaching the app through
+`app.config.js` → `extra.appToken`), or the matching EAS secret for a build. All five
+proxy request sites already attach `X-App-Token` when it is set — the code was never
+the problem. `applicationError` in `LLMService` now prints that remedy once per
+session on any 401/403 instead of leaving a bare "Unauthorized" in the log.
 
 **Open / candidate next work:**
 - **On-device playtest of the whole sweep above** — it is all LLM- and feel-dependent:

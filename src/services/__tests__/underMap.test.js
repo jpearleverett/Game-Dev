@@ -1302,3 +1302,46 @@ describe('two boards, two descents', () => {
     expect(descentStateFor(m, '004A').probesUsed).toBe(1); // and so does the newest gate
   });
 });
+
+describe('latent relation logging', () => {
+  const KIND = 'symbol';
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('does not console.warn when a relation is held latent', () => {
+    // Holding a relation whose other endpoint the player has not collected yet
+    // is the designed "this thread dives deeper" open loop, not a fault. It
+    // fires on nearly every EXAMINE — and TWICE per tap, because
+    // GameContext.ingestSceneFragments deliberately computes the map once
+    // synchronously and again inside the functional updater — so warning on it
+    // buried every real warning in the playtest logs.
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const debug = jest.spyOn(console, 'debug').mockImplementation(() => {});
+
+    let map = createBlankUnderMap();
+    map = addFragments(map, [makeFragment({ label: 'A held thing', kind: KIND })]);
+    map = addRelations(map, [
+      { aLabel: 'A held thing', bLabel: 'Not collected yet', revelation: 'They rhyme.' },
+    ], { caseNumber: '001A' });
+
+    expect(map.latentRelations).toHaveLength(1);
+    expect(warn).not.toHaveBeenCalled();
+    expect(debug).toHaveBeenCalled();
+  });
+
+  it('still promotes the latent thread once the missing fragment arrives', () => {
+    jest.spyOn(console, 'debug').mockImplementation(() => {});
+    let map = createBlankUnderMap();
+    map = addFragments(map, [makeFragment({ label: 'A held thing', kind: KIND })]);
+    map = addRelations(map, [
+      { aLabel: 'A held thing', bLabel: 'Not collected yet', revelation: 'They rhyme.' },
+    ], { caseNumber: '001A' });
+    expect(map.relations).toHaveLength(0);
+
+    map = addFragments(map, [makeFragment({ label: 'Not collected yet', kind: KIND })]);
+    expect(map.relations).toHaveLength(1);
+    expect(map.latentRelations).toHaveLength(0);
+  });
+});

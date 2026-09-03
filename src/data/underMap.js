@@ -429,8 +429,15 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
           caseNumber,
           at: new Date().toISOString(),
         });
-        if (typeof console !== 'undefined') {
-          console.warn(
+        // debug, not warn. Holding a relation whose other endpoint the player
+        // has not collected YET is the designed "this thread dives deeper"
+        // open loop, not a fault — it fires on nearly every EXAMINE and used to
+        // bury real warnings. It also appears TWICE per tap because
+        // GameContext.ingestSceneFragments deliberately computes the map once
+        // synchronously for its caller and again inside the functional
+        // updater (the no-clobber invariant), so both snapshots log it.
+        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+          console.debug(
             `[underMap] relation held LATENT — unresolved label(s): ${!aId ? `a="${raw.aLabel}"` : ''}${!aId && !bId ? ' ' : ''}${!bId ? `b="${raw.bLabel}"` : ''} (case ${caseNumber || '?'})`,
           );
         }
