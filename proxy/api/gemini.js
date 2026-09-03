@@ -21,8 +21,35 @@ export const preferredRegion = 'auto';
 // thinkingLevel low|medium|high (default medium; 'minimal' is rejected by 3.8),
 // and no sampling parameters (temperature/topP/topK/candidateCount are deprecated).
 const DEFAULT_MODEL = 'gemini-3.8-flash';
+// Explicit caching (cachedContents) and cached generateContent both live on the
+// stable surface; the preview surface is not guaranteed to serve a GA model, and
+// pointing cache traffic there fails every cached call.
+const GEMINI_API_VERSION = 'v1beta';
+const GEMINI_API_BASE = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}`;
 const MAX_OUTPUT_TOKENS = 65536;
 const THINKING_LEVELS = ['low', 'medium', 'high'];
+
+/**
+ * Join the answer text across every part of a candidate.
+ *
+ * A thinking model can return the answer split over several text parts, and can
+ * put a thought part first. Reading parts[0].text alone therefore yields either
+ * a fragment or an empty string — and a truncated fragment only gets JSON repair
+ * when finishReason says MAX_TOKENS, so the loss is silent. Thought parts are
+ * skipped; the thought signature is taken from whichever part carries one.
+ */
+function extractCandidateContent(candidate) {
+  const parts = candidate?.content?.parts;
+  if (!Array.isArray(parts) || parts.length === 0) {
+    return { content: '', thoughtSignature: null };
+  }
+  const content = parts
+    .filter((p) => p && p.thought !== true && typeof p.text === 'string')
+    .map((p) => p.text)
+    .join('');
+  const withSignature = parts.find((p) => p && p.thoughtSignature);
+  return { content, thoughtSignature: withSignature ? withSignature.thoughtSignature : null };
+}
 
 function isGemini3Model(model) {
   return typeof model === 'string' && /gemini-3(?:[.\-_]|$)/.test(model);
@@ -166,7 +193,7 @@ export default async function handler(request) {
         );
       }
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1alpha/cachedContents?key=${process.env.GEMINI_API_KEY}`;
+      const geminiUrl = `${GEMINI_API_BASE}/cachedContents?key=${process.env.GEMINI_API_KEY}`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
@@ -240,8 +267,7 @@ export default async function handler(request) {
     console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, streaming=${useStreaming}, cached=${!!cachedContent}`);
 
     // Build Gemini request
-    const apiVersion = cachedContent ? 'v1alpha' : 'v1beta';
-    const geminiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const geminiUrl = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const geminiBody = {
       contents: body.messages.map(msg => {
@@ -386,10 +412,7 @@ export default async function handler(request) {
 
           const geminiData = await geminiResponse.json();
           const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
-          const contentPart = geminiData.candidates?.[0]?.content?.parts?.[0] || {};
-          const content = contentPart.text || '';
-          // Capture thought signature for multi-call reasoning continuity (Gemini 3)
-          const thoughtSignature = contentPart.thoughtSignature || null;
+          const { content, thoughtSignature } = extractCandidateContent(geminiData.candidates?.[0]);
           const usage = geminiData.usageMetadata || {};
 
           if (finishReason === 'SAFETY') {
@@ -512,10 +535,7 @@ export default async function handler(request) {
 
       const geminiData = await geminiResponse.json();
       const finishReason = geminiData.candidates?.[0]?.finishReason || 'UNKNOWN';
-      const contentPart = geminiData.candidates?.[0]?.content?.parts?.[0] || {};
-      const content = contentPart.text || '';
-      // Capture thought signature for multi-call reasoning continuity (Gemini 3)
-      const thoughtSignature = contentPart.thoughtSignature || null;
+      const { content, thoughtSignature } = extractCandidateContent(geminiData.candidates?.[0]);
       const usage = geminiData.usageMetadata || {};
 
       if (finishReason === 'SAFETY') {

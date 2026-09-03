@@ -39,7 +39,6 @@ function callGemini(prompt, apiKey) {
         parts: [{ text: prompt }]
       }],
       generationConfig: {
-        temperature: 0.3,
         maxOutputTokens: 2000,
       },
       systemInstruction: {

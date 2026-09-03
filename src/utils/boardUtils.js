@@ -1,4 +1,4 @@
-const POLAROID_LABEL_WORD_LIMIT = 2;
+export const POLAROID_LABEL_WORD_LIMIT = 2;
 const POLAROID_STOP_WORDS = new Set([
   "a",
   "an",

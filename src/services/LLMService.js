@@ -15,6 +15,7 @@ import Constants from 'expo-constants';
 import { fetch as expoFetch } from 'expo/fetch';
 import EventSource from 'react-native-sse';
 import {
+  GEMINI_API_BASE,
   GEMINI_MODEL,
   clampMaxOutputTokens,
   isGemini3Model,
@@ -49,6 +50,51 @@ const DEFAULT_CONFIG = {
   maxRetries: 4, // 4 retries for mobile network resilience
   timeout: 300000, // 300 seconds (5 min) - matches Vercel maxDuration for long generations
 };
+
+/**
+ * HTTP statuses worth retrying. Everything else from the API is deterministic:
+ * a bad model id, an unsupported thinkingLevel, a deprecated generationConfig
+ * field or a malformed schema will fail identically on every attempt, so
+ * retrying one turns a single 400 into a dozen full requests, minutes of
+ * backoff, and a burned rate-limit budget before the player sees the failure.
+ */
+const RETRYABLE_HTTP_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+
+function isPermanentApiStatus(status) {
+  return typeof status === 'number' && status >= 400 && status < 600 && !RETRYABLE_HTTP_STATUSES.has(status);
+}
+
+/** Tag an error with the API status so the retry loop can stop on permanent failures. */
+function applicationError(message, { status = null, details = null } = {}) {
+  const err = new Error(message || 'Server returned error');
+  err.isApplicationError = true;
+  if (status != null) err.geminiStatus = status;
+  if (details) err.details = details;
+  err.isPermanent = isPermanentApiStatus(status);
+  return err;
+}
+
+/**
+ * Join the answer text across every part of a candidate.
+ *
+ * A thinking model can return the answer split over several text parts, and can
+ * put a thought part first. Reading parts[0].text alone therefore yields either
+ * a fragment or an empty string — and a truncated fragment only gets JSON repair
+ * when finishReason says MAX_TOKENS, so the loss is silent. Thought parts are
+ * skipped; the thought signature is taken from whichever part carries one.
+ */
+function extractCandidateContent(candidate) {
+  const parts = candidate?.content?.parts;
+  if (!Array.isArray(parts) || parts.length === 0) {
+    return { content: '', thoughtSignature: null };
+  }
+  const content = parts
+    .filter((p) => p && p.thought !== true && typeof p.text === 'string')
+    .map((p) => p.text)
+    .join('');
+  const withSignature = parts.find((p) => p && p.thoughtSignature);
+  return { content, thoughtSignature: withSignature ? withSignature.thoughtSignature : null };
+}
 
 class LLMService {
   constructor() {
@@ -348,8 +394,15 @@ class LLMService {
         console.warn('[LLMService] Non-gemini provider found in saved config. Forcing provider="gemini".');
         this.config.provider = 'gemini';
       }
-      if (typeof this.config.model !== 'string' || !this.config.model.toLowerCase().includes('gemini')) {
-        this.config.model = DEFAULT_CONFIG.model;
+      // The model id is owned by src/constants/gemini.js, not by the save file.
+      // A persisted id from a previous build would otherwise outlive a model
+      // upgrade and split the app across two models — the uncached calls on the
+      // stale one, the cached ones on the new one.
+      if (this.config.model !== GEMINI_MODEL) {
+        if (this.config.model) {
+          console.warn(`[LLMService] Persisted model "${this.config.model}" != "${GEMINI_MODEL}"; using the current model.`);
+        }
+        this.config.model = GEMINI_MODEL;
       }
 
       // Load any persisted offline queue
@@ -494,7 +547,7 @@ class LLMService {
 
     // ========== DIRECT MODE (Development) ==========
     // Gemini API endpoint
-    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
 
     // Convert messages to Gemini format
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
@@ -643,10 +696,10 @@ class LLMService {
                            finishReason === 'LENGTH' ||
                            finishReason === 'RECITATION';
 
-        const contentPart = candidate.content?.parts?.[0] || {};
-        let content = contentPart.text || '';
+        const extracted = extractCandidateContent(candidate);
+        let content = extracted.content;
         // Capture thought signature for multi-call reasoning continuity (Gemini 3)
-        const thoughtSignature = contentPart.thoughtSignature || null;
+        const thoughtSignature = extracted.thoughtSignature;
 
         // If response was truncated and we expect JSON, try to repair it
         if (isTruncated && responseSchema) {
@@ -801,7 +854,10 @@ class LLMService {
           } else if (parsed.type === 'error') {
             console.error(`[LLMService] [${localRequestId}] SSE error event: ${parsed.error}`);
             cleanup();
-            reject(new Error(parsed.error || 'Server returned error'));
+            reject(applicationError(parsed.error, {
+              status: parsed.geminiStatus ?? null,
+              details: parsed.details ?? null,
+            }));
           }
         } catch (parseErr) {
           // Not JSON, just collect it - only log in verbose mode
@@ -990,17 +1046,20 @@ class LLMService {
         }
 
         // Build request body for logging
+        // The model contract is applied here, at the single egress, rather than
+        // only in complete(): completeWithCache reaches _callViaProxy directly,
+        // and the proxy is deployed separately so it may be older than this app.
         const requestBody = {
           messages: messages.map(m => ({
             role: m.role,
             content: m.content,
           })),
           model,
-          maxTokens,
+          maxTokens: clampMaxOutputTokens(maxTokens) ?? undefined,
           systemPrompt,
           responseSchema,
           cachedContent, // Optional: cached content reference for context caching
-          thinkingLevel, // Optional: per-task thinking level; omitted => Gemini 'medium' default
+          thinkingLevel: normalizeThinkingLevel(thinkingLevel) ?? undefined, // omitted => Gemini 'medium' default
           stream: true, // Enable streaming with heartbeats to prevent mobile timeouts
           clientTraceId: traceId || null,
           clientRequestContext: requestContext || null,
@@ -1037,6 +1096,14 @@ class LLMService {
           response = result.response;
           clearTimeout(timeoutId);
         } catch (sseError) {
+          // An application error is the server's verdict on this request, not a
+          // transport failure: replaying it over two more transports just costs
+          // the player three identical rejections instead of one.
+          if (sseError.isApplicationError) {
+            clearTimeout(timeoutId);
+            throw sseError;
+          }
+
           console.warn(`[LLMService] [${localRequestId}] SSE streaming failed: ${sseError.message}, trying expo/fetch...`);
 
           // Method 2: Try expo/fetch streaming (Expo SDK 52+ native)
@@ -1191,13 +1258,19 @@ class LLMService {
               localRequestId,
             }, 'error');
           }
-          throw new Error(errorMsg);
+          throw applicationError(errorMsg, {
+            status: data?.geminiStatus ?? response.status,
+            details: data?.details ?? null,
+          });
         }
 
         // Validate we got actual data
         if (!data || !data.success) {
           console.error(`[LLMService] [${localRequestId}] No valid response in stream`);
-          throw new Error(data?.error || 'No valid response received from proxy');
+          throw applicationError(data?.error || 'No valid response received from proxy', {
+            status: data?.geminiStatus ?? null,
+            details: data?.details ?? null,
+          });
         }
 
         // Check for truncated responses
@@ -1291,6 +1364,23 @@ class LLMService {
             }, 'error');
           }
           throw new Error('Request timed out');
+        }
+
+        // A permanent API rejection (bad model id, unsupported thinkingLevel,
+        // deprecated field, malformed schema) fails identically every time.
+        // Retrying it costs minutes of backoff and the rate-limit budget before
+        // the player sees a failure that was decided on the first attempt.
+        if (error.isPermanent) {
+          console.error(`[LLMService] [${localRequestId}] Permanent API error (${error.geminiStatus}), not retrying: ${error.message}${error.details ? ` — ${error.details}` : ''}`);
+          if (traceId) {
+            llmTrace('LLMService', traceId, 'llm.proxy.permanent_error', {
+              status: error.geminiStatus,
+              error: error.message,
+              details: error.details || null,
+              localRequestId,
+            }, 'error');
+          }
+          throw error;
         }
 
         attempt++;
@@ -1695,8 +1785,7 @@ class LLMService {
       } else {
         log.debug('LLMService', 'Creating cache via direct API');
 
-        // Use the v1alpha endpoint for caching
-        const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+        const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
 
         const response = await fetch(`${baseUrl}/cachedContents`, {
           method: 'POST',
@@ -1786,7 +1875,7 @@ class LLMService {
       throw new Error(`Cache not found: ${key}`);
     }
 
-    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
 
     try {
       const response = await fetch(`${baseUrl}/${cache.name}`, {
@@ -1830,7 +1919,7 @@ class LLMService {
       return;
     }
 
-    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
 
     try {
       const response = await fetch(`${baseUrl}/${cache.name}`, {
@@ -1902,7 +1991,9 @@ class LLMService {
       throw new Error(`Cache not found or expired: ${cacheKey}`);
     }
 
-    const model = options.model || cache.model || this.config.model;
+    // Never take the model from the (persisted) cache record: a cache written by
+    // an earlier build would pin this call to a superseded model.
+    const model = options.model || this.config.model || GEMINI_MODEL;
 
     log.debug('LLMService', `🎯 Generating with cache: ${cacheKey}`);
 
@@ -1918,7 +2009,7 @@ class LLMService {
         messages,
         {
           model,
-          maxTokens: options.maxTokens || 8192,
+          maxTokens: clampMaxOutputTokens(options.maxTokens) || 8192,
           systemPrompt: null, // System prompt is in cache
           responseSchema: options.responseSchema,
           cachedContent: cache.name,
@@ -1964,7 +2055,7 @@ class LLMService {
       generationConfig.responseSchema = options.responseSchema;
     }
 
-    const baseUrl = this.config.baseUrl || 'https://generativelanguage.googleapis.com/v1alpha';
+    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
 
     // Build contents array with prior messages (thought signatures) if provided
     const contents = [];
@@ -1973,7 +2064,7 @@ class LLMService {
       if (msg.thoughtSignature) {
         parts[0].thoughtSignature = msg.thoughtSignature;
       }
-      contents.push({ role: msg.role, parts });
+      contents.push({ role: msg.role === 'assistant' ? 'model' : 'user', parts });
     }
     contents.push({ role: 'user', parts: [{ text: dynamicPrompt }] });
 
@@ -2030,10 +2121,7 @@ class LLMService {
         throw new Error('No candidate in response');
       }
 
-      const contentPart = candidate.content?.parts?.[0] || {};
-      const content = contentPart.text || '';
-      // Capture thought signature for multi-call reasoning continuity (Gemini 3)
-      const thoughtSignature = contentPart.thoughtSignature || null;
+      const { content, thoughtSignature } = extractCandidateContent(candidate);
       const usage = data.usageMetadata || {};
 
       // Log token usage with cache metrics

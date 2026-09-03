@@ -17,6 +17,15 @@
 
 export const GEMINI_MODEL = 'gemini-3.8-flash';
 
+/**
+ * REST API version. Explicit context caching (cachedContents) and cached
+ * generateContent both live on v1beta; v1alpha is a preview surface that a
+ * GA model is not guaranteed to be served on, and pointing cache traffic at it
+ * fails every cached call (which is the primary generation path).
+ */
+export const GEMINI_API_VERSION = 'v1beta';
+export const GEMINI_API_BASE = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}`;
+
 /** Output-token ceiling for the current model family. */
 export const GEMINI_MAX_OUTPUT_TOKENS = 65536;
 

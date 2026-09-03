@@ -45,7 +45,6 @@ function callGemini(prompt, apiKey) {
     const requestBody = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.3,
         maxOutputTokens: 4000,
       },
       systemInstruction: {

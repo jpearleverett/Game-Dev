@@ -65,7 +65,6 @@ Return as JSON array:
     const response = await llmService.complete(
       [{ role: 'user', content: prompt }],
       {
-        temperature: 0.3,
         maxTokens: 2000,
         systemPrompt: 'You are a literary analyst specializing in noir fiction categorization.'
       }

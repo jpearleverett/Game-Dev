@@ -109,7 +109,6 @@ async function main() {
       const response = await llmService.complete(
         [{ role: 'user', content: prompt }],
         {
-          temperature: 0.3,  // Lower temp for consistent categorization
           maxTokens: 4000,
           responseSchema: CATEGORIZATION_SCHEMA,
           systemPrompt: buildSystemPrompt()
