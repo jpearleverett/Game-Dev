@@ -24,6 +24,7 @@ import {
   isKeystone,
   FRAGMENT_KIND,
 } from '../data/underMap';
+import { descentStateFor as umDescentStateFor } from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
 import { analytics } from '../services/AnalyticsService';
 import { FIELD_NOTES } from '../data/fieldNotes';
@@ -103,8 +104,11 @@ function DescentHold({ active, reducedMotion }) {
     return () => clearInterval(t);
   }, [active, reducedMotion]);
   if (!active) return null;
+  // Blocks input on purpose: this covers the live footer during a wait that can
+  // run tens of seconds, and pointerEvents="none" let taps land on the buttons
+  // underneath it (Reconsider, in particular, mid-cross).
   return (
-    <View style={styles.descentOverlay} pointerEvents="none">
+    <View style={styles.descentOverlay}>
       <Text style={styles.descentKicker}>DESCENDING</Text>
       <Text style={styles.descentLine}>{DESCENT_LINES[idx]}</Text>
     </View>
@@ -115,7 +119,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const game = useGame();
   const audio = useAudio();
   const {
-    progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, touchUnderMap,
+    progress, senseUnderMap, resolveUnderMapReading, recordUnderMapDescent, updateUnderMapDescent, touchUnderMap,
     drawUnderMapDailyStir, prefetchAfterUnderMapReveal, claimUnderMapByFoil, markLessonSeen,
   } = game;
 
@@ -200,9 +204,19 @@ export default function UnderMapScreen({ navigation, route }) {
   // links stay sensed for a later visit. Budget is fixed at descent start (and
   // includes any bonus the daily thread banked — surfaced so the daily loop is
   // FELT paying into the campaign).
+  // Seeded from the persisted per-descent state. All of this used to live only
+  // in component state, so the game's own advice ("Re-read the scene, then
+  // return") refunded every probe, cleared the misstep flag, re-armed DEEPSIGHT
+  // forgiveness and unlocked the pairs the player had just blurred.
+  const persistedDescent = useMemo(
+    () => umDescentStateFor(map, gateCaseNumber),
+    // Intentionally seeded once per gate, not per map write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gateCaseNumber],
+  );
   const [probeBudget] = useState(() => probeBudgetFor(map));
   const [probeBonus] = useState(() => pendingProbeBonus(map));
-  const [probesUsed, setProbesUsed] = useState(0);
+  const [probesUsed, setProbesUsed] = useState(() => persistedDescent.probesUsed);
   const probesLeft = Math.max(0, probeBudget - probesUsed);
   // Probes only meter the gated A/B descent. The Desk-opened freeform map is for
   // reviewing/connecting at leisure — no budget, no lockout there.
@@ -211,7 +225,7 @@ export default function UnderMapScreen({ navigation, route }) {
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
   const [genError, setGenError] = useState(null);
-  const hadMisstepRef = useRef(false);
+  const hadMisstepRef = useRef(persistedDescent.hadMisstep);
   const lockRef = useRef(false);
   const toastTimer = useRef(null);
 
@@ -245,10 +259,10 @@ export default function UnderMapScreen({ navigation, route }) {
   // THE OTHER READER's pressure: hidden threads the rival is ahead by.
   const foilAhead = foilThreadsAhead(map);
   // DEEPSIGHT (tier 3): the first missed probe of each descent is forgiven.
-  const firstMissForgivenRef = useRef(false);
+  const firstMissForgivenRef = useRef(persistedDescent.firstMissForgiven);
   // RE-READ GATE: pairs whose meaning the player blurred THIS visit stay locked
   // until they leave to re-read the scene (unmount clears the set).
-  const blockedPairsRef = useRef(new Set());
+  const blockedPairsRef = useRef(new Set(persistedDescent.blockedPairs));
   const pairKeyOf = (a, b) => [a, b].sort().join('::');
   // DANGLING THREADS: held fragments whose authored thread dives deeper — its
   // other end hasn't been collected yet. Drawn trailing off into the dark.
@@ -369,6 +383,12 @@ export default function UnderMapScreen({ navigation, route }) {
       if (firstFree) firstMissForgivenRef.current = true;
       const spend = !(motifShield || firstFree);
       if (spend) setProbesUsed((n) => n + 1);
+      updateUnderMapDescent?.(gateCaseNumber, {
+        probesUsed: probesUsed + (spend ? 1 : 0),
+        hadMisstep: true,
+        firstMissForgiven: firstMissForgivenRef.current,
+        blockedPairs: Array.from(blockedPairsRef.current),
+      });
       const left = Math.max(0, probeBudget - (probesUsed + (spend ? 1 : 0)));
       const grace = motifShield
         ? 'The map remembers this one — no probe spent.'
@@ -427,6 +447,10 @@ export default function UnderMapScreen({ navigation, route }) {
       impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
       // The pair stays connected but its meaning is locked behind a re-read.
       blockedPairsRef.current.add(pairKeyOf(node.aId, node.bId));
+      updateUnderMapDescent?.(gateCaseNumber, {
+        hadMisstep: true,
+        blockedPairs: Array.from(blockedPairsRef.current),
+      });
       setNode((nd) => ({ ...nd, mode: 'blurred' }));
     }
   }, [node, resolveUnderMapReading, triggerBloom, audio]);
@@ -448,11 +472,19 @@ export default function UnderMapScreen({ navigation, route }) {
     const nextCase = subchapter >= 3 ? null : formatCaseNumber(chapter, subchapter + 1);
     const nextPathKey = progress?.storyCampaign?.currentPathKey || 'ROOT';
     const waitStart = Date.now();
+    let ensured;
     try {
       if (nextCase) {
-        await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, { underMap: map });
+        ensured = await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, { underMap: map });
       }
     } catch (_e) {
+      setContinuing(false);
+      setGenError('The descent stalled before the next scene took shape. Tap to try again.');
+      return;
+    }
+    // Resolves { ok: false } rather than throwing, so the catch alone let the
+    // player advance into a subchapter that had failed to generate.
+    if (ensured && ensured.ok === false) {
       setContinuing(false);
       setGenError('The descent stalled before the next scene took shape. Tap to try again.');
       return;

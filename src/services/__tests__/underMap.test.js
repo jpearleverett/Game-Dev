@@ -1,6 +1,8 @@
 import {
   createBlankUnderMap,
   truthsDrawn,
+  descentStateFor,
+  updateDescentState,
   normalizeUnderMap,
   makeFragment,
   fragmentId,
@@ -957,5 +959,55 @@ describe('defects found in the end-to-end audit', () => {
     });
     expect(truthsDrawn(true3)).toBe(3);
     expect(senseTier(true3)).toBe(1);
+  });
+});
+
+test('re-sealing a chapter replaces its unresolved belief instead of stacking one', () => {
+  // 'Reconsider' on the Theory screen let a player seal twice for one chapter.
+  // resolveTheory flips EVERY unresolved theory for a chapter, so two entries
+  // meant clarity counted that chapter twice and the ending was computed from
+  // more beliefs than the campaign has chapters.
+  let m = createBlankUnderMap();
+  m = recordTheory(m, { chapter: 3, fragmentIds: ['a'], interpretation: 'She is guiding you in' });
+  m = recordTheory(m, { chapter: 3, fragmentIds: ['a'], interpretation: 'She is the lock' });
+  expect(m.theories.filter((t) => t.chapter === 3)).toHaveLength(1);
+  expect(m.theories[0].interpretation).toBe('She is the lock');
+
+  // A belief already resolved is history and must not be overwritten.
+  m = resolveTheory(m, 3, true);
+  m = recordTheory(m, { chapter: 3, fragmentIds: ['a'], interpretation: 'A later reading' });
+  expect(m.theories.filter((t) => t.chapter === 3)).toHaveLength(2);
+});
+
+describe('the per-descent economy survives leaving to re-read the scene', () => {
+  test('probes, misstep, forgiveness and blurred pairs persist for the same gate', () => {
+    // The game tells the player "Re-read the scene, then return", and all of
+    // this used to live in component state, so taking that advice refunded the
+    // probes and unlocked the pairs they had just blurred.
+    let m = createBlankUnderMap();
+    m = updateDescentState(m, '002A', {
+      probesUsed: 2,
+      hadMisstep: true,
+      firstMissForgiven: true,
+      blockedPairs: ['frag_a::frag_b'],
+    });
+    const restored = descentStateFor(m, '002A');
+    expect(restored.probesUsed).toBe(2);
+    expect(restored.hadMisstep).toBe(true);
+    expect(restored.firstMissForgiven).toBe(true);
+    expect(restored.blockedPairs).toEqual(['frag_a::frag_b']);
+  });
+
+  test('a different gate starts fresh, and completing the descent clears it', () => {
+    let m = updateDescentState(createBlankUnderMap(), '002A', { probesUsed: 2, hadMisstep: true });
+    expect(descentStateFor(m, '002B').probesUsed).toBe(0);
+    m = recordDescent(m, { hadMisstep: true });
+    expect(m.descent).toBeNull();
+    expect(descentStateFor(m, '002A').probesUsed).toBe(0);
+  });
+
+  test('an unchanged patch does not produce a new map', () => {
+    const m = updateDescentState(createBlankUnderMap(), '002A', { probesUsed: 1 });
+    expect(updateDescentState(m, '002A', { probesUsed: 1 })).toBe(m);
   });
 });

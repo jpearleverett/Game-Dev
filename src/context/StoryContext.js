@@ -571,9 +571,17 @@ export function StoryProvider({ children, progress, updateProgress }) {
     if (isLLMConfigured && nextChapter <= 12) {
       log.debug('StoryContext', `Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}, triggering ${nextCaseNumber}`);
 
-      // Generate in background - don't await
+      // Generate in background - don't await.
+      //
+      // requireFreshUnderMap matters even though nothing here waits on the
+      // result: it is what puts the Under-Map signature into the generation key.
+      // Without it this ran under a bare key while the C-beat's belief prefetch
+      // was still in flight under a signature-keyed one, so instead of deduping
+      // onto it this opened a THIRD generation — taking one of only two slots,
+      // from the very request the player is about to wait on.
       generateForCase(nextCaseNumber, nextPathKey, nextChoiceHistory, branchingChoices, {
         underMap: generationOptions.underMap || null,
+        requireFreshUnderMap: !!generationOptions.underMap,
       })
         .then((result) => {
           if (result) {

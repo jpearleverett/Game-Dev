@@ -128,6 +128,11 @@ export const createBlankUnderMap = () => ({
   // FOIL INCURSION: the chapter in which The Other Reader last claimed a thread
   // on the board (one claim max per chapter, at presence >= 2).
   lastFoilClaimChapter: null,
+  // Per-descent economy for the gated CONNECT beat, persisted so leaving to
+  // re-read the scene (which the game explicitly invites) does not refund the
+  // probes, clear the misstep flag, re-arm DEEPSIGHT forgiveness and unlock the
+  // pairs the player just blurred. Reset when the gate moves to a new case.
+  descent: null,
   lastVisitedAt: null,
 });
 
@@ -163,6 +168,7 @@ const isNormalizedUnderMap = (map) => (
   && map.pendingProbeBonus >= 0
   && map.pendingProbeBonus <= MAX_PROBE_BONUS
   && (map.lastFoilClaimChapter === null || Number.isFinite(map.lastFoilClaimChapter))
+  && (map.descent === null || (!!map.descent && typeof map.descent === 'object'))
 );
 
 export const normalizeUnderMap = (map) => {
@@ -189,6 +195,7 @@ export const normalizeUnderMap = (map) => {
       ? Math.max(0, Math.min(MAX_PROBE_BONUS, map.pendingProbeBonus))
       : 0,
     lastFoilClaimChapter: Number.isFinite(map.lastFoilClaimChapter) ? map.lastFoilClaimChapter : null,
+    descent: map.descent && typeof map.descent === 'object' ? map.descent : null,
   };
 };
 
@@ -517,13 +524,46 @@ export const readingChoices = (readings, rng = Math.random) => {
  * Record the outcome of a descent for the flawless-mapping streak. A descent
  * with any wrong probe resets the streak (soft sting); a clean one extends it.
  */
+export const EMPTY_DESCENT = { caseNumber: null, probesUsed: 0, hadMisstep: false, firstMissForgiven: false, blockedPairs: [] };
+
+/** The persisted descent state for `caseNumber`, or a fresh one if the gate moved. */
+export const descentStateFor = (map, caseNumber) => {
+  const m = normalizeUnderMap(map);
+  const d = m.descent;
+  if (!d || !caseNumber || d.caseNumber !== caseNumber) return { ...EMPTY_DESCENT, caseNumber: caseNumber || null };
+  return {
+    caseNumber,
+    probesUsed: Number.isFinite(d.probesUsed) ? d.probesUsed : 0,
+    hadMisstep: !!d.hadMisstep,
+    firstMissForgiven: !!d.firstMissForgiven,
+    blockedPairs: Array.isArray(d.blockedPairs) ? d.blockedPairs : [],
+  };
+};
+
+/** Merge a patch into the descent state for `caseNumber` (starting fresh if the gate moved). */
+export const updateDescentState = (map, caseNumber, patch = {}) => {
+  const m = normalizeUnderMap(map);
+  const current = descentStateFor(m, caseNumber);
+  const next = { ...current, ...patch, caseNumber: caseNumber || null };
+  const same = m.descent
+    && m.descent.caseNumber === next.caseNumber
+    && m.descent.probesUsed === next.probesUsed
+    && !!m.descent.hadMisstep === next.hadMisstep
+    && !!m.descent.firstMissForgiven === next.firstMissForgiven
+    && Array.isArray(m.descent.blockedPairs)
+    && m.descent.blockedPairs.length === next.blockedPairs.length
+    && m.descent.blockedPairs.every((k, i) => k === next.blockedPairs[i]);
+  if (same) return m;
+  return { ...m, descent: next };
+};
+
 export const recordDescent = (map, { hadMisstep = false } = {}) => {
   const m = normalizeUnderMap(map);
   const flawlessStreak = hadMisstep ? 0 : (m.flawlessStreak || 0) + 1;
   const bestFlawlessStreak = Math.max(m.bestFlawlessStreak || 0, flawlessStreak);
   // The banked daily-stir probe bonus is spent by this descent (its budget was
   // computed at descent start) — zero it so it never double-applies.
-  return { ...m, flawlessStreak, bestFlawlessStreak, pendingProbeBonus: 0 };
+  return { ...m, flawlessStreak, bestFlawlessStreak, pendingProbeBonus: 0, descent: null };
 };
 
 // The Other Reader's presence is bounded so no single run of luck pins the foil
@@ -551,6 +591,11 @@ export const recordTheory = (map, theory) => {
   return {
     ...m,
     foil: nextFoil,
+    // Idempotent per chapter: an unresolved belief for this chapter is REPLACED,
+    // not stacked. Sealing, tapping Reconsider and sealing again used to leave two
+    // contradictory beliefs for one chapter, and resolveTheory flips every
+    // unresolved theory for a chapter, so clarity double-counted it and the ending
+    // was computed from more beliefs than the campaign has chapters.
     theories: [
       {
         chapter: theory.chapter ?? null,
@@ -565,7 +610,7 @@ export const recordTheory = (map, theory) => {
         grounded: theory.grounded != null ? !!theory.grounded : null,
         at: new Date().toISOString(),
       },
-      ...m.theories,
+      ...m.theories.filter((t) => !(t && t.chapter === (theory.chapter ?? null) && t.correct == null)),
     ],
   };
 };

@@ -61,8 +61,11 @@ function ThresholdHold({ active, reducedMotion }) {
     return () => clearInterval(t);
   }, [active, reducedMotion]);
   if (!active) return null;
+  // Blocks input on purpose: this covers the live footer during a wait that can
+  // run tens of seconds, and pointerEvents="none" let taps land on the buttons
+  // underneath it (Reconsider, in particular, mid-cross).
   return (
-    <View style={styles.crossingOverlay} pointerEvents="none">
+    <View style={styles.crossingOverlay}>
       <MaterialCommunityIcons name="door-open" size={26} color={COLORS.underViolet} />
       <Text style={styles.crossingKicker}>CROSSING THE THRESHOLD</Text>
       <Text style={styles.crossingLine}>{CROSSING_LINES[idx]}</Text>
@@ -114,6 +117,12 @@ export default function TheoryScreen({ navigation, route }) {
 
   // CLARITY (Move 3): how truly the player has read the hidden world so far, and
   // the most recent belief the story has borne out or subverted.
+  // Only nodes the player actually read TRUE. A blurred or foil-claimed node
+  // still stores the true revelation, so anything unfiltered leaks the answer.
+  const surfacedNodes = useMemo(
+    () => (Array.isArray(map.nodes) ? map.nodes : []).filter((n) => n && n.revelation && !n.unresolvedReading),
+    [map.nodes],
+  );
   const cl = useMemo(() => clarity(map), [map]);
   const variant = useMemo(() => endingVariant(map), [map]);
   const lastResolved = useMemo(() => map.theories.find((t) => t.correct != null) || null, [map.theories]);
@@ -332,12 +341,22 @@ export default function TheoryScreen({ navigation, route }) {
     // "Crossing…" hold is still better than fallback text. We pass the sealed-belief
     // map + requireFreshUnderMap so the lookup is keyed to THIS belief.
     const waitStart = Date.now();
+    let ensured;
     try {
-      await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
+      ensured = await game.ensureStoryContent?.(nextCaseNumber, nextPathKey, nextChoiceHistory, null, {
         underMap: sealedMapRef.current || map,
         requireFreshUnderMap: true,
       });
     } catch (_e) {
+      setContinuing(false);
+      setGenError('The next chapter would not take shape. Tap to try again.');
+      return;
+    }
+    // ensureStoryContent RESOLVES with { ok: false } on a generation failure; it
+    // does not throw. The catch above was therefore dead, and a failed generation
+    // advanced the campaign into a chapter with no content: the player crossed
+    // the threshold into a blank case behind a fresh gate.
+    if (ensured && ensured.ok === false) {
       setContinuing(false);
       setGenError('The next chapter would not take shape. Tap to try again.');
       return;
@@ -401,27 +420,30 @@ export default function TheoryScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* What the map has revealed so far (context for the choice; full list in the Codex) */}
-        {map.nodes.length > 0 ? (
+        {/* What the map has revealed so far (context for the choice; full list in the Codex).
+            Blurred and foil-claimed nodes are excluded: their `revelation` holds the TRUE
+            reading even when the player read it wrong, so listing them printed the answer
+            that the re-read gate and the whole choose-the-truth step exist to withhold. */}
+        {surfacedNodes.length > 0 ? (
           <>
             <Text style={styles.sectionLabel}>WHAT THE MAP HAS REVEALED</Text>
             <Text style={styles.sectionHint}>The truths you've pulled from the Under-Map — what your reading rests on.</Text>
             <View style={styles.nodeList}>
-              {map.nodes.slice(0, 3).map((n) => (
+              {surfacedNodes.slice(0, 3).map((n) => (
                 <View key={n.id} style={styles.nodeRow}>
                   <MaterialCommunityIcons name="map-marker-star" size={15} color={COLORS.accentSecondary} />
                   <Text style={styles.nodeText}>{n.revelation}</Text>
                 </View>
               ))}
-              {map.nodes.length > 3 ? (
-                <Text style={styles.nodeMore}>+{map.nodes.length - 3} more truth{map.nodes.length - 3 === 1 ? '' : 's'} you've uncovered</Text>
+              {surfacedNodes.length > 3 ? (
+                <Text style={styles.nodeMore}>+{surfacedNodes.length - 3} more truth{surfacedNodes.length - 3 === 1 ? '' : 's'} you've uncovered</Text>
               ) : null}
             </View>
           </>
         ) : null}
 
         {/* YOUR EVIDENCE — read-only reference to weigh BEFORE the choice. Tap to read a clue. */}
-        <Text style={[styles.sectionLabel, { marginTop: map.nodes.length ? SPACING.lg : 0 }]}>YOUR EVIDENCE</Text>
+        <Text style={[styles.sectionLabel, { marginTop: surfacedNodes.length ? SPACING.lg : 0 }]}>YOUR EVIDENCE</Text>
         {map.fragments.length === 0 ? (
           <Text style={styles.muted}>You collected no fragments this chapter — the map stays dark. You can still commit a read.</Text>
         ) : (

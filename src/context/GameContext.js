@@ -20,6 +20,8 @@ import {
   nameFoil as umNameFoil,
   drawDailyStir as umDrawStir,
   resolveDailyStir as umResolveStir,
+  updateDescentState as umUpdateDescentState,
+  descentStateFor as umDescentStateFor,
   touchUnderMap as umTouch,
   claimByFoil as umClaimByFoil,
   seedNewGamePlus as umSeedNewGamePlus,
@@ -778,6 +780,19 @@ export function GameProvider({
     return probe.claimed;
   }, [progress.storyCampaign, updateProgress]);
 
+  // Persist the per-descent economy (probes spent, misstep, DEEPSIGHT
+  // forgiveness, blurred pairs) so it survives leaving to re-read the scene,
+  // which the game explicitly invites the player to do.
+  const updateUnderMapDescent = useCallback((caseNumber, patch) => {
+    if (!caseNumber || !patch) return;
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      const um = umUpdateDescentState(current.underMap, caseNumber, patch);
+      if (um === current.underMap) return null;
+      return { storyCampaign: { ...current, underMap: um } };
+    });
+  }, [updateProgress]);
+
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
     updateProgress((prev) => {
@@ -1191,6 +1206,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    updateUnderMapDescent,
     claimUnderMapByFoil,
     markLessonSeen,
     resolveUnderMapBelief,
@@ -1216,6 +1232,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    updateUnderMapDescent,
     claimUnderMapByFoil,
     markLessonSeen,
     resolveUnderMapBelief,
@@ -1262,6 +1279,7 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    updateUnderMapDescent,
     claimUnderMapByFoil,
     markLessonSeen,
     resolveUnderMapBelief,
