@@ -105,7 +105,16 @@ const HEARTBEAT_INTERVAL_MS = 10000;
 const GEMINI_FETCH_TIMEOUT_MS = 270000;
 
 // Simple in-memory rate limiting (resets on cold start)
+// The key travels in a header, never in the URL. As a query parameter it landed
+// in every proxy/CDN access log, in fetch error messages, and in anything that
+// echoed a request URL back to a client.
+const geminiHeaders = () => ({
+  'Content-Type': 'application/json',
+  'x-goog-api-key': process.env.GEMINI_API_KEY,
+});
+
 const rateLimitStore = new Map();
+const RATE_LIMIT_MAX_KEYS = 5000;
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60 * 1000;
 
@@ -114,6 +123,14 @@ function isRateLimited(ip) {
   const record = rateLimitStore.get(ip);
 
   if (!record || now > record.resetAt) {
+    // Nothing ever swept this map: an entry was only replaced when the SAME key
+    // came back, so on an edge instance it grew with every distinct client until
+    // the isolate was recycled. Sweep the expired entries when it gets large.
+    if (rateLimitStore.size > RATE_LIMIT_MAX_KEYS) {
+      for (const [k, v] of rateLimitStore) {
+        if (now > v.resetAt) rateLimitStore.delete(k);
+      }
+    }
     rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
     return false;
   }
@@ -135,10 +152,22 @@ export default async function handler(request) {
   const startTime = Date.now();
 
   // CORS headers for all responses
+  // The app is a native client and sends no Origin, so it never needed CORS.
+  // The wildcard only ever served BROWSERS, which meant any web page could call
+  // this proxy from a user's machine and spend the Gemini quota. Origins are
+  // allowed only when ALLOWED_ORIGINS names them.
+  const origin = request.headers.get('origin');
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-App-Token',
+    'Vary': 'Origin',
+    ...(origin && allowedOrigins.includes(origin)
+      ? { 'Access-Control-Allow-Origin': origin }
+      : {}),
   };
 
   // Handle preflight
@@ -155,7 +184,15 @@ export default async function handler(request) {
   }
 
   // Rate limiting
-  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  // Prefer the headers the platform sets over the one any client can send:
+  // x-forwarded-for is caller-supplied at the edge, so a single client could
+  // rotate it and never be limited, while a shared proxy's real users all
+  // collapsed onto one bucket.
+  const clientIP = request.headers.get('x-vercel-forwarded-for')
+    || request.headers.get('x-real-ip')
+    || request.headers.get('cf-connecting-ip')
+    || request.headers.get('x-forwarded-for')?.split(',')[0]
+    || 'unknown';
   if (isRateLimited(clientIP)) {
     console.warn(`[${requestId}] Rate limited: ${clientIP}`);
     return Response.json(
@@ -216,7 +253,7 @@ export default async function handler(request) {
         );
       }
 
-      const geminiUrl = `${GEMINI_API_BASE}/cachedContents?key=${process.env.GEMINI_API_KEY}`;
+      const geminiUrl = `${GEMINI_API_BASE}/cachedContents`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
@@ -224,7 +261,7 @@ export default async function handler(request) {
       try {
         const cacheResponse = await fetch(geminiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: geminiHeaders(),
           body: JSON.stringify({
             model: `models/${model}`,
             system_instruction: { parts: [{ text: systemInstruction }] },
@@ -288,14 +325,14 @@ export default async function handler(request) {
       }
 
       const isDelete = body.operation === 'deleteCache';
-      const geminiUrl = `${GEMINI_API_BASE}/${name}?key=${process.env.GEMINI_API_KEY}`;
+      const geminiUrl = `${GEMINI_API_BASE}/${name}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
 
       try {
         const res = await fetch(geminiUrl, {
           method: isDelete ? 'DELETE' : 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: geminiHeaders(),
           ...(isDelete ? {} : { body: JSON.stringify({ ttl: body.ttl || '3600s' }) }),
           signal: controller.signal,
         });
@@ -344,7 +381,7 @@ export default async function handler(request) {
     console.log(`[${requestId}] Request: model=${model}, messages=${body.messages.length}, hasSchema=${hasSchema}, streaming=${useStreaming}, cached=${!!cachedContent}`);
 
     // Build Gemini request
-    const geminiUrl = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const geminiUrl = `${GEMINI_API_BASE}/models/${model}:generateContent`;
 
     const geminiBody = {
       contents: body.messages.map(msg => {
@@ -465,7 +502,7 @@ export default async function handler(request) {
 
           const geminiResponse = await fetch(geminiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: geminiHeaders(),
             body: JSON.stringify(geminiBody),
             signal: geminiController.signal,
           });
@@ -509,6 +546,12 @@ export default async function handler(request) {
               requestId,
               finishReason,
               geminiStatus: 200,
+              // A safety block, a recitation block or an empty candidate is the
+              // model's answer, not a transport hiccup. Without this marker the
+              // client saw a 200 and retried the identical prompt through three
+              // transports and four attempts, burning minutes to be refused
+              // twelve times.
+              permanent: true,
             })}\n\n`;
             await writer.write(encoder.encode(blockedError));
             await writer.close();
@@ -593,7 +636,7 @@ export default async function handler(request) {
     try {
       const geminiResponse = await fetch(geminiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: geminiHeaders(),
         body: JSON.stringify(geminiBody),
         signal: controller.signal,
       });

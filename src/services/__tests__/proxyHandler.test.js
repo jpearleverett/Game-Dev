@@ -78,6 +78,19 @@ describe('the Gemini proxy', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
+    test('a browser origin that is not on the allowlist', async () => {
+      // The wildcard only ever served browsers, and the app is native: it meant
+      // any web page could spend the Gemini quota from a user's machine.
+      const res = await handler(post({ messages: [{ role: 'user', content: 'hi' }], stream: false }, { Origin: 'https://evil.test' }));
+      expect(res.headers.get('access-control-allow-origin')).toBeNull();
+
+      process.env.ALLOWED_ORIGINS = 'https://ok.test';
+      handler = require('../../../proxy/api/gemini').default;
+      const allowed = await handler(post({ messages: [{ role: 'user', content: 'hi' }], stream: false }, { Origin: 'https://ok.test' }));
+      expect(allowed.headers.get('access-control-allow-origin')).toBe('https://ok.test');
+      delete process.env.ALLOWED_ORIGINS;
+    });
+
     test('a cache name that is not a cachedContents resource', async () => {
       const res = await handler(post({ operation: 'deleteCache', name: '../../models/gemini-3.8-flash' }));
       expect(res.status).toBe(400);
@@ -96,6 +109,14 @@ describe('the Gemini proxy', () => {
       await send();
       expect(upstream().url).toContain(`/v1beta/models/${GEMINI_MODEL}:generateContent`);
       expect(upstream().url).not.toContain('v1alpha');
+    });
+
+    test('carries the API key in a header, never in the URL', async () => {
+      // As a query parameter it landed in every proxy and CDN access log, and in
+      // any fetch error message that echoed the request URL.
+      await send();
+      expect(upstream().url).not.toContain('key=');
+      expect(upstream().init.headers['x-goog-api-key']).toBe('test-key');
     });
 
     test('drops every deprecated sampling parameter', async () => {

@@ -57,13 +57,19 @@ function isPermanentApiStatus(status) {
   return typeof status === 'number' && status >= 400 && status < 600 && !RETRYABLE_HTTP_STATUSES.has(status);
 }
 
+/** +/-25% so concurrent retries spread out instead of synchronizing. */
+const withJitter = (ms) => Math.round(ms * (0.75 + Math.random() * 0.5));
+
 /** Tag an error with the API status so the retry loop can stop on permanent failures. */
-function applicationError(message, { status = null, details = null } = {}) {
+function applicationError(message, { status = null, details = null, permanent = null } = {}) {
   const err = new Error(message || 'Server returned error');
   err.isApplicationError = true;
   if (status != null) err.geminiStatus = status;
   if (details) err.details = details;
-  err.isPermanent = isPermanentApiStatus(status);
+  // `permanent` lets the server mark a refusal that carries a 200: a safety or
+  // recitation block is the model's answer, and retrying the same prompt only
+  // buys the same refusal again.
+  err.isPermanent = permanent === true || isPermanentApiStatus(status);
   return err;
 }
 
@@ -200,7 +206,15 @@ class LLMService {
       retryCount: 0,
     };
 
+    // Bounded. Nothing ever trimmed this: a long offline stretch pushed an entry
+    // per attempt and persisted the whole array to AsyncStorage each time, so the
+    // write cost grew with the queue and the oldest requests (least likely to
+    // still be wanted) were the ones kept.
+    const MAX_OFFLINE_QUEUE = 20;
     this.offlineQueue.push(queueItem);
+    if (this.offlineQueue.length > MAX_OFFLINE_QUEUE) {
+      this.offlineQueue = this.offlineQueue.slice(-MAX_OFFLINE_QUEUE);
+    }
 
     // Persist queue to storage
     try {
@@ -769,7 +783,9 @@ class LLMService {
         attempt++;
         // Exponential backoff before next retry - longer for mobile resilience: 2s, 4s, 8s, 16s
         if (attempt < this.config.maxRetries) {
-          await this._sleep(Math.pow(2, attempt - 1) * 2000);
+          // Jittered: without it every concurrent caller woke at the same
+          // instant and hit the same limit together, on every attempt.
+          await this._sleep(withJitter(Math.pow(2, attempt - 1) * 2000));
         }
       }
     }
@@ -884,6 +900,7 @@ class LLMService {
             reject(applicationError(parsed.error, {
               status: parsed.geminiStatus ?? null,
               details: parsed.details ?? null,
+              permanent: parsed.permanent === true,
             }));
           }
         } catch (parseErr) {
@@ -1489,7 +1506,7 @@ class LLMService {
         attempt++;
         if (attempt < this.config.maxRetries) {
           // Longer backoff for mobile network resilience: 2s, 4s, 8s, 16s
-          const backoffDelay = Math.pow(2, attempt - 1) * 2000;
+          const backoffDelay = withJitter(Math.pow(2, attempt - 1) * 2000);
           console.warn(`[LLMService] [${localRequestId}] Attempt ${attempt} failed after ${attemptTime}ms: ${error.message}. Retrying in ${backoffDelay/1000}s...`);
           if (traceId) {
             llmTrace('LLMService', traceId, 'llm.proxy.retry', {
@@ -2129,8 +2146,12 @@ class LLMService {
       // Build messages with prior thought signatures if provided
       const messages = [...priorMessages, { role: 'user', content: dynamicPrompt }];
 
-      // Call via proxy with cachedContent parameter
-      const response = await this._callViaProxy(
+      // Through the same limiter as complete(). Going straight to the proxy meant
+      // the CACHED path (which is most of them) was outside the interval and
+      // concurrency budget entirely, so the two generation slots could put two
+      // requests on the wire back to back and collect a 429 the budget exists to
+      // avoid.
+      const response = await this._rateLimitedRequest(() => this._callViaProxy(
         messages,
         {
           model,
@@ -2142,7 +2163,7 @@ class LLMService {
           traceId: options.traceId,
           requestContext: options.requestContext,
         }
-      );
+      ));
 
       // Log token usage with cache metrics
       this._logCachedTokenUsage({
