@@ -794,8 +794,8 @@ export const CONSISTENCY_RULES = [
 // ============================================================================
 export const GENERATION_CONFIG = {
   // Temperature settings
-  // NOTE (Gemini 3.5): the LLM layer no longer sends sampling params (temperature/
-  // topP/topK), the model uses its tuned defaults per Google's 3.5 guidance.
+  // NOTE (Gemini 3.x): the LLM layer no longer sends sampling params (temperature/
+  // topP/topK), the model uses its tuned defaults per Google's Gemini 3.x guidance.
   // This section is retained for backward compatibility and future provider swaps only;
   // values here are not applied to Gemini 3.x requests.
   temperature: {
@@ -809,7 +809,7 @@ export const GENERATION_CONFIG = {
   // IMPORTANT: Thinking tokens consume output budget. Core narrative uses medium
   // thinking for gameplay latency; values below leave headroom for reasoning +
   // structured story output.
-  // Gemini 3.5 Flash: 1M input / 64k output
+  // Gemini 3.8 Flash: 1M input / 65,536 output
   maxTokens: {
     subchapter: 65536,    // Main narrative generation; enough for ~900-1500 words + thinking
     expansion: 32000,     // For expansion requests (currently disabled)

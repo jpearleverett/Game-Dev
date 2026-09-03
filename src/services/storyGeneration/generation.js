@@ -483,7 +483,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         );
 
         // ========== THOUGHT SIGNATURE CONTINUITY ==========
-        // Intentionally no signature replay. Per the Gemini 3.5 Flash contract,
+        // Intentionally no signature replay. Per the Gemini 3.x Flash contract,
         // signatures are optional for non-function-call JSON (omitting them does not
         // error, only "may degrade"), and carrying one forward would require replaying
         // the prior subchapter's full unmodified response (it must stay attached to the

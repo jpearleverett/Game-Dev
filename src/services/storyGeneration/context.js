@@ -729,7 +729,7 @@ function _buildSceneStateSection(context, chapter, subchapter) {
 }
 
 // NOTE: Cross-subchapter thought-signature replay was intentionally NOT wired up.
-// Per the Gemini 3.5 Flash thought-signatures contract, signatures are optional
+// Per the Gemini 3.x Flash thought-signatures contract, signatures are optional
 // for non-function-call JSON generation (omitting them does not error, only "may
 // degrade"), and carrying one forward requires replaying the prior model turn's
 // FULL unmodified content with the signature attached to that exact part. In this

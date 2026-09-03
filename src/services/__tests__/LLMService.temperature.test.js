@@ -13,7 +13,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(async () => null),
 }));
 
-describe('LLMService Gemini 3.5 sampling/thinking defaults', () => {
+describe('LLMService Gemini 3.x sampling/thinking defaults', () => {
   test('omits sampling params and thinkingLevel for proxy requests (uses model defaults)', async () => {
     // Require after mocks so constructor sees mocked NetInfo/Constants.
     // (Jest in this repo isn't configured for ESM dynamic import.)
@@ -38,7 +38,7 @@ describe('LLMService Gemini 3.5 sampling/thinking defaults', () => {
     await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10 });
 
     const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    // Per Gemini 3.5 guidance we no longer send sampling params...
+    // Per Gemini 3.x guidance we no longer send sampling params...
     expect(body.temperature).toBeUndefined();
     // ...and we don't pin a thinking level by default (falsy => proxy omits it, model uses 'medium').
     expect(body.thinkingLevel == null).toBe(true);

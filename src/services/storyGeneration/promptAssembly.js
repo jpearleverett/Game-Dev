@@ -563,7 +563,7 @@ function _buildOtherReaderSection(underMap) {
 
 /**
  * Build a compact, high-salience continuity anchor for the END of the prompt
- * (right before <task>). Gemini 3.5 Flash's long-context recall is a relative
+ * (right before <task>). Gemini 3.x Flash's long-context recall is a relative
  * soft spot (MRCR v2 @128k ~77%), and immutable facts get diluted across the
  * full story text dumped earlier. Restating the core canon in the highest-
  * attention end position keeps names / roles / timeline from drifting across a
@@ -636,7 +636,7 @@ function _buildDynamicPrompt(
   // The includeManyShot parameter was removed to prevent duplication.
   const parts = [];
 
-  // Per Gemini 3.5 Flash docs: use XML tags for structure clarity, and
+  // Per Gemini 3.x Flash docs: use XML tags for structure clarity, and
   // "place your specific instructions or questions at the end of the prompt, after the data context"
 
   // Dynamic Part 1: Story context
@@ -729,7 +729,7 @@ function _buildDynamicPrompt(
   }
 
   // Dynamic Part 7.5: Continuity anchor (immutable canon) in the high-attention
-  // end position, to counter Gemini 3.5 Flash's long-context dilution as the
+  // end position, to counter Gemini 3.x Flash's long-context dilution as the
   // story grows across chapters.
   const continuityAnchor = this._buildContinuityAnchorSection(context, chapter);
   if (continuityAnchor) {
@@ -738,7 +738,7 @@ function _buildDynamicPrompt(
     parts.push('</continuity_anchors>');
   }
 
-  // Dynamic Part 8: Current Task Specification (LAST per Gemini 3.5 Flash best practice)
+  // Dynamic Part 8: Current Task Specification (LAST per Gemini 3.x Flash best practice)
   const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
   // Note: beatType already declared earlier for many-shot examples.
 
@@ -1699,7 +1699,7 @@ Do not use these in your narrative:
 - "suddenly" at sentence start
 - Stating emotions directly ("He felt angry") instead of showing them`;
 
-  // ========== FINAL CHECKLIST (Per Gemini 3.5 Flash best practice: restate task at end) ==========
+  // ========== FINAL CHECKLIST (Per Gemini 3.x Flash best practice: restate task at end) ==========
   // NOTE: no closing checklist. The output rules live once in the system
   // prompt's <constraints> and once in the schema field descriptions that
   // actually enforce them; restating them a third time here is the redundancy

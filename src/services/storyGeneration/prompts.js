@@ -60,7 +60,7 @@ export const getManyShotCategories = (beatType, chapterBeatType) => {
 
 // ============================================================================
 // PATHDECISIONS SYSTEM PROMPT - Story context for path-specific decisions
-// Per Gemini 3.5 Flash best practices: XML tags, persona, direct constraints
+// Per Gemini 3.x Flash best practices: XML tags, persona, direct constraints
 // Enhanced with style/voice guidance for consistency with main narrative
 // ============================================================================
 export const buildPathDecisionsSystemPrompt = () => {
@@ -98,7 +98,7 @@ Return ONLY valid JSON matching the schema. No commentary.
 };
 
 // ============================================================================
-// PATHDECISIONS PROMPT TEMPLATE - Structured per Gemini 3.5 Flash best practices
+// PATHDECISIONS PROMPT TEMPLATE - Structured per Gemini 3.x Flash best practices
 // Uses XML tags, explicit planning, few-shot examples, causality mapping
 // IMPORTANT: Uses SUMMARIES (15-25 words each) instead of full narrative content.
 // Full narrative excerpts trigger Gemini's RECITATION safety filter.
@@ -251,7 +251,7 @@ Every path gets its own options, drawn from what THAT path discovered; no two pa
 
 // ============================================================================
 // MASTER SYSTEM PROMPT - Core instructions for the LLM
-// Structured per Gemini 3.5 Flash best practices (XML tags, direct constraints, persona)
+// Structured per Gemini 3.x Flash best practices (XML tags, direct constraints, persona)
 // Now builds dynamically from storyBible.js data - no hardcoded duplicates
 // ============================================================================
 export const buildMasterSystemPrompt = () => {

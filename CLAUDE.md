@@ -15,8 +15,16 @@ is **science-fiction mystery, NOT a detective whodunit** — there are no suspec
 alibis, or culprits. The fantasy is *mapping a reality that doesn't want to be
 seen*, and slowly revealing its secrets.
 
-Story content is **generated on-device by Google Gemini** (`gemini-3.5-flash`)
+Story content is **generated on-device by Google Gemini** (`gemini-3.8-flash`)
 through a Vercel proxy, with branching narrative and infinite path divergence.
+The model contract lives in **one place**: `src/constants/gemini.js`
+(`GEMINI_MODEL`, `GEMINI_API_VERSION` = `v1beta`, `GEMINI_MAX_OUTPUT_TOKENS` =
+65,536, `THINKING_LEVELS`, `normalizeThinkingLevel`, `clampMaxOutputTokens`,
+`isGemini3Model`). No caller passes a model id; `proxy/api/gemini.js` mirrors the
+same constants (it deploys separately, so `geminiModelContract.test.js` asserts
+the two stay in step). 3.x rejects `thinkingLevel: 'minimal'` and ignores
+`temperature`/`topP`/`topK`/`candidateCount`/`thinkingBudget`, so the client
+normalizes the first and never sends the rest.
 
 > **History note:** the game was refactored from an older "noir detective +
 > word-puzzle + alibi deduction" design into the Under-Map design. The whodunit
@@ -90,7 +98,16 @@ Key helpers: `makeFragment`, `addFragments` (dedups by id; **re-collecting deepe
 - **Hook:** `src/hooks/useStoryGeneration.js` → `src/context/StoryContext.js` (`ensureStoryContent`) → `src/hooks/useStoryEngine.js`.
 - **Proxy:** `proxy/` (Vercel Edge function at `https://game-dev-tan.vercel.app/api/gemini`), SSE streaming with heartbeats. Configured via `GEMINI_PROXY_URL` (see `.env.example`).
 - **Caching:** Gemini context caching (chapter-start prefix cache, ~24-28k cached tokens) + an in-memory `generatedCache` in `src/data/storyContent.js` + persisted `src/storage/generatedStoryStorage.js` (with pruning).
-- **Many-shot:** `src/data/manyShot/` (scene-type exemplars) is **live** — `promptAssembly.js` injects them for quality. (Built by `scripts/` + `MANY_SHOT_WORKFLOW.md`.)
+- **Many-shot: RETIRED and deleted.** `src/data/manyShot/` injected ~4,700 words per
+  request of verbatim excerpts from a published crime novel, introduced to the model as
+  the scenes to absorb patterns from. Wrong register (1990s Boston working-class crime
+  drama, not science-fiction mystery), a recitation risk, and third-party text on the
+  wire. `buildManyShotExamples()` now returns `''` and keeps the rationale in a comment;
+  the directory, the build scripts and `MANY_SHOT_WORKFLOW.md` are gone. **The prose
+  corpus is now the game's own:** 14 native Ashport exemplars at the segment target
+  (`EXAMPLE_PASSAGES` ×10, `EXTENDED_STYLE_GROUNDING` ×4), guarded by
+  `promptCorpus.test.js` (register, length, paragraph structure, the em dash ban, and
+  that the negative examples quote their own text).
 - **Thinking level:** narrative uses `medium`; path-decisions / personality use `low`. No temperature/topP. Latency is dominated by thinking (TTFT).
 
 ### Under-Map steers generation (`<under_map_state>`)
@@ -114,7 +131,7 @@ Alongside it, `_buildOtherReaderSection(underMap)` injects a separate, presence-
 (promptAssembly.js) injects the player's **revealed node truths** and **sealed
 beliefs** (with their resolved status: held / subverted / unproven) into the
 end-of-prompt `<continuity_anchors>` block as HARD "do not contradict" canon — the
-high-attention position that counters Gemini 3.5 Flash's long-context dilution.
+high-attention position that counters Gemini 3.x Flash's long-context dilution.
 This is distinct from `<under_map_state>` (a generative "weave this in" instruction).
 Note: the old model-emitted `consistencyFacts` ledger is **retired** — it was
 removed from the schemas (`schemas.js`), so the model no longer emits facts and the
@@ -181,13 +198,13 @@ src/
     DeskScreen.js, StoryCampaignScreen.js, CaseSolvedScreen.js, ... (menus/meta)
   components/
     BranchingNarrativeReader.js  branching reader + inline tappable EXAMINE phrases
+  constants/gemini.js            THE model contract (id, api version, token ceiling, thinking levels)
   data/
     underMap.js                  Under-Map pure model (the spine)
     storyContent.js              getStoryEntry, generatedCache, path keys, parseCaseNumber, computeBranchPathKey
     storyNarrative.json          STATIC chapter-1A content (full 13-node branch tree, written in the Under-Map register; seeded fragments/relations). Only 001A.ROOT is authored; other keys are generated/cached.
     cases.js                     SEASON_ONE_CASES placeholders
     caseBoard.js                 LEGACY (retired alibi board) — kept only for save back-compat + EvidenceBoard constants
-    manyShot/                    live generation exemplars
   utils/
     storyAdvance.js              pure advance helpers (advanceWithDecision/advanceSubchapter/caseOrder)
     storyDecision.js             resolveStoryDecision / decisionOptionsFrom (shared by CaseFile + Theory)
@@ -197,7 +214,6 @@ src/
   storage/                       AsyncStorage progress + generated-story persistence
 proxy/                           Vercel Gemini proxy (Edge function)
 docs/gemini_*.md                 Gemini API reference (caching/structured-output/thinking/etc.) — keep
-scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time tooling)
 ```
 
 ---
@@ -207,7 +223,13 @@ scripts/, MANY_SHOT_WORKFLOW.md  many-shot data tooling (live data, one-time too
 - **Run on device:** Expo Go (tested on Pixel 10 Pro via Termux, and iOS). `npx expo start -c` (the `-c` clears the cache — needed after content/prompt changes so chapters regenerate). Requires the proxy URL in `.env` (`GEMINI_PROXY_URL=https://game-dev-tan.vercel.app/api/gemini`).
 - **Cursor Cloud can run the RN UI and live model when the environment is configured.** Use Expo (`npx expo start -c`) for UI/manual testing and the configured `GEMINI_PROXY_URL` for live generation checks when a task needs end-to-end validation.
 - Baseline automated verification still applies:
-  - `npx jest` — unit/integration tests (incl. a real `usePersistence`+`useStoryEngine` advance test via `react-test-renderer`).
+  - `npx jest` — **two projects** (`jest.config.js`): `logic` (babel-jest, node env, expo
+    stubbed) covers `src/data|services|storage|utils/**/__tests__`; `ui` (`jest-expo`
+    preset, no expo stub) covers `src/components|screens|hooks|context/**/__tests__` and
+    can actually MOUNT React Native components. A test's project is decided by its PATH,
+    so a test that imports the RN module graph belongs under `hooks/`, `components/`,
+    `screens/` or `context/`. Note `react-test-renderer` produces no layout, so anything
+    driven by measured width (the reader's pagination) can't be asserted on rendered text.
   - Babel parse-check any RN file you edit: `node -e 'require("@babel/core").transformFileSync("<path>")'`.
 - After changing generation/content, the player must start a **fresh** run (cached pre-change entries won't reflect changes).
 
@@ -255,7 +277,8 @@ The cache-key contract these rely on lives in `src/utils/underMapGeneration.js`
 
 **LATENCY REALITY (on-device, 2026-06-09):** the above only hides generation when the
 generation FITS inside the cover window. On a Pixel 10 Pro a single scene takes **~70s**
-(`gemini-3.5-flash`, `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion tokens),
+(measured on `gemini-3.5-flash`; `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion
+tokens), not yet re-measured on 3.8 Flash,
 nearly all of it model *thinking* (TTFT). Cover windows (a CONNECT puzzle, a THEORY
 deliberation) are ~20-40s — so the prefetch is *correct* (logs show all duplicate requests
 dedupe onto one in-flight generation) but starts only ~1 beat ahead and **cannot fully cover
@@ -412,7 +435,57 @@ rationale as rejecting deeper lookahead). First-session cover instead relies on
 prefetch-at-second-choice (already in place) + the DescentHold. Season 2 scaffolding:
 `docs/SEASON_2_ARCHITECTURE.md`.
 
+**MODEL UPGRADE + END-TO-END SWEEP (this pass).** Everything below is code-complete
+and green (`npx jest`), and none of it has been through an on-device playtest yet.
+
+- **Model:** `gemini-3.8-flash` everywhere, behind `src/constants/gemini.js` (see §1).
+  API surface moved `v1alpha` → `v1beta`; a model id persisted by an older build is
+  overridden at `init()`; `maxOutputTokens` is omitted when unset and clamped to 65,536;
+  multi-part candidates are joined instead of taking part[0]; permanent 4xx are no longer
+  retried; 429 is honoured; the SSE read has an overall deadline.
+- **Prompts, per Gemini 3.x guidance:** chain-of-thought scaffolding and self-critique
+  checklists removed (thinking does that work now), instructions moved after bulk context,
+  consistent XML delimiters, and the same rule stated once instead of four times.
+  Redundancy actively degrades these models.
+- **The evidence-grounded belief chain was inert and is repaired.** The pathDecisions
+  merge rebuilt each decision from a literal that dropped `groundedKey`, so every belief
+  reached the Theory screen ungrounded. Do not reintroduce a hand-rolled merge there;
+  it must go through `_convertDecisionFormat`.
+- **The repair pass no longer eats data.** `_fixContent` regenerates against a schema
+  with no `pathDecisions` and, on a C beat, none of the Under-Map fields; whatever the
+  in-force schema cannot re-emit is carried across in `preservedAcrossRepair`, and the
+  canonical narrative is rebuilt (`ensureCanonicalNarrative`) instead of being stored empty.
+- **Rewards are earned, not granted.** The Desk's daily-stir card only opens the board;
+  the +1 probe and the days-mapped streak are paid by drawing a true reading on the
+  FREEFORM board or by solving the daily word puzzle. Settling deepens the drifted
+  fragment (`seen` + 1), which moves the generation signature, so it must never happen
+  inside a gated A/B descent - that would invalidate the prefetch the descent exists to cover.
+- **Restarts are real restarts.** `storyGenerationService.resetGeneratedContent()` drops
+  the AsyncStorage keys, `storyContent`'s in-memory `generatedCache`, the service's
+  `generatedStory` mirror and the chapter-start prefix caches. Called from
+  `usePersistence.clearProgress` and from `enterStoryCampaign({reset:true})`. Clearing
+  storage alone replayed the previous run's prose.
+- **Under-Map model:** the fragment cap is soft for load-bearing fragments (an evicted
+  endpoint used to orphan a relation forever, capping depth below 100%); the label
+  resolver prefers the newest fragment carrying a label; New Game+ keeps the player's
+  streak record; a carried-over foil keeps `fromChapter: null`; the empty-signature
+  sentinel actually fires.
+- **`intro` is rendered.** Nine path-specific climax framings a chapter were generated,
+  validated, persisted and shown nowhere. The Theory screen renders it above the readings.
+- **Prompt corpus:** see §4 (many-shot retired, native exemplars in). The chapter beat
+  types, the revelation gradient, a subtext example and two schema field examples were
+  still describing the retired whodunit and are rewritten to the Under-Map design.
+  `tempoModifier` (was `wordCountModifier`) selects a pacing note; it never multiplied a
+  word count, since segment length is fixed at 380-420 by the schema.
+- **Tests: 250, two projects.** New: `geminiModelContract`, `promptCorpus`,
+  `storyEntryShape`, `rewardWiring`, `BranchingNarrativeReader` (the first test that
+  mounts a component), plus additions to `underMap`, `storyDecision`, `storyAdvance`,
+  `validation.deriveFragments`, `playerTheoryPrompt`, `underMapGenerationSignature`.
+
 **Open / candidate next work:**
+- **On-device playtest of the whole sweep above** — it is all LLM- and feel-dependent:
+  does 3.8 Flash hold the prose register with the native corpus, is the latency envelope
+  different, do the rewritten beat types read as the Under-Map rather than a procedural.
 - **On-device playtest of the new loop mechanics** (all code-complete but LLM/feel-dependent): evidence echoes + groundedKey fairness at a C-beat; sense-tier pacing (do tiers land ~ch2/ch4/ch7?); the unlock-verdict notification firing on a real device; the post-game Desk after finishing chapter 12.
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step. (The new `addRelations` console warning makes dropped/unresolved relations visible.)
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.
