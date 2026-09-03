@@ -123,14 +123,17 @@ export default function CaseFileScreen({
     }
 
     return () => {
-      if (soundObject) {
-        try {
-          soundObject.remove();
-        } catch (e) {
-          // already released
-        }
-        soundObject = null;
-      }
+      const player = soundObject;
+      soundObject = null;
+      if (!player) return;
+      // remove() is registry bookkeeping only (AudioModule.kt: `players.remove(
+      // player.id)`) — it neither stops playback nor frees the native player.
+      // Without release() this looping ambient bed kept playing under every
+      // later screen, and since this effect is keyed on [ambienceVolume], every
+      // drag of the Settings slider leaked another copy on top.
+      try { player.pause(); } catch (e) { /* already gone */ }
+      try { player.remove(); } catch (e) { /* already gone */ }
+      try { player.release(); } catch (e) { /* already released */ }
     };
   }, [ambienceVolume]);
 
@@ -1574,7 +1577,7 @@ const styles = StyleSheet.create({
   boardFrame: { flex: 1, width: "100%", position: "relative", overflow: "hidden", padding: 1 },
   boardSurface: { flex: 1, width: "100%", position: "relative", overflow: "hidden" },
   boardGlow: { position: "absolute", top: -120, left: -80, opacity: 0.5 },
-  boardNoise: { ...StyleSheet.absoluteFillObject, opacity: 0.08 },
+  boardNoise: { ...StyleSheet.absoluteFill, opacity: 0.08 },
   boardCorner: { position: "absolute", width: 72, height: 72, opacity: 0.4 },
   boardCornerTl: { top: -4, left: -4 },
   boardCornerTr: { top: -4, right: -4, transform: [{ scaleX: -1 }] },

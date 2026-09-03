@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   cardGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1,
   },
   cardLines: {
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   celebrationGlow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(241, 197, 114, 0.28)',
     shadowColor: 'rgba(241, 197, 114, 0.8)',
     shadowOpacity: 0.55,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   celebrationRing: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 2,
     borderColor: 'rgba(241, 197, 114, 0.85)',
     zIndex: 0,

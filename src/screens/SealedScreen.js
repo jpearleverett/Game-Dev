@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     shadowColor: '#c44a32', shadowOpacity: 0.5, shadowRadius: 30, shadowOffset: { width: 0, height: 12 }, elevation: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  waxTex: { ...StyleSheet.absoluteFillObject, opacity: 0.18 },
+  waxTex: { ...StyleSheet.absoluteFill, opacity: 0.18 },
   waxHighlight: { position: 'absolute', top: 14, left: 22, width: 54, height: 38, borderRadius: 30, backgroundColor: 'rgba(255,190,160,0.35)' },
   emboss: { alignItems: 'center', justifyContent: 'center' },
   sealCh: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 3.4, color: '#f7cab8', opacity: 0.85 },

@@ -185,13 +185,13 @@ export default function SolvedStampAnimation({ visible, onContinue, reducedMotio
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1000,
     justifyContent: 'center',
     alignItems: 'center',
   },
   overlayBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
   contentContainer: {
@@ -239,6 +239,10 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(211, 47, 47, 0.4)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 8,
+    // RN 0.86 defaults every <Text> to overflow:'hidden'
+    // (defaultTextToOverflowHidden), which clips this glow to the
+    // text box. RN prepends its default, so this wins.
+    overflow: 'visible',
     marginBottom: -2,
   },
   subtitleText: {
@@ -265,7 +269,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   inkTexture: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.15,
     backgroundColor: 'transparent',
     // Simulate ink grain effect with multiple borders

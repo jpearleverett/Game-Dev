@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ambientGlow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'transparent',
     shadowColor: '#ff8970',
     shadowOpacity: 0.85,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   neonRim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 8,
     borderColor: '#ff6f59',
     shadowColor: '#ff7a64',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   neonHighlight: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 4,
     borderColor: '#ffe4d7',
     shadowColor: '#ffd3c5',

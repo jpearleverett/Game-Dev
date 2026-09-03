@@ -37,6 +37,7 @@ jest.mock('expo-audio', () => ({
       pause: jest.fn(function pause() { this.playing = false; }),
       seekTo: jest.fn(function seekTo(s) { this.seeks.push(s); return Promise.resolve(); }),
       remove: jest.fn(),
+      release: jest.fn(),
     };
     mockPlayers.push(player);
     return player;
@@ -77,6 +78,7 @@ describe('useAudioController on expo-audio', () => {
       allowsRecording: false,
       shouldPlayInBackground: false,
       playsInSilentMode: true,
+      interruptionMode: 'duckOthers',
     });
     // The expo-av names must be gone: they are accepted and silently ignored.
     expect(mode).not.toHaveProperty('playsInSilentModeIOS');
@@ -149,12 +151,42 @@ describe('useAudioController on expo-audio', () => {
     expect(mockPlayers.length).toBe(before);
   });
 
-  it('releases every player with remove() on unmount', () => {
+  it('tears every player down with pause + remove + release on unmount', () => {
     const tree = mount();
     const created = [...mockPlayers];
     expect(created.length).toBeGreaterThan(0);
     act(() => { tree.unmount(); });
-    created.forEach((p) => expect(p.remove).toHaveBeenCalled());
+    created.forEach((p) => {
+      // remove() alone is registry bookkeeping — AudioModule.kt's
+      // Function("remove") is just `players.remove(player.id)`. It neither
+      // stops playback nor frees the native ExoPlayer, so a looping bed would
+      // keep playing under every later screen. release() is the real teardown.
+      expect(p.pause).toHaveBeenCalled();
+      expect(p.remove).toHaveBeenCalled();
+      expect(p.release).toHaveBeenCalled();
+    });
+  });
+
+  it('removes before releasing, since releasing first strands the registry entry', () => {
+    const tree = mount();
+    const player = mockPlayers[0];
+    act(() => { tree.unmount(); });
+    const removeOrder = player.remove.mock.invocationCallOrder[0];
+    const releaseOrder = player.release.mock.invocationCallOrder[0];
+    expect(removeOrder).toBeLessThan(releaseOrder);
+  });
+
+  it('stops a loop even while it is still buffering', () => {
+    // `playing` is ExoPlayer's isPlaying, which is FALSE during buffering.
+    // Guarding the stop on it let a fast screen change skip the pause, and the
+    // bed then faded up under the next screen and looped there forever.
+    const tree = mount('desk');
+    const deskMusic = mockPlayers[0];
+    deskMusic.playing = false; // simulate "still buffering"
+    deskMusic.pause.mockClear();
+
+    act(() => { tree.update(<Harness screen="board" settings={SETTINGS} />); });
+    expect(deskMusic.pause).toHaveBeenCalled();
   });
 
   it('does not create a player after unmount', async () => {
@@ -173,6 +205,7 @@ describe('useAudioController on expo-audio', () => {
     created.forEach((p) => {
       expect(p.pause).toHaveBeenCalled();
       expect(p.remove).not.toHaveBeenCalled();
+      expect(p.release).not.toHaveBeenCalled();
     });
   });
 

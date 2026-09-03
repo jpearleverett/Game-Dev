@@ -1116,7 +1116,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   boardNoise: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.16,
   },
   boardCorner: {
@@ -1215,6 +1215,10 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.35)",
     textShadowOffset: { width: 0, height: 3 },
     textShadowRadius: 6,
+    // RN 0.86 defaults every <Text> to overflow:'hidden'
+    // (defaultTextToOverflowHidden), which clips this glow to the
+    // text box. RN prepends its default, so this wins.
+    overflow: 'visible',
     textAlign: "center",
     alignSelf: "stretch",
     flexShrink: 1,

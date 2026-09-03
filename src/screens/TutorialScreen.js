@@ -443,6 +443,10 @@ const styles = StyleSheet.create({
     color: COLORS.underCyan,
     textShadowColor: COLORS.underCyanGlow,
     textShadowRadius: 8,
+    // RN 0.86 defaults every <Text> to overflow:'hidden'
+    // (defaultTextToOverflowHidden), which clips this glow to the
+    // text box. RN prepends its default, so this wins.
+    overflow: 'visible',
     textShadowOffset: { width: 0, height: 0 },
     flexShrink: 1,
   },
@@ -524,6 +528,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textShadowColor: '#000',
     textShadowRadius: 6,
+    // RN 0.86 defaults every <Text> to overflow:'hidden'
+    // (defaultTextToOverflowHidden), which clips this glow to the
+    // text box. RN prepends its default, so this wins.
+    overflow: 'visible',
     textShadowOffset: { width: 0, height: 1 },
   },
   starLabelSelected: {
@@ -575,6 +583,10 @@ const styles = StyleSheet.create({
     color: COLORS.underCyan,
     textShadowColor: COLORS.underCyanGlow,
     textShadowRadius: 10,
+    // RN 0.86 defaults every <Text> to overflow:'hidden'
+    // (defaultTextToOverflowHidden), which clips this glow to the
+    // text box. RN prepends its default, so this wins.
+    overflow: 'visible',
     textShadowOffset: { width: 0, height: 0 },
   },
   demoSolvedTitle: {

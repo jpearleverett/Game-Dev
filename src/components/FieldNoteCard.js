@@ -52,7 +52,7 @@ export default function FieldNoteCard({ note, visible, onDismiss, reducedMotion 
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject, zIndex: 80,
+    ...StyleSheet.absoluteFill, zIndex: 80,
     backgroundColor: 'rgba(7,6,14,0.78)', alignItems: 'center', justifyContent: 'center', padding: 26,
   },
   card: {

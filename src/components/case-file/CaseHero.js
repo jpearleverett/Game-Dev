@@ -156,11 +156,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   heroLetterNoise: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.1,
   },
   heroLetterSheen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.3,
   },
   heroLetterTape: {

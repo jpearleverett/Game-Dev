@@ -595,7 +595,8 @@ full-season state and asserts on the sentinels that come out:
 - **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
   unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
   prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
-- **Tests: 377.** New: `audioController.expoAudio` (pins the expo-audio migration),
+- **Tests: 383.** New: `audioController.expoAudio` (pins the expo-audio migration),
+  `absoluteFillContract` (guards the removed `StyleSheet.absoluteFillObject`),
   `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,
   `decisionConsequences.derivation`, plus additions to `continuityAnchorUnderMap`,
   `playerTheoryPrompt`, `endings`, `generatedStoryStorage.prune`,
@@ -634,6 +635,44 @@ clean with zero warnings, `expo-doctor` 21/21, dev server advertises `exposdk:57
   `react-native-view-shot` v5 explicitly preserves `ref.current.capture()`;
   `react-native-sse` still exposes the private `_xhr` that `LLMService` watches, and
   RN 0.86's `XMLHttpRequest` still dispatches `loadend` (the SSE end-of-stream guard).
+- ⚠️ **`StyleSheet.absoluteFillObject` was DELETED in RN 0.85.** Only `absoluteFill`
+  remains (zero occurrences of the old name in the whole published 0.86.3 package).
+  This repo spread it into 39 overlay styles across 22 files, and `{...undefined}` is
+  legal JS that yields `{}` — so Metro, Babel, both Jest projects and `expo export`
+  were ALL silent while every overlay lost `position/top/right/bottom/left` and became
+  an in-flow flex child (the CONNECT node-reveal card, the DescentHold/ThresholdHold
+  covers, an input-blocking scrim). All 39 now use `absoluteFill`, guarded by
+  `absoluteFillContract.test.js`.
+- ⚠️ **`player.remove()` is NOT teardown.** expo-audio's `AudioModule.kt` defines
+  `Function("remove") { players.remove(player.id) }` — registry bookkeeping only. It
+  neither stops playback nor frees the native ExoPlayer. The real teardown is
+  `pause()` → `remove()` → `release()`, in that order (releasing first strands the
+  registry entry). Without it the Case File ambient bed looped under every later
+  screen, and since that effect is keyed on `[ambienceVolume]`, every drag of the
+  Settings slider leaked another copy.
+- ⚠️ **`player.playing` is ExoPlayer's `isPlaying`, which is FALSE while buffering.**
+  Guarding a stop on it let a fast screen change skip the pause, so the bed faded up
+  under the next screen and looped there. `stopLoop`/`stopAll` now pause
+  unconditionally (harmless on an idle player) and `startLoop` plays unconditionally
+  (`play()` is idempotent — it sets playWhenReady, it does not seek).
+- ⚠️ **`interruptionMode` must be passed explicitly** (`'duckOthers'`). Unset, Android
+  takes exclusive focus: a notification chime PAUSES the music and ambience outright
+  instead of dipping them, and launching the game hard-stops the player's own music.
+- ⚠️ **RN 0.85 defaults every `<Text>` to `overflow: 'hidden'`**
+  (`defaultTextToOverflowHidden`, on by default; `Text.js` prepends
+  `styles.default`). That clips `textShadow` glows to the text box — the neon
+  Under-Map look. Because RN *prepends*, an app-level `overflow: 'visible'` wins; the
+  18 glow styles with `textShadowRadius >= 6` now set it. Do NOT blanket-apply this:
+  View styles like `nodeCard` use `overflow: 'hidden'` deliberately.
+- The `expo-audio` config plugin defaults to `recordAudioAndroid: true` and
+  `enableBackgroundPlayback: true`, which put a **Microphone** permission on the store
+  listing for a game that never records. It is configured off in `app.config.js`.
+- **Checked and NOT a problem** (recorded so nobody re-investigates): `expo-notifications`
+  does NOT crash in Expo Go. Its Android throw lives in `warnOfExpoGoPushUsage()`,
+  called only from `getDevicePushTokenAsync`, `addPushTokenListener` and the topic
+  subscribe/unsubscribe functions — never at module scope. This game uses only LOCAL
+  notifications (`scheduleNotificationAsync`, permissions, channels, response
+  listeners) and calls none of those four.
 - **Unverified on device:** the audio migration is behavioral. Listen for the desk/board/
   narrative music beds, the rain/lamp ambience, the page-flip SFX and the Settings volume
   sliders actually taking effect.

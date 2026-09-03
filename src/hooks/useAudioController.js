@@ -16,7 +16,12 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
  *                                                 — there is NO stop() in expo-audio
  *   await sound.setPositionAsync(0)            -> await p.seekTo(0)   (Promise)
  *   await sound.replayAsync()                  -> await p.seekTo(0); p.play()
- *   await sound.unloadAsync()                  -> p.remove()
+ *   await sound.unloadAsync()                  -> p.remove() + p.release()
+ *     (remove() is REGISTRY BOOKKEEPING ONLY — AudioModule.kt's
+ *      Function("remove") is literally `players.remove(player.id)`. It does not
+ *      stop playback and does not free the native ExoPlayer. release() is the
+ *      real teardown, and it must come after remove(), because releasing first
+ *      leaves a dead entry in the module's players map.)
  *
  * setAudioModeAsync is a top-level export now, and its fields were renamed:
  *   allowsRecordingIOS -> allowsRecording
@@ -71,18 +76,25 @@ export function useAudioController(activeScreen, settings) {
       allowsRecording: false,
       shouldPlayInBackground: false,
       playsInSilentMode: true,
+      // Must be explicit. Left unset, Android takes exclusive audio focus:
+      // a notification chime PAUSES the music and ambience outright instead of
+      // dipping them (dead air in a game built on an ambience bed), and
+      // launching the game hard-stops whatever the player was listening to.
+      interruptionMode: 'duckOthers',
     }).catch(() => {});
 
     return () => {
       releasedRef.current = true;
       allRefs.forEach((ref) => {
-        try {
-          ref.current?.remove();
-        } catch (e) {
-          // A player can already be released; releasing twice must not throw
-          // during teardown.
-        }
+        const player = ref.current;
+        // Null the ref FIRST: after release() any use of the object throws.
         ref.current = null;
+        if (!player) return;
+        // pause() stops the audio now; remove() drops the module's registry
+        // entry; release() frees the native player. All three, in this order.
+        try { player.pause(); } catch (e) { /* already gone */ }
+        try { player.remove(); } catch (e) { /* already gone */ }
+        try { player.release(); } catch (e) { /* already released */ }
       });
     };
   }, [allRefs]);
@@ -111,7 +123,12 @@ export function useAudioController(activeScreen, settings) {
     const player = ref.current;
     if (!player) return;
     try {
-      if (player.playing) player.pause();
+      // Unconditional. `playing` is ExoPlayer's isPlaying, which is FALSE while
+      // a just-started bed is still buffering — so guarding on it let a fast
+      // screen change skip the stop, and the bed then faded up underneath the
+      // next screen's music and looped there forever. pause() on an idle player
+      // is harmless and clears playWhenReady.
+      player.pause();
     } catch (e) {
       // ignore
     }
@@ -127,7 +144,9 @@ export function useAudioController(activeScreen, settings) {
     try {
       player.loop = true;
       player.volume = volume;
-      if (!player.playing) player.play();
+      // Also unconditional, for the same reason: play() on an already-playing
+      // player is a no-op (it sets playWhenReady, it does not seek).
+      player.play();
     } catch (e) {
       // ignore
     }
@@ -231,7 +250,7 @@ export function useAudioController(activeScreen, settings) {
       const player = ref.current;
       if (!player) return;
       try {
-        if (player.playing) player.pause();
+        player.pause();
       } catch (e) {
         // ignore
       }

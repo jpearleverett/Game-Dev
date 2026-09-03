@@ -141,14 +141,14 @@ export default function NarrativePager({
     }
 
     return () => {
-      if (soundRef.current) {
-        try {
-          soundRef.current.remove();
-        } catch {
-          // already released
-        }
-        soundRef.current = null;
-      }
+      const player = soundRef.current;
+      soundRef.current = null;
+      if (!player) return;
+      // remove() only drops the module's registry entry; release() is what
+      // actually frees the native player. Both, in this order.
+      try { player.pause(); } catch { /* already gone */ }
+      try { player.remove(); } catch { /* already gone */ }
+      try { player.release(); } catch { /* already released */ }
     };
   }, []);
 
@@ -502,11 +502,11 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   lightenOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   gradientOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   tapZone: {
     position: "absolute",

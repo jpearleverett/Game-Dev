@@ -103,7 +103,7 @@ function StringLayer({
 
 const styles = StyleSheet.create({
   stringLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 5,
   },
 });

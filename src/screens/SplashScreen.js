@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   content: {
     flex: 1,
@@ -119,6 +119,10 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.9)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
+    // RN 0.86 defaults every <Text> to overflow:'hidden'
+    // (defaultTextToOverflowHidden), which clips this glow to the
+    // text box. RN prepends its default, so this wins.
+    overflow: 'visible',
   },
   promptTextDisabled: {
     color: COLORS.textMuted,

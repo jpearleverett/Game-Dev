@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(26, 22, 20, 0.4)',
     // gradient could be better here
   },

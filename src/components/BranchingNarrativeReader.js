@@ -1286,11 +1286,11 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   lightenOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   gradientOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   // The page-flip zones live in the OUTER MARGIN only, and sit below the
   // content. At 20% width with zIndex 10 they covered roughly the first and last

@@ -103,7 +103,9 @@ const styles = StyleSheet.create({
     borderRadius: 20, padding: 22, gap: 10, overflow: 'hidden',
     backgroundColor: '#100c1c', borderWidth: 1, borderColor: 'rgba(167,139,250,0.4)',
   },
-  wordmark: { fontFamily: FONTS.secondaryBold, fontSize: 24, letterSpacing: 2, color: '#f3eeff', textAlign: 'center', textShadowColor: COLORS.underGlow, textShadowRadius: 18, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  wordmark: { overflow: 'visible', fontFamily: FONTS.secondaryBold, fontSize: 24, letterSpacing: 2, color: '#f3eeff', textAlign: 'center', textShadowColor: COLORS.underGlow, textShadowRadius: 18, textShadowOffset: { width: 0, height: 0 } },
   sub: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 2.4, color: COLORS.underCyan, textAlign: 'center' },
   constWrap: { borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(10,8,18,0.8)', marginTop: 4 },
   statRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 4 },

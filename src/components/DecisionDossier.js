@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     borderColor: '#4a1212',
   },
   sealFillContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#7a1f1f',
   },
   sealText: {

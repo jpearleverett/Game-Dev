@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   lockedDecisionGlow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.18,
     backgroundColor: "rgba(255, 214, 170, 0.5)",
   },

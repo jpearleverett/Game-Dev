@@ -975,12 +975,18 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 22, paddingTop: 30, paddingBottom: 12 },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   kicker: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 3, color: COLORS.textMuted },
-  kickerCyan: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
-  umTitle: { fontFamily: FONTS.secondaryBold, fontSize: 31, lineHeight: 33, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 30, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  kickerCyan: { overflow: 'visible', fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  umTitle: { overflow: 'visible', fontFamily: FONTS.secondaryBold, fontSize: 31, lineHeight: 33, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 30, textShadowOffset: { width: 0, height: 0 } },
   umInstr: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.3, color: COLORS.textMuted, marginTop: 9, lineHeight: 17 },
   umInstrHold: { color: COLORS.underCyan },
   probeRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 12 },
-  probeGlyphs: { fontFamily: FONTS.mono, fontSize: 14, letterSpacing: 2, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  probeGlyphs: { overflow: 'visible', fontFamily: FONTS.mono, fontSize: 14, letterSpacing: 2, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } },
   probeGlyphsLow: { color: COLORS.bloodRed, textShadowColor: 'transparent' },
   probeLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textMuted, textTransform: 'uppercase', flexShrink: 1 },
   senseLine: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1, color: COLORS.underCyan, marginTop: 9, opacity: 0.9 },
@@ -1003,14 +1009,16 @@ const styles = StyleSheet.create({
   starLabelAttuned: { color: '#dff3ff', fontFamily: FONTS.monoBold },
   motifBadge: { position: 'absolute', top: 2, right: 2, minWidth: 15, height: 15, borderRadius: 8, paddingHorizontal: 3, backgroundColor: 'rgba(167,139,250,0.92)', alignItems: 'center', justifyContent: 'center' },
   motifBadgeText: { fontFamily: FONTS.monoBold, fontSize: 8, color: '#120d0a' },
-  starLabel: { fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  starLabel: { overflow: 'visible', fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textMuted, textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
   starLabelSel: { color: '#fff', fontFamily: FONTS.monoBold },
   starLabelMapped: { color: COLORS.fogGrayLight },
   starInert: { opacity: 0.55 },
   starCoreInert: { opacity: 0.45 },
   starLabelInert: { opacity: 0.4, fontSize: 8.5 },
 
-  empty: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  empty: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   emptyText: { fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textMuted, textAlign: 'center', lineHeight: 18 },
 
   footer: { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 16 },
@@ -1063,21 +1071,23 @@ const styles = StyleSheet.create({
   },
   toastText: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.4, color: COLORS.textSecondary },
 
-  nodeOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(7,6,14,0.66)', justifyContent: 'flex-end', zIndex: 40 },
+  nodeOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(7,6,14,0.66)', justifyContent: 'flex-end', zIndex: 40 },
   nodeCard: {
     margin: 14, padding: 24, borderRadius: 24, overflow: 'hidden',
     backgroundColor: 'rgba(20,16,34,0.92)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.34)',
     shadowColor: COLORS.underViolet, shadowOpacity: 0.5, shadowRadius: 40, shadowOffset: { width: 0, height: -8 },
   },
   nodeSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: 'rgba(200,230,255,0.6)' },
-  nodeTag: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 4, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  nodeTag: { overflow: 'visible', fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 4, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
   nodeTagArc: { color: COLORS.amberLight, textShadowColor: 'transparent' },
   nodeTagReclaim: { color: COLORS.bloodRed, textShadowColor: 'transparent' },
   reclaimSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.4, color: COLORS.bloodRed, marginTop: 6, opacity: 0.9 },
   arcSub: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.4, color: COLORS.amberLight, marginTop: 6 },
   // Descent hold (diegetic cold-cache wait)
   descentOverlay: {
-    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 10,
+    ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 10,
     backgroundColor: 'rgba(8,6,16,0.88)', zIndex: 60, paddingHorizontal: 36,
   },
   descentKicker: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 3.4, color: COLORS.underCyan },

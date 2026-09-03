@@ -324,15 +324,15 @@ const styles = StyleSheet.create({
   surface: { paddingHorizontal: 0, paddingVertical: 0 },
   scroll: { flex: 1 },
   container: { paddingBottom: 36 },
-  lampPool: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
+  lampPool: { ...StyleSheet.absoluteFill, zIndex: 0 },
 
   // Rain-glass window
   window: { position: 'relative', height: 210, overflow: 'hidden', borderBottomWidth: 1, borderBottomColor: 'rgba(245,230,205,0.1)' },
   windowTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10,9,14,0.36)',
   },
-  windowNeon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  windowNeon: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   neon: { transform: [{ rotate: '-2deg' }] },
   windowIdLeft: { position: 'absolute', top: 16, left: 16, fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1.6, color: COLORS.textMuted, zIndex: 5 },
   settingsBtn: { position: 'absolute', top: 16, right: 16, padding: 6, zIndex: 5 },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     position: 'relative', backgroundColor: PAPER, borderRadius: 4, padding: 24, overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 22, shadowOffset: { width: 0, height: 18 }, elevation: 14,
   },
-  paperGrain: { ...StyleSheet.absoluteFillObject, opacity: 0.10 },
+  paperGrain: { ...StyleSheet.absoluteFill, opacity: 0.10 },
   clip: {
     position: 'absolute', top: 4, right: 28, width: 16, height: 44, zIndex: 3,
     borderWidth: 3, borderBottomWidth: 0, borderColor: '#ad9472', borderTopLeftRadius: 9, borderTopRightRadius: 9,

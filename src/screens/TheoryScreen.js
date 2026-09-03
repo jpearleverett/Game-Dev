@@ -649,7 +649,9 @@ const styles = StyleSheet.create({
   header: { marginBottom: SPACING.sm },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   kicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.sm, letterSpacing: 3, color: COLORS.underViolet },
-  title: { fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: '#f3eeff', marginTop: SPACING.sm, textShadowColor: COLORS.underGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 26 },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  title: { overflow: 'visible', fontFamily: FONTS.secondaryBold, fontSize: FONT_SIZES.title, color: '#f3eeff', marginTop: SPACING.sm, textShadowColor: COLORS.underGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 26 },
   lede: { fontFamily: FONTS.primary, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, lineHeight: LINE_HEIGHTS.cozy },
   scroll: { flex: 1 },
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
@@ -693,7 +695,9 @@ const styles = StyleSheet.create({
   beliefTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   beliefTitle: { fontFamily: FONTS.secondaryBold, fontSize: 18, lineHeight: 21, color: COLORS.textPrimary },
   beliefHint: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.textSubtle, textTransform: 'uppercase', marginTop: 4 },
-  beliefMark: { fontSize: 16, marginLeft: 6, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  beliefMark: { overflow: 'visible', fontSize: 16, marginLeft: 6, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
   beliefBody: { fontFamily: FONTS.primary, fontSize: 13.5, lineHeight: 22, color: COLORS.textSecondary, marginTop: 12 },
   // Evidence echoes: which surfaced truths a reading leans on (◆ mapped, ◇ never surfaced)
   evidenceWrap: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(167,139,250,0.18)', gap: 7 },
@@ -706,7 +710,7 @@ const styles = StyleSheet.create({
   evidenceTextOff: { color: COLORS.textSubtle, fontStyle: 'italic' },
   // Crossing hold (diegetic wait while the next chapter takes shape)
   crossingOverlay: {
-    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm,
+    ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm,
     backgroundColor: 'rgba(8,6,16,0.88)', zIndex: 60, paddingHorizontal: 36,
   },
   crossingKicker: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3.4, color: COLORS.underViolet },

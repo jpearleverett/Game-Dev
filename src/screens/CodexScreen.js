@@ -275,7 +275,9 @@ const styles = StyleSheet.create({
   surface: { paddingHorizontal: 0, paddingVertical: 0 },
   header: { paddingHorizontal: 22, paddingTop: 30, paddingBottom: 14 },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  kicker: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  kicker: { overflow: 'visible', fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 2.6, color: COLORS.underCyan, textShadowColor: COLORS.underCyanGlow, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 } },
   close: { fontFamily: FONTS.mono, fontSize: 18, color: COLORS.textMuted },
   headActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   shareLink: { fontFamily: FONTS.monoBold, fontSize: 10.5, letterSpacing: 2, color: COLORS.underCyan },
@@ -286,7 +288,9 @@ const styles = StyleSheet.create({
   fieldNoteHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fieldNoteTitle: { fontFamily: FONTS.primarySemiBold, fontSize: 13.5, color: COLORS.textPrimary },
   fieldNoteBody: { fontFamily: FONTS.primary, fontSize: 12, lineHeight: 18, color: COLORS.textMuted },
-  title: { fontFamily: FONTS.secondaryBold, fontSize: 29, lineHeight: 32, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 26, textShadowOffset: { width: 0, height: 0 } },
+  // RN 0.86 defaults every <Text> to overflow:'hidden' (defaultTextToOverflowHidden),
+  // which clips this glow to the text box. RN prepends its default, so this wins.
+  title: { overflow: 'visible', fontFamily: FONTS.secondaryBold, fontSize: 29, lineHeight: 32, color: '#f3eeff', textShadowColor: COLORS.underGlow, textShadowRadius: 26, textShadowOffset: { width: 0, height: 0 } },
 
   depthWrap: { marginTop: 16 },
   depthTrack: { height: 4, borderRadius: 3, backgroundColor: 'rgba(167,139,250,0.18)', overflow: 'hidden' },

@@ -77,7 +77,17 @@ export default {
     plugins: [
       'expo-font',
       'expo-asset',
-      'expo-audio',
+      // Configured, not bare. The plugin defaults to recordAudioAndroid: true
+      // and enableBackgroundPlayback: true, which would add RECORD_AUDIO and
+      // FOREGROUND_SERVICE* to the Android manifest and a microphone usage
+      // string + UIBackgroundModes:['audio'] on iOS — a Microphone permission
+      // on the store listing for a game that never records, and a background
+      // audio mode the app explicitly disables (shouldPlayInBackground: false).
+      ['expo-audio', {
+        recordAudioAndroid: false,
+        enableBackgroundPlayback: false,
+        enableBackgroundRecording: false,
+      }],
       'expo-image',
       'expo-sharing',
       'expo-splash-screen',

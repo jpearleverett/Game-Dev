@@ -115,7 +115,7 @@ export default function DustLayer() {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1,
     overflow: 'hidden',
   },
