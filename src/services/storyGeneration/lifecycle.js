@@ -1,5 +1,5 @@
-import { loadGeneratedStory, getStoryContext } from '../../storage/generatedStoryStorage';
-import { formatCaseNumber } from '../../data/storyContent';
+import { loadGeneratedStory, getStoryContext, clearGeneratedStory } from '../../storage/generatedStoryStorage';
+import { formatCaseNumber, clearGeneratedCache } from '../../data/storyContent';
 import { DECISION_CONSEQUENCES } from './constants';
 
 /**
@@ -157,6 +157,44 @@ function pruneInMemoryMaps(currentPathKey, currentChapter) {
 }
 
 /**
+ * Wipe every trace of a previous run's generated chapters.
+ *
+ * Clearing the AsyncStorage keys alone was not enough: the chapters also live in
+ * `storyContent`'s in-memory `generatedCache` (which `getStoryEntryAsync` reads
+ * FIRST) and in this service's own `generatedStory` mirror, so a "clear progress"
+ * or a New Game+ in the same app session replayed the old run's prose. Everything
+ * that survives a reset has to be dropped here together.
+ *
+ * Deliberately narrower than `destroy()`: the service stays initialized and any
+ * in-flight generation keeps its promise, so this is safe to call mid-session.
+ */
+async function resetGeneratedContent() {
+  clearGeneratedCache();
+  this.generatedStory = { chapters: {} };
+  this.storyContext = null;
+  this.chapterOutlines.clear();
+  this.consistencyCheckpoints.clear();
+  this.generatedConsequences.clear();
+  this.generationAttempts.clear();
+  this.threadAcknowledgmentCounts.clear();
+  this.decisionConsequences.clear();
+  this.characterStates.clear();
+  this.narrativeThreads = [];
+  this.archivedThreads = [];
+  this.consistencyLog = [];
+  this.storyArc = null;
+  this.indexedFacts = null;
+  this.pathPersonality = null;
+  this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+  this._currentDynamicClusters = null;
+  // The chapter-start prefix caches are keyed by the prior story text, which no
+  // longer exists; keeping them would prime a fresh run with the old one.
+  this.chapterStartCacheKeys.clear();
+  this.chapterStartCacheContent.clear();
+  return clearGeneratedStory();
+}
+
+/**
  * Destroy the service and clean up all resources
  * Call this when unmounting or resetting the application
  */
@@ -246,6 +284,7 @@ async function getGeneratedEntryAsync(caseNumber, pathKey) {
 
 export const lifecycleMethods = {
   init,
+  resetGeneratedContent,
   pruneInMemoryMaps,
   destroy,
   needsGeneration,

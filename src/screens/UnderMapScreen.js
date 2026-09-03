@@ -353,7 +353,7 @@ export default function UnderMapScreen({ navigation, route }) {
       const options = readingChoices(sensed.readings);
       if (options.length < 2) {
         // No decoys → reveal directly (matches the design's tap-connect-reveal).
-        const res = resolveUnderMapReading?.(pair[0], pair[1], sensed.readings.correct);
+        const res = resolveUnderMapReading?.(pair[0], pair[1], sensed.readings.correct, { settlesDailyStir: !asPuzzle });
         triggerBloom(pair[0], pair[1]);
         notificationHaptic(Haptics.NotificationFeedbackType.Success);
         audio?.playVictory?.();
@@ -407,7 +407,7 @@ export default function UnderMapScreen({ navigation, route }) {
     // First miss ever: teach what the whisper is buying them.
     maybeNote('whisper');
     setSelected([]); lockRef.current = false;
-  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, probeBudget, probesUsed, probesEnabled, tier, whisperFor, fragById, maybeNote]);
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, asPuzzle, probeBudget, probesUsed, probesEnabled, tier, whisperFor, fragById, maybeNote]);
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
@@ -433,7 +433,8 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const chooseReading = useCallback((opt) => {
     if (!node) return;
-    const res = resolveUnderMapReading?.(node.aId, node.bId, opt);
+    // Freeform only: drawing a true reading is what settles the Desk's daily stir.
+    const res = resolveUnderMapReading?.(node.aId, node.bId, opt, { settlesDailyStir: !asPuzzle });
     if (res?.correctReading) {
       triggerBloom(node.aId, node.bId);
       notificationHaptic(Haptics.NotificationFeedbackType.Success);
@@ -453,7 +454,7 @@ export default function UnderMapScreen({ navigation, route }) {
       });
       setNode((nd) => ({ ...nd, mode: 'blurred' }));
     }
-  }, [node, resolveUnderMapReading, triggerBloom, audio]);
+  }, [node, resolveUnderMapReading, triggerBloom, audio, asPuzzle]);
 
   const closeNode = useCallback(() => { setNode(null); setSelected([]); }, []);
 

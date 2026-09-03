@@ -11,7 +11,7 @@ import {
   saveStoredProgress,
   migrateProgress,
 } from '../storage/progressStorage';
-import { clearGeneratedStory } from '../storage/generatedStoryStorage';
+import storyGenerationService from '../services/StoryGenerationService';
 import { normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { SEASON_ONE_CASES, SEASON_ONE_CASE_COUNT } from '../data/cases';
 import { getCaseByNumber } from '../utils/gameLogic';
@@ -222,9 +222,12 @@ export function usePersistence() {
   const clearProgress = useCallback(async () => {
     const blank = createBlankProgress();
     await saveStoredProgress(blank);
-    // Also clear generated story data so player gets fresh LLM-generated content
-    // This ensures age fix (29→35) and other story bible changes take effect
-    await clearGeneratedStory();
+    // Also drop every generated chapter so the player gets fresh content (this is
+    // what makes story-bible and prompt changes take effect). It has to go
+    // through the service: removing the AsyncStorage keys alone left the
+    // chapters in the in-memory caches that are read first, so a wipe inside a
+    // running session silently replayed the old run.
+    await storyGenerationService.resetGeneratedContent();
     setProgress(blank);
     return blank;
   }, []);

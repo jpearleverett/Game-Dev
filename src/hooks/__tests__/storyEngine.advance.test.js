@@ -15,11 +15,18 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 jest.mock('../../storage/generatedStoryStorage', () => ({
   clearGeneratedStory: jest.fn(async () => true),
 }));
+// usePersistence's reset path reaches the generation service to drop the
+// previous run's chapters; nothing here exercises generation.
+jest.mock('../../services/StoryGenerationService', () => ({
+  __esModule: true,
+  default: { resetGeneratedContent: jest.fn(async () => true) },
+  storyGenerationService: { resetGeneratedContent: jest.fn(async () => true) },
+}));
 
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { usePersistence } from '../../hooks/usePersistence';
-import { useStoryEngine } from '../../hooks/useStoryEngine';
+import { usePersistence } from '../usePersistence';
+import { useStoryEngine } from '../useStoryEngine';
 
 let api;
 function Harness() {

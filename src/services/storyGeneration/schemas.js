@@ -548,7 +548,7 @@ export const DECISION_ONLY_SCHEMA = {
         optionA: {
           type: 'object',
           properties: {
-            key: { type: 'string', description: 'Always "A"' },
+            key: { type: 'string', enum: ['A'], description: 'Always "A"' },
             title: { type: 'string', description: 'A declarative BELIEF about the hidden world the player can commit to (3-8 words), e.g. "She is guiding you in". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
@@ -566,7 +566,7 @@ export const DECISION_ONLY_SCHEMA = {
         optionB: {
           type: 'object',
           properties: {
-            key: { type: 'string', description: 'Always "B"' },
+            key: { type: 'string', enum: ['B'], description: 'Always "B"' },
             title: { type: 'string', description: 'The opposed declarative BELIEF about the hidden world (3-8 words), e.g. "You are bait". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
@@ -850,7 +850,7 @@ export const PATHDECISIONS_ONLY_SCHEMA = {
           optionA: {
             type: 'object',
             properties: {
-              key: { type: 'string', description: 'Always "A"' },
+              key: { type: 'string', enum: ['A'], description: 'Always "A"' },
               title: { type: 'string', description: 'A belief about the hidden world (3-8 words, declarative stance)' },
               focus: { type: 'string', description: 'The reading + the direction committing to it pulls the story (1 sentence)' },
               personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'balanced'] },
@@ -865,7 +865,7 @@ export const PATHDECISIONS_ONLY_SCHEMA = {
           optionB: {
             type: 'object',
             properties: {
-              key: { type: 'string', description: 'Always "B"' },
+              key: { type: 'string', enum: ['B'], description: 'Always "B"' },
               title: { type: 'string', description: 'The opposed belief (3-8 words, declarative stance)' },
               focus: { type: 'string', description: 'The reading + its direction (1 sentence)' },
               personalityAlignment: { type: 'string', enum: ['aggressive', 'methodical', 'balanced'] },

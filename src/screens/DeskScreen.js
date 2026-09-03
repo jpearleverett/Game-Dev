@@ -46,7 +46,6 @@ export default function DeskScreen({
   onPickUpTrail,
   onBribe,
   onDrawDailyStir,
-  onResolveDailyStir,
   onViewEnding,
 }) {
   const storyCampaign = progress.storyCampaign || {};
@@ -149,10 +148,11 @@ export default function DeskScreen({
   const onPrimary = campaignDone && onViewEnding
     ? onViewEnding
     : storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
-  const onDailyStirPress = tap(() => {
-    onResolveDailyStir?.();
-    onOpenCaseBoard?.();
-  });
+  // The stir card only OPENS the map. It used to bank the +1 probe and advance
+  // the days-mapped streak on tap, before any thread was drawn, which made the
+  // reward unearnable: the real gates (drawing a true reading, or solving the
+  // daily word puzzle) then found the stir already resolved and no-op'd.
+  const onDailyStirPress = tap(() => { onOpenCaseBoard?.(); });
 
   const { moderateScale } = useResponsiveLayout();
   const palette = useMemo(() => createCasePalette(activeCase), [activeCase]);

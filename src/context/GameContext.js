@@ -3,6 +3,7 @@ import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
 import { advanceWithDecision, advanceSubchapter, caseOrder } from '../utils/storyAdvance';
+import storyGenerationService from '../services/StoryGenerationService';
 import {
   addClue as boardAddClue,
   addClues as boardAddClues,
@@ -237,6 +238,12 @@ export function GameProvider({
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
     if (reset) {
+        // A restart has to drop the previous run's generated chapters. They are
+        // keyed by (caseNumber, pathKey), so a New Game+ that retraced the same
+        // choices was served the identical prose it had already read — with the
+        // fresh Under-Map and the carried-over foil steering nothing. Fire and
+        // forget: the campaign write below must not wait on storage.
+        storyGenerationService.resetGeneratedContent?.().catch(() => {});
         // NEW GAME+: restarting after a COMPLETED run carries The Other Reader
         // over (named, presence 1) — the city remembers being read. A restart
         // mid-campaign stays a clean slate.
@@ -744,18 +751,34 @@ export function GameProvider({
 
   // Commit a connection with the player's chosen reading. Returns the result
   // (node, correctReading, alreadyConnected, upgraded) for the reveal UI.
-  const resolveUnderMapReading = useCallback((aId, bId, chosenRevelation) => {
+  // `settlesDailyStir` is passed by the FREEFORM board only (the one the Desk's
+  // stir card opens). §8.1 bridge: today's thread is paid for by MAPPING, not by
+  // tapping the card — that used to bank the probe and the streak before any
+  // thread was drawn, so the real gates always found it already settled.
+  // Deliberately NOT applied during a gated A/B descent: settling deepens the
+  // drifted fragment (seen + 1), which moves the Under-Map generation signature
+  // and would invalidate the very prefetch that descent exists to cover.
+  const resolveUnderMapReading = useCallback((aId, bId, chosenRevelation, { settlesDailyStir = false } = {}) => {
     const current = normalizeStoryCampaignShape(progress.storyCampaign);
     const result = umResolveReading(current.underMap, aId, bId, chosenRevelation);
     if (result.map !== current.underMap) {
+      const mappedTruth = !!(result.correctReading && (result.revealed?.node || result.upgraded));
+      const settles = settlesDailyStir && mappedTruth;
       updateProgress((prev) => {
         const c = normalizeStoryCampaignShape(prev.storyCampaign);
         const r = umResolveReading(c.underMap, aId, bId, chosenRevelation);
         if (r.map === c.underMap) return null;
-        return { storyCampaign: { ...c, underMap: r.map } };
+        const um = settles ? umResolveStir(r.map) : r.map;
+        return { storyCampaign: { ...c, underMap: um } };
       });
-      if (result.correctReading && (result.revealed?.node || result.upgraded)) {
-        story.prefetchAfterUnderMapReveal?.(current.activeCaseNumber, result.map);
+      if (mappedTruth) {
+        // Prefetch against the map the player will actually carry forward,
+        // stir included, or the speculative scene is signed for a map that no
+        // longer exists and is thrown away at the gate.
+        story.prefetchAfterUnderMapReveal?.(
+          current.activeCaseNumber,
+          settles ? umResolveStir(result.map) : result.map,
+        );
       }
     }
     return result;
@@ -811,8 +834,8 @@ export function GameProvider({
       // CONNECT beat paid the campaign the daily word-puzzle's probe bonus and
       // advanced the daily streak without the player having played it — and the
       // stir's motif deepening mutated the Under-Map generation signature, which
-      // invalidated the prefetch this very beat exists to cover. The stir has its
-      // own owner in resolveUnderMapDailyStir, wired to the Desk.
+      // invalidated the prefetch this very beat exists to cover. The stir is
+      // settled by the FREEFORM board and by solving the daily word puzzle.
       const um = umRecordDescent(current.underMap, { hadMisstep });
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };

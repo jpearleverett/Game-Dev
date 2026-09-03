@@ -880,7 +880,13 @@ class ValidationMethods {
         .slice(0, 2);
 
     const optionAObj = {
-      key: decision.optionA?.key || 'A',
+      // Authoritative, not model-supplied. The schema only DESCRIBED this as
+      // 'Always "A"', so a model that emitted "1A" (or the path key) had it
+      // written straight into choiceHistory as optionKey — where
+      // computeBranchPathKey silently drops anything that is not A or B, so
+      // every later chapter resolved to a path missing that decision and the
+      // branch the player chose stopped being reflected.
+      key: 'A',
       title: decision.optionA?.title || 'Option A',
       focus: decision.optionA?.focus || '',
       personalityAlignment: normalizeAlignment(decision.optionA?.personalityAlignment),
@@ -893,7 +899,7 @@ class ValidationMethods {
       details: [],
     };
     const optionBObj = {
-      key: decision.optionB?.key || 'B',
+      key: 'B',
       title: decision.optionB?.title || 'Option B',
       focus: decision.optionB?.focus || '',
       personalityAlignment: normalizeAlignment(decision.optionB?.personalityAlignment),

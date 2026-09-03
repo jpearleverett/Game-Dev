@@ -372,7 +372,13 @@ function _buildPlayerTheorySection(underMap, currentChapter = null, { mode = 'na
   // deepen, and the theory they sealed. Soft steering, never breaks canon.
   if (!underMap || typeof underMap !== 'object') return '';
   const fragments = Array.isArray(underMap.fragments) ? underMap.fragments : [];
-  const nodes = Array.isArray(underMap.nodes) ? underMap.nodes : [];
+  // Only truths the player actually READ TRUE. A node blurred by a wrong reading,
+  // and every thread The Other Reader has claimed, still stores the true
+  // revelation — so listing them here fed the model the answers the player has
+  // not surfaced, and the very next scene built on truths they were still being
+  // told to go back and earn. Matches _buildContinuityAnchorSection.
+  const nodes = (Array.isArray(underMap.nodes) ? underMap.nodes : [])
+    .filter((n) => n && n.revelation && !n.unresolvedReading);
   const theories = Array.isArray(underMap.theories) ? underMap.theories : [];
   const latest = theories.length ? theories[0] : null;
   if (!fragments.length && !nodes.length && !latest) return '';

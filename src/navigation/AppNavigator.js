@@ -150,7 +150,6 @@ export default function AppNavigator({ fontsReady, audio }) {
               onPickUpTrail={actions.handlePickUpTrailNow}
               onBribe={purchaseBribe}
               onDrawDailyStir={game.drawUnderMapDailyStir}
-              onResolveDailyStir={game.resolveUnderMapDailyStir}
               onViewEnding={() => {
                 // POST-GAME: recompute the reached ending from the frozen map.
                 const ending = selectEnding(progress.storyCampaign?.underMap);
