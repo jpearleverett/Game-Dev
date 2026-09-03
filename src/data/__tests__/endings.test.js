@@ -51,3 +51,38 @@ describe('selectEnding', () => {
     expect(e.foilLine).toContain('the door is a mouth');
   });
 });
+
+describe('the reading the player walks out on', () => {
+  const { selectEnding: pick } = require('../endings');
+
+  const run = (resolved, finalGrounded) => ({
+    theories: [
+      // Newest first: the chapter-12 belief, sealed and never borne out.
+      { chapter: 12, interpretation: 'The map was always a mouth.', correct: null, grounded: finalGrounded },
+      ...resolved.map((correct, i) => ({ chapter: 11 - i, interpretation: `belief ${i}`, correct })),
+    ],
+  });
+
+  test('an ungrounded final reading can cost an ending sitting on the line', () => {
+    // Two of three borne out is 0.667, a hair over CLARITY_TRUE. The final
+    // belief has no resolution to count, so before this it changed nothing.
+    expect(pick(run([true, true, false], null)).variant).toBe('clear');
+    expect(pick(run([true, true, false], false)).variant).toBe('half');
+  });
+
+  test('a grounded final reading holds the better ending', () => {
+    expect(pick(run([true, true, false], true)).variant).toBe('clear');
+  });
+
+  test('it cannot overturn an ending that was not close', () => {
+    expect(pick(run([false, false, false, false], true)).variant).toBe('deceived');
+    expect(pick(run([true, true, true, true], false)).variant).toBe('clear');
+  });
+
+  test('the close does not claim an untested reading was borne out', () => {
+    const held = pick(run([true, true, false], true));
+    expect(held.flavorLine).toContain('walked out on');
+    expect(held.flavorLine).not.toContain('bore it out');
+    expect(pick(run([true, true, false], false)).flavorLine).toContain('against everything you had surfaced');
+  });
+});

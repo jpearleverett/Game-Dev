@@ -504,7 +504,11 @@ export default function TheoryScreen({ navigation, route }) {
           <Text style={styles.beliefIntro}>{beliefIntro}</Text>
         ) : null}
         {beliefs.length > 0 ? (
-          <Text style={styles.sectionHint}>Your one real choice. The chapter ahead bears it out — or subverts it.</Text>
+          <Text style={styles.sectionHint}>
+            {chapter >= TOTAL_CHAPTERS
+              ? 'Your one real choice. Nothing after this tests it; this is the reading Jack walks out with.'
+              : 'Your one real choice. The chapter ahead bears it out — or subverts it.'}
+          </Text>
         ) : null}
         {beliefs.length === 0 ? (
           <Text style={styles.error}>

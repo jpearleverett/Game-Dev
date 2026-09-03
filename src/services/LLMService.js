@@ -809,11 +809,13 @@ class LLMService {
           }, overallTimeoutMs)
         : null;
 
+      const cleanupHooks = [];
       const cleanup = () => {
         if (!hasCompleted) {
           hasCompleted = true;
           clearInterval(dataTimeout);
           if (deadline) clearTimeout(deadline);
+          cleanupHooks.forEach((fn) => { try { fn(); } catch (_e) { /* best effort */ } });
           try {
             es.close();
           } catch (e) {
@@ -899,25 +901,49 @@ class LLMService {
         reject(new Error(event.message || 'SSE connection error'));
       });
 
-      es.addEventListener('close', () => {
-        if (hasCompleted) return;
-
-        const elapsed = Date.now() - bodyReadStart;
-        console.log(`[LLMService] [${localRequestId}] SSE stream closed at ${elapsed}ms, ${heartbeatCount} heartbeats`);
-
-        cleanup();
-
-        // Build response text from chunks
-        // If we have SSE data format, join with newlines for NDJSON compatibility
-        const responseText = chunks.join('\n');
-
-        resolve({
-          responseText,
-          heartbeatCount,
-          streamingMethod: 'sse',
-          response: null, // No Response object with SSE
-        });
-      });
+      // A stream that ENDS without a terminal frame (the proxy dying mid-generation,
+      // an upstream abort, a truncated body) used to be invisible here.
+      // react-native-sse dispatches 'close' only from its own close() method, which
+      // this code calls exclusively from cleanup(), after hasCompleted is already
+      // set, so the listener that was supposed to catch this could never run. The
+      // only remaining guard was the 45s idle timer, which meant a dead stream cost
+      // three quarters of a minute and then a full re-generation on the next
+      // transport. Watch the underlying request instead: with pollingInterval 0 the
+      // library does not reopen after DONE, so loadend IS the end of the stream.
+      let xhrWatch = setInterval(() => {
+        const xhr = es?._xhr;
+        if (!xhr) return;
+        clearInterval(xhrWatch);
+        xhrWatch = null;
+        const onEnd = () => {
+          if (hasCompleted) return;
+          const elapsed = Date.now() - bodyReadStart;
+          console.log(`[LLMService] [${localRequestId}] SSE stream ended at ${elapsed}ms without a response frame, ${heartbeatCount} heartbeats`);
+          cleanup();
+          const responseText = chunks.join('\n');
+          // Heartbeats alone are not a response; failing fast here lets the next
+          // transport start now instead of after the idle timeout.
+          if (!responseText.trim()) {
+            reject(new Error('SSE stream ended without a response'));
+            return;
+          }
+          resolve({
+            responseText,
+            heartbeatCount,
+            streamingMethod: 'sse',
+            response: null, // No Response object with SSE
+          });
+        };
+        try {
+          xhr.addEventListener('loadend', onEnd);
+        } catch (_e) {
+          // Older XHR shims expose only the handler property.
+          const prior = xhr.onloadend;
+          xhr.onloadend = (...args) => { try { prior?.(...args); } finally { onEnd(); } };
+        }
+      }, 100);
+      const clearXhrWatch = () => { if (xhrWatch) { clearInterval(xhrWatch); xhrWatch = null; } };
+      cleanupHooks.push(clearXhrWatch);
     });
   }
 

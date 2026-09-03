@@ -5,7 +5,7 @@
  * final belief they sealed. Templated + deterministic (no LLM at the finale),
  * so the ending is stable and the selection is unit-testable.
  */
-import { clarity, endingVariant, foil, foilPresence } from './underMap';
+import { clarity, endingVariant, foil, foilPresence, CLARITY_TRUE, CLARITY_PARTIAL } from './underMap';
 
 export const ENDING_VARIANTS = {
   CLEAR: 'clear',
@@ -66,15 +66,37 @@ const ENDINGS = {
  *            foilLine: string|null, clarity: {resolved,correct,ratio} }}
  */
 export function selectEnding(map) {
-  const variant = endingVariant(map);
-  const base = ENDINGS[variant] || ENDINGS.unproven;
   const cl = clarity(map);
-
-  // Flavor the close with the LAST belief the player sealed.
   const theories = Array.isArray(map?.theories) ? map.theories : [];
-  const lastBelief = theories.length ? theories[0].interpretation : null;
+  // Newest first (recordTheory prepends), so this is the belief sealed at the
+  // chapter-12 climax.
+  const last = theories.length ? theories[0] : null;
+  const lastBelief = last ? last.interpretation : null;
+
+  // The final belief is never borne out: there is no chapter 13 to emit a
+  // beliefResolution for it, so it stays `correct: null` forever and `clarity`
+  // (which counts only resolved beliefs) cannot see it. Left alone it is the one
+  // reading in a twelve-chapter run that changes nothing about the ending it
+  // reaches. Count it as a HALF vote, using the only honest signal available at
+  // seal time: whether the player chose the reading their own revealed truths
+  // supported. It can only move an ending that was already sitting on a
+  // threshold, which is exactly where a last reading should matter.
+  const finalIsUnresolved = !!(last && last.correct == null && last.grounded != null);
+  let variant = endingVariant(map);
+  if (finalIsUnresolved && cl.resolved > 0) {
+    const ratio = (cl.correct + (last.grounded ? 0.5 : 0)) / (cl.resolved + 0.5);
+    variant = ratio >= CLARITY_TRUE ? 'clear' : ratio >= CLARITY_PARTIAL ? 'half' : 'deceived';
+  }
+  const base = ENDINGS[variant] || ENDINGS.unproven;
+
+  // Flavor the close with the LAST belief the player sealed. When it was never
+  // tested, say so rather than claiming the Under-Map bore it out.
   let flavorLine = null;
-  if (lastBelief) {
+  if (lastBelief && finalIsUnresolved) {
+    flavorLine = last.grounded
+      ? `You walked out on one reading — "${lastBelief}" — and everything you had surfaced stood behind it.`
+      : `You walked out on one reading — "${lastBelief}" — against everything you had surfaced.`;
+  } else if (lastBelief) {
     if (variant === 'clear') flavorLine = `You staked everything on one reading — "${lastBelief}" — and the Under-Map bore it out.`;
     else if (variant === 'half') flavorLine = `Your last reading — "${lastBelief}" — was part of the truth, and part of the dark talking.`;
     else if (variant === 'deceived') flavorLine = `Your last reading — "${lastBelief}" — was the shape it wanted you to settle on.`;
@@ -110,7 +132,14 @@ export function closingReport(map, ending = null) {
   // The record of readings, oldest first (theories are stored newest-first).
   [...theories].reverse().forEach((t) => {
     if (!t?.interpretation) return;
-    const verdict = t.correct === true ? 'HELD' : t.correct === false ? 'SUBVERTED' : 'UNANSWERED';
+    // A belief the story never got to test still says something: whether the
+    // player's own surfaced truths stood behind it. That is what the final
+    // chapter's reading is judged on, so the report should not call it blank.
+    const verdict = t.correct === true ? 'HELD'
+      : t.correct === false ? 'SUBVERTED'
+      : t.grounded === true ? 'UNTESTED · THE TRUTHS BACKED IT'
+      : t.grounded === false ? 'UNTESTED · THE TRUTHS DID NOT'
+      : 'UNANSWERED';
     lines.push(`CH ${String(t.chapter ?? '?').padStart(2, '0')} — "${t.interpretation}" · ${verdict}`);
   });
 
