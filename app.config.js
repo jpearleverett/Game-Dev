@@ -72,7 +72,17 @@ export default {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-font', 'expo-asset'],
+    // SDK 57 ships config plugins for these; `expo install --fix` asks for them
+    // explicitly (it cannot edit a dynamic config itself).
+    plugins: [
+      'expo-font',
+      'expo-asset',
+      'expo-audio',
+      'expo-image',
+      'expo-sharing',
+      'expo-splash-screen',
+      'expo-status-bar',
+    ],
     extra: compact({
       // ========== PRODUCTION (Recommended) ==========
       // Your Cloudflare Worker URL - API key stays secure on server

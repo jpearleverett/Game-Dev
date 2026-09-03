@@ -19,7 +19,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 
 import ScreenSurface from "../components/ScreenSurface";
 import SecondaryButton from "../components/SecondaryButton";
@@ -99,46 +99,36 @@ export default function CaseFileScreen({
   const ambienceVolume = gameProgress?.settings?.ambienceVolume;
 
   useEffect(() => {
-    // `cancelled` closes a real leak: the cleanup used to run while
-    // Audio.Sound.createAsync was still in flight, so `soundObject` was still
-    // null and there was nothing to unload. The sound then started with no
-    // handle and looped for the rest of the session. Opening the case file and
-    // immediately backing out was enough to trigger it, and each route that did
-    // so stacked another copy.
-    let cancelled = false;
+    // This used to need a `cancelled` flag: expo-av's Audio.Sound.createAsync
+    // was async, so the cleanup could run before the handle existed, leaving a
+    // sound looping for the rest of the session with nothing holding it.
+    // expo-audio's createAudioPlayer is SYNCHRONOUS (it buffers in the
+    // background), so the handle exists before this effect can be torn down and
+    // the race is structurally gone. Do not reintroduce an async create here.
     let soundObject = null;
 
-    async function loadAmbientSound() {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-           require("../../assets/audio/music/menu-ambient.mp3"),
-           {
-             isLooping: true,
-             // Honours the player's ambience setting instead of a hardcoded 0.15,
-             // which meant the slider in Settings did nothing on this screen.
-             volume: typeof ambienceVolume === 'number' ? ambienceVolume : 0.4,
-             shouldPlay: true,
-           }
-        );
-        if (cancelled) {
-          await sound.unloadAsync();
-          return;
-        }
-        soundObject = sound;
-      } catch (error) {
-        if (!ambientSoundWarned) {
-          ambientSoundWarned = true;
-          console.warn("[CaseFile] Ambient sound failed to load (logged once):", error?.message || error);
-        }
+    try {
+      soundObject = createAudioPlayer(require("../../assets/audio/music/menu-ambient.mp3"));
+      soundObject.loop = true;
+      // Honours the player's ambience setting instead of a hardcoded 0.15,
+      // which meant the slider in Settings did nothing on this screen.
+      soundObject.volume = typeof ambienceVolume === 'number' ? ambienceVolume : 0.4;
+      soundObject.play();
+    } catch (error) {
+      soundObject = null;
+      if (!ambientSoundWarned) {
+        ambientSoundWarned = true;
+        console.warn("[CaseFile] Ambient sound failed to load (logged once):", error?.message || error);
       }
     }
 
-    loadAmbientSound();
-
     return () => {
-      cancelled = true;
       if (soundObject) {
-        soundObject.unloadAsync().catch(() => {});
+        try {
+          soundObject.remove();
+        } catch (e) {
+          // already released
+        }
         soundObject = null;
       }
     };

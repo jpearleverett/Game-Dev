@@ -1,5 +1,30 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+
+/**
+ * Migrated from expo-av (removed in Expo SDK 57) to expo-audio.
+ *
+ * The shapes differ in ways a 1:1 port gets wrong, so for future reference:
+ *   Audio.Sound.createAsync(src, {isLooping})  -> createAudioPlayer(src); p.loop = …
+ *     (synchronous — the player exists immediately and loads in the background,
+ *      which is why the old promise-dedup map for in-flight loads is gone)
+ *   await sound.setVolumeAsync(v)              -> p.volume = v        (property)
+ *   await sound.setIsLoopingAsync(b)           -> p.loop = b          (property)
+ *   (await sound.getStatusAsync()).isPlaying   -> p.playing           (property)
+ *   await sound.playAsync()                    -> p.play()            (void)
+ *   await sound.stopAsync()                    -> p.pause() + seekTo(0)
+ *                                                 — there is NO stop() in expo-audio
+ *   await sound.setPositionAsync(0)            -> await p.seekTo(0)   (Promise)
+ *   await sound.replayAsync()                  -> await p.seekTo(0); p.play()
+ *   await sound.unloadAsync()                  -> p.remove()
+ *
+ * setAudioModeAsync is a top-level export now, and its fields were renamed:
+ *   allowsRecordingIOS -> allowsRecording
+ *   staysActiveInBackground -> shouldPlayInBackground
+ *   playsInSilentModeIOS -> playsInSilentMode
+ * Passing the old names is silently ignored, which would have left the game
+ * muted behind the iOS silent switch.
+ */
 
 const SOUND_FILES = {
   deskMusic: require('../../assets/audio/music/menu-ambient.mp3'),
@@ -24,224 +49,194 @@ export function useAudioController(activeScreen, settings) {
   const submitRef = useRef(null);
   const failureRef = useRef(null);
 
-  // Track in-flight loading promises to prevent duplicate sound creation
-  const loadingRefs = useRef({});
+  // Set once the hook unmounts, so an async play() that was already in flight
+  // cannot resurrect a player we have just released.
+  const releasedRef = useRef(false);
+
+  const allRefs = useMemo(() => [
+    deskMusicRef,
+    boardMusicRef,
+    narrativeMusicRef,
+    rainRef,
+    lampRef,
+    victoryRef,
+    selectRef,
+    submitRef,
+    failureRef,
+  ], []);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: false,
-      playsInSilentModeIOS: true,
+    releasedRef.current = false;
+    setAudioModeAsync({
+      allowsRecording: false,
+      shouldPlayInBackground: false,
+      playsInSilentMode: true,
     }).catch(() => {});
 
     return () => {
-      const unloadAll = async () => {
-        const sounds = [
-          deskMusicRef,
-          boardMusicRef,
-          narrativeMusicRef,
-          rainRef,
-          lampRef,
-          victoryRef,
-          selectRef,
-          submitRef,
-          failureRef,
-        ];
-        for (const ref of sounds) {
-          try {
-            await ref.current?.unloadAsync();
-          } catch (e) {
-            // ignore
-          }
-          ref.current = null;
+      releasedRef.current = true;
+      allRefs.forEach((ref) => {
+        try {
+          ref.current?.remove();
+        } catch (e) {
+          // A player can already be released; releasing twice must not throw
+          // during teardown.
         }
-        // Clear any pending loads
-        loadingRefs.current = {};
-      };
-      unloadAll();
+        ref.current = null;
+      });
     };
-  }, []);
+  }, [allRefs]);
 
-  const ensureSound = useCallback(async (ref, key, source, { isLooping = false }) => {
+  /**
+   * Synchronous now: createAudioPlayer returns immediately and buffers in the
+   * background, so there is no window in which two callers race to create the
+   * same player.
+   */
+  const ensureSound = useCallback((ref, key, source, { isLooping = false } = {}) => {
+    if (releasedRef.current) return null;
     if (ref.current) return ref.current;
-    if (loadingRefs.current[key]) return loadingRefs.current[key];
-
-    const promise = (async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: false, isLooping });
-        ref.current = sound;
-        return sound;
-      } catch (error) {
-        // console.warn(`Failed to load sound ${key}`, error);
-        return null;
-      } finally {
-        delete loadingRefs.current[key];
-      }
-    })();
-
-    loadingRefs.current[key] = promise;
-    return promise;
+    try {
+      const player = createAudioPlayer(source);
+      player.loop = isLooping;
+      ref.current = player;
+      return player;
+    } catch (error) {
+      // A missing or undecodable asset must never take the screen down; audio
+      // is non-critical feedback.
+      return null;
+    }
   }, []);
 
-  const stopLoop = async (ref) => {
-    if (!ref.current) return;
+  const stopLoop = useCallback((ref) => {
+    const player = ref.current;
+    if (!player) return;
     try {
-      const status = await ref.current.getStatusAsync();
-      if (status.isPlaying) {
-        await ref.current.stopAsync();
-      }
+      if (player.playing) player.pause();
     } catch (e) {
       // ignore
     }
-  };
+  }, []);
 
-  const startLoop = async (ref, key, file, volume) => {
+  const startLoop = useCallback((ref, key, file, volume) => {
     if (volume <= 0) {
-      await stopLoop(ref);
+      stopLoop(ref);
       return;
     }
-    const sound = await ensureSound(ref, key, file, { isLooping: true });
-    if (!sound) return;
-
+    const player = ensureSound(ref, key, file, { isLooping: true });
+    if (!player) return;
     try {
-        await sound.setIsLoopingAsync(true);
-        await sound.setVolumeAsync(volume);
-        const status = await sound.getStatusAsync();
-        if (!status.isPlaying) {
-          await sound.playAsync();
-        }
+      player.loop = true;
+      player.volume = volume;
+      if (!player.playing) player.play();
     } catch (e) {
-        // ignore
+      // ignore
     }
-  };
+  }, [ensureSound, stopLoop]);
 
   useEffect(() => {
-    let cancelled = false;
-    const apply = async () => {
-      const musicVolume = settings.musicVolume ?? 0.6;
-      const ambienceVolume = settings.ambienceVolume ?? 0.4;
+    const musicVolume = settings.musicVolume ?? 0.6;
+    const ambienceVolume = settings.ambienceVolume ?? 0.4;
 
-      // 'story' was missing, so the Story hub (and everything mapped to it) sat
-      // in silence rather than under the desk bed.
-      const DESK_SCREENS = ['desk', 'prologue', 'menu', 'archive', 'stats', 'settings', 'story'];
-      const isDeskScreen = DESK_SCREENS.includes(activeScreen);
-      const isBoardScreen = activeScreen === 'board';
-      const isNarrativeScreen = activeScreen === 'caseFile';
+    // 'story' was missing, so the Story hub (and everything mapped to it) sat
+    // in silence rather than under the desk bed.
+    const DESK_SCREENS = ['desk', 'prologue', 'menu', 'archive', 'stats', 'settings', 'story'];
+    const isDeskScreen = DESK_SCREENS.includes(activeScreen);
+    const isBoardScreen = activeScreen === 'board';
+    const isNarrativeScreen = activeScreen === 'caseFile';
 
-      // Music
-      if (isDeskScreen) {
-        if (cancelled) return;
-        await startLoop(deskMusicRef, 'deskMusic', SOUND_FILES.deskMusic, musicVolume);
-        await stopLoop(boardMusicRef);
-        await stopLoop(narrativeMusicRef);
-      } else if (isBoardScreen) {
-        if (cancelled) return;
-        await stopLoop(deskMusicRef);
-        await startLoop(boardMusicRef, 'boardMusic', SOUND_FILES.boardMusic, musicVolume);
-        await stopLoop(narrativeMusicRef);
-      } else if (isNarrativeScreen) {
-        if (cancelled) return;
-        await stopLoop(deskMusicRef);
-        await stopLoop(boardMusicRef);
-        await startLoop(narrativeMusicRef, 'narrativeMusic', SOUND_FILES.narrativeMusic, musicVolume * 0.8);
-      } else {
-        await stopLoop(deskMusicRef);
-        await stopLoop(boardMusicRef);
-        await stopLoop(narrativeMusicRef);
-      }
+    // Music
+    if (isDeskScreen) {
+      startLoop(deskMusicRef, 'deskMusic', SOUND_FILES.deskMusic, musicVolume);
+      stopLoop(boardMusicRef);
+      stopLoop(narrativeMusicRef);
+    } else if (isBoardScreen) {
+      stopLoop(deskMusicRef);
+      startLoop(boardMusicRef, 'boardMusic', SOUND_FILES.boardMusic, musicVolume);
+      stopLoop(narrativeMusicRef);
+    } else if (isNarrativeScreen) {
+      stopLoop(deskMusicRef);
+      stopLoop(boardMusicRef);
+      startLoop(narrativeMusicRef, 'narrativeMusic', SOUND_FILES.narrativeMusic, musicVolume * 0.8);
+    } else {
+      stopLoop(deskMusicRef);
+      stopLoop(boardMusicRef);
+      stopLoop(narrativeMusicRef);
+    }
 
-      // Ambience
-      if (isDeskScreen) {
-        if (cancelled) return;
-        await startLoop(rainRef, 'rainAmbience', SOUND_FILES.rainAmbience, ambienceVolume * 0.6);
-        await startLoop(lampRef, 'lampHum', SOUND_FILES.lampHum, ambienceVolume * 0.4);
-      } else if (isBoardScreen) {
-        if (cancelled) return;
-        await startLoop(rainRef, 'rainAmbience', SOUND_FILES.rainAmbience, ambienceVolume);
-        await stopLoop(lampRef);
-      } else if (isNarrativeScreen) {
-        if (cancelled) return;
-        await startLoop(rainRef, 'rainAmbience', SOUND_FILES.rainAmbience, ambienceVolume * 0.5);
-        await stopLoop(lampRef);
-      } else {
-        await stopLoop(rainRef);
-        await stopLoop(lampRef);
-      }
+    // Ambience
+    if (isDeskScreen) {
+      startLoop(rainRef, 'rainAmbience', SOUND_FILES.rainAmbience, ambienceVolume * 0.6);
+      startLoop(lampRef, 'lampHum', SOUND_FILES.lampHum, ambienceVolume * 0.4);
+    } else if (isBoardScreen) {
+      startLoop(rainRef, 'rainAmbience', SOUND_FILES.rainAmbience, ambienceVolume);
+      stopLoop(lampRef);
+    } else if (isNarrativeScreen) {
+      startLoop(rainRef, 'rainAmbience', SOUND_FILES.rainAmbience, ambienceVolume * 0.5);
+      stopLoop(lampRef);
+    } else {
+      stopLoop(rainRef);
+      stopLoop(lampRef);
+    }
 
-      if (activeScreen === 'solved' || activeScreen === 'splash') {
-        await stopLoop(deskMusicRef);
-        await stopLoop(boardMusicRef);
-        await stopLoop(narrativeMusicRef);
-        await stopLoop(rainRef);
-        await stopLoop(lampRef);
-      }
-    };
-    
-    apply();
-    
-    return () => {
-      cancelled = true;
-    };
-  }, [activeScreen, settings.musicVolume, settings.ambienceVolume, ensureSound]);
+    if (activeScreen === 'solved' || activeScreen === 'splash') {
+      stopLoop(deskMusicRef);
+      stopLoop(boardMusicRef);
+      stopLoop(narrativeMusicRef);
+      stopLoop(rainRef);
+      stopLoop(lampRef);
+    }
+  }, [activeScreen, settings.musicVolume, settings.ambienceVolume, startLoop, stopLoop]);
+
+  /** One-shots restart from 0 even if the previous play is still ringing out. */
+  const fireOneShot = useCallback(async (ref, key, file, volume) => {
+    if (volume <= 0) return;
+    const player = ensureSound(ref, key, file, { isLooping: false });
+    if (!player) return;
+    try {
+      player.volume = volume;
+      await player.seekTo(0);
+      if (releasedRef.current || ref.current !== player) return;
+      player.play();
+    } catch (e) {
+      // ignore
+    }
+  }, [ensureSound]);
 
   const playVictory = useCallback(async () => {
-    await stopLoop(deskMusicRef);
-    await stopLoop(boardMusicRef);
-    await stopLoop(narrativeMusicRef);
-    await stopLoop(rainRef);
-    await stopLoop(lampRef);
-    if (settings.musicVolume <= 0) return;
-    
-    const sound = await ensureSound(victoryRef, 'victory', SOUND_FILES.victory, { isLooping: false });
-    if (sound) {
-        await sound.setVolumeAsync(settings.musicVolume);
-        await sound.setPositionAsync(0);
-        await sound.playAsync();
-    }
-  }, [settings.musicVolume, ensureSound]);
+    stopLoop(deskMusicRef);
+    stopLoop(boardMusicRef);
+    stopLoop(narrativeMusicRef);
+    stopLoop(rainRef);
+    stopLoop(lampRef);
+    await fireOneShot(victoryRef, 'victory', SOUND_FILES.victory, settings.musicVolume);
+  }, [settings.musicVolume, fireOneShot, stopLoop]);
 
-  const playSelect = useCallback(async () => {
-    if (settings.sfxVolume <= 0) return;
-    const sound = await ensureSound(selectRef, 'select', SOUND_FILES.select, { isLooping: false });
-    if (sound) {
-        await sound.setVolumeAsync(settings.sfxVolume);
-        await sound.setPositionAsync(0);
-        await sound.playAsync();
-    }
-  }, [settings.sfxVolume, ensureSound]);
+  const playSelect = useCallback(
+    () => fireOneShot(selectRef, 'select', SOUND_FILES.select, settings.sfxVolume),
+    [settings.sfxVolume, fireOneShot]
+  );
 
-  const playSubmit = useCallback(async () => {
-    if (settings.sfxVolume <= 0) return;
-    const sound = await ensureSound(submitRef, 'submit', SOUND_FILES.submit, { isLooping: false });
-    if (sound) {
-        await sound.setVolumeAsync(settings.sfxVolume);
-        await sound.setPositionAsync(0);
-        await sound.playAsync();
-    }
-  }, [settings.sfxVolume, ensureSound]);
+  const playSubmit = useCallback(
+    () => fireOneShot(submitRef, 'submit', SOUND_FILES.submit, settings.sfxVolume),
+    [settings.sfxVolume, fireOneShot]
+  );
 
-  const playFailure = useCallback(async () => {
-    if (settings.sfxVolume <= 0) return;
-    const sound = await ensureSound(failureRef, 'failure', SOUND_FILES.failure, { isLooping: false });
-    if (sound) {
-        await sound.setVolumeAsync(settings.sfxVolume);
-        await sound.setPositionAsync(0);
-        await sound.playAsync();
-    }
-  }, [settings.sfxVolume, ensureSound]);
+  const playFailure = useCallback(
+    () => fireOneShot(failureRef, 'failure', SOUND_FILES.failure, settings.sfxVolume),
+    [settings.sfxVolume, fireOneShot]
+  );
 
   const stopAll = useCallback(async () => {
-    const loops = [deskMusicRef, boardMusicRef, narrativeMusicRef, rainRef, lampRef];
-    for (const ref of loops) {
-      await stopLoop(ref);
-    }
-    const oneShots = [victoryRef, selectRef, submitRef, failureRef];
-    for (const ref of oneShots) {
+    allRefs.forEach((ref) => {
+      const player = ref.current;
+      if (!player) return;
       try {
-        await ref.current?.stopAsync();
-      } catch (e) {}
-    }
-  }, []);
+        if (player.playing) player.pause();
+      } catch (e) {
+        // ignore
+      }
+    });
+  }, [allRefs]);
 
   return useMemo(() => ({
     playVictory,

@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 
 // Noir/Detective paper texture background
 const CASE_FILE_BG = require("../../assets/images/ui/backgrounds/case-file-bg.jpg");
@@ -130,30 +130,37 @@ export default function NarrativePager({
     if (soundLoadAttempted.current) return;
     soundLoadAttempted.current = true;
 
-    (async () => {
-      try {
-        const { sound: loadedSound } = await Audio.Sound.createAsync(
-          require('../../assets/audio/sfx/ui/page-flip.mp3')
-        );
-        soundRef.current = loadedSound;
-      } catch {
-        // Sound file is missing or invalid - fail silently
-        soundRef.current = null;
-      }
-    })();
+    try {
+      // expo-audio's createAudioPlayer is synchronous (it buffers in the
+      // background), so unlike expo-av's createAsync there is no window where
+      // the cleanup runs before the handle exists.
+      soundRef.current = createAudioPlayer(require('../../assets/audio/sfx/ui/page-flip.mp3'));
+    } catch {
+      // Sound file is missing or invalid - fail silently
+      soundRef.current = null;
+    }
 
     return () => {
       if (soundRef.current) {
-        soundRef.current.unloadAsync();
+        try {
+          soundRef.current.remove();
+        } catch {
+          // already released
+        }
         soundRef.current = null;
       }
     };
   }, []);
 
   async function playPageFlipSound() {
-    if (!soundRef.current) return;
+    const player = soundRef.current;
+    if (!player) return;
     try {
-      await soundRef.current.replayAsync();
+      // expo-audio has no replayAsync: seek to the start, then play, so a fast
+      // page flip retriggers instead of being swallowed by the still-playing one.
+      await player.seekTo(0);
+      if (soundRef.current !== player) return;
+      player.play();
     } catch {
       // Fail silently - sound is non-critical UI feedback
     }
