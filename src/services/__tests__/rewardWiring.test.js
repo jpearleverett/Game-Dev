@@ -105,6 +105,7 @@ describe('a restart does not replay the previous run', () => {
       characterStates: new Map(),
       chapterStartCacheKeys: new Map([['k', 'v']]),
       chapterStartCacheContent: new Map([['k', {}]]),
+      staticCacheKeysBySignature: new Map([['ms_none_r0', 'story_static_x']]),
       narrativeThreads: [{}],
       archivedThreads: [{}],
       consistencyLog: [{}],
@@ -115,6 +116,10 @@ describe('a restart does not replay the previous run', () => {
     expect(service.generatedStory).toEqual({ chapters: {} });
     expect(service.storyContext).toBeNull();
     expect(service.chapterStartCacheKeys.size).toBe(0);
+    // The prefix caches on the MODEL's side are keyed deterministically and live
+    // for 16h, so a restart inside that window could otherwise be grounded on
+    // the previous run's prose.
+    expect(service.staticCacheKeysBySignature.size).toBe(0);
     expect(service.narrativeThreads).toEqual([]);
     expect(clearGeneratedStory).toHaveBeenCalled();
   });

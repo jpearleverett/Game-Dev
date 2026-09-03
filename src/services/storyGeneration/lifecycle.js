@@ -189,9 +189,46 @@ async function resetGeneratedContent() {
   this._currentDynamicClusters = null;
   // The chapter-start prefix caches are keyed by the prior story text, which no
   // longer exists; keeping them would prime a fresh run with the old one.
-  this.chapterStartCacheKeys.clear();
-  this.chapterStartCacheContent.clear();
+  // Guarded: a reset must never throw. It is the recovery path.
+  this.chapterStartCacheKeys?.clear?.();
+  this.chapterStartCacheContent?.clear?.();
+  this.staticCacheKeysBySignature?.clear?.();
+
+  // And the caches THEMSELVES, on the model's side. Clearing the local key maps
+  // was not enough: the cache key is deterministic (model tag, chapter, path,
+  // prior-choices hash, prior-branch hash, versions), and llmService keeps its
+  // own persisted registry of live Gemini caches under exactly those keys with a
+  // 16-hour TTL. So a restart inside that window that repeated the same
+  // decisions and the same in-scene branches recomputed the same key, found run
+  // one's cache still alive, and generated the new run's chapter on top of the
+  // OLD run's prose — the player reading callbacks to scenes that never
+  // happened to them. Fire and forget: a cache we cannot reach expires on its
+  // own, and no reset should hang on the network.
+  clearStoryPrefixCaches();
+
   return clearGeneratedStory();
+}
+
+/**
+ * Delete every Gemini context cache this service created. Identified by the key
+ * prefixes it owns, so nothing else the app cached is touched.
+ */
+function clearStoryPrefixCaches() {
+  try {
+    // Required lazily: a static import would pull the whole network layer
+    // (expo-constants, NetInfo, react-native-sse) into every module that
+    // imports this one, several of which are pure and tested without it.
+    // eslint-disable-next-line global-require
+    const { llmService } = require('../LLMService');
+    const keys = Array.from(llmService.caches?.keys?.() || []);
+    keys
+      .filter((k) => typeof k === 'string' && (k.startsWith('story_static_') || k.startsWith('story_chStart_')))
+      .forEach((k) => {
+        llmService.deleteCache?.(k)?.catch?.(() => {});
+      });
+  } catch (_e) {
+    // A cache we cannot reach expires on its own TTL.
+  }
 }
 
 /**

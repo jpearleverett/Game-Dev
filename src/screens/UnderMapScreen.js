@@ -558,7 +558,20 @@ export default function UnderMapScreen({ navigation, route }) {
     let ensured;
     try {
       if (nextCase) {
-        ensured = await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, { underMap: map });
+        // requireFreshUnderMap is the whole point of the beat. Passing the map
+        // alone was not enough: ensureStoryContent serves any cached scene unless
+        // the caller also ASKS for freshness, so a descent could reveal two new
+        // truths and then be handed a scene generated before they existed — the
+        // next chapter simply would not know what the player had just uncovered.
+        // The C-beat cross already asked for this; the A and B gates did not.
+        // The mount-time prefetch re-fires on every reveal and records its
+        // signature, so this is normally a cache hit; when it is not, it dedupes
+        // onto the in-flight prefetch rather than starting a second generation,
+        // and the DescentHold covers the wait.
+        ensured = await game.ensureStoryContent?.(nextCase, nextPathKey, null, null, {
+          underMap: map,
+          requireFreshUnderMap: true,
+        });
       }
     } catch (_e) {
       setContinuing(false);
