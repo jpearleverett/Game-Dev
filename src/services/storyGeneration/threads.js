@@ -139,13 +139,27 @@ function _extractNarrativeThreads(chapters) {
     });
   });
 
-  // Sort by chapter/subchapter and keep most recent threads (last 20)
   threads.sort((a, b) => {
     if (a.chapter !== b.chapter) return a.chapter - b.chapter;
     return a.subchapter - b.subchapter;
   });
 
-  return threads.slice(-20);
+  // No blind recency cut here. This used to end `return threads.slice(-20)`,
+  // which ran BEFORE any urgency or overdue logic — so by the later chapters a
+  // critical thread from chapter 2 was gone before _capActiveThreads (which is
+  // urgency-aware and explicitly keeps every critical thread) ever saw it. The
+  // prompt then printed "CRITICAL THREADS: address every one of these" over a
+  // list that omitted exactly the promises the campaign had left hanging longest.
+  //
+  // Bounded here only as a safety valve, and urgency-aware when it bites.
+  const HARD_CAP = 60;
+  if (threads.length <= HARD_CAP) return threads;
+  const mustKeep = threads.filter((t) => t && (t.urgency === 'critical' || t.type === 'appointment' || t.type === 'promise' || t.type === 'threat'));
+  const rest = threads.filter((t) => !mustKeep.includes(t));
+  return [...mustKeep, ...rest.slice(-(Math.max(0, HARD_CAP - mustKeep.length)))].sort((a, b) => {
+    if (a.chapter !== b.chapter) return a.chapter - b.chapter;
+    return a.subchapter - b.subchapter;
+  });
 }
 
 /**

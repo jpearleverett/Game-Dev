@@ -192,7 +192,7 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
     model: GEMINI_MODEL,
     systemInstruction: buildMasterSystemPrompt(),
     content: staticContent,
-    ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
+    ttl: '57600s', // 16h: the static content is small and never varies per run
     metadata: {
       version: this.staticCacheVersion,
       created: new Date().toISOString(),
@@ -325,7 +325,12 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     model: GEMINI_MODEL,
     systemInstruction: buildMasterSystemPrompt(),
     content: chapterCacheContent,
-    ttl: '7200s',
+    // Must outlive the chapter gate. Gates run 6h (chapters 3-5) and 12h (6+),
+    // so at the old 2h TTL this prefix was GUARANTEED expired on every gated
+    // return: the first generation after every wait re-uploaded a ~200k-char
+    // cache from the phone before the scene could start, at exactly the moment
+    // the player came back to read.
+    ttl: '57600s', // 16h, past the longest gate
     metadata: {
       version: this.chapterStartCacheVersion,
       staticVersion: this.staticCacheVersion,
@@ -411,7 +416,21 @@ function _buildPlayerTheorySection(underMap, currentChapter = null, { mode = 'na
   let hasKeystone = false;
   if (fragments.length) {
     lines.push('- Fragments the player already holds (reference any of these by their exact label to weave this chapter into the map):');
-    fragments.slice(0, 14).forEach((f) => {
+    // Priority, not recency. Fragments are stored newest-first and the schema
+    // asks for 3-5 per scene, so a plain "newest 14" window was exhausted within
+    // about three scenes: from chapter 2 onward the model could not see, and so
+    // could not name, any of the motifs the weaving and QUAKE instructions are
+    // about. Keystones and recurring motifs are listed first and always.
+    const byPriority = [
+      ...fragments.filter((f) => f && (isKeystone(f) || (f.seen || 1) > 1)),
+      ...fragments.filter((f) => f && !(isKeystone(f) || (f.seen || 1) > 1)),
+    ];
+    const seenIds = new Set();
+    byPriority.filter((f) => {
+      if (!f?.id || seenIds.has(f.id)) return !f?.id;
+      seenIds.add(f.id);
+      return true;
+    }).slice(0, 20).forEach((f) => {
       if (!f?.label) return;
       const keystone = isKeystone(f);
       if (keystone) hasKeystone = true;
@@ -1163,6 +1182,10 @@ ${WRITING_STYLE.absolutelyForbidden.map(item => `- ${item}`).join('\n')}`;
  * This ensures the LLM has full context for proper continuation.
  */
 function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infinity } = {}) {
+  // Only the window that actually reaches the current position may mark the
+  // continuation point.
+  const marksContinuation = !Number.isFinite(maxChapter)
+    || maxChapter >= (context?.currentPosition?.chapter ?? 1);
   const clampMin = Number.isFinite(minChapter) ? minChapter : 1;
   const clampMax = Number.isFinite(maxChapter) ? maxChapter : Infinity;
 
@@ -1234,7 +1257,9 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     // Chapter header with emphasis for immediately previous
     if (isImmediatelyPrevious) {
       summary += `\n${'='.repeat(80)}\n`;
-      summary += '### Immediately previous subchapter (continue from here)\n';
+      summary += marksContinuation
+        ? '### Immediately previous subchapter (continue from here)\n'
+        : '### Previous subchapter\n';
       summary += `### Chapter ${ch.chapter}, Subchapter ${ch.subchapter} (${['A', 'B', 'C'][ch.subchapter - 1]}): "${ch.title}"\n`;
       summary += `${'='.repeat(80)}\n\n`;
     } else {

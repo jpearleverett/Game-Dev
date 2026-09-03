@@ -127,9 +127,19 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
             branchingChoice.firstChoice,
             branchingChoice.secondChoice
           );
+        } else if (!narrativeText && entry.branchingNarrative) {
+          // No recorded branch and no canonical text (a rejected/malformed branch
+          // key, or a save restored without branchingChoices). Falling through
+          // here used to drop the whole subchapter from the story context with no
+          // warning, leaving a hole the later prompt still treats as canon.
+          narrativeText = buildRealizedNarrative(entry.branchingNarrative, '1A', '1A-2A');
+          console.warn(`[StoryGenerationService] No recorded branch for ${caseNum}; using the default path for context.`);
           log.debug('StoryGenerationService', `Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
         }
 
+        if (!narrativeText) {
+          console.warn(`[StoryGenerationService] ${caseNum} has no usable narrative; it will be missing from the story context.`);
+        }
         if (narrativeText) {
           context.previousChapters.push({
             chapter: 1,
@@ -171,9 +181,19 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
             branchingChoice.firstChoice,
             branchingChoice.secondChoice
           );
+        } else if (!narrativeText && entry.branchingNarrative) {
+          // No recorded branch and no canonical text (a rejected/malformed branch
+          // key, or a save restored without branchingChoices). Falling through
+          // here used to drop the whole subchapter from the story context with no
+          // warning, leaving a hole the later prompt still treats as canon.
+          narrativeText = buildRealizedNarrative(entry.branchingNarrative, '1A', '1A-2A');
+          console.warn(`[StoryGenerationService] No recorded branch for ${caseNum}; using the default path for context.`);
           log.debug('StoryGenerationService', `Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
         }
 
+        if (!narrativeText) {
+          console.warn(`[StoryGenerationService] ${caseNum} has no usable narrative; it will be missing from the story context.`);
+        }
         if (narrativeText) {
           context.previousChapters.push({
             chapter: ch,
@@ -219,9 +239,19 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
             branchingChoice.firstChoice,
             branchingChoice.secondChoice
           );
+        } else if (!narrativeText && entry.branchingNarrative) {
+          // No recorded branch and no canonical text (a rejected/malformed branch
+          // key, or a save restored without branchingChoices). Falling through
+          // here used to drop the whole subchapter from the story context with no
+          // warning, leaving a hole the later prompt still treats as canon.
+          narrativeText = buildRealizedNarrative(entry.branchingNarrative, '1A', '1A-2A');
+          console.warn(`[StoryGenerationService] No recorded branch for ${caseNum}; using the default path for context.`);
           log.debug('StoryGenerationService', `Using realized narrative for ${caseNum}: path ${formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice)}`);
         }
 
+        if (!narrativeText) {
+          console.warn(`[StoryGenerationService] ${caseNum} has no usable narrative; it will be missing from the story context.`);
+        }
         if (narrativeText) {
           context.previousChapters.push({
             chapter: targetChapter,
