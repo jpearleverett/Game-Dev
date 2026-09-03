@@ -767,8 +767,13 @@ export function GameProvider({
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
-      const afterDescent = umRecordDescent(current.underMap, { hadMisstep });
-      const um = umResolveStir(afterDescent);
+      // Only the descent. This used to chain resolveDailyStir, so finishing a
+      // CONNECT beat paid the campaign the daily word-puzzle's probe bonus and
+      // advanced the daily streak without the player having played it — and the
+      // stir's motif deepening mutated the Under-Map generation signature, which
+      // invalidated the prefetch this very beat exists to cover. The stir has its
+      // own owner in resolveUnderMapDailyStir, wired to the Desk.
+      const um = umRecordDescent(current.underMap, { hadMisstep });
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });

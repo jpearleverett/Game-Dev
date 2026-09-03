@@ -321,14 +321,14 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const evaluate = useCallback((pair) => {
     const sensed = senseUnderMap?.(pair[0], pair[1]);
-    if (sensed?.valid && sensed.alreadyConnected && !sensed.unresolved) {
+    if (sensed?.valid && sensed.alreadyConnected && !sensed.unresolvedReading) {
       showToast('Already mapped — this truth is known.');
       setSelected([]); lockRef.current = false;
       return;
     }
     // RE-READ GATE: a meaning the player just blurred won't settle by force —
     // they must leave and re-read the scene before trying this pair again.
-    if (sensed?.valid && sensed.unresolved && blockedPairsRef.current.has(pairKeyOf(pair[0], pair[1]))) {
+    if (sensed?.valid && sensed.unresolvedReading && blockedPairsRef.current.has(pairKeyOf(pair[0], pair[1]))) {
       impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
       showToast('The meaning won’t settle by force. Re-read the scene, then return.');
       setSelected([]); lockRef.current = false;
@@ -350,7 +350,7 @@ export default function UnderMapScreen({ navigation, route }) {
         }, 480);
         return;
       }
-      setNode({ aId: pair[0], bId: pair[1], mode: 'choose', options, unresolved: !!sensed.unresolved });
+      setNode({ aId: pair[0], bId: pair[1], mode: 'choose', options, unresolved: !!sensed.unresolvedReading });
       lockRef.current = false;
       return;
     }

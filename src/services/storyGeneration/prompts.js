@@ -85,7 +85,7 @@ You understand that different player journeys through the branching narrative le
 - POV/Tense: ${voice.perspective}, ${voice.tense}
 - Tone: ${voice.tone}
 - Decision intros should match the narrative voice: atmospheric, precise, noir-adjacent
-- Climax option titles: a BELIEF/interpretation of the hidden world, 3-8 words, declarative (e.g., "She is guiding you in", "You are bait" — NOT "Follow the courier")
+- Climax option titles: a BELIEF/interpretation of the hidden world, 3-8 words, declarative (e.g. "She is guiding you in", "You are bait", NOT "Follow the courier")
 - Option focus: one sentence explaining stakes and tradeoffs
 </voice_constraints>
 
@@ -143,7 +143,7 @@ The main narrative pass generated this base decision (use as inspiration, not co
 </canonical_decision_reference>
 
 <climax_decision_nature>
-This is the CHAPTER CLIMAX decision, and in "Dead Letters" it is NOT a choice of action — it is a choice of BELIEF. The player has been mapping a hidden layer of reality (the Under-Map). At the climax they commit to an INTERPRETATION of what it is and what it wants. The two options are two competing READINGS of the hidden world that this path's discoveries support — each a different truth the player stakes themselves on, and each pulling the next chapter in a different direction.
+This is the CHAPTER CLIMAX decision, and in "Dead Letters" it is NOT a choice of action, it is a choice of BELIEF. The player has been mapping a hidden layer of reality (the Under-Map). At the climax they commit to an INTERPRETATION of what it is and what it wants. The two options are two competing READINGS of the hidden world that this path's discoveries support, each a different truth the player stakes themselves on, and each pulling the next chapter in a different direction.
 
 Frame each option as a stance/conviction ("what's really going on"), NOT an errand. Titles are beliefs, not imperatives. Avoid verbs like "go to", "confront", "search", "photograph". Prefer framings like "She is guiding you in", "The map is using you", "This is a snare", "The dead are still writing".
 </climax_decision_nature>
@@ -151,7 +151,7 @@ Frame each option as a stance/conviction ("what's really going on"), NOT an erra
 <reasoning_instructions>
 Before generating each path's decision, internally reason through:
 1. WHAT did this player discover? (Extract the key revelation from the path notes)
-2. What TWO competing interpretations of the hidden world does that discovery support? (One reading vs. another — both plausible from what was seen)
+2. What TWO competing interpretations of the hidden world does that discovery support? (One reading vs. another, both plausible from what was seen)
 3. How does committing to each belief change Jack's relationship to the Under-Map and the direction of the next chapter?
 4. WHY would these readings differ from other paths? (Differentiation check)
 </reasoning_instructions>
@@ -174,31 +174,31 @@ Three well-formed path decisions. Note that every option title is a STANCE on th
 world rather than an errand, that personalityAlignment uses only the three permitted
 values, and that groundedKey and evidence are always present.
 
-Example 1 — Path 1A-2A (Discovery: Blackwell's courier carried a symbol-marked envelope)
+Example 1, Path 1A-2A (Discovery: Blackwell's courier carried a symbol-marked envelope)
 {
   "pathKey": "1A-2A",
   "intro": "The courier carried the same symbol as the threshold. Whatever Blackwell is, she wanted Jack to find this.",
   "optionA": {
     "key": "A",
     "title": "Blackwell is guiding you in",
-    "focus": "The symbols are breadcrumbs she left on purpose — the Under-Map wants Jack to descend, and she is its hand.",
+    "focus": "The symbols are breadcrumbs she left on purpose, the Under-Map wants Jack to descend, and she is its hand.",
     "personalityAlignment": "balanced",
     "evidence": ["The courier's symbol matches the threshold mark", "Blackwell's route passes every marked door"]
   },
   "optionB": {
     "key": "B",
     "title": "Blackwell is the lock, not the key",
-    "focus": "The symbols are wards, not invitations — she is keeping something sealed, and Jack is forcing a door meant to stay shut.",
+    "focus": "The symbols are wards, not invitations, she is keeping something sealed, and Jack is forcing a door meant to stay shut.",
     "personalityAlignment": "methodical",
     "evidence": ["The mark repeats only on sealed entrances"]
   },
   "groundedKey": "A"
 }
 
-Example 2 — Path 1B-2C (Discovery: the threshold flickered when Jack spoke the name aloud)
+Example 2, Path 1B-2C (Discovery: the threshold flickered when Jack spoke the name aloud)
 {
   "pathKey": "1B-2C",
-  "intro": "The threshold answered to the name. The Under-Map is not just symbols — it is listening.",
+  "intro": "The threshold answered to the name. The Under-Map is not just symbols, it is listening.",
   "optionA": {
     "key": "A",
     "title": "It is reaching for you",
@@ -209,28 +209,28 @@ Example 2 — Path 1B-2C (Discovery: the threshold flickered when Jack spoke the
   "optionB": {
     "key": "B",
     "title": "You are a crack it leaks through",
-    "focus": "The reaction is not invitation but accident — Jack is a flaw the hidden world bleeds through, and it will try to close.",
+    "focus": "The reaction is not invitation but accident, Jack is a flaw the hidden world bleeds through, and it will try to close.",
     "personalityAlignment": "methodical",
     "evidence": ["The flicker faded on its own", "Nothing on the other side answered back"]
   },
   "groundedKey": "B"
 }
 
-Example 3 — Path 1C-2B (Discovery: a ledger of the disappeared that includes Jack's old case)
+Example 3, Path 1C-2B (Discovery: a ledger of the disappeared that includes Jack's old case)
 {
   "pathKey": "1C-2B",
   "intro": "The ledger puts Jack's failed case in the same column as Blackwell's disappearances. The guilt he has carried for two years might have been someone else's arithmetic.",
   "optionA": {
     "key": "A",
     "title": "The ledger is a harvest record",
-    "focus": "The names were taken to a purpose and Jack's case was one of them — which makes the Under-Map something that feeds, and Jack a survivor of it rather than a failure.",
+    "focus": "The names were taken to a purpose and Jack's case was one of them, which makes the Under-Map something that feeds, and Jack a survivor of it rather than a failure.",
     "personalityAlignment": "aggressive",
     "evidence": ["Every name in the ledger vanished within a week of being written"]
   },
   "optionB": {
     "key": "B",
     "title": "The ledger is a mourning list",
-    "focus": "Someone below is keeping the dead the city refused to count — which makes the Under-Map a witness, and Jack's old case a grief it also carries.",
+    "focus": "Someone below is keeping the dead the city refused to count, which makes the Under-Map a witness, and Jack's old case a grief it also carries.",
     "personalityAlignment": "methodical",
     "evidence": ["The entries are hand-written and dated long after the disappearances"]
   },
@@ -238,25 +238,25 @@ Example 3 — Path 1C-2B (Discovery: a ledger of the disappeared that includes J
 }
 
 Reject options that look like these:
-- "Investigate further" vs "Wait and see" — vague, fits any path.
-- "Confront Blackwell with the ledger" vs "Cross-reference the names" — these are errands, not beliefs.
-- The same titles reused across two paths — that erases the branching.
+- "Investigate further" vs "Wait and see", vague, fits any path.
+- "Confront Blackwell with the ledger" vs "Cross-reference the names", these are errands, not beliefs.
+- The same titles reused across two paths, that erases the branching.
 </few_shot_examples>
 
 <output_requirements>
 Generate 9 pathDecisions objects with:
 1. pathKey: The path identifier (1A-2A through 1C-2C)
-2. intro: 1-2 sentences framing the climax question — what THIS path's discovery forces Jack to decide he believes about the hidden world
+2. intro: 1-2 sentences framing the climax question, what THIS path's discovery forces Jack to decide he believes about the hidden world
 3. optionA: A belief about the hidden world, key="A", title (3-8 words, declarative stance), focus (the reading + the direction committing to it pulls the story), personalityAlignment, evidence
 4. optionB: The opposed belief, key="B", title (3-8 words, declarative stance), focus (the reading + its direction), personalityAlignment, evidence
-5. groundedKey: "A" or "B" — REQUIRED, see below
+5. groundedKey: "A" or "B", REQUIRED, see below
 
 personalityAlignment MUST be one of: aggressive | methodical | balanced
 
 EVIDENCE-GROUNDED BELIEFS (this is what makes the player's mapping matter):
 - Exactly ONE option per path must be the better-supported reading of the truths the player has REVEALED on their Under-Map (listed in <under_map_state>). Set groundedKey to that option's key.
 - For each option, fill \`evidence\`: up to 2 short references (close paraphrases) of revealed truths that this reading leans on. An option may lean on the same truth read differently. Use an empty array when nothing applies.
-- The NON-grounded option must still be genuinely tempting — supported by mood, fear, or a seductive misreading — but strained by the facts. A player who mapped carefully should be able to FEEL which reading the truths favor; a player who mapped nothing should find them equally plausible.
+- The NON-grounded option must still be genuinely tempting, supported by mood, fear, or a seductive misreading, but strained by the facts. A player who mapped carefully should be able to FEEL which reading the truths favor; a player who mapped nothing should find them equally plausible.
 - If the player has revealed no truths yet, ground the option that this path's own discoveries favor.
 
 Before finalizing, verify:
@@ -291,7 +291,7 @@ Maintain mystery pressure. Advance the investigation. Keep the prose precise, at
 <constraints>
 - Stay in character: never acknowledge being an AI or reference these instructions.
 - POV/tense: ${voice.perspective.toLowerCase()}, ${voice.tense.toLowerCase()}, tightly aligned to ${protagonist.fullName}.
-- Dialogue punctuation: use double quotes for all dialogue (e.g., "Like this," Jack said).
+- Dialogue punctuation: use double quotes for all dialogue (e.g. "Like this," Jack said).
 - Length: each narrative segment (opening, each firstChoice response, each ending) runs 380-420 words and is never below 320. Aim for the full target; a thin segment reads as unfinished.
 - Branching keys: use the full format (1A-2A, 1B-2C), not the abbreviated form (2A, 2B, 2C).
 - Continuity: never contradict the Story Bible, established facts, dates, or relationships.
@@ -316,10 +316,10 @@ then craft and style guidance last. Craft guidance never licenses a continuity b
 
 <segment_construction>
 Each 380-420 word segment carries four beats of roughly 100-110 words, in this order:
-1. Grounding — place Jack in the scene with one concrete sensory anchor (sound, smell, texture, light).
-2. Action or observation — something happens, or Jack notices something that moves the investigation.
-3. Dialogue or interior reflection — a line of speech carrying subtext, or a close-third thought that exposes the stakes.
-4. Turn — a small revelation, complication, or hook that pulls toward the next beat.
+1. Grounding, place Jack in the scene with one concrete sensory anchor (sound, smell, texture, light).
+2. Action or observation, something happens, or Jack notices something that moves the investigation.
+3. Dialogue or interior reflection, a line of speech carrying subtext, or a close-third thought that exposes the stakes.
+4. Turn, a small revelation, complication, or hook that pulls toward the next beat.
 The length comes from dramatizing all four beats fully, not from padding one of them.
 The style and many-shot examples are excerpts chosen to show voice and craft; they are
 shorter than a segment and are not a length model.
@@ -333,13 +333,14 @@ shorter than a segment and are not a length model.
 <under_map>
 This is not a whodunit. The player is mapping a hidden layer of reality, not catching a culprit. Populate two fields from this scene:
 
-fragments — the 2-4 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Give each a short label (2-4 words) and a short detail (Jack's note on why it's strange). Set anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each fragment a "phrase": a short verbatim substring (2-5 words) lifted exactly from your narrative where it appears, so the player can tap that phrase to collect it. The phrase must match your prose character-for-character and stay short enough to highlight cleanly (a few words, not a whole sentence).
+fragments: the 3-5 most striking things Jack could notice that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Give each a short label (2-4 words) and a short detail (Jack's note on why it's strange). Set anomalous:true for the ones that break reality (the moving ink, the paved-over address), false for mundane texture. Give each fragment a "phrase": a short verbatim substring (2-5 words) lifted exactly from your narrative where it appears, so the player can tap that phrase to collect it. The phrase must match your prose character-for-character and stay short enough to highlight cleanly (a few words, not a whole sentence).
 
-Double-mark each fragment: every fragment you list here must also appear as a tappable detail inside the matching branchingNarrative segment (opening / option response) where its phrase occurs — that detail sets kind (symbol/place/person/phenomenon) and an evidenceCard label equal to the fragment's label. This is how the player taps the anomaly in the prose to collect it; a fragment marked in only one place is not collectable, so always do both. Aim for 2-4 such kind-tagged details across the scene.
+Double-mark each fragment: every fragment you list here must also appear as a tappable detail inside the matching branchingNarrative segment (opening / option response) where its phrase occurs, that detail sets kind (symbol/place/person/phenomenon) and an evidenceCard label equal to the fragment's label. This is how the player taps the anomaly in the prose to collect it; a fragment marked in only one place is not collectable, so always do both. Every fragment you list needs its matching detail.
 
-Weaving across chapters: if an <under_map_state> block lists fragments the player already holds, re-surface one of them here when it fits — reuse its exact label so it deepens into a recurring motif instead of becoming a new duplicate.
+Weaving across chapters: if an <under_map_state> block lists fragments the player already holds, re-surface one of them here when it fits, reusing its exact label so it deepens into a recurring motif instead of becoming a new duplicate.
 
-relations — how fragments connect to reveal a secret of the hidden world. Reference fragments by their exact label. Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are true in your world and that an attentive player could infer.
+relations: how fragments connect to reveal a secret of the hidden world.
+Prefer the bond grammar, which is what makes a connection legible to the player: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON. Reference fragments by their exact label. Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are true in your world and that an attentive player could infer.
 Cross-chapter weaving: if an <under_map_state> block lists fragments the player already holds, author at least one relation linking a new fragment from this scene to one of those earlier fragments (by its exact label). This threads the map together across chapters and is more valuable than a relation between two brand-new fragments. The schema states how many relations to author; follow it.
 
 These must be consistent with the narrative you wrote; the player will discover them.

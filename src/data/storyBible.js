@@ -407,11 +407,11 @@ export const WRITING_STYLE = {
 
   absolutelyForbidden: [
     // Em dashes - use commas, periods, or semicolons instead
-    'Em dashes (—). Use commas, periods, colons, or semicolons instead. Never use — in narrative.',
+    'The em dash character \u2014. Use commas, periods, colons, or semicolons instead. It must never appear in narrative prose.',
     // AI-typical "not just X; it's Y" constructions - extremely common LLM output pattern
-    '"It\'s not just X; it\'s Y" or "It wasn\'t just X; it was Y" constructions (e.g., "It wasn\'t just rain; it was a deluge")',
-    '"It didn\'t just X; it Y" constructions (e.g., "The door didn\'t just open; it groaned")',
-    '"X didn\'t just Y; X Z" constructions (e.g., "She didn\'t just walk; she glided")',
+    '"It\'s not just X; it\'s Y" or "It wasn\'t just X; it was Y" constructions (e.g. "It wasn\'t just rain; it was a deluge")',
+    '"It didn\'t just X; it Y" constructions (e.g. "The door didn\'t just open; it groaned")',
+    '"X didn\'t just Y; X Z" constructions (e.g. "She didn\'t just walk; she glided")',
     'Any "not just...but" or "more than just" formulations that contrast two things with a semicolon',
     '"In a world where..." openings',
     '"Little did he know..." foreshadowing',
@@ -451,7 +451,7 @@ possession, reminded him of Jimmy, actually, in that way, as well. He could
 see Annabeth Marcus as being a fun woman, but never a frivolous one.
 "So," she said to Sean as he lit a cigarette for her, "what are you doing
 with your evening after you're released from comforting me?"
- "I'm not— "
+ "I'm not, "
  She waved it away. "I appreciate it. So what're you doing?"
  "Going to see my mother."
 "Really?"
@@ -464,7 +464,7 @@ with your evening after you're released from comforting me?"
  "Not anymore. She travels."
  "You said that with acid. 'Travels.'"
  "Did I?" He shrugged.
-She held up a hand. "I hate to keep doing this to you— getting my mind
+She held up a hand. "I hate to keep doing this to you, getting my mind
 off Katie at your expense. So you don't have to answer any of my questions.
 I'm just nosy, and you're an interesting guy."
 He smiled. "No, I'm not. I'm actually very boring, Mrs. Marcus. You take
@@ -480,7 +480,7 @@ kind of guy who'd give someone phantom tickets."
  "It seems childish," she said. "You don't seem like a childish man."
 Sean shrugged. In his experience, everyone was childish at one time or
 another. It's what you reverted to, particularly when the shit piled up.
-In more than a year, he'd never spoken to anyone about Lauren— not his
+In more than a year, he'd never spoken to anyone about Lauren, not his
 parents, his few stray friends, not even the police psychologist the
 commander had made a brief and pointed mention of once Lauren's moving
 out had become common knowledge around the barracks. But here was
@@ -488,8 +488,8 @@ Annabeth, a stranger who'd suffered a loss, and he could feel her probing
 for his loss, needing to see it or share it or something along those lines,
 needing to know, Sean figured, that she wasn't being singled out.
 "My wife's a stage manager," he said quietly. "For road shows, you
-know? Lord of the Dance toured the country last year— my wife stage-
-managed. That sort of thing. She's doing one now— Annie Get Your Gun,
+know? Lord of the Dance toured the country last year, my wife stage-
+managed. That sort of thing. She's doing one now, Annie Get Your Gun,
 maybe. I'm not sure, to tell you the truth. Whatever they're recycling this
 year. We were a weird couple. I mean, our jobs, right, how further apart can
 you get?"
@@ -502,7 +502,7 @@ hell off this porch and out of this house.
 Sean took a cigarette from the pack and lit one, nodding. "That's a nice
 word for it. Yeah, we'll say that. A rival. And my wife and I, we were going
 through some shit for a while. Neither of us was around much, and so on.
-And this, uh, rival— he moved in on her."
+And this, uh, rival, he moved in on her."
  "And you reacted badly," Annabeth said. A statement, not a question.
 Sean rolled his eyes in her direction. "You know anyone who reacts
 well?"
@@ -511,9 +511,9 @@ was below him, or maybe just something she wasn't fan of in general.
  "You still love her, though."
 "Sure. Hell, I think she still loves me." He stubbed out his cigarette. "She
 calls me all the time. Calls me and doesn't talk."
- "Wait, she— "
+ "Wait, she, "
  "I know," he said.
- "— calls you up and doesn't say a word?"
+ ", calls you up and doesn't say a word?"
  "Yup. Been going on for about eight months now."
 Annabeth laughed. "No offense, but that's the weirdest thing I've heard in
 a while."
@@ -545,14 +545,13 @@ She blew a stream of smoke up at the empty clotheslines. "These silly
 dreams you have when you're young. I mean, what, Katie and Brendan
 Harris were going to make a life in Las Vegas? How long would that little
 Eden have lasted? Maybe they'd be on their second trailer park, second kid,
-but it would hit them sooner or later— life isn't happily ever after and
+but it would hit them sooner or later, life isn't happily ever after and
 golden sunsets and shit like that. It's work. The person you love is rarely
 worthy of how big your love is. Because no one is worthy of that and
 maybe no one deserves the burden of it, either. You'll be let down. You'll be
 disappointed and have your trust broken and have a lot of real sucky days.
 You lose more than you win. You hate the person you love as much as you
-love him. But, shit, you roll up your sleeves and work— at everything—
-because that's what growing older is."
+love him. But, shit, you roll up your sleeves and work, at everything, because that's what growing older is."
  "Annabeth," Sean said, "anyone ever tell you that you're a hard woman?"
 She turned her head to him, her eyes closed, a dreamy smile on her face.
 "All the time."`,
@@ -703,7 +702,7 @@ They reached the sidewalk beside him.
 
 Sean's father looked up and down the street again. "They what? They picked him up?"
 
-"To take him home. I lied. I said I lived here. Dave said he lived in the Flats, and they—"
+"To take him home. I lied. I said I lived here. Dave said he lived in the Flats, and they, "
 
 "What are you talking about? Sean, what'd the cops look like?"
 
@@ -711,7 +710,7 @@ Sean's father looked up and down the street again. "They what? They picked him u
 
 "Were they wearing uniforms?"
 
-"No. No, they—"
+"No. No, they, "
 
 "Then how'd you know they were cops?"
 
@@ -777,7 +776,7 @@ export const CONSISTENCY_RULES = [
 export const GENERATION_CONFIG = {
   // Temperature settings
   // NOTE (Gemini 3.5): the LLM layer no longer sends sampling params (temperature/
-  // topP/topK) — the model uses its tuned defaults per Google's 3.5 guidance.
+  // topP/topK), the model uses its tuned defaults per Google's 3.5 guidance.
   // This section is retained for backward compatibility and future provider swaps only;
   // values here are not applied to Gemini 3.x requests.
   temperature: {
@@ -804,16 +803,24 @@ export const GENERATION_CONFIG = {
     llmValidation: 32000, // LLM-based semantic validation (uses 'low' thinking, but structured output)
   },
 
-  // Word count requirements - optimized for fast background generation
-  // NOTE: 3 segments (opening + firstChoice + ending) per path. Validation floor stays
-  // at 900 (3×300); the TARGET is raised to ~1200 (3×400) because Gemini 3.5 Flash is
-  // constitutionally concise and anchors to the short style exemplars — asking higher
-  // pulls actual output up toward the real 380-420/segment goal.
+  // Word count requirements.
+  //
+  // A player-visible path is 3 segments: opening + firstChoice response + ending.
+  // At the 380-420 per-segment target that is 1140-1260 words, with a hard
+  // validation floor of 900 (3x300).
+  //
+  // promptTargetMultiplier is 1. It used to be 1.25, a deliberate over-ask to
+  // counter an older model's undershoot, and the effect was a prompt that asked
+  // for ~1500 words per path while also capping each of the three segments at
+  // 420, arithmetically impossible, and the rational response to an impossible
+  // length rule is to discount every length rule in the prompt. The real cause of
+  // short output was the exemplar corpus demonstrating short passages, which is
+  // fixed where it belongs: in the exemplars.
   wordCount: {
-    minimum: 900,         // 3×300 word segments minimum (hard validation floor)
-    target: 1200,         // 3×400 word segments target
-    promptTargetMultiplier: 1.25, // Ask for ~25% more to counter 3.5 Flash undershoot
-    maximum: 1500,        // Headroom above the raised target
+    minimum: 900,         // 3x300 word segments minimum (hard validation floor)
+    target: 1200,         // 3x400 word segments target
+    promptTargetMultiplier: 1,
+    maximum: 1500,        // Headroom above the target
   },
 
   // Quality assurance settings
@@ -945,7 +952,7 @@ He saw the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and h
 
 Jimmy stood up, holding on to the banister. "Don't know what you're talking about."
 
-"You killed both of them—Ray Harris and Dave Boyle. Jesus, Jimmy, I came down here thinking the whole idea was nuts, but I can see it in your face, man. You crazy, lunatic, fucking psycho piece of shit. You did it. You killed Dave. You killed Dave Boyle. Our friend, Jimmy."
+"You killed both of them, Ray Harris and Dave Boyle. Jesus, Jimmy, I came down here thinking the whole idea was nuts, but I can see it in your face, man. You crazy, lunatic, fucking psycho piece of shit. You did it. You killed Dave. You killed Dave Boyle. Our friend, Jimmy."
 
 Jimmy snorted. "Our friend. Yeah, okay, Point Boy, he was your good buddy. Hung with him all the time, right?"
 
@@ -1082,11 +1089,11 @@ Because it all came down to evidence. And she'd just washed the evidence down th
   },
 
   acceptingDarknessExample: {
-    passage: `And it occurred to him as he began to shave that he was evil. No big thing, really, no earth-shattering clang of bells erupting in his heart. Just that—an occurrence, a momentary realization that fell like gently grasping fingers through his chest.
+    passage: `And it occurred to him as he began to shave that he was evil. No big thing, really, no earth-shattering clang of bells erupting in his heart. Just that, an occurrence, a momentary realization that fell like gently grasping fingers through his chest.
 
 So I am then.
 
-He looked in the mirror and felt very little of anything at all. He loved his daughters and he loved his wife. And they loved him. He found certainty in them, complete certainty. Few men—few people—had that.
+He looked in the mirror and felt very little of anything at all. He loved his daughters and he loved his wife. And they loved him. He found certainty in them, complete certainty. Few men, few people, had that.
 
 He'd killed a man for a crime the man had probably not committed. If that weren't bad enough, he felt very little regret.
 
@@ -1111,13 +1118,13 @@ And Lauren spoke. "For what?"
 
 "Okay..."
 
-"Hey—"
+"Hey, "
 
-"Hey—"
+"Hey, "
 
 "You go ahead," he said.
 
-"I...hell, Sean, I'm sorry, too. I didn't mean to—"
+"I...hell, Sean, I'm sorry, too. I didn't mean to, "
 
 "It's okay," he said. "Really." He took a deep breath, sucking in the soiled, stale-sweat stench of his cruiser. "I want to see you. I want to see my daughter."
 
@@ -1125,12 +1132,12 @@ And Lauren answered, "How do you know she's yours?"
 
 "She's mine."
 
-"But the blood test—"
+"But the blood test, "
 
 "She's mine," he said. "I don't need a blood test. Will you come home, Lauren? Will you?"`,
     annotations: [
       'After a year of silent phone calls, "I\'m sorry" breaks everything open - power of withheld words',
-      'Overlapping "Hey—" shows both trying to reconnect at once - rhythm of reconciliation',
+      'Overlapping "Hey, " shows both trying to reconnect at once - rhythm of reconciliation',
       '"Stale-sweat stench of his cruiser" - even transcendent moments grounded in sensory reality',
       'Paternity question deflected by emotional certainty: "She\'s mine" - faith over fact',
       'Repeated "She\'s mine" and "Will you?" - the desperation under the calm surface',
@@ -1235,9 +1242,9 @@ Sean had heard the screams of a lot of victims' parents over the years. Always t
   dialogueSubtextExample: {
     passage: `"You still love her, though."
 "Sure. Hell, I think she still loves me." He stubbed out his cigarette. "She calls me all the time. Calls me and doesn't talk."
-"Wait, she— "
+"Wait, she, "
 "I know," he said.
-"— calls you up and doesn't say a word?"
+", calls you up and doesn't say a word?"
 "Yup. Been going on for about eight months now."
 Annabeth laughed. "No offense, but that's the weirdest thing I've heard in a while."
 "No argument." He watched a fly dart in and away from the bare lightbulb. "One of these days, I figure, she's gotta talk. That's what I'm holding out for."
@@ -1245,7 +1252,7 @@ He heard his half-assed chuckle die in the night and the echo of it embarrassed 
     annotations: [
       'Surface conversation about phone calls; actual subject is devotion and hope',
       '"Calls me and doesn\'t talk" - the absurd detail reveals depth of connection',
-      'Annabeth\'s interruption ("Wait, she—") shows genuine surprise, makes it real',
+      'Annabeth\'s interruption ("Wait, she, ") shows genuine surprise, makes it real',
       '"Eight months" - specific duration adds weight, shows this is an ongoing wound',
       '"What I\'m holding out for" - vulnerability disguised as casual observation',
       '"Half-assed chuckle died...embarrassed him" - self-awareness about exposing too much',
@@ -1259,7 +1266,7 @@ He heard his half-assed chuckle die in the night and the echo of it embarrassed 
 
 Sean felt a sudden lurch in the morning, a shifting in the softness of it.
 
-The driver got out. He looked like a cop— blond crew cut, red face, white shirt, black-and-gold nylon tie, the heft of his gut dropping over his belt buckle like a stack of pancakes. The other one looked sick. He was skinny and tired-looking and stayed in his seat, one hand gripping his skull through greasy black hair, staring into the side-view mirror as the three boys came around near the driver's door.`,
+The driver got out. He looked like a cop, blond crew cut, red face, white shirt, black-and-gold nylon tie, the heft of his gut dropping over his belt buckle like a stack of pancakes. The other one looked sick. He was skinny and tired-looking and stayed in his seat, one hand gripping his skull through greasy black hair, staring into the side-view mirror as the three boys came around near the driver's door.`,
     annotations: [
       '"Dark brown car" - mundane description normalizes the approaching threat',
       '"Bumper stopped by their legs" - physical proximity creates implicit danger',
@@ -1273,7 +1280,7 @@ The driver got out. He looked like a cop— blond crew cut, red face, white shir
   },
 
   chapterHookExample: {
-    passage: `Jimmy looked at the Flats spread out before him as he and the old man walked under the deep shade of the el tracks and neared the place where Crescent bottomed out and the freight trains rumbled past the old, ratty drive-in and the Penitentiary Channel beyond, and he knew— deep, deep in his chest— that they'd never see Dave Boyle again.`,
+    passage: `Jimmy looked at the Flats spread out before him as he and the old man walked under the deep shade of the el tracks and neared the place where Crescent bottomed out and the freight trains rumbled past the old, ratty drive-in and the Penitentiary Channel beyond, and he knew, deep, deep in his chest, that they'd never see Dave Boyle again.`,
     annotations: [
       'Long sentence mimics walking, creates rhythm of approaching dread',
       'Geographic specificity (Crescent, el tracks, Channel) grounds the revelation in place',
@@ -1325,8 +1332,8 @@ Downstairs, Murphy's jukebox changed songs without anyone touching it.`,
     problems: [
       'Adverb tags ("angrily," "desperately") tell what dialogue should show',
       'Characters explaining their emotions explicitly',
-      'Dialogue too on-the-nose—people don\'t speak their subtext',
-      'No physical action—talking heads',
+      'Dialogue too on-the-nose, people don\'t speak their subtext',
+      'No physical action, talking heads',
       'Melodramatic phrasing ("everything we ever stood for")',
     ],
     goodVersion: `"You're sure this is just graffiti?" the woman asked.
@@ -1351,7 +1358,7 @@ She didn't argue. She only slid the second photo across the table, the one taken
     badVersion: `Jack went to the place. He saw a symbol. He was confused. Then he went somewhere else. He saw another symbol. It was spooky. Then he found a clue.`,
     problems: [
       'Every sentence same length and structure',
-      'No variation in rhythm—monotonous',
+      'No variation in rhythm, monotonous',
       'Action without meaning or tension',
       '"Very interesting" - empty value judgment',
       'No sensory detail, no atmosphere',
@@ -1379,7 +1386,7 @@ Where the symbol should have been, there was only blur, a smear of silver that r
     badVersion: `Jack looked at the symbol, not knowing this was the moment his life would change forever. Little did he know the Under-Map was about to reveal itself. Everything was about to become magical.`,
     problems: [
       '"Little did he know" - forbidden phrase, breaks immersion',
-      'Tells reader something important is coming—destroys tension',
+      'Tells reader something important is coming, destroys tension',
       '"Change everything forever" - vague, melodramatic',
       'Narrator intruding with future knowledge Jack doesn\'t have',
       'Promises impact instead of delivering it',
@@ -1453,7 +1460,7 @@ export const ENGAGEMENT_REQUIREMENTS = {
   revelationGradient: {
     description: 'Revelations should follow a deliberate pattern',
     levels: {
-      micro: 'Every subchapter - a clue, a connection, a small truth (e.g., a name, a date, a lie exposed)',
+      micro: 'Every subchapter - a clue, a connection, a small truth (e.g. a name, a date, a lie exposed)',
       chapter: 'End of each chapter - a character\'s true nature revealed, a conspiracy layer peeled',
       arc: 'Chapters 4, 7, 10 - game-changers that recontextualize everything the reader thought they knew',
     },
@@ -1517,7 +1524,7 @@ Then short again.
     'If three sentences in a row are similar length, revise',
     'Use fragments for emotional impact (one-word paragraphs, incomplete thoughts)',
     'Long sentences for rumination, short for action and revelation',
-    'Paragraph breaks create pacing—don\'t be afraid of one-line paragraphs',
+    'Paragraph breaks create pacing, don\'t be afraid of one-line paragraphs',
   ],
 };
 
@@ -1529,7 +1536,7 @@ export const ICEBERG_TECHNIQUE = {
   applications: [
     'Characters reference events that happened "that night in February" without explaining',
     'Jack avoids looking at the third barstool at Murphy\'s without saying why',
-    'Victoria touches her wrist when lying—we never learn why',
+    'Victoria touches her wrist when lying, we never learn why',
   ],
   principle: 'Mystery isn\'t about what you reveal. It\'s about what you deliberately don\'t.',
   execution: 'Let readers sense depths they can\'t see. The unspoken creates intrigue.',

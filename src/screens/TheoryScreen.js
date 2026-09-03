@@ -266,9 +266,13 @@ export default function TheoryScreen({ navigation, route }) {
       caseNumber,
       { underMap: sealedMap },
     );
-    if (fragmentIds.length) {
-      recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected, grounded: chosenBelief?.grounded ?? null });
-    }
+    // Always record the belief. It used to be gated on holding at least one
+    // fragment, which meant a player who reached the climax with an empty map
+    // (a fallback scene with no tappable phrases is enough) lost the seal
+    // outright: no theory, no foil creed, no verdict, and an ending computed
+    // from a campaign missing a chapter's belief. fragmentIds is recorded but
+    // read by nothing, so it was never a fit gate for the chapter's one decision.
+    recordUnderMapTheory?.({ chapter, fragmentIds, interpretation, rejected, grounded: chosenBelief?.grounded ?? null });
 
     setGenError(null);
     notificationHaptic(Haptics.NotificationFeedbackType.Success);

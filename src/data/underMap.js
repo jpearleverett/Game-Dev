@@ -204,9 +204,12 @@ export const addFragments = (map, fragments = []) => {
     const f = raw.id ? raw : makeFragment(raw);
     const existing = byId.get(f.id);
     if (existing) {
+      const incomingCase = f.caseNumber || f.lastCaseNumber || null;
+      const lastCase = existing.lastCaseNumber || existing.caseNumber || null;
+      const sameScene = !!incomingCase && !!lastCase && incomingCase === lastCase;
       byId.set(f.id, {
         ...existing,
-        seen: (existing.seen || 1) + 1,
+        seen: sameScene ? (existing.seen || 1) : (existing.seen || 1) + 1,
         lastCaseNumber: f.caseNumber || f.lastCaseNumber || existing.lastCaseNumber || existing.caseNumber || null,
         lastSeenAt: new Date().toISOString(),
         detail: existing.detail || f.detail || '',
@@ -266,12 +269,16 @@ export const promoteLatentRelations = (map) => {
   m.latentRelations.forEach((lat, idx) => {
     const aId = resolveLabel(lat.aLabel);
     const bId = resolveLabel(lat.bLabel);
-    if (aId && bId && aId !== bId) {
-      const key = relationKey(aId, bId);
-      if (!have.has(key)) {
+    if (aId && bId) {
+      // Both ends have arrived, so this thread is settled either way: it becomes
+      // a relation, or it collapses (the two labels named one fragment, or the
+      // pair is already connected). Retaining it would hold a capped slot
+      // forever and keep telling the model to pay off a closed thread.
+      const key = aId === bId ? null : relationKey(aId, bId);
+      if (key && !have.has(key)) {
         have.add(key);
         promoted.push({
-          id: `rel_${slug(lat.caseNumber || 'x')}_lat${idx}_${slug(lat.revelation).slice(0, 24)}`,
+          id: `rel_${key}`,
           a: aId,
           b: bId,
           revelation: lat.revelation,
@@ -333,7 +340,7 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
     if (have.has(key)) return;
     have.add(key);
     next.push({
-      id: raw.id || `rel_${slug(caseNumber || 'x')}_${idx}_${slug(revelation).slice(0, 24)}`,
+      id: raw.id || `rel_${relationKey(aId, bId)}`,
       a: aId,
       b: bId,
       revelation,
@@ -343,7 +350,9 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
     });
   });
   const latentTrimmed = nextLatent.slice(-MAX_LATENT_RELATIONS); // keep newest
-  if (next.length === m.relations.length && latentTrimmed.length === m.latentRelations.length) {
+  const latentUnchanged = latentTrimmed.length === m.latentRelations.length
+    && latentTrimmed.every((lat, i) => lat === m.latentRelations[i]);
+  if (next.length === m.relations.length && latentUnchanged) {
     // Still attempt promotion: a previously-latent thread may now resolve.
     return promoteLatentRelations(m);
   }
@@ -485,7 +494,7 @@ const clampPresence = (n) =>
 
 export const recordTheory = (map, theory) => {
   const m = normalizeUnderMap(map);
-  if (!theory || !Array.isArray(theory.fragmentIds) || theory.fragmentIds.length === 0) return m;
+  if (!theory || !String(theory.interpretation || '').trim()) return m;
   // The strongest reading the player turned away from becomes the foil's creed.
   // `presence` persists across C-beats (one evolving antagonist, not one per chapter).
   const rejected = cleanFalseReadings(theory.rejected);
@@ -504,7 +513,7 @@ export const recordTheory = (map, theory) => {
     theories: [
       {
         chapter: theory.chapter ?? null,
-        fragmentIds: theory.fragmentIds,
+        fragmentIds: Array.isArray(theory.fragmentIds) ? theory.fragmentIds : [],
         interpretation: String(theory.interpretation || '').trim(),
         rejected,
         correct: theory.correct != null ? !!theory.correct : null,
@@ -804,8 +813,19 @@ export const pendingProbeBonus = (map) => normalizeUnderMap(map).pendingProbeBon
  * Jack's earned sense of the Under-Map (0..3), from total truths drawn across the
  * campaign. See SENSE_TIER_THRESHOLDS for what each tier unlocks on the board.
  */
+/**
+ * Connections the player actually read TRUE: not blurred by a wrong reading, and
+ * not one The Other Reader claimed. This is the basis for sense tiers, which are
+ * meant to track mastery; counting every connection meant a player who chose the
+ * wrong reading every single time still climbed to DEEPSIGHT.
+ */
+export const truthsDrawn = (map) => {
+  const m = normalizeUnderMap(map);
+  return m.connections.filter((c) => c && !c.unresolvedReading && !c.foilClaimed).length;
+};
+
 export const senseTier = (map) => {
-  const { drawn } = mapDepth(map);
+  const drawn = truthsDrawn(map);
   let tier = 0;
   SENSE_TIER_THRESHOLDS.forEach((need) => { if (drawn >= need) tier += 1; });
   return tier;

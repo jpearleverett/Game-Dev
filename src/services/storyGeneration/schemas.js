@@ -37,7 +37,7 @@ export const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g., "Ask about the file", "Examine her desk", "Change the subject". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g. "Ask about the file", "Examine her desk", "Change the subject". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
     },
     response: {
       type: 'string',
@@ -45,7 +45,7 @@ export const CHOICE_OPTION_SCHEMA = {
     },
     summary: {
       type: 'string',
-      description: 'One-sentence summary of what happens when player takes this path (15-25 words). Used for decision context. E.g., "Jack takes a direct approach, confronting the witness and pressuring them for information."',
+      description: 'One-sentence summary of what happens when player takes this path (15-25 words). Used for decision context. E.g. "Jack takes a direct approach, confronting the witness and pressuring them for information."',
     },
     details: {
       type: 'array',
@@ -64,7 +64,7 @@ export const CHOICE_POINT_SCHEMA = {
   properties: {
     prompt: {
       type: 'string',
-      description: 'Brief context for the choice (shown to player, 5-15 words). E.g., "How does Jack respond?"',
+      description: 'Brief context for the choice (shown to player, 5-15 words). E.g. "How does Jack respond?"',
     },
     options: {
       type: 'array',
@@ -102,7 +102,7 @@ export const SECOND_CHOICE_SCHEMA = {
           },
           label: {
             type: 'string',
-            description: 'Short action label (2-5 words). NOTE: For 2C options (e.g., 1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
+            description: 'Short action label (2-5 words). NOTE: For 2C options (e.g. 1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
           },
           response: {
             type: 'string',
@@ -110,7 +110,7 @@ export const SECOND_CHOICE_SCHEMA = {
           },
           summary: {
             type: 'string',
-            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g., "Jack presses the symbol into the wet brick and the threshold answers, but something on the other side now knows his name."',
+            description: 'One-sentence summary of what happens in this path ending (15-25 words). Used for decision context. E.g. "Jack presses the symbol into the wet brick and the threshold answers, but something on the other side now knows his name."',
           },
           details: {
             type: 'array',
@@ -164,7 +164,7 @@ export const BRANCHING_NARRATIVE_SCHEMA = {
 /**
  * Schema for regular subchapters (no decision point)
  */
-// UNDER-MAP OUTPUT FIELDS — shared by the A/B and the C schemas.
+// UNDER-MAP OUTPUT FIELDS, shared by the A/B and the C schemas.
 //
 // These were declared only on STORY_CONTENT_SCHEMA, so a chapter's C beat could
 // not emit fragments, relations, echoes, a belief verdict or a foil name even
@@ -199,11 +199,11 @@ export const UNDER_MAP_OUTPUT_FIELDS = {
         scope: {
           type: 'string',
           enum: ['chapter', 'arc'],
-          description: "Default 'chapter'. Use 'arc' ONLY when this connection links long-recurring motifs into a SERIES-LEVEL truth about the hidden world (rare, big — the payoff for cross-chapter attention).",
+          description: "Default 'chapter'. Use 'arc' ONLY when this connection links long-recurring motifs into a SERIES-LEVEL truth about the hidden world (rare, big, the payoff for cross-chapter attention).",
         },
         falseReadings: {
           type: 'array',
-          description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair — plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",
+          description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair, plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",
           items: { type: 'string' },
           minItems: 2,
           maxItems: 2,
@@ -221,7 +221,7 @@ export const UNDER_MAP_OUTPUT_FIELDS = {
     items: {
       type: 'object',
       properties: {
-        nodeRef: { type: 'string', description: 'The revealed truth this scene builds on — quote it closely from the list in <under_map_state>.' },
+        nodeRef: { type: 'string', description: 'The revealed truth this scene builds on, quote it closely from the list in <under_map_state>.' },
         line: { type: 'string', description: 'The single in-fiction sentence in THIS scene that pays that discovery off.' },
       },
       // nodeRef is required because the UI discards any echo without one:
@@ -231,11 +231,11 @@ export const UNDER_MAP_OUTPUT_FIELDS = {
     maxItems: 2,
   },
   // BELIEF RESOLUTION (Move 3): if the player SEALED a belief last chapter
-  // (shown in <under_map_state>), this scene may begin to bear it out — or
+  // (shown in <under_map_state>), this scene may begin to bear it out, or
   // subvert it. Reporting this drives the player's Clarity / the ending they reach.
   beliefResolution: {
     type: 'object',
-    description: 'OMIT unless a sealed belief is listed in <under_map_state> AND this scene reveals whether it was right. Be willing to SUBVERT a wrong belief — a misread of the hidden world makes a richer story.',
+    description: 'OMIT unless a sealed belief is listed in <under_map_state> AND this scene reveals whether it was right. Be willing to SUBVERT a wrong belief, a misread of the hidden world makes a richer story.',
     properties: {
       resolvesChapter: { type: 'integer', description: 'The chapter number the resolved belief was sealed in.' },
       correct: { type: 'boolean', description: 'True if reality CONFIRMS the player\'s belief; false if it subverts/contradicts it.' },
@@ -293,7 +293,7 @@ export const STORY_CONTENT_SCHEMA = {
         firstChoice: {
           type: 'object',
           properties: {
-            prompt: { type: 'string', description: 'Choice context (5-15 words). E.g., "How does Jack respond?"' },
+            prompt: { type: 'string', description: 'Choice context (5-15 words). E.g. "How does Jack respond?"' },
             options: {
               type: 'array',
               minItems: 3,
@@ -360,12 +360,12 @@ export const STORY_CONTENT_SCHEMA = {
       properties: {
         summary: {
           type: 'string',
-          description: 'One sentence objective for this subchapter, e.g., "Find the connection between the warehouse records and the missing witness."',
+          description: 'One sentence objective for this subchapter, e.g. "Find the connection between the warehouse records and the missing witness."',
         },
         objectives: {
           type: 'array',
           items: { type: 'string' },
-          description: '2-3 specific directives for the player, e.g., "Cross-reference the shipping manifests", "Identify the code words used"',
+          description: '2-3 specific directives for the player, e.g. "Cross-reference the shipping manifests", "Identify the code words used"',
         },
       },
       required: ['summary', 'objectives'],
@@ -384,7 +384,7 @@ export const STORY_CONTENT_SCHEMA = {
           },
           description: {
             type: 'string',
-            description: 'Brief description of the thread (e.g., "Jack agreed to meet his contact at the docks at midnight")'
+            description: 'Brief description of the thread (e.g. "Jack agreed to meet his contact at the docks at midnight")'
           },
           status: {
             type: 'string',
@@ -417,7 +417,7 @@ export const STORY_CONTENT_SCHEMA = {
   // propertyOrdering pins the order the model emits fields in.
   //
   // Two reasons it matters here. The decision must be authored BEFORE the prose
-  // it is supposed to shape — a comment in generation.js already claimed this
+  // it is supposed to shape, a comment in generation.js already claimed this
   // was happening on the strength of declaration order, which the API does not
   // guarantee. And the small, cheap fields go ahead of the ~4,000-word
   // branchingNarrative so a response cut short at the output ceiling loses prose
@@ -549,7 +549,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "A"' },
-            title: { type: 'string', description: 'A declarative BELIEF about the hidden world the player can commit to (3-8 words), e.g., "She is guiding you in". NOT an imperative action.' },
+            title: { type: 'string', description: 'A declarative BELIEF about the hidden world the player can commit to (3-8 words), e.g. "She is guiding you in". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
@@ -567,7 +567,7 @@ export const DECISION_ONLY_SCHEMA = {
           type: 'object',
           properties: {
             key: { type: 'string', description: 'Always "B"' },
-            title: { type: 'string', description: 'The opposed declarative BELIEF about the hidden world (3-8 words), e.g., "You are bait". NOT an imperative action.' },
+            title: { type: 'string', description: 'The opposed declarative BELIEF about the hidden world (3-8 words), e.g. "You are bait". NOT an imperative action.' },
             focus: { type: 'string', description: 'Two sentences: What this path prioritizes and what it risks.' },
             personalityAlignment: {
               type: 'string',
@@ -729,7 +729,7 @@ export const DECISION_CONTENT_SCHEMA = {
       properties: {
         summary: {
           type: 'string',
-          description: 'One sentence objective for this subchapter, e.g., "Uncover the truth behind the conflicting testimonies."',
+          description: 'One sentence objective for this subchapter, e.g. "Uncover the truth behind the conflicting testimonies."',
         },
         objectives: {
           type: 'array',
@@ -784,7 +784,7 @@ export const DECISION_CONTENT_SCHEMA = {
   // propertyOrdering pins the order the model emits fields in.
   //
   // Two reasons it matters here. The decision must be authored BEFORE the prose
-  // it is supposed to shape — a comment in generation.js already claimed this
+  // it is supposed to shape, a comment in generation.js already claimed this
   // was happening on the strength of declaration order, which the API does not
   // guarantee. And the small, cheap fields go ahead of the ~4,000-word
   // branchingNarrative so a response cut short at the output ceiling loses prose

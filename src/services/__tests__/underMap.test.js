@@ -1,5 +1,6 @@
 import {
   createBlankUnderMap,
+  truthsDrawn,
   normalizeUnderMap,
   makeFragment,
   fragmentId,
@@ -191,7 +192,12 @@ describe('underMap', () => {
     let m = seed();
     m = recordTheory(m, { chapter: 1, fragmentIds: ['a', 'b'], interpretation: 'It is all one map.' });
     expect(m.theories[0].interpretation).toBe('It is all one map.');
-    expect(recordTheory(m, { fragmentIds: [] }).theories).toHaveLength(1); // empty -> no new theory
+    // The belief, not the fragment list, is what a theory is. A player can
+    // legitimately reach a climax holding nothing collectable; the seal must
+    // still happen, or the chapter has no answer and the ending loses a belief.
+    expect(recordTheory(m, { fragmentIds: [], interpretation: 'The city is answering.' }).theories).toHaveLength(2);
+    expect(recordTheory(m, { fragmentIds: ['a'], interpretation: '  ' }).theories).toHaveLength(1); // no belief -> nothing sealed
+    expect(recordTheory(m, { fragmentIds: [] }).theories).toHaveLength(1); // no belief -> nothing sealed
   });
 
   test('normalizeUnderMap repairs garbage', () => {
@@ -865,5 +871,91 @@ describe('underMap — New Game+ (the city remembers being read)', () => {
 
   test('no foil in the previous run -> a plain blank map', () => {
     expect(seedNewGamePlus(createBlankUnderMap()).foil).toBeNull();
+  });
+});
+
+describe('defects found in the end-to-end audit', () => {
+  test('a new dangling thread survives the cap instead of being dropped', () => {
+    // The cap guard compared LENGTHS: at capacity, trimming a new thread back to
+    // the cap made the lengths match, so the trimmed list (holding the new
+    // thread) was discarded and the oldest kept forever.
+    let m = createBlankUnderMap();
+    m = addFragments(m, [makeFragment({ label: 'Anchor', kind: 'symbol', caseNumber: '001A' })]);
+    for (let i = 0; i < 14; i += 1) {
+      m = addRelations(m, [{ aLabel: 'Anchor', bLabel: `Absent ${i}`, revelation: `Truth number ${i}.` }], '001A');
+    }
+    const labels = m.latentRelations.map((l) => l.bLabel);
+    expect(labels).toContain('Absent 13');
+    expect(labels).not.toContain('Absent 0');
+  });
+
+  test('two relations whose revelations start alike get distinct ids and both reveal', () => {
+    // Ids were built from the revelation's first 24 slug characters, so a
+    // collision made the second connection reveal a node that already existed
+    // and was therefore never stored.
+    let m = createBlankUnderMap();
+    m = addFragments(m, ['A', 'B', 'C', 'D'].map((l) => makeFragment({ label: l, kind: 'symbol', caseNumber: '001A' })));
+    m = addRelations(m, [
+      { aLabel: 'A', bLabel: 'B', revelation: 'The seal was cut for a door that is not there anymore.' },
+      { aLabel: 'C', bLabel: 'D', revelation: 'The seal was cut for a door that never opened once.' },
+    ], '001A');
+    expect(new Set(m.relations.map((r) => r.id)).size).toBe(2);
+
+    const first = connectFragments(m, fragmentId('symbol', 'A'), fragmentId('symbol', 'B'));
+    const second = connectFragments(first.map, fragmentId('symbol', 'C'), fragmentId('symbol', 'D'));
+    expect(first.revealed).toBeTruthy();
+    expect(second.revealed).toBeTruthy();
+    expect(second.map.nodes).toHaveLength(2);
+  });
+
+  test('re-collecting a fragment in the SAME scene does not make it a motif', () => {
+    // The reader backfills the opening's fragments on completion, so a tapped
+    // fragment was re-ingested within one scene and every first sight counted
+    // as a recurrence.
+    let m = createBlankUnderMap();
+    m = addFragments(m, [makeFragment({ label: 'Moving Ink', kind: 'phenomenon', caseNumber: '001A' })]);
+    m = addFragments(m, [makeFragment({ label: 'Moving Ink', kind: 'phenomenon', caseNumber: '001A' })]);
+    expect(isMotif(m.fragments[0])).toBe(false);
+    expect(m.fragments[0].seen).toBe(1);
+
+    m = addFragments(m, [makeFragment({ label: 'Moving Ink', kind: 'phenomenon', caseNumber: '003B' })]);
+    expect(isMotif(m.fragments[0])).toBe(true);
+    expect(m.fragments[0].seen).toBe(2);
+  });
+
+  test('a latent whose labels resolve to one fragment is consumed, not held forever', () => {
+    let m = createBlankUnderMap();
+    m = addRelations(m, [{ aLabel: 'the drowned door', bLabel: 'drowned door', revelation: 'It answers to its own name.' }], '001A');
+    expect(m.latentRelations).toHaveLength(1);
+    m = addFragments(m, [makeFragment({ label: 'the drowned door', kind: 'place', caseNumber: '001B' })]);
+    expect(m.latentRelations).toHaveLength(0);
+    expect(m.relations).toHaveLength(0);
+  });
+
+  test('sense tiers count only readings the player got right', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, ['A', 'B', 'C', 'D', 'E', 'F'].map((l) => makeFragment({ label: l, kind: 'symbol', caseNumber: '001A' })));
+    m = addRelations(m, [
+      { aLabel: 'A', bLabel: 'B', revelation: 'One.', falseReadings: ['Wrong one.', 'Also wrong.'] },
+      { aLabel: 'C', bLabel: 'D', revelation: 'Two.', falseReadings: ['Wrong two.', 'Also wrong.'] },
+      { aLabel: 'E', bLabel: 'F', revelation: 'Three.', falseReadings: ['Wrong three.', 'Also wrong.'] },
+    ], '001A');
+
+    // Three blurred readings: connections exist, but nothing was read true.
+    let blurred = m;
+    [['A', 'B', 'Wrong one.'], ['C', 'D', 'Wrong two.'], ['E', 'F', 'Wrong three.']].forEach(([a, b, wrong]) => {
+      blurred = resolveReading(blurred, fragmentId('symbol', a), fragmentId('symbol', b), wrong).map;
+    });
+    expect(blurred.connections).toHaveLength(3);
+    expect(truthsDrawn(blurred)).toBe(0);
+    expect(senseTier(blurred)).toBe(0);
+
+    // The same three, read true, do earn the first tier.
+    let true3 = m;
+    [['A', 'B', 'One.'], ['C', 'D', 'Two.'], ['E', 'F', 'Three.']].forEach(([a, b, right]) => {
+      true3 = resolveReading(true3, fragmentId('symbol', a), fragmentId('symbol', b), right).map;
+    });
+    expect(truthsDrawn(true3)).toBe(3);
+    expect(senseTier(true3)).toBe(1);
   });
 });
