@@ -501,6 +501,60 @@ and green (`npx jest`), and none of it has been through an on-device playtest ye
   to `underMap`, `endings`, `storyDecision`, `storyAdvance`, `promptCorpus`,
   `validation.deriveFragments`, `playerTheoryPrompt`, `underMapGenerationSignature`.
 
+**MEMORY-CHAIN AUDIT (follow-up pass).** A dedicated audit of "does chapter 12 still
+know what I did in chapter 1?" found the promise was NOT being kept. All fixed, all
+guarded by `lateChapterMemory.test.js`, which builds a real chapter-12 prompt from a
+full-season state and asserts on the sentinels that come out:
+- **The canon block carried a window, not the canon.** `<continuity_anchors>` heads
+  itself "Immutable canon — do not contradict" and carried the newest 8 truths and 3
+  beliefs, so chapters 1-8's beliefs were outside it entirely. Limits are now
+  `ANCHOR_NODE_LIMIT`/`ANCHOR_BELIEF_LIMIT` (40/12), sized to hold a whole season
+  (~4k chars against a 1M window), arc-scoped truths guaranteed.
+- **Chapter 1 was the first thing pruned.** It is stored under pathKey `ROOT`, and
+  `'AABBA…'.startsWith('ROOT')` is false, so the opening scored 0 from the on-path
+  bonus against a never-prune threshold of 500 — the lowest-scored entry in the save.
+  `generatedStoryStorage` treats ROOT as the prefix it is.
+- **`narrativeThreads` never reached the extractor.** The field is REQUIRED by the
+  output schema and persisted on every entry, but all four `previousChapters.push`
+  whitelists in `context.js` dropped it, so the structured-thread branch (its stated
+  first priority) was dead and 100% of threads came from a regex over prose — no
+  urgency, no dueChapter, nothing ever CRITICAL. Also fixed the regex's ungrouped
+  alternation, which was yielding bare stubs like "Jack promised".
+- **The consequences block reported a template.** `constants.js` ships a whodunit-era
+  `001C` entry that was consulted BEFORE derivation, so every run asserted "Jack chose
+  the methodical, evidence-focused approach" whatever the player sealed. Derivation now
+  runs first, off `choiceHistory.optionTitle/optionFocus`; the templates are fallbacks.
+  ONGOING EFFECTS also sliced the FIRST five of a chapter-ordered list (frozen on
+  chapters 1-2 forever) and the phrasing was built for imperative titles.
+- **The climax call had no record of the run.** `pathDecisions` authors the nine
+  competing readings and starts a fresh conversation with no story text (correct — that
+  is the recitation guard), but it also had no anchors, so it could offer a reading the
+  story contradicted five chapters back. It gets `<continuity_anchors>` now.
+- **The generative block was recency-only.** `<under_map_state>` offered the newest 6
+  truths and only `theories[0]`, so from ~ch3 the material a scene was BUILT ON was
+  always last chapter's, and a belief that slipped its window became unresolvable.
+  Truths lead with arc-scoped (`THEORY_TRUTH_LIMIT`); older unanswered beliefs are
+  listed with the `resolvesChapter` they need.
+- **A restart could be grounded on the previous run.** `resetGeneratedContent` cleared
+  the local key maps but not `llmService.caches`, whose keys are deterministic and live
+  16h — so a restart in that window repeating the same choices generated on top of run
+  one's prose. It deletes the `story_static_`/`story_chStart_` caches it owns.
+- **The CONNECT gate served stale scenes.** `ensureStoryContent` honours a cached scene
+  unless the caller ASKS for freshness; the A/B gates passed the map without asking, so
+  a descent could reveal two truths and be handed a scene written before they existed.
+- **Unresolved beliefs counted for nothing.** `beliefResolution` is optional with no
+  floor and `clarity()` drops an unproven belief from numerator AND denominator. The
+  half-vote that rescued the ch-12 belief now covers every untested one (via `grounded`).
+  The anchor block also said "let the world test it" about beliefs years overdue, which
+  contradicted the instruction to close them.
+- **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
+  unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
+  prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
+- **Tests: 360.** New: `lateChapterMemory`, `threadLedger`,
+  `decisionConsequences.derivation`, plus additions to `continuityAnchorUnderMap`,
+  `playerTheoryPrompt`, `endings`, `generatedStoryStorage.prune`,
+  `validation.deriveFragments`.
+
 **Open / candidate next work:**
 - **On-device playtest of the whole sweep above** — it is all LLM- and feel-dependent:
   does 3.8 Flash hold the prose register with the native corpus, is the latency envelope
