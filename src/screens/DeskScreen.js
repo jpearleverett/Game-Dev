@@ -42,7 +42,12 @@ export default function DeskScreen({
   const reducedMotion = !!progress?.settings?.reducedMotion;
   const underMap = storyCampaign?.underMap || {};
   const fragments = underMap?.fragments?.length || 0;
-  const truths = underMap?.nodes?.length || 0;
+  // A blurred reading and a thread The Other Reader claimed are both nodes and
+  // neither is a truth the player holds. The Codex already filters this list;
+  // the Desk counted them, so the aperture and the TRUTHS tag both overstated
+  // the map, and the count could exceed the relations that exist.
+  const truths = (underMap?.nodes || [])
+    .filter((n) => n && !n.unresolvedReading && !n.foilClaimed).length;
   const totalRelations = underMap?.relations?.length || 0;
   const depth = mapDepth(underMap);
   const depthPct = Math.round(depth.ratio * 100);
@@ -269,7 +274,7 @@ export default function DeskScreen({
               <Text style={styles.apertureKicker}>DESCEND ▾</Text>
               <Text style={styles.apertureTitle}>The Under-Map</Text>
               <Text style={styles.apertureSub}>
-                {truths} / {Math.max(totalRelations, truths)} truths surfaced
+                {truths} / {totalRelations} truths surfaced
               </Text>
             </View>
             <Text style={styles.apertureArrow}>↓</Text>

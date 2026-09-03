@@ -196,6 +196,11 @@ export default function UnderMapScreen({ navigation, route }) {
   // First-contact lessons on entering the board (one per visit, priority order):
   // a dangling thread is the rarer/stranger sight, then the earned sense tier.
   useEffect(() => {
+    // The daily thread's card had no trigger anywhere in the app: it was written,
+    // listed in the Codex glossary, and never shown at first contact. This is the
+    // moment it explains — the freeform board, opened with today's stir waiting.
+    const stir = map?.dailyStir;
+    if (!asPuzzle && stir && !stir.resolved && maybeNote('dailyThread')) return;
     if (latentCount > 0 && maybeNote('latent')) return;
     if (tier >= 1) maybeNote('sense');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -539,6 +544,8 @@ export default function UnderMapScreen({ navigation, route }) {
   const depthPct = Math.round(depth.ratio * 100);
   // Forgiving rule (§3.1): out of probes still advances the story.
   const canContinue = revealsThisVisit > 0 || remaining === 0 || probesLeft <= 0;
+  // Nothing left to find here, whichever visit found it.
+  const mappedClean = remaining === 0 && depth.total > 0 && blurredCount === 0;
   const probeMeter = probeBudget <= 7
     ? '◆'.repeat(probesLeft) + '◇'.repeat(Math.max(0, probeBudget - probesLeft))
     : `${probesLeft}/${probeBudget}`;
@@ -727,18 +734,24 @@ export default function UnderMapScreen({ navigation, route }) {
         </View>
         {asPuzzle && canContinue ? (
           <>
-            <View style={[styles.visitWin, remaining === 0 && revealsThisVisit > 0 && styles.visitWinClean]}>
-              <Text style={[styles.visitWinKicker, remaining === 0 && revealsThisVisit > 0 && styles.visitWinKickerClean]}>
-                {remaining === 0 && revealsThisVisit > 0
+            <View style={[styles.visitWin, mappedClean && styles.visitWinClean]}>
+              {/* Keyed on what is LEFT, not on this visit's reveals. A player who
+                  drew the last thread on an earlier visit came back to "THREADS
+                  STILL SENSED · unfinished relations stay on the map" over a
+                  board with nothing left on it. */}
+              <Text style={[styles.visitWinKicker, mappedClean && styles.visitWinKickerClean]}>
+                {mappedClean
                   ? '✦ CHAPTER MAPPED CLEAN'
                   : revealsThisVisit > 0 ? 'TRUTH SURFACED' : 'THREADS STILL SENSED'}
               </Text>
               <Text style={styles.visitWinText}>
-                {remaining === 0 && revealsThisVisit > 0
+                {mappedClean
                   ? `Every thread this chapter offered, drawn. ${streak > 0 ? `${streak} flawless descent${streak === 1 ? '' : 's'} and counting.` : 'The hidden world has nothing left to hide here.'}`
                   : revealsThisVisit > 0
                     ? `${revealsThisVisit} node${revealsThisVisit === 1 ? '' : 's'} revealed this descent · map ${depthPct}% drawn`
-                    : 'The dark has gone quiet for now. Unfinished relations stay on the map.'}
+                    : blurredCount > 0
+                      ? `${blurredCount} reading${blurredCount === 1 ? '' : 's'} here are still blurred. Re-read the scene and they will settle.`
+                      : 'The dark has gone quiet for now. Unfinished relations stay on the map.'}
               </Text>
             </View>
             {genError ? <Text style={styles.genError}>{genError}</Text> : null}

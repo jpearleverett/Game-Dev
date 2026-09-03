@@ -41,6 +41,7 @@ import { createCasePalette } from "../theme/casePalette";
 import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath, getStoryEntryAsync, parseCaseNumber, computeBranchPathKey } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
 import { resolveStoryDecision, decisionOptionsFrom, decisionIntroFrom } from "../utils/storyDecision";
+import { CHAPTER_UNLOCK_DELAY_MS, EARLY_CHAPTER_UNLOCK_DELAY_MS, LONG_GATE_CHAPTER } from "../utils/storyAdvance";
 import {
   formatCountdown,
   parseDailyIntro,
@@ -1188,7 +1189,13 @@ export default function CaseFileScreen({
   const unlockLabel = countdown
     ? storyLocked ? 'Next chapter unlocks in' : 'Next case unlocks in'
     : storyLocked ? 'Next chapter unlocks' : 'Next case unlocks';
-  const unlockValue = countdown || (storyLocked ? 'After 24 hours' : 'At dawn');
+  // The cadence is 6h (chapters 3-5) then 12h. This said "After 24 hours",
+  // a number the game has never used, on the one screen a waiting player reads.
+  const gateNextChapter = Number(String(caseNumber || '001A').slice(0, 3)) + 1;
+  const gateHours = Math.round(
+    (gateNextChapter >= LONG_GATE_CHAPTER ? CHAPTER_UNLOCK_DELAY_MS : EARLY_CHAPTER_UNLOCK_DELAY_MS) / 3600000,
+  );
+  const unlockValue = countdown || (storyLocked ? `About ${gateHours} hours` : 'At dawn');
   const footerRibbonStyle = {
       borderRadius: scaleRadius(RADIUS.md),
       paddingHorizontal: scaleSpacing(compact ? SPACING.sm : SPACING.md),
