@@ -489,8 +489,12 @@ and green (`npx jest`), and none of it has been through an on-device playtest ye
   copies of one helper. Also: notifications are opt-in (`settings.notificationsEnabled`),
   the ending is revisited by its recorded id (`selectEndingById`), and the
   chapter-12 belief now counts as a half vote toward the ending it was previously
-  unable to affect.
-- **Tests: 306, two projects.** New: `geminiModelContract`, `promptCorpus`,
+  unable to affect. **Descents are stored per key** (`underMap.descents`, keyed by
+  gate case number or `FREEFORM_DESCENT_KEY`) — with one slot, opening the Desk's
+  board mid-gate refunded the gated descent's probes. `campaignSimulation.test.js`
+  walks a whole run through the model in call order, which is where a change that
+  is locally right but breaks the sequence now shows up.
+- **Tests: 316, two projects.** New: `geminiModelContract`, `promptCorpus`,
   `storyEntryShape`, `rewardWiring`, `campaignAdvanceInvariants`, `proxyHandler`
   (which RUNS the real proxy handler rather than grepping it), `normalizeStoryCampaign`,
   `BranchingNarrativeReader` (the first test that mounts a component), plus additions
