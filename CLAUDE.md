@@ -477,9 +477,24 @@ and green (`npx jest`), and none of it has been through an on-device playtest ye
   still describing the retired whodunit and are rewritten to the Under-Map design.
   `tempoModifier` (was `wordCountModifier`) selects a pacing note; it never multiplied a
   word count, since segment length is fixed at 380-420 by the schema.
-- **Tests: 250, two projects.** New: `geminiModelContract`, `promptCorpus`,
-  `storyEntryShape`, `rewardWiring`, `BranchingNarrativeReader` (the first test that
-  mounts a component), plus additions to `underMap`, `storyDecision`, `storyAdvance`,
+- **Second pass (the game itself).** The audit's game-quality, CONNECT/THEORY and
+  rest-of-app dimensions turned up loop-level defects that are now fixed: ATTUNED
+  named the exact partner for free (it glimmers a superset that narrows by tier —
+  `attunedGlimmer`); the Desk board was unmetered, so the campaign puzzle could be
+  brute-forced from the Desk (it meters under `FREEFORM_DESCENT_KEY`); the probe
+  budget was recomputed per mount while the used count was persisted, so re-reading
+  shrank it (frozen into `descent.probeBudget`); `mapDepth` counted blurred and
+  foil-claimed connections as drawn; blurred readings were rendered nowhere; the
+  gate countdown returned the literal string "Unlocking soon" forever, in two
+  copies of one helper. Also: notifications are opt-in (`settings.notificationsEnabled`),
+  the ending is revisited by its recorded id (`selectEndingById`), and the
+  chapter-12 belief now counts as a half vote toward the ending it was previously
+  unable to affect.
+- **Tests: 306, two projects.** New: `geminiModelContract`, `promptCorpus`,
+  `storyEntryShape`, `rewardWiring`, `campaignAdvanceInvariants`, `proxyHandler`
+  (which RUNS the real proxy handler rather than grepping it), `normalizeStoryCampaign`,
+  `BranchingNarrativeReader` (the first test that mounts a component), plus additions
+  to `underMap`, `endings`, `storyDecision`, `storyAdvance`, `promptCorpus`,
   `validation.deriveFragments`, `playerTheoryPrompt`, `underMapGenerationSignature`.
 
 **Open / candidate next work:**

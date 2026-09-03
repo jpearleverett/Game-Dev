@@ -1019,7 +1019,13 @@ export function GameProvider({
               ...playthroughDetails,
             },
           },
-          totalEndingsReached: currentEndings.totalEndingsReached + 1,
+          // Reached-COUNT, not a call count. This incremented on every call, and
+          // the Ending screen mounts it again on every revisit, so a player who
+          // looked at their ending twice was credited with three endings out of
+          // three variants.
+          totalEndingsReached: seen
+            ? currentEndings.totalEndingsReached
+            : (currentEndings.totalEndingsReached || 0) + 1,
           firstEndingId: currentEndings.firstEndingId || endingId,
           firstEndingAt: currentEndings.firstEndingAt || nowIso,
         },

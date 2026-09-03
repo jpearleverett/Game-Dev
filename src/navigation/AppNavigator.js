@@ -29,7 +29,7 @@ import EndingGalleryScreen from '../screens/EndingGalleryScreen';
 import ChapterSelectScreen from '../screens/ChapterSelectScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
 import { ACHIEVEMENT_COUNT } from '../data/achievementsData';
-import { selectEnding, selectEndingById } from '../data/endings';
+import { selectEndingById } from '../data/endings';
 
 const Stack = createNativeStackNavigator();
 
