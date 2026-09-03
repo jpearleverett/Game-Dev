@@ -63,3 +63,31 @@ describe('decisionOptionsFrom', () => {
     expect(decisionOptionsFrom({ groundedKey: 'Z', optionA: { title: 'a' } })[0].grounded).toBeNull();
   });
 });
+
+describe('the climax framing the model writes actually reaches a screen', () => {
+  const { decisionIntroFrom } = require('../../utils/storyDecision');
+
+  test('an intro is read whether it arrives as an array or a string', () => {
+    // The legacy converter stores it as ['...']; the raw schema emits a string.
+    expect(decisionIntroFrom({ intro: ['The seal answered to her name.'] })).toBe('The seal answered to her name.');
+    expect(decisionIntroFrom({ intro: 'The seal answered to her name.' })).toBe('The seal answered to her name.');
+  });
+
+  test('an absent or empty intro reads as nothing, not as a blank line', () => {
+    expect(decisionIntroFrom(null)).toBeNull();
+    expect(decisionIntroFrom({})).toBeNull();
+    expect(decisionIntroFrom({ intro: [''] })).toBeNull();
+    expect(decisionIntroFrom({ intro: '   ' })).toBeNull();
+  });
+
+  test('the Theory climax renders it and the CaseFile forwards it', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const read = (rel) => fs.readFileSync(path.join(__dirname, '../..', rel), 'utf8');
+    // Nine of these are authored, validated and persisted per chapter. The only
+    // reader used to be the decision panel, which is hidden at the climax.
+    expect(read('screens/TheoryScreen.js')).toContain('{beliefIntro}');
+    expect(read('screens/CaseFileScreen.js')).toContain('onProceedToPuzzle(decisionOptions, decisionIntro)');
+    expect(read('navigation/AppNavigator.js')).toContain('decisionIntro: decisionIntro || undefined');
+  });
+});

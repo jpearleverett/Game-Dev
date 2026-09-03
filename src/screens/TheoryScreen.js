@@ -22,7 +22,7 @@ import {
   getStoryEntry,
   ROOT_PATH_KEY,
 } from '../data/storyContent';
-import { resolveStoryDecision, decisionOptionsFrom } from '../utils/storyDecision';
+import { resolveStoryDecision, decisionOptionsFrom, decisionIntroFrom } from '../utils/storyDecision';
 import { underMapGenerationSignature } from '../utils/underMapGeneration';
 import { analytics } from '../services/AnalyticsService';
 import { FIELD_NOTES } from '../data/fieldNotes';
@@ -134,9 +134,7 @@ export default function TheoryScreen({ navigation, route }) {
   // The competing beliefs (the chapter decision, framed as interpretations of the
   // hidden world). Prefer options passed from the CaseFile; otherwise resolve them
   // ourselves so a direct/resumed entry still works.
-  const beliefs = useMemo(() => {
-    const passed = route?.params?.decisionOptions;
-    if (Array.isArray(passed) && passed.length) return passed;
+  const resolvedDecision = useMemo(() => {
     const storyMeta = game.activeCase?.storyMeta
       || getStoryEntry(
         caseNumber,
@@ -146,15 +144,27 @@ export default function TheoryScreen({ navigation, route }) {
       || null;
     const branchingPath = (storyCampaign.branchingChoices || [])
       .find((bc) => bc.caseNumber === caseNumber)?.secondChoice || null;
-    const resolved = resolveStoryDecision({
+    return resolveStoryDecision({
       activeCaseStoryDecision: game.activeCase?.storyDecision,
       metaDecision: storyMeta?.decision,
       metaPathDecisions: storyMeta?.pathDecisions,
       subchapterLetter: caseNumber ? caseNumber.slice(3, 4) : null,
       branchingPath,
     });
-    return decisionOptionsFrom(resolved);
-  }, [route?.params?.decisionOptions, game.activeCase, caseNumber, chapter, storyCampaign.pathHistory, storyCampaign.currentPathKey, storyCampaign.branchingChoices]);
+  }, [game.activeCase, caseNumber, chapter, storyCampaign.pathHistory, storyCampaign.currentPathKey, storyCampaign.branchingChoices]);
+
+  const beliefs = useMemo(() => {
+    const passed = route?.params?.decisionOptions;
+    if (Array.isArray(passed) && passed.length) return passed;
+    return decisionOptionsFrom(resolvedDecision);
+  }, [route?.params?.decisionOptions, resolvedDecision]);
+
+  // The path-specific framing of the climax question. Generated for all nine
+  // paths every chapter and, until now, never rendered anywhere.
+  const beliefIntro = useMemo(
+    () => route?.params?.decisionIntro || decisionIntroFrom(resolvedDecision),
+    [route?.params?.decisionIntro, resolvedDecision],
+  );
 
   const [beliefKey, setBeliefKey] = useState(null);
   // FIELD NOTE: first contact with evidence echoes (the ◆/◇ marks) — teach what
@@ -490,6 +500,9 @@ export default function TheoryScreen({ navigation, route }) {
 
         {/* WHAT DO YOU BELIEVE? — the chapter's one decision, the climax (last, above SEAL) */}
         <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>WHAT DO YOU BELIEVE?</Text>
+        {beliefs.length > 0 && beliefIntro ? (
+          <Text style={styles.beliefIntro}>{beliefIntro}</Text>
+        ) : null}
         {beliefs.length > 0 ? (
           <Text style={styles.sectionHint}>Your one real choice. The chapter ahead bears it out — or subverts it.</Text>
         ) : null}
@@ -611,6 +624,17 @@ const styles = StyleSheet.create({
   body: { paddingVertical: SPACING.md, paddingBottom: SPACING.xl },
   sectionLabel: { fontFamily: FONTS.primaryBold, fontSize: FONT_SIZES.xs, letterSpacing: 3, color: COLORS.textSecondary, marginBottom: SPACING.sm },
   sectionHint: { fontFamily: FONTS.primary, fontSize: 11.5, color: COLORS.textMuted, marginTop: -SPACING.xs, marginBottom: SPACING.sm, lineHeight: 16 },
+  // The model's path-specific framing of the climax question: the scene's own
+  // voice, so it reads as prose rather than as UI copy.
+  beliefIntro: {
+    fontFamily: FONTS.secondary,
+    fontStyle: 'italic',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    lineHeight: LINE_HEIGHTS.cozy,
+    marginTop: -SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
   nodeMore: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.4, color: COLORS.textSubtle, marginTop: 2, marginLeft: 22 },
   // Clarity / belief resolution (Move 3)
   resolvedCard: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.sm },

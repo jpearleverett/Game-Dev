@@ -64,4 +64,18 @@ export function decisionOptionsFrom(storyDecision) {
   return storyDecision.options.map((o) => ({ ...o, grounded: o && o.key ? groundedFor(o.key) : null }));
 }
 
+/**
+ * The model's one-or-two-sentence framing of the climax question for THIS path.
+ *
+ * It is authored per path, validated and persisted (nine of them per chapter),
+ * and until now nothing rendered it: the only reader was the CaseFile's decision
+ * panel, which is hidden at the theory climax — exactly where these are written
+ * to land. Stored as an array by the legacy converter, sometimes a bare string.
+ */
+export function decisionIntroFrom(storyDecision) {
+  const raw = storyDecision?.intro;
+  const text = Array.isArray(raw) ? raw.filter(Boolean).join(' ') : raw;
+  return String(text || '').trim() || null;
+}
+
 export { DEFAULT_PATH_KEY };

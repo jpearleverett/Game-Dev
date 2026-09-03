@@ -268,7 +268,7 @@ export default function AppNavigator({ fontsReady, audio }) {
           const resolvedActiveCase = stableCaseFromParams || activeCase;
 
           // SUBCHAPTER C FLOW: Navigate to puzzle after narrative complete
-          const handleProceedToPuzzle = (decisionOptions) => {
+          const handleProceedToPuzzle = (decisionOptions, decisionIntro) => {
             const puzzleMode = getPuzzleMode(resolvedActiveCase?.caseNumber, effectivelyStoryMode);
             const routeName = getPuzzleRouteName(puzzleMode);
             if (routeName === 'Board' && resolvedActiveCase?.id) {
@@ -291,6 +291,7 @@ export default function AppNavigator({ fontsReady, audio }) {
                 caseNumber: resolvedActiveCase?.caseNumber,
                 caseId: resolvedActiveCase?.id,
                 decisionOptions: Array.isArray(decisionOptions) ? decisionOptions : undefined,
+                decisionIntro: decisionIntro || undefined,
               });
               return;
             }

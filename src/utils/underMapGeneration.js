@@ -1,4 +1,5 @@
 const UNDER_MAP_EMPTY_SIGNATURE = 'empty';
+const EMPTY_PARTS_SIGNATURE = ['', '', '', '', ''].join('::');
 
 export function underMapGenerationSignature(underMap) {
   if (!underMap || typeof underMap !== 'object') return UNDER_MAP_EMPTY_SIGNATURE;
@@ -37,7 +38,11 @@ export function underMapGenerationSignature(underMap) {
     ? `${underMap.foil.belief}:${underMap.foil.presence || 0}:${underMap.foil.name || ''}`
     : '';
   const signature = `${fragments}::${nodes}::${theories}::${latents}::${foil}`;
-  return signature === '::::' ? UNDER_MAP_EMPTY_SIGNATURE : signature;
+  // Five parts joined by four two-character separators, so an all-empty map is
+  // eight colons. This compared against four and therefore never fired: a blank
+  // map produced a long literal signature instead of the sentinel, and never
+  // compared equal to one built from a map that was absent entirely.
+  return signature === EMPTY_PARTS_SIGNATURE ? UNDER_MAP_EMPTY_SIGNATURE : signature;
 }
 
 export function compactUnderMapSignature(signature) {

@@ -44,3 +44,15 @@ describe('underMapGenerationSignature', () => {
     expect(underMapGenerationSignature(after)).not.toBe(underMapGenerationSignature(before));
   });
 });
+
+describe('the empty sentinel', () => {
+  test('a blank map signs the same as no map at all', () => {
+    // Five parts joined by four two-character separators is eight colons; the
+    // sentinel compared against four, so it never fired and a blank map signed
+    // as a long literal that no absent map could ever match.
+    const { createBlankUnderMap } = require('../../data/underMap');
+    expect(underMapGenerationSignature(createBlankUnderMap())).toBe('empty');
+    expect(underMapGenerationSignature(null)).toBe('empty');
+    expect(underMapGenerationSignature(undefined)).toBe('empty');
+  });
+});

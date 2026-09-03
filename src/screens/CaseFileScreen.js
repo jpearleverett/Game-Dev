@@ -40,7 +40,7 @@ import useResponsiveLayout from "../hooks/useResponsiveLayout";
 import { createCasePalette } from "../theme/casePalette";
 import { getStoryEntry, ROOT_PATH_KEY, buildRealizedNarrative, fragmentsOnRealizedPath, getStoryEntryAsync, parseCaseNumber, computeBranchPathKey } from "../data/storyContent";
 import { getPuzzleActionLabel, getPuzzleMode, PUZZLE_MODE } from "../utils/puzzleMode";
-import { resolveStoryDecision, decisionOptionsFrom } from "../utils/storyDecision";
+import { resolveStoryDecision, decisionOptionsFrom, decisionIntroFrom } from "../utils/storyDecision";
 import {
   formatCountdown,
   parseDailyIntro,
@@ -912,6 +912,9 @@ export default function CaseFileScreen({
   const selectedOptionKey = decisionChoice?.optionKey || (lastDecision?.caseNumber === caseNumber ? lastDecision.optionKey : null);
 
   const decisionOptions = useMemo(() => decisionOptionsFrom(storyDecision), [storyDecision]);
+  // Forwarded to the Theory climax, which is the only screen that renders it
+  // (the decision panel that used to read it is hidden at the climax).
+  const decisionIntro = useMemo(() => decisionIntroFrom(storyDecision), [storyDecision]);
 
   const subchapterIndex = Number(storyMeta?.subchapter);
   const isThirdSubchapter = subchapterIndex === 3;
@@ -1063,7 +1066,7 @@ export default function CaseFileScreen({
               actionLabel: puzzleActionLabel,
               actionIcon: "🔮",
               // Pass the resolved belief options so the Theory climax presents them.
-              onPress: () => onProceedToPuzzle(decisionOptions),
+              onPress: () => onProceedToPuzzle(decisionOptions, decisionIntro),
             };
           }
           // Still reading — no CTA yet.
@@ -1123,7 +1126,7 @@ export default function CaseFileScreen({
       };
     }
     return null;
-  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, isTheoryClimax, decisionOptions, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
+  }, [countdown, isStoryMode, isThirdSubchapter, nextStoryLabel, onContinueStory, onReturnHome, pendingStoryAdvance, showNextBriefingCTA, storyLocked, hasLockedDecision, isSubchapterC, isTheoryClimax, decisionOptions, decisionIntro, narrativeComplete, existingBranchingChoice, isCaseSolved, onProceedToPuzzle, hasPreDecision, puzzleMode, puzzleActionLabel, hideContinueInvestigationCTA]);
 
   const handleSelectOption = useCallback((option) => {
     if (!option) return;

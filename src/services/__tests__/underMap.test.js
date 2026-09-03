@@ -1011,3 +1011,86 @@ describe('the per-descent economy survives leaving to re-read the scene', () => 
     expect(updateDescentState(m, '002A', { probesUsed: 1 })).toBe(m);
   });
 });
+
+describe('the map survives its own limits and its own restarts', () => {
+  test('a duplicate label resolves to the fragment the CURRENT scene introduced', () => {
+    // A fragment id is kind + label, so the same words can legitimately appear
+    // twice under different kinds. The label resolver kept the LAST map write,
+    // which for a newest-first list is the OLDEST fragment: a relation authored
+    // this chapter bound to the chapter-1 star, so probing the pair the scene
+    // had just described missed and quietly spent a probe.
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'The Seal', kind: FRAGMENT_KIND.SYMBOL, caseNumber: '001A' }]);
+    m = addFragments(m, [
+      { label: 'The Seal', kind: FRAGMENT_KIND.PLACE, caseNumber: '004A' },
+      { label: 'Rain on the ledger', kind: FRAGMENT_KIND.PHENOMENON, caseNumber: '004A' },
+    ]);
+    m = addRelations(m, [
+      { aLabel: 'The Seal', bLabel: 'Rain on the ledger', revelation: 'The seal is a doorway.' },
+    ]);
+    expect(m.relations).toHaveLength(1);
+    expect(m.relations[0].a).toBe(fragmentId(FRAGMENT_KIND.PLACE, 'The Seal'));
+  });
+
+  test('the fragment cap never orphans a thread the player still owes', () => {
+    // A flat slice evicted oldest-first while nothing pruned relations, so an
+    // evicted endpoint left a relation that could never be drawn: depth stalled
+    // below 100%, "CHAPTER MAPPED CLEAN" became unreachable, and the foil showed
+    // a lead with no way to close it.
+    let m = createBlankUnderMap();
+    m = addFragments(m, [
+      { label: 'The first seal', kind: FRAGMENT_KIND.SYMBOL },
+      { label: 'The last ledger', kind: FRAGMENT_KIND.PLACE },
+    ]);
+    m = addRelations(m, [
+      { aLabel: 'The first seal', bLabel: 'The last ledger', revelation: 'One hand wrote both.' },
+    ]);
+    for (let i = 0; i < 200; i += 1) {
+      m = addFragments(m, [{ label: `Filler fragment ${i}`, kind: FRAGMENT_KIND.PERSON }]);
+    }
+    const held = new Set(m.fragments.map((f) => f.id));
+    m.relations.forEach((r) => {
+      expect(`${r.a} held: ${held.has(r.a)}`).toBe(`${r.a} held: true`);
+      expect(`${r.b} held: ${held.has(r.b)}`).toBe(`${r.b} held: true`);
+    });
+    expect(undiscoveredRelationCount(m)).toBe(1);
+  });
+
+  test('New Game+ keeps the record even though it resets the map', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'The Seal', kind: FRAGMENT_KIND.SYMBOL }]);
+    m = { ...m, dailyStreak: 9, bestDailyStreak: 14, lastDailyResolved: '2026-08-30', bestFlawlessStreak: 4 };
+    m = recordTheory(m, { chapter: 3, interpretation: 'Blackwell is guiding you in.', rejected: ['The symbol is a lock.'] });
+    m = nameFoil(m, 'The Cartographer');
+    const next = seedNewGamePlus(m);
+
+    expect(next.fragments).toHaveLength(0);
+    expect(next.dailyStreak).toBe(9);
+    expect(next.bestDailyStreak).toBe(14);
+    expect(next.lastDailyResolved).toBe('2026-08-30');
+    expect(next.bestFlawlessStreak).toBe(4);
+    // Banked probes belong to the run that earned them.
+    expect(next.pendingProbeBonus).toBe(0);
+  });
+
+  test('a carried-over foil stays a prior-season reader after the first belief', () => {
+    // `fromChapter: null` is the whole marker the NG+ prompt clause hangs off;
+    // the first C-beat stamped this run's chapter over it.
+    let m = seedNewGamePlus({
+      ...createBlankUnderMap(),
+      foil: { belief: 'The map is reading you.', fromChapter: 7, presence: 3, name: 'The Cartographer' },
+    });
+    expect(m.foil.fromChapter).toBeNull();
+    m = recordTheory(m, { chapter: 1, interpretation: 'The ink remembers.', rejected: ['The ink is bait.'] });
+    expect(m.foil.fromChapter).toBeNull();
+    expect(m.foil.belief).toBe('The ink is bait.');
+    expect(m.foil.name).toBe('The Cartographer');
+  });
+
+  test('a fresh run still dates its foil to the chapter that made it', () => {
+    let m = recordTheory(createBlankUnderMap(), {
+      chapter: 2, interpretation: 'The stair is a warning.', rejected: ['The stair is an invitation.'],
+    });
+    expect(m.foil.fromChapter).toBe(2);
+  });
+});

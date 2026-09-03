@@ -272,9 +272,39 @@ export const addFragments = (map, fragments = []) => {
   if (!changed) return m;
   // Keep existing order (with deepened updates applied), prepend the brand-new ones.
   const updatedExisting = m.fragments.map((f) => byId.get(f.id) || f);
-  const next = { ...m, fragments: [...incoming, ...updatedExisting].slice(0, MAX_FRAGMENTS) };
+  const next = { ...m, fragments: capFragments([...incoming, ...updatedExisting], m) };
   // New fragments may be the missing endpoint of a dangling thread — promote.
   return incoming.length ? promoteLatentRelations(next) : next;
+};
+
+/**
+ * Cap the board without breaking it.
+ *
+ * A flat `.slice(0, MAX_FRAGMENTS)` evicted oldest-first with no regard for what
+ * the rest of the map points at, and nothing prunes relations: an evicted
+ * endpoint left a relation that can never be drawn, so undiscoveredRelationCount
+ * and mapDepth counted it forever. "CHAPTER MAPPED CLEAN" became unreachable,
+ * depth could not reach 100%, and The Other Reader reported a permanent lead the
+ * player had no way to close.
+ *
+ * So the cap is soft for load-bearing fragments: anything that is an endpoint of
+ * a relation, a drawn connection, or a latent thread's resolved half stays.
+ * Only inert fragments are evicted, oldest first.
+ */
+const capFragments = (fragments, map) => {
+  if (fragments.length <= MAX_FRAGMENTS) return fragments;
+  const protectedIds = new Set();
+  (map.relations || []).forEach((r) => { protectedIds.add(r.a); protectedIds.add(r.b); });
+  (map.connections || []).forEach((c) => { protectedIds.add(c.a); protectedIds.add(c.b); });
+  let over = fragments.length - MAX_FRAGMENTS;
+  const dropped = new Set();
+  for (let i = fragments.length - 1; i >= 0 && over > 0; i -= 1) {
+    const f = fragments[i];
+    if (protectedIds.has(f.id)) continue;
+    dropped.add(f.id);
+    over -= 1;
+  }
+  return dropped.size ? fragments.filter((f) => !dropped.has(f.id)) : fragments;
 };
 
 /**
@@ -282,8 +312,23 @@ export const addFragments = (map, fragments = []) => {
  * of the model's wording drift: exact (normalized) -> slug -> fuzzy contains.
  */
 const makeLabelResolver = (fragments) => {
-  const byNorm = new Map(fragments.map((f) => [norm(f.label), f.id]));
-  const bySlug = new Map(fragments.map((f) => [slug(f.label), f.id]));
+  // `fragments` is newest-first, and an id is kind + label, so the same label can
+  // legitimately exist twice under different kinds ("The Seal" as a symbol in
+  // chapter 1, as a place in chapter 4). Building these with `new Map(...map())`
+  // let the LAST write win, i.e. the OLDEST fragment: a relation authored this
+  // chapter resolved onto the chapter-1 star, so probing the pair the scene just
+  // described MISSED and quietly spent a probe on a thread that really exists.
+  // Keep the first (newest) entry for each key instead.
+  const firstWins = (key) => {
+    const out = new Map();
+    fragments.forEach((f) => {
+      const k = key(f.label);
+      if (!out.has(k)) out.set(k, f.id);
+    });
+    return out;
+  };
+  const byNorm = firstWins(norm);
+  const bySlug = firstWins(slug);
   return (label) => {
     if (!label) return null;
     const n = norm(label);
@@ -580,10 +625,14 @@ export const recordTheory = (map, theory) => {
   // `presence` persists across C-beats (one evolving antagonist, not one per chapter).
   const rejected = cleanFalseReadings(theory.rejected);
   const foilBelief = rejected[0] || null;
+  // `fromChapter: null` is what marks a NEW GAME+ foil as a prior-season reader
+  // (the prompt's "they know how Jack reads" framing hangs off it). Stamping this
+  // chapter over it at the first C-beat threw that away for the whole run.
+  const carriedOver = !!(m.foil && m.foil.belief && m.foil.fromChapter == null);
   const nextFoil = foilBelief
     ? {
         belief: foilBelief,
-        fromChapter: theory.chapter ?? null,
+        fromChapter: carriedOver ? null : (theory.chapter ?? null),
         presence: m.foil ? clampPresence(m.foil.presence) : 0,
         name: (m.foil && m.foil.name) || null,
       }
@@ -669,9 +718,21 @@ export const claimByFoil = (map, { chapter } = {}) => {
 export const seedNewGamePlus = (prevMap) => {
   const prev = normalizeUnderMap(prevMap);
   const blank = createBlankUnderMap();
-  if (!prev.foil || !prev.foil.belief) return blank;
-  return {
+  // The map resets; the player's record does not. The days-mapped streak and the
+  // best-ever marks are surfaced on the Desk, the Codex and the Stats screen as
+  // a multi-week history, and a restart used to silently zero all of it.
+  // `pendingProbeBonus` deliberately does NOT carry: it is banked against a
+  // specific run's next descent.
+  const carried = {
     ...blank,
+    dailyStreak: prev.dailyStreak || 0,
+    bestDailyStreak: prev.bestDailyStreak || 0,
+    lastDailyResolved: prev.lastDailyResolved || null,
+    bestFlawlessStreak: prev.bestFlawlessStreak || 0,
+  };
+  if (!prev.foil || !prev.foil.belief) return carried;
+  return {
+    ...carried,
     foil: {
       belief: prev.foil.belief,
       fromChapter: null,
