@@ -186,7 +186,11 @@ export const STORY_STRUCTURE = {
     1: {
       type: 'INCITING_INCIDENT',
       description: 'The impossible arrives: Jack receives a letter he wrote but did not write, leading to a photo with living ink',
-      wordCountModifier: 1.0,
+      // Tempo, not length: this selects the pacing note the prompt adds for a
+      // chapter (fast and punchy below 1, room to breathe above it). Segment
+      // length is fixed at 380-420 words by the schema, so it never multiplied
+      // a word count despite the name it used to carry.
+      tempoModifier: 1.0,
       requirements: [
         'Continue from the dead letter discovery and silver glyph photo',
         'Jack investigates the impossible: the ink, the glyph, Victoria, The Threshold',
@@ -198,68 +202,100 @@ export const STORY_STRUCTURE = {
     },
     2: {
       type: 'INVESTIGATION',
-      description: 'Methodical evidence gathering, interview-heavy, building the case',
-      wordCountModifier: 1.0, // Standard length
-      requirements: ['Skeptical analysis', 'Discovery of new evidence', 'End with a mystery to follow'],
+      description: 'Jack starts mapping: he treats the anomaly as a pattern to be charted rather than a crime to be solved',
+      tempoModifier: 1.0, // Standard length
+      requirements: [
+        'Jack looks for the anomaly on purpose for the first time, using the tools he trusts (records, paper maps, walking the ground)',
+        'A second instance of the impossible, in a different form, that rhymes with the first',
+        'End on a thread that hangs: a place, a name or a mark he cannot yet account for',
+      ],
     },
     3: {
       type: 'REVELATION',
-      description: 'Major discovery that recontextualizes previous events',
-      wordCountModifier: 1.0,
-      requirements: ['Shocking reveal about a trusted character', 'Jack questions his assumptions', 'Stakes raised significantly'],
+      description: 'A discovery that reframes what the hidden layer IS, not who did something',
+      tempoModifier: 1.0,
+      requirements: [
+        'Something Jack already saw turns out to have meant something else entirely',
+        'Jack has to give up an assumption he was using to stay comfortable',
+        'The hidden world shows intent, or the appearance of it',
+      ],
     },
     4: {
       type: 'RELATIONSHIP',
-      description: 'Character-focused, trust dynamics, personal stakes',
-      wordCountModifier: 1.1, // Slightly longer for character depth
-      requirements: ['Extended dialogue with key character', 'Trust tested or earned', 'Personal vulnerability shown'],
+      description: 'Someone else can see it too, and what they want from Jack is not what he wants from them',
+      tempoModifier: 1.1, // Slightly longer for character depth
+      requirements: [
+        'Extended dialogue with a character who has their own reading of the hidden world',
+        'Trust tested or earned over what to believe, not over an alibi',
+        'Jack lets something slip about the case two years ago',
+      ],
     },
     5: {
       type: 'TENSION',
-      description: 'Building dread, surveillance, being watched',
-      wordCountModifier: 1.0,
-      requirements: ['Sense of being followed/watched', 'Paranoia justified', 'Near-miss danger'],
+      description: 'The map looks back: Jack is being read as surely as he is reading',
+      tempoModifier: 1.0,
+      requirements: [
+        'Signs that something has been following the route Jack has been charting',
+        'A mark or an entry that could only have been left for him',
+        'One moment where the city arranges itself too neatly to be chance',
+      ],
     },
     6: {
       type: 'CHASE',
       description: 'High action, short punchy scenes, physical danger, time pressure',
-      wordCountModifier: 0.85, // Shorter, faster pacing
+      tempoModifier: 0.85, // Shorter, faster pacing
       requirements: ['Physical pursuit or escape', 'Time-sensitive objective', 'Minimal dialogue, maximum action'],
     },
     7: {
       type: 'BETRAYAL',
-      description: 'Trust shattered, ally becomes threat, isolation',
-      wordCountModifier: 1.0,
-      requirements: ['Trusted character revealed as compromised', 'Jack left without support', 'Emotional gut-punch'],
+      description: 'THE QUAKE: an image Jack has trusted since the beginning turns out to have meant the opposite',
+      tempoModifier: 1.0,
+      requirements: [
+        'Recontextualize the oldest recurring motif without contradicting any truth already revealed',
+        'Jack is left holding a map he can no longer read the same way',
+        'Whoever or whatever has been reading alongside him gains ground by it',
+      ],
     },
     8: {
       type: 'CONFRONTATION',
-      description: 'Face-to-face with antagonist or major corrupt figure',
-      wordCountModifier: 1.1,
-      requirements: ['Direct confrontation with power', 'Truth spoken to corruption', 'High stakes dialogue'],
+      description: 'Face to face with the rival reading, in a person who holds it',
+      tempoModifier: 1.1,
+      requirements: [
+        'Direct meeting with the figure who reads the hidden world the other way',
+        'They are coherent and unembarrassed; their reading explains things Jack cannot',
+        'Jack leaves with the argument unfinished and something of theirs stuck in him',
+      ],
     },
     9: {
       type: 'BOTTLE_EPISODE',
       description: 'Single location, intense dialogue, psychological pressure',
-      wordCountModifier: 1.2, // Longer for dialogue depth
+      tempoModifier: 1.2, // Longer for dialogue depth
       requirements: ['One primary location', 'Extended dialogue exchange', 'Character psychology explored', 'Minimal scene changes'],
     },
     10: {
       type: 'RECKONING',
-      description: 'Consequences of choices manifest, past catches up',
-      wordCountModifier: 1.0,
-      requirements: ['Previous choices have consequences', 'Character accountability', 'Setup for climax'],
+      description: 'The beliefs Jack sealed come due, in the shape the city has taken because of them',
+      tempoModifier: 1.0,
+      requirements: [
+        'The readings the player committed to show their consequences in the world',
+        'Jack owns what his mapping cost, including two years ago',
+        'Setup for climax',
+      ],
     },
     11: {
       type: 'CLIMAX',
-      description: 'All threads converge, maximum stakes, decisive action',
-      wordCountModifier: 1.1,
-      requirements: ['Multiple plot threads resolved', 'Highest stakes moment', 'Irreversible choices made'],
+      description: 'The map completes enough to be acted on, and acting on it cannot be taken back',
+      tempoModifier: 1.1,
+      requirements: [
+        'The threads the player has drawn converge into one legible shape',
+        'Highest stakes moment: what the hidden world wants becomes answerable',
+        'Irreversible choices made',
+      ],
     },
     12: {
       type: 'RESOLUTION',
       description: 'Aftermath, reflection, earned ending based on choices',
-      wordCountModifier: 1.0,
+      tempoModifier: 1.0,
       requirements: ['Consequences shown', 'Character reflection', 'Thematic closure', 'Path-dependent ending'],
     },
   },
@@ -977,12 +1013,12 @@ export const NEGATIVE_EXAMPLES = {
   tellDontShow: {
     badVersion: `Jack suddenly realized the symbols were magical, and he felt terrified and shocked. The world was not what it seemed, and everything changed forever. He couldn't help but feel like his life was over.`,
     problems: [
-      '"Suddenly" - false urgency, tells instead of shows',
-      '"Felt a wave of shock" - abstract emotion, not physical',
-      '"Weight of the revelation" - cliché metaphor',
-      '"Couldn\'t help but notice" - forbidden phrase, passive voice',
-      '"In that moment" - filler phrase, adds nothing',
-      '"Profound sense of betrayal" - abstract, tells reader what to feel',
+      '"suddenly realized" - false urgency, and the realization is announced rather than earned',
+      '"felt terrified and shocked" - abstract emotion, named instead of shown in the body',
+      '"The world was not what it seemed" - states the premise of the story out loud',
+      '"everything changed forever" - vague and melodramatic; nothing specific changes',
+      '"couldn\'t help but feel" - forbidden construction, and passive',
+      '"his life was over" - tells the reader what to feel about a moment they have not felt yet',
     ],
     goodVersion: `The symbol on the paper did not sit still.
 
@@ -994,10 +1030,10 @@ His thumbnail scraped the ink. It didn't smudge. It didn't lift. It didn't feel 
 
 Downstairs, Murphy's jukebox changed songs without anyone touching it.`,
     whyItWorks: [
-      'Physical action (cup finding desk) shows dissociation',
-      '"Didn\'t remember" shows shock through lost time',
-      'One-word paragraph creates impact through isolation',
-      'Specific (signature, handwriting) beats abstract (betrayal, shock)',
+      'The anomaly is stated flatly ("did not sit still") and left to do its own work',
+      'Three short actions (blinked, looked away, looked back) show disbelief without naming it',
+      'The horror is an absence of texture: specific and physical, never an emotion word',
+      'The jukebox lands the scale of it in one sentence about something else entirely',
     ],
   },
 
@@ -1006,11 +1042,11 @@ Downstairs, Murphy's jukebox changed songs without anyone touching it.`,
 
 "Yes," Victoria replied mysteriously. "You are the chosen one and you must fulfill the prophecy."`,
     problems: [
-      'Adverb tags ("angrily," "desperately") tell what dialogue should show',
-      'Characters explaining their emotions explicitly',
-      'Dialogue too on-the-nose, people don\'t speak their subtext',
-      'No physical action, talking heads',
-      'Melodramatic phrasing ("everything we ever stood for")',
+      'Adverb tags ("terrified", "mysteriously") tell what the dialogue should show',
+      'Characters state their own emotional state out loud ("I feel like I\'m losing my mind")',
+      'The exchange summarizes the plot to the reader instead of two people talking',
+      'No physical action anywhere; two talking heads',
+      'Borrowed melodrama ("the chosen one", "fulfill the prophecy") from a different genre',
     ],
     goodVersion: `"You're sure this is just graffiti?" the woman asked.
 
@@ -1022,22 +1058,20 @@ He swallowed. "If I say it out loud, then it's real."
 
 She didn't argue. She only slid the second photo across the table, the one taken three blocks away, same symbol, same angle, same line weight, like the city had traced it with the same hand.`,
     whyItWorks: [
-      'Minimal dialogue does more than speeches',
-      'Physical grounding (hand on desk) shows need for stability',
-      '"Just the name" - narration notes the inadequacy of words',
-      'The unanswered question is more damning than any answer',
-      'Subtext (devastation, betrayal) lives beneath simple words',
+      'Jack argues with the evidence instead of admitting what he saw',
+      'The one-word line ("Jack.") does the work a paragraph of pleading would not',
+      'His real fear arrives as a rule about speech, not as a statement of fear',
+      'She answers with an object; the second photo ends the argument without a word',
     ],
   },
 
   flatPacing: {
     badVersion: `Jack went to the place. He saw a symbol. He was confused. Then he went somewhere else. He saw another symbol. It was spooky. Then he found a clue.`,
     problems: [
-      'Every sentence same length and structure',
+      'Every sentence the same length and the same subject-verb shape',
       'No variation in rhythm, monotonous',
-      'Action without meaning or tension',
-      '"Very interesting" - empty value judgment',
-      'No sensory detail, no atmosphere',
+      '"He was confused", "It was spooky" - empty value judgments standing in for the scene',
+      'No sensory detail, no atmosphere, no place',
       'Events listed rather than experienced',
     ],
     goodVersion: `The underpass smelled like wet pennies and old engines.
@@ -1051,10 +1085,9 @@ He raised his phone to photograph it. The screen showed the pillar. It showed hi
 Where the symbol should have been, there was only blur, a smear of silver that refused to resolve into a shape.`,
     whyItWorks: [
       'Varied sentence length creates rhythm',
-      'Sensory details (rusty hinges, sound) establish atmosphere',
-      'Short paragraphs create pacing, build tension',
-      'Delayed recognition ("he knew that handwriting") creates dread',
-      'Specific physical details (whisper of tape) make scene real',
+      'A specific smell (wet pennies, old engines) places the reader before anything happens',
+      '"It was there. Fresh. Too fresh." earns its fragments by escalating',
+      'The wrongness arrives through a failed photograph, not through an adjective',
     ],
   },
 
@@ -1062,9 +1095,9 @@ Where the symbol should have been, there was only blur, a smear of silver that r
     badVersion: `Jack looked at the symbol, not knowing this was the moment his life would change forever. Little did he know the Under-Map was about to reveal itself. Everything was about to become magical.`,
     problems: [
       '"Little did he know" - forbidden phrase, breaks immersion',
-      'Tells reader something important is coming, destroys tension',
-      '"Change everything forever" - vague, melodramatic',
-      'Narrator intruding with future knowledge Jack doesn\'t have',
+      '"not knowing this was the moment" - the narrator steps outside Jack to promise significance',
+      '"change forever", "become magical" - vague, melodramatic, and unearned',
+      'Tells the reader something important is coming, which spends the tension in advance',
       'Promises impact instead of delivering it',
     ],
     goodVersion: `Jack folded the letter back into its envelope and told himself it was a prank.
@@ -1075,11 +1108,10 @@ Then the river-glass token on his desk clicked once against the wood, as if it h
 
 There was no finger.`,
     whyItWorks: [
-      'Shows routine being disrupted, not announcing disruption',
-      'Jack\'s false assumption creates dramatic irony',
-      'The repeated "perfectly" signals wrongness without explaining',
-      '"Never noticed" puts reader ahead of Jack subtly',
-      'Foreshadows through observation, not narration',
+      'Jack talks himself out of it, which is more ominous than a warning',
+      '"He said it like a verdict" undercuts the denial without explaining it',
+      'The token moves on its own and the prose declines to comment',
+      'Three words ("There was no finger.") carry what a paragraph of foreshadowing could not',
     ],
   },
 };
@@ -1137,7 +1169,7 @@ export const ENGAGEMENT_REQUIREMENTS = {
     description: 'Revelations should follow a deliberate pattern',
     levels: {
       micro: 'Every subchapter - a clue, a connection, a small truth (e.g. a name, a date, a lie exposed)',
-      chapter: 'End of each chapter - a character\'s true nature revealed, a conspiracy layer peeled',
+      chapter: 'End of each chapter - the hidden world shows one more rule of how it works, or one more sign of what it wants',
       arc: 'Chapters 4, 7, 10 - game-changers that recontextualize everything the reader thought they knew',
     },
     rule: 'Revelations should make readers say "I KNEW something was off" or "Oh god, that changes everything"',
@@ -1241,8 +1273,8 @@ export const SUBTEXT_REQUIREMENTS = {
       subtext: 'I can\'t protect you anymore if you stay involved.',
     },
     {
-      surface: '"How\'s the case going?"',
-      subtext: 'I know more than you think. Are you getting close?',
+      surface: '"You been sleeping?"',
+      subtext: 'I know what you have been seeing. I have seen it too.',
     },
   ],
   rule: 'Never write dialogue where characters say exactly what they mean. That\'s not how broken people talk.',

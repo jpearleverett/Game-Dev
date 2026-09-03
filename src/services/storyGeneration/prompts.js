@@ -4,7 +4,6 @@ import {
   WRITING_STYLE,
   EXAMPLE_PASSAGES,
   ENGAGEMENT_REQUIREMENTS,
-  MICRO_TENSION_TECHNIQUES,
   SENTENCE_RHYTHM,
 } from '../../data/storyBible';
 import { TOTAL_CHAPTERS } from './constants';
@@ -84,7 +83,6 @@ You understand that different player journeys through the branching narrative le
 - POV/Tense: ${voice.perspective}, ${voice.tense}
 - Tone: ${voice.tone}
 - Decision intros should match the narrative voice: atmospheric, precise, noir-adjacent
-- Climax option titles: a BELIEF/interpretation of the hidden world, 3-8 words, declarative (e.g. "She is guiding you in", "You are bait", NOT "Follow the courier")
 - Option focus: one sentence explaining stakes and tradeoffs
 </voice_constraints>
 
@@ -147,14 +145,6 @@ This is the CHAPTER CLIMAX decision, and in "Dead Letters" it is NOT a choice of
 Frame each option as a stance/conviction ("what's really going on"), NOT an errand. Titles are beliefs, not imperatives. Avoid verbs like "go to", "confront", "search", "photograph". Prefer framings like "She is guiding you in", "The map is using you", "This is a snare", "The dead are still writing".
 </climax_decision_nature>
 
-<reasoning_instructions>
-Before generating each path's decision, internally reason through:
-1. WHAT did this player discover? (Extract the key revelation from the path notes)
-2. What TWO competing interpretations of the hidden world does that discovery support? (One reading vs. another, both plausible from what was seen)
-3. How does committing to each belief change Jack's relationship to the Under-Map and the direction of the next chapter?
-4. WHY would these readings differ from other paths? (Differentiation check)
-</reasoning_instructions>
-
 <causality_rules>
 Discoveries MUST drive the competing interpretations. Follow these patterns:
 
@@ -169,9 +159,7 @@ If the discovery doesn't fit these patterns, derive two honest, opposed interpre
 </causality_rules>
 
 <few_shot_examples>
-Three well-formed path decisions. Note that every option title is a STANCE on the hidden
-world rather than an errand, that personalityAlignment uses only the three permitted
-values, and that groundedKey and evidence are always present.
+Three well-formed path decisions.
 
 Example 1, Path 1A-2A (Discovery: Blackwell's courier carried a symbol-marked envelope)
 {
@@ -246,8 +234,8 @@ Reject options that look like these:
 Generate 9 pathDecisions objects with:
 1. pathKey: The path identifier (1A-2A through 1C-2C)
 2. intro: 1-2 sentences framing the climax question, what THIS path's discovery forces Jack to decide he believes about the hidden world
-3. optionA: A belief about the hidden world, key="A", title (3-8 words, declarative stance), focus (the reading + the direction committing to it pulls the story), personalityAlignment, evidence
-4. optionB: The opposed belief, key="B", title (3-8 words, declarative stance), focus (the reading + its direction), personalityAlignment, evidence
+3. optionA: A belief about the hidden world, key="A", with title, focus (the reading + the direction committing to it pulls the story), personalityAlignment, evidence
+4. optionB: The opposed belief, key="B", same fields
 5. groundedKey: "A" or "B", REQUIRED, see below
 
 personalityAlignment MUST be one of: aggressive | methodical | balanced
@@ -258,12 +246,7 @@ EVIDENCE-GROUNDED BELIEFS (this is what makes the player's mapping matter):
 - The NON-grounded option must still be genuinely tempting, supported by mood, fear, or a seductive misreading, but strained by the facts. A player who mapped carefully should be able to FEEL which reading the truths favor; a player who mapped nothing should find them equally plausible.
 - If the player has revealed no truths yet, ground the option that this path's own discoveries favor.
 
-Before finalizing, verify:
-✓ Each path's options reference what that path discovered
-✓ No two paths have identical option titles
-✓ The intro mentions the specific discovery or revelation
-✓ Options feel like natural next steps given what Jack learned
-✓ Every path has groundedKey set, and the grounded option's evidence cites revealed truths where any exist
+Every path gets its own options, drawn from what THAT path discovered; no two paths repeat a title.
 </output_requirements>`;
 
 // ============================================================================
@@ -370,7 +353,7 @@ These are properties the finished prose must have, not steps to narrate.
   doing with his body) reads as one coherent person, and matches the path personality named
   in the context blocks. It shows in behaviour; never state it outright.
 - The scene sits on Day N of the ${TOTAL_CHAPTERS}-day timeline, where N is the chapter number.
-- SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'a recurring sensory detail (a sound, smell, texture) anchors the scene physically'}
+- SENSORY GROUNDING: a recurring sensory detail (a sound, a smell, a texture) anchors the scene physically and returns at least twice
 - MICRO-REVELATION: ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
 - FORWARD MOMENTUM: ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
 - PERSONAL STAKES: ${ENGAGEMENT_REQUIREMENTS.personalStakes.requirement}

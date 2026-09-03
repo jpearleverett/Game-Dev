@@ -81,10 +81,14 @@ const sanitizeCacheKeyPart = (value, fallback = 'default') => {
 };
 
 const getManyShotSignature = (beatType, chapterBeatType, hasExamples, rotationSeed = null) => {
+  // With the many-shot corpus retired there are no examples, so the static
+  // prefix is byte-identical for every beat type and every rotation. Varying
+  // the signature anyway would create (and pay to create) a separate Gemini
+  // context cache per beat type for identical content.
+  if (!hasExamples) return 'ms_none_r0';
   const { categories } = getManyShotCategories(beatType, chapterBeatType);
-  const signature = hasExamples ? categories.join('_') : 'none';
   const rotationTag = Number.isFinite(rotationSeed) ? `r${Math.abs(Math.floor(rotationSeed))}` : 'r0';
-  return sanitizeCacheKeyPart(`ms_${signature}_${rotationTag}`, 'ms_none');
+  return sanitizeCacheKeyPart(`ms_${categories.join('_')}_${rotationTag}`, 'ms_none');
 };
 
 /**
@@ -972,7 +976,7 @@ When generating branching choices (firstChoice options 1A/1B/1C and secondChoice
   - Using humor, misdirection, or an unorthodox tactic
   - Acting on intuition rather than logic
   - Making an unexpected alliance or revealing hidden information
-- The wildcard should still be IN CHARACTER for Jack (noir detective, not silly)
+- The wildcard should still be IN CHARACTER for Jack (a burnt-out investigator who trusts paper, not a wisecracking noir detective)
 - It should feel like a "what if I tried THIS?" moment
 - The response should deliver on the promise of the unexpected choice
 
@@ -1121,13 +1125,20 @@ function _buildGroundingSection(context, { includeStyle = true } = {}) {
         .filter(n => Number.isFinite(n))
         .sort((a, b) => b - a);
 
+      // The keys ARE years-ago (18 = eighteen years before the story starts,
+      // 1 = the present day). Rendering them as an unlabelled "Timeline marker
+      // 18" put a bare number directly under "Jack's age at story start: 35",
+      // inside a block headed "Use exact numbers; never approximate" - so the
+      // one load-bearing fact in Jack's backstory, the burnout two years ago,
+      // was ambiguous exactly where the prompt forbids ambiguity.
       for (const k of numericKeys) {
         const entry = jackHistory[k];
+        const when = k === 1 ? 'Present day' : `${k} years before the story starts`;
         if (Array.isArray(entry)) {
-          timelineLines.push(`- Timeline marker ${k}:`);
+          timelineLines.push(`- ${when}:`);
           entry.forEach(e => timelineLines.push(`  - ${safe(e)}`));
         } else {
-          timelineLines.push(`- Timeline marker ${k}: ${safe(entry)}`);
+          timelineLines.push(`- ${when}: ${safe(entry)}`);
         }
       }
     }
@@ -1356,7 +1367,7 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
  * Build character reference section
  */
 function _buildCharacterSection() {
-  const { protagonist, antagonist } = CHARACTER_REFERENCE;
+  const { protagonist, antagonist, locations, themes } = CHARACTER_REFERENCE;
 
   // Helper to format example phrases
   const formatExamples = (phrases) => {
@@ -1367,6 +1378,7 @@ function _buildCharacterSection() {
 
 ### JACK HALLOWAY (Protagonist - Narration is close third-person on Jack)
 Role: ${protagonist.role}, ${protagonist.age}
+Body: ${protagonist.physicalDescription.appearance}. ${protagonist.physicalDescription.build}. ${protagonist.physicalDescription.distinctiveFeatures}
 Voice: ${protagonist.voiceAndStyle.narrative}
 Internal Monologue: ${protagonist.voiceAndStyle.internalMonologue}
 Dialogue: ${protagonist.voiceAndStyle.dialogue}
@@ -1383,7 +1395,14 @@ ${formatExamples(antagonist.voiceAndStyle.examplePhrases)}
 
 ### OTHER CHARACTERS
 The LLM has creative freedom to generate any supporting characters as the story requires.
-Create distinctive voices for any new characters that serve the narrative.`;
+Create distinctive voices for any new characters that serve the narrative.
+
+### ASHPORT (recurring places - reuse these by name rather than inventing a new one each chapter)
+${locations.ashport.description}
+${locations.ashport.landmarks.map(l => `- ${l}`).join('\n')}
+
+### SEASON MOTIFS (the images this story returns to; a scene that reuses one deepens it)
+${Object.values(themes.motifs).map((m, i) => `- ${Object.keys(themes.motifs)[i]}: ${m}`).join('\n')}`;
 }
 
 /**
@@ -1477,11 +1496,11 @@ ${beatType.requirements.map(r => `- ${r}`).join('\n')}`;
 - Every word in the dialogue carries weight
 - Physical descriptions of tension (clenched jaw, white knuckles)
 - Allow for emotional gut-punches with space to breathe after`;
-    } else if (beatType.wordCountModifier < 1.0) {
+    } else if (beatType.tempoModifier < 1.0) {
       task += `
 
 **PACING NOTE:** This is a FAST-PACED chapter. Keep scenes short and punchy. Less exposition, more action.`;
-    } else if (beatType.wordCountModifier > 1.0) {
+    } else if (beatType.tempoModifier > 1.0) {
       task += `
 
 **PACING NOTE:** This is a DEEP chapter. Take time for dialogue and character exploration. Don't rush.`;

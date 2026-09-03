@@ -23,7 +23,7 @@ import {
   buildExtendedStyleExamples,
   buildManyShotExamples,
 } from '../storyGeneration/prompts';
-import { EXAMPLE_PASSAGES, EXTENDED_STYLE_GROUNDING, WRITING_STYLE } from '../../data/storyBible';
+import { EXAMPLE_PASSAGES, EXTENDED_STYLE_GROUNDING, WRITING_STYLE, NEGATIVE_EXAMPLES } from '../../data/storyBible';
 
 const promptBlocks = () => ({
   system: buildMasterSystemPrompt(),
@@ -122,5 +122,36 @@ describe('the em dash rule stays credible', () => {
 describe('the retired many-shot corpus stays retired', () => {
   test('it contributes nothing to the prompt', () => {
     expect(buildManyShotExamples()).toBe('');
+  });
+});
+
+describe('the negative examples annotate themselves, not an earlier draft', () => {
+  // Every quoted fragment in `problems` used to come from a badVersion that had
+  // since been rewritten: the prompt told the model that "Felt a wave of shock"
+  // and "Couldn't help but notice" were the faults in a passage containing
+  // neither. A demonstration that does not match its own label teaches nothing.
+  const quoted = (line) => Array.from(line.matchAll(/"([^"]{4,})"/g)).map((m) => m[1]);
+  const norm = (t) => String(t).replace(/[\u2018\u2019]/g, "'").toLowerCase();
+
+  Object.entries(NEGATIVE_EXAMPLES).forEach(([name, ex]) => {
+    test(`${name}: every phrase quoted as a problem appears in its badVersion`, () => {
+      const bad = norm(ex.badVersion);
+      ex.problems.forEach((p) => {
+        quoted(p).forEach((phrase) => {
+          expect(`${name} problems quote "${phrase}": ${bad.includes(norm(phrase))}`)
+            .toBe(`${name} problems quote "${phrase}": true`);
+        });
+      });
+    });
+
+    test(`${name}: every phrase quoted as working appears in its goodVersion`, () => {
+      const good = norm(ex.goodVersion);
+      (ex.whyItWorks || []).forEach((w) => {
+        quoted(w).forEach((phrase) => {
+          expect(`${name} whyItWorks quotes "${phrase}": ${good.includes(norm(phrase))}`)
+            .toBe(`${name} whyItWorks quotes "${phrase}": true`);
+        });
+      });
+    });
   });
 });

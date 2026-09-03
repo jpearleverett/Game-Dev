@@ -37,7 +37,7 @@ export const CHOICE_OPTION_SCHEMA = {
     },
     label: {
       type: 'string',
-      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g. "Ask about the file", "Examine her desk", "Change the subject". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
+      description: 'Short action label (2-5 words, imperative). Must be a DIFFERENT ACTION from other options - not the same action with different intensity. E.g. "Follow the stair down", "Copy the mark", "Leave it unread". NOTE: For option C (1C or 2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.',
     },
     response: {
       type: 'string',
@@ -45,7 +45,7 @@ export const CHOICE_OPTION_SCHEMA = {
     },
     summary: {
       type: 'string',
-      description: 'One-sentence summary of what happens when player takes this path (15-25 words). Used for decision context. E.g. "Jack takes a direct approach, confronting the witness and pressuring them for information."',
+      description: 'One-sentence summary of what happens when player takes this path (15-25 words). Used for decision context. E.g. "Jack follows the stair below the viaduct and finds the same mark cut into a door that should not open."',
     },
     details: {
       type: 'array',
