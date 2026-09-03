@@ -103,6 +103,7 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
       decision: chapter1AEntry.decision || null,
       pathDecisions: chapter1AEntry.pathDecisions || null, // Store path-specific decisions for proper lookup
       chapterSummary: chapter1AEntry.chapterSummary || null,
+      narrativeThreads: Array.isArray(chapter1AEntry.narrativeThreads) ? chapter1AEntry.narrativeThreads : [],
       branchingPath: branchingChoice1A ? formatBranchingPath(branchingChoice1A.firstChoice, branchingChoice1A.secondChoice) : null,
       isRecent: true, // Mark as recent to include full text
     });
@@ -151,6 +152,13 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
             decision: entry.decision || null,
             pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
             chapterSummary: entry.chapterSummary || null,
+            // The model's OWN thread ledger. `narrativeThreads` is required by the
+            // output schema and persisted on every entry, but this whitelist
+            // dropped it — so _extractNarrativeThreads's structured branch (its
+            // stated first priority) never saw a single thread in production and
+            // every promise, appointment and threat at chapter 12 came from a
+            // regex over prose instead of from what the model wrote down.
+            narrativeThreads: Array.isArray(entry.narrativeThreads) ? entry.narrativeThreads : [],
             branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
             isRecent: true, // Mark as recent to include full text
           });
@@ -203,6 +211,13 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
             title: entry.title || `Chapter ${ch}.${sub}`,
             narrative: narrativeText, // REALIZED narrative from player's actual path
             chapterSummary: entry.chapterSummary || null,
+            // The model's OWN thread ledger. `narrativeThreads` is required by the
+            // output schema and persisted on every entry, but this whitelist
+            // dropped it — so _extractNarrativeThreads's structured branch (its
+            // stated first priority) never saw a single thread in production and
+            // every promise, appointment and threat at chapter 12 came from a
+            // regex over prose instead of from what the model wrote down.
+            narrativeThreads: Array.isArray(entry.narrativeThreads) ? entry.narrativeThreads : [],
             decision: entry.decision || null,
             pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
             branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,
@@ -261,6 +276,13 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
             title: entry.title || `Chapter ${targetChapter}.${sub}`,
             narrative: narrativeText, // REALIZED narrative from player's actual path
             chapterSummary: entry.chapterSummary || null,
+            // The model's OWN thread ledger. `narrativeThreads` is required by the
+            // output schema and persisted on every entry, but this whitelist
+            // dropped it — so _extractNarrativeThreads's structured branch (its
+            // stated first priority) never saw a single thread in production and
+            // every promise, appointment and threat at chapter 12 came from a
+            // regex over prose instead of from what the model wrote down.
+            narrativeThreads: Array.isArray(entry.narrativeThreads) ? entry.narrativeThreads : [],
             decision: entry.decision || null,
             pathDecisions: entry.pathDecisions || null, // Store path-specific decisions for proper lookup
             branchingPath: branchingChoice ? formatBranchingPath(branchingChoice.firstChoice, branchingChoice.secondChoice) : null,

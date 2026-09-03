@@ -40,6 +40,11 @@ const seasonState = () => {
         pathKey: ch === 1 ? 'ROOT' : 'A'.repeat(ch - 1),
         title: `Chapter ${ch}.${sub}`,
         narrative: `PROSE-CH${String(ch).padStart(2, '0')}-SUB${sub}. The rain had not stopped since Tuesday.`,
+        // The model's own ledger, exactly as it is persisted on an entry. The
+        // chapter-2 promise is left unresolved on purpose.
+        narrativeThreads: ch === 2 && sub === 1
+          ? [{ type: 'promise', description: 'THREAD-FROM-CH02: Jack owes Nadia the ledger he took from the laundromat.', status: 'active', urgency: 'critical', dueChapter: 5 }]
+          : [],
       });
     }
     playerChoices.push({
@@ -75,9 +80,12 @@ const seasonState = () => {
     playerChoices,
     currentPosition: { chapter: TOTAL, subchapter: 1, pathKey: 'A'.repeat(TOTAL - 1) },
     establishedFacts: [],
-    narrativeThreads: [
-      { type: 'promise', description: 'THREAD-FROM-CH02: Jack said he would go back for the ledger.', status: 'active', urgency: 'critical', introducedChapter: 2 },
-    ],
+    // Run the REAL extractor over the real entries, the way buildStoryContext
+    // does. Injecting a finished thread list here instead made the thread
+    // assertion below unfalsifiable: it proved the renderer would carry a
+    // critical chapter-2 thread if one existed, and could not fail when the
+    // extractor stopped producing one — which is exactly what had happened.
+    narrativeThreads: pa._extractNarrativeThreads(previousChapters),
     decisionConsequences: [],
     underMap,
   };

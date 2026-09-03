@@ -89,7 +89,12 @@ function _extractNarrativeThreads(chapters) {
     if (!ch.narrative) return;
 
     threadPatterns.forEach(({ pattern, type }) => {
-      const regex = new RegExp(`.{0,50}${pattern.source}.{0,50}`, 'gi');
+      // The patterns are alternations ('promised|gave.*word|committed to'), and
+      // interpolating one bare binds the .{0,50} context windows to the FIRST and
+      // LAST alternative only: a middle match produced a bare stub like "Jack
+      // promised" with the object of the promise stripped off, which is
+      // unpayable-off by anything downstream. Group it.
+      const regex = new RegExp(`.{0,50}(?:${pattern.source}).{0,50}`, 'gi');
       const matchIterator = ch.narrative.matchAll(regex);
 
       for (const match of matchIterator) {
