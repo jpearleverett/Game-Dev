@@ -340,13 +340,13 @@ Double-mark each fragment: every fragment you list here must also appear as a ta
 Weaving across chapters: if an <under_map_state> block lists fragments the player already holds, re-surface one of them here when it fits — reuse its exact label so it deepens into a recurring motif instead of becoming a new duplicate.
 
 relations — how fragments connect to reveal a secret of the hidden world. Reference fragments by their exact label. Each relation states the revelation the connection unlocks (one sentence). Only assert connections that are true in your world and that an attentive player could infer.
-Cross-chapter weaving: if an <under_map_state> block lists fragments the player already holds, author at least one relation linking a new fragment from this scene to one of those earlier fragments (by its exact label). This threads the map together across chapters and is more valuable than a relation between two brand-new fragments. Return an empty relations list only when nothing genuinely connects yet.
+Cross-chapter weaving: if an <under_map_state> block lists fragments the player already holds, author at least one relation linking a new fragment from this scene to one of those earlier fragments (by its exact label). This threads the map together across chapters and is more valuable than a relation between two brand-new fragments. The schema states how many relations to author; follow it.
 
 These must be consistent with the narrative you wrote; the player will discover them.
 </under_map>
 
 <thread_accounting_rule>
-Address every thread in ACTIVE_THREADS marked urgency="critical" within this scene. For each one:
+Address every thread listed under CRITICAL THREADS in the <active_threads> block within this scene. For each one:
 1. Have a character take visible action on it, not just think about it.
 2. Show progress through dialogue or concrete action rather than narration or exposition.
 3. If it genuinely cannot be acted on in this scene, have Jack acknowledge why he can't act on it yet.

@@ -216,6 +216,11 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
  * and the story-so-far up to the end of the previous chapter.
  *
  * This reduces per-subchapter prompt size by moving the large shared prefix into an explicit cache.
+ *
+ * Note on cardinality: the many-shot exemplars are chosen per beat (A/B/C map to
+ * different categories), so this is one cache per (chapter, subchapter), not one
+ * per chapter. Each is reused across every request for that subchapter — the
+ * scene, its lazy second-choice bodies, and the path decisions.
  */
 async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, choiceHistory, context) {
   const beatType = this._getBeatType(chapter, subchapter);
@@ -234,8 +239,28 @@ async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, c
     : [];
   const priorChoicesHash = this._hashChoiceHistoryForCache(priorChoices);
 
+  // The cached content includes the REALIZED prose of the prior chapters, which
+  // depends on the in-scene branches the player took (1A/1B/1C and 2A/2B/2C) —
+  // not just the A/B decisions priorChoicesHash covers. Without the branch in
+  // the key, a restart or NG+ inside the cache TTL that reaches the same
+  // decisions by different branches gets a byte-identical key and is handed the
+  // PREVIOUS run's story as its canon.
+  const priorBranches = (Array.isArray(this.currentBranchingChoices) ? this.currentBranchingChoices : [])
+    .filter((bc) => {
+      const ch = this._extractChapterFromCase(bc?.caseNumber);
+      return Number.isFinite(ch) ? ch < chapter : false;
+    })
+    .map((bc) => `${bc.caseNumber}:${bc.secondChoice || bc.firstChoice || ''}`)
+    .sort();
+  const priorBranchHash = this._hashChoiceHistoryForCache(
+    priorBranches.map((entry) => {
+      const [caseNumber, optionKey] = entry.split(':');
+      return { caseNumber, optionKey };
+    })
+  );
+
   // Use a logical key to avoid collisions; store the actual cache key separately.
-  const logicalKey = `chStart:${MODEL_CACHE_TAG}:${chapter}:path:${effectivePathKey}:beat:${manyShotSignature}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
+  const logicalKey = `chStart:${MODEL_CACHE_TAG}:${chapter}:path:${effectivePathKey}:beat:${manyShotSignature}:choices:${priorChoicesHash}:branches:${priorBranchHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
   const existingKey = this.chapterStartCacheKeys.get(logicalKey);
   if (existingKey) {
     const existing = await llmService.getCache(existingKey);
@@ -244,7 +269,7 @@ async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, c
   }
 
   const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
-  const cacheKey = `${chapterStartCacheKeyPrefix(chapter)}${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
+  const cacheKey = `${chapterStartCacheKeyPrefix(chapter)}${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}_${priorBranchHash}`;
 
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
@@ -326,7 +351,16 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 }
 
 
-function _buildPlayerTheorySection(underMap, currentChapter = null) {
+function _buildPlayerTheorySection(underMap, currentChapter = null, { mode = 'narrative' } = {}) {
+  // mode 'narrative' — the scene-writing call, which authors fragments/relations
+  // and can resolve a belief.
+  // mode 'decisions' — the pathDecisions call, which emits only 9 belief pairs.
+  // It needs the player's held fragments, revealed truths and sealed belief to
+  // ground groundedKey/evidence, and nothing else: every authoring instruction
+  // below names a field (beliefResolution, relations, falseReadings, echoes)
+  // that the pathDecisions schema does not have, so sending them asks a
+  // low-thinking call to reconcile impossible work.
+  const forNarrative = mode !== 'decisions';
   // Surfaces the player's living Under-Map so each new scene WEAVES into it: the
   // fragments they've collected (so the model can link new anomalies back to old
   // ones across chapters), the hidden-world nodes they've revealed by connecting
@@ -345,27 +379,29 @@ function _buildPlayerTheorySection(underMap, currentChapter = null) {
   if (latest?.interpretation) {
     const sealedChapter = Number.isFinite(latest.chapter) ? latest.chapter : null;
     lines.push(`- The player just sealed this theory of the hidden world${sealedChapter ? ` (chapter ${sealedChapter})` : ''}: "${latest.interpretation}". Let this chapter answer it: confirm it, complicate it, or reveal its cost.`);
-    lines.push(`- If this scene reveals whether that belief was right, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Feel free to subvert a wrong reading; it makes a richer story and steers the player's ending.`);
+    if (forNarrative) {
+      lines.push(`- If this scene reveals whether that belief was right, set \`beliefResolution\` { resolvesChapter: ${sealedChapter ?? 'the sealed chapter'}, correct, line }. Feel free to subvert a wrong reading; it makes a richer story and steers the player's ending.`);
+    }
     // EVIDENCE-GROUNDED RESOLUTION: the player's mapping must causally buy clarity.
     // `grounded` records whether they chose the reading their revealed truths
     // supported (set at seal time from the decision's groundedKey).
-    if (latest.grounded === true) {
+    if (forNarrative && latest.grounded === true) {
       lines.push('- The player chose the reading their revealed truths SUPPORTED. When this belief resolves, it should normally HOLD (`beliefResolution.correct: true`). Subvert it only for a strong, earned story reason — never casually; mapping well must pay off.');
-    } else if (latest.grounded === false) {
+    } else if (forNarrative && latest.grounded === false) {
       lines.push('- The player chose AGAINST the weight of the truths they had revealed. When this belief resolves, it should normally be SUBVERTED (`beliefResolution.correct: false`) — the evidence already pointed the other way. Let the truth they ignored be the one that answers them.');
     }
     // BELIEF LIFECYCLE: a sealed reading must never be left permanently hanging.
     const staleness = Number.isFinite(currentChapter) && Number.isFinite(latest.chapter)
       ? currentChapter - latest.chapter
       : null;
-    if (latest.correct == null && staleness != null && staleness >= 2) {
+    if (forNarrative && latest.correct == null && staleness != null && staleness >= 2) {
       lines.push(`- This belief has gone unanswered since chapter ${latest.chapter}. Resolve it in THIS chapter — emit \`beliefResolution\`. A sealed reading left hanging cheats the player of their verdict.`);
-    } else if (latest.correct == null) {
+    } else if (forNarrative && latest.correct == null) {
       lines.push('- Resolve a sealed belief within a chapter or two of its sealing. Do not leave it permanently unanswered.');
     }
     // The verdict is the player's re-entry reward after the chapter gate: when a
     // chapter answers a sealed belief, land the answer EARLY.
-    lines.push('- When this chapter answers the sealed belief, deliver the verdict in the OPENING of the chapter (the A-beat, ideally its first scene) — the player returns specifically to learn whether they read the city true; do not make them wait pages for it.');
+    if (forNarrative) lines.push('- When this chapter answers the sealed belief, deliver the verdict in the OPENING of the chapter (the A-beat, ideally its first scene) — the player returns specifically to learn whether they read the city true; do not make them wait pages for it.');
   }
 
   if (nodes.length) {
@@ -387,22 +423,30 @@ function _buildPlayerTheorySection(underMap, currentChapter = null) {
   // DANGLING THREADS the story has promised but not yet paid: a prior scene
   // authored a relation whose other endpoint the player does not hold. Deliver
   // the missing fragment soon (by EXACTLY this label) so the thread resolves.
-  const latents = Array.isArray(underMap.latentRelations) ? underMap.latentRelations : [];
+  const latents = forNarrative && Array.isArray(underMap.latentRelations) ? underMap.latentRelations : [];
   if (latents.length) {
     const heldNorm = new Set(fragments.map((f) => String(f.label || '').trim().toLowerCase()));
     lines.push('- Threads left hanging (PAY THESE OFF: introduce the missing fragment in this scene or the next, using EXACTLY the label given, so the dangling thread connects):');
     latents.slice(0, 4).forEach((lat) => {
       const aHeld = heldNorm.has(String(lat.aLabel || '').trim().toLowerCase());
+      const bHeld = heldNorm.has(String(lat.bLabel || '').trim().toLowerCase());
+      if (aHeld === bHeld) {
+        // Neither endpoint is held (the usual cause: the scene drifted on both
+        // labels). Naming one of them as already on the player's map would be a
+        // lie the model then writes around, so ask for the pair.
+        lines.push(`  • missing BOTH: "${lat.aLabel}" and "${lat.bLabel}" (introduce both, using exactly these labels, so the thread can close)`);
+        return;
+      }
       const missing = aHeld ? lat.bLabel : lat.aLabel;
       const present = aHeld ? lat.aLabel : lat.bLabel;
-      lines.push(`  • missing: "${missing}" (its thread runs to "${present}")`);
+      lines.push(`  • missing: "${missing}" (its thread runs to "${present}", which the player already holds)`);
     });
   }
 
   // THE QUAKE (chapter 7): the season's recontextualization. The player's oldest
   // recurring motif is revealed to have meant something else all along — reframe,
   // never contradict, the node truths already revealed.
-  if (Number.isFinite(currentChapter) && currentChapter === 7) {
+  if (forNarrative && Number.isFinite(currentChapter) && currentChapter === 7) {
     const oldestMotif = [...fragments]
       .filter((f) => (f.seen || 1) > 1)
       .sort((a, b) => String(a.firstCaseNumber || '999').localeCompare(String(b.firstCaseNumber || '999')))[0];
@@ -413,13 +457,19 @@ function _buildPlayerTheorySection(underMap, currentChapter = null) {
 
   if (!lines.length) return '';
 
+  const preamble = forNarrative
+    ? "The player is assembling a hidden map of reality on their Under-Map (this is not a whodunit). Each chapter should make that map feel more interconnected, without contradicting established canon or the Story Bible."
+    : "The player is assembling a hidden map of reality on their Under-Map (this is not a whodunit). What they have surfaced so far is what the competing readings below must be grounded in.";
+
+  if (!forNarrative) {
+    return [preamble, ...lines].join('\n');
+  }
+
   return [
-    "The player is assembling a hidden map of reality on their Under-Map (this is not a whodunit). Each chapter should make that map feel more interconnected, without contradicting established canon or the Story Bible.",
+    preamble,
     ...lines,
     'Weaving (important):',
-    '- Always give the player something to connect: author at least two relations whose endpoints are both fragments introduced in this scene (reference them by exact label), so the CONNECT beat is never empty.',
-    '- Then author at least one more connection that links a new fragment to a fragment the player already holds above (by its exact label). This is how the map threads across chapters.',
-    '- Also author ONE dangling thread: a relation between a fragment in THIS scene and a named fragment the player does NOT hold yet (one that should arrive within the next scene or two). The thread "dives deeper" and resolves when its other end surfaces — this is the open loop that pulls the player forward. Name the future fragment carefully; a later scene must introduce it by exactly that label.',
+    '- The `relations` schema states how many connections to author and what each is for. What matters here is which fragments they reach for: the cross-chapter one must name a fragment listed above by its exact label, and the dangling thread must name a fragment a later scene can introduce by exactly the label you choose — that open loop is what pulls the player forward.',
     '- Re-surface a recurring motif when it fits: reuse the exact label of an earlier fragment so it deepens rather than spawning a duplicate, and let its meaning grow.',
     '- When a motif recurs, let the prose register its DRIFT in one line: how its meaning has changed since the player last saw it (the seal again — but this time the wax was warm). Recurrence without drift is repetition; drift is what makes the motif feel alive.',
     '- For each relation, also author its two `falseReadings`: tempting but false one-sentence interpretations of the same pair that a careful player might wrongly believe (the player picks the true reading from among them, so make the wrong ones plausible, never absurd).',
@@ -520,11 +570,16 @@ function _buildContinuityAnchorSection(context, chapter) {
   if (um) {
     const nodes = (Array.isArray(um.nodes) ? um.nodes : [])
       .filter((n) => n && n.revelation && !n.unresolvedReading);
-    nodes.slice(-8).forEach((n) => {
+    // underMap.js stores nodes and theories NEWEST-FIRST, so take from the head.
+    // slice(-8) took the oldest eight, which is the opposite of what an anchor
+    // block is for: it kept stale canon salient and dropped what the next scene
+    // actually has to stay consistent with. Reversed so the newest lands last,
+    // closest to <task>.
+    nodes.slice(0, 8).reverse().forEach((n) => {
       lines.push(`- Established truth the player has surfaced (do not contradict): ${n.revelation}${n.scope === 'arc' ? ' (a truth that spans chapters)' : ''}`);
     });
     const sealed = (Array.isArray(um.theories) ? um.theories : []).filter((t) => t && t.interpretation);
-    sealed.slice(-3).forEach((t) => {
+    sealed.slice(0, 3).reverse().forEach((t) => {
       if (t.correct === false) {
         lines.push(`- The player believed: "${t.interpretation}" — but this was SUBVERTED. The hidden world is NOT as they believed; reflect the truth, not the false belief.`);
       } else if (t.correct === true) {
@@ -779,6 +834,18 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push(this._buildCraftTechniquesSection());
   parts.push('</craft_techniques>');
 
+  // Part 9.5: Continuity anchor. This is the dynamic canon spine (revealed node
+  // truths + sealed-belief status) and it is the only thing standing between a
+  // 12-chapter campaign and a scene that contradicts a truth the player mapped.
+  // It was missing here, so whenever caching failed and generation fell back to
+  // this builder the whole spine was silently dropped.
+  const continuityAnchor = this._buildContinuityAnchorSection(context, chapter);
+  if (continuityAnchor) {
+    parts.push('<continuity_anchors>');
+    parts.push(continuityAnchor);
+    parts.push('</continuity_anchors>');
+  }
+
   // Part 10: Current Task Specification (LAST for recency effect)
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
   // NOTE: quality bar lives in the system prompt's <scene_requirements>
@@ -940,31 +1007,22 @@ function _buildEngagementGuidanceSection(context, chapter, subchapter) {
   if (this.storyArc?.chapterArcs) {
     const chapterArc = this.storyArc.chapterArcs.find(a => a.chapter === chapter);
     if (chapterArc) {
-      section += `### CHAPTER ${chapter} FOCUS\n`;
-      section += `**Phase:** ${chapterArc.phase}\n`;
-      section += `**Primary Focus:** ${chapterArc.primaryFocus}\n`;
-      section += `**Tension Level:** ${chapterArc.tensionLevel}/10\n`;
-
+      // The chapter's phase, focus, tension, key revelation and ending hook are
+      // stated in <task> under STORY ARC GUIDANCE. Repeating them here gave the
+      // model the same facts under three headings across one prompt, which is
+      // the redundancy Gemini 3.x over-analyzes. This block keeps only what is
+      // unique to it.
       if (chapterArc.personalStakes) {
-        section += `\n### PERSONAL STAKES (What Jack loses if he fails HERE)\n`;
+        section += `### PERSONAL STAKES (What Jack loses if he fails HERE)\n`;
         section += `${chapterArc.personalStakes}\n`;
-        section += `\n**Make the reader FEEL this is at risk. Show it, don't tell it.**\n`;
+        section += `\nThe reader should feel this is at risk through what happens, not be told it is.\n`;
       }
 
       if (chapterArc.emotionalAnchor) {
         section += `\n### EMOTIONAL ANCHOR (The gut-punch moment for this chapter)\n`;
         section += `${chapterArc.emotionalAnchor}\n`;
-        section += `\n**This is not plot. This is FEELING. Write it to hit the reader in the chest.**\n`;
+        section += `\nThis is feeling rather than plot; write it to land in the chest.\n`;
       }
-
-      if (chapterArc.keyRevelation) {
-        section += `\n### KEY REVELATION\n`;
-        section += `${chapterArc.keyRevelation}\n`;
-      }
-
-      section += `\n### ENDING HOOK\n`;
-      section += `This chapter should end with: "${chapterArc.endingHook}"\n`;
-      section += `\n**For subchapter ${['A', 'B', 'C'][subchapter - 1]}: Build toward this ending while creating micro-hooks at the end of your subchapter.**\n`;
     }
   }
 
@@ -1115,14 +1173,20 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
   }
 
   const isFiltered = clampMin !== 1 || clampMax !== Infinity;
+  const hasAnyChapterInWindow = (context.previousChapters || []).some(
+    (ch) => Number.isFinite(ch?.chapter) && ch.chapter >= clampMin && ch.chapter <= clampMax
+  );
+  if (isFiltered && !hasAnyChapterInWindow) {
+    // The chapter-start cache already carries the story up to the previous
+    // chapter, so on an A-beat this window is empty. Announcing "FULL TEXT,
+    // chapters N to N" over nothing tells the model its context is missing.
+    return `## STORY CONTEXT\n\nNo subchapter of chapter ${clampMin} has been written yet; the story so far is in <chapter_start_story_context>.\n`;
+  }
   const header = isFiltered
     ? `## STORY CONTEXT (FULL TEXT)\n\n**Included chapters:** ${clampMin} to ${clampMax === Infinity ? 'latest' : clampMax}\n\n`
     : '## COMPLETE STORY SO FAR (FULL TEXT)\n\n';
 
   let summary = header;
-  summary += 'You are continuing an ongoing story; read all of it carefully.\n';
-  summary += 'Your new subchapter should continue exactly from where the previous subchapter ended.\n';
-  summary += 'Do not summarize, skip, or rehash events. Pick up the narrative mid-scene if needed.\n\n';
 
   // Build quick lookup: decision chapter -> choice object (from choice history)
   const choicesByChapter = new Map();
@@ -1194,8 +1258,7 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
 
         // If this is the most recent decision affecting current chapter
         if (ch.chapter === currentChapter - 1) {
-          summary += '\n   *** THIS CHOICE MUST DRIVE THE OPENING OF YOUR NARRATIVE ***';
-          summary += '\n   *** SHOW THIS SCENE HAPPENING - DO NOT SKIP OR SUMMARIZE IT ***';
+          summary += '\n   (this is the decision the current subchapter opens on)';
         }
         summary += ']\n';
       }
@@ -1232,17 +1295,11 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
 
     // Emphasize continuation point
     if (isImmediatelyPrevious) {
-      summary += `\n${'='.repeat(80)}\n`;
-      summary += 'Continue your narrative from the end of this text.\n';
-
-      // Extract and highlight the last few sentences
-      const sentences = ch.narrative?.match(/[^.!?]+[.!?]+/g) || [];
-      if (sentences.length > 0) {
-        const lastSentences = sentences.slice(-3).join(' ').trim();
-        summary += `\nThe story ended with:\n"${lastSentences}"\n`;
-        summary += '\nPick up exactly here: what happens next?\n';
-      }
-      summary += `${'='.repeat(80)}\n`;
+      // Marked, not instructed: <scene_state> already carries the exact last
+      // sentence and the "pick up from here" rule, and the system prompt's
+      // <constraints> carries it a second time. A third copy inside the data
+      // block is the repetition Gemini 3.x over-analyzes.
+      summary += '\n(end of the immediately previous subchapter)\n';
     }
 
     summary += '\n---\n';
@@ -1341,16 +1398,6 @@ function _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
   let task = `## CURRENT TASK
 
 Write **Chapter ${chapter}, Subchapter ${subchapter} (${subchapterLabel})**
-
-### Requirements (read first)
-Meet these before writing:
-
-1. **Length:** each narrative segment is ${segmentMinWords}-${segmentMaxWords} words. The style examples are shorter than this on purpose — match their craft, not their length. If a drafted segment is under ${segmentMinWords} words, develop its thinnest beat further until it reaches the target.
-2. **POV/tense:** third-person limited, past tense, aligned to Jack Halloway
-3. **Dialogue:** all dialogue uses double quotes ("Like this," Jack said)
-4. **Continuation:** start immediately after the last sentence, with no recap, restart, or summary
-5. **Output:** valid JSON only, with no commentary or markdown wrapping
-6. **Branching keys:** use the full format (1A-2A, 1B-2B), not the abbreviated form (2A/2B/2C)
 
 ### STORY POSITION
 - Chapter ${chapter} of ${TOTAL_CHAPTERS} (${chaptersRemaining} remaining)
@@ -1452,7 +1499,7 @@ ${outline.openingCausality}`;
     task += `
 
 ### MUST-REFERENCE ANCHORS (Mandatory)
-${outline.mustReference.slice(0, 6).map((x) => `- ${x}`).join('\n')}`;
+${outline.mustReference.slice(0, 8).map((x) => `- ${x}`).join('\n')}`;
   }
 
   // ========== NEW: Narrative Thread Continuity ==========
@@ -1525,7 +1572,7 @@ ${context.lastDecision
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
-1. This call produces ${totalSegments} prose segments${lazyBranching ? ' (the opening and the three first-choice responses; the second-choice options need labels only)' : ' (the opening, three first-choice responses, and nine endings)'}, so the whole response runs about ${totalMinWords}-${totalMaxWords} words. Any single path a player reads through this subchapter (opening + one first-choice response + one ending) must clear ${MIN_WORDS_PER_SUBCHAPTER} words, target ~${targetWords}.
+1. This call produces ${totalSegments} prose segments${lazyBranching ? ' (the opening and the three first-choice responses; the second-choice options need labels and summaries only)' : ' (the opening, three first-choice responses, and nine endings)'} of ${segmentMinWords}-${segmentMaxWords} words each, so the whole response runs about ${totalMinWords}-${totalMaxWords} words. Any single path a player reads through this subchapter (opening + one first-choice response + one ending) must clear ${MIN_WORDS_PER_SUBCHAPTER} words, target ~${targetWords}.
 2. Reference specific events from previous chapters, so continuity shows on the page
 3. Carry atmospheric description, internal monologue, and dialogue in every segment
 4. Build tension appropriate to the ${pacing.phase} phase
@@ -1603,20 +1650,10 @@ Do not use these in your narrative:
 - Stating emotions directly ("He felt angry") instead of showing them`;
 
   // ========== FINAL CHECKLIST (Per Gemini 3.5 Flash best practice: restate task at end) ==========
-  task += `
-
-### Final checklist (verify before submitting)
-Before outputting JSON, confirm:
-□ Each narrative segment reaches ${segmentMinWords}-${segmentMaxWords} words — re-read each one; if any is short, develop its thinnest beat before submitting
-□ Written in third-person limited, past tense
-□ All dialogue uses double quotes ("Like this")
-□ Continues directly from the previous subchapter, with no restart or recap
-□ No avoided phrases used (see list above)
-□ Critical threads from ACTIVE_THREADS addressed through action/dialogue
-□ Branching keys in full format (1A-2A, 1B-2C, etc.)
-□ Valid JSON output with no commentary or markdown wrapping
-
-Length target: ${segmentMinWords}-${segmentMaxWords} words per segment, every segment.`;
+  // NOTE: no closing checklist. The output rules live once in the system
+  // prompt's <constraints> and once in the schema field descriptions that
+  // actually enforce them; restating them a third time here is the redundancy
+  // Gemini 3.x over-analyzes rather than obeys.
 
   return task;
 }
@@ -1698,13 +1735,13 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
     // ========== REQUIRED THREAD COVERAGE (highest-priority threads) ==========
     if (mandatoryThreads.length > 0) {
       section += `\n\n${'='.repeat(60)}`;
-      section += '\n### Threads to address this scene';
+      section += '\n### CRITICAL THREADS (urgency: critical — address every one of these in this scene)';
       section += `\n${'='.repeat(60)}`;
       section += '\nAddress each of these threads in your narrative; leaving one untouched is a continuity gap.\n';
 
       mandatoryThreads.forEach((t, idx) => {
-        const overdueTag = t.isOverdue ? '⚠️ OVERDUE' : '';
-        const priorityTag = t.urgency === 'critical' ? '🔴 CRITICAL' : '🟡 URGENT';
+        const overdueTag = t.isOverdue ? 'overdue' : '';
+        const priorityTag = t.urgency === 'critical' ? 'urgency: critical' : 'urgency: urgent';
         const desc = t.description || t.excerpt || '';
         const truncatedDesc = desc.length > TRUNCATE_DESCRIPTION ? desc.slice(0, TRUNCATE_DESCRIPTION) + '...' : desc;
 
@@ -1725,7 +1762,7 @@ ${context.establishedFacts.slice(0, maxFacts).map(f => `- ${f}`).join('\n')}`;
 
     // ========== ACTIVE THREADS (Should address if possible) ==========
     if (optionalThreads.length > 0) {
-      section += '\n\n### ACTIVE THREADS (Address if narratively appropriate)';
+      section += '\n\n### OPTIONAL THREADS (urgency: normal — address only if narratively appropriate)';
 
       const threadsByType = {};
       optionalThreads.forEach(t => {

@@ -364,7 +364,7 @@ export const STORY_CONTENT_SCHEMA = {
     },
     relations: {
       type: 'array',
-      description: 'REQUIRED: author AT LEAST 2 connections, and BOTH endpoints of at least two of them MUST be fragments you listed in THIS scene\'s `fragments` (so the player can connect them immediately). Reference fragments by their EXACT label. Only assert connections true in your world and inferable by the player. Prefer the bond grammar: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON. You MAY add one extra relation linking a new fragment to one the player already holds.',
+      description: 'Author 4 relations, each referencing fragments by their EXACT label: TWO whose endpoints are both fragments listed in THIS scene\'s `fragments` (so the CONNECT beat is never empty); ONE linking a fragment from this scene to a fragment the player already holds, named in <under_map_state> (this is what threads the map across chapters); and ONE dangling thread, linking a fragment from this scene to a named fragment the player does NOT hold yet and that a later scene will introduce by exactly that label. Drop the third when the player holds no fragments yet. Only assert connections true in your world and inferable by the player. Prefer the bond grammar: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON.',
       items: {
         type: 'object',
         properties: {

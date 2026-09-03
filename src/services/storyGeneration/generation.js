@@ -739,12 +739,37 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           console.log(`  - Base decision: "${generatedContent.decision?.optionA?.title}" vs "${generatedContent.decision?.optionB?.title}"`);
           console.log(`  - Prompt length: ${pathDecisionsPrompt.length} chars (uses summaries, not full narrative)`);
 
-          // UNDER-MAP: weave the next chapter's decisions around the living map —
-          // the fragments collected, truths revealed, and theory sealed.
-          let basePathPrompt = pathDecisionsPrompt;
-          const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter);
+          // UNDER-MAP: ground the 9 belief pairs in the living map — the
+          // fragments collected, the truths revealed, the belief last sealed.
+          //
+          // Two things matter about how this is spliced in. It uses mode
+          // 'decisions', which drops every instruction that names a field this
+          // call's schema does not have (beliefResolution, relations,
+          // falseReadings, echoes) — a low-thinking call should not be spending
+          // its budget reconciling impossible asks. And it goes BEFORE
+          // <output_requirements> rather than after it, because that block is
+          // the ask: per Gemini 3.x guidance the instruction comes last, with
+          // the context it reasons over above it.
+          const pdContext = [];
+          const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter, { mode: 'decisions' });
           if (pdTheory) {
-            basePathPrompt = `${basePathPrompt}\n\n<under_map_state>\n${pdTheory}\n</under_map_state>`;
+            pdContext.push(`<under_map_state>\n${pdTheory}\n</under_map_state>`);
+          }
+          // The rejected reading's champion shapes which belief is worth
+          // rejecting, so the decisions call needs to know them too.
+          const pdFoil = this._buildOtherReaderSection?.(this.currentUnderMap);
+          if (pdFoil) {
+            pdContext.push(`<the_other_reader>\n${pdFoil}\n</the_other_reader>`);
+          }
+
+          let basePathPrompt = pathDecisionsPrompt;
+          if (pdContext.length) {
+            const block = pdContext.join('\n\n');
+            const askMarker = '<output_requirements>';
+            const askAt = basePathPrompt.lastIndexOf(askMarker);
+            basePathPrompt = askAt >= 0
+              ? `${basePathPrompt.slice(0, askAt)}${block}\n\n${basePathPrompt.slice(askAt)}`
+              : `${basePathPrompt}\n\n${block}`;
           }
 
           // Single user message - start fresh conversation for pathDecisions

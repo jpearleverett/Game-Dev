@@ -9,6 +9,8 @@ jest.mock('../LLMService', () => ({
 jest.mock('../../storage/generatedStoryStorage', () => ({ saveStoryContext: jest.fn(async () => true) }));
 
 import { promptAssemblyMethods } from '../storyGeneration/promptAssembly';
+import { STORY_CONTENT_SCHEMA } from '../storyGeneration/schemas';
+import { buildMasterSystemPrompt } from '../storyGeneration/prompts';
 import {
   createBlankUnderMap,
   addFragments,
@@ -180,7 +182,24 @@ describe('latent threads & the quake in <under_map_state>', () => {
     let m = createBlankUnderMap();
     m = addFragments(m, [{ label: 'x', kind: 'symbol' }]);
     const out = promptAssemblyMethods._buildPlayerTheorySection(m, 2);
+    // The count lives once, in the schema field the model writes into; the
+    // prompt block names the mechanic and says what the endpoints must be.
     expect(out).toContain('dangling thread');
     expect(out.toLowerCase()).toContain('drift');
+    expect(STORY_CONTENT_SCHEMA.properties.relations.description).toContain('dangling thread');
+  });
+
+  test('the relation count is stated once, in the schema, and nowhere contradicted', () => {
+    const schemaDesc = STORY_CONTENT_SCHEMA.properties.relations.description;
+    expect(schemaDesc).toContain('Author 4 relations');
+
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'x', kind: 'symbol' }]);
+    const block = promptAssemblyMethods._buildPlayerTheorySection(m, 2);
+    // No competing floor in the prompt block (this contradicted the schema and
+    // the system prompt, and the model settled on the smallest number it saw).
+    expect(block).not.toMatch(/at least (two|2|one|1|four|4) relations?/i);
+
+    expect(buildMasterSystemPrompt()).not.toContain('Return an empty relations list');
   });
 });
