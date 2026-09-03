@@ -14,6 +14,12 @@ import NetInfo from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
 import { fetch as expoFetch } from 'expo/fetch';
 import EventSource from 'react-native-sse';
+import {
+  GEMINI_MODEL,
+  clampMaxOutputTokens,
+  isGemini3Model,
+  normalizeThinkingLevel,
+} from '../constants/gemini';
 import { llmTrace, log } from '../utils/llmTrace';
 
 const LLM_CONFIG_KEY = 'dead_letters_llm_config';
@@ -32,10 +38,10 @@ console.log('[LLMService] Environment loaded:', {
   hasApiKey: !!ENV_API_KEY,
 });
 
-// Default configuration - using Gemini 3.5 Flash
+// Default configuration - model id lives in src/constants/gemini.js
 const DEFAULT_CONFIG = {
   provider: 'gemini',
-  model: 'gemini-3.5-flash', // Gemini 3.5 Flash (GA, released May 2026)
+  model: GEMINI_MODEL, // See src/constants/gemini.js for the model contract
   apiKey: ENV_API_KEY, // Only used in direct mode (dev)
   proxyUrl: ENV_PROXY_URL, // Cloudflare Worker URL (production)
   appToken: ENV_APP_TOKEN, // Optional auth token for proxy
@@ -432,8 +438,13 @@ class LLMService {
       responseSchema = null,
       traceId = null,
       requestContext = null,
-      thinkingLevel = null,  // null = use Gemini's default ('medium'); override per-task when needed
+      thinkingLevel: requestedThinkingLevel = null,  // null = use Gemini's default ('medium'); override per-task when needed
     } = options;
+
+    // Gemini 3.8 Flash accepts only low|medium|high. Anything else (notably
+    // 'minimal', which older Gemini 3 models allowed) is a hard API validation
+    // error, so fold it into the nearest supported level instead of failing.
+    const thinkingLevel = normalizeThinkingLevel(requestedThinkingLevel);
 
     if (this.config.provider === 'gemini') {
       // Use rate-limited request wrapper to prevent API overload during preloading bursts
@@ -448,13 +459,15 @@ class LLMService {
   /**
    * Google Gemini API completion
    * Supports structured output via responseSchema for guaranteed valid JSON responses
-   * Per Gemini 3.5 guidance we do not set sampling params (temperature/topP/topK);
-   * thinkingConfig is only sent when a task explicitly requests a level (else 'medium' default).
+   * Per Gemini 3.x guidance we do not set sampling params (temperature/topP/topK/
+   * candidateCount) — they are deprecated for this model family and lowering
+   * temperature degrades reasoning. thinkingConfig is only sent when a task
+   * explicitly requests a level (else Gemini's own 'medium' default applies).
    *
    * Routes through proxy if configured (production), otherwise direct API (dev)
    */
   async _geminiComplete(messages, { maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel }) {
-    const model = this.config.model || 'gemini-3.5-flash';
+    const model = this.config.model || GEMINI_MODEL;
 
     // DEBUG: Log config to see what mode we're in
     console.log('[LLMService] Config:', {
@@ -464,7 +477,7 @@ class LLMService {
     });
 
     // Check if using Gemini 3 model
-    const isGemini3 = model.includes('gemini-3');
+    const isGemini3 = isGemini3Model(model);
 
     // ========== PROXY MODE (Production - Secure) ==========
     if (this.config.proxyUrl) {
@@ -487,14 +500,17 @@ class LLMService {
     const contents = this._convertToGeminiFormat(messages, systemPrompt);
 
     // Build generation config.
-    // Per Gemini 3.5 guidance, sampling params (temperature/topP/topK) are omitted
-    // so the model uses its tuned defaults.
+    // Per Gemini 3.x guidance, sampling params (temperature/topP/topK/candidateCount)
+    // are deprecated and omitted so the model uses its tuned defaults.
+    // maxOutputTokens is omitted entirely when unset — sending an explicit null
+    // is rejected by the API — and clamped to the model's output ceiling.
+    const clampedMaxTokens = clampMaxOutputTokens(maxTokens);
     const generationConfig = {
-      maxOutputTokens: maxTokens,
+      ...(clampedMaxTokens != null && { maxOutputTokens: clampedMaxTokens }),
     };
 
     // Thinking configuration: only set when a task explicitly requests a level.
-    // When omitted, Gemini 3.5 uses its 'medium' default.
+    // When omitted, Gemini applies its own 'medium' default.
     if (isGemini3 && thinkingLevel) {
       generationConfig.thinkingConfig = { thinkingLevel };
     }
@@ -1926,18 +1942,20 @@ class LLMService {
     // Direct mode (dev) - call Gemini API directly
     log.debug('LLMService', 'Using direct mode for cached generation');
 
-    const isGemini3 = model.includes('gemini-3');
+    const isGemini3 = isGemini3Model(model);
 
     // Build generation config.
-    // Per Gemini 3.5 guidance, sampling params (temperature/topP/topK) are omitted.
+    // Per Gemini 3.x guidance, sampling params (temperature/topP/topK/candidateCount)
+    // are deprecated and omitted so the model uses its tuned defaults.
     const generationConfig = {
-      maxOutputTokens: options.maxTokens || 8192,
+      maxOutputTokens: clampMaxOutputTokens(options.maxTokens) || 8192,
     };
 
     // Thinking configuration: only set when a task explicitly requests a level.
-    // When omitted, Gemini 3.5 uses its 'medium' default.
-    if (isGemini3 && options.thinkingLevel) {
-      generationConfig.thinkingConfig = { thinkingLevel: options.thinkingLevel };
+    // When omitted, Gemini applies its own 'medium' default.
+    const cachedThinkingLevel = normalizeThinkingLevel(options.thinkingLevel);
+    if (isGemini3 && cachedThinkingLevel) {
+      generationConfig.thinkingConfig = { thinkingLevel: cachedThinkingLevel };
     }
 
     // Add structured output configuration if schema provided

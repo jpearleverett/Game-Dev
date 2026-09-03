@@ -5,6 +5,7 @@
  * Handles triggering generation, tracking progress, and error states.
  */
 
+import { GEMINI_MODEL } from '../constants/gemini';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { AppState } from 'react-native';
 import { storyGenerationService } from '../services/StoryGenerationService';
@@ -385,7 +386,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     // If a caller passes non-gemini values, force-correct to prevent hard failures in LLMService.
     const safeModel = typeof model === 'string' && model.toLowerCase().includes('gemini')
       ? model
-      : 'gemini-3.5-flash';
+      : GEMINI_MODEL;
     await llmService.setConfig({ provider: 'gemini', model: safeModel });
     setIsConfigured(true);
     setError(null);

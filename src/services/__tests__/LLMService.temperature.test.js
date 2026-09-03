@@ -33,7 +33,7 @@ describe('LLMService Gemini 3.5 sampling/thinking defaults', () => {
 
     // Ensure we are in proxy mode.
     await llmService.init();
-    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
+    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.8-flash' });
 
     await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10 });
 
@@ -55,7 +55,7 @@ describe('LLMService Gemini 3.5 sampling/thinking defaults', () => {
     }));
 
     await llmService.init();
-    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
+    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.8-flash' });
 
     await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10, thinkingLevel: 'high' });
 

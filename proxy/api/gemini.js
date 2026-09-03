@@ -14,6 +14,35 @@
 // Edge Runtime - use BOTH syntaxes for maximum compatibility
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
+// ============================================================================
+// MODEL CONTRACT — keep in sync with src/constants/gemini.js
+// ============================================================================
+// Gemini 3.8 Flash (GA, 2026-09-02): 1M input context, 65,536 max output tokens,
+// thinkingLevel low|medium|high (default medium; 'minimal' is rejected by 3.8),
+// and no sampling parameters (temperature/topP/topK/candidateCount are deprecated).
+const DEFAULT_MODEL = 'gemini-3.8-flash';
+const MAX_OUTPUT_TOKENS = 65536;
+const THINKING_LEVELS = ['low', 'medium', 'high'];
+
+function isGemini3Model(model) {
+  return typeof model === 'string' && /gemini-3(?:[.\-_]|$)/.test(model);
+}
+
+function normalizeThinkingLevel(level) {
+  if (!level) return null;
+  const normalized = String(level).toLowerCase().trim();
+  if (THINKING_LEVELS.includes(normalized)) return normalized;
+  if (normalized === 'minimal' || normalized === 'none' || normalized === 'off') return 'low';
+  return 'medium';
+}
+
+function clampMaxOutputTokens(maxTokens) {
+  if (maxTokens == null) return null;
+  const n = Number(maxTokens);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(Math.floor(n), MAX_OUTPUT_TOKENS);
+}
+
 export const config = {
   runtime: 'edge',
   supportsResponseStreaming: true,
@@ -202,8 +231,8 @@ export default async function handler(request) {
       );
     }
 
-    const model = body.model || 'gemini-3.5-flash';
-    const isGemini3 = model.includes('gemini-3');
+    const model = body.model || DEFAULT_MODEL;
+    const isGemini3 = isGemini3Model(model);
     const hasSchema = !!body.responseSchema;
     const cachedContent = body.cachedContent;
     const useStreaming = body.stream !== false;
@@ -227,11 +256,16 @@ export default async function handler(request) {
         };
       }),
       generationConfig: {
-        // Gemini 3.5 guidance: omit sampling params (temperature/topP/topK) so the
-        // model uses its tuned defaults. Pre-3 callers may still pass them explicitly.
+        // Gemini 3.x guidance: temperature / topP / topK / candidateCount are
+        // deprecated for this family and are dropped here even if a client sends
+        // them, so the model uses its tuned defaults. Pre-3 callers may still
+        // pass them explicitly.
         ...(!isGemini3 && body.temperature != null && { temperature: body.temperature }),
-        ...(body.maxTokens && { maxOutputTokens: body.maxTokens }),
         ...((!isGemini3 && body.topP) && { topP: body.topP }),
+        ...((!isGemini3 && body.topK) && { topK: body.topK }),
+        ...(clampMaxOutputTokens(body.maxTokens) != null && {
+          maxOutputTokens: clampMaxOutputTokens(body.maxTokens),
+        }),
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -243,11 +277,12 @@ export default async function handler(request) {
     };
 
     // Thinking configuration: only set when the client explicitly requests a level.
-    // When omitted, Gemini 3.5 uses its 'medium' default.
-    if (isGemini3 && body.thinkingLevel) {
-      geminiBody.generationConfig.thinkingConfig = {
-        thinkingLevel: body.thinkingLevel,
-      };
+    // When omitted, Gemini applies its own 'medium' default. Levels outside
+    // low|medium|high (notably 'minimal', which 3.8 Flash rejects outright) are
+    // folded down here rather than allowed to fail the whole request.
+    const thinkingLevel = normalizeThinkingLevel(body.thinkingLevel);
+    if (isGemini3 && thinkingLevel) {
+      geminiBody.generationConfig.thinkingConfig = { thinkingLevel };
     }
 
     if (body.systemPrompt) {

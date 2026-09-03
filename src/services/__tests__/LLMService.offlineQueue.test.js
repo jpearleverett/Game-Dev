@@ -20,7 +20,7 @@ describe('LLMService offline queue serialization', () => {
     const { llmService } = require('../LLMService');
 
     await llmService.init();
-    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
+    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.8-flash' });
 
     const offlineCallback = jest.fn(async () => {});
 

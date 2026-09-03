@@ -1,3 +1,4 @@
+import { GEMINI_MODEL } from '../../constants/gemini';
 import { llmService } from '../LLMService';
 import { CHARACTER_REFERENCE } from '../../data/characterReference';
 import { isKeystone } from '../../data/underMap';
@@ -54,6 +55,11 @@ function _buildExtendedStyleExamplesForCache() {
     return '';
   }
 }
+
+// A Gemini cachedContents handle is bound to the model that created it, so the
+// model id has to be part of every cache key: after a model upgrade the old
+// caches must miss rather than be handed to the new model (which rejects them).
+const MODEL_CACHE_TAG = GEMINI_MODEL.replace(/[^a-zA-Z0-9]/g, '');
 
 const sanitizeCacheKeyPart = (value, fallback = 'default') => {
   const safe = String(value || '')
@@ -137,7 +143,7 @@ ${extendedExamples}
 async function _ensureStaticCache(beatType, chapterBeatType) {
   const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
   const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples));
-  const cacheKey = `story_static_${manyShotSignature}_v${this.staticCacheVersion}`;
+  const cacheKey = `story_static_${MODEL_CACHE_TAG}_${manyShotSignature}_v${this.staticCacheVersion}`;
 
   const cachedKey = this.staticCacheKeysBySignature?.get(manyShotSignature);
   if (cachedKey) {
@@ -175,7 +181,7 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
 
   await llmService.createCache({
     key: cacheKey,
-    model: 'gemini-3.5-flash',
+    model: GEMINI_MODEL,
     systemInstruction: buildMasterSystemPrompt(),
     content: staticContent,
     ttl: '7200s', // 2 hours (story sessions typically < 2 hours)
@@ -219,7 +225,7 @@ async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, c
   const priorChoicesHash = this._hashChoiceHistoryForCache(priorChoices);
 
   // Use a logical key to avoid collisions; store the actual cache key separately.
-  const logicalKey = `chStart:${chapter}:path:${effectivePathKey}:beat:${manyShotSignature}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
+  const logicalKey = `chStart:${MODEL_CACHE_TAG}:${chapter}:path:${effectivePathKey}:beat:${manyShotSignature}:choices:${priorChoicesHash}:sv${this.staticCacheVersion}:v${this.chapterStartCacheVersion}`;
   const existingKey = this.chapterStartCacheKeys.get(logicalKey);
   if (existingKey) {
     const existing = await llmService.getCache(existingKey);
@@ -228,7 +234,7 @@ async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, c
   }
 
   const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
-  const cacheKey = `story_chStart_c${chapter}_${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
+  const cacheKey = `story_chStart_${MODEL_CACHE_TAG}_c${chapter}_${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
 
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
@@ -282,7 +288,7 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
 
   await llmService.createCache({
     key: cacheKey,
-    model: 'gemini-3.5-flash',
+    model: GEMINI_MODEL,
     systemInstruction: buildMasterSystemPrompt(),
     content: chapterCacheContent,
     ttl: '7200s',
