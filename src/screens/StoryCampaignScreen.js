@@ -76,11 +76,18 @@ export default function StoryCampaignScreen({
   const countdown = useUnlockCountdown(campaign.nextStoryUnlockAt);
   const hasHistory = Array.isArray(campaign.choiceHistory) && campaign.choiceHistory.length > 0;
   const hasStarted = Boolean(campaign.startedAt || hasHistory);
-  const resumeAvailable = hasStarted && !awaitingDecision && !campaign.nextStoryUnlockAt;
+  // `completed` was never read here, so after the finale this hub still offered
+  // "Continue Story" and re-entered 012C: the player could walk the last chapter
+  // again, and sealing there re-opened a belief on a map the ending was already
+  // computed from.
+  const completed = Boolean(campaign.completed);
+  const resumeAvailable = hasStarted && !awaitingDecision && !campaign.nextStoryUnlockAt && !completed;
   const currentPathLabel = campaign.currentPathKey || 'ROOT';
   const historyEntries = hasHistory ? [...campaign.choiceHistory].reverse() : [];
 
-  const heroStatusLine = awaitingDecision
+  const heroStatusLine = completed
+    ? 'The file is closed. Every chapter is read and the map is sealed. Begin a new reading to walk it again.'
+    : awaitingDecision
     ? 'Branching choice required. Open the current case file to choose your path.'
     : countdown
       ? `Next chapter unlocks in ${countdown}.`
@@ -147,16 +154,20 @@ export default function StoryCampaignScreen({
 
           <View style={[styles.heroActions, (compact || medium) && styles.heroActionsStack]}>
             <PrimaryButton
-              label={resumeAvailable ? 'Continue Story' : hasStarted ? 'Resume Story' : 'Start Story'}
-              icon={resumeAvailable 
-                ? <MaterialCommunityIcons name="play-circle-outline" size={20} color={COLORS.textSecondary} />
-                : hasStarted 
-                  ? <MaterialCommunityIcons name="play" size={20} color={COLORS.textSecondary} />
-                  : <MaterialCommunityIcons name="star" size={20} color={COLORS.textSecondary} />
+              label={completed ? 'Begin a New Reading' : resumeAvailable ? 'Continue Story' : hasStarted ? 'Resume Story' : 'Start Story'}
+              icon={completed
+                ? <MaterialCommunityIcons name="refresh" size={20} color={COLORS.textSecondary} />
+                : resumeAvailable
+                  ? <MaterialCommunityIcons name="play-circle-outline" size={20} color={COLORS.textSecondary} />
+                  : hasStarted
+                    ? <MaterialCommunityIcons name="play" size={20} color={COLORS.textSecondary} />
+                    : <MaterialCommunityIcons name="star" size={20} color={COLORS.textSecondary} />
               }
               disabled={awaitingDecision}
               onPress={() => {
-                if (resumeAvailable) {
+                if (completed) {
+                  handleRestart();
+                } else if (resumeAvailable) {
                   onContinueStory?.();
                 } else if (!hasStarted) {
                   onStartStory?.();

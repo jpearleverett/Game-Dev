@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useState, useMemo, useRef } from 'react';
 import { SEASON_ONE_CASES } from '../data/cases';
 import { STATUS, getCaseByNumber, formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { resolveStoryPathKey, ROOT_PATH_KEY, isDynamicChapter } from '../data/storyContent';
@@ -614,6 +614,7 @@ export function GameProvider({
       if (!pendingDecisionOptions.B && sd?.options?.[1]) pendingDecisionOptions[sd.options[1].key || 'B'] = { title: sd.options[1].title, focus: sd.options[1].focus };
 
       let advancedCaseNumber = null;
+      let checkpointPathKey = null;
 
       // FUNCTIONAL + FORWARD-ONLY: read the latest campaign, derive the next position
       // from the COMPLETED case, and only ever move forward. This is robust to the
@@ -634,6 +635,7 @@ export function GameProvider({
               timestamp: pre.timestamp,
             });
             advancedCaseNumber = updatedStory.activeCaseNumber;
+            checkpointPathKey = updatedStory.currentPathKey;
             return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
           }
           // No pre-decision: surface the post-puzzle decision panel (only if we
@@ -661,6 +663,14 @@ export function GameProvider({
       if (advancedCaseNumber) {
         const nextCase = getCaseByNumber(advancedCaseNumber);
         if (nextCase?.id) setActiveCaseInternal(nextCase.id);
+        // Record the chapter boundary the player just crossed. Chapter Select
+        // unlocks after the finale and lists all twelve chapters, but nothing
+        // ever wrote a checkpoint, so every tap there found an empty list and
+        // did nothing at all: no navigation, no message.
+        const advanced = parseCaseNumber(advancedCaseNumber);
+        if (advanced.subchapter === 1 && advanced.chapter > 1) {
+          saveChapterCheckpointRef.current?.(advanced.chapter, 1, checkpointPathKey || 'ROOT');
+        }
       }
   }, [mode, updateProgress, story, audio, setActiveCaseInternal, activeCase]);
 
@@ -1083,38 +1093,35 @@ export function GameProvider({
     progress.endings,
   ]);
 
+  // Held in a ref so completeLogicPuzzle can record a checkpoint without
+  // depending on a callback declared below it.
+  const saveChapterCheckpointRef = useRef(null);
+
   const saveChapterCheckpoint = useCallback((chapter, subchapter, pathKey) => {
     const nowIso = new Date().toISOString();
-    const currentCheckpoints = progress.chapterCheckpoints || { checkpoints: [], unlocked: false };
-    
-    const checkpoint = {
-      id: `${chapter}-${subchapter}-${pathKey}-${Date.now()}`,
-      chapter,
-      subchapter,
-      pathKey,
-      savedAt: nowIso,
-      storyCampaignSnapshot: { ...progress.storyCampaign },
-    };
-
-    const existingIndex = currentCheckpoints.checkpoints.findIndex(
-      cp => cp.chapter === chapter && cp.pathKey === pathKey
-    );
-
-    let updatedCheckpoints;
-    if (existingIndex >= 0) {
-      updatedCheckpoints = [...currentCheckpoints.checkpoints];
-      updatedCheckpoints[existingIndex] = checkpoint;
-    } else {
-      updatedCheckpoints = [...currentCheckpoints.checkpoints, checkpoint];
-    }
-
-    updateProgress({
-      chapterCheckpoints: {
-        ...currentCheckpoints,
-        checkpoints: updatedCheckpoints,
-      },
+    // Functional, and snapshots the campaign at write time: this used to read
+    // both the checkpoint list and the campaign from a render-time closure.
+    updateProgress((prev) => {
+      const currentCheckpoints = prev.chapterCheckpoints || { checkpoints: [], unlocked: false };
+      const list = Array.isArray(currentCheckpoints.checkpoints) ? currentCheckpoints.checkpoints : [];
+      const checkpoint = {
+        id: `${chapter}-${subchapter}-${pathKey}`,
+        chapter,
+        subchapter,
+        pathKey,
+        savedAt: nowIso,
+        storyCampaignSnapshot: { ...normalizeStoryCampaignShape(prev.storyCampaign) },
+      };
+      const existingIndex = list.findIndex((cp) => cp.chapter === chapter && cp.pathKey === pathKey);
+      const updatedCheckpoints = existingIndex >= 0
+        ? list.map((cp, i) => (i === existingIndex ? checkpoint : cp))
+        : [...list, checkpoint];
+      return {
+        chapterCheckpoints: { ...currentCheckpoints, checkpoints: updatedCheckpoints },
+      };
     });
-  }, [progress.chapterCheckpoints, progress.storyCampaign, updateProgress]);
+  }, [updateProgress]);
+  saveChapterCheckpointRef.current = saveChapterCheckpoint;
 
   const startFromChapter = useCallback((checkpoint) => {
     if (!checkpoint?.storyCampaignSnapshot) return false;

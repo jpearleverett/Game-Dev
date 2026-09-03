@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { getPuzzleMode, getPuzzleRouteName } from '../utils/puzzleMode';
 import { Share } from 'react-native';
+import { purchaseService } from '../services/PurchaseService';
 
 // The Under-Map (CONNECT beat) gates advancing to the next scene, so it must be
 // entered with puzzle params. Other puzzle routes take no params.
@@ -34,6 +35,7 @@ export function useNavigationActions(navigation, game, audio) {
     ensureDailyStoryCase,
     selectStoryDecision,
     startFromChapter,
+    purchaseFullUnlock,
   } = game;
 
   const isStoryMode = game.mode === 'story';
@@ -214,12 +216,29 @@ export function useNavigationActions(navigation, game, audio) {
     });
   }, [clearProgress, navigation]);
 
-  const handlePurchasePremium = useCallback(() => {
-    setPremiumUnlocked(true);
-  }, [setPremiumUnlocked]);
+  // These used to be `setPremiumUnlocked(true)` with no purchase involved, so
+  // "Purchase Archive Key ($6.99)" and "Restore Purchase" both granted the
+  // premium unlock for free and persisted it: every paid gate opened without a
+  // payment sheet ever appearing.
+  const handlePurchasePremium = useCallback(async () => {
+    try {
+      return await purchaseFullUnlock?.();
+    } catch (e) {
+      console.warn('[Purchase] Full unlock failed:', e?.message || e);
+      return false;
+    }
+  }, [purchaseFullUnlock]);
 
-  const handleRestorePremium = useCallback(() => {
-    setPremiumUnlocked(true);
+  const handleRestorePremium = useCallback(async () => {
+    try {
+      const customerInfo = await purchaseService.restorePurchases();
+      const active = !!customerInfo?.entitlements?.active?.['com.deadletters.full_unlock']?.isActive;
+      if (active) setPremiumUnlocked(true);
+      return active;
+    } catch (e) {
+      console.warn('[Purchase] Restore failed:', e?.message || e);
+      return false;
+    }
   }, [setPremiumUnlocked]);
 
   const handleReplayTutorial = useCallback(() => {

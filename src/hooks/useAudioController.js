@@ -121,7 +121,9 @@ export function useAudioController(activeScreen, settings) {
       const musicVolume = settings.musicVolume ?? 0.6;
       const ambienceVolume = settings.ambienceVolume ?? 0.4;
 
-      const DESK_SCREENS = ['desk', 'prologue', 'menu', 'archive', 'stats', 'settings'];
+      // 'story' was missing, so the Story hub (and everything mapped to it) sat
+      // in silence rather than under the desk bed.
+      const DESK_SCREENS = ['desk', 'prologue', 'menu', 'archive', 'stats', 'settings', 'story'];
       const isDeskScreen = DESK_SCREENS.includes(activeScreen);
       const isBoardScreen = activeScreen === 'board';
       const isNarrativeScreen = activeScreen === 'caseFile';

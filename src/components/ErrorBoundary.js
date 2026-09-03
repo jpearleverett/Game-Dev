@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import PrimaryButton from './PrimaryButton';
 import * as Updates from 'expo-updates';
 import { recordError } from '../services/ErrorReporting';
+import { clearStoredProgress } from '../storage/progressStorage';
+import { clearGeneratedStory } from '../storage/generatedStoryStorage';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -32,6 +34,37 @@ export class ErrorBoundary extends React.Component {
     }
   };
 
+  // A reload was the ONLY recovery, so any crash originating in the persisted
+  // save became an unbreakable loop: reload, rehydrate the same bad state,
+  // crash, with no way out but deleting the app. This is the escape hatch.
+  handleResetCaseFiles = () => {
+    Alert.alert(
+      'Reset Case Files',
+      'This erases your saved progress and every generated chapter, then restarts. '
+      + 'Use it only if reloading keeps landing here.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Erase and restart',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearStoredProgress();
+            } catch (e) {
+              console.warn('[ErrorBoundary] Failed to clear progress:', e?.message || e);
+            }
+            try {
+              await clearGeneratedStory();
+            } catch (e) {
+              console.warn('[ErrorBoundary] Failed to clear generated story:', e?.message || e);
+            }
+            this.handleRestart();
+          },
+        },
+      ],
+    );
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -50,6 +83,9 @@ export class ErrorBoundary extends React.Component {
               label="RELOAD SYSTEM" 
               onPress={this.handleRestart} 
             />
+            <Pressable onPress={this.handleResetCaseFiles} style={styles.resetLink}>
+              <Text style={styles.resetLinkText}>Still landing here? Reset case files</Text>
+            </Pressable>
           </View>
         </SafeAreaView>
       );
@@ -60,6 +96,8 @@ export class ErrorBoundary extends React.Component {
 }
 
 const styles = StyleSheet.create({
+  resetLink: { marginTop: 18, paddingVertical: 8, paddingHorizontal: 12 },
+  resetLinkText: { color: COLORS.textSecondary, fontSize: 13, textDecorationLine: 'underline', textAlign: 'center' },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

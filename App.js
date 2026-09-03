@@ -19,19 +19,32 @@ import { installGlobalErrorReporting } from './src/services/ErrorReporting';
 // (production failures must be diagnosable, not vanish into console.error).
 installGlobalErrorReporting();
 
+// Every route in AppNavigator maps to an audio bed. Anything missing here falls
+// back to 'desk', which is why the Under-Map, the Theory climax and the Story hub
+// used to play menu music; LogicPuzzle is a route that no longer exists.
 const ROUTE_TO_AUDIO_KEY = {
   Splash: 'splash',
   Prologue: 'prologue',
   Desk: 'desk',
-  Board: 'board',
-  LogicPuzzle: 'board',
-  Solved: 'solved',
-  CaseFile: 'caseFile',
-  Archive: 'archive',
-  Stats: 'stats',
   Menu: 'menu',
   Settings: 'settings',
+  Archive: 'archive',
+  Stats: 'stats',
   Story: 'story',
+  ChapterSelect: 'story',
+  Achievements: 'stats',
+  Codex: 'archive',
+  EndingGallery: 'archive',
+  // Reading and the beats that follow it
+  CaseFile: 'caseFile',
+  UnderMap: 'caseFile',
+  Theory: 'caseFile',
+  Sealed: 'solved',
+  Solved: 'solved',
+  Ending: 'solved',
+  // Daily word puzzle
+  Board: 'board',
+  Tutorial: 'board',
 };
 
 // Wrapper component to provide contexts that need progress

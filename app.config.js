@@ -65,6 +65,12 @@ export default {
       posthogApiKey: process.env.POSTHOG_API_KEY || null,
       posthogHost: process.env.POSTHOG_HOST || null,
 
+      // ========== IN-APP PURCHASES (optional) ==========
+      // RevenueCat public SDK keys. Without them PurchaseService falls back to
+      // its mock backend and warns; it never configures with a placeholder.
+      revenueCatAppleKey: process.env.REVENUECAT_APPLE_KEY || null,
+      revenueCatGoogleKey: process.env.REVENUECAT_GOOGLE_KEY || null,
+
       // ========== DEVELOPMENT ONLY ==========
       // Direct API key - only use for local development
       // This gets embedded in the app and is NOT secure for distribution
