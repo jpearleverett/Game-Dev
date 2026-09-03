@@ -204,7 +204,10 @@ export default function StoryCampaignScreen({
           </Text>
           {historyEntries.length ? (
             historyEntries.map((entry, index) => {
-              const chapter = entry.nextChapter || parseInt(entry.caseNumber.slice(0, 3), 10);
+              // A history row written before nextChapter existed, or one whose
+              // caseNumber was lost, threw inside the list and blanked the screen.
+              if (!entry?.nextChapter && !entry?.caseNumber) return null;
+              const chapter = entry.nextChapter || parseInt(String(entry.caseNumber || '').slice(0, 3), 10) || null;
               const timestamp = entry.selectedAt
                 ? new Date(entry.selectedAt).toLocaleString()
                 : 'Recently';

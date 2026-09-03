@@ -66,7 +66,8 @@ export default function DeskScreen({
     if (!nextStoryUnlockAt) { setCountdown(null); return undefined; }
     const update = () => setCountdown(formatCountdown(nextStoryUnlockAt));
     update();
-    const timer = setInterval(update, 5000);
+    // The countdown renders seconds; at 5s it visibly skipped four of them.
+    const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [nextStoryUnlockAt]);
 
@@ -169,7 +170,7 @@ export default function DeskScreen({
           <View style={styles.windowTint} pointerEvents="none" />
           <Text style={styles.windowIdLeft} pointerEvents="none">ASHPORT · 2:14 AM</Text>
           <View style={styles.windowNeon} pointerEvents="none">
-            <NeonSign logoSource={DEAD_LETTERS_LOGO} style={styles.neon} />
+            <NeonSign logoSource={DEAD_LETTERS_LOGO} style={styles.neon} reducedMotion={reducedMotion} />
           </View>
           <Pressable onPress={tap(onOpenSettings)} hitSlop={10} style={styles.settingsBtn}>
             <MaterialCommunityIcons name="cog-outline" size={20} color={COLORS.accentCyan} />

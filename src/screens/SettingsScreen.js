@@ -95,6 +95,19 @@ export default function SettingsScreen({
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reminders</Text>
+            <Text style={styles.metaText}>
+              A once-a-day nudge when a thread drifts back up, and one when the city
+              answers a reading you sealed. Off until you ask for them.
+            </Text>
+            <SettingToggle
+              label="Daily Reminders"
+              value={settings.notificationsEnabled}
+              onToggle={handleToggle('notificationsEnabled')}
+            />
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Premium</Text>
             <Text style={styles.metaText}>
               {premiumUnlocked

@@ -86,7 +86,10 @@ export function installGlobalErrorReporting() {
     // eslint-disable-next-line global-require
     const tracking = require('promise/setimmediate/rejection-tracking');
     tracking.enable({
-      allRejections: true,
+      // RN's own default. With this true every rejection was recorded the moment
+      // it was created, including ones handled a tick later, so the ring buffer
+      // filled with non-errors and pushed real crashes out of it.
+      allRejections: false,
       onUnhandled: (_id, error) => { recordError(error, { source: 'unhandledrejection' }); },
       onHandled: () => {},
     });

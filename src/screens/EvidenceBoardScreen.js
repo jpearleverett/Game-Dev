@@ -424,7 +424,9 @@ export default function EvidenceBoardScreen({
   const handTranslateX = useState(() => new Animated.Value(0))[0];
 
   useEffect(() => {
-    if (activeCase?.caseNumber === 1 && !solved && !failed) {
+    // Case numbers are zero-padded strings ('001A'), so this compared a string
+    // against 1 and the pointing hand never appeared for anybody.
+    if (activeCase?.caseNumber === '001A' && !solved && !failed) {
        // Delay start
        const timer = setTimeout(() => {
          Animated.sequence([

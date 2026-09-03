@@ -130,6 +130,13 @@ function AppContent({ fontsReady, audioController, onStateChange }) {
     navigationRef.current?.navigate('Story');
   }, [cancelGeneration, exitStoryCampaign]);
 
+  // Above the early return: a hook after it makes this component's hook count
+  // depend on whether the fonts have loaded, so the render that follows font
+  // load runs a different number of hooks than the one before it.
+  const handleCloseVerboseOverlay = useCallback(() => {
+    updateSettings?.({ verboseMode: false });
+  }, [updateSettings]);
+
   if (!fontsReady) {
     return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
   }
@@ -138,10 +145,6 @@ function AppContent({ fontsReady, audioController, onStateChange }) {
     storyGeneration?.awaitingGeneration ||
     storyGeneration?.status === 'error' ||
     storyGeneration?.status === 'not_configured';
-
-  const handleCloseVerboseOverlay = useCallback(() => {
-    updateSettings?.({ verboseMode: false });
-  }, [updateSettings]);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>

@@ -147,7 +147,10 @@ export default function CodexScreen({ navigation }) {
         {/* The Other Reader — the road not taken, given a face */}
         {fl ? (
           <View style={styles.foilCard}>
-            <Text style={styles.foilKicker}>◆ THE OTHER READER</Text>
+            {/* The name is pinned once the story gives them one; the ending prints
+                it and this card did not, so the rival stayed anonymous in the one
+                place the player goes to look them up. */}
+            <Text style={styles.foilKicker}>◆ THE OTHER READER{fl.name ? ` · ${String(fl.name).toUpperCase()}` : ''}</Text>
             <Text style={styles.foilBelief}>“{fl.belief}”</Text>
             <Text style={styles.foilLine}>{flLine}</Text>
           </View>

@@ -29,7 +29,7 @@ import EndingGalleryScreen from '../screens/EndingGalleryScreen';
 import ChapterSelectScreen from '../screens/ChapterSelectScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
 import { ACHIEVEMENT_COUNT } from '../data/achievementsData';
-import { selectEnding } from '../data/endings';
+import { selectEnding, selectEndingById } from '../data/endings';
 
 const Stack = createNativeStackNavigator();
 
@@ -151,8 +151,13 @@ export default function AppNavigator({ fontsReady, audio }) {
               onBribe={purchaseBribe}
               onDrawDailyStir={game.drawUnderMapDailyStir}
               onViewEnding={() => {
-                // POST-GAME: recompute the reached ending from the frozen map.
-                const ending = selectEnding(progress.storyCampaign?.underMap);
+                // POST-GAME: the ending the player actually reached, by its
+                // recorded id. Recomputing it from the map alone showed a
+                // different ending whenever the computation had since changed.
+                const ending = selectEndingById(
+                  progress.storyCampaign?.underMap,
+                  progress.storyCampaign?.endingId || null,
+                );
                 navigation.navigate('Ending', { ending });
               }}
             />

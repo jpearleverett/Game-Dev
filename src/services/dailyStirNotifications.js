@@ -16,8 +16,31 @@ const DEFAULT_HOUR = 9; // 9am local
 const DEFAULT_MINUTE = 0;
 
 const NOTIF_BODY = 'The Under-Map stirred overnight — a thread has surfaced. Trace it.';
+const CHANNEL_ID = 'undermap';
 
 let scheduledThisSession = false;
+let channelReady = false;
+
+/**
+ * Android needs a notification channel before anything it schedules will be
+ * shown at all. Nothing created one, so on Android 8+ every reminder this
+ * service scheduled landed in the default channel or was dropped outright.
+ * Idempotent and defensive, like everything else here.
+ */
+async function ensureChannel() {
+  if (Platform.OS !== 'android' || channelReady) return;
+  try {
+    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+      name: 'The Under-Map',
+      importance: Notifications.AndroidImportance?.HIGH ?? 4,
+      vibrationPattern: [0, 200, 120, 200],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC,
+    });
+    channelReady = true;
+  } catch (_e) {
+    // Channel API unavailable — scheduling still degrades to a no-op below.
+  }
+}
 
 /** Ask for permission once; resolves false on any error / web / denial. */
 async function ensurePermission() {
@@ -46,6 +69,7 @@ export async function scheduleDailyStirReminder({ hour = DEFAULT_HOUR, minute = 
   try {
     const ok = await ensurePermission();
     if (!ok) return false;
+    await ensureChannel();
     // Clear any prior copy of our reminder so we never stack duplicates.
     await cancelDailyStirReminder();
     await Notifications.scheduleNotificationAsync({
@@ -55,6 +79,7 @@ export async function scheduleDailyStirReminder({ hour = DEFAULT_HOUR, minute = 
         body: NOTIF_BODY,
         data: { kind: 'daily-stir' },
       },
+      ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes?.DAILY ?? 'daily',
         hour,
@@ -99,6 +124,7 @@ export async function scheduleUnlockNotification(unlockAtIso, beliefText = null)
     if (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) return false;
     const ok = await ensurePermission();
     if (!ok) return false;
+    await ensureChannel();
     await cancelUnlockNotification();
     const belief = String(beliefText || '').trim();
     await Notifications.scheduleNotificationAsync({
@@ -110,6 +136,7 @@ export async function scheduleUnlockNotification(unlockAtIso, beliefText = null)
           : 'The next chapter is open. Pick up the trail.',
         data: { kind: 'chapter-unlock' },
       },
+      ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes?.DATE ?? 'date',
         date: at,
@@ -146,6 +173,17 @@ export function installNotificationOpenListener(onOpen) {
         onOpen({ kind });
       } catch (_e) { /* never crash on a tap */ }
     });
+    // The listener only sees taps that arrive while the app is running. A tap
+    // that COLD-STARTS the app is delivered before anything subscribes, so the
+    // one notification the retention hooks exist to be opened from was the one
+    // open never recorded. Ask for it explicitly, once.
+    Notifications.getLastNotificationResponseAsync?.()
+      .then((response) => {
+        if (!response) return;
+        const kind = response?.notification?.request?.content?.data?.kind || 'unknown';
+        onOpen({ kind, coldStart: true });
+      })
+      .catch(() => {});
     return () => { try { sub.remove(); } catch (_e) { /* noop */ } };
   } catch (_e) {
     return () => {};

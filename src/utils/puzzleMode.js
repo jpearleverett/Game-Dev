@@ -26,15 +26,14 @@ export function getPuzzleMode(caseNumber, isStoryMode) {
 export function getPuzzleRouteName(mode) {
   if (mode === PUZZLE_MODE.CONNECT) return 'UnderMap';
   if (mode === PUZZLE_MODE.THEORY) return 'Theory';
-  if (mode === PUZZLE_MODE.DEDUCTION) return 'Deduction';
-  if (mode === PUZZLE_MODE.LOGIC) return 'LogicPuzzle';
+  // 'Deduction' and 'LogicPuzzle' were deleted with the whodunit refactor.
+  // Returning them navigated to a route the navigator does not define, which
+  // throws instead of falling through to the daily board.
   return 'Board';
 }
 
 export function getPuzzleActionLabel(mode) {
   if (mode === PUZZLE_MODE.CONNECT) return 'Descend into the Under-Map';
   if (mode === PUZZLE_MODE.THEORY) return 'Form your theory';
-  if (mode === PUZZLE_MODE.DEDUCTION) return 'Work the Alibi Board';
-  if (mode === PUZZLE_MODE.LOGIC) return 'Solve Logic Grid';
   return 'Solve Evidence Board';
 }

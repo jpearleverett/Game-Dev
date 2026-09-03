@@ -11,7 +11,7 @@ import Reveal from '../components/motion/Reveal';
 import ShareCard from '../components/ShareCard';
 import { useGame } from '../context/GameContext';
 import { normalizeUnderMap } from '../data/underMap';
-import { selectEnding, closingReport } from '../data/endings';
+import { selectEndingById, closingReport } from '../data/endings';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
@@ -28,8 +28,14 @@ export default function EndingScreen({ navigation, route }) {
 
   const ending = useMemo(() => {
     if (route?.params?.ending) return route.params.ending;
-    return selectEnding(normalizeUnderMap(progress?.storyCampaign?.underMap));
-  }, [route?.params?.ending, progress?.storyCampaign?.underMap]);
+    // Prefer the ending the run RECORDED. Recomputing from the map alone shows a
+    // different ending than the player finished on whenever the computation has
+    // changed since.
+    return selectEndingById(
+      normalizeUnderMap(progress?.storyCampaign?.underMap),
+      progress?.storyCampaign?.endingId || null,
+    );
+  }, [route?.params?.ending, progress?.storyCampaign?.underMap, progress?.storyCampaign?.endingId]);
 
   const cl = ending?.clarity || { resolved: 0, correct: 0, ratio: 0 };
   const map = useMemo(() => normalizeUnderMap(progress?.storyCampaign?.underMap), [progress?.storyCampaign?.underMap]);

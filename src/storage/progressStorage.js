@@ -161,6 +161,10 @@ export const createBlankProgress = () => ({
     musicVolume: 0.6,
     ambienceVolume: 0.4,
     reducedMotion: false,
+    // Opt-IN. The retention hooks used to fire a system permission prompt on the
+    // first hydrated launch, before the player had seen the game; a denial there
+    // is permanent on iOS.
+    notificationsEnabled: false,
     colorBlindMode: false,
     highContrast: false,
     hintsEnabled: false,

@@ -86,3 +86,31 @@ describe('the reading the player walks out on', () => {
     expect(pick(run([true, true, false], false)).flavorLine).toContain('against everything you had surfaced');
   });
 });
+
+describe('revisiting the ending shows the one that was reached', () => {
+  const { selectEndingById } = require('../endings');
+
+  const run = (correct) => ({
+    theories: correct.map((c, i) => ({ chapter: 12 - i, interpretation: `belief ${i}`, correct: c })),
+  });
+
+  test('the recorded id wins over a recomputation that has since changed', () => {
+    // "Revisit the ending" recomputed from the frozen map every time, which is
+    // only correct while the computation never changes. It has changed twice.
+    const map = run([false, false, false]); // computes to 'deceived'
+    const revisited = selectEndingById(map, 'ending_clear');
+    expect(revisited.variant).toBe('clear');
+    expect(revisited.title).toBe('The Map Made Whole');
+    // The figures still come from the run itself.
+    expect(revisited.clarity).toEqual({ resolved: 3, correct: 0, ratio: 0 });
+  });
+
+  test('with no recorded id it falls back to the computation', () => {
+    expect(selectEndingById(run([true, true, true]), null).variant).toBe('clear');
+    expect(selectEndingById(run([false, false, false]), null).variant).toBe('deceived');
+  });
+
+  test('an unknown id does not blank the ending', () => {
+    expect(selectEndingById(run([true, true, true]), 'ending_nonsense').variant).toBe('clear');
+  });
+});

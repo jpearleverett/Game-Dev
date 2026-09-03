@@ -40,6 +40,18 @@ export function usePersistence() {
         
           // Merge settings
           stored.settings = { ...blank.settings, ...(stored.settings || {}) };
+
+          // The counters the Stats screen and submitGuess read. Only
+          // unlockedCaseIds was ever repaired, so a save written before these
+          // existed (or corrupted to a non-array) threw on the first .length or
+          // .includes and took hydration down with it.
+          if (!Array.isArray(stored.solvedCaseIds)) stored.solvedCaseIds = [];
+          if (!Array.isArray(stored.failedCaseIds)) stored.failedCaseIds = [];
+          if (!Array.isArray(stored.unlockedCaseIds)) stored.unlockedCaseIds = [...blank.unlockedCaseIds];
+          if (!stored.attemptsDistribution || typeof stored.attemptsDistribution !== 'object') {
+            stored.attemptsDistribution = { ...blank.attemptsDistribution };
+          }
+          if (!stored.seenLessons || typeof stored.seenLessons !== 'object') stored.seenLessons = {};
         
           // Type checks
           if (typeof stored.seenPrologue !== 'boolean') stored.seenPrologue = false;

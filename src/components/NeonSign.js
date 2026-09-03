@@ -7,7 +7,7 @@ import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
-export default function NeonSign({ title = 'Dead Letters', style, logoSource }) {
+export default function NeonSign({ title = 'Dead Letters', style, logoSource, reducedMotion = false }) {
   const { moderateScale, scaleSpacing, scaleRadius, sizeClass } = useResponsiveLayout();
   const SIGN_SCALE = 0.84;
   const LOGO_SCALE = 1.0;
@@ -36,6 +36,10 @@ export default function NeonSign({ title = 'Dead Letters', style, logoSource }) 
     [intensity]
   );
   useEffect(() => {
+    // The sign flickers on a random schedule forever. Every other animation in
+    // the app honours the reduced-motion setting; this one had no prop for it,
+    // so the Desk kept strobing for a player who had asked it to stop.
+    if (reducedMotion) { intensity.setValue(1); return undefined; }
     const timers = new Set();
     let isUnmounted = false;
 
@@ -92,7 +96,7 @@ export default function NeonSign({ title = 'Dead Letters', style, logoSource }) 
       timers.clear();
       intensity.stopAnimation();
     };
-  }, [intensity]);
+  }, [intensity, reducedMotion]);
 
   const basePaddingVertical = scaleSpacing(
     sizeClass === 'xsmall'

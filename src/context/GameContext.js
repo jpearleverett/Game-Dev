@@ -41,6 +41,7 @@ import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 import { purchaseService } from '../services/PurchaseService';
 import {
   scheduleDailyStirReminder,
+  cancelDailyStirReminder,
   scheduleUnlockNotification,
   cancelUnlockNotification,
   installNotificationOpenListener,
@@ -76,10 +77,17 @@ export function GameProvider({
   }, []);
 
   // RETENTION: local notifications (fully defensive no-ops on web / denial).
+  // Gated on an explicit opt-in. These used to fire a system permission prompt
+  // on the first launch that finished hydrating, before the player had seen the
+  // game, with no way to turn them off afterwards: a denial there is permanent
+  // on iOS and takes both hooks down with it.
+  const notificationsEnabled = !!progress?.settings?.notificationsEnabled;
   // 1) Daily stir reminder — the once-a-day "the map stirred" habit hook.
   useEffect(() => {
-    if (hydrationComplete) scheduleDailyStirReminder();
-  }, [hydrationComplete]);
+    if (!hydrationComplete) return;
+    if (notificationsEnabled) scheduleDailyStirReminder();
+    else cancelDailyStirReminder();
+  }, [hydrationComplete, notificationsEnabled]);
   // 2) The unlock VERDICT hook: coming back to a verdict on your own sealed
   // reading is a far stronger re-entry than "next chapter available". Scheduled
   // at nextStoryUnlockAt; cancelled if the lock is consumed early (trail/bribe)
@@ -88,9 +96,9 @@ export function GameProvider({
   const latestSealedBelief = progress?.storyCampaign?.underMap?.theories?.[0]?.interpretation || null;
   useEffect(() => {
     if (!hydrationComplete) return;
-    if (nextStoryUnlockAtIso) scheduleUnlockNotification(nextStoryUnlockAtIso, latestSealedBelief);
+    if (notificationsEnabled && nextStoryUnlockAtIso) scheduleUnlockNotification(nextStoryUnlockAtIso, latestSealedBelief);
     else cancelUnlockNotification();
-  }, [hydrationComplete, nextStoryUnlockAtIso, latestSealedBelief]);
+  }, [hydrationComplete, notificationsEnabled, nextStoryUnlockAtIso, latestSealedBelief]);
   // 3) Measure whether the hooks WORK: app opens that came from a notification.
   useEffect(() => installNotificationOpenListener(({ kind }) => {
     analytics.logEvent('notification_open', { kind });
@@ -247,16 +255,20 @@ export function GameProvider({
         // NEW GAME+: restarting after a COMPLETED run carries The Other Reader
         // over (named, presence 1) — the city remembers being read. A restart
         // mid-campaign stays a clean slate.
+        // An updater must be pure: React may call it more than once (and does
+        // under StrictMode), so a logEvent inside it double-counted the run.
+        let ngPlusRun = null;
         updateProgress((prev) => {
           const old = normalizeStoryCampaignShape(prev.storyCampaign);
           const fresh = normalizeStoryCampaignShape(null);
           if (old.completed) {
             fresh.underMap = umSeedNewGamePlus(old.underMap);
             fresh.ngPlus = (old.ngPlus || 0) + 1;
-            analytics.logEvent('ng_plus_start', { run: fresh.ngPlus });
+            ngPlusRun = fresh.ngPlus;
           }
           return { storyCampaign: fresh };
         });
+        if (ngPlusRun != null) analytics.logEvent('ng_plus_start', { run: ngPlusRun });
         return true;
     }
     return activateStoryCase({ mode: 'story' });
@@ -789,12 +801,14 @@ export function GameProvider({
   // Screens check progress.seenLessons[key] before surfacing a card.
   const markLessonSeen = useCallback((key) => {
     if (!key) return;
+    let shown = false;
     updateProgress((prev) => {
       const seen = prev.seenLessons || {};
       if (seen[key]) return null;
-      analytics.logEvent('field_note_shown', { key });
+      shown = true;
       return { seenLessons: { ...seen, [key]: new Date().toISOString() } };
     });
+    if (shown) analytics.logEvent('field_note_shown', { key });
   }, [updateProgress]);
 
   // FOIL INCURSION: at presence >= 2, The Other Reader claims one hidden thread
@@ -934,16 +948,17 @@ export function GameProvider({
   // Functional + idempotent (clobber-safe, per the campaign-advance invariant).
   const markCampaignComplete = useCallback(({ caseNumber, endingId = null } = {}) => {
     const nowIso = new Date().toISOString();
+    let completionEvent = null;
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       if (current.completed) return null;
       const cl = umClarity(current.underMap);
-      analytics.logEvent('campaign_complete', {
+      completionEvent = {
         endingId: endingId || null,
         clarityRatio: cl.ratio,
         resolvedBeliefs: cl.resolved,
         ngPlus: current.ngPlus || 0,
-      });
+      };
       return {
         storyCampaign: {
           ...current,
@@ -963,6 +978,7 @@ export function GameProvider({
         nextUnlockAt: null,
       };
     });
+    if (completionEvent) analytics.logEvent('campaign_complete', completionEvent);
   }, [updateProgress]);
 
   // ========== ENDINGS & ACHIEVEMENTS SYSTEM ==========

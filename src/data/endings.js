@@ -115,6 +115,26 @@ export function selectEnding(map) {
 }
 
 /**
+ * The ending a finished campaign actually REACHED, by its recorded id.
+ *
+ * "Revisit the ending" recomputed it from the frozen map every time, which is
+ * only correct as long as the computation never changes. It has changed twice
+ * (blurred readings no longer count as truths; the final belief now carries
+ * weight), so a player could be shown a different ending than the one they
+ * finished on. The recorded id is the record; the map still supplies the
+ * flavour, the foil line and the clarity figures.
+ */
+export function selectEndingById(map, endingId) {
+  const base = endingId
+    ? Object.values(ENDINGS).find((e) => e.id === endingId)
+    : null;
+  const computed = selectEnding(map);
+  if (!base || base.variant === computed.variant) return computed;
+  return { ...computed, ...base, clarity: computed.clarity };
+}
+
+
+/**
  * The CLOSING REPORT — the case file's last page, composed deterministically
  * from the player's actual run (their beliefs and verdicts, what recurred, who
  * read against them). This is the personal artifact of the campaign: every line
