@@ -61,6 +61,16 @@ function _buildExtendedStyleExamplesForCache() {
 // caches must miss rather than be handed to the new model (which rejects them).
 const MODEL_CACHE_TAG = GEMINI_MODEL.replace(/[^a-zA-Z0-9]/g, '');
 
+// The chapter-start cache key prefix, in one place. Callers ask whether a cache
+// key is a chapter-start cache for a given chapter (to know the story history is
+// already cached and must not be repeated in the dynamic prompt); building that
+// prefix by hand at the call site is how it silently drifted once already.
+export const chapterStartCacheKeyPrefix = (chapter) =>
+  `story_chStart_${MODEL_CACHE_TAG}_c${chapter}_`;
+
+export const isChapterStartCacheKey = (cacheKey, chapter) =>
+  typeof cacheKey === 'string' && cacheKey.startsWith(chapterStartCacheKeyPrefix(chapter));
+
 const sanitizeCacheKeyPart = (value, fallback = 'default') => {
   const safe = String(value || '')
     .replace(/[^A-Za-z0-9_-]/g, '_')
@@ -234,7 +244,7 @@ async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, c
   }
 
   const safePath = String(effectivePathKey || 'ZZ').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'ZZ';
-  const cacheKey = `story_chStart_${MODEL_CACHE_TAG}_c${chapter}_${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
+  const cacheKey = `${chapterStartCacheKeyPrefix(chapter)}${safePath}_${manyShotSignature}_sv${this.staticCacheVersion}_cv${this.chapterStartCacheVersion}_${priorChoicesHash}`;
 
   const existing = await llmService.getCache(cacheKey);
   if (existing) {
@@ -650,16 +660,14 @@ function _buildDynamicPrompt(
   // Note: beatType already declared earlier for many-shot examples.
 
   // Anchor reasoning to the context above with a transition phrase.
-  // NOTE: Self-critique checklist was moved to system prompt's <craft_quality_checklist>
+  // NOTE: quality bar lives in the system prompt's <scene_requirements>
   // to avoid duplication. The model's native thinking handles quality validation internally.
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, continuity_anchors, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
+Based on all the preceding context blocks, write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
-Before writing, plan internally (do not output the plan):
-1. What narrative threads from ACTIVE_THREADS must be addressed?
-2. What is the emotional anchor for this subchapter?
-3. How does this advance the chapter beat (${chapterBeatLabel})?
+It must address the critical threads in <active_threads>, land the emotional anchor for this
+subchapter, and advance the chapter beat (${chapterBeatLabel}).
 
 ${taskSpec}
 </task>`);
@@ -773,16 +781,14 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
 
   // Part 10: Current Task Specification (LAST for recency effect)
   // Gemini 3 best practice: Anchor reasoning to context with transition phrase
-  // NOTE: Self-critique checklist is in system prompt's <craft_quality_checklist>
+  // NOTE: quality bar lives in the system prompt's <scene_requirements>
   const taskSpec = this._buildTaskSection(context, chapter, subchapter, isDecisionPoint);
   parts.push(`
 <task>
-Based on all the context provided above (story_bible, character_reference, character_knowledge, voice_dna, many_shot_examples, story_context, active_threads, scene_state, engagement_guidance), write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
+Based on all the preceding context blocks, write subchapter ${chapter}.${subchapter} (${beatType}; chapter beat: ${chapterBeatLabel}).
 
-Before writing, plan internally (do not output the plan):
-1. What narrative threads from ACTIVE_THREADS must be addressed?
-2. What is the emotional anchor for this subchapter?
-3. How does this advance the chapter beat (${chapterBeatLabel})?
+It must address the critical threads in <active_threads>, land the emotional anchor for this
+subchapter, and advance the chapter beat (${chapterBeatLabel}).
 
 ${taskSpec}
 </task>`);
@@ -1322,7 +1328,15 @@ function _buildTaskSection(context, chapter, subchapter, isDecisionPoint) {
   );
   const segmentMinWords = 380; // target floor shown in-prompt (hard validation floor is 300/segment)
   const segmentMaxWords = 420;
-  const totalSegments = 13; // opening + 3 firstChoice + 9 endings
+  // How many full-prose segments THIS call is responsible for. Under lazy
+  // branching (the default) the model writes the opening and the three
+  // first-choice responses; the nine ending bodies are generated later, on
+  // demand, so quoting the 13-segment budget here would ask for roughly three
+  // times the prose the schema accepts.
+  const lazyBranching = typeof context.lazyBranchGeneration === 'boolean'
+    ? context.lazyBranchGeneration
+    : (GENERATION_CONFIG?.qualitySettings?.lazyBranchGeneration !== false);
+  const totalSegments = lazyBranching ? 4 : 13; // opening + 3 firstChoice [+ 9 endings]
 
   let task = `## CURRENT TASK
 
@@ -1511,18 +1525,12 @@ ${context.lastDecision
 ${pacing.requirements.map(r => `- ${r}`).join('\n')}
 
 ### WRITING REQUIREMENTS
-1. **PLAN FIRST:** Internally outline 3-5 major beats before writing. Do NOT output the outline.
-2. **BRANCHING LENGTH REQUIREMENTS:**
-   - Each narrative segment (opening + each response) must be ${segmentMinWords}-${segmentMaxWords} words.
-   - Each complete path (opening + firstChoice response + ending response) must be >= ${MIN_WORDS_PER_SUBCHAPTER} words (target ~${targetWords}).
-   - Total output across all segments should land around ${totalMinWords}-${totalMaxWords} words.
-3. Continue DIRECTLY from where the last subchapter ended
-4. Maintain third-person limited voice throughout (no first-person narration)
-5. Reference specific events from previous chapters (show continuity)
-6. Include: atmospheric description, internal monologue, dialogue
-7. Build tension appropriate to ${pacing.phase} phase
-8. **ENSURE the protagonist's behavior matches the path personality above**
-9. **FOLLOW the story arc and chapter outline guidance above**`;
+1. This call produces ${totalSegments} prose segments${lazyBranching ? ' (the opening and the three first-choice responses; the second-choice options need labels only)' : ' (the opening, three first-choice responses, and nine endings)'}, so the whole response runs about ${totalMinWords}-${totalMaxWords} words. Any single path a player reads through this subchapter (opening + one first-choice response + one ending) must clear ${MIN_WORDS_PER_SUBCHAPTER} words, target ~${targetWords}.
+2. Reference specific events from previous chapters, so continuity shows on the page
+3. Carry atmospheric description, internal monologue, and dialogue in every segment
+4. Build tension appropriate to the ${pacing.phase} phase
+5. Jack's behavior matches the path personality above
+6. Follow the story arc and chapter outline guidance above`;
 
   // Add emphasis on recent decision if applicable (beginning of new chapter)
   if (subchapter === 1 && context.playerChoices.length > 0) {

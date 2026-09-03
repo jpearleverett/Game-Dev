@@ -168,7 +168,7 @@ export const STORY_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
     // NOTE: beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration, storyDay
-    // were moved to <internal_planning> in system prompt - Gemini 3's native thinking
+    // were moved to <scene_requirements> in the system prompt - Gemini 3's native thinking
     // handles these internally without outputting them, reducing token usage by ~20%.
     title: {
       type: 'string',
@@ -595,7 +595,7 @@ export const DECISION_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
     // NOTE: beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration, storyDay
-    // were moved to <internal_planning> in system prompt - Gemini 3's native thinking
+    // were moved to <scene_requirements> in the system prompt - Gemini 3's native thinking
     // handles these internally without outputting them, reducing token usage by ~20%.
     title: {
       type: 'string',

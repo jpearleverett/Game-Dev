@@ -13,6 +13,7 @@ import {
   SECOND_CHOICE_RESPONSES_SCHEMA,
 } from './schemas';
 import { isLayer1Partial, mergeSecondChoiceResponses } from './lazyBranching';
+import { isChapterStartCacheKey } from './promptAssembly';
 import {
   DECISION_SUBCHAPTER,
   MAX_RETRIES,
@@ -378,6 +379,13 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         : (typeof _baseQ.lazyBranchGeneration === 'boolean' ? _baseQ.lazyBranchGeneration : false);
       const useLazyBranching = lazyBranchGeneration;
 
+      // The task section states how much prose this call is actually asking for.
+      // Under lazy branching the model writes the opening plus the three
+      // first-choice responses and only LABELS for the second choices, so a
+      // prompt that quotes the full 13-segment budget contradicts the schema it
+      // is handed. Stamp the effective mode onto the context the prompt reads.
+      context.lazyBranchGeneration = useLazyBranching;
+
       const schema = isDecisionPoint
         ? (useLazyBranching ? DECISION_CONTENT_LAYER1_SCHEMA : DECISION_CONTENT_SCHEMA)
         : (useLazyBranching ? STORY_CONTENT_LAYER1_SCHEMA : STORY_CONTENT_SCHEMA);
@@ -406,7 +414,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
         // Build only dynamic prompt (delta context + current state + task).
         // If cacheKey is a chapter-start cache, omit story history up to previous chapter.
-        const usingChapterStartCache = typeof cacheKey === 'string' && cacheKey.startsWith(`story_chStart_c${chapter}_`);
+        const usingChapterStartCache = isChapterStartCacheKey(cacheKey, chapter);
         // Build dynamic prompt - many-shot examples are in the cache, not here
         const dynamicPrompt = this._buildDynamicPrompt(
           context,
@@ -1104,7 +1112,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       // Build the story entry
       // NOTE: Schema was slimmed down - beatSheet, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration,
       // storyDay, chapterSummary, consistencyFacts, previousThreadsAddressed were removed from output.
-      // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking handles internally).
+      // These are now handled via <scene_requirements> in the system prompt (Gemini 3 thinking handles internally).
       const shouldGenerateBoard = isDecisionPoint;
       const storyEntry = {
         chapter,

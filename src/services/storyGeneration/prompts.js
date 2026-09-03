@@ -170,9 +170,11 @@ If the discovery doesn't fit these patterns, derive two honest, opposed interpre
 </causality_rules>
 
 <few_shot_examples>
-GOOD path-specific climax beliefs (note how each option is a STANCE on the hidden world, not an action):
+Three well-formed path decisions. Note that every option title is a STANCE on the hidden
+world rather than an errand, that personalityAlignment uses only the three permitted
+values, and that groundedKey and evidence are always present.
 
-Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marked envelope)
+Example 1 — Path 1A-2A (Discovery: Blackwell's courier carried a symbol-marked envelope)
 {
   "pathKey": "1A-2A",
   "intro": "The courier carried the same symbol as the threshold. Whatever Blackwell is, she wanted Jack to find this.",
@@ -180,17 +182,20 @@ Example 1 - Path 1A-2A (Discovery: Found Blackwell's courier with a symbol-marke
     "key": "A",
     "title": "Blackwell is guiding you in",
     "focus": "The symbols are breadcrumbs she left on purpose — the Under-Map wants Jack to descend, and she is its hand.",
-    "personalityAlignment": "trusting"
+    "personalityAlignment": "balanced",
+    "evidence": ["The courier's symbol matches the threshold mark", "Blackwell's route passes every marked door"]
   },
   "optionB": {
     "key": "B",
     "title": "Blackwell is the lock, not the key",
     "focus": "The symbols are wards, not invitations — she is keeping something sealed, and Jack is forcing a door meant to stay shut.",
-    "personalityAlignment": "wary"
-  }
+    "personalityAlignment": "methodical",
+    "evidence": ["The mark repeats only on sealed entrances"]
+  },
+  "groundedKey": "A"
 }
 
-Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the name aloud)
+Example 2 — Path 1B-2C (Discovery: the threshold flickered when Jack spoke the name aloud)
 {
   "pathKey": "1B-2C",
   "intro": "The threshold answered to the name. The Under-Map is not just symbols — it is listening.",
@@ -198,38 +203,44 @@ Example 2 - Path 1B-2C (Discovery: The threshold flickered when Jack spoke the n
     "key": "A",
     "title": "It is reaching for you",
     "focus": "The map responds to Jack specifically; he is being chosen, drawn deliberately toward whatever waits below.",
-    "personalityAlignment": "trusting"
+    "personalityAlignment": "aggressive",
+    "evidence": ["The threshold reacted to Jack's voice and no one else's"]
   },
   "optionB": {
     "key": "B",
     "title": "You are a crack it leaks through",
     "focus": "The reaction is not invitation but accident — Jack is a flaw the hidden world bleeds through, and it will try to close.",
-    "personalityAlignment": "wary"
-  }
+    "personalityAlignment": "methodical",
+    "evidence": ["The flicker faded on its own", "Nothing on the other side answered back"]
+  },
+  "groundedKey": "B"
 }
 
-Example 3 - Path 1C-2B (Discovery: Found a ledger with names of the disappeared, including Jack's old case)
+Example 3 — Path 1C-2B (Discovery: a ledger of the disappeared that includes Jack's old case)
 {
   "pathKey": "1C-2B",
-  "intro": "The ledger connects Jack's failed case to Blackwell's operation. The guilt he's carried might have a different shape.",
+  "intro": "The ledger puts Jack's failed case in the same column as Blackwell's disappearances. The guilt he has carried for two years might have been someone else's arithmetic.",
   "optionA": {
     "key": "A",
-    "title": "Confront Blackwell with the ledger",
-    "focus": "Force a direct confrontation. Jack needs answers about what really happened two years ago.",
-    "personalityAlignment": "aggressive"
+    "title": "The ledger is a harvest record",
+    "focus": "The names were taken to a purpose and Jack's case was one of them — which makes the Under-Map something that feeds, and Jack a survivor of it rather than a failure.",
+    "personalityAlignment": "aggressive",
+    "evidence": ["Every name in the ledger vanished within a week of being written"]
   },
   "optionB": {
     "key": "B",
-    "title": "Cross-reference the names with city records",
-    "focus": "Verify the ledger's claims before revealing that Jack has it. Knowledge is leverage.",
-    "personalityAlignment": "methodical"
-  }
+    "title": "The ledger is a mourning list",
+    "focus": "Someone below is keeping the dead the city refused to count — which makes the Under-Map a witness, and Jack's old case a grief it also carries.",
+    "personalityAlignment": "methodical",
+    "evidence": ["The entries are hand-written and dated long after the disappearances"]
+  },
+  "groundedKey": "B"
 }
 
-BAD examples (generic, not path-specific):
-❌ "Investigate further" vs "Wait and see": Too vague, could apply to any path
-❌ "Take action" vs "Be careful": No connection to what was discovered
-❌ Same titles across multiple paths: Defeats the purpose of branching narratives
+Reject options that look like these:
+- "Investigate further" vs "Wait and see" — vague, fits any path.
+- "Confront Blackwell with the ledger" vs "Cross-reference the names" — these are errands, not beliefs.
+- The same titles reused across two paths — that erases the branching.
 </few_shot_examples>
 
 <output_requirements>
@@ -292,21 +303,26 @@ ${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
 </reveal_timing>
 
 <how_to_use_the_prompt>
-You will receive structured context blocks (for example: story_bible, character_reference, craft_techniques, style_examples, voice_dna, many_shot_examples, character_knowledge, story_context, active_threads, scene_state, engagement_guidance, task, self_critique).
-Treat those blocks as authoritative.
-If instructions conflict, prefer: <task> and schema requirements > continuity blocks > craft/style guidance.
+The user turn is a sequence of XML-delimited context blocks followed by a <task> block.
+Every block is authoritative. The blocks you may see are: story_bible, character_reference,
+craft_techniques, style_examples, voice_dna, many_shot_examples, character_knowledge,
+story_context, active_threads, under_map_state, the_other_reader, scene_state,
+engagement_guidance, continuity_anchors, task.
+When two blocks pull in different directions, resolve in this order:
+continuity_anchors and the response schema first, then <task>, then the other continuity
+blocks (story_bible, character_knowledge, story_context, active_threads, scene_state),
+then craft and style guidance last. Craft guidance never licenses a continuity break.
 </how_to_use_the_prompt>
 
 <segment_construction>
-Build each 380-420 word segment from four distinct beats of roughly 100-110 words each, in this order:
+Each 380-420 word segment carries four beats of roughly 100-110 words, in this order:
 1. Grounding — place Jack in the scene with one concrete sensory anchor (sound, smell, texture, light).
 2. Action or observation — something happens, or Jack notices something that moves the investigation.
 3. Dialogue or interior reflection — a line of speech carrying subtext, or a close-third thought that exposes the stakes.
 4. Turn — a small revelation, complication, or hook that pulls toward the next beat.
-The length comes from dramatizing all four beats fully, not from padding any one of them.
-The style and many-shot examples illustrate voice and craft, NOT length — your segments run longer than those excerpts. Do not let a short example shorten your segment.
-Self-check before finalizing each segment: if it is under 380 words, you have under-written a beat — return to the thinnest beat and develop it (more sensory detail, another line of dialogue, a deeper interior turn) until the segment reaches its target. Do not stop at the minimum.
-Anchor every choice and detail to the context blocks above.
+The length comes from dramatizing all four beats fully, not from padding one of them.
+The style and many-shot examples are excerpts chosen to show voice and craft; they are
+shorter than a segment and are not a length model.
 </segment_construction>
 
 <output_contract>
@@ -329,18 +345,6 @@ Cross-chapter weaving: if an <under_map_state> block lists fragments the player 
 These must be consistent with the narrative you wrote; the player will discover them.
 </under_map>
 
-<internal_planning>
-Before writing narrative, internally determine (do NOT output these; just let them guide your writing):
-- BEAT STRUCTURE: What are the 3-5 major plot beats for this scene?
-- JACK'S PRIMARY ACTION: investigate | confront | observe | negotiate | flee | wait | interrogate | follow
-- JACK'S DIALOGUE APPROACH: aggressive | measured | evasive | empathetic | threatening | pleading
-- JACK'S EMOTIONAL STATE: determined | desperate | cautious | angry | regretful | suspicious | resigned
-- JACK'S PHYSICAL BEHAVIOR: tense | relaxed | aggressive | defensive | stealthy | commanding
-- PERSONALITY ALIGNMENT: Does this match the player's path personality (aggressive/methodical/balanced)?
-- STORY DAY: This is Day N of the ${TOTAL_CHAPTERS}-day timeline (Chapter N = Day N)
-These decisions should manifest naturally in the prose without being explicitly stated.
-</internal_planning>
-
 <thread_accounting_rule>
 Address every thread in ACTIVE_THREADS marked urgency="critical" within this scene. For each one:
 1. Have a character take visible action on it, not just think about it.
@@ -359,15 +363,20 @@ For any thread active 2+ chapters without meaningful progress, do exactly one of
 An overdue thread should not pass through a scene untouched.
 </thread_escalation_rule>
 
-<craft_quality_checklist>
-Before finalizing your narrative, internally verify these craft elements (do NOT output these; just ensure your writing embodies them):
-- SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'Include a recurring sensory detail (a sound, smell, texture) that anchors the scene physically'}
+<scene_requirements>
+These are properties the finished prose must have, not steps to narrate.
+
+- Jack's approach to the scene (how he investigates, how he speaks, what he is feeling and
+  doing with his body) reads as one coherent person, and matches the path personality named
+  in the context blocks. It shows in behaviour; never state it outright.
+- The scene sits on Day N of the ${TOTAL_CHAPTERS}-day timeline, where N is the chapter number.
+- SENSORY GROUNDING: ${MICRO_TENSION_TECHNIQUES.elements.find(e => e.includes('sensory')) || 'a recurring sensory detail (a sound, smell, texture) anchors the scene physically'}
 - MICRO-REVELATION: ${ENGAGEMENT_REQUIREMENTS.revelationGradient.levels.micro}
 - FORWARD MOMENTUM: ${ENGAGEMENT_REQUIREMENTS.finalLineHook.description}
 - PERSONAL STAKES: ${ENGAGEMENT_REQUIREMENTS.personalStakes.requirement}
 - EMOTIONAL PEAK: ${ENGAGEMENT_REQUIREMENTS.emotionalAnchor.rule}
 - VARIED RHYTHM: ${SENTENCE_RHYTHM.rules[0]}
-</craft_quality_checklist>`;
+</scene_requirements>`;
 };
 
 // ============================================================================

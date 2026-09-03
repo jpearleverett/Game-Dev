@@ -112,7 +112,7 @@ class ValidationMethods {
         briefing: parsed.briefing || { summary: '', objectives: [] },
         consistencyFacts: Array.isArray(parsed.consistencyFacts) ? parsed.consistencyFacts : [],
         // NOTE: storyDay, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration removed from schema
-        // These are now handled via <internal_planning> in system prompt (Gemini 3 thinking)
+        // These are now handled via <scene_requirements> in the system prompt (Gemini 3 thinking)
         // Kept for backward compatibility with old saved data
         storyDay: parsed.storyDay,
         jackActionStyle: parsed.jackActionStyle,
@@ -946,7 +946,7 @@ class ValidationMethods {
     // =========================================================================
     // CATEGORY 2: STORY DAY CONSISTENCY
     // =========================================================================
-    // NOTE: storyDay field was removed from schema - now handled via <internal_planning> in system prompt.
+    // NOTE: storyDay field was removed from schema - now handled via <scene_requirements> in the system prompt.
     // The LLM determines storyDay internally (Chapter N = Day N) without outputting it.
     // NOTE: Character-specific timeline validations removed - only Jack and Victoria are canonical.
     // The LLM has creative freedom to generate supporting characters with their own timelines.
@@ -1038,14 +1038,14 @@ class ValidationMethods {
     // CATEGORY 4: CHARACTER BEHAVIOR CONSISTENCY (Based on path personality)
     // NOTE: jackActionStyle, jackRiskLevel, jackBehaviorDeclaration were removed from schema.
     // Behavior consistency is now validated through narrative text analysis only.
-    // The LLM handles behavior planning internally via <internal_planning> in system prompt.
+    // The LLM handles behavior planning internally via <scene_requirements> in the system prompt.
     // =========================================================================
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
 
       // Check for personality-inconsistent behavior in narrative text
       // NOTE: These are now warnings only since we can't detect emotional state exceptions
-      // without the schema field. Trust the <internal_planning> system prompt guidance.
+      // without the schema field. Trust the <scene_requirements> system prompt guidance.
       if (personality.riskTolerance === 'low') {
         // Methodical Jack shouldn't suddenly be reckless
         const recklessBehavior = /\b(?:i|jack)\s+(?:rushed|stormed|lunged|burst|barreled)\s+(?:in|into|through|forward)\b/i;
@@ -1569,7 +1569,7 @@ class ValidationMethods {
     // Note: Category 4 handles detailed checks; this is a broader safety net
     if (context.pathPersonality) {
       const personality = context.pathPersonality;
-      // NOTE: jackBehaviorDeclaration removed from schema - now in <internal_planning>
+      // NOTE: jackBehaviorDeclaration removed from schema - now in <scene_requirements>
       // Legacy validation kept for old data but won't run on new generations
 
       // Check for reckless behavior when player has been methodical
