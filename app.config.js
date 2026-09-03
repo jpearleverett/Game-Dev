@@ -17,6 +17,28 @@
  * 4. GEMINI_API_KEY is NOT needed (it's in Cloudflare secrets)
  */
 
+/**
+ * Expo's config normalization serializes a `null` inside `extra` as `{}` in the
+ * manifest it serves to the app — verified by fetching the dev-server manifest.
+ * An empty object is TRUTHY, so every `extra.foo || null` read downstream kept
+ * the `{}` and every "is this configured?" guard passed. The concrete failure:
+ * LLMService sent `X-App-Token: [object Object]` on every request, so the day an
+ * operator set APP_TOKEN in Vercel the proxy would 401 all of them; and in a
+ * production build PurchaseService would configure RevenueCat with `{}` instead
+ * of falling back to its mock.
+ *
+ * So an unset value must be OMITTED, never set to null. Readers additionally
+ * coerce to string, because a stale manifest can still carry the old shape.
+ */
+const optional = (value) => {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed.length ? trimmed : undefined;
+};
+
+const compact = (obj) => Object.fromEntries(
+  Object.entries(obj).filter(([, v]) => v !== undefined)
+);
+
 export default {
   expo: {
     name: 'Dead Letters',
@@ -51,30 +73,30 @@ export default {
       favicon: './assets/favicon.png',
     },
     plugins: ['expo-font', 'expo-asset'],
-    extra: {
+    extra: compact({
       // ========== PRODUCTION (Recommended) ==========
       // Your Cloudflare Worker URL - API key stays secure on server
-      geminiProxyUrl: process.env.GEMINI_PROXY_URL || null,
+      geminiProxyUrl: optional(process.env.GEMINI_PROXY_URL),
 
       // Optional: App token for extra proxy authentication
-      appToken: process.env.APP_TOKEN || null,
+      appToken: optional(process.env.APP_TOKEN),
 
       // ========== ANALYTICS (optional) ==========
       // PostHog project API key + host. Without a key, analytics stay local
       // (console only) — the game never blocks on this.
-      posthogApiKey: process.env.POSTHOG_API_KEY || null,
-      posthogHost: process.env.POSTHOG_HOST || null,
+      posthogApiKey: optional(process.env.POSTHOG_API_KEY),
+      posthogHost: optional(process.env.POSTHOG_HOST),
 
       // ========== IN-APP PURCHASES (optional) ==========
       // RevenueCat public SDK keys. Without them PurchaseService falls back to
       // its mock backend and warns; it never configures with a placeholder.
-      revenueCatAppleKey: process.env.REVENUECAT_APPLE_KEY || null,
-      revenueCatGoogleKey: process.env.REVENUECAT_GOOGLE_KEY || null,
+      revenueCatAppleKey: optional(process.env.REVENUECAT_APPLE_KEY),
+      revenueCatGoogleKey: optional(process.env.REVENUECAT_GOOGLE_KEY),
 
       // ========== DEVELOPMENT ONLY ==========
       // Direct API key - only use for local development
       // This gets embedded in the app and is NOT secure for distribution
-      geminiApiKey: process.env.GEMINI_API_KEY || null,
-    },
+      geminiApiKey: optional(process.env.GEMINI_API_KEY),
+    }),
   },
 };

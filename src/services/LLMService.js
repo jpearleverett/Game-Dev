@@ -27,10 +27,17 @@ const LLM_CONFIG_KEY = 'dead_letters_llm_config';
 const OFFLINE_QUEUE_KEY = 'dead_letters_offline_queue';
 const CACHE_STORAGE_KEY = 'dead_letters_llm_caches';
 
-// Get configuration from environment (baked in at build time)
-const ENV_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || null;
-const ENV_PROXY_URL = Constants.expoConfig?.extra?.geminiProxyUrl || null;
-const ENV_APP_TOKEN = Constants.expoConfig?.extra?.appToken || null;
+// Get configuration from environment (baked in at build time).
+// Coerced to a non-empty string, never merely truthy: Expo's config
+// normalization used to serialize an unset `extra` value as `{}`, which is
+// truthy, so `|| null` kept it and `X-App-Token` went out as
+// "[object Object]" on every request. app.config.js now omits unset keys;
+// this is the second line of defense, since a manifest cached by an older
+// build can still carry the old shape.
+const envString = (value) => (typeof value === 'string' && value.trim().length ? value.trim() : null);
+const ENV_API_KEY = envString(Constants.expoConfig?.extra?.geminiApiKey);
+const ENV_PROXY_URL = envString(Constants.expoConfig?.extra?.geminiProxyUrl);
+const ENV_APP_TOKEN = envString(Constants.expoConfig?.extra?.appToken);
 
 // Default configuration - model id lives in src/constants/gemini.js
 const DEFAULT_CONFIG = {

@@ -220,7 +220,50 @@ docs/gemini_*.md                 Gemini API reference (caching/structured-output
 
 ## 7. Running, building, and testing
 
-- **Run on device:** Expo Go (tested on Pixel 10 Pro via Termux, and iOS). `npx expo start -c` (the `-c` clears the cache — needed after content/prompt changes so chapters regenerate). Requires the proxy URL in `.env` (`GEMINI_PROXY_URL=https://game-dev-tan.vercel.app/api/gemini`).
+- **Run on device (Termux / Android, same-device Expo Go):**
+  ```sh
+  git pull origin <branch>
+  npm install                 # postinstall runs patch-package; "No patch files found" is expected (exit 0, there is no patches/ dir)
+  printf 'GEMINI_PROXY_URL=https://game-dev-tan.vercel.app/api/gemini\n' > .env   # .env is gitignored, so a pull never brings it
+  npx expo start -c --localhost
+  ```
+  Then in Expo Go tap **Enter URL manually** and type `exp://127.0.0.1:8081`.
+  - `--localhost` matters on Termux: the default `--host lan` advertises a LAN IP, which
+    breaks when wifi is off or the interface isn't visible from the Termux namespace.
+    Same-device Expo Go always reaches `127.0.0.1`. (`-m/--host`, `--lan`, `--localhost`,
+    `--tunnel`, `-p/--port` are the relevant flags.)
+  - There is no `adb` in Termux, so the CLI's `a` key / `npm run android` cannot launch
+    Expo Go — open the `exp://` URL by hand.
+  - The `-c` clears the bundler cache; needed after content/prompt changes.
+  - Expo Go must be the **SDK 54** build.
+  - A **fresh run** is required after generation/content changes (see the last bullet) —
+    cached chapters replay the old prose.
+- **Verified boot facts (this pass, run rather than reasoned):**
+  - `npx expo export --platform android` bundles clean — 6.54 MB Hermes bytecode, zero
+    warnings. That is the cheapest whole-graph check that every import resolves; run it
+    after a broad refactor.
+  - Expo Go's bundled native modules are listed in `expo/bundledNativeModules.json`.
+    `react-native-view-shot@4.0.3` and `lottie-react-native ~7.3.1` are **in** it (so
+    ShareCard and LottieEffect work in Expo Go). `react-native-purchases` is **not** —
+    see the lazy-import note below. `react-native-sse` / `react-native-confetti-cannon`
+    are absent from the list because they are pure JS, which is fine.
+  - ⚠️ **`extra` must OMIT unset values, never set them to `null`.** Expo's config
+    normalization serializes a `null` inside `extra` as `{}` in the manifest it serves
+    (confirmed by fetching the dev-server manifest; the same manifest shows
+    `"staticConfigPath": {}`). `{}` is **truthy**, so every `extra.foo || null` read kept
+    it: `LLMService` sent `X-App-Token: [object Object]` on every request, which would
+    have 401'd **100% of generations** the day an operator set `APP_TOKEN` in Vercel, and
+    a production build would have handed `Purchases.configure` a `{}` apiKey instead of
+    falling back to the mock. `app.config.js` now builds `extra` through `optional()` +
+    `compact()`; `LLMService`/`PurchaseService` additionally coerce to a non-empty string.
+    Guarded by `appConfigExtra.test.js`. `AnalyticsService` already did this correctly
+    (`typeof key === 'string'`) — copy that pattern for any new `extra` key.
+  - ⚠️ **`react-native-purchases` is imported lazily** (`loadPurchases()` in
+    `PurchaseService.js`) and must stay that way. Its module body runs
+    `new NativeEventEmitter(NativeModules.RNPurchases)` at import time, and RN's
+    constructor asserts non-null **when `Platform.OS === 'ios'`** — so a static import
+    white-screened iOS Expo Go at boot before any game code ran. Android was unaffected
+    because that invariant is iOS-only, which is why a Pixel playtest never caught it.
 - **Cursor Cloud can run the RN UI and live model when the environment is configured.** Use Expo (`npx expo start -c`) for UI/manual testing and the configured `GEMINI_PROXY_URL` for live generation checks when a task needs end-to-end validation.
 - Baseline automated verification still applies:
   - `npx jest` — **two projects** (`jest.config.js`): `logic` (babel-jest, node env, expo
@@ -550,7 +593,7 @@ full-season state and asserts on the sentinels that come out:
 - **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
   unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
   prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
-- **Tests: 360.** New: `lateChapterMemory`, `threadLedger`,
+- **Tests: 365.** New: `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,
   `decisionConsequences.derivation`, plus additions to `continuityAnchorUnderMap`,
   `playerTheoryPrompt`, `endings`, `generatedStoryStorage.prune`,
   `validation.deriveFragments`.
