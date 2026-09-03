@@ -714,7 +714,13 @@ the token the client sent did not match (`proxy/api/gemini.js`: `if (appToken) {
 one line of config: `APP_TOKEN=<value>` in `.env` (reaching the app through
 `app.config.js` → `extra.appToken`), or the matching EAS secret for a build. All five
 proxy request sites already attach `X-App-Token` when it is set — the code was never
-the problem. `applicationError` in `LLMService` now prints that remedy once per
+the problem. ⚠️ **A Vercel env var marked Sensitive cannot be read back** — not by
+`vercel env ls`, `vercel env pull`, or the dashboard. `vercel env pull` happily writes
+`APP_TOKEN=""` for one, and an empty value is OMITTED from `extra` by `optional()`, so
+the app sends no header and the 401 looks identical to never having configured it. The
+only fix for a lost token is to ROTATE it (`vercel env rm` + `vercel env add` for BOTH
+production and preview) and then **redeploy** — Vercel injects env vars at deploy time,
+so changing the setting alone leaves the running deployment on the old value. `applicationError` in `LLMService` now prints that remedy once per
 session on any 401/403 instead of leaving a bare "Unauthorized" in the log.
 
 **Open / candidate next work:**
