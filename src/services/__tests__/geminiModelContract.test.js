@@ -166,5 +166,61 @@ describe('gemini model contract', () => {
       expect(proxySrc).toContain(`const GEMINI_API_VERSION = '${GEMINI_API_VERSION}';`);
       expect(proxySrc).not.toContain('v1alpha');
     });
+
+    test('it can delete and extend a cache, not only create one', () => {
+      // The client keeps a registry of caches it created but holds no API key in
+      // proxy mode, so these two operations used to go to Google unauthenticated.
+      expect(proxySrc).toContain("body.operation === 'deleteCache'");
+      expect(proxySrc).toContain("body.operation === 'updateCache'");
+      // And only ever addresses a cachedContents resource.
+      expect(proxySrc).toMatch(/\^cachedContents\\\/\[A-Za-z0-9_-\]\+\$/);
+    });
+  });
+
+  describe('cache lifecycle goes wherever the client is pointed', () => {
+    const seedCache = async () => {
+      const { llmService } = require('../LLMService');
+      await llmService.init();
+      await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', apiKey: null });
+      llmService.cacheInitialized = true;
+      llmService.caches.set('k', { name: 'cachedContents/abc123', expireTime: new Date(Date.now() + 3600000).toISOString() });
+      return llmService;
+    };
+
+    test('a delete in proxy mode goes to the proxy, not to Google', async () => {
+      const llmService = await seedCache();
+      global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({ success: true }) }));
+
+      await llmService.deleteCache('k');
+
+      const [url, init] = global.fetch.mock.calls[0];
+      expect(url).toBe('https://example.test/proxy');
+      expect(JSON.parse(init.body)).toMatchObject({ operation: 'deleteCache', name: 'cachedContents/abc123' });
+      expect(llmService.caches.has('k')).toBe(false);
+    });
+
+    test('a failed delete still drops the local record, since the cache has a TTL', async () => {
+      const llmService = await seedCache();
+      global.fetch = jest.fn(async () => ({ ok: false, status: 500, json: async () => ({ error: 'nope' }) }));
+
+      await llmService.deleteCache('k');
+
+      expect(llmService.caches.has('k')).toBe(false);
+    });
+
+    test('a TTL extension in proxy mode carries the new ttl', async () => {
+      const llmService = await seedCache();
+      const expireTime = new Date(Date.now() + 7200000).toISOString();
+      global.fetch = jest.fn(async () => ({
+        ok: true, status: 200, json: async () => ({ success: true, cache: { expireTime, updateTime: 'now' } }),
+      }));
+
+      await llmService.updateCache('k', '7200s');
+
+      const [url, init] = global.fetch.mock.calls[0];
+      expect(url).toBe('https://example.test/proxy');
+      expect(JSON.parse(init.body)).toMatchObject({ operation: 'updateCache', ttl: '7200s' });
+      expect(llmService.caches.get('k').expireTime).toBe(expireTime);
+    });
   });
 });

@@ -272,6 +272,60 @@ export default async function handler(request) {
       }
     }
 
+    // ========== CACHE LIFECYCLE REQUESTS ==========
+    // The client holds a registry of the caches it created, but it has no API key
+    // in proxy mode, so deleting or extending one used to fire an unauthenticated
+    // request straight at Google. Deletes failed silently (the local record went
+    // away, the remote cache lived out its TTL) and TTL extension threw.
+    if (body.operation === 'deleteCache' || body.operation === 'updateCache') {
+      const name = typeof body.name === 'string' ? body.name.replace(/^\/+/, '') : '';
+      // Only ever address a cachedContents resource, never an arbitrary path.
+      if (!/^cachedContents\/[A-Za-z0-9_-]+$/.test(name)) {
+        return Response.json(
+          { error: 'Invalid cache name', requestId },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      const isDelete = body.operation === 'deleteCache';
+      const geminiUrl = `${GEMINI_API_BASE}/${name}?key=${process.env.GEMINI_API_KEY}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
+
+      try {
+        const res = await fetch(geminiUrl, {
+          method: isDelete ? 'DELETE' : 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          ...(isDelete ? {} : { body: JSON.stringify({ ttl: body.ttl || '3600s' }) }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        // A cache that is already gone is a successful delete as far as the
+        // client's registry is concerned.
+        if (!res.ok && !(isDelete && res.status === 404)) {
+          const errorText = await res.text();
+          console.error(`[${requestId}] Cache ${body.operation} failed: ${res.status} - ${errorText.substring(0, 200)}`);
+          return Response.json(
+            { error: `Cache ${body.operation} failed`, requestId, details: errorText.substring(0, 200) },
+            { status: res.status, headers: corsHeaders }
+          );
+        }
+
+        const cache = isDelete ? null : await res.json().catch(() => null);
+        console.log(`[${requestId}] Cache ${body.operation}: ${name}`);
+        return Response.json({ success: true, cache, requestId }, { headers: corsHeaders });
+      } catch (error) {
+        clearTimeout(timeoutId);
+        const isTimeout = error.name === 'AbortError';
+        console.error(`[${requestId}] Cache ${body.operation} error: ${error.message}`);
+        return Response.json(
+          { error: isTimeout ? `Cache ${body.operation} timed out` : `Cache ${body.operation} failed`, requestId, details: error.message },
+          { status: 500, headers: corsHeaders }
+        );
+      }
+    }
+
     // ========== GENERATION REQUEST ==========
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       console.warn(`[${requestId}] Invalid request: missing messages`);

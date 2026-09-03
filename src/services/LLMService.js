@@ -405,6 +405,14 @@ class LLMService {
       await this.checkOnline();
 
       this.initialized = true;
+
+      // Sweep the local cache registry. Nothing called this, so the persisted
+      // map of context caches only ever grew: entries whose remote cache expired
+      // hours ago stayed on disk and were still offered to completeWithCache,
+      // which then had to discover the 404 the slow way.
+      this.cleanExpiredCaches().catch((e) => {
+        log.debug('LLMService', `Cache sweep skipped: ${e?.message}`);
+      });
     } catch (error) {
       console.warn('[LLMService] Failed to load config:', error);
       this.initialized = true;
@@ -1957,6 +1965,48 @@ class LLMService {
    * @param {string} key - Cache key
    * @param {string} ttl - New TTL (e.g., '3600s')
    */
+  /**
+   * Cache lifecycle (delete / TTL extension) against whichever surface this
+   * client is configured for. In proxy mode there is no API key here, so these
+   * used to hit Google unauthenticated: the delete failed and silently dropped
+   * only the local record while the remote cache lived out its TTL, and the TTL
+   * extension threw. Returns the updated cache resource for an update, null for
+   * a delete.
+   */
+  async _cacheLifecycleRequest(operation, cache, ttl) {
+    if (this.config.proxyUrl) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.config.appToken) headers['X-App-Token'] = this.config.appToken;
+      const response = await fetch(this.config.proxyUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ operation, name: cache.name, ...(ttl ? { ttl } : {}) }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Cache ${operation} failed: ${response.status} - ${error.error || error.details || 'Unknown error'}`);
+      }
+      const result = await response.json().catch(() => ({}));
+      return result?.cache || null;
+    }
+
+    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
+    const isDelete = operation === 'deleteCache';
+    const response = await fetch(`${baseUrl}/${cache.name}`, {
+      method: isDelete ? 'DELETE' : 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': this.config.apiKey,
+      },
+      ...(isDelete ? {} : { body: JSON.stringify({ ttl }) }),
+    });
+    if (!response.ok && !(isDelete && response.status === 404)) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`Cache ${operation} failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+    }
+    return isDelete ? null : await response.json().catch(() => null);
+  }
+
   async updateCache(key, ttl) {
     await this._initializeCacheStorage();
 
@@ -1965,26 +2015,12 @@ class LLMService {
       throw new Error(`Cache not found: ${key}`);
     }
 
-    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
-
     try {
-      const response = await fetch(`${baseUrl}/${cache.name}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': this.config.apiKey,
-        },
-        body: JSON.stringify({ ttl }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(`Cache update failed: ${response.status} - ${error.error?.message || 'Unknown error'}`);
+      const updated = await this._cacheLifecycleRequest('updateCache', cache, ttl);
+      if (updated) {
+        cache.expireTime = updated.expireTime;
+        cache.updateTime = updated.updateTime;
       }
-
-      const updated = await response.json();
-      cache.expireTime = updated.expireTime;
-      cache.updateTime = updated.updateTime;
 
       this.caches.set(key, cache);
       await this._saveCacheStorage();
@@ -2009,28 +2045,17 @@ class LLMService {
       return;
     }
 
-    const baseUrl = this.config.baseUrl || GEMINI_API_BASE;
-
     try {
-      const response = await fetch(`${baseUrl}/${cache.name}`, {
-        method: 'DELETE',
-        headers: {
-          'x-goog-api-key': this.config.apiKey,
-        },
-      });
-
-      if (!response.ok && response.status !== 404) {
-        const error = await response.json().catch(() => ({}));
-        console.warn(`[LLMService] Cache deletion warning: ${response.status} - ${error.error?.message || 'Unknown error'}`);
-      }
-
-      this.caches.delete(key);
-      await this._saveCacheStorage();
-
-      console.log(`[LLMService] ✅ Cache deleted: ${key}`);
+      await this._cacheLifecycleRequest('deleteCache', cache);
     } catch (error) {
-      console.error('[LLMService] Failed to delete cache:', error);
+      // A cache we cannot reach still has a TTL; dropping the local record is
+      // the right outcome either way, so this is a warning, not a failure.
+      console.warn('[LLMService] Cache deletion warning:', error.message);
     }
+
+    this.caches.delete(key);
+    await this._saveCacheStorage();
+    console.log(`[LLMService] ✅ Cache deleted: ${key}`);
   }
 
   /**
