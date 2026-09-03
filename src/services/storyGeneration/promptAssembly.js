@@ -421,11 +421,37 @@ function _buildPlayerTheorySection(underMap, currentChapter = null, { mode = 'na
     // The verdict is the player's re-entry reward after the chapter gate: when a
     // chapter answers a sealed belief, land the answer EARLY.
     if (forNarrative) lines.push('- When this chapter answers the sealed belief, deliver the verdict in the OPENING of the chapter (the A-beat, ideally its first scene), the player returns specifically to learn whether they read the city true; do not make them wait pages for it.');
+
+    // Older beliefs the story still owes an answer. Only the NEWEST was ever
+    // named here, so a belief that slipped past its two-chapter window became
+    // structurally unresolvable: the model was never told it existed, and the
+    // player waited out a campaign for a verdict that could not arrive.
+    if (forNarrative) {
+      const olderUnresolved = theories.filter(
+        (t) => t && t !== latest && t.interpretation && t.correct == null && Number.isFinite(t.chapter),
+      );
+      if (olderUnresolved.length) {
+        lines.push('- Beliefs the player sealed earlier that the story has still not answered. Close one of these here if the scene can carry it, oldest first:');
+        olderUnresolved.slice(-3).reverse().forEach((t) => {
+          lines.push(`  • chapter ${t.chapter}: "${t.interpretation}" (emit \`beliefResolution\` with resolvesChapter: ${t.chapter} to answer it)`);
+        });
+      }
+    }
   }
 
   if (nodes.length) {
     lines.push('- Truths the player has already pulled out of the Under-Map (treat these as established and build the scene on them):');
-    nodes.slice(0, 6).forEach((n) => { if (n?.revelation) lines.push(`  • ${n.revelation}`); });
+    // Priority, not recency — the same lesson the fragment list below already
+    // learned. A flat "newest six" meant that from about chapter three onward the
+    // material the scene was told to BUILD ON was always the last chapter's, and
+    // an arc-spanning truth surfaced in chapter 1 could only ever appear as a
+    // prohibition in <continuity_anchors>, never as fuel. Arc-scoped truths span
+    // chapters by definition, so they lead and they stay.
+    const arc = nodes.filter((n) => n.scope === 'arc');
+    const rest = nodes.filter((n) => n.scope !== 'arc');
+    [...arc, ...rest].slice(0, THEORY_TRUTH_LIMIT).forEach((n) => {
+      if (n?.revelation) lines.push(`  • ${n.revelation}${n.scope === 'arc' ? ' (spans chapters)' : ''}`);
+    });
   }
 
   let hasKeystone = false;
@@ -579,6 +605,10 @@ function _buildOtherReaderSection(underMap) {
 // beliefs is every belief a run can seal, and forty truths covers a thorough
 // player, at roughly ninety characters a line.
 const ANCHOR_NODE_LIMIT = 40;
+// How many revealed truths the GENERATIVE block offers as material to build on.
+// Smaller than the canon limit on purpose: this is what one scene can weave in,
+// not everything it must not contradict.
+const THEORY_TRUTH_LIMIT = 10;
 const ANCHOR_BELIEF_LIMIT = 12;
 
 function _buildContinuityAnchorSection(context, chapter) {

@@ -203,3 +203,72 @@ describe('latent threads & the quake in <under_map_state>', () => {
     expect(buildMasterSystemPrompt()).not.toContain('Return an empty relations list');
   });
 });
+
+describe('the scene is given material from the whole run, not just last chapter', () => {
+  const build = (um, chapter = 12) =>
+    promptAssemblyMethods._buildPlayerTheorySection(um, chapter);
+
+  const lateRun = ({ olderUnresolved = false } = {}) => {
+    let m = createBlankUnderMap();
+    // Beliefs for chapters 1-11. Chapter 9's is deliberately left hanging.
+    for (let ch = 1; ch <= 11; ch += 1) {
+      m = recordTheory(m, { chapter: ch, interpretation: `BELIEF-${String(ch).padStart(2, '0')}`, rejected: [`R${ch}`] });
+      const leaveOpen = olderUnresolved && ch === 9;
+      if (ch < 11 && !leaveOpen) {
+        const { resolveTheory } = require('../../data/underMap');
+        m = resolveTheory(m, ch, true);
+      }
+    }
+    // Twenty truths, newest first, with two arc-scoped ones from early chapters.
+    return {
+      ...m,
+      nodes: Array.from({ length: 20 }, (_, i) => ({
+        id: `node_${i}`,
+        revelation: `TRUTH-${String(20 - i).padStart(2, '0')}`,
+        // The two OLDEST truths are the arc-spanning ones.
+        scope: i >= 18 ? 'arc' : 'chapter',
+      })),
+    };
+  };
+
+  test('an arc-spanning truth from chapter 1 is still material to build on', () => {
+    // A flat "newest six" meant that from about chapter three onward the material
+    // the scene was told to BUILD ON was always the last chapter's, and an
+    // arc-spanning truth surfaced in chapter 1 could only ever appear as a
+    // prohibition in the canon block, never as fuel.
+    const out = build(lateRun());
+    expect(out).toContain('TRUTH-01');
+    expect(out).toContain('TRUTH-02');
+    expect(out).toContain('spans chapters');
+  });
+
+  test('it still leads with the recent, and stays a scene-sized list', () => {
+    const out = build(lateRun());
+    expect(out).toContain('TRUTH-20');
+    const bullets = out.split('\n').filter((l) => l.trim().startsWith('• TRUTH-'));
+    expect(bullets.length).toBeLessThanOrEqual(10);
+  });
+
+  test('a belief left hanging past its window is named so it CAN be resolved', () => {
+    // Only the newest belief was ever named here, so one that slipped past the
+    // two-chapter window became structurally unresolvable: the model was never
+    // told it existed, and the player waited out a campaign for a verdict that
+    // could not arrive.
+    const out = build(lateRun({ olderUnresolved: true }));
+    expect(out).toContain('BELIEF-09');
+    expect(out).toContain('resolvesChapter: 9');
+    expect(out).toContain('still not answered');
+  });
+
+  test('with nothing outstanding it does not invent a backlog', () => {
+    const out = build(lateRun());
+    expect(out).not.toContain('still not answered');
+  });
+
+  test('the decisions call gets the truths but not the authoring instructions', () => {
+    const out = promptAssemblyMethods._buildPlayerTheorySection(lateRun({ olderUnresolved: true }), 12, { mode: 'decisions' });
+    expect(out).toContain('TRUTH-01');
+    expect(out).not.toContain('beliefResolution');
+    expect(out).not.toContain('still not answered');
+  });
+});
