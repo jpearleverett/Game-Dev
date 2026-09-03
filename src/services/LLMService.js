@@ -32,13 +32,6 @@ const ENV_API_KEY = Constants.expoConfig?.extra?.geminiApiKey || null;
 const ENV_PROXY_URL = Constants.expoConfig?.extra?.geminiProxyUrl || null;
 const ENV_APP_TOKEN = Constants.expoConfig?.extra?.appToken || null;
 
-// DEBUG: Log what was loaded from environment
-console.log('[LLMService] Environment loaded:', {
-  hasProxyUrl: !!ENV_PROXY_URL,
-  proxyUrl: ENV_PROXY_URL,
-  hasApiKey: !!ENV_API_KEY,
-});
-
 // Default configuration - model id lives in src/constants/gemini.js
 const DEFAULT_CONFIG = {
   provider: 'gemini',
@@ -522,12 +515,11 @@ class LLMService {
   async _geminiComplete(messages, { maxTokens, systemPrompt, responseSchema, traceId, requestContext, thinkingLevel }) {
     const model = this.config.model || GEMINI_MODEL;
 
-    // DEBUG: Log config to see what mode we're in
-    console.log('[LLMService] Config:', {
-      proxyUrl: this.config.proxyUrl,
-      hasApiKey: !!this.config.apiKey,
-      model,
-    });
+    // Deliberately does not print the proxy URL. This was an unconditional
+    // console.log at module scope and again per generation, so release builds
+    // wrote the backend endpoint into device logs before the app had done
+    // anything at all.
+    log.debug('LLMService', `mode=${this.config.proxyUrl ? 'proxy' : 'direct'} model=${model}`);
 
     // Check if using Gemini 3 model
     const isGemini3 = isGemini3Model(model);
@@ -771,7 +763,7 @@ class LLMService {
    * Try SSE streaming using react-native-sse (XMLHttpRequest-based)
    * More reliable on Android than fetch-based streaming
    */
-  async _trySSEStreaming(url, requestBody, headers, localRequestId, bodyReadStart) {
+  async _trySSEStreaming(url, requestBody, headers, localRequestId, bodyReadStart, overallTimeoutMs = null) {
     return new Promise((resolve, reject) => {
       const chunks = [];
       let heartbeatCount = 0;
@@ -803,10 +795,25 @@ class LLMService {
         }
       }, 5000);
 
+      // Overall deadline. The AbortController the caller sets up is never wired
+      // into react-native-sse (it takes no signal and defaults its own timeout to
+      // 0), and the only other guard is the 45s idle timer, which the proxy's
+      // 10s heartbeats keep resetting forever. Without this a single stuck
+      // generation could hold the player past the proxy's whole budget.
+      const deadline = Number.isFinite(overallTimeoutMs) && overallTimeoutMs > 0
+        ? setTimeout(() => {
+            if (hasCompleted) return;
+            console.error(`[LLMService] [${localRequestId}] SSE deadline reached after ${Math.round(overallTimeoutMs / 1000)}s`);
+            cleanup();
+            reject(new Error('Request timed out'));
+          }, overallTimeoutMs)
+        : null;
+
       const cleanup = () => {
         if (!hasCompleted) {
           hasCompleted = true;
           clearInterval(dataTimeout);
+          if (deadline) clearTimeout(deadline);
           try {
             es.close();
           } catch (e) {
@@ -872,6 +879,23 @@ class LLMService {
         console.error(`[LLMService] [${localRequestId}] SSE error at ${elapsed}ms:`, event.message || event);
 
         cleanup();
+
+        // react-native-sse surfaces any HTTP status >= 400 as an 'error' event
+        // carrying xhrStatus and the response body. Rejecting with a plain Error
+        // threw that away, so a 401 from a bad app token or a 400 from a bad
+        // request looked like a dropped connection: replayed across all three
+        // transports and every retry.
+        const status = event?.xhrStatus;
+        if (typeof status === 'number' && status >= 400) {
+          let parsed = null;
+          try { parsed = JSON.parse(event.message); } catch (_e) { /* not JSON */ }
+          reject(applicationError(parsed?.error || `Proxy HTTP ${status}`, {
+            status: parsed?.geminiStatus ?? status,
+            details: parsed?.details ?? (typeof event.message === 'string' ? event.message.slice(0, 200) : null),
+          }));
+          return;
+        }
+
         reject(new Error(event.message || 'SSE connection error'));
       });
 
@@ -991,6 +1015,8 @@ class LLMService {
   async _callViaProxy(messages, { model, maxTokens, systemPrompt, responseSchema, traceId, requestContext, cachedContent, thinkingLevel }) {
     let lastError = null;
     let attempt = 0;
+    const MAX_RATE_LIMIT_WAITS = 3;
+    let rateLimitWaits = 0;
     const operationStart = Date.now();
     const localRequestId = `llm_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 4)}`;
 
@@ -1038,7 +1064,8 @@ class LLMService {
           llmTrace('LLMService', traceId, 'llm.proxy.request.start', {
             attempt: attempt + 1,
             maxRetries: this.config.maxRetries,
-            proxyUrl: this.config.proxyUrl,
+            // Host only: the full endpoint does not belong in device logs.
+            proxyHost: (() => { try { return new URL(this.config.proxyUrl).host; } catch (_e) { return 'unknown'; } })(),
             timeout: this.config.timeout,
             localRequestId,
             streaming: true,
@@ -1088,7 +1115,8 @@ class LLMService {
             requestBody,
             headers,
             localRequestId,
-            bodyReadStart
+            bodyReadStart,
+            this.config.timeout
           );
           responseText = result.responseText;
           heartbeatCount = result.heartbeatCount;
@@ -1138,7 +1166,15 @@ class LLMService {
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              // Typed, so the retry loop can tell a permanent rejection from a
+              // dropped connection. Throwing a plain Error here made both the
+              // 429 handler and the permanent-status check below unreachable:
+              // a rate limit was retried after 2s straight back into the limiter.
+              const errBody = await response.json().catch(() => ({}));
+              throw applicationError(errBody.error || `Proxy HTTP ${response.status}`, {
+                status: errBody.geminiStatus ?? response.status,
+                details: errBody.details ?? response.statusText ?? null,
+              });
             }
 
             log.debug('LLMService', `[${localRequestId}] Response received (status=${response.status}), waiting for body...`);
@@ -1264,7 +1300,15 @@ class LLMService {
           });
         }
 
-        // Validate we got actual data
+        // Validate we got actual data. An empty content string with success:true
+        // is not a usable answer: it parses to nothing and gets stored as a
+        // broken chapter.
+        if (data && data.success && !data.content) {
+          throw applicationError(
+            `Proxy returned an empty response (finishReason ${data.finishReason || 'unknown'})`,
+            { status: data.geminiStatus ?? null },
+          );
+        }
         if (!data || !data.success) {
           console.error(`[LLMService] [${localRequestId}] No valid response in stream`);
           throw applicationError(data?.error || 'No valid response received from proxy', {
@@ -1364,6 +1408,21 @@ class LLMService {
             }, 'error');
           }
           throw new Error('Request timed out');
+        }
+
+        // A rate limit is retryable, but only after the server's own backoff.
+        // The 429 branch further down never ran once the transports started
+        // throwing, so this honours Retry-After here instead.
+        if (error.isApplicationError && error.geminiStatus === 429) {
+          rateLimitWaits += 1;
+          if (rateLimitWaits > MAX_RATE_LIMIT_WAITS) {
+            console.error(`[LLMService] [${localRequestId}] Rate limited ${rateLimitWaits} times; giving up.`);
+            throw error;
+          }
+          const retryAfter = Math.min(Number(error.details?.retryAfter) || 60, 120);
+          console.warn(`[LLMService] [${localRequestId}] Rate limited (429), waiting ${retryAfter}s (${rateLimitWaits}/${MAX_RATE_LIMIT_WAITS})...`);
+          await this._sleep(retryAfter * 1000);
+          continue;
         }
 
         // A permanent API rejection (bad model id, unsupported thinkingLevel,
@@ -1852,7 +1911,12 @@ class LLMService {
     if (!cache) return null;
 
     const expireTime = new Date(cache.expireTime).getTime();
-    if (expireTime <= Date.now()) {
+    // A generation takes tens of seconds, so a cache that merely has not expired
+    // YET is not safe to start one with: Gemini rejects the call partway through
+    // with "CachedContent not found", after the point where the caller can still
+    // fall back to an uncached run.
+    const CACHE_SAFETY_MARGIN_MS = 120000;
+    if (expireTime - CACHE_SAFETY_MARGIN_MS <= Date.now()) {
       console.log(`[LLMService] Cache expired: ${key}`);
       this.caches.delete(key);
       await this._saveCacheStorage();

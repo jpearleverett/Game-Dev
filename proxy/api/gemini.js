@@ -51,6 +51,29 @@ function extractCandidateContent(candidate) {
   return { content, thoughtSignature: withSignature ? withSignature.thoughtSignature : null };
 }
 
+// Reasons Gemini gives for withholding a response. Only 'SAFETY' was checked,
+// so a prompt blocked before generation (a 200 with promptFeedback.blockReason
+// and no candidates), a response blocked as RECITATION or PROHIBITED_CONTENT,
+// and a MAX_TOKENS response whose entire budget went to thinking all came back
+// as success:true with content:'' — which the client then tried to parse as the
+// scene, failed, and stored as a broken chapter.
+const BLOCKED_FINISH_REASONS = new Set([
+  'SAFETY', 'PROHIBITED_CONTENT', 'RECITATION', 'BLOCKLIST', 'SPII',
+]);
+
+/**
+ * Returns an error string when a 200 from Gemini carries no usable answer,
+ * or null when the response is good.
+ */
+function describeEmptyOrBlocked(geminiData, finishReason, content) {
+  const blockReason = geminiData?.promptFeedback?.blockReason;
+  if (blockReason) return `Prompt blocked before generation (${blockReason})`;
+  if (!geminiData?.candidates?.[0]) return 'Gemini returned no candidate';
+  if (BLOCKED_FINISH_REASONS.has(finishReason)) return `Content withheld by the model (${finishReason})`;
+  if (!content) return `Gemini returned an empty response (finishReason ${finishReason})`;
+  return null;
+}
+
 function isGemini3Model(model) {
   return typeof model === 'string' && /gemini-3(?:[.\-_]|$)/.test(model);
 }
@@ -331,6 +354,7 @@ export default async function handler(request) {
       let heartbeatTimer = null;
       let geminiController = null;
       let geminiTimeoutId = null;
+      let clientGone = false;
 
       const sendHeartbeat = async () => {
         heartbeatCount++;
@@ -344,7 +368,13 @@ export default async function handler(request) {
           await writer.write(encoder.encode(heartbeat));
           console.log(`[${requestId}] Heartbeat ${heartbeatCount} sent`);
         } catch (e) {
-          console.warn(`[${requestId}] Failed to send heartbeat: ${e.message}`);
+          // A failed write means the client is gone. Nothing here noticed before,
+          // so the function kept heartbeating into a dead stream and kept the
+          // Gemini call running (and billing) for its full 270-second budget.
+          console.warn(`[${requestId}] Client disconnected (${e.message}); aborting upstream call`);
+          clientGone = true;
+          cleanup();
+          try { geminiController?.abort(); } catch (_e) { /* already settled */ }
         }
       };
 
@@ -415,16 +445,18 @@ export default async function handler(request) {
           const { content, thoughtSignature } = extractCandidateContent(geminiData.candidates?.[0]);
           const usage = geminiData.usageMetadata || {};
 
-          if (finishReason === 'SAFETY') {
-            console.error(`[${requestId}] Content blocked by safety filters`);
+          const emptyOrBlocked = describeEmptyOrBlocked(geminiData, finishReason, content);
+          if (emptyOrBlocked) {
+            console.error(`[${requestId}] ${emptyOrBlocked}`);
             // SSE format: "data: {...}\n\n"
-            const safetyError = `data: ${JSON.stringify({
+            const blockedError = `data: ${JSON.stringify({
               type: 'error',
-              error: 'Content blocked by safety filters',
+              error: emptyOrBlocked,
               requestId,
               finishReason,
+              geminiStatus: 200,
             })}\n\n`;
-            await writer.write(encoder.encode(safetyError));
+            await writer.write(encoder.encode(blockedError));
             await writer.close();
             return;
           }
@@ -450,6 +482,10 @@ export default async function handler(request) {
             requestId,
             timing: { total: totalDuration, gemini: geminiDuration },
           })}\n\n`;
+          if (clientGone) {
+            console.warn(`[${requestId}] Client gone before the response was ready; discarding it`);
+            return;
+          }
           await writer.write(encoder.encode(finalResponse));
           await writer.close();
 
@@ -538,10 +574,12 @@ export default async function handler(request) {
       const { content, thoughtSignature } = extractCandidateContent(geminiData.candidates?.[0]);
       const usage = geminiData.usageMetadata || {};
 
-      if (finishReason === 'SAFETY') {
+      const emptyOrBlocked = describeEmptyOrBlocked(geminiData, finishReason, content);
+      if (emptyOrBlocked) {
+        console.error(`[${requestId}] ${emptyOrBlocked}`);
         return Response.json(
-          { error: 'Content blocked by safety filters', requestId, finishReason },
-          { status: 400, headers: corsHeaders }
+          { error: emptyOrBlocked, requestId, finishReason, geminiStatus: 200 },
+          { status: 502, headers: corsHeaders }
         );
       }
 
