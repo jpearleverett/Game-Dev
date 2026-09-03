@@ -335,10 +335,32 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       startOne('A').catch((e) => llmTrace('useStoryGeneration', traceId, 'prefetch.branch.A.failed', { error: e?.message }, 'warn')),
       startOne('B').catch((e) => llmTrace('useStoryGeneration', traceId, 'prefetch.branch.B.failed', { error: e?.message }, 'warn')),
     ]);
-  }, [isConfigured, withQualitySettings]);
+  }, [isConfigured, withQualitySettings, beginBackgroundGeneration, endBackgroundGeneration]);
 
   // Track mounted state to prevent state updates on unmounted component
   const isMountedRef = useRef(true);
+
+  // Background prefetches used to set status GENERATING and never clear it, so a
+  // successful prefetch left the hook reporting "generating" forever. Screens key
+  // their primary CTA off that ("Continue Investigation" disabled, spinner shown),
+  // and the next content request hits the cache and returns without touching
+  // status, so the player was stranded on a page whose only button never re-armed.
+  // Depth-counted because several prefetches overlap.
+  const backgroundDepthRef = useRef(0);
+  const userFacingActiveRef = useRef(false);
+
+  const beginBackgroundGeneration = useCallback(() => {
+    backgroundDepthRef.current += 1;
+    if (userFacingActiveRef.current || !isMountedRef.current) return;
+    setStatus(GENERATION_STATUS.GENERATING);
+    setGenerationType(GENERATION_TYPE.PRELOAD);
+  }, []);
+
+  const endBackgroundGeneration = useCallback(() => {
+    backgroundDepthRef.current = Math.max(0, backgroundDepthRef.current - 1);
+    if (backgroundDepthRef.current > 0 || userFacingActiveRef.current || !isMountedRef.current) return;
+    setStatus(GENERATION_STATUS.IDLE);
+  }, []);
   // Track pending timeouts for cleanup
   const pendingTimeoutsRef = useRef(new Set());
 
@@ -488,6 +510,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       log.debug('useStoryGeneration', `[${genId}] CACHE MISS: predicted=${lastPredictionRef.current.primary}, actual=${pathKey}`);
     }
 
+    userFacingActiveRef.current = true;
     setStatus(GENERATION_STATUS.GENERATING);
     setGenerationType(GENERATION_TYPE.IMMEDIATE);
     setIsCacheMiss(wasCacheMiss);
@@ -580,6 +603,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       return null; // UI will check for null and show error/retry screen
     } finally {
       generationRef.current = false;
+      userFacingActiveRef.current = false;
       // NOTE: We do NOT prefetch next chapter when C completes.
       // With sequential generation, we wait for the player to make their decision,
       // then generate ONLY the chosen path (via selectStoryDecision in StoryContext).
@@ -685,7 +709,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         generationRef.current = false;
       }
     }
-  }, [isConfigured, withQualitySettings]);
+  }, [isConfigured, withQualitySettings, beginBackgroundGeneration, endBackgroundGeneration]);
 
   /**
    * Pre-generate the remaining subchapters of the current chapter (B and C)
@@ -720,9 +744,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
       if (needsGen && isMountedRef.current) {
         if (!anyNeedsGen) {
-          // Only set status once when we first find something to generate
-          setStatus(GENERATION_STATUS.GENERATING);
-          setGenerationType(GENERATION_TYPE.PRELOAD);
+          // Only claim the status once when we first find something to generate
+          beginBackgroundGeneration();
           anyNeedsGen = true;
         }
 
@@ -752,7 +775,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         }
       }
     }
-  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC, withQualitySettings]);
+    if (anyNeedsGen) endBackgroundGeneration();
+  }, [isConfigured, needsGeneration, prefetchNextChapterBranchesAfterC, withQualitySettings, beginBackgroundGeneration, endBackgroundGeneration]);
 
   /**
    * TRUE INFINITE BRANCHING: Generate next subchapter AFTER player completes branching narrative.
@@ -812,9 +836,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
     if (needsGen && isMountedRef.current) {
       const genStartTime = Date.now();
+      beginBackgroundGeneration();
       try {
-        setStatus(GENERATION_STATUS.GENERATING);
-        setGenerationType(GENERATION_TYPE.PRELOAD);
 
         // Pass branchingChoices so the context includes realized narrative
         const entry = await storyGenerationService.generateSubchapter(
@@ -842,6 +865,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       } catch (err) {
         const genDuration = Date.now() - genStartTime;
         console.warn(`[useStoryGeneration] ❌ Generation failed for ${nextCaseNumber} after ${(genDuration/1000).toFixed(1)}s:`, err.message);
+      } finally {
+        endBackgroundGeneration();
       }
     } else if (!needsGen) {
       log.debug('useStoryGeneration', `⏭️ ${nextCaseNumber} already exists, skipping generation`);
@@ -864,10 +889,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     const refreshKey = compactUnderMapSignature(targetSignature);
     const traceId = createTraceId(`um_prefetch_${nextCaseNumber}_${refreshKey}`);
 
+    beginBackgroundGeneration();
     try {
-      setStatus(GENERATION_STATUS.GENERATING);
-      setGenerationType(GENERATION_TYPE.PRELOAD);
-
       const entry = await storyGenerationService.generateSubchapter(
         chapter,
         nextSubIndex,
@@ -888,6 +911,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     } catch (err) {
       console.warn(`[useStoryGeneration] Under-Map prefetch failed for ${nextCaseNumber}:`, err.message);
     } finally {
+      endBackgroundGeneration();
       const current = underMapPrefetchJobsRef.current.get(key);
       if (current) {
         current.inFlight = false;
@@ -899,7 +923,7 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         }
       }
     }
-  }, [withQualitySettings]);
+  }, [withQualitySettings, beginBackgroundGeneration, endBackgroundGeneration]);
 
   const prefetchNextSubchapterWithUnderMap = useCallback((caseNumber, pathKey, choiceHistory = [], branchingChoices = [], underMapSnapshot = null) => {
     if (!isConfigured || !caseNumber || !underMapSnapshot) return;
@@ -1008,10 +1032,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
       log.debug('useStoryGeneration', `Generating ${nextCaseNumber} for path ${speculativeSecondChoice}...`);
 
+      beginBackgroundGeneration();
       try {
-        setStatus(GENERATION_STATUS.GENERATING);
-        setGenerationType(GENERATION_TYPE.PRELOAD);
-
         // Generate with the speculative branching choices context
         const entry = await storyGenerationService.generateSubchapter(
           chapter,
@@ -1034,11 +1056,13 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       } catch (err) {
         console.warn(`[useStoryGeneration] Speculative prefetch failed for ${speculativeSecondChoice}:`, err.message);
         // Continue with other branches even if one fails
+      } finally {
+        endBackgroundGeneration();
       }
     }
 
     log.debug('useStoryGeneration', `Speculative prefetch complete: 3 versions of ${nextCaseNumber} ready`);
-  }, [isConfigured, withQualitySettings]);
+  }, [isConfigured, withQualitySettings, beginBackgroundGeneration, endBackgroundGeneration]);
 
   /**
    * Analyze choice history to predict most likely next path

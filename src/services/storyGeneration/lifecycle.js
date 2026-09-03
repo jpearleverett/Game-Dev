@@ -134,12 +134,15 @@ function pruneInMemoryMaps(currentPathKey, currentChapter) {
     }
   }
 
-  // Prune stale pendingGenerations: remove any that are older than 5 minutes
-  // (they likely failed silently or were abandoned)
+  // Prune pendingGenerations that have SETTLED without being cleaned up, or that
+  // have outlived the hard generation timeout. Pruning purely by age discarded
+  // generations that were still legitimately running (LLMService alone allows
+  // 300s per attempt, and this pruner is invoked from inside another
+  // generation), and the next request for that key then started a duplicate.
   const now = Date.now();
+  const PENDING_MAX_AGE_MS = 11 * 60 * 1000; // matches GENERATION_TIMEOUT_MS
   for (const [key, promise] of this.pendingGenerations) {
-    // Check if promise has been resolved/rejected by adding a flag
-    if (promise._createdAt && now - promise._createdAt > 5 * 60 * 1000) {
+    if (promise._settled || (promise._createdAt && now - promise._createdAt > PENDING_MAX_AGE_MS)) {
       this.pendingGenerations.delete(key);
       prunedCount++;
       console.log(`[StoryGenerationService] Pruned stale pending generation: ${key}`);

@@ -464,7 +464,7 @@ class ValidationMethods {
    *
    * Mutates `content.fragments[].phrase`; returns the issues worth acting on.
    */
-  _validateUnderMapPlayability(content) {
+  _validateUnderMapPlayability(content, requestUnderMap = null) {
     const issues = [];
     if (!content || typeof content !== 'object') return issues;
 
@@ -511,8 +511,9 @@ class ValidationMethods {
       f.phrase = '';
     });
 
+    const activeMap = requestUnderMap || this.currentUnderMap;
     const heldLabels = new Set(
-      (Array.isArray(this.currentUnderMap?.fragments) ? this.currentUnderMap.fragments : [])
+      (Array.isArray(activeMap?.fragments) ? activeMap.fragments : [])
         .map((f) => String(f?.label || '').trim().toLowerCase())
         .filter(Boolean),
     );

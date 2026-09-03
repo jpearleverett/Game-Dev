@@ -244,7 +244,7 @@ async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, c
   // the key, a restart or NG+ inside the cache TTL that reaches the same
   // decisions by different branches gets a byte-identical key and is handed the
   // PREVIOUS run's story as its canon.
-  const priorBranches = (Array.isArray(this.currentBranchingChoices) ? this.currentBranchingChoices : [])
+  const priorBranches = (Array.isArray(context?.branchingChoices) ? context.branchingChoices : (Array.isArray(this.currentBranchingChoices) ? this.currentBranchingChoices : []))
     .filter((bc) => {
       const ch = this._extractChapterFromCase(bc?.caseNumber);
       return Number.isFinite(ch) ? ch < chapter : false;
@@ -565,7 +565,7 @@ function _buildContinuityAnchorSection(context, chapter) {
   // constraints, distinct from <under_map_state> above, which is a generative
   // "weave this in" instruction. The Under-Map model manages lifecycle (path-scoped;
   // a subverted belief is flagged correct=false), so there is no stale-fact bug.
-  const um = this.currentUnderMap;
+  const um = context?.underMap || this.currentUnderMap;
   if (um) {
     const nodes = (Array.isArray(um.nodes) ? um.nodes : [])
       .filter((n) => n && n.revelation && !n.unresolvedReading);
@@ -655,7 +655,7 @@ function _buildDynamicPrompt(
 
   // Dynamic Part 4.6: Player's living Under-Map (collected fragments, revealed
   // nodes, sealed theory) so this scene WEAVES into it across chapters.
-  const theorySection = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter);
+  const theorySection = this._buildPlayerTheorySection?.(context?.underMap || this.currentUnderMap, chapter);
   if (theorySection) {
     parts.push('<under_map_state>');
     parts.push(theorySection);
@@ -664,7 +664,7 @@ function _buildDynamicPrompt(
 
   // The Other Reader: the foil born from the player's rejected reading, escalating
   // with foilPresence (the Station-Eleven "Prophet" mirror).
-  const otherReader = this._buildOtherReaderSection?.(this.currentUnderMap);
+  const otherReader = this._buildOtherReaderSection?.(context?.underMap || this.currentUnderMap);
   if (otherReader) {
     parts.push('<the_other_reader>');
     parts.push(otherReader);
@@ -797,7 +797,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   parts.push('</active_threads>');
 
   // Part 6.6: Player's living Under-Map so this scene WEAVES into it across chapters.
-  const theorySectionGen = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter);
+  const theorySectionGen = this._buildPlayerTheorySection?.(context?.underMap || this.currentUnderMap, chapter);
   if (theorySectionGen) {
     parts.push('<under_map_state>');
     parts.push(theorySectionGen);
@@ -805,7 +805,7 @@ function _buildGenerationPrompt(context, chapter, subchapter, isDecisionPoint) {
   }
 
   // The Other Reader: keep the rejected reading's champion steering path-decisions too.
-  const otherReaderGen = this._buildOtherReaderSection?.(this.currentUnderMap);
+  const otherReaderGen = this._buildOtherReaderSection?.(context?.underMap || this.currentUnderMap);
   if (otherReaderGen) {
     parts.push('<the_other_reader>');
     parts.push(otherReaderGen);
@@ -1605,7 +1605,8 @@ Prefer: "The salt wind cut through Jack's coat as he stepped onto the weathered 
   }
 
   if (isDecisionPoint) {
-    const heldFragments = (Array.isArray(this.currentUnderMap?.fragments) ? this.currentUnderMap.fragments : [])
+    const requestMap = context?.underMap || this.currentUnderMap;
+    const heldFragments = (Array.isArray(requestMap?.fragments) ? requestMap.fragments : [])
       .filter((f) => f?.label)
       .slice(0, 5)
       .map((f) => `- [${String(f.kind || 'anomaly').toUpperCase()}] ${f.label}${f.detail ? `: ${String(f.detail).slice(0, 120)}` : ''}`)
