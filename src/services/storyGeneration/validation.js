@@ -98,7 +98,11 @@ class ValidationMethods {
 
     return issues;
   }
-  _parseGeneratedContent(content, isDecisionPoint) {
+  // `requestUnderMap` is this request's own map. It has to be threaded in rather
+  // than read off the service, because two generations run concurrently and each
+  // overwrites `this.currentUnderMap`: the belief-chapter snap below could
+  // otherwise correct one request's verdict against the other request's beliefs.
+  _parseGeneratedContent(content, isDecisionPoint, requestUnderMap = null) {
     try {
       // Parse JSON response (guaranteed valid by Gemini's structured output)
       const parsed = typeof content === 'string' ? JSON.parse(content) : content;
@@ -133,7 +137,7 @@ class ValidationMethods {
         // UNDER-MAP ECHO: callbacks to truths the player already revealed.
         echoes: this._normalizeEchoes(parsed.echoes),
         // BELIEF RESOLUTION: did a sealed belief bear out here? (drives Clarity)
-        beliefResolution: this._normalizeBeliefResolution(parsed.beliefResolution),
+        beliefResolution: this._normalizeBeliefResolution(parsed.beliefResolution, requestUnderMap),
         // THE OTHER READER: the name the model gave the foil, if any.
         foilName: this._normalizeFoilName(parsed.foilName),
         pathDecisions: null,
@@ -653,7 +657,7 @@ class ValidationMethods {
   }
 
   /** BELIEF RESOLUTION: normalize the signal that a sealed belief was borne out. */
-  _normalizeBeliefResolution(raw) {
+  _normalizeBeliefResolution(raw, requestUnderMap = null) {
     if (!raw || typeof raw !== 'object') return null;
     const resolvesChapter = Number(raw.resolvesChapter);
     if (!Number.isFinite(resolvesChapter)) return null;
@@ -667,7 +671,8 @@ class ValidationMethods {
     // unresolved belief it can only have meant.
     // Only correctable when a map is actually loaded; with no theories to check
     // against, the value passes through untouched rather than being second-guessed.
-    const unresolved = (Array.isArray(this.currentUnderMap?.theories) ? this.currentUnderMap.theories : [])
+    const activeMap = requestUnderMap || this.currentUnderMap;
+    const unresolved = (Array.isArray(activeMap?.theories) ? activeMap.theories : [])
       .filter((t) => t && t.correct == null && Number.isFinite(t.chapter));
     if (unresolved.length > 0 && !unresolved.some((t) => t.chapter === resolvesChapter)) {
       const snapped = unresolved[0].chapter; // theories are newest-first
@@ -2468,7 +2473,7 @@ Rewrite the narrative to fix ALL issues while maintaining the story's thriller t
       throw new Error(`Repair pass produced no usable content (${response?.finishReason || 'empty response'})`);
     }
 
-    return this._parseGeneratedContent(response.content, isDecisionPoint);
+    return this._parseGeneratedContent(response.content, isDecisionPoint, context?.underMap || null);
   }
 
   // ==========================================================================

@@ -12,6 +12,7 @@ import {
 import { formatCaseNumber, normalizeStoryCampaignShape } from '../utils/gameLogic';
 import { analytics } from '../services/AnalyticsService';
 import { createTraceId, llmTrace, log } from '../utils/llmTrace';
+import { TOTAL_CHAPTERS } from '../services/storyGeneration/constants';
 
 const StoryStateContext = createContext(null);
 const StoryDispatchContext = createContext(null);
@@ -544,8 +545,13 @@ export function StoryProvider({ children, progress, updateProgress }) {
     // Store the decision (pass explicit caseNumber to avoid stale state)
     selectDecisionBeforePuzzle(optionKey, optionDetails, caseNumber);
 
-    // Calculate next chapter info
-    const chapter = currentCampaign.chapter;
+    // Derive the next chapter from the CASE BEING SEALED, not from the campaign's
+    // own idea of where it is. The campaign can have moved on (a background write,
+    // a resumed session), and the advance helpers deliberately derive from the
+    // completed case for exactly that reason; deriving from the campaign here
+    // prefetched a chapter the seal was not for, so the seal itself missed the
+    // cache and the player ate a full generation.
+    const chapter = parseCaseNumber(caseNumber).chapter;
     const nextChapter = chapter + 1;
     const nextCaseNumber = formatCaseNumber(nextChapter, 1); // Next chapter, subchapter A
 
@@ -568,7 +574,7 @@ export function StoryProvider({ children, progress, updateProgress }) {
     const branchingChoices = currentCampaign.branchingChoices || [];
 
     // Trigger generation for next chapter immediately
-    if (isLLMConfigured && nextChapter <= 12) {
+    if (isLLMConfigured && nextChapter <= TOTAL_CHAPTERS) {
       log.debug('StoryContext', `Pre-puzzle decision made for ${caseNumber}: Option ${optionKey}, triggering ${nextCaseNumber}`);
 
       // Generate in background - don't await.

@@ -660,7 +660,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         throw truncErr;
       }
 
-      generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
+      generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint, requestUnderMap);
       llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
         hasTitle: !!generatedContent?.title,
         narrativeLength: generatedContent?.narrative?.length || 0,

@@ -828,7 +828,7 @@ export function GameProvider({
   }, [updateProgress]);
 
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
-  const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
+  const recordUnderMapDescent = useCallback(({ hadMisstep = false, used = true } = {}) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       // Only the descent. This used to chain resolveDailyStir, so finishing a
@@ -837,7 +837,7 @@ export function GameProvider({
       // stir's motif deepening mutated the Under-Map generation signature, which
       // invalidated the prefetch this very beat exists to cover. The stir is
       // settled by the FREEFORM board and by solving the daily word puzzle.
-      const um = umRecordDescent(current.underMap, { hadMisstep });
+      const um = umRecordDescent(current.underMap, { hadMisstep, used });
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
@@ -848,6 +848,11 @@ export function GameProvider({
   // chapter, so re-applying the same scene's resolution is a safe no-op.
   const resolveUnderMapBelief = useCallback(({ chapter, correct } = {}) => {
     if (!Number.isFinite(chapter) || typeof correct !== 'boolean') return;
+    // Analytics has to follow the WRITE, not the call: the scene's verdict banner
+    // re-applies on every mount of that case file, so logging unconditionally
+    // counted one resolution many times and inflated the funnel it exists to
+    // measure. Same pattern completeLogicPuzzle already uses.
+    let didResolve = false;
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       const um = current.underMap;
@@ -856,9 +861,10 @@ export function GameProvider({
       const hasUnresolved = Array.isArray(um?.theories)
         && um.theories.some((t) => t.chapter === chapter && t.correct == null);
       if (!hasUnresolved) return null;
+      didResolve = true;
       return { storyCampaign: { ...current, underMap: umResolveTheory(um, chapter, correct) } };
     });
-    analytics.logEvent('belief_resolved', { chapter, correct });
+    if (didResolve) analytics.logEvent('belief_resolved', { chapter, correct });
   }, [updateProgress]);
 
   // THE OTHER READER: pin the foil's name the first time a scene names them.

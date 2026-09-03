@@ -602,13 +602,26 @@ export const updateDescentState = (map, caseNumber, patch = {}) => {
   return { ...m, descent: next };
 };
 
-export const recordDescent = (map, { hadMisstep = false } = {}) => {
+export const recordDescent = (map, { hadMisstep = false, used = true } = {}) => {
   const m = normalizeUnderMap(map);
-  const flawlessStreak = hadMisstep ? 0 : (m.flawlessStreak || 0) + 1;
+  // `used` is false for a descent the player opened and left without probing
+  // anything. It still ENDS (the per-descent state has to be cleared, or the
+  // next visit to this gate restores a stale one), but it neither advances the
+  // flawless streak nor spends the banked daily probe: the bank is the daily
+  // loop's payment into the campaign, and walking through a board without
+  // touching it should not burn it.
+  const flawlessStreak = used ? (hadMisstep ? 0 : (m.flawlessStreak || 0) + 1) : (m.flawlessStreak || 0);
   const bestFlawlessStreak = Math.max(m.bestFlawlessStreak || 0, flawlessStreak);
-  // The banked daily-stir probe bonus is spent by this descent (its budget was
-  // computed at descent start) — zero it so it never double-applies.
-  return { ...m, flawlessStreak, bestFlawlessStreak, pendingProbeBonus: 0, descent: null };
+  const pendingProbeBonus = used ? 0 : (m.pendingProbeBonus || 0);
+  if (
+    m.descent == null
+    && flawlessStreak === (m.flawlessStreak || 0)
+    && bestFlawlessStreak === (m.bestFlawlessStreak || 0)
+    && pendingProbeBonus === (m.pendingProbeBonus || 0)
+  ) {
+    return m;
+  }
+  return { ...m, flawlessStreak, bestFlawlessStreak, pendingProbeBonus, descent: null };
 };
 
 // The Other Reader's presence is bounded so no single run of luck pins the foil

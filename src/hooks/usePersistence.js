@@ -27,78 +27,90 @@ export function usePersistence() {
   // Hydrate on mount
   useEffect(() => {
     const hydrate = async () => {
-      let stored = await loadStoredProgress();
+      let stored = null;
       const blank = createBlankProgress();
+      try {
+        stored = await loadStoredProgress();
 
-      if (!stored) {
-        stored = blank;
-      } else {
-        // Migrate old progress to new format
-        stored = migrateProgress(stored) || stored;
-        
-        // Merge settings
-        stored.settings = { ...blank.settings, ...(stored.settings || {}) };
-        
-        // Type checks
-        if (typeof stored.seenPrologue !== 'boolean') stored.seenPrologue = false;
-        if (typeof stored.premiumUnlocked !== 'boolean') stored.premiumUnlocked = false;
-        
-        // Normalize story
-        if (!stored.storyCampaign) {
-          stored.storyCampaign = createBlankStoryCampaign();
+        if (!stored) {
+          stored = blank;
         } else {
-          stored.storyCampaign = normalizeStoryCampaignShape(stored.storyCampaign);
-        }
-
-        // Ensure briefings object
-        if (!stored.seenBriefings || typeof stored.seenBriefings !== 'object') {
-          stored.seenBriefings = {};
-        }
+          // Migrate old progress to new format
+          stored = migrateProgress(stored) || stored;
         
-        // Ensure new state objects exist
-        if (!stored.endings) stored.endings = createBlankEndingsState();
-        if (!stored.achievements) stored.achievements = createBlankAchievementsState();
-        if (!stored.chapterCheckpoints) stored.chapterCheckpoints = createBlankChapterCheckpoints();
-        if (!stored.gameplayStats) stored.gameplayStats = createBlankGameplayStats();
-      }
+          // Merge settings
+          stored.settings = { ...blank.settings, ...(stored.settings || {}) };
+        
+          // Type checks
+          if (typeof stored.seenPrologue !== 'boolean') stored.seenPrologue = false;
+          if (typeof stored.premiumUnlocked !== 'boolean') stored.premiumUnlocked = false;
+        
+          // Normalize story
+          if (!stored.storyCampaign) {
+            stored.storyCampaign = createBlankStoryCampaign();
+          } else {
+            stored.storyCampaign = normalizeStoryCampaignShape(stored.storyCampaign);
+          }
 
-      // Ensure valid current case ID
-      const storyCase = getCaseByNumber(stored.storyCampaign.activeCaseNumber) || null;
-      const fallbackCase =
-        storyCase ||
-        SEASON_ONE_CASES.find((c) => c.id === stored.currentCaseId) ||
-        SEASON_ONE_CASES[0];
-      
-      // Ensure unlockedCaseIds is an array before using it
-      if (!Array.isArray(stored.unlockedCaseIds)) {
-        stored.unlockedCaseIds = [1];
-      }
-
-      if (fallbackCase?.id) {
-        stored.currentCaseId = fallbackCase.id;
-        if (!stored.unlockedCaseIds.includes(fallbackCase.id)) {
-          stored.unlockedCaseIds = Array.from(
-            new Set([...stored.unlockedCaseIds, fallbackCase.id]),
-          );
+          // Ensure briefings object
+          if (!stored.seenBriefings || typeof stored.seenBriefings !== 'object') {
+            stored.seenBriefings = {};
+          }
+        
+          // Ensure new state objects exist
+          if (!stored.endings) stored.endings = createBlankEndingsState();
+          if (!stored.achievements) stored.achievements = createBlankAchievementsState();
+          if (!stored.chapterCheckpoints) stored.chapterCheckpoints = createBlankChapterCheckpoints();
+          if (!stored.gameplayStats) stored.gameplayStats = createBlankGameplayStats();
         }
-      }
 
-      // Check timer unlocks
-      if (stored.nextUnlockAt) {
-        const nowIso = new Date().toISOString();
-        if (nowIso >= stored.nextUnlockAt) {
-          const unlockedCount = stored.unlockedCaseIds.length;
-          if (unlockedCount < SEASON_ONE_CASE_COUNT) {
+        // Ensure valid current case ID
+        const storyCase = getCaseByNumber(stored.storyCampaign.activeCaseNumber) || null;
+        const fallbackCase =
+          storyCase ||
+          SEASON_ONE_CASES.find((c) => c.id === stored.currentCaseId) ||
+          SEASON_ONE_CASES[0];
+      
+        // Ensure unlockedCaseIds is an array before using it
+        if (!Array.isArray(stored.unlockedCaseIds)) {
+          stored.unlockedCaseIds = [1];
+        }
+
+        if (fallbackCase?.id) {
+          stored.currentCaseId = fallbackCase.id;
+          if (!stored.unlockedCaseIds.includes(fallbackCase.id)) {
             stored.unlockedCaseIds = Array.from(
-              new Set([...stored.unlockedCaseIds, unlockedCount + 1]),
+              new Set([...stored.unlockedCaseIds, fallbackCase.id]),
             );
           }
-          stored.nextUnlockAt = null;
         }
-      }
 
-      setProgress(stored);
-      setHydrationComplete(true);
+        // Check timer unlocks
+        if (stored.nextUnlockAt) {
+          const nowIso = new Date().toISOString();
+          if (nowIso >= stored.nextUnlockAt) {
+            const unlockedCount = stored.unlockedCaseIds.length;
+            if (unlockedCount < SEASON_ONE_CASE_COUNT) {
+              stored.unlockedCaseIds = Array.from(
+                new Set([...stored.unlockedCaseIds, unlockedCount + 1]),
+              );
+            }
+            stored.nextUnlockAt = null;
+          }
+        }
+
+      } catch (e) {
+        // Every step above walks arbitrary persisted data (migrateProgress,
+        // normalizeStoryCampaignShape and its board/Under-Map normalizers, date
+        // arithmetic). A single throw left hydrationComplete false forever, and
+        // the app sat on its loading state with no error and no way forward.
+        // A corrupt save should cost the save, not the app.
+        console.warn('[Persistence] hydrate failed, starting fresh:', e?.message);
+        stored = blank;
+      } finally {
+        setProgress(stored || blank);
+        setHydrationComplete(true);
+      }
     };
 
     hydrate();

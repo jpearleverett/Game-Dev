@@ -553,7 +553,14 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         // Generation was cancelled - but we still have the entry
         log.debug('useStoryGeneration', `[${genId}] Generation cancelled after ${duration}ms, but caching entry`);
         if (entry) {
-          updateGeneratedCache(caseNumber, pathKey, entry);
+          // Same key as the success path. This wrote under the RAW pathKey while
+          // every read (and the success write) uses the canonical one, so a
+          // finished-but-cancelled generation was cached where nothing would look
+          // for it, and the next request regenerated it from scratch.
+          updateGeneratedCache(caseNumber, entry?.pathKey || canonicalPathKey, entry);
+          if (requiredUnderMapSignature) {
+            generatedUnderMapSignaturesRef.current.set(`${caseNumber}_${entry?.pathKey || canonicalPathKey}`, requiredUnderMapSignature);
+          }
         }
         return entry;
       }
@@ -901,11 +908,20 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           reason: 'under-map-reveal-prefetch',
           branchingChoices: args.branchingChoices,
           underMap: args.underMap,
+          // The signature belongs in the generation key, or the descent's own
+          // ensureStoryContent (which passes it) runs under a different key and
+          // opens a SECOND generation instead of deduping onto this one.
+          refreshKey,
         }),
       );
 
       if (entry && isMountedRef.current) {
-        updateGeneratedCache(nextCaseNumber, entry.pathKey || args.pathKey, entry);
+        const cachedPathKey = entry.pathKey || args.pathKey;
+        updateGeneratedCache(nextCaseNumber, cachedPathKey, entry);
+        // Record what this prefetch is signed for. Without it the freshness
+        // guard could never be satisfied by a prefetch, so every warmed scene
+        // was regenerated at the gate anyway.
+        generatedUnderMapSignaturesRef.current.set(`${nextCaseNumber}_${cachedPathKey}`, targetSignature);
         log.debug('useStoryGeneration', `Under-Map prefetch cached ${nextCaseNumber} (${refreshKey})`);
       }
     } catch (err) {

@@ -15,28 +15,12 @@ export function useStoryEngine(progress, updateProgress) {
     [progress.storyCampaign],
   );
 
-  const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
-    if (reset) {
-       // Reset logic
-       // We just return instructions for the persistence layer
-       const blankStory = {
-           // ... new blank story ...
-           // Ideally imported from storage/progressStorage but we want to keep deps clean
-           // For now let's assume the caller handles the deep reset or we use updateProgress
-       };
-       // This is tricky without the "createBlank" function.
-       // Let's rely on the persistence layer's 'clearProgress' or similar if needed, 
-       // or just reset the story part.
-       updateProgress({
-           storyCampaign: normalizeStoryCampaignShape(null) // Resets to defaults
-       });
-       return true;
-    }
-    
-    // Just switch mode
-    // The consumer needs to switch the "mode" state, which might be in GameContext
-    return true; 
-  }, [updateProgress]);
+  // NOTE: `enterStoryCampaign` used to live here as a half-written stub whose own
+  // comments said it could not do the job ("this is tricky without the createBlank
+  // function"). It wiped the campaign to defaults with a non-functional write and
+  // returned true regardless, so a caller that reached it would have lost a
+  // completed run's New Game+ carry-over. GameContext.enterStoryCampaign is the
+  // single owner; nothing consumed this one.
 
   const selectDecision = useCallback((optionKey) => {
     const decisionTime = new Date().toISOString();
@@ -244,7 +228,6 @@ export function useStoryEngine(progress, updateProgress) {
 
   return {
       storyCampaign,
-      enterStoryCampaign,
       selectDecision,
       selectDecisionBeforePuzzle,
       applyPreDecision,

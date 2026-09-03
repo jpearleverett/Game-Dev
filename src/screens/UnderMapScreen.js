@@ -461,7 +461,16 @@ export default function UnderMapScreen({ navigation, route }) {
   const handleContinue = useCallback(async () => {
     if (continuing || !asPuzzle || !gateCaseNumber) return;
     setContinuing(true); setGenError(null);
-    if (hadMisstepRef.current || revealsThisVisit > 0) recordUnderMapDescent?.({ hadMisstep: hadMisstepRef.current });
+    // Always record the END of the descent: skipping it entirely left the
+    // per-descent state (probes spent, blurred pairs) behind for the next visit
+    // to this gate, and never consumed the daily-stir probe the budget had
+    // already handed out. `used` tells the model whether anything happened, so a
+    // board the player only glanced at neither advances the flawless streak nor
+    // burns the bank.
+    recordUnderMapDescent?.({
+      hadMisstep: hadMisstepRef.current,
+      used: hadMisstepRef.current || revealsThisVisit > 0,
+    });
     analytics.logEvent('descent_complete', {
       caseNumber: gateCaseNumber,
       reveals: revealsThisVisit,
