@@ -466,19 +466,25 @@ export const addRelations = (map, relations = [], { caseNumber = null } = {}) =>
 export const senseConnection = (map, aId, bId) => {
   const m = normalizeUnderMap(map);
   if (!aId || !bId || aId === bId) {
-    return { valid: false, relation: null, alreadyConnected: false, unresolvedReading: false, readings: null };
+    return { valid: false, relation: null, alreadyConnected: false, unresolvedReading: false, foilClaimed: false, foilReading: null, readings: null };
   }
   const key = relationKey(aId, bId);
   const relation = m.relations.find((r) => relationKey(r.a, r.b) === key) || null;
   if (!relation) {
-    return { valid: false, relation: null, alreadyConnected: false, unresolvedReading: false, readings: null };
+    return { valid: false, relation: null, alreadyConnected: false, unresolvedReading: false, foilClaimed: false, foilReading: null, readings: null };
   }
   const existing = m.connections.find((c) => relationKey(c.a, c.b) === key) || null;
+  const node = m.nodes.find((n) => n && n.id === `node_${relation.id}`) || null;
   return {
     valid: true,
     relation,
     alreadyConnected: !!existing,
     unresolvedReading: !!existing?.unresolvedReading,
+    // The Other Reader's claim, and the false reading they hold it under. The
+    // reading was authored and stored and rendered nowhere, so an incursion
+    // reached the player as a red line and no words.
+    foilClaimed: !!existing?.foilClaimed,
+    foilReading: node?.foilReading || null,
     readings: { correct: relation.revelation, options: [relation.revelation, ...(relation.falseReadings || [])] },
   };
 };

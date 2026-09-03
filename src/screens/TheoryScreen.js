@@ -108,7 +108,12 @@ export default function TheoryScreen({ navigation, route }) {
   const storyCampaign = progress?.storyCampaign || {};
   const caseNumber = route?.params?.caseNumber || storyCampaign.activeCaseNumber || null;
   const caseId = route?.params?.caseId || game.activeCase?.id || null;
-  const chapter = storyCampaign.chapter ?? (caseNumber ? parseCaseNumber(caseNumber).chapter : null);
+  // From the CASE being sealed first. Everything downstream (recordUnderMapTheory,
+  // the prefetch's TOTAL_CHAPTERS guard, crossThreshold's sealedChapter) keys on
+  // the case number, so preferring the campaign's own position meant a campaign
+  // that had drifted sealed the belief against the wrong chapter and the verdict
+  // could never resolve it.
+  const chapter = (caseNumber ? parseCaseNumber(caseNumber).chapter : null) ?? storyCampaign.chapter ?? null;
 
   const map = useMemo(
     () => normalizeUnderMap(storyCampaign.underMap),
@@ -213,8 +218,12 @@ export default function TheoryScreen({ navigation, route }) {
       if (!r) return false;
       if (r.includes(e) || e.includes(r)) return true;
       const ew = new Set(e.split(' ').filter((w) => w.length >= 5));
+      // Count DISTINCT shared words. Counting every occurrence let one word
+      // repeated twice in a revelation vouch for a reading it has nothing to do
+      // with, and the ◆ mark is the whole basis of the evidence-grounded choice.
+      const rw = new Set(r.split(' ').filter((w) => w.length >= 5));
       let hits = 0;
-      r.split(' ').forEach((w) => { if (w.length >= 5 && ew.has(w)) hits += 1; });
+      rw.forEach((w) => { if (ew.has(w)) hits += 1; });
       return hits >= 2;
     });
   }, [map.nodes]);

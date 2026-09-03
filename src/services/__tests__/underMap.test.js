@@ -1198,3 +1198,40 @@ describe('the board does not answer itself', () => {
     expect(descentStateFor(m, '002A').probesUsed).toBe(1);
   });
 });
+
+describe("The Other Reader's claim is legible", () => {
+  const { claimByFoil, senseConnection: sense } = require('../../data/underMap');
+
+  test('a probed claim carries their reading, not just a red line', () => {
+    // foilReading was authored and stored and rendered nowhere, so an incursion
+    // reached the player as a coloured stroke and no words.
+    let m = createBlankUnderMap();
+    m = addFragments(m, [
+      { label: 'The drowned door', kind: FRAGMENT_KIND.PLACE },
+      { label: 'Silver ink', kind: FRAGMENT_KIND.PHENOMENON },
+    ]);
+    m = addRelations(m, [{
+      aLabel: 'The drowned door',
+      bLabel: 'Silver ink',
+      revelation: 'The door was written, not built.',
+      falseReadings: ['The ink is bleeding out of the door.'],
+    }]);
+    m = recordTheory(m, { chapter: 1, interpretation: 'A reading.', rejected: ['Another reading.'] });
+    m = { ...m, foil: { ...m.foil, presence: 2 } };
+
+    const claimed = claimByFoil(m, { chapter: 2 });
+    expect(claimed.claimed).toBeTruthy();
+
+    const [a, b] = [m.fragments[0].id, m.fragments[1].id];
+    const probe = sense(claimed.map, a, b);
+    expect(probe.foilClaimed).toBe(true);
+    expect(probe.foilReading).toBe('The ink is bleeding out of the door.');
+  });
+
+  test('an ordinary pair reports no claim', () => {
+    const m = createBlankUnderMap();
+    const probe = sense(m, 'frag_a', 'frag_b');
+    expect(probe.foilClaimed).toBeFalsy();
+    expect(probe.foilReading).toBeNull();
+  });
+});

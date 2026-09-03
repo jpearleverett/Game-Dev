@@ -244,7 +244,13 @@ export default function UnderMapScreen({ navigation, route }) {
   const [continuing, setContinuing] = useState(false);
   const [genError, setGenError] = useState(null);
   const hadMisstepRef = useRef(persistedDescent.hadMisstep);
+  // Continue awaits a generation that can fail; the retry must not record the
+  // descent a second time (which would re-advance the flawless streak).
+  const descentRecordedRef = useRef(false);
   const lockRef = useRef(false);
+  // Both deferred steps of a probe (the 300ms hold before evaluating, the 480ms
+  // beat before the reveal card) used to fire into an unmounted screen.
+  const pendingTimerRef = useRef(null);
   const toastTimer = useRef(null);
 
   const shake = useRef(new Animated.Value(0)).current;
@@ -340,7 +346,10 @@ export default function UnderMapScreen({ navigation, route }) {
     // Whisper toasts carry real information — give them time to be read.
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
-  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+  }, []);
 
   const doShake = useCallback(() => {
     if (reducedMotion) return;
@@ -387,13 +396,32 @@ export default function UnderMapScreen({ navigation, route }) {
         notificationHaptic(Haptics.NotificationFeedbackType.Success);
         audio?.playVictory?.();
         setRevealsThisVisit((n) => n + 1);
-        setTimeout(() => {
-          setNode({ aId: pair[0], bId: pair[1], mode: 'revealed', revelation: res?.node?.revelation || sensed.readings.correct, scope: res?.node?.scope || null });
+        // Mirror chooseReading: a pair with no decoys can still be a thread
+        // reclaimed from The Other Reader, and this path was dropping both the
+        // RECLAIMED card and the node_revealed event entirely.
+        analytics.logEvent('node_revealed', { reclaimed: !!res?.reclaimed, upgraded: !!res?.upgraded });
+        pendingTimerRef.current = setTimeout(() => {
+          setNode({
+            aId: pair[0],
+            bId: pair[1],
+            mode: 'revealed',
+            revelation: res?.node?.revelation || sensed.readings.correct,
+            scope: res?.node?.scope || null,
+            reclaimed: !!res?.reclaimed,
+          });
           setSelected([]); lockRef.current = false;
         }, 480);
         return;
       }
-      setNode({ aId: pair[0], bId: pair[1], mode: 'choose', options, unresolved: !!sensed.unresolvedReading });
+      setNode({
+        aId: pair[0],
+        bId: pair[1],
+        mode: 'choose',
+        options,
+        unresolved: !!sensed.unresolvedReading,
+        foilClaimed: !!sensed.foilClaimed,
+        foilReading: sensed.foilReading || null,
+      });
       lockRef.current = false;
       return;
     }
@@ -441,25 +469,29 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
-    setSelected((sel) => {
-      if (sel.includes(id)) return sel.filter((s) => s !== id);
-      if (sel.length >= 2) return sel;
-      // Forming a pair (the probe) requires an unspent probe. Out of probes never
-      // blocks the descent — it just stops further guessing this visit.
-      if (sel.length === 1 && probesEnabled && probesLeft <= 0) {
-        showToast('Out of probes. The rest stays sensed — continue the descent.');
-        return sel;
-      }
-      const next = [...sel, id];
-      if (next.length === 2) {
-        lockRef.current = true;
-        setTimeout(() => evaluate(next), 300);
-      } else {
-        selectionHaptic();
-      }
-      return next;
-    });
-  }, [node, evaluate, probesEnabled, probesLeft, showToast]);
+    // Decide from the current selection and then set it. This used to toast,
+    // fire haptics, take a lock and schedule the probe from INSIDE the state
+    // updater, which React is free to call twice (and does under StrictMode):
+    // a single tap could double-fire the haptic and schedule two evaluations of
+    // the same pair, spending two probes for one guess.
+    const sel = selected;
+    if (sel.includes(id)) { setSelected(sel.filter((s) => s !== id)); return; }
+    if (sel.length >= 2) return;
+    // Forming a pair (the probe) requires an unspent probe. Out of probes never
+    // blocks the descent — it just stops further guessing this visit.
+    if (sel.length === 1 && probesEnabled && probesLeft <= 0) {
+      showToast('Out of probes. The rest stays sensed — continue the descent.');
+      return;
+    }
+    const next = [...sel, id];
+    setSelected(next);
+    if (next.length === 2) {
+      lockRef.current = true;
+      pendingTimerRef.current = setTimeout(() => evaluate(next), 300);
+    } else {
+      selectionHaptic();
+    }
+  }, [node, selected, evaluate, probesEnabled, probesLeft, showToast]);
 
   const chooseReading = useCallback((opt) => {
     if (!node) return;
@@ -498,10 +530,13 @@ export default function UnderMapScreen({ navigation, route }) {
     // already handed out. `used` tells the model whether anything happened, so a
     // board the player only glanced at neither advances the flawless streak nor
     // burns the bank.
-    recordUnderMapDescent?.({
-      hadMisstep: hadMisstepRef.current,
-      used: hadMisstepRef.current || revealsThisVisit > 0,
-    });
+    if (!descentRecordedRef.current) {
+      descentRecordedRef.current = true;
+      recordUnderMapDescent?.({
+        hadMisstep: hadMisstepRef.current,
+        used: hadMisstepRef.current || revealsThisVisit > 0,
+      });
+    }
     analytics.logEvent('descent_complete', {
       caseNumber: gateCaseNumber,
       reveals: revealsThisVisit,
@@ -821,8 +856,17 @@ export default function UnderMapScreen({ navigation, route }) {
             <View style={styles.nodeSheen} />
             {node.mode === 'choose' ? (
               <>
-                <Text style={styles.nodeTag}>◆ A NODE STIRS</Text>
-                <Text style={styles.nodeTitle}>{node.unresolved ? 'Read it again — what does it mean?' : 'What does this connection mean?'}</Text>
+                <Text style={[styles.nodeTag, node.foilClaimed && styles.nodeTagReclaim]}>
+                  {node.foilClaimed ? '◆ THE OTHER READER’S THREAD' : '◆ A NODE STIRS'}
+                </Text>
+                <Text style={styles.nodeTitle}>
+                  {node.foilClaimed
+                    ? 'They drew this one first. Read it true and take it back.'
+                    : node.unresolved ? 'Read it again — what does it mean?' : 'What does this connection mean?'}
+                </Text>
+                {node.foilClaimed && node.foilReading ? (
+                  <Text style={styles.reclaimSub}>They read it as: “{node.foilReading}”</Text>
+                ) : null}
                 <View style={{ gap: 10, marginTop: 6 }}>
                   {node.options.map((opt, i) => (
                     <Pressable key={i} style={styles.readingOpt} onPress={() => chooseReading(opt)}>
