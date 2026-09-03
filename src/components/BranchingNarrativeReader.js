@@ -752,6 +752,10 @@ export default function BranchingNarrativeReader({
 
   const allPages = useMemo(() => [...historyPages, ...pages], [historyPages, pages]);
   const liveStartIndex = historyPages.length;
+  // Read by the viewability callback, which is created once in a ref and so
+  // cannot close over the current value.
+  const liveStartIndexRef = useRef(liveStartIndex);
+  liveStartIndexRef.current = liveStartIndex;
 
   // Position the reader on the LIVE page (not the start of history) on first layout, and
   // preserve the page under the player if history arrives late (async): shift by the delta
@@ -788,9 +792,13 @@ export default function BranchingNarrativeReader({
   );
   const inHistory = activePage < liveStartIndex;
   const snapToLatest = useCallback(() => {
-    try { listRef.current?.scrollToIndex({ index: liveStartIndex, animated: true }); } catch (_e) { /* noop */ }
-    setActivePage(liveStartIndex);
-  }, [liveStartIndex]);
+    const target = Math.max(
+      liveStartIndex,
+      Math.min(allPages.length - 1, lastLiveIndexRef.current || liveStartIndex),
+    );
+    try { listRef.current?.scrollToIndex({ index: target, animated: true }); } catch (_e) { /* noop */ }
+    setActivePage(target);
+  }, [liveStartIndex, allPages.length]);
 
   // Handle first choice
   const handleFirstChoice = useCallback((option) => {
@@ -930,11 +938,17 @@ export default function BranchingNarrativeReader({
 
   const perspective = Math.max(620, Math.round((pageWidth || scaleSpacing(SPACING.xl)) * 1.6));
 
+  // Where "now" actually is. RETURN TO NOW jumped to liveStartIndex, the FIRST
+  // live page, so a player four pages into the current scene who flipped back to
+  // read something earlier was returned to the top of the subchapter and had to
+  // page forward through prose they had already read.
+  const lastLiveIndexRef = useRef(0);
   const handleViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems?.length) {
       const nextIndex = viewableItems[0]?.index ?? 0;
       if (typeof nextIndex === "number") {
         setActivePage(nextIndex);
+        if (nextIndex >= liveStartIndexRef.current) lastLiveIndexRef.current = nextIndex;
       }
     }
   });
