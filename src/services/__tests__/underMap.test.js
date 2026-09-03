@@ -357,11 +357,43 @@ describe('underMap — deduction', () => {
     expect(sensedRelations(drawn)).toHaveLength(0);
   });
 
+  test('the scaling arm actually scales, and the daily bonus rides on top', () => {
+    // The case above only ever exercises floor(2/3) = 0, so the whole scaling
+    // term could have been deleted without turning this suite red.
+    let m = createBlankUnderMap();
+    const labels = Array.from({ length: 8 }, (_, i) => `Thread ${i}`);
+    m = addFragments(m, labels.map((label) => ({ label, kind: FRAGMENT_KIND.SYMBOL })));
+    m = addRelations(m, [
+      { aLabel: 'Thread 0', bLabel: 'Thread 1', revelation: 'One.' },
+      { aLabel: 'Thread 2', bLabel: 'Thread 3', revelation: 'Two.' },
+      { aLabel: 'Thread 4', bLabel: 'Thread 5', revelation: 'Three.' },
+      { aLabel: 'Thread 6', bLabel: 'Thread 7', revelation: 'Four.' },
+    ]);
+    expect(connectableFragmentCount(m)).toBe(8);
+    expect(probeBudgetFor(m)).toBeGreaterThan(PROBE_BASE);
+    expect(probeBudgetFor(m)).toBe(PROBE_BASE + 2); // floor(8 / 3)
+
+    const withBonus = { ...m, pendingProbeBonus: 2 };
+    expect(pendingProbeBonus(withBonus)).toBe(2);
+    expect(probeBudgetFor(withBonus)).toBe(PROBE_BASE + 2 + 2);
+  });
+
   test('readingChoices shuffles deterministically with an injected rng', () => {
     const { readings } = senseConnection(deductionSeed(), STAIN, INK);
-    const order = readingChoices(readings, () => 0); // rng=0 -> reverse-ish deterministic order
+    const order = readingChoices(readings, () => 0);
     expect(order).toHaveLength(3);
     expect([...order].sort()).toEqual([...readings.options].sort()); // same set
+
+    // The point of injecting an rng is that the same one yields the same order,
+    // and a different one is free to yield another. Without this the test passed
+    // for a function that ignored its rng entirely.
+    expect(readingChoices(readings, () => 0)).toEqual(order);
+    let i = 0;
+    const seq = () => [0.99, 0.01, 0.5, 0.75][i++ % 4];
+    i = 0; const a = readingChoices(readings, seq);
+    i = 0; const b = readingChoices(readings, seq);
+    expect(b).toEqual(a);
+    expect([...a].sort()).toEqual([...readings.options].sort());
   });
 
   test('recordDescent tracks the flawless streak and resets on a misstep', () => {
@@ -884,7 +916,7 @@ describe('defects found in the end-to-end audit', () => {
     let m = createBlankUnderMap();
     m = addFragments(m, [makeFragment({ label: 'Anchor', kind: 'symbol', caseNumber: '001A' })]);
     for (let i = 0; i < 14; i += 1) {
-      m = addRelations(m, [{ aLabel: 'Anchor', bLabel: `Absent ${i}`, revelation: `Truth number ${i}.` }], '001A');
+      m = addRelations(m, [{ aLabel: 'Anchor', bLabel: `Absent ${i}`, revelation: `Truth number ${i}.` }], { caseNumber: '001A' });
     }
     const labels = m.latentRelations.map((l) => l.bLabel);
     expect(labels).toContain('Absent 13');
@@ -927,7 +959,7 @@ describe('defects found in the end-to-end audit', () => {
 
   test('a latent whose labels resolve to one fragment is consumed, not held forever', () => {
     let m = createBlankUnderMap();
-    m = addRelations(m, [{ aLabel: 'the drowned door', bLabel: 'drowned door', revelation: 'It answers to its own name.' }], '001A');
+    m = addRelations(m, [{ aLabel: 'the drowned door', bLabel: 'drowned door', revelation: 'It answers to its own name.' }], { caseNumber: '001A' });
     expect(m.latentRelations).toHaveLength(1);
     m = addFragments(m, [makeFragment({ label: 'the drowned door', kind: 'place', caseNumber: '001B' })]);
     expect(m.latentRelations).toHaveLength(0);

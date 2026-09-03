@@ -394,15 +394,16 @@ export function GameProvider({
       if (!progress.nextUnlockAt) return;
       const nowIso = new Date().toISOString();
       if (nowIso >= progress.nextUnlockAt) {
-          const currentUnlocked = progress.unlockedCaseIds || [];
-          const seasonCount = SEASON_ONE_CASES.length; 
-          if (currentUnlocked.length < seasonCount) {
-               const nextId = currentUnlocked.length + 1;
-               updateProgress({
-                   unlockedCaseIds: Array.from(new Set([...currentUnlocked, nextId])),
-                   nextUnlockAt: null
-               });
-          }
+          const seasonCount = SEASON_ONE_CASES.length;
+          updateProgress((prev) => {
+              const currentUnlocked = prev.unlockedCaseIds || [];
+              if (currentUnlocked.length >= seasonCount) return null;
+              const nextId = currentUnlocked.length + 1;
+              return {
+                  unlockedCaseIds: Array.from(new Set([...currentUnlocked, nextId])),
+                  nextUnlockAt: null,
+              };
+          });
       }
   }, [progress, updateProgress]);
 
@@ -962,37 +963,38 @@ export function GameProvider({
 
   const unlockEnding = useCallback((endingId, playthroughDetails = {}) => {
     const nowIso = new Date().toISOString();
-    const currentEndings = progress.endings || { unlockedEndingIds: [], endingDetails: {}, totalEndingsReached: 0 };
-    
-    const alreadyUnlocked = currentEndings.unlockedEndingIds.includes(endingId);
-    
-    const updatedEndings = {
-      ...currentEndings,
-      unlockedEndingIds: alreadyUnlocked 
-        ? currentEndings.unlockedEndingIds 
-        : [...currentEndings.unlockedEndingIds, endingId],
-      endingDetails: {
-        ...currentEndings.endingDetails,
-        [endingId]: {
-          unlockedAt: currentEndings.endingDetails[endingId]?.unlockedAt || nowIso,
-          lastReachedAt: nowIso,
-          reachCount: (currentEndings.endingDetails[endingId]?.reachCount || 0) + 1,
-          ...playthroughDetails,
+    const alreadyUnlocked = !!(progress.endings?.unlockedEndingIds || []).includes(endingId);
+
+    // Functional: the finale writes this while the campaign is still settling,
+    // and a merge built from a render-time snapshot drops whatever landed in
+    // between (the same class of write that once reset the campaign).
+    updateProgress((prev) => {
+      const currentEndings = prev.endings || { unlockedEndingIds: [], endingDetails: {}, totalEndingsReached: 0 };
+      const seen = currentEndings.unlockedEndingIds.includes(endingId);
+      return {
+        endings: {
+          ...currentEndings,
+          unlockedEndingIds: seen
+            ? currentEndings.unlockedEndingIds
+            : [...currentEndings.unlockedEndingIds, endingId],
+          endingDetails: {
+            ...currentEndings.endingDetails,
+            [endingId]: {
+              unlockedAt: currentEndings.endingDetails[endingId]?.unlockedAt || nowIso,
+              lastReachedAt: nowIso,
+              reachCount: (currentEndings.endingDetails[endingId]?.reachCount || 0) + 1,
+              ...playthroughDetails,
+            },
+          },
+          totalEndingsReached: currentEndings.totalEndingsReached + 1,
+          firstEndingId: currentEndings.firstEndingId || endingId,
+          firstEndingAt: currentEndings.firstEndingAt || nowIso,
         },
-      },
-      totalEndingsReached: currentEndings.totalEndingsReached + 1,
-      firstEndingId: currentEndings.firstEndingId || endingId,
-      firstEndingAt: currentEndings.firstEndingAt || nowIso,
-    };
-
-    const updatedCheckpoints = {
-      ...(progress.chapterCheckpoints || {}),
-      unlocked: true,
-    };
-
-    updateProgress({ 
-      endings: updatedEndings,
-      chapterCheckpoints: updatedCheckpoints,
+        chapterCheckpoints: {
+          ...(prev.chapterCheckpoints || {}),
+          unlocked: true,
+        },
+      };
     });
 
     analytics.logEvent?.('ending_unlocked', { endingId, isNew: !alreadyUnlocked });
@@ -1158,26 +1160,28 @@ export function GameProvider({
       replayFromChapter: checkpoint.chapter,
     };
 
-    updateProgress({
+    // Functional: this writes the CAMPAIGN, and it also merged the checkpoint map
+    // from a render-time snapshot. Per the campaign-advance invariant, a write
+    // built from a closure loses whatever landed between render and commit.
+    updateProgress((prev) => ({
       storyCampaign: restoredCampaign,
       chapterCheckpoints: {
-        ...progress.chapterCheckpoints,
+        ...(prev.chapterCheckpoints || {}),
         activeReplayBranch: checkpoint.id,
       },
-    });
+    }));
 
     return true;
-  }, [progress.chapterCheckpoints, updateProgress]);
+  }, [updateProgress]);
 
   const updateGameplayStats = useCallback((updates) => {
-    const currentStats = progress.gameplayStats || {};
-    updateProgress({
+    updateProgress((prev) => ({
       gameplayStats: {
-        ...currentStats,
+        ...(prev.gameplayStats || {}),
         ...updates,
       },
-    });
-  }, [progress.gameplayStats, updateProgress]);
+    }));
+  }, [updateProgress]);
 
   const stateValue = useMemo(() => ({
     ...gameState,

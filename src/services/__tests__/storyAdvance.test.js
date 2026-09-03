@@ -31,9 +31,27 @@ describe('advanceWithDecision (chapter climax)', () => {
     expect(out.branchingChoices).toHaveLength(1);
   });
 
-  test('chapters 1-5 are not gated; 6+ are', () => {
-    expect(advanceWithDecision(base({ chapter: 1 }), { decisionCase: '001C', optionKey: 'A', timestamp: 't' }).nextStoryUnlockAt).toBeNull();
-    expect(advanceWithDecision(base({ chapter: 5, subchapter: 3, activeCaseNumber: '005C' }), { decisionCase: '005C', optionKey: 'A', timestamp: 't' }).nextStoryUnlockAt).toBeTruthy();
+  test('chapters 1-2 are binge-able; the gate starts at 3 and lengthens at 6', () => {
+    // The old name here claimed chapters 1-5 were ungated, which the code
+    // retired when FIRST_GATED_CHAPTER moved to 3, and it asserted nothing about
+    // the gate's LENGTH, so the 6h -> 12h step was uncovered.
+    const gateAfter = (chapter) => {
+      const cn = `${String(chapter).padStart(3, '0')}C`;
+      const at = Date.now();
+      const out = advanceWithDecision(
+        base({ chapter, subchapter: 3, activeCaseNumber: cn }),
+        { decisionCase: cn, optionKey: 'A', timestamp: new Date(at).toISOString() },
+      );
+      if (!out.nextStoryUnlockAt) return null;
+      // The gate is measured from the moment the decision lands, not from the
+      // timestamp carried on it.
+      return Math.round((Date.parse(out.nextStoryUnlockAt) - at) / 3600000);
+    };
+    expect(gateAfter(1)).toBeNull();
+    expect(gateAfter(2)).toBe(6);   // the decision at 2C unlocks chapter 3
+    expect(gateAfter(3)).toBe(6);
+    expect(gateAfter(5)).toBe(12);  // the decision at 5C unlocks chapter 6
+    expect(gateAfter(8)).toBe(12);
   });
 });
 

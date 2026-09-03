@@ -424,6 +424,16 @@ class LLMService {
    */
   async setConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
+    // The model id is owned by src/constants/gemini.js. init() enforces this
+    // against the save file, but setConfig could put any id straight on the
+    // wire AND persist it, which is how a stale id would survive the next
+    // upgrade. Same rule, both doors.
+    if (this.config.model !== GEMINI_MODEL) {
+      if (newConfig && 'model' in newConfig) {
+        console.warn(`[LLMService] Ignoring model override "${newConfig.model}"; the model is pinned to "${GEMINI_MODEL}".`);
+      }
+      this.config.model = GEMINI_MODEL;
+    }
     try {
       // Don't persist the API key in plain text - in production use secure storage
       const configToSave = { ...this.config };

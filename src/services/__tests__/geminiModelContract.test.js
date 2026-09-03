@@ -40,7 +40,10 @@ const okResponse = () => ({
   headers: { get: () => null },
 });
 
-const bodyOfLastCall = () => JSON.parse(global.fetch.mock.calls[0][1].body);
+const bodyOfLastCall = () => {
+  const calls = global.fetch.mock.calls;
+  return JSON.parse(calls[calls.length - 1][1].body);
+};
 
 describe('gemini model contract', () => {
   beforeEach(() => {
@@ -68,6 +71,19 @@ describe('gemini model contract', () => {
 
     await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10 });
 
+    expect(bodyOfLastCall().model).toBe(GEMINI_MODEL);
+  });
+
+  test('setConfig cannot put a different model on the wire', async () => {
+    // init() enforced the pin against the save file, but setConfig would both
+    // send and PERSIST any id handed to it, which is exactly how a stale one
+    // survives the next upgrade.
+    const { llmService } = require('../LLMService');
+    await llmService.init();
+    await llmService.setConfig({ proxyUrl: 'https://example.test/proxy', model: 'gemini-3.5-flash' });
+
+    expect(llmService.config.model).toBe(GEMINI_MODEL);
+    await llmService.complete([{ role: 'user', content: 'hi' }], { maxTokens: 10 });
     expect(bodyOfLastCall().model).toBe(GEMINI_MODEL);
   });
 

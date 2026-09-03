@@ -56,18 +56,17 @@ describe('the exemplars demonstrate what the rules ask for', () => {
     allPassages().forEach(([name, prose]) => {
       const words = prose.trim().split(/\s+/).length;
       // The stated target is 380-420. A corpus of short excerpts is what taught
-      // the model to under-write against that number.
-      expect({ name, words }).toEqual({ name, words: expect.any(Number) });
-      expect(words).toBeGreaterThanOrEqual(340);
-      expect(words).toBeLessThanOrEqual(520);
+      // the model to under-write against that number. Asserted as a string so a
+      // failure names the exemplar instead of just printing a number.
+      const inRange = words >= 340 && words <= 520;
+      expect(`${name}: ${words} words, in range: ${inRange}`).toBe(`${name}: ${words} words, in range: true`);
     });
   });
 
   test('each has real paragraph structure, for a paged reader', () => {
     allPassages().forEach(([name, prose]) => {
       const paragraphs = prose.trim().split(/\n\s*\n/).filter(Boolean);
-      expect(`${name} paragraphs: ${paragraphs.length}`).toBe(`${name} paragraphs: ${paragraphs.length}`);
-      expect(paragraphs.length).toBeGreaterThanOrEqual(4);
+      expect(`${name} paragraphs: ${paragraphs.length >= 4}`).toBe(`${name} paragraphs: true`);
     });
   });
 
