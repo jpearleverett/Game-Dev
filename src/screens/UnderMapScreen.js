@@ -238,7 +238,6 @@ export default function UnderMapScreen({ navigation, route }) {
   const [probeBonus] = useState(() => (asPuzzle ? pendingProbeBonus(map) : 0));
   const [probesUsed, setProbesUsed] = useState(() => persistedDescent.probesUsed);
   const probesLeft = Math.max(0, probeBudget - probesUsed);
-  const probesEnabled = true;
   const [toast, setToast] = useState(null);
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
@@ -432,7 +431,9 @@ export default function UnderMapScreen({ navigation, route }) {
     impactHaptic(Haptics.ImpactFeedbackStyle.Rigid);
     doShake();
     const whisper = whisperFor(pair[0], pair[1]);
-    if (probesEnabled) {
+    // Both boards are metered now, so there is no unmetered branch left: the
+    // Desk's board draws into the same map and was brute-forceable without one.
+    {
       // Earned forgiveness: tier 2 shields misses that involve a motif ("the map
       // remembers"); tier 3 forgives the first misstep of each descent.
       const motifShield = tier >= 2 && (isMotif(fragById(pair[0])) || isMotif(fragById(pair[1])));
@@ -458,14 +459,12 @@ export default function UnderMapScreen({ navigation, route }) {
         ? `${whisper} ${grace}`
         : left > 0
           ? `${whisper} ${left} probe${left === 1 ? '' : 's'} left.`
-          : `${whisper} The dark falls silent — continue the descent.`);
-    } else {
-      showToast(whisper);
+          : `${whisper} ${asPuzzle ? 'The dark falls silent — continue the descent.' : 'The dark falls silent. Come back tomorrow, or descend from the case file.'}`);
     }
     // First miss ever: teach what the whisper is buying them.
     maybeNote('whisper');
     setSelected([]); lockRef.current = false;
-  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, asPuzzle, probeBudget, probesUsed, probesEnabled, tier, whisperFor, fragById, maybeNote]);
+  }, [senseUnderMap, resolveUnderMapReading, showToast, doShake, triggerBloom, audio, asPuzzle, probeBudget, probesUsed, tier, whisperFor, fragById, maybeNote]);
 
   const handleTapStar = useCallback((id) => {
     if (node || lockRef.current) return;
@@ -479,8 +478,10 @@ export default function UnderMapScreen({ navigation, route }) {
     if (sel.length >= 2) return;
     // Forming a pair (the probe) requires an unspent probe. Out of probes never
     // blocks the descent — it just stops further guessing this visit.
-    if (sel.length === 1 && probesEnabled && probesLeft <= 0) {
-      showToast('Out of probes. The rest stays sensed — continue the descent.');
+    if (sel.length === 1 && probesLeft <= 0) {
+      showToast(asPuzzle
+        ? 'Out of probes. The rest stays sensed — continue the descent.'
+        : 'Out of probes here. The rest stays sensed — the chapter\u2019s own descent has its own.');
       return;
     }
     const next = [...sel, id];
@@ -491,7 +492,7 @@ export default function UnderMapScreen({ navigation, route }) {
     } else {
       selectionHaptic();
     }
-  }, [node, selected, evaluate, probesEnabled, probesLeft, showToast]);
+  }, [node, selected, evaluate, probesLeft, showToast]);
 
   const chooseReading = useCallback((opt) => {
     if (!node) return;
@@ -533,6 +534,7 @@ export default function UnderMapScreen({ navigation, route }) {
     if (!descentRecordedRef.current) {
       descentRecordedRef.current = true;
       recordUnderMapDescent?.({
+        caseNumber: descentKey,
         hadMisstep: hadMisstepRef.current,
         used: hadMisstepRef.current || revealsThisVisit > 0,
       });
@@ -599,7 +601,7 @@ export default function UnderMapScreen({ navigation, route }) {
         <Text style={styles.umInstr}>
           Trace a line between two fragments that belong together. A true pair surfaces a <Text style={{ color: COLORS.underCyan }}>node</Text> — a truth that does not want to be seen. <Text style={styles.umInstrHold}>Hold a fragment to read its clue.</Text>
         </Text>
-        {probesEnabled && map.fragments.length > 0 ? (
+        {map.fragments.length > 0 ? (
           <View style={styles.probeRow}>
             <Text style={[styles.probeGlyphs, probesLeft <= 1 && styles.probeGlyphsLow]}>{probeMeter}</Text>
             <Text style={styles.probeLabel}>

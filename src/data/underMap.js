@@ -133,6 +133,12 @@ export const createBlankUnderMap = () => ({
   // probes, clear the misstep flag, re-arm DEEPSIGHT forgiveness and unlock the
   // pairs the player just blurred. Reset when the gate moves to a new case.
   descent: null,
+  // Keyed by descent (a gate's case number, or FREEFORM_DESCENT_KEY). One slot
+  // was not enough once the Desk's board started metering too: opening it
+  // mid-gate — which is exactly what "re-read the scene, then return" invites —
+  // overwrote the gated descent and handed back every probe it had spent.
+  // `descent` above is kept as the most recent entry, for saves written before this.
+  descents: {},
   lastVisitedAt: null,
 });
 
@@ -169,6 +175,7 @@ const isNormalizedUnderMap = (map) => (
   && map.pendingProbeBonus <= MAX_PROBE_BONUS
   && (map.lastFoilClaimChapter === null || Number.isFinite(map.lastFoilClaimChapter))
   && (map.descent === null || (!!map.descent && typeof map.descent === 'object'))
+  && !!map.descents && typeof map.descents === 'object'
 );
 
 export const normalizeUnderMap = (map) => {
@@ -196,6 +203,7 @@ export const normalizeUnderMap = (map) => {
       : 0,
     lastFoilClaimChapter: Number.isFinite(map.lastFoilClaimChapter) ? map.lastFoilClaimChapter : null,
     descent: map.descent && typeof map.descent === 'object' ? map.descent : null,
+    descents: map.descents && typeof map.descents === 'object' ? map.descents : {},
   };
 };
 
@@ -587,40 +595,64 @@ export const EMPTY_DESCENT = { caseNumber: null, probesUsed: 0, probeBudget: 0, 
 export const FREEFORM_DESCENT_KEY = 'freeform';
 export const FREEFORM_PROBE_BASE = 3;
 
-/** The persisted descent state for `caseNumber`, or a fresh one if the gate moved. */
+/** How many descents are remembered at once: the gate the player is on, the
+ *  freeform board, and one gate of slack for a mid-flight navigation. */
+const MAX_REMEMBERED_DESCENTS = 3;
+
+const readDescent = (d, caseNumber) => ({
+  caseNumber,
+  probesUsed: Number.isFinite(d.probesUsed) ? d.probesUsed : 0,
+  probeBudget: Number.isFinite(d.probeBudget) ? d.probeBudget : 0,
+  hadMisstep: !!d.hadMisstep,
+  firstMissForgiven: !!d.firstMissForgiven,
+  blockedPairs: Array.isArray(d.blockedPairs) ? d.blockedPairs : [],
+});
+
+const sameDescent = (a, b) => (
+  !!a
+  && a.caseNumber === b.caseNumber
+  && (a.probesUsed || 0) === (b.probesUsed || 0)
+  && (a.probeBudget || 0) === (b.probeBudget || 0)
+  && !!a.hadMisstep === b.hadMisstep
+  && !!a.firstMissForgiven === b.firstMissForgiven
+  && Array.isArray(a.blockedPairs)
+  && a.blockedPairs.length === b.blockedPairs.length
+  && a.blockedPairs.every((k, i) => k === b.blockedPairs[i])
+);
+
+/** The persisted descent state for `caseNumber`, or a fresh one if it has none. */
 export const descentStateFor = (map, caseNumber) => {
   const m = normalizeUnderMap(map);
-  const d = m.descent;
-  if (!d || !caseNumber || d.caseNumber !== caseNumber) return { ...EMPTY_DESCENT, caseNumber: caseNumber || null };
-  return {
-    caseNumber,
-    probesUsed: Number.isFinite(d.probesUsed) ? d.probesUsed : 0,
-    probeBudget: Number.isFinite(d.probeBudget) ? d.probeBudget : 0,
-    hadMisstep: !!d.hadMisstep,
-    firstMissForgiven: !!d.firstMissForgiven,
-    blockedPairs: Array.isArray(d.blockedPairs) ? d.blockedPairs : [],
-  };
+  if (!caseNumber) return { ...EMPTY_DESCENT, caseNumber: null };
+  const stored = m.descents?.[caseNumber]
+    || (m.descent && m.descent.caseNumber === caseNumber ? m.descent : null);
+  if (!stored) return { ...EMPTY_DESCENT, caseNumber };
+  return readDescent(stored, caseNumber);
 };
 
-/** Merge a patch into the descent state for `caseNumber` (starting fresh if the gate moved). */
+/** Merge a patch into the descent state for `caseNumber`, leaving the others alone. */
 export const updateDescentState = (map, caseNumber, patch = {}) => {
   const m = normalizeUnderMap(map);
+  if (!caseNumber) return m;
   const current = descentStateFor(m, caseNumber);
-  const next = { ...current, ...patch, caseNumber: caseNumber || null };
-  const same = m.descent
-    && m.descent.caseNumber === next.caseNumber
-    && m.descent.probesUsed === next.probesUsed
-    && (m.descent.probeBudget || 0) === (next.probeBudget || 0)
-    && !!m.descent.hadMisstep === next.hadMisstep
-    && !!m.descent.firstMissForgiven === next.firstMissForgiven
-    && Array.isArray(m.descent.blockedPairs)
-    && m.descent.blockedPairs.length === next.blockedPairs.length
-    && m.descent.blockedPairs.every((k, i) => k === next.blockedPairs[i]);
-  if (same) return m;
-  return { ...m, descent: next };
+  const next = { ...current, ...patch, caseNumber };
+  if (sameDescent(m.descents?.[caseNumber], next)) return m;
+
+  const descents = { ...(m.descents || {}), [caseNumber]: next };
+  // Bounded, oldest-inserted first, but never at the cost of the entry just
+  // written or the freeform slot.
+  const keys = Object.keys(descents);
+  if (keys.length > MAX_REMEMBERED_DESCENTS) {
+    for (const k of keys) {
+      if (Object.keys(descents).length <= MAX_REMEMBERED_DESCENTS) break;
+      if (k === caseNumber || k === FREEFORM_DESCENT_KEY) continue;
+      delete descents[k];
+    }
+  }
+  return { ...m, descent: next, descents };
 };
 
-export const recordDescent = (map, { hadMisstep = false, used = true } = {}) => {
+export const recordDescent = (map, { hadMisstep = false, used = true, caseNumber = null } = {}) => {
   const m = normalizeUnderMap(map);
   // `used` is false for a descent the player opened and left without probing
   // anything. It still ENDS (the per-descent state has to be cleared, or the
@@ -631,15 +663,31 @@ export const recordDescent = (map, { hadMisstep = false, used = true } = {}) => 
   const flawlessStreak = used ? (hadMisstep ? 0 : (m.flawlessStreak || 0) + 1) : (m.flawlessStreak || 0);
   const bestFlawlessStreak = Math.max(m.bestFlawlessStreak || 0, flawlessStreak);
   const pendingProbeBonus = used ? 0 : (m.pendingProbeBonus || 0);
+  // End only THIS descent. Clearing the whole store would wipe the freeform
+  // board's state (and any other gate's) along with it.
+  const descents = { ...(m.descents || {}) };
+  const endedKey = caseNumber || m.descent?.caseNumber || null;
+  const hadEntry = endedKey ? Object.prototype.hasOwnProperty.call(descents, endedKey) : false;
+  if (hadEntry) delete descents[endedKey];
+  const clearsLegacy = m.descent && (!endedKey || m.descent.caseNumber === endedKey);
+
   if (
-    m.descent == null
+    !hadEntry
+    && !clearsLegacy
     && flawlessStreak === (m.flawlessStreak || 0)
     && bestFlawlessStreak === (m.bestFlawlessStreak || 0)
     && pendingProbeBonus === (m.pendingProbeBonus || 0)
   ) {
     return m;
   }
-  return { ...m, flawlessStreak, bestFlawlessStreak, pendingProbeBonus, descent: null };
+  return {
+    ...m,
+    flawlessStreak,
+    bestFlawlessStreak,
+    pendingProbeBonus,
+    descent: clearsLegacy ? null : m.descent,
+    descents,
+  };
 };
 
 // The Other Reader's presence is bounded so no single run of luck pins the foil

@@ -1235,3 +1235,70 @@ describe("The Other Reader's claim is legible", () => {
     expect(probe.foilReading).toBeNull();
   });
 });
+
+describe('two boards, two descents', () => {
+  const { FREEFORM_DESCENT_KEY } = require('../../data/underMap');
+
+  test('opening the Desk board mid-gate does not refund the gated descent', () => {
+    // The game invites the player to leave and re-read the scene, and the Desk's
+    // Under-Map is one tap away on the route back. With a single descent slot,
+    // touching the freeform board overwrote the gated one and handed back every
+    // probe it had spent, the misstep flag, and the pairs just blurred.
+    let m = createBlankUnderMap();
+    m = updateDescentState(m, '003A', {
+      probesUsed: 2,
+      probeBudget: 3,
+      hadMisstep: true,
+      firstMissForgiven: true,
+      blockedPairs: ['frag_a::frag_b'],
+    });
+    m = updateDescentState(m, FREEFORM_DESCENT_KEY, { probesUsed: 1, probeBudget: 3 });
+
+    const gate = descentStateFor(m, '003A');
+    expect(gate.probesUsed).toBe(2);
+    expect(gate.hadMisstep).toBe(true);
+    expect(gate.firstMissForgiven).toBe(true);
+    expect(gate.blockedPairs).toEqual(['frag_a::frag_b']);
+    expect(descentStateFor(m, FREEFORM_DESCENT_KEY).probesUsed).toBe(1);
+  });
+
+  test('ending one descent leaves the other standing', () => {
+    let m = createBlankUnderMap();
+    m = updateDescentState(m, '003A', { probesUsed: 2, probeBudget: 3 });
+    m = updateDescentState(m, FREEFORM_DESCENT_KEY, { probesUsed: 1, probeBudget: 3 });
+
+    m = recordDescent(m, { hadMisstep: false, caseNumber: '003A' });
+    expect(descentStateFor(m, '003A').probesUsed).toBe(0);
+    expect(descentStateFor(m, FREEFORM_DESCENT_KEY).probesUsed).toBe(1);
+  });
+
+  test('an unused descent ends without spending the banked probe or the streak', () => {
+    let m = { ...createBlankUnderMap(), pendingProbeBonus: 2, flawlessStreak: 3, bestFlawlessStreak: 3 };
+    m = updateDescentState(m, '003A', { probeBudget: 4 });
+    const after = recordDescent(m, { hadMisstep: false, used: false, caseNumber: '003A' });
+    expect(after.pendingProbeBonus).toBe(2);
+    expect(after.flawlessStreak).toBe(3);
+    expect(descentStateFor(after, '003A').probeBudget).toBe(0);
+  });
+
+  test('a save from before the per-descent store still restores its descent', () => {
+    const legacy = {
+      ...createBlankUnderMap(),
+      descents: {},
+      descent: { caseNumber: '004B', probesUsed: 1, hadMisstep: true, blockedPairs: [] },
+    };
+    expect(descentStateFor(legacy, '004B').probesUsed).toBe(1);
+    expect(descentStateFor(legacy, '004B').hadMisstep).toBe(true);
+  });
+
+  test('the store stays bounded, and never at the cost of the live keys', () => {
+    let m = createBlankUnderMap();
+    m = updateDescentState(m, FREEFORM_DESCENT_KEY, { probesUsed: 1 });
+    ['002A', '002B', '003A', '003B', '004A'].forEach((cn) => {
+      m = updateDescentState(m, cn, { probesUsed: 1 });
+    });
+    expect(Object.keys(m.descents).length).toBeLessThanOrEqual(3);
+    expect(descentStateFor(m, FREEFORM_DESCENT_KEY).probesUsed).toBe(1); // freeform survives
+    expect(descentStateFor(m, '004A').probesUsed).toBe(1); // and so does the newest gate
+  });
+});

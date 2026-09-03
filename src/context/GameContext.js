@@ -853,7 +853,7 @@ export function GameProvider({
   }, [updateProgress]);
 
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
-  const recordUnderMapDescent = useCallback(({ hadMisstep = false, used = true } = {}) => {
+  const recordUnderMapDescent = useCallback(({ hadMisstep = false, used = true, caseNumber = null } = {}) => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       // Only the descent. This used to chain resolveDailyStir, so finishing a
@@ -862,7 +862,7 @@ export function GameProvider({
       // stir's motif deepening mutated the Under-Map generation signature, which
       // invalidated the prefetch this very beat exists to cover. The stir is
       // settled by the FREEFORM board and by solving the daily word puzzle.
-      const um = umRecordDescent(current.underMap, { hadMisstep, used });
+      const um = umRecordDescent(current.underMap, { hadMisstep, used, caseNumber });
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
