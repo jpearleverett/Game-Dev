@@ -207,6 +207,11 @@ export default function UnderMapScreen({ navigation, route }) {
 
   const [field, setField] = useState({ w: 0, h: 0 });
   const [selected, setSelected] = useState([]);
+  // Mirrors `selected` for the tap handler, which decides from the current
+  // selection before setting it. Reading the render-time value instead would
+  // lose the first of two taps that land inside one render.
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const [node, setNode] = useState(null); // { aId, bId, mode:'choose'|'revealed'|'blurred', options, revelation }
   const [inspect, setInspect] = useState(null); // a fragment the player is reading (the full clue)
   // Probe economy (§3.1): a per-descent budget of attempts. A wrong pair costs a
@@ -473,7 +478,7 @@ export default function UnderMapScreen({ navigation, route }) {
     // updater, which React is free to call twice (and does under StrictMode):
     // a single tap could double-fire the haptic and schedule two evaluations of
     // the same pair, spending two probes for one guess.
-    const sel = selected;
+    const sel = selectedRef.current;
     if (sel.includes(id)) { setSelected(sel.filter((s) => s !== id)); return; }
     if (sel.length >= 2) return;
     // Forming a pair (the probe) requires an unspent probe. Out of probes never
@@ -492,7 +497,7 @@ export default function UnderMapScreen({ navigation, route }) {
     } else {
       selectionHaptic();
     }
-  }, [node, selected, evaluate, probesLeft, showToast]);
+  }, [node, evaluate, probesLeft, showToast]);
 
   const chooseReading = useCallback((opt) => {
     if (!node) return;
