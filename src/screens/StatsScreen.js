@@ -8,6 +8,16 @@ import { EASE_OUT, DURATION } from '../utils/motion';
 import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
+import { normalizeStoryCampaignShape } from '../utils/gameLogic';
+import {
+  fragmentCount,
+  truthsDrawn,
+  motifCount,
+  keystoneCount,
+  bestFlawlessStreak,
+  dailyStreak,
+  clarity,
+} from '../data/underMap';
 
 /** A solve-distribution bar that grows from 0 to its value on mount. */
 function StatBar({ value, index = 0, reducedMotion = false }) {
@@ -46,6 +56,20 @@ export default function StatsScreen({ progress, onBack }) {
   const accuracy = attemptedCount ? Math.round((solvedCount / attemptedCount) * 100) : 0;
   const reducedMotion = !!progress?.settings?.reducedMotion;
 
+  // The campaign record. This screen showed only daily word-puzzle counters,
+  // which the story path never writes, so a player who only plays the campaign
+  // (the entire designed loop; the word board is reachable only from the
+  // Archive) saw a permanent wall of zeroes while their real record went
+  // unmentioned.
+  const campaign = normalizeStoryCampaignShape(progress.storyCampaign);
+  const map = campaign.underMap;
+  const cl = clarity(map);
+  const chaptersRead = Array.isArray(campaign.completedCaseNumbers)
+    ? new Set(campaign.completedCaseNumbers.map((c) => String(c).slice(0, 3))).size
+    : 0;
+  const hasCampaign = Boolean(campaign.startedAt || chaptersRead > 0 || fragmentCount(map) > 0);
+  const hasDailyRecord = attemptedCount > 0 || progress.streak > 0 || progress.bestStreak > 0;
+
   return (
     <ScreenSurface variant="default" accentColor={COLORS.accentPrimary} contentStyle={styles.surface}>
       <View style={styles.container}>
@@ -56,7 +80,43 @@ export default function StatsScreen({ progress, onBack }) {
           <Text style={styles.title}>STATISTICS</Text>
         </View>
 
+        {hasCampaign ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>The Under-Map</Text>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Chapters read</Text>
+              <Text style={styles.metricValue}>{chaptersRead}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Fragments collected</Text>
+              <Text style={styles.metricValue}>{fragmentCount(map)}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Truths drawn</Text>
+              <Text style={styles.metricValue}>{truthsDrawn(map)}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Motifs / keystones</Text>
+              <Text style={styles.metricValue}>{motifCount(map)} / {keystoneCount(map)}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Readings held</Text>
+              <Text style={styles.metricValue}>{cl.correct} of {cl.resolved}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Best flawless descent streak</Text>
+              <Text style={styles.metricValue}>{bestFlawlessStreak(map)}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Daily thread streak</Text>
+              <Text style={styles.metricValue}>{dailyStreak(map)} days</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {hasDailyRecord ? (
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Daily word puzzle</Text>
           <View style={styles.metricRow}>
             <Text style={styles.metricLabel}>Current Streak</Text>
             <Text style={styles.metricValue}>{progress.streak} days</Text>
@@ -78,7 +138,9 @@ export default function StatsScreen({ progress, onBack }) {
             <Text style={styles.metricValue}>{accuracy}%</Text>
           </View>
         </View>
+        ) : null}
 
+        {hasDailyRecord ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Solve Distribution</Text>
           {distributionOrder.map((key, i) => (
@@ -91,6 +153,14 @@ export default function StatsScreen({ progress, onBack }) {
             </View>
           ))}
         </View>
+        ) : null}
+
+        {!hasCampaign && !hasDailyRecord ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Nothing on record yet</Text>
+            <Text style={styles.metricLabel}>Start the story, or play a daily thread, and your record builds here.</Text>
+          </View>
+        ) : null}
         </Stagger>
       </View>
     </ScreenSurface>

@@ -257,7 +257,15 @@ export default function TheoryScreen({ navigation, route }) {
     // All collected fragments are recorded with the sealed reading (for the record /
     // Codex). There is no player-facing staking — evidence is reference, not a choice.
     const fragmentIds = map.fragments.map((f) => f.id);
-    const interpretation = chosenBelief?.title || chosenBelief?.focus || 'A reading of the hidden world.';
+    // No placeholder fallback. This used to seal the literal string "A reading of
+    // the hidden world." whenever pathDecisions failed to generate, which then
+    // became the belief in the Codex, in the closing report, and in the next
+    // chapter's prompt as the thing the player committed to.
+    const interpretation = chosenBelief?.title || chosenBelief?.focus || '';
+    if (!interpretation) {
+      setGenError('The chapter\'s readings did not come through. Go back and re-enter the climax to try again.');
+      return;
+    }
     // The readings the player turned away from — these seed "The Other Reader" (the
     // foil born from the road not taken). underMap.recordTheory takes the strongest.
     const rejected = beliefs
@@ -486,7 +494,11 @@ export default function TheoryScreen({ navigation, route }) {
           <Text style={styles.sectionHint}>Your one real choice. The chapter ahead bears it out — or subverts it.</Text>
         ) : null}
         {beliefs.length === 0 ? (
-          <Text style={styles.muted}>The way forward is yours to take. Seal your read and press on.</Text>
+          <Text style={styles.error}>
+            The chapter's competing readings did not come through. Nothing is sealed yet.
+            Go back and re-enter the climax to try again; sealing an empty reading would
+            write a placeholder into your Codex and into the next chapter.
+          </Text>
         ) : (
           <View style={styles.beliefList}>
             {beliefs.map((b, bi) => {
@@ -564,7 +576,7 @@ export default function TheoryScreen({ navigation, route }) {
           <PrimaryButton
             label="Seal your theory"
             onPress={sealTheory}
-            disabled={beliefs.length > 0 && !chosenBelief}
+            disabled={beliefs.length === 0 || !chosenBelief}
             icon={<MaterialCommunityIcons name="seal" size={18} color={COLORS.textSecondary} />}
           />
         ) : (

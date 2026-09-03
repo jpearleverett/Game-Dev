@@ -52,7 +52,8 @@ const STEPS = [
     icon: 'gesture-tap',
     title: 'Sense Anomalies',
     body:
-      'As you read, colored phrases shimmer when they do not belong. Tap them to pin fragments to the Under-Map.',
+      'As you read, colored phrases shimmer when they do not belong. Tap them to pin fragments to the Under-Map. '
+      + 'A fragment that surfaces again in a later chapter is a motif, and carries a count on the board.',
   },
   {
     key: 'demo',
@@ -190,8 +191,11 @@ function DemoUnderMap({ onSolved, solved }) {
                 <View style={[styles.demoStarRing, { borderColor: fragment.color, opacity: isSelected || solved ? 0.8 : 0.34 }]} />
                 <View style={[styles.demoStarGlow, { backgroundColor: fragment.color, opacity: isSelected || solved ? 0.82 : 0.38 }]} />
                 <View style={[styles.demoStarCore, { backgroundColor: fragment.color, shadowColor: fragment.color }, (isSelected || solved) && styles.demoStarCoreSelected]} />
+                {/* The real board only shows this badge at x2 and up: it means the
+                    fragment has RECURRED, not that it was collected. Teaching x1
+                    here taught the opposite of the board's most important read. */}
                 {fragment.id === 'rain' ? (
-                  <View style={styles.demoMotifBadge}><Text style={styles.demoMotifText}>×1</Text></View>
+                  <View style={styles.demoMotifBadge}><Text style={styles.demoMotifText}>×2</Text></View>
                 ) : null}
               </View>
               <Text style={[styles.starLabel, (isSelected || solved) && styles.starLabelSelected]}>{fragment.label}</Text>

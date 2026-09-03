@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Image as RNImage } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -127,6 +127,25 @@ export default function DeskScreen({
             : 'Descend into the Under-Map';
 
   const tap = (cb) => () => { Haptics.selectionAsync().catch(() => {}); cb?.(); };
+
+  // The primary CTA awaits a full generation, which on a cold cache runs about a
+  // minute. It had no pending state at all: after a gate elapsed the player
+  // tapped "Pick up the trail" and the Desk simply did nothing, so the natural
+  // response was to tap again and re-enter the same async handler. This is the
+  // one gateway with no diegetic cover.
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
+  const runPrimary = useCallback(async (cb) => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
+    try {
+      await cb?.();
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
+    }
+  }, []);
   const onPrimary = campaignDone && onViewEnding
     ? onViewEnding
     : storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
@@ -194,9 +213,15 @@ export default function DeskScreen({
                 ))}
               </View>
 
-              <PressableScale onPress={tap(onPrimary)} reducedMotion={reducedMotion} style={styles.btnStamp} haptic={false}>
-                <Text style={styles.btnStampText}>{primaryLabel}</Text>
-                <Text style={styles.btnStampArrow}>▸</Text>
+              <PressableScale
+                onPress={() => { Haptics.selectionAsync().catch(() => {}); runPrimary(onPrimary); }}
+                disabled={starting}
+                reducedMotion={reducedMotion}
+                style={[styles.btnStamp, starting && { opacity: 0.6 }]}
+                haptic={false}
+              >
+                <Text style={styles.btnStampText}>{starting ? 'The city is answering…' : primaryLabel}</Text>
+                <Text style={styles.btnStampArrow}>{starting ? '·' : '▸'}</Text>
               </PressableScale>
               {storyLocked && countdown ? (
                 <Text style={styles.lockNote}>
