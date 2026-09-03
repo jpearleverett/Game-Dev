@@ -73,8 +73,17 @@ export default function SealedScreen({ navigation, route }) {
   const auraScale = aura.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] });
   const auraOpacity = aura.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] });
 
+  // The gate the campaign just set. Crossing here used to walk straight through
+  // it: the primary amber CTA jumped into the next chapter with no wait, so the
+  // 6h/12h cadence never fired once for a player who tapped the obvious button,
+  // and nextStoryUnlockAt stayed set behind them so every other screen reported
+  // a lock they had already passed.
+  const unlockAt = progress?.storyCampaign?.nextStoryUnlockAt;
+  const unlockMs = unlockAt ? new Date(unlockAt).getTime() : 0;
+  const gateHolds = Number.isFinite(unlockMs) && unlockMs > Date.now();
+
   const goNext = () => {
-    if (nextCaseNumber) navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
+    if (nextCaseNumber && !gateHolds) navigation.replace('CaseFile', { caseNumber: nextCaseNumber });
     else navigation.reset({ index: 0, routes: [{ name: 'Desk' }] });
   };
   const goDesk = () => navigation.reset({ index: 0, routes: [{ name: 'Desk' }] });
@@ -119,11 +128,20 @@ export default function SealedScreen({ navigation, route }) {
         </View>
 
         <View style={styles.actions}>
+          {gateHolds ? (
+            <Text style={styles.gateLine}>
+              The city is still working through your reading. Come back to the desk when it answers.
+            </Text>
+          ) : null}
           <PrimaryButton
-            label={nextCaseNumber ? `Cross into Chapter ${String(nextChapter).padStart(3, '0')}` : 'Return to the desk'}
+            label={nextCaseNumber && !gateHolds
+              ? `Cross into Chapter ${String(nextChapter).padStart(3, '0')}`
+              : 'Return to the desk'}
             onPress={goNext}
           />
-          <SecondaryButton label="Return to the desk" onPress={goDesk} style={{ marginTop: 10 }} />
+          {nextCaseNumber && !gateHolds ? (
+            <SecondaryButton label="Return to the desk" onPress={goDesk} style={{ marginTop: 10 }} />
+          ) : null}
         </View>
       </View>
     </ScreenSurface>
@@ -131,6 +149,7 @@ export default function SealedScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  gateLine: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center', marginBottom: 14, paddingHorizontal: 8 },
   surface: { paddingHorizontal: 0 },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 30 },
 

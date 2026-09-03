@@ -892,6 +892,14 @@ export default function CaseFileScreen({
   // - Puzzle is pending (narrative done, puzzle not done)
   // - Narrative is in progress (still reading)
   const showNextBriefingCTA = Boolean((pendingStoryAdvance || isCaseSolved) && typeof onContinueStory === "function" && !storyLocked && !awaitingDecision && !hideContinueInvestigationCTA);
+
+  // A scene with no prose at all is a failed generation, whatever the campaign
+  // state says. The retry CTA above is gated on a solved / pending-advance
+  // state that this path never reaches, so the player was left on a case file
+  // with the placeholder title, an empty page, and nothing to tap.
+  const showGenerationFailure = Boolean(
+    isStoryMode && !hasNarrative && !isGenerating && typeof onContinueStory === 'function',
+  );
   const nextStoryLabel = storyCampaign?.chapter != null && storyCampaign?.subchapter != null 
     ? `Chapter ${storyCampaign.chapter}.${storyCampaign.subchapter}` 
     : "the next chapter";
@@ -1416,6 +1424,22 @@ export default function CaseFileScreen({
                         ⚠️ {generationError}
                       </Text>
                     )}
+                  </View>
+                )}
+
+                {/* A generation that produced nothing: say so, and offer the retry. */}
+                {showGenerationFailure && !showNextBriefingCTA && (
+                  <View style={{ marginTop: scaleSpacing(SPACING.sm) }}>
+                    <Text style={[styles.errorHint, { color: '#ff4444', fontSize: slugSize, marginBottom: scaleSpacing(SPACING.xs) }]}>
+                      {generationError
+                        ? `⚠️ ${generationError}`
+                        : '⚠️ This chapter did not come through. Check your connection and try again.'}
+                    </Text>
+                    <PrimaryButton
+                      label="Retry Chapter Generation"
+                      onPress={onContinueStory}
+                      fullWidth
+                    />
                   </View>
                 )}
 

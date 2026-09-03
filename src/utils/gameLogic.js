@@ -92,6 +92,19 @@ export function normalizeStoryCampaignShape(campaign) {
     if (!merged.activeCaseNumber) {
         merged.activeCaseNumber = formatCaseNumber(merged.chapter, merged.subchapter);
     }
+    // A gate that has elapsed is not a gate. nextStoryUnlockAt was only ever
+    // cleared by paying, bribing or finishing the campaign, never by the passage
+    // of time, so every screen that tests it for PRESENCE stayed locked forever:
+    // the Desk kept saying "Pick up the trail", the Story hub refused to resume
+    // and popped the paywall instead, and the game went on offering to sell a
+    // rush on a chapter the player had already waited out. Expiring it here makes
+    // one source of truth for every consumer.
+    if (merged.nextStoryUnlockAt) {
+        const unlockAt = new Date(merged.nextStoryUnlockAt).getTime();
+        if (!Number.isFinite(unlockAt) || unlockAt <= Date.now()) {
+            merged.nextStoryUnlockAt = null;
+        }
+    }
     return merged;
 }
 

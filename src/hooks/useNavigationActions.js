@@ -282,11 +282,19 @@ export function useNavigationActions(navigation, game, audio) {
   const handlePickUpTrailNow = useCallback(async () => {
     try {
       const result = await pickUpTrailNow();
+      // Only move if the chapter actually exists. Navigating on ok:false dropped
+      // the player into a case file with no narrative, no error and no retry:
+      // the placeholder title, an empty page, and nothing to tap.
+      if (result && result.ok === false) {
+        console.warn('[Navigation] pickUpTrailNow failed; staying put:', result.reason);
+        return result;
+      }
       const targetCaseNumber = result?.caseNumber;
       navigation.replace('CaseFile', targetCaseNumber ? { caseNumber: targetCaseNumber } : undefined);
+      return result;
     } catch (error) {
-      console.warn('[Navigation] pickUpTrailNow threw, routing to CaseFile:', error?.message || error);
-      navigation.replace('CaseFile');
+      console.warn('[Navigation] pickUpTrailNow threw:', error?.message || error);
+      return { ok: false, reason: 'threw', error: error?.message || String(error) };
     }
   }, [pickUpTrailNow, navigation]);
 
@@ -303,15 +311,24 @@ export function useNavigationActions(navigation, game, audio) {
         reason: result?.reason,
       });
 
+      // A failed generation must NOT be navigated into. It used to be: the
+      // player landed on a case file with the placeholder title, an empty page,
+      // and no error or retry anywhere, because the retry CTA is gated on a
+      // solved/pending-advance state this path never reaches.
+      if (result && result.ok === false) {
+        console.warn('[Navigation] continueStoryCampaign failed; staying put:', result.reason);
+        return result;
+      }
+
       const targetCaseNumber = result?.caseNumber;
 
-      // Always leave the Solved screen. Pass the target case number to avoid
-      // any transient "stale activeCase" frame during async state updates.
+      // Pass the target case number to avoid any transient "stale activeCase"
+      // frame during async state updates.
       navigation.replace('CaseFile', targetCaseNumber ? { caseNumber: targetCaseNumber } : undefined);
+      return result;
     } catch (error) {
-      // Never strand the user on the results screen if something throws.
-      console.warn('[Navigation] continueStoryCampaign threw, routing to CaseFile:', error?.message || error);
-      navigation.replace('CaseFile');
+      console.warn('[Navigation] continueStoryCampaign threw:', error?.message || error);
+      return { ok: false, reason: 'threw', error: error?.message || String(error) };
     }
   }, [continueStoryCampaign, navigation]);
 

@@ -81,7 +81,11 @@ export default function StoryCampaignScreen({
   // again, and sealing there re-opened a belief on a map the ending was already
   // computed from.
   const completed = Boolean(campaign.completed);
-  const resumeAvailable = hasStarted && !awaitingDecision && !campaign.nextStoryUnlockAt && !completed;
+  // Keyed on the expiry-aware countdown rather than the raw timestamp. The hero
+  // line already used `countdown`, so after a gate elapsed the screen said
+  // "Ready for Chapter N" while the button popped the $0.99 bribe modal for a
+  // chapter the player had already waited out, with no other way to continue.
+  const resumeAvailable = hasStarted && !awaitingDecision && !countdown && !completed;
   const currentPathLabel = campaign.currentPathKey || 'ROOT';
   const historyEntries = hasHistory ? [...campaign.choiceHistory].reverse() : [];
 
@@ -171,7 +175,7 @@ export default function StoryCampaignScreen({
                   onContinueStory?.();
                 } else if (!hasStarted) {
                   onStartStory?.();
-                } else if (Boolean(campaign.nextStoryUnlockAt)) {
+                } else if (countdown) {
                   setBribeModalVisible(true);
                 }
               }}
