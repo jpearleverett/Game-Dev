@@ -670,7 +670,14 @@ function _buildContinuityAnchorSection(context, chapter) {
       } else if (t.correct === true) {
         lines.push(`- The player's belief has held true: "${t.interpretation}". Stay consistent with it.`);
       } else {
-        lines.push(`- The player has staked a belief, as yet unproven: "${t.interpretation}". Do not silently confirm or deny it; let the world test it.`);
+        // An unproven belief past its window is OVERDUE, not scenery. Saying
+        // "let the world test it" about every unanswered belief contradicted the
+        // instruction in <under_map_state> to close the old ones, and left the
+        // model with two rules pointing opposite ways on the same reading.
+        const overdue = Number.isFinite(chapter) && Number.isFinite(t.chapter) && (chapter - t.chapter) >= 2;
+        lines.push(overdue
+          ? `- The player staked this belief in chapter ${t.chapter} and the story still has not answered it: "${t.interpretation}". It is overdue. Answer it here if the scene can carry it.`
+          : `- The player has staked a belief, as yet unproven: "${t.interpretation}". Do not silently confirm or deny it; let the world test it.`);
       }
     });
   }

@@ -114,3 +114,58 @@ describe('revisiting the ending shows the one that was reached', () => {
     expect(selectEndingById(run([true, true, true]), 'ending_nonsense').variant).toBe('clear');
   });
 });
+
+describe('every belief the player sealed counts for something', () => {
+  const { selectEnding: pick } = require('../endings');
+
+  const run = (specs) => ({
+    // Newest first, as recordTheory stores them.
+    theories: specs.map((sp, i) => ({
+      chapter: specs.length - i,
+      interpretation: `belief ${i}`,
+      correct: sp.correct,
+      grounded: sp.grounded,
+    })),
+  });
+
+  test('an unanswered belief is no longer worth literally nothing', () => {
+    // beliefResolution is an optional emission. clarity() drops an unproven
+    // belief from BOTH numerator and denominator, so a run where the model
+    // skipped it for most chapters had its ending decided by whichever handful
+    // happened to get answered -- and a player whose early readings were all
+    // sound but never borne out reached the same ending as one who never sealed
+    // them at all.
+    const twoAnswered = [{ correct: true, grounded: true }, { correct: true, grounded: true }];
+    const fourSkipped = [
+      { correct: null, grounded: false },
+      { correct: null, grounded: false },
+      { correct: null, grounded: false },
+      { correct: null, grounded: false },
+    ];
+    // Two held, four ungrounded-and-untested: 2 / (2 + 2) = 0.5 -> half.
+    expect(pick(run([...fourSkipped, ...twoAnswered])).variant).toBe('half');
+    // The same two held with nothing skipped is still the clear ending.
+    expect(pick(run(twoAnswered)).variant).toBe('clear');
+  });
+
+  test('untested but well-grounded readings pull the other way', () => {
+    const specs = [
+      { correct: null, grounded: true },
+      { correct: null, grounded: true },
+      { correct: true, grounded: true },
+      { correct: false, grounded: false },
+    ];
+    // (1 + 1) / (2 + 1) = 0.667 -> clear, where the resolved pair alone is 0.5.
+    expect(pick(run(specs)).variant).toBe('clear');
+  });
+
+  test('a belief with no grounding recorded still abstains', () => {
+    // Nothing honest to say about it, so it changes nothing either way.
+    const specs = [{ correct: null, grounded: null }, { correct: true, grounded: true }];
+    expect(pick(run(specs)).variant).toBe('clear');
+  });
+
+  test('with nothing resolved at all the run is still unproven', () => {
+    expect(pick(run([{ correct: null, grounded: true }])).variant).toBe('unproven');
+  });
+});

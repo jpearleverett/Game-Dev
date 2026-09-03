@@ -238,3 +238,27 @@ describe('the climax call is told the run it is writing a climax for', () => {
     expect(block).not.toContain('previousChapters');
   });
 });
+
+describe('the canon block and the scene instruction agree with each other', () => {
+  const { recordTheory: rt } = require('../../data/underMap');
+
+  test('an overdue belief is called overdue, not left as scenery', () => {
+    // Saying "let the world test it" about EVERY unanswered belief contradicted
+    // the instruction in <under_map_state> to close the old ones, and left the
+    // model with two rules pointing opposite ways on the same reading.
+    let m = createBlankUnderMap();
+    m = rt(m, { chapter: 2, interpretation: 'OLD-BELIEF', rejected: ['x'] });
+    m = rt(m, { chapter: 11, interpretation: 'NEW-BELIEF', rejected: ['y'] });
+    const anchor = buildAnchor(m, 12);
+
+    expect(anchor).toMatch(/OLD-BELIEF[\s\S]{0,120}overdue|overdue[\s\S]{0,120}OLD-BELIEF/);
+    // The one sealed last chapter is still the world's to test.
+    expect(anchor).toMatch(/NEW-BELIEF[\s\S]{0,160}let the world test it/);
+  });
+
+  test('inside its window a belief is not nagged about', () => {
+    let m = createBlankUnderMap();
+    m = rt(m, { chapter: 11, interpretation: 'RECENT-BELIEF', rejected: ['y'] });
+    expect(buildAnchor(m, 12)).not.toContain('overdue');
+  });
+});

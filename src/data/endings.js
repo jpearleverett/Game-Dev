@@ -81,10 +81,21 @@ export function selectEnding(map) {
   // seal time: whether the player chose the reading their own revealed truths
   // supported. It can only move an ending that was already sitting on a
   // threshold, which is exactly where a last reading should matter.
+  // EVERY untested belief, not just the last one. beliefResolution is an optional
+  // emission: a run where the model skips it for three chapters leaves three
+  // beliefs permanently unproven, and clarity() drops an unproven belief from
+  // both the numerator AND the denominator — so those readings counted for
+  // literally nothing and the ending was decided by whichever handful happened
+  // to get answered. A player whose early readings were all sound but never
+  // borne out reached the same ending as one who never sealed them. Each is a
+  // half vote, judged the only honest way available: whether they chose the
+  // reading their own revealed truths supported.
+  const untested = theories.filter((t) => t && t.correct == null && t.grounded != null);
   const finalIsUnresolved = !!(last && last.correct == null && last.grounded != null);
   let variant = endingVariant(map);
-  if (finalIsUnresolved && cl.resolved > 0) {
-    const ratio = (cl.correct + (last.grounded ? 0.5 : 0)) / (cl.resolved + 0.5);
+  if (untested.length && cl.resolved > 0) {
+    const halfCorrect = untested.filter((t) => t.grounded).length * 0.5;
+    const ratio = (cl.correct + halfCorrect) / (cl.resolved + untested.length * 0.5);
     variant = ratio >= CLARITY_TRUE ? 'clear' : ratio >= CLARITY_PARTIAL ? 'half' : 'deceived';
   }
   const base = ENDINGS[variant] || ENDINGS.unproven;
