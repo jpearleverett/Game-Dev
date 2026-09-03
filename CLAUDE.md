@@ -489,6 +489,12 @@ and green (`npx jest`), and none of it has been through an on-device playtest ye
 - **On-device playtest of the new loop mechanics** (all code-complete but LLM/feel-dependent): evidence echoes + groundedKey fairness at a C-beat; sense-tier pacing (do tiers land ~ch2/ch4/ch7?); the unlock-verdict notification firing on a real device; the post-game Desk after finishing chapter 12.
 - **Tune cross-chapter weaving strength.** The model is *instructed* to link new fragments to earlier ones; it's LLM-driven, so verify on device whether links actually recur and feel meaningful. If weak, increase prompt pressure or add a deterministic "seed an earlier fragment into each scene" step. (The new `addRelations` console warning makes dropped/unresolved relations visible.)
 - **Generation length.** Scenes generate ~600-650 words (below the 900 minimum; expansion is disabled for speed). Revisit if quality/length needs to rise.
+- **Legacy cleanup (optional):** the retired `consistencyFacts` ledger still has
+  inert plumbing in `context.js`/`validation.js`/`decisionConsequences.js` (the model
+  emits none, so every branch is a no-op). Its test file is gone; the two live tests
+  in it moved to `StoryGenerationService.pathContext.test.js`. Removing the plumbing
+  touches the generation hot path for no player-visible gain, so it was left marked
+  rather than deleted.
 - **Legacy cleanup (optional):** `caseBoard.js` and the `GameContext` case-board actions are retired but kept for save back-compat; `EvidenceBoardScreen`/daily mode is independent. Remove only with intent.
 
 **Diagnostics:** the `[ADV]`/`[FRAG]`/`[EXAMINE]` console logs used to debug the reset and fragment flow have been removed.

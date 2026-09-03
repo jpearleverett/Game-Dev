@@ -115,6 +115,8 @@ class ValidationMethods {
         chapterSummary: parsed.chapterSummary || '', // High-quality summary
         puzzleCandidates: parsed.puzzleCandidates || [], // LLM suggested puzzle words
         briefing: parsed.briefing || { summary: '', objectives: [] },
+        // Retired: not in the schemas any more, so always []. Read only by the
+        // legacy path-keyed ledger, which old saves may still carry.
         consistencyFacts: Array.isArray(parsed.consistencyFacts) ? parsed.consistencyFacts : [],
         // NOTE: storyDay, jackActionStyle, jackRiskLevel, jackBehaviorDeclaration removed from schema
         // These are now handled via <scene_requirements> in the system prompt (Gemini 3 thinking)

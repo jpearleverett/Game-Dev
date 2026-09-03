@@ -333,10 +333,12 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
   // Extract established facts from generated content
   context.establishedFacts = this._extractEstablishedFacts(context.previousChapters);
 
-  // IMPORTANT:
-  // Persisted storage strips per-entry consistencyFacts to save space.
-  // We persist a rolling fact log keyed BY PATH to prevent branch-bleed from background prefetch.
-  // Only merge facts whose pathKey is relevant (prefix of current path).
+  // RETIRED LEDGER, kept only for saves written before the schema change.
+  // `consistencyFacts` was removed from the output schemas, so the model no
+  // longer emits any and every branch of this is a no-op on a current save. The
+  // consistency spine is the Under-Map now: revealed node truths and sealed
+  // beliefs, injected as hard canon by _buildContinuityAnchorSection. Do not
+  // re-wire this; extend the anchors instead.
   const persistedFacts = this._getRelevantPersistedConsistencyFacts(pathKey);
   if (persistedFacts.length > 0) {
     context.establishedFacts = [
