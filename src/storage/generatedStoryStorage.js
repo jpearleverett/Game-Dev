@@ -556,7 +556,16 @@ export async function pruneOldGenerations(currentPathKey, currentChapter, maxSiz
       // Preserve any entry whose path key is a prefix of the current path.
       const entryPathKey = typeof key === 'string' && key.includes('_') ? key.split('_').slice(1).join('_') : '';
       if (currentPathKey && entryPathKey) {
-        if (String(currentPathKey).startsWith(String(entryPathKey))) {
+        // 'ROOT' is the path key chapter 1 is stored under (there are no decisions
+        // behind it yet), and it is a prefix of every path that follows even though
+        // it does not look like one. Without this case, "AABBA..." .startsWith('ROOT')
+        // is false, so the OPENING OF THE GAME scored lowest of everything on the
+        // player's own path and was the first thing pruned: the read-back pager
+        // could no longer reach the start, and any prompt reading previous chapters
+        // from storage found a hole where chapter 1 had been.
+        const onPath = entryPathKey === 'ROOT'
+          || String(currentPathKey).startsWith(String(entryPathKey));
+        if (onPath) {
           score += 1000;
         } else if (String(entryPathKey).startsWith(String(currentPathKey))) {
           // Also keep if it is a child/continuation path (rare, but safe)

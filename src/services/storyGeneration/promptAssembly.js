@@ -575,6 +575,12 @@ function _buildOtherReaderSection(underMap) {
  * 12-chapter campaign. Kept short on purpose: this anchors, it does not
  * duplicate the full ESTABLISHED FACTS ledger above.
  */
+// How much canon the anchor block carries. Sized to hold a WHOLE season: twelve
+// beliefs is every belief a run can seal, and forty truths covers a thorough
+// player, at roughly ninety characters a line.
+const ANCHOR_NODE_LIMIT = 40;
+const ANCHOR_BELIEF_LIMIT = 12;
+
 function _buildContinuityAnchorSection(context, chapter) {
   const { protagonist, antagonist, setting } = ABSOLUTE_FACTS || {};
   const lines = [];
@@ -608,11 +614,27 @@ function _buildContinuityAnchorSection(context, chapter) {
     // block is for: it kept stale canon salient and dropped what the next scene
     // actually has to stay consistent with. Reversed so the newest lands last,
     // closest to <task>.
-    nodes.slice(0, 8).reverse().forEach((n) => {
+    // The block calls itself immutable canon, so it has to CARRY the canon. Eight
+    // truths and three beliefs meant that by chapter 12 the model was told nothing
+    // about what the player had believed in chapters 1-8: the beliefs that shaped
+    // the run were silently outside the one block that says "do not contradict".
+    // A season holds at most twelve beliefs and MAX_NODES truths, each about ninety
+    // characters, so the whole canon is under 4k characters against a 1M window.
+    // Arc-scoped truths (the ones that span chapters) are guaranteed a place.
+    const arcTruths = nodes.filter((n) => n.scope === 'arc');
+    const anchorNodes = arcTruths.length >= ANCHOR_NODE_LIMIT
+      ? arcTruths.slice(0, ANCHOR_NODE_LIMIT)
+      : [...arcTruths, ...nodes.filter((n) => n.scope !== 'arc')].slice(0, ANCHOR_NODE_LIMIT);
+    // Restore campaign order (underMap stores newest-first) so the newest canon
+    // lands last, closest to <task>.
+    const orderedNodes = nodes.filter((n) => anchorNodes.includes(n)).reverse();
+    orderedNodes.forEach((n) => {
       lines.push(`- Established truth the player has surfaced (do not contradict): ${n.revelation}${n.scope === 'arc' ? ' (a truth that spans chapters)' : ''}`);
     });
+    // EVERY sealed belief. This is the player's record of the run; a season has
+    // twelve of them at most.
     const sealed = (Array.isArray(um.theories) ? um.theories : []).filter((t) => t && t.interpretation);
-    sealed.slice(0, 3).reverse().forEach((t) => {
+    sealed.slice(0, ANCHOR_BELIEF_LIMIT).reverse().forEach((t) => {
       if (t.correct === false) {
         lines.push(`- The player believed: "${t.interpretation}", but this was SUBVERTED. The hidden world is NOT as they believed; reflect the truth, not the false belief.`);
       } else if (t.correct === true) {

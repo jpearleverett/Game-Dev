@@ -96,3 +96,72 @@ describe('_buildContinuityAnchorSection — Under-Map canon', () => {
     expect(out).not.toContain('TRUE_READING_ONLY');
   });
 });
+
+describe('the canon block carries a whole season, not a window of it', () => {
+  // The block calls itself "Immutable canon for this scene. Do not contradict
+  // these." It carried the newest 8 truths and the newest 3 beliefs, so by
+  // chapter 12 the model was told nothing about what the player had believed in
+  // chapters 1-8: the beliefs that shaped the entire run sat outside the one
+  // block that forbids contradicting them.
+  const seasonMap = () => {
+    let m = createBlankUnderMap();
+    for (let i = 1; i <= 12; i += 1) {
+      m = recordTheory(m, {
+        chapter: i,
+        interpretation: `BELIEF-${String(i).padStart(2, '0')}`,
+        rejected: [`REJECTED-${i}`],
+      });
+      if (i < 12) m = resolveTheory(m, i, i % 2 === 0);
+    }
+    // Twenty revealed truths, oldest first so the ids read in campaign order.
+    const nodes = Array.from({ length: 20 }, (_, i) => ({
+      id: `node_rel_${i}`,
+      revelation: `TRUTH-${String(20 - i).padStart(2, '0')}`,
+      scope: i > 17 ? 'arc' : 'chapter',
+    }));
+    return { ...m, nodes };
+  };
+
+  test('every belief the player sealed is still named as canon at chapter 12', () => {
+    const anchor = buildAnchor(seasonMap(), 12);
+    for (let i = 1; i <= 12; i += 1) {
+      const belief = `BELIEF-${String(i).padStart(2, '0')}`;
+      expect(`${belief} present: ${anchor.includes(belief)}`).toBe(`${belief} present: true`);
+    }
+  });
+
+  test('a subverted belief still says it was subverted, however old', () => {
+    const anchor = buildAnchor(seasonMap(), 12);
+    // Odd chapters resolved false in the fixture.
+    expect(anchor).toMatch(/BELIEF-01[\s\S]*SUBVERTED|SUBVERTED[\s\S]*BELIEF-01/);
+  });
+
+  test('twenty revealed truths all survive, and arc truths are kept', () => {
+    const anchor = buildAnchor(seasonMap(), 12);
+    for (let i = 1; i <= 20; i += 1) {
+      const truth = `TRUTH-${String(i).padStart(2, '0')}`;
+      expect(`${truth} present: ${anchor.includes(truth)}`).toBe(`${truth} present: true`);
+    }
+    expect(anchor).toContain('a truth that spans chapters');
+  });
+
+  test('the newest canon still lands last, closest to the task', () => {
+    const anchor = buildAnchor(seasonMap(), 12);
+    expect(anchor.indexOf('BELIEF-12')).toBeGreaterThan(anchor.indexOf('BELIEF-01'));
+    expect(anchor.indexOf('TRUTH-20')).toBeGreaterThan(anchor.indexOf('TRUTH-01'));
+  });
+
+  test('a map larger than the cap keeps the arc truths', () => {
+    let m = createBlankUnderMap();
+    const nodes = Array.from({ length: 60 }, (_, i) => ({
+      id: `node_rel_${i}`,
+      revelation: `BULK-${i}`,
+      scope: i > 55 ? 'arc' : 'chapter',
+    }));
+    const anchor = buildAnchor({ ...m, nodes }, 12);
+    ['BULK-56', 'BULK-57', 'BULK-58', 'BULK-59'].forEach((t) => {
+      expect(`${t} present: ${anchor.includes(t)}`).toBe(`${t} present: true`);
+    });
+    expect(anchor.split('\n').length).toBeLessThan(50);
+  });
+});
