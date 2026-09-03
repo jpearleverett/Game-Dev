@@ -7,10 +7,15 @@ import {
   SETUP_PAYOFF_REGISTRY,
 } from '../../data/storyBible';
 import { saveStoryContext } from '../../storage/generatedStoryStorage';
-import { DECISION_CONTENT_SCHEMA, STORY_CONTENT_SCHEMA } from './schemas';
+import {
+  DECISION_CONTENT_LAYER1_SCHEMA,
+  DECISION_CONTENT_SCHEMA,
+  STORY_CONTENT_LAYER1_SCHEMA,
+  STORY_CONTENT_SCHEMA,
+} from './schemas';
+import { isLayer1Partial } from './lazyBranching';
 import { DECISION_SUBCHAPTER, MIN_WORDS_PER_SUBCHAPTER, TRUNCATE_VALIDATION } from './constants';
 import { formatSubchapterLabel } from './helpers';
-import { isLayer1Partial } from './lazyBranching';
 
 class ValidationMethods {
   /**
@@ -119,7 +124,6 @@ class ValidationMethods {
         jackRiskLevel: parsed.jackRiskLevel,
         jackBehaviorDeclaration: parsed.jackBehaviorDeclaration,
         narrativeThreads: Array.isArray(parsed.narrativeThreads) ? parsed.narrativeThreads : [],
-        previousThreadsAddressed: Array.isArray(parsed.previousThreadsAddressed) ? parsed.previousThreadsAddressed : [],
         // UNDER-MAP: fragments the player can examine/collect, and how they
         // connect to reveal the hidden world.
         fragments: this._normalizeFragments(parsed.fragments),
@@ -626,7 +630,13 @@ class ValidationMethods {
       const line = String(e.line || '').trim();
       if (!line) continue;
       const nodeRef = String(e.nodeRef || '').trim();
-      out.push(nodeRef ? { nodeRef, line } : { line });
+      if (!nodeRef) {
+        // CaseFileScreen filters echoes without a nodeRef, so one stored here is
+        // a payoff the player is promised and never shown.
+        console.warn(`[StoryGen] echo dropped — no nodeRef to anchor it: "${line.slice(0, 60)}"`);
+        continue;
+      }
+      out.push({ nodeRef, line });
       if (out.length >= 2) break;
     }
     return out;
@@ -639,6 +649,21 @@ class ValidationMethods {
     if (!Number.isFinite(resolvesChapter)) return null;
     if (typeof raw.correct !== 'boolean') return null;
     const line = String(raw.line || '').trim();
+
+    // resolveTheory matches on `theory.chapter === resolvesChapter && correct == null`.
+    // The prompt asks for the chapter the belief was SEALED in while every other
+    // number in that prompt is the current chapter, so an off-by-one is easy and
+    // its cost is total: the verdict silently resolves nothing. Snap it to the
+    // unresolved belief it can only have meant.
+    // Only correctable when a map is actually loaded; with no theories to check
+    // against, the value passes through untouched rather than being second-guessed.
+    const unresolved = (Array.isArray(this.currentUnderMap?.theories) ? this.currentUnderMap.theories : [])
+      .filter((t) => t && t.correct == null && Number.isFinite(t.chapter));
+    if (unresolved.length > 0 && !unresolved.some((t) => t.chapter === resolvesChapter)) {
+      const snapped = unresolved[0].chapter; // theories are newest-first
+      console.warn(`[StoryGen] beliefResolution named chapter ${resolvesChapter}, which has no unresolved belief; snapping to ${snapped}`);
+      return { resolvesChapter: snapped, correct: raw.correct, line };
+    }
     return { resolvesChapter, correct: raw.correct, line };
   }
 
@@ -663,7 +688,6 @@ class ValidationMethods {
       chapterSummary: '',
       puzzleCandidates: [],
       briefing: { summary: '', objectives: [] },
-      consistencyFacts: [],
       pathDecisions: null, // Path-specific decisions for C subchapters
     };
 
@@ -689,34 +713,38 @@ class ValidationMethods {
       result.previously = previouslyMatch[1];
     }
 
-    // Try to extract narrative (this is the most important and likely longest field)
-    const narrativeMatch = content.match(/"narrative"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"|"\s*,\s*"briefing|"\s*,\s*"consistencyFacts|"\s*})/);
-    if (narrativeMatch) {
-      // Unescape the narrative content
-      let narrative = narrativeMatch[1];
-      // Handle escaped characters
-      narrative = narrative.replace(/\\n/g, '\n')
-                          .replace(/\\"/g, '"')
-                          .replace(/\\\\/g, '\\');
-      result.narrative = this._cleanNarrative(narrative);
-    } else {
-      // Try a more aggressive pattern for truncated narratives
-      const looseNarrativeMatch = content.match(/"narrative"\s*:\s*"([\s\S]{100,})/);
-      if (looseNarrativeMatch) {
-        let narrative = looseNarrativeMatch[1];
-        // Find the last complete sentence
-        const lastSentenceEnd = Math.max(
-          narrative.lastIndexOf('.'),
-          narrative.lastIndexOf('!'),
-          narrative.lastIndexOf('?')
-        );
-        if (lastSentenceEnd > narrative.length * 0.5) {
-          narrative = narrative.substring(0, lastSentenceEnd + 1);
-        }
-        narrative = narrative.replace(/\\n/g, '\n')
-                            .replace(/\\"/g, '"')
-                            .replace(/\\\\/g, '\\');
-        result.narrative = this._cleanNarrative(narrative);
+    // Recover the opening prose.
+    //
+    // This used to look for a top-level "narrative" field, which no schema has
+    // emitted since the branching rewrite — so every truncated response fell
+    // through to "use the raw content as narrative" and the player was shown
+    // mangled JSON. The prose actually lives at branchingNarrative.opening.text.
+    const unescape = (text) => text
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+    const truncateToLastSentence = (text) => {
+      const lastSentenceEnd = Math.max(text.lastIndexOf('.'), text.lastIndexOf('!'), text.lastIndexOf('?'));
+      return lastSentenceEnd > text.length * 0.5 ? text.substring(0, lastSentenceEnd + 1) : text;
+    };
+
+    const openingIdx = content.indexOf('"opening"');
+    if (openingIdx >= 0) {
+      const after = content.slice(openingIdx);
+      // A complete opening.text, or whatever of it survived the cut.
+      const complete = after.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const partial = complete ? null : after.match(/"text"\s*:\s*"((?:[^"\\]|\\.){100,})/);
+      const raw = complete ? complete[1] : (partial ? truncateToLastSentence(partial[1]) : '');
+      if (raw) {
+        const text = this._cleanNarrative(unescape(raw));
+        result.narrative = text;
+        // Give the reader a minimal but well-formed branching narrative so the
+        // scene opens instead of rendering an empty page.
+        result.branchingNarrative = {
+          opening: { text, details: [] },
+          firstChoice: { prompt: '', options: [] },
+          secondChoices: [],
+        };
       }
     }
 
@@ -1174,117 +1202,14 @@ class ValidationMethods {
       );
 
       if (criticalThreads.length > 0 && context.currentPosition.chapter > 2) {
-        // Check if LLM provided thread acknowledgments
-        const addressedThreads = content.previousThreadsAddressed || [];
-
-        // ========== NEW: Verify addressed threads actually match critical threads ==========
-        // This prevents the LLM from claiming to address made-up threads
-        let validAddressedCount = 0;
-        const unmatchedCritical = [...criticalThreads];
-
-        for (const addressed of addressedThreads) {
-          const addressedLower = (addressed.originalThread || '').toLowerCase();
-
-          // Try to match this addressed thread to a critical thread
-          const matchIndex = unmatchedCritical.findIndex(critical => {
-            const criticalLower = (critical.description || '').toLowerCase();
-            // Match if there's significant overlap in key terms
-            const addressedWords = addressedLower.split(/\s+/).filter(w => w.length > 3);
-            const criticalWords = criticalLower.split(/\s+/).filter(w => w.length > 3);
-            // Use prefix matching: one word must be a prefix of the other (min 4 chars)
-            // This allows "promise" to match "promised" but prevents "case" matching "showcase"
-            const wordsMatch = (a, b) => {
-              if (a.length < 4 || b.length < 4) return a === b;
-              return a.startsWith(b) || b.startsWith(a);
-            };
-            const matchingWords = addressedWords.filter(w => criticalWords.some(cw => wordsMatch(w, cw)));
-            // Require at least 2 matching words or 40% overlap
-            return matchingWords.length >= 2 || matchingWords.length / Math.max(addressedWords.length, 1) > 0.4;
-          });
-
-          if (matchIndex !== -1) {
-            validAddressedCount++;
-            unmatchedCritical.splice(matchIndex, 1); // Remove matched thread
-          } else {
-            // Log potential fabricated thread
-            console.warn(`[StoryGenerationService] Thread addressed doesn't match any critical thread: "${addressedLower.slice(0, 60)}..."`);
-          }
-        }
-
-        // Require ALL critical threads to be VALIDLY acknowledged.
-        // The system prompt instructs the model to copy originalThread exactly and the engine treats
-        // missing critical threads as a hard continuity failure (we will hard-enforce in generation).
-        const criticalCount = criticalThreads.length;
-        const requiredAcknowledgments = criticalCount;
-        if (validAddressedCount < requiredAcknowledgments) {
-          issues.push(
-            `THREAD CONTINUITY VIOLATION: Only ${validAddressedCount}/${criticalCount} critical threads validly addressed (${addressedThreads.length} claimed). Must acknowledge ALL ${requiredAcknowledgments}. Unaddressed: ${unmatchedCritical.slice(0, 3).map(t => t.description?.slice(0, 50)).join('; ')}`
-          );
-        }
-
-        // =========================================================================
-        // THREAD ESCALATION SYSTEM - Track and enforce overdue threads
-        // =========================================================================
-        for (const addressed of addressedThreads) {
-          const threadId = addressed.originalThread.slice(0, 50); // Use truncated description as ID
-
-          if (addressed.howAddressed === 'acknowledged' || addressed.howAddressed === 'delayed') {
-            // Increment acknowledgment count for threads that weren't progressed
-            const currentCount = (this.threadAcknowledgmentCounts.get(threadId) || 0) + 1;
-            this.threadAcknowledgmentCounts.set(threadId, currentCount);
-
-            // If acknowledged 2+ times without progress, flag as OVERDUE ERROR
-            if (currentCount >= 2) {
-              // Use word-based prefix matching to find the corresponding critical thread
-              // This handles LLM rewording (e.g., "promised to meet" → "meeting") while
-              // distinguishing similar threads (e.g., "meet contact" vs "call contact")
-              const threadIdWords = threadId.toLowerCase().match(/\b\w{4,}\b/g) || [];
-              const wordsMatchFn = (a, b) => {
-                if (a.length < 4 || b.length < 4) return a === b;
-                return a.startsWith(b) || b.startsWith(a);
-              };
-              const matchingCritical = criticalThreads.find(t => {
-                if (!t.description) return false;
-                const descWords = t.description.toLowerCase().match(/\b\w{4,}\b/g) || [];
-                const matchingWords = threadIdWords.filter(tw =>
-                  descWords.some(dw => wordsMatchFn(tw, dw))
-                );
-                // Require at least 2 matching words AND 40% overlap
-                return matchingWords.length >= 2 && matchingWords.length / Math.max(threadIdWords.length, 1) > 0.4;
-              });
-              if (matchingCritical) {
-                issues.push(`OVERDUE THREAD ERROR: "${addressed.originalThread.slice(0, 60)}..." has been acknowledged ${currentCount} times without resolution. You MUST either resolve it, progress it meaningfully, or mark it as "failed" with explanation.`);
-              }
-            }
-          } else if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed' || addressed.howAddressed === 'failed') {
-            // Reset counter when thread is actually addressed
-            this.threadAcknowledgmentCounts.delete(threadId);
-          }
-
-          // Verify acknowledged threads actually appear in narrative
-          if (addressed.howAddressed === 'resolved' || addressed.howAddressed === 'progressed') {
-            const threadLower = addressed.originalThread.toLowerCase();
-            const narrativeLower = narrative.toLowerCase();
-
-            // Extract key nouns/names from the thread description
-            // Only canonical character names are matched - other characters are LLM-generated
-            const keyWords = threadLower.match(/\b(?:jack|victoria|blackwell|meet|promise|call|contact|investigate|reveal)\b/g) || [];
-
-            // Use prefix matching to allow word variations (meet/meeting, promise/promised)
-            // but prevent false positives (case/showcase)
-            const narrativeWords = narrativeLower.match(/\b\w+\b/g) || [];
-            const mentionedInNarrative = keyWords.some(keyword => {
-              return narrativeWords.some(w => {
-                if (keyword.length < 4 || w.length < 4) return keyword === w;
-                return keyword.startsWith(w) || w.startsWith(keyword);
-              });
-            });
-
-            if (!mentionedInNarrative && keyWords.length > 0) {
-              warnings.push(`Thread claimed as "${addressed.howAddressed}" but may not appear in narrative: "${addressed.originalThread.slice(0, 60)}..."`);
-            }
-          }
-        }
+        // NOTE: the thread-acknowledgment machinery that lived here has been
+        // removed. It read `content.previousThreadsAddressed`, a field deleted
+        // from the schemas, so the model could not emit it and the count was
+        // always zero — every generation from chapter 3 onward raised a
+        // guaranteed-false THREAD CONTINUITY VIOLATION, forcing validation to
+        // fail and burning repair passes on a phantom. Threads are enforced by
+        // the prompt's <thread_accounting_rule> and by the narrative-text checks
+        // in Category 10, which read prose the model actually produces.
       }
 
       // Check for dangling appointments more than 2 chapters old - NOW ERROR
@@ -1581,8 +1506,6 @@ class ValidationMethods {
         return false;
       });
 
-      const addressedThreads = content.previousThreadsAddressed || [];
-
       for (const thread of threadsToCheck) {
         // Check if this thread was addressed in the generated content
         const threadDescription = (thread.description || thread.excerpt || '').toLowerCase();
@@ -1599,20 +1522,12 @@ class ValidationMethods {
           });
         };
 
-        const wasAddressed = addressedThreads.some(addressed => {
-          if (!addressed.originalThread) return false;
-          const addressedLower = addressed.originalThread.toLowerCase();
-          // Check if at least 2 key words match using prefix matching
-          // This allows "promise" to match "promised" but prevents "case" matching "showcase"
-          const matchingKeywords = threadKeywords.filter(kw => wordMatchesInText(kw, addressedLower));
-          return matchingKeywords.length >= 2;
-        });
-
-        // Also check if the thread is mentioned in the narrative itself
+        // Whether the thread shows up in the prose the model actually wrote.
+        // (The old self-report check read a schema field that no longer exists.)
         const narrativeLower = narrative.toLowerCase();
         const mentionedInNarrative = threadKeywords.some(kw => wordMatchesInText(kw, narrativeLower));
 
-        if (!wasAddressed && !mentionedInNarrative) {
+        if (!mentionedInNarrative) {
           const threadChapter = thread.chapter || 0;
           const currentChapter = context.currentPosition?.chapter || 12;
           const chapterDistance = currentChapter - threadChapter;
@@ -2481,6 +2396,20 @@ Example texture to emulate:
 "Ashport looked ordinary until you stared long enough. Reflections didn't match their sources. A street sign held a curve that belonged on paper, not metal. The city kept pretending nothing was happening."
 ` : '';
 
+    // Posting the model's own ~4,000 words straight back at it is exactly the
+    // pattern the pathDecisions call documents as the RECITATION trigger — and a
+    // recitation block here returns empty content that would be stored over the
+    // original. Send the structure and the prose that has to be rewritten, not
+    // the whole object graph: the branching bodies are the bulk, and the repair
+    // only ever rewrites prose it is shown.
+    const contentForPrompt = {
+      title: content?.title,
+      bridge: content?.bridgeText || content?.bridge,
+      previously: content?.previously,
+      ...(content?.decision ? { decision: content.decision } : {}),
+      branchingNarrative: content?.branchingNarrative,
+    };
+
     const fixPrompt = `The following generated story content contains violations that must be fixed.
 
 ## CONSISTENCY ISSUES TO FIX:
@@ -2495,13 +2424,17 @@ ${proseGuidance}
 5. Never use forbidden words: delve, unravel, tapestry, myriad, whilst, realm
 
 ## ORIGINAL CONTENT:
-${JSON.stringify(content, null, 2)}
+${JSON.stringify(contentForPrompt, null, 2)}
 
 Rewrite the narrative to fix ALL issues while maintaining the story's thriller tone and progression.`;
 
+    // Repair against the schema that produced the content. A lazy Layer-1 scene
+    // repaired against the full schema would be asked for nine ending bodies it
+    // never had.
+    const isLayer1 = isLayer1Partial(content?.branchingNarrative);
     const responseSchema = isDecisionPoint
-      ? DECISION_CONTENT_SCHEMA
-      : STORY_CONTENT_SCHEMA;
+      ? (isLayer1 ? DECISION_CONTENT_LAYER1_SCHEMA : DECISION_CONTENT_SCHEMA)
+      : (isLayer1 ? STORY_CONTENT_LAYER1_SCHEMA : STORY_CONTENT_SCHEMA);
 
     const response = await llmService.complete(
       [{ role: 'user', content: fixPrompt }],
@@ -2511,6 +2444,13 @@ Rewrite the narrative to fix ALL issues while maintaining the story's thriller t
         responseSchema,
       }
     );
+
+    // A repair that came back empty or was blocked as recitation must not be
+    // returned as a hollow "fixed" object: the caller would store it over the
+    // original. Throwing lets generation.js keep the content it already has.
+    if (response?.finishReason === 'RECITATION' || !response?.content) {
+      throw new Error(`Repair pass produced no usable content (${response?.finishReason || 'empty response'})`);
+    }
 
     return this._parseGeneratedContent(response.content, isDecisionPoint);
   }

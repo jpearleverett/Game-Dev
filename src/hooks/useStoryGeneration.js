@@ -1386,7 +1386,18 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
       // Best-effort persist (the live screen uses the returned value regardless).
       try {
         const baseEntry = entry || (await getStoryEntryAsync(caseNumber, pathKey)) || { branchingNarrative: bn };
-        const updatedEntry = { ...baseEntry, branchingNarrative: mergedBN };
+        // The ending segments arrive after the entry was written, so any anomaly
+        // the model tagged in them is not yet in the entry's fragment list —
+        // which is what the Under-Map ingests. Union the newly-derived fragments
+        // in, or the last third of every path contributes nothing to the board.
+        let mergedFragments = Array.isArray(baseEntry.fragments) ? baseEntry.fragments : [];
+        try {
+          const derived = storyGenerationService._deriveFragmentsFromBranching?.(mergedBN) || [];
+          if (derived.length) {
+            mergedFragments = storyGenerationService._normalizeFragments?.([...mergedFragments, ...derived]) || mergedFragments;
+          }
+        } catch (_deriveErr) { /* the merged prose is still usable without new fragments */ }
+        const updatedEntry = { ...baseEntry, branchingNarrative: mergedBN, fragments: mergedFragments };
         updateGeneratedCache(caseNumber, pathKey, updatedEntry);
         saveGeneratedChapter(caseNumber, pathKey, updatedEntry).catch(() => {});
       } catch (_persistErr) { /* persistence is best-effort */ }

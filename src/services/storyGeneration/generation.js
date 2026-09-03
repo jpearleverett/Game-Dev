@@ -615,6 +615,23 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
       // Track token usage for first call
       this._trackTokenUsage(response?.usage, `Chapter ${chapter}.${subchapter} (main content)`);
 
+      // A response cut off at the output ceiling is not parseable JSON, and the
+      // partial-content recovery can only rebuild the opening — the branches,
+      // the fragments and (on a C beat) the decision are simply gone. Retrying
+      // costs one more generation; accepting it costs the player a broken scene
+      // that is then written into the save as canon.
+      if (response?.isTruncated || response?.finishReason === 'MAX_TOKENS' || response?.finishReason === 'LENGTH') {
+        llmTrace('StoryGenerationService', traceId, 'llm.response.truncated', {
+          finishReason: response?.finishReason,
+          contentLength: response?.content?.length || 0,
+          chapter,
+          subchapter,
+        }, 'warn');
+        const truncErr = new Error(`Generation truncated at the output ceiling (${response?.finishReason || 'MAX_TOKENS'})`);
+        truncErr.retryable = true;
+        throw truncErr;
+      }
+
       generatedContent = this._parseGeneratedContent(response.content, isDecisionPoint);
       llmTrace('StoryGenerationService', traceId, 'llm.response.parsed', {
         hasTitle: !!generatedContent?.title,
@@ -1424,9 +1441,10 @@ async function generateSecondChoiceResponses(afterChoice, branchingNarrative, op
     '<endings_to_write>',
     'Write exactly one ending per option below, matched by its key. Stay consistent with the scene above; do not contradict it.',
     endings,
+    'Each ending carries 1-2 tappable `details`: a short verbatim phrase from that ending where an anomaly of the hidden world appears, a one-line note on why it is strange, a 2-4 word evidenceCard label, and its kind. Without them the last third of every path has nothing for the player to examine.',
     '</endings_to_write>',
     '<output_contract>',
-    `Return ONLY JSON: { "afterChoice": "${target}", "responses": [ { "key": "...", "response": "..." } ] } with exactly 3 responses. No commentary, no markdown.`,
+    `Return ONLY JSON: { "afterChoice": "${target}", "responses": [ { "key": "...", "response": "...", "details": [ { "phrase": "...", "note": "...", "evidenceCard": "...", "kind": "symbol|place|person|phenomenon" } ] } ] } with exactly 3 responses. No commentary, no markdown.`,
     '</output_contract>',
   ].join('\n');
 

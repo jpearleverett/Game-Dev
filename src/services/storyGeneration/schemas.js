@@ -164,6 +164,92 @@ export const BRANCHING_NARRATIVE_SCHEMA = {
 /**
  * Schema for regular subchapters (no decision point)
  */
+// UNDER-MAP OUTPUT FIELDS — shared by the A/B and the C schemas.
+//
+// These were declared only on STORY_CONTENT_SCHEMA, so a chapter's C beat could
+// not emit fragments, relations, echoes, a belief verdict or a foil name even
+// though the prompt asked for all five unconditionally. That cost a third of all
+// scenes their contribution to the board, and meant a belief answered at a
+// climax could never be recorded.
+export const UNDER_MAP_OUTPUT_FIELDS = {
+  fragments: {
+    type: 'array',
+    description: 'REQUIRED: 3-5 striking things Jack notices in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose. There MUST be enough here to support at least two connections (see relations).',
+    items: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'Short name of the thing noticed (2-5 words), as it appears in the prose.' },
+        kind: { type: 'string', enum: ['symbol', 'place', 'person', 'phenomenon'], description: 'What kind of fragment this is.' },
+        detail: { type: 'string', description: "Jack's one-line note on why it's strange (10-20 words)." },
+        phrase: { type: 'string', description: 'The EXACT verbatim substring from your narrative prose where this fragment first appears, so the player can tap it to examine it. Must match the prose character-for-character.' },
+        anomalous: { type: 'boolean', description: 'True if it breaks reality / is part of the hidden world (vs. a mundane detail).' },
+      },
+      required: ['label', 'kind'],
+    },
+  },
+  relations: {
+    type: 'array',
+    description: 'Author 4 relations, each referencing fragments by their EXACT label: TWO whose endpoints are both fragments listed in THIS scene\'s `fragments` (so the CONNECT beat is never empty); ONE linking a fragment from this scene to a fragment the player already holds, named in <under_map_state> (this is what threads the map across chapters); and ONE dangling thread, linking a fragment from this scene to a named fragment the player does NOT hold yet and that a later scene will introduce by exactly that label. Drop the third when the player holds no fragments yet. Only assert connections true in your world and inferable by the player. Prefer the bond grammar: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON.',
+    items: {
+      type: 'object',
+      properties: {
+        aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
+        bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
+        revelation: { type: 'string', description: 'The TRUE secret this connection reveals (one sentence).' },
+        scope: {
+          type: 'string',
+          enum: ['chapter', 'arc'],
+          description: "Default 'chapter'. Use 'arc' ONLY when this connection links long-recurring motifs into a SERIES-LEVEL truth about the hidden world (rare, big — the payoff for cross-chapter attention).",
+        },
+        falseReadings: {
+          type: 'array',
+          description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair — plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",
+          items: { type: 'string' },
+          minItems: 2,
+          maxItems: 2,
+        },
+      },
+      required: ['aLabel', 'bLabel', 'revelation', 'falseReadings'],
+    },
+  },
+  // UNDER-MAP ECHO: make the player FEEL their mapping shaped the story. When
+  // this scene builds on a truth the player already revealed (listed in
+  // <under_map_state>), name the callback so the UI can surface it.
+  echoes: {
+    type: 'array',
+    description: 'If THIS scene builds on a truth the player has ALREADY revealed on their Under-Map (see <under_map_state>), add up to 2 callbacks. Omit entirely if this scene does not build on a prior discovery.',
+    items: {
+      type: 'object',
+      properties: {
+        nodeRef: { type: 'string', description: 'The revealed truth this scene builds on — quote it closely from the list in <under_map_state>.' },
+        line: { type: 'string', description: 'The single in-fiction sentence in THIS scene that pays that discovery off.' },
+      },
+      // nodeRef is required because the UI discards any echo without one:
+      // an echo the model may legally emit without it renders as nothing.
+      required: ['nodeRef', 'line'],
+    },
+    maxItems: 2,
+  },
+  // BELIEF RESOLUTION (Move 3): if the player SEALED a belief last chapter
+  // (shown in <under_map_state>), this scene may begin to bear it out — or
+  // subvert it. Reporting this drives the player's Clarity / the ending they reach.
+  beliefResolution: {
+    type: 'object',
+    description: 'OMIT unless a sealed belief is listed in <under_map_state> AND this scene reveals whether it was right. Be willing to SUBVERT a wrong belief — a misread of the hidden world makes a richer story.',
+    properties: {
+      resolvesChapter: { type: 'integer', description: 'The chapter number the resolved belief was sealed in.' },
+      correct: { type: 'boolean', description: 'True if reality CONFIRMS the player\'s belief; false if it subverts/contradicts it.' },
+      line: { type: 'string', description: 'The in-fiction sentence in THIS scene that shows the belief confirmed or undone.' },
+    },
+    required: ['resolvesChapter', 'correct'],
+  },
+  // THE OTHER READER (foil): when <the_other_reader> asks you to give the
+  // road-not-taken a face (presence >= 2) and you name them, report that name
+  // here ONCE so it stays fixed across chapters. Omit otherwise.
+  foilName: { type: 'string', description: 'OMIT unless <the_other_reader> told you to name the foil and you did. The name you gave them, so future chapters keep it.' },
+};
+
+
 export const STORY_CONTENT_SCHEMA = {
   type: 'object',
   properties: {
@@ -198,15 +284,8 @@ export const STORY_CONTENT_SCHEMA = {
             },
             details: {
               type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  phrase: { type: 'string', description: 'Exact phrase from text that can be tapped' },
-                  note: { type: 'string', description: 'Jack\'s observation (15-25 words)' },
-                  evidenceCard: { type: 'string', description: 'Evidence card label if applicable (2-4 words), or empty' },
-                },
-                required: ['phrase', 'note'],
-              },
+              items: DETAIL_SCHEMA,
+              description: '1-2 tappable details in the opening',
             },
           },
           required: ['text'],
@@ -227,15 +306,8 @@ export const STORY_CONTENT_SCHEMA = {
                   response: { type: 'string', description: 'Narrative response (target 380-420 words; never below 320)' },
                   details: {
                     type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        phrase: { type: 'string' },
-                        note: { type: 'string' },
-                        evidenceCard: { type: 'string' },
-                      },
-                      required: ['phrase', 'note'],
-                    },
+                    items: DETAIL_SCHEMA,
+                    description: '1-2 tappable details in this response',
                   },
                 },
                 required: ['key', 'label', 'response'],
@@ -266,15 +338,8 @@ export const STORY_CONTENT_SCHEMA = {
                     response: { type: 'string', description: 'Ending segment (target 380-420 words; never below 320). Conclude this path.' },
                     details: {
                       type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          phrase: { type: 'string' },
-                          note: { type: 'string' },
-                          evidenceCard: { type: 'string' },
-                        },
-                        required: ['phrase', 'note'],
-                      },
+                      items: DETAIL_SCHEMA,
+                      description: '1-2 tappable details in this ending',
                     },
                   },
                   required: ['key', 'label', 'response'],
@@ -347,80 +412,24 @@ export const STORY_CONTENT_SCHEMA = {
     },
     // UNDER-MAP: the fragments the player can collect from this scene, and how
     // they connect to reveal the hidden world. Drives examine -> connect -> reveal.
-    fragments: {
-      type: 'array',
-      description: 'REQUIRED: 3-5 striking things Jack notices in THIS scene that hint at the hidden world (a symbol, an impossible place, a person, a phenomenon). Use the exact wording from your prose. There MUST be enough here to support at least two connections (see relations).',
-      items: {
-        type: 'object',
-        properties: {
-          label: { type: 'string', description: 'Short name of the thing noticed (2-5 words), as it appears in the prose.' },
-          kind: { type: 'string', enum: ['symbol', 'place', 'person', 'phenomenon'], description: 'What kind of fragment this is.' },
-          detail: { type: 'string', description: "Jack's one-line note on why it's strange (10-20 words)." },
-          phrase: { type: 'string', description: 'The EXACT verbatim substring from your narrative prose where this fragment first appears, so the player can tap it to examine it. Must match the prose character-for-character.' },
-          anomalous: { type: 'boolean', description: 'True if it breaks reality / is part of the hidden world (vs. a mundane detail).' },
-        },
-        required: ['label', 'kind'],
-      },
-    },
-    relations: {
-      type: 'array',
-      description: 'Author 4 relations, each referencing fragments by their EXACT label: TWO whose endpoints are both fragments listed in THIS scene\'s `fragments` (so the CONNECT beat is never empty); ONE linking a fragment from this scene to a fragment the player already holds, named in <under_map_state> (this is what threads the map across chapters); and ONE dangling thread, linking a fragment from this scene to a named fragment the player does NOT hold yet and that a later scene will introduce by exactly that label. Drop the third when the player holds no fragments yet. Only assert connections true in your world and inferable by the player. Prefer the bond grammar: a SYMBOL is marked into a PLACE; a PHENOMENON clings to a PERSON; a PLACE remembers a PERSON; a SYMBOL causes a PHENOMENON.',
-      items: {
-        type: 'object',
-        properties: {
-          aLabel: { type: 'string', description: 'Exact label of the first fragment.' },
-          bLabel: { type: 'string', description: 'Exact label of the second fragment.' },
-          revelation: { type: 'string', description: 'The TRUE secret this connection reveals (one sentence).' },
-          scope: {
-            type: 'string',
-            enum: ['chapter', 'arc'],
-            description: "Default 'chapter'. Use 'arc' ONLY when this connection links long-recurring motifs into a SERIES-LEVEL truth about the hidden world (rare, big — the payoff for cross-chapter attention).",
-          },
-          falseReadings: {
-            type: 'array',
-            description: "Exactly TWO tempting but FALSE one-sentence readings of this SAME pair — plausible misinterpretations a careful player might believe, but wrong in your world. Used for the player's choose-the-truth deduction; do NOT make them obviously absurd.",
-            items: { type: 'string' },
-            minItems: 2,
-            maxItems: 2,
-          },
-        },
-        required: ['aLabel', 'bLabel', 'revelation'],
-      },
-    },
-    // UNDER-MAP ECHO: make the player FEEL their mapping shaped the story. When
-    // this scene builds on a truth the player already revealed (listed in
-    // <under_map_state>), name the callback so the UI can surface it.
-    echoes: {
-      type: 'array',
-      description: 'If THIS scene builds on a truth the player has ALREADY revealed on their Under-Map (see <under_map_state>), add up to 2 callbacks. Omit entirely if this scene does not build on a prior discovery.',
-      items: {
-        type: 'object',
-        properties: {
-          nodeRef: { type: 'string', description: 'The revealed truth this scene builds on — quote it closely from the list in <under_map_state>.' },
-          line: { type: 'string', description: 'The single in-fiction sentence in THIS scene that pays that discovery off.' },
-        },
-        required: ['line'],
-      },
-      maxItems: 2,
-    },
-    // BELIEF RESOLUTION (Move 3): if the player SEALED a belief last chapter
-    // (shown in <under_map_state>), this scene may begin to bear it out — or
-    // subvert it. Reporting this drives the player's Clarity / the ending they reach.
-    beliefResolution: {
-      type: 'object',
-      description: 'OMIT unless a sealed belief is listed in <under_map_state> AND this scene reveals whether it was right. Be willing to SUBVERT a wrong belief — a misread of the hidden world makes a richer story.',
-      properties: {
-        resolvesChapter: { type: 'integer', description: 'The chapter number the resolved belief was sealed in.' },
-        correct: { type: 'boolean', description: 'True if reality CONFIRMS the player\'s belief; false if it subverts/contradicts it.' },
-        line: { type: 'string', description: 'The in-fiction sentence in THIS scene that shows the belief confirmed or undone.' },
-      },
-      required: ['resolvesChapter', 'correct'],
-    },
-    // THE OTHER READER (foil): when <the_other_reader> asks you to give the
-    // road-not-taken a face (presence >= 2) and you name them, report that name
-    // here ONCE so it stays fixed across chapters. Omit otherwise.
-    foilName: { type: 'string', description: 'OMIT unless <the_other_reader> told you to name the foil and you did. The name you gave them, so future chapters keep it.' },
+    ...UNDER_MAP_OUTPUT_FIELDS,
   },
+  // propertyOrdering pins the order the model emits fields in.
+  //
+  // Two reasons it matters here. The decision must be authored BEFORE the prose
+  // it is supposed to shape — a comment in generation.js already claimed this
+  // was happening on the strength of declaration order, which the API does not
+  // guarantee. And the small, cheap fields go ahead of the ~4,000-word
+  // branchingNarrative so a response cut short at the output ceiling loses prose
+  // rather than the briefing and the thread ledger.
+  //
+  // fragments/relations/echoes/beliefResolution stay AFTER the prose on purpose:
+  // each one quotes it verbatim, so they cannot be authored before it exists.
+  propertyOrdering: [
+    'title', 'bridge', 'previously', 'briefing', 'narrativeThreads',
+    'branchingNarrative',
+    'fragments', 'relations', 'echoes', 'beliefResolution', 'foilName',
+  ],
   required: ['title', 'bridge', 'previously', 'branchingNarrative', 'briefing', 'narrativeThreads', 'fragments', 'relations'],
 };
 
@@ -490,6 +499,7 @@ export const STORY_CONTENT_LAYER1_SCHEMA = {
     ...STORY_CONTENT_SCHEMA.properties,
     branchingNarrative: BRANCHING_LAYER1_SCHEMA,
   },
+  propertyOrdering: STORY_CONTENT_SCHEMA.propertyOrdering,
   required: STORY_CONTENT_SCHEMA.required,
 };
 
@@ -650,15 +660,8 @@ export const DECISION_CONTENT_SCHEMA = {
             text: { type: 'string', description: 'Opening scene (target 380-420 words; never below 320). Build tension toward the decision.' },
             details: {
               type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  phrase: { type: 'string' },
-                  note: { type: 'string' },
-                  evidenceCard: { type: 'string' },
-                },
-                required: ['phrase', 'note'],
-              },
+              items: DETAIL_SCHEMA,
+              description: '1-2 tappable details in the opening',
             },
           },
           required: ['text'],
@@ -678,7 +681,7 @@ export const DECISION_CONTENT_SCHEMA = {
                   label: { type: 'string', description: 'Action label (2-5 words). NOTE: For option 1C, make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
                   response: { type: 'string', description: 'Narrative response (target 380-420 words; never below 320)' },
                   summary: { type: 'string', description: 'One-sentence summary of what happens (15-25 words). Used for decision context.' },
-                  details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
+                  details: { type: 'array', items: DETAIL_SCHEMA, description: '1-2 tappable details in this response' },
                 },
                 required: ['key', 'label', 'response', 'summary'],
               },
@@ -706,7 +709,7 @@ export const DECISION_CONTENT_SCHEMA = {
                     label: { type: 'string', description: 'Action label (2-5 words). NOTE: For 2C options (1A-2C, 1B-2C, 1C-2C), make this a WILDCARD choice - unexpected, creative, or unconventional action that adds fun and variation.' },
                     response: { type: 'string', description: 'Ending segment (target 380-420 words; never below 320). Conclude at the decision moment.' },
                     summary: { type: 'string', description: 'One-sentence summary of this path ending (15-25 words). Used for decision context.' },
-                    details: { type: 'array', items: { type: 'object', properties: { phrase: { type: 'string' }, note: { type: 'string' }, evidenceCard: { type: 'string' } }, required: ['phrase', 'note'] } },
+                    details: { type: 'array', items: DETAIL_SCHEMA, description: '1-2 tappable details in this response' },
                   },
                   required: ['key', 'label', 'response', 'summary'],
                 },
@@ -776,8 +779,25 @@ export const DECISION_CONTENT_SCHEMA = {
       },
       description: 'Active story threads: promises, meetings, investigations, relationships, injuries, threats.'
     },
+    ...UNDER_MAP_OUTPUT_FIELDS,
   },
-  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'briefing', 'narrativeThreads'],
+  // propertyOrdering pins the order the model emits fields in.
+  //
+  // Two reasons it matters here. The decision must be authored BEFORE the prose
+  // it is supposed to shape — a comment in generation.js already claimed this
+  // was happening on the strength of declaration order, which the API does not
+  // guarantee. And the small, cheap fields go ahead of the ~4,000-word
+  // branchingNarrative so a response cut short at the output ceiling loses prose
+  // rather than the briefing and the thread ledger.
+  //
+  // fragments/relations/echoes/beliefResolution stay AFTER the prose on purpose:
+  // each one quotes it verbatim, so they cannot be authored before it exists.
+  propertyOrdering: [
+    'title', 'bridge', 'previously', 'decision', 'briefing', 'narrativeThreads',
+    'branchingNarrative',
+    'fragments', 'relations', 'echoes', 'beliefResolution', 'foilName',
+  ],
+  required: ['title', 'bridge', 'previously', 'decision', 'branchingNarrative', 'briefing', 'narrativeThreads', 'fragments', 'relations'],
 };
 
 // Lazy (Layer-1) variant of the decision schema: same as above but the branching
@@ -788,6 +808,7 @@ export const DECISION_CONTENT_LAYER1_SCHEMA = {
     ...DECISION_CONTENT_SCHEMA.properties,
     branchingNarrative: BRANCHING_LAYER1_SCHEMA,
   },
+  propertyOrdering: DECISION_CONTENT_SCHEMA.propertyOrdering,
   required: DECISION_CONTENT_SCHEMA.required,
 };
 

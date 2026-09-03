@@ -391,3 +391,48 @@ describe('EXAMINE phrases survive the prose cleaner', () => {
     expect(frag.phrase).toBe('the brass token, still warm');
   });
 });
+
+describe('beliefResolution is snapped to a belief that can actually receive it', () => {
+  afterEach(() => { validationMethods.currentUnderMap = null; });
+
+  test('a wrong chapter number is snapped to the newest unresolved belief', () => {
+    validationMethods.currentUnderMap = {
+      fragments: [],
+      theories: [
+        { chapter: 4, interpretation: 'The map is using you', correct: null },
+        { chapter: 2, interpretation: 'She is guiding you in', correct: true },
+      ],
+    };
+    // resolveTheory matches strictly on chapter, so naming the CURRENT chapter
+    // instead of the sealed one made the verdict a permanent no-op.
+    const out = validationMethods._normalizeBeliefResolution({
+      resolvesChapter: 5, correct: false, line: 'The door was never for him.',
+    });
+    expect(out).toEqual({ resolvesChapter: 4, correct: false, line: 'The door was never for him.' });
+  });
+
+  test('a correct chapter number is left alone', () => {
+    validationMethods.currentUnderMap = {
+      theories: [{ chapter: 4, interpretation: 'x', correct: null }],
+    };
+    expect(validationMethods._normalizeBeliefResolution({ resolvesChapter: 4, correct: true, line: 'y' }))
+      .toEqual({ resolvesChapter: 4, correct: true, line: 'y' });
+  });
+
+  test('with no map loaded the value passes through untouched', () => {
+    validationMethods.currentUnderMap = null;
+    expect(validationMethods._normalizeBeliefResolution({ resolvesChapter: 9, correct: true, line: 'z' }))
+      .toEqual({ resolvesChapter: 9, correct: true, line: 'z' });
+  });
+});
+
+describe('echoes must be anchorable', () => {
+  test('an echo with no nodeRef is dropped rather than stored unrenderable', () => {
+    // CaseFileScreen filters these out, so storing one promises a payoff the
+    // player never sees.
+    expect(validationMethods._normalizeEchoes([
+      { line: 'The seal was warm again.' },
+      { nodeRef: 'The seal marks a threshold', line: 'It was warm again.' },
+    ])).toEqual([{ nodeRef: 'The seal marks a threshold', line: 'It was warm again.' }]);
+  });
+});
