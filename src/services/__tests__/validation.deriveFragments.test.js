@@ -396,7 +396,7 @@ describe('EXAMINE phrases survive the prose cleaner', () => {
 describe('beliefResolution is snapped to a belief that can actually receive it', () => {
   afterEach(() => { validationMethods.currentUnderMap = null; });
 
-  test('a wrong chapter number is snapped to the newest unresolved belief', () => {
+  test('a wrong chapter number is snapped when only one belief is outstanding', () => {
     validationMethods.currentUnderMap = {
       fragments: [],
       theories: [
@@ -424,6 +424,33 @@ describe('beliefResolution is snapped to a belief that can actually receive it',
     validationMethods.currentUnderMap = null;
     expect(validationMethods._normalizeBeliefResolution({ resolvesChapter: 9, correct: true, line: 'z' }))
       .toEqual({ resolvesChapter: 9, correct: true, line: 'z' });
+  });
+
+  test('with two beliefs outstanding it refuses to guess which one was answered', () => {
+    // This used to take theories[0], the NEWEST. So a scene that answered the
+    // OVERDUE belief -- which the prompt now explicitly asks for, oldest first --
+    // had its verdict stamped onto the wrong reading: a belief the player got
+    // right recorded as wrong, permanently, in the record that decides their
+    // ending. Losing one verdict banner is the cheaper failure.
+    validationMethods.currentUnderMap = {
+      theories: [
+        { chapter: 3, interpretation: 'newest', correct: null },
+        { chapter: 2, interpretation: 'overdue', correct: null },
+      ],
+    };
+    expect(validationMethods._normalizeBeliefResolution({ resolvesChapter: 4, correct: false, line: 'x' }))
+      .toBeNull();
+  });
+
+  test('and still honours a verdict that names one of them exactly', () => {
+    validationMethods.currentUnderMap = {
+      theories: [
+        { chapter: 3, interpretation: 'newest', correct: null },
+        { chapter: 2, interpretation: 'overdue', correct: null },
+      ],
+    };
+    expect(validationMethods._normalizeBeliefResolution({ resolvesChapter: 2, correct: true, line: 'x' }))
+      .toEqual({ resolvesChapter: 2, correct: true, line: 'x' });
   });
 });
 

@@ -680,9 +680,20 @@ class ValidationMethods {
     const unresolved = (Array.isArray(activeMap?.theories) ? activeMap.theories : [])
       .filter((t) => t && t.correct == null && Number.isFinite(t.chapter));
     if (unresolved.length > 0 && !unresolved.some((t) => t.chapter === resolvesChapter)) {
-      const snapped = unresolved[0].chapter; // theories are newest-first
-      console.warn(`[StoryGen] beliefResolution named chapter ${resolvesChapter}, which has no unresolved belief; snapping to ${snapped}`);
-      return { resolvesChapter: snapped, correct: raw.correct, line };
+      // Snap ONLY when there is one candidate, so the correction is a certainty
+      // rather than a guess. With two beliefs outstanding this took
+      // unresolved[0] — the newest — so a scene that answered the OVERDUE one
+      // (which the prompt now explicitly asks for, oldest first) had its verdict
+      // stamped onto the wrong reading: a belief the player got right recorded
+      // as wrong, permanently, in the record that decides their ending. Losing
+      // one verdict banner is the cheaper failure.
+      if (unresolved.length === 1) {
+        const snapped = unresolved[0].chapter;
+        console.warn(`[StoryGen] beliefResolution named chapter ${resolvesChapter}, which has no unresolved belief; snapping to the only one outstanding (${snapped})`);
+        return { resolvesChapter: snapped, correct: raw.correct, line };
+      }
+      console.warn(`[StoryGen] beliefResolution named chapter ${resolvesChapter}, which has no unresolved belief, and ${unresolved.length} are outstanding (${unresolved.map((t) => t.chapter).join(', ')}); dropping it rather than resolving the wrong reading`);
+      return null;
     }
     return { resolvesChapter, correct: raw.correct, line };
   }
