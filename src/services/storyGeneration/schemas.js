@@ -14,7 +14,7 @@ export const DETAIL_SCHEMA = {
     },
     evidenceCard: {
       type: 'string',
-      description: 'If this detail becomes evidence, the card label (2-4 words). Leave empty if purely atmospheric.',
+      description: 'A short label for this detail (2-4 words), e.g. "Brass Token" or "The Paved Address". Always fill this in for a detail that is an anomaly of the hidden world; it becomes the fragment name the player collects and the exact string you reuse when the motif recurs.',
     },
     kind: {
       type: 'string',

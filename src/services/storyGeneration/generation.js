@@ -61,6 +61,40 @@ const normalizeBranchingChoice = (choice) => {
   };
 };
 
+/**
+ * No schema declares a top-level `narrative`; the prose lives inside
+ * branchingNarrative. This synthesizes the canonical read-through (opening +
+ * 1A + 1A-2A) that validation, word counts, prior-chapter context and the
+ * stored entry all read.
+ *
+ * It has to be re-runnable: _fixContent returns a freshly parsed object whose
+ * `narrative` is empty, so calling this only once (before validation) left a
+ * repaired entry stored with an empty narrative and wordCount 0 — which later
+ * chapters then read as the story so far.
+ */
+const ensureCanonicalNarrative = (content) => {
+  if (!content) return content;
+  const hasNarrative = typeof content.narrative === 'string' && content.narrative.trim().length > 0;
+  if (hasNarrative || !content.branchingNarrative) return content;
+
+  const bn = content.branchingNarrative;
+  const parts = [];
+  if (bn.opening?.text) parts.push(bn.opening.text);
+  const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A')
+    || bn.firstChoice?.options?.[0];
+  if (firstOption?.response) parts.push(firstOption.response);
+  const firstKey = String(firstOption?.key || '1A').toUpperCase();
+  const secondGroup = bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === firstKey)
+    || bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === '1A')
+    || bn.secondChoices?.[0];
+  const secondOption = secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === `${firstKey}-2A`)
+    || secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === '2A')
+    || secondGroup?.options?.[0];
+  if (secondOption?.response) parts.push(secondOption.response);
+  content.narrative = parts.join('\n\n');
+  return content;
+};
+
 const normalizeBranchingChoices = (choices = []) => {
   if (!Array.isArray(choices)) return [];
   return choices
@@ -857,15 +891,20 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           }
 
           if (pathDecisionsParsed?.pathDecisions && Array.isArray(pathDecisionsParsed.pathDecisions)) {
-            // Convert array format to object format for compatibility
+            // Convert array format to object format for compatibility.
+            //
+            // This MUST go through _convertDecisionFormat rather than a hand-rolled
+            // literal. The literal dropped `groundedKey`, which is the whole
+            // evidence-grounded belief chain: without it decisionOptionsFrom stamps
+            // grounded:null on every option, TheoryScreen seals theory.grounded as
+            // null, and _buildPlayerTheorySection emits neither the hold nor the
+            // subvert steering — so mapping well stopped buying clarity, silently.
+            // The converter also normalizes personalityAlignment, clamps evidence to
+            // two entries, and builds the options[] array the UI iterates.
             const pathDecisionsObj = {};
             for (const pd of pathDecisionsParsed.pathDecisions) {
               if (pd.pathKey) {
-                pathDecisionsObj[pd.pathKey] = {
-                  intro: pd.intro,
-                  optionA: pd.optionA,
-                  optionB: pd.optionB,
-                };
+                pathDecisionsObj[pd.pathKey] = this._convertDecisionFormat(pd);
               }
             }
             generatedContent.pathDecisions = pathDecisionsObj;
@@ -931,25 +970,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
       // Build canonical narrative from branchingNarrative for validation/expansion
       // Uses opening + first choice (1A) + first ending (1A-2A) as the canonical path
-      const hasNarrative = typeof generatedContent.narrative === 'string'
-        && generatedContent.narrative.trim().length > 0;
-      if (!hasNarrative && generatedContent.branchingNarrative) {
-        const bn = generatedContent.branchingNarrative;
-        const parts = [];
-        if (bn.opening?.text) parts.push(bn.opening.text);
-        const firstOption = bn.firstChoice?.options?.find(o => o.key === '1A')
-          || bn.firstChoice?.options?.[0];
-        if (firstOption?.response) parts.push(firstOption.response);
-        const firstKey = String(firstOption?.key || '1A').toUpperCase();
-        const secondGroup = bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === firstKey)
-          || bn.secondChoices?.find(sc => String(sc.afterChoice || '').toUpperCase() === '1A')
-          || bn.secondChoices?.[0];
-        const secondOption = secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === `${firstKey}-2A`)
-          || secondGroup?.options?.find(o => String(o.key || '').toUpperCase() === '2A')
-          || secondGroup?.options?.[0];
-        if (secondOption?.response) parts.push(secondOption.response);
-        generatedContent.narrative = parts.join('\n\n');
-      }
+      ensureCanonicalNarrative(generatedContent);
 
       // Word count check - log but DO NOT expand
       // Expansion was causing text corruption (duplicate content, mid-word cuts like "ike taffy")
@@ -1083,6 +1104,22 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
       let retries = 0;
 
+      // _fixContent re-generates against DECISION_CONTENT_SCHEMA / STORY_CONTENT_SCHEMA,
+      // neither of which carries pathDecisions, and the C-beat schema carries none of
+      // the Under-Map fields either. A single repair pass therefore used to return an
+      // object with those fields absent, and the entry was stored that way: nine
+      // path-specific beliefs collapsed to one generic decision, no fragments for the
+      // board, no belief verdict. Hold them here and restore whatever the repair did
+      // not itself produce.
+      const preservedAcrossRepair = {
+        pathDecisions: generatedContent.pathDecisions,
+        fragments: generatedContent.fragments,
+        relations: generatedContent.relations,
+        echoes: generatedContent.echoes,
+        beliefResolution: generatedContent.beliefResolution,
+        foilName: generatedContent.foilName,
+      };
+
       // Only retry if there are HARD continuity issues that require fixing
       while (!validationResult.valid && retries < MAX_RETRIES) {
         console.warn(`Consistency check failed (Attempt ${retries + 1}/${MAX_RETRIES}). Issues:`, validationResult.issues);
@@ -1090,8 +1127,15 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         try {
           generatedContent = await this._fixContent(generatedContent, validationResult.issues, context, isDecisionPoint);
 
+          for (const [field, value] of Object.entries(preservedAcrossRepair)) {
+            const repaired = generatedContent[field];
+            const repairedIsEmpty = repaired == null || (Array.isArray(repaired) && repaired.length === 0);
+            if (repairedIsEmpty && value != null) generatedContent[field] = value;
+          }
+          ensureCanonicalNarrative(generatedContent);
+
           // Log word count after fix (expansion disabled to prevent text corruption)
-          const fixedWordCount = generatedContent.narrative.split(/\s+/).length;
+          const fixedWordCount = (generatedContent.narrative || '').split(/\s+/).filter(Boolean).length;
           if (fixedWordCount < MIN_WORDS_PER_SUBCHAPTER) {
             console.log(`[StoryGenerationService] Post-fix word count ${fixedWordCount} below minimum, proceeding without expansion`);
           }

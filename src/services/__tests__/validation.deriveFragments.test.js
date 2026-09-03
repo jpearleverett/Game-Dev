@@ -25,7 +25,7 @@ describe('_deriveFragmentsFromBranching (EXAMINE fallback for generated scenes)'
         text: '...',
         details: [
           { phrase: 'the moving ink', note: 'It shifts.', evidenceCard: 'Moving Ink', kind: 'phenomenon' },
-          { phrase: 'a damp coat', note: 'Just rain.', evidenceCard: '' }, // no card/kind -> still a fragment (label=phrase)
+          { phrase: 'a damp coat', note: 'Just rain.', evidenceCard: '' }, // no card/kind -> still a fragment (label condensed from phrase)
         ],
       },
       firstChoice: {
@@ -41,8 +41,13 @@ describe('_deriveFragmentsFromBranching (EXAMINE fallback for generated scenes)'
     const labels = out.map((f) => f.label);
     expect(labels).toContain('Moving Ink');
     expect(labels).toContain('Brass Key');
-    expect(labels).toContain('Acheron Avenue'); // kind, no evidenceCard -> label falls back to phrase
-    expect(labels).toContain('a damp coat'); // every tappable detail is now collectable
+    expect(labels).toContain('Acheron Avenue'); // kind, no evidenceCard -> label condensed from phrase
+    // Every tappable detail is collectable. Without an evidenceCard the label is
+    // condensed from the phrase (leading article dropped) rather than being the
+    // raw clause: the label is the fragment's identity, so it has to be short and
+    // stable enough for a later scene to reuse it and deepen the motif.
+    expect(labels).toContain('damp coat');
+    expect(out.find((f) => f.label === 'damp coat').phrase).toBe('a damp coat');
 
     const ink = out.find((f) => f.label === 'Moving Ink');
     expect(ink.kind).toBe('phenomenon');
@@ -256,8 +261,8 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
     expect(tooLong.foilName).toBeNull();
   });
 
-  test('playability validation flags fragment phrases that are not in prose', () => {
-    const issues = validationMethods._validateUnderMapPlayability({
+  test('a phrase that is nowhere in the prose loses its tap target, not the whole scene', () => {
+    const content = {
       title: 'x',
       branchingNarrative: {
         opening: { text: 'The rain rose through the station lights.' },
@@ -266,13 +271,33 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
       },
       fragments: [{ label: 'Missing phrase', kind: 'phenomenon', phrase: 'silver staircase' }],
       relations: [],
-    });
-    expect(issues).toEqual([
-      'UNDERMAP PLAYABILITY: fragment phrase missing from prose: "silver staircase"',
-    ]);
+    };
+    const issues = validationMethods._validateUnderMapPlayability(content);
+    // Reporting this as hard-critical bought a full scene rewrite from a repair
+    // prompt that is never told about the Under-Map, so the same mismatch came
+    // back after ~70s. The fragment survives; only the tap is dropped.
+    expect(issues).toEqual([]);
+    expect(content.fragments[0].phrase).toBe('');
+    expect(content.fragments[0].label).toBe('Missing phrase');
   });
 
-  test('playability validation requires cross-chapter relations when held fragments exist', () => {
+  test('a phrase that differs only in case or spacing is repaired to the exact prose substring', () => {
+    const content = {
+      title: 'x',
+      branchingNarrative: {
+        opening: { text: 'He watched the Silver\n  Staircase turn back on itself.' },
+        firstChoice: { options: [] },
+        secondChoices: [],
+      },
+      fragments: [{ label: 'Silver Staircase', kind: 'place', phrase: 'silver staircase' }],
+      relations: [],
+    };
+    expect(validationMethods._validateUnderMapPlayability(content)).toEqual([]);
+    // Rewritten to what the reader will actually find in the rendered prose.
+    expect(content.fragments[0].phrase).toBe('Silver\n  Staircase');
+  });
+
+  test('a missing cross-chapter weave is deferred to a latent thread, not a hard failure', () => {
     validationMethods.currentUnderMap = {
       fragments: [{ label: 'Old Rain', kind: 'phenomenon' }],
     };
@@ -286,7 +311,10 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
       fragments: [{ label: 'New Door', kind: 'place', phrase: 'new door' }],
       relations: [{ aLabel: 'New Door', bLabel: 'Bridge Shadow', revelation: 'They share a lock.' }],
     });
-    expect(issues).toContain('UNDERMAP PLAYABILITY: no relation links a new fragment to a fragment the player already holds');
+    // A missed cross-chapter weave is deferred, not fatal: addRelations stores an
+    // unresolved endpoint as a latent relation and promotes it when the fragment
+    // arrives, so failing the scene bought a slow rewrite that could not target it.
+    expect(issues).toEqual([]);
 
     const fixed = validationMethods._validateUnderMapPlayability({
       title: 'x',
@@ -300,5 +328,66 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
     });
     expect(fixed).toEqual([]);
     validationMethods.currentUnderMap = null;
+  });
+});
+
+describe('fragment labels stay short enough to be an identity', () => {
+  test('a whole prose clause is condensed, and the full phrase is kept for tapping', () => {
+    const bn = {
+      opening: {
+        details: [
+          {
+            phrase: 'the rain that fell upward past the third-floor sills',
+            note: 'Wrong direction.',
+            evidenceCard: '',
+            kind: 'phenomenon',
+          },
+        ],
+      },
+    };
+    const [frag] = validationMethods._deriveFragmentsFromBranching(bn);
+    expect(frag.label).toBe('rain that fell upward');
+    expect(frag.label.split(' ').length).toBeLessThanOrEqual(4);
+    // The tappable substring must stay verbatim, or EXAMINE cannot highlight it.
+    expect(frag.phrase).toBe('the rain that fell upward past the third-floor sills');
+  });
+
+  test('an over-long label arriving on an explicit fragment is condensed too', () => {
+    const out = validationMethods._normalizeFragments([
+      { label: 'the long slow tolling of a bell somewhere under the street', kind: 'phenomenon', phrase: 'the long slow tolling' },
+    ]);
+    expect(out[0].label).toBe('long slow tolling of');
+  });
+
+  test('an explicit evidenceCard always wins over the condensed phrase', () => {
+    const bn = {
+      opening: { details: [{ phrase: 'the rain that fell upward past the sills', note: 'x', evidenceCard: 'Upward Rain', kind: 'phenomenon' }] },
+    };
+    expect(validationMethods._deriveFragmentsFromBranching(bn)[0].label).toBe('Upward Rain');
+  });
+});
+
+describe('EXAMINE phrases survive the prose cleaner', () => {
+  test('an em dash in a phrase is rewritten the same way it is in the prose', () => {
+    const normalized = validationMethods._normalizeBranchingNarrative({
+      opening: {
+        text: 'He turned the brass token — still warm — over in his hand.',
+        details: [{ phrase: 'the brass token — still warm', note: 'Warm.', evidenceCard: 'Brass Token' }],
+      },
+      firstChoice: { options: [] },
+      secondChoices: [],
+    });
+    const phrase = normalized.opening.details[0].phrase;
+    // The reader looks this up verbatim in the cleaned prose; if the transform is
+    // applied to one and not the other, the anomaly can never be tapped.
+    expect(phrase).not.toContain('—');
+    expect(normalized.opening.text).toContain(phrase);
+  });
+
+  test('an explicit fragment phrase is cleaned identically', () => {
+    const [frag] = validationMethods._normalizeFragments([
+      { label: 'Brass Token', kind: 'symbol', phrase: 'the brass token — still warm' },
+    ]);
+    expect(frag.phrase).toBe('the brass token, still warm');
   });
 });

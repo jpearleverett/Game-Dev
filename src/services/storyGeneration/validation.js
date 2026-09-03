@@ -251,10 +251,15 @@ class ValidationMethods {
     };
 
     const clean = (t) => this._cleanBranchingProse(t);
+    // A detail's `phrase` is looked up verbatim in the cleaned prose, so it has
+    // to be cleaned identically or the reader can never highlight it.
+    const cleanDetails = (details) => (Array.isArray(details)
+      ? details.map((d) => (d && typeof d.phrase === 'string' ? { ...d, phrase: clean(d.phrase) } : d))
+      : details);
 
     // Clean the shared opening prose (preserving paragraph structure).
     const opening = branchingNarrative.opening && typeof branchingNarrative.opening === 'object'
-      ? { ...branchingNarrative.opening, text: clean(branchingNarrative.opening.text) }
+      ? { ...branchingNarrative.opening, text: clean(branchingNarrative.opening.text), details: cleanDetails(branchingNarrative.opening.details) }
       : branchingNarrative.opening;
 
     const firstChoice = branchingNarrative.firstChoice || {};
@@ -263,6 +268,7 @@ class ValidationMethods {
       ...opt,
       key: normalizeFirstKey(opt?.key, idx),
       ...(typeof opt?.response === 'string' ? { response: clean(opt.response) } : {}),
+      ...(Array.isArray(opt?.details) ? { details: cleanDetails(opt.details) } : {}),
     }));
 
     const secondChoices = Array.isArray(branchingNarrative.secondChoices) ? branchingNarrative.secondChoices : [];
@@ -273,6 +279,7 @@ class ValidationMethods {
         ...opt,
         key: normalizeSecondKey(afterChoice, opt?.key, optIdx),
         ...(typeof opt?.response === 'string' ? { response: clean(opt.response) } : {}),
+        ...(Array.isArray(opt?.details) ? { details: cleanDetails(opt.details) } : {}),
       }));
       return {
         ...sc,
@@ -318,7 +325,8 @@ class ValidationMethods {
       // fills `details` (phrase/note) reliably but rarely fills the optional kind /
       // evidenceCard, so we no longer gate on those — otherwise generated scenes
       // produce no collectable fragments at all (the reported bug).
-      const label = card || phrase;
+      const label = card || this._shortFragmentLabel(phrase);
+      if (!label) return;
       const key = label.toLowerCase();
       if (seen.has(key)) return;
       seen.add(key);
@@ -342,6 +350,29 @@ class ValidationMethods {
     return out;
   }
 
+  /**
+   * Condense a prose phrase into a fragment LABEL.
+   *
+   * A fragment's label is its identity: it becomes the id (frag_<kind>_<slug>),
+   * it is the caption on the Under-Map board, and it is the string the model is
+   * told to reuse verbatim so a motif recurs instead of spawning a duplicate.
+   * When a detail carries no evidenceCard the label used to be the whole prose
+   * clause, which no later scene ever reproduces exactly — so every such
+   * fragment was a one-off that could never recur or resolve a latent thread.
+   */
+  _shortFragmentLabel(text) {
+    const cleaned = String(text || '')
+      .replace(/[""'']/g, '')
+      .replace(/[^\p{L}\p{N}\s'-]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleaned) return '';
+    let words = cleaned.split(' ');
+    // Drop a leading article only when enough of the phrase survives it.
+    if (words.length > 2 && /^(the|a|an)$/i.test(words[0])) words = words.slice(1);
+    return words.slice(0, 4).join(' ');
+  }
+
   /** UNDER-MAP: normalize the scene's collectable fragments (dedup, clamp, defaults). */
   _normalizeFragments(raw) {
     if (!Array.isArray(raw)) return [];
@@ -350,7 +381,11 @@ class ValidationMethods {
     const out = [];
     for (const f of raw) {
       if (!f || !f.label) continue;
-      const label = String(f.label).trim();
+      const rawLabel = String(f.label).trim();
+      // A label long enough to be a sentence is a prose clause that leaked in;
+      // condense it so the id stays stable and the board caption stays readable.
+      const label = rawLabel.length > 40 ? this._shortFragmentLabel(rawLabel) : rawLabel;
+      if (!label) continue;
       if (!label) continue;
       const kind = KINDS.has(f.kind) ? f.kind : 'phenomenon';
       const key = `${kind}:${label.toLowerCase()}`;
@@ -360,8 +395,12 @@ class ValidationMethods {
         label,
         kind,
         detail: f.detail ? String(f.detail).trim() : '',
-        // EXAMINE: verbatim prose substring the player taps to collect this fragment.
-        phrase: f.phrase ? String(f.phrase).trim() : '',
+        // EXAMINE: verbatim prose substring the player taps to collect this
+        // fragment. It has to go through the SAME transform the prose does
+        // (em dash -> comma, whitespace collapsed) — otherwise a phrase the
+        // model wrote with an em dash stops matching the cleaned prose and the
+        // anomaly becomes uncollectable, with nothing reporting it.
+        phrase: f.phrase ? this._cleanBranchingProse(String(f.phrase)).trim() : '',
         anomalous: f.anomalous != null ? !!f.anomalous : true,
       });
       if (out.length >= 6) break;
@@ -408,6 +447,19 @@ class ValidationMethods {
     return parts.join('\n\n');
   }
 
+  /**
+   * EXAMINE depends on a fragment's `phrase` appearing verbatim in the rendered
+   * prose. This REPAIRS that where it can, and only reports what it cannot fix.
+   *
+   * The previous version reported every mismatch as a hard-critical issue, which
+   * bought a full ~70s scene rewrite by a repair prompt that is not even told
+   * about the Under-Map — so the usual outcome was a long wait and the same
+   * mismatch. Repairing in place (case, whitespace, trailing punctuation) fixes
+   * the overwhelmingly common causes; a phrase that still cannot be located is
+   * dropped, which costs one tappable anomaly rather than the whole scene.
+   *
+   * Mutates `content.fragments[].phrase`; returns the issues worth acting on.
+   */
   _validateUnderMapPlayability(content) {
     const issues = [];
     if (!content || typeof content !== 'object') return issues;
@@ -415,13 +467,44 @@ class ValidationMethods {
     const prose = [
       content.narrative || '',
       this._collectBranchingText(content.branchingNarrative),
-    ].join('\n\n').toLowerCase();
+    ].join('\n\n');
+    const proseLower = prose.toLowerCase();
+    // Whitespace-insensitive view, with a map back to offsets in the real prose.
+    const flatChars = [];
+    const flatToReal = [];
+    for (let i = 0; i < proseLower.length; i++) {
+      const c = proseLower[i];
+      if (/\s/.test(c)) {
+        if (flatChars.length && flatChars[flatChars.length - 1] !== ' ') {
+          flatChars.push(' ');
+          flatToReal.push(i);
+        }
+        continue;
+      }
+      flatChars.push(c);
+      flatToReal.push(i);
+    }
+    const flatProse = flatChars.join('');
 
     (Array.isArray(content.fragments) ? content.fragments : []).forEach((f) => {
       const phrase = String(f?.phrase || '').trim();
-      if (phrase && !prose.includes(phrase.toLowerCase())) {
-        issues.push(`UNDERMAP PLAYABILITY: fragment phrase missing from prose: "${phrase}"`);
+      if (!phrase) return;
+      if (proseLower.includes(phrase.toLowerCase())) return;
+
+      // Try again ignoring case, whitespace runs and trailing punctuation, and
+      // rewrite the phrase to the exact substring the prose actually contains.
+      const needle = phrase.toLowerCase().replace(/\s+/g, ' ').replace(/[.,;:!?'"]+$/, '').trim();
+      const at = needle ? flatProse.indexOf(needle) : -1;
+      if (at >= 0) {
+        const start = flatToReal[at];
+        const end = flatToReal[Math.min(at + needle.length - 1, flatToReal.length - 1)];
+        f.phrase = prose.slice(start, end + 1).trim();
+        return;
       }
+
+      // Unlocatable: keep the fragment, lose the tap. Warned, not fatal.
+      console.warn(`[StoryGen] fragment phrase not found in prose, dropping the tap target: "${phrase}"`);
+      f.phrase = '';
     });
 
     const heldLabels = new Set(
@@ -437,7 +520,11 @@ class ValidationMethods {
         return heldLabels.has(a) || heldLabels.has(b);
       });
       if (!linksHeldFragment) {
-        issues.push('UNDERMAP PLAYABILITY: no relation links a new fragment to a fragment the player already holds');
+        // Not fatal: addRelations holds an unresolved endpoint as a latent
+        // relation and promotes it when the fragment arrives, so a missed weave
+        // is deferred rather than lost. Failing the scene for it bought a slow
+        // rewrite that could not target the problem.
+        console.warn('[StoryGen] no relation links a new fragment to one the player already holds; the weave is deferred to a latent thread');
       }
     }
 
