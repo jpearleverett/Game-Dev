@@ -8,7 +8,7 @@ the pre-redesign game (the whodunit/alibi version) have been removed.
 
 ## 1. What this is (current state)
 
-**Dead Letters** is an Expo / React Native (SDK 54, React 19) mobile game. The
+**Dead Letters** is an Expo / React Native (SDK 57, RN 0.86, React 19.2) mobile game. The
 player is **Jack Halloway**, a former-detective PI in rain-soaked **Ashport** who
 is pulled into a hidden, mystical layer of reality called **the Under-Map**. It
 is **science-fiction mystery, NOT a detective whodunit** — there are no suspects,
@@ -235,7 +235,9 @@ docs/gemini_*.md                 Gemini API reference (caching/structured-output
   - There is no `adb` in Termux, so the CLI's `a` key / `npm run android` cannot launch
     Expo Go — open the `exp://` URL by hand.
   - The `-c` clears the bundler cache; needed after content/prompt changes.
-  - Expo Go must be the **SDK 54** build.
+  - Expo Go must be the **SDK 57** build (the current store build). Expo Go refuses
+    to open a project whose SDK does not match it — that is what an
+    "incompatible with this version of Expo Go" screen means.
   - A **fresh run** is required after generation/content changes (see the last bullet) —
     cached chapters replay the old prose.
 - **Verified boot facts (this pass, run rather than reasoned):**
@@ -593,10 +595,48 @@ full-season state and asserts on the sentinels that come out:
 - **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
   unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
   prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
-- **Tests: 365.** New: `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,
+- **Tests: 377.** New: `audioController.expoAudio` (pins the expo-audio migration),
+  `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,
   `decisionConsequences.derivation`, plus additions to `continuityAnchorUnderMap`,
   `playerTheoryPrompt`, `endings`, `generatedStoryStorage.prune`,
   `validation.deriveFragments`.
+
+**EXPO SDK 54 → 57 UPGRADE (this pass).** Expo Go ships SDK 57 and refuses to open
+an SDK 54 project, so the project moved rather than pinning an old client.
+`expo` 54.0.30→57.0.19, `react-native` 0.81.5→0.86.3, `react`/`react-dom` 19.1→19.2.3,
+`@react-native-community/netinfo` 11→12, `react-native-view-shot` 4→5, every `expo-*`
+to its SDK 57 pin. Verified: 377 tests green, `expo export --platform android` bundles
+clean with zero warnings, `expo-doctor` 21/21, dev server advertises `exposdk:57.0.0`.
+- **`expo-av` was REMOVED from the SDK** (its npm `latest`, 16.0.8, is an SDK 54 build).
+  All audio moved to **`expo-audio`**, which differs in SHAPE, not just names — the
+  mapping is documented at the top of `src/hooks/useAudioController.js` and pinned by
+  `src/hooks/__tests__/audioController.expoAudio.test.js`. The traps: `volume`/`loop`/
+  `playing` are synchronous PROPERTIES (not `await set*Async`); there is **no `stop()`**
+  (use `pause()`); there is **no `replayAsync()`** (use `await seekTo(0)` then `play()`);
+  release is `remove()`. `setAudioModeAsync` is a top-level export and its fields were
+  renamed (`allowsRecordingIOS`→`allowsRecording`, `staysActiveInBackground`→
+  `shouldPlayInBackground`, `playsInSilentModeIOS`→`playsInSilentMode`) — the old names
+  are accepted and IGNORED, which silently mutes the game behind the iOS silent switch.
+  The hook swallows player errors (audio is non-critical), so every one of these fails
+  SILENTLY rather than crashing.
+- **`createAudioPlayer` is synchronous**, so two pieces of machinery that existed only
+  to manage async loads are gone: the in-flight promise-dedup map in `useAudioController`,
+  and the `cancelled` flag in `CaseFileScreen` that guarded a real leak (cleanup running
+  before the sound handle existed). That race is now structurally impossible — do not
+  reintroduce an async create there.
+- **`@expo/vector-icons` was never declared as a dependency.** It resolved only because
+  `expo` hoisted it in SDK 54; SDK 57 does not. 15 files import it, including most
+  top-level screens, so this was a hard boot failure that 365 green tests sailed past.
+  It is the reason `npx expo export` belongs in the verification loop: it is the only
+  check that exercises the whole module graph the way the device does.
+- RN 0.86 moved its Jest preset to `@react-native/jest-preset`, now a devDependency.
+- Checked and needing NO change: `netinfo` v12 keeps `fetch`/`addEventListener`;
+  `react-native-view-shot` v5 explicitly preserves `ref.current.capture()`;
+  `react-native-sse` still exposes the private `_xhr` that `LLMService` watches, and
+  RN 0.86's `XMLHttpRequest` still dispatches `loadend` (the SSE end-of-stream guard).
+- **Unverified on device:** the audio migration is behavioral. Listen for the desk/board/
+  narrative music beds, the rain/lamp ambience, the page-flip SFX and the Settings volume
+  sliders actually taking effect.
 
 **Open / candidate next work:**
 - **On-device playtest of the whole sweep above** — it is all LLM- and feel-dependent:
