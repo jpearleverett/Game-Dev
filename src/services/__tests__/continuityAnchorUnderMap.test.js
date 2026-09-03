@@ -199,3 +199,42 @@ describe('the player\'s decision list is stated once per prompt', () => {
     expect(pa._buildStorySummarySection(ctx())).toContain('PLAYER CHOICE HISTORY');
   });
 });
+
+describe('the climax call is told the run it is writing a climax for', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const GEN = fs.readFileSync(path.join(__dirname, '../storyGeneration/generation.js'), 'utf8');
+
+  // pathDecisions is a SECOND api call that authors the nine competing readings
+  // the player actually picks between. It deliberately starts a fresh
+  // conversation carrying no story text -- echoing narrative back is what trips
+  // the recitation filter -- but that left it with no record of the run either:
+  // the finale's beliefs were written by a model that had never been told which
+  // of the player's earlier readings the world had already subverted.
+  const pdAt = GEN.indexOf('const pdContext = []');
+  const block = GEN.slice(pdAt, GEN.indexOf('const messages = [{ role:', pdAt));
+
+  test('it carries the Under-Map, the foil, and the canon', () => {
+    expect(block).toContain('<under_map_state>');
+    expect(block).toContain('<the_other_reader>');
+    expect(block).toContain('<continuity_anchors>');
+    expect(block).toContain('_buildContinuityAnchorSection');
+  });
+
+  test('the canon is built from THIS request\'s map, not the singleton', () => {
+    // Two generations run concurrently and overwrite this.currentUnderMap.
+    expect(block).toMatch(/_buildContinuityAnchorSection\?\.\(\{ \.\.\.context, underMap: requestUnderMap \}/);
+  });
+
+  test('context lands before the ask, per the instructions-last rule', () => {
+    const spliced = block;
+    expect(spliced).toContain("const askMarker = '<output_requirements>'");
+    expect(spliced).toContain('basePathPrompt.slice(0, askAt)');
+  });
+
+  test('it still does NOT carry narrative prose', () => {
+    // The recitation guard this call was designed around.
+    expect(block).not.toContain('_buildStorySummarySection');
+    expect(block).not.toContain('previousChapters');
+  });
+});

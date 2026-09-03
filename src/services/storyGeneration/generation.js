@@ -765,6 +765,19 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           if (pdFoil) {
             pdContext.push(`<the_other_reader>\n${pdFoil}\n</the_other_reader>`);
           }
+          // The canon. This call authors the nine readings the player actually
+          // picks between at a chapter climax, and it starts a FRESH conversation
+          // that carries no story text by design (echoing narrative back is what
+          // trips the recitation filter). Without the anchors it also carried no
+          // record of the run: the finale's competing beliefs were written by a
+          // model that had never been told which of the player's earlier readings
+          // the world had already borne out or subverted, and could offer one it
+          // had contradicted five chapters ago. The anchors are short declarative
+          // canon lines, not prose, so they add the record without the risk.
+          const pdAnchors = this._buildContinuityAnchorSection?.({ ...context, underMap: requestUnderMap }, chapter);
+          if (pdAnchors) {
+            pdContext.push(`<continuity_anchors>\n${pdAnchors}\n</continuity_anchors>`);
+          }
 
           let basePathPrompt = pathDecisionsPrompt;
           if (pdContext.length) {
