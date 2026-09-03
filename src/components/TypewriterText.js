@@ -128,9 +128,13 @@ function TypewriterText({
       if (targetIndex > lastRenderedIndexRef.current) {
          setDisplayedText(fullText.slice(0, targetIndex));
 
-         // Haptic Feedback (Throttled & Batch Aware)
+         // Haptic Feedback (Throttled & Batch Aware).
+         // Gated on reducedMotion, and thinned from a 70ms floor to 180ms: at
+         // 70ms a single page produced dozens of vibration pulses, each one a
+         // bridge call competing with the per-frame setDisplayedText that drives
+         // the typing itself.
          const nowTime = Date.now();
-         if (nowTime - hapticThrottleRef.current > 70) {
+         if (!reducedMotion && nowTime - hapticThrottleRef.current > 180) {
              let shouldHaptic = false;
              // Check if any of the newly revealed characters trigger haptics
              for (let i = lastRenderedIndexRef.current; i < targetIndex; i++) {

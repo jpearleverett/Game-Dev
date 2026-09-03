@@ -96,13 +96,20 @@ const InlineTappablePhrase = React.memo(function InlineTappablePhrase({
   onTap,
   isRevealed,
   shimmer, // shared Animated.Value (0..1) — pulses uncollected anomalies to invite the tap
+  // The phrase as the DETAIL declares it. `phrase` above is the prose casing,
+  // which is what gets rendered; this is the key everything else agrees on.
+  // Reporting the prose casing while isRevealed read the canonical one meant a
+  // phrase whose casing differed (the model writes "the tide ledger", the prose
+  // says "The Tide Ledger") could be tapped forever without ever being marked
+  // collected: no tint, and the page's anomaly meter never completed.
+  canonicalPhrase,
 }) {
   const handlePress = useCallback(() => {
     Haptics.impactAsync(
       isRevealed ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
     );
-    onTap({ phrase, note, evidenceCard, kind, isFragment, isRevealed });
-  }, [isRevealed, phrase, note, evidenceCard, kind, isFragment, onTap]);
+    onTap({ phrase: canonicalPhrase || phrase, note, evidenceCard, kind, isFragment, isRevealed });
+  }, [isRevealed, phrase, canonicalPhrase, note, evidenceCard, kind, isFragment, onTap]);
 
   // Fragment anomalies get a kind-colored ink treatment so the things that
   // "don't belong" visibly stand out from ordinary observations.
@@ -176,7 +183,15 @@ function parseTextWithDetails(text, details) {
     }
   }
 
-  phrasePositions.sort((a, b) => a.start - b.start);
+  // Earliest first; on a tie the longest match wins, and a fragment anomaly
+  // beats a plain observation. Without the tiebreaks this was insertion order,
+  // so an ordinary detail sharing a start offset could swallow a fragment and
+  // leave it permanently uncollectable.
+  phrasePositions.sort((a, b) => (
+    (a.start - b.start)
+    || ((b.end - b.start) - (a.end - a.start))
+    || ((b.detail?.__fragment ? 1 : 0) - (a.detail?.__fragment ? 1 : 0))
+  ));
 
   const filtered = [];
   let lastEnd = 0;
@@ -207,6 +222,7 @@ function parseTextWithDetails(text, details) {
 
 // Render narrative text with inline tappable phrases
 const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
+  isActive = true,
   text,
   details,
   onDetailTap,
@@ -225,14 +241,18 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
   );
   useEffect(() => {
     // backgroundColor isn't native-drivable, so this loop runs on the JS driver.
-    if (reducedMotion || !hasUncollected) { shimmer.setValue(0); return undefined; }
+    if (reducedMotion || !hasUncollected || !isActive) { shimmer.setValue(0); return undefined; }
+    if (reducedMotion) {
+      pulseAnim.setValue(1);
+      return undefined;
+    }
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(shimmer, { toValue: 1, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
       Animated.timing(shimmer, { toValue: 0, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
     ]));
     loop.start();
     return () => loop.stop();
-  }, [reducedMotion, hasUncollected, shimmer]);
+  }, [reducedMotion, hasUncollected, shimmer, isActive]);
 
   const renderSegment = (segment, index) => {
     if (segment.type === 'text') {
@@ -258,6 +278,7 @@ const NarrativeTextWithDetails = React.memo(function NarrativeTextWithDetails({
       <InlineTappablePhrase
         key={index}
         phrase={segment.content}
+        canonicalPhrase={segment.detail.phrase}
         note={segment.detail.note}
         evidenceCard={segment.detail.evidenceCard}
         kind={segment.detail.kind}
@@ -320,12 +341,18 @@ const AnomalyMeter = React.memo(function AnomalyMeter({ total, found, reducedMot
 const ObservationPopup = React.memo(function ObservationPopup({
   detail,
   onDismiss,
+  reducedMotion,
 }) {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const { moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
 
   useEffect(() => {
+    if (reducedMotion) {
+      slideAnim.setValue(0);
+      opacityAnim.setValue(1);
+      return;
+    }
     Animated.parallel([
       Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 100, useNativeDriver: true }),
       Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
@@ -382,12 +409,17 @@ const ChoiceButton = React.memo(function ChoiceButton({
   isSelected,
   isDisabled,
   index,
+  reducedMotion,
 }) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const { moderateScale, scaleSpacing, scaleRadius, sizeClass } = useResponsiveLayout();
   const compact = sizeClass === 'xsmall' || sizeClass === 'small';
 
   useEffect(() => {
+    if (reducedMotion) {
+      scaleAnim.setValue(1);
+      return;
+    }
     Animated.spring(scaleAnim, {
       toValue: 1,
       friction: 8,
@@ -435,11 +467,15 @@ const ChoiceButton = React.memo(function ChoiceButton({
 });
 
 // Pulsing arrow for page navigation cue
-const PulsingArrow = React.memo(function PulsingArrow() {
+const PulsingArrow = React.memo(function PulsingArrow({ reducedMotion }) {
   const opacity = useRef(new Animated.Value(0.2)).current;
   const loopRef = useRef(null);
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.setValue(0.7);
+      return undefined;
+    }
     loopRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
@@ -452,7 +488,7 @@ const PulsingArrow = React.memo(function PulsingArrow() {
       if (loopRef.current) loopRef.current.stop();
       opacity.stopAnimation();
     };
-  }, [opacity]);
+  }, [opacity, reducedMotion]);
 
   return (
     <Animated.Text style={[styles.nextPageCue, { opacity }]}>
@@ -649,8 +685,15 @@ export default function BranchingNarrativeReader({
         // Ending pages (based on both choices). LAZY BRANCHING: if the response
         // hasn't arrived yet, show a brief placeholder; it fills in when the
         // merged narrative prop updates (pages recompute).
-        const endingText = currentEndingSegment.response
-          || (secondChoiceLoading ? 'Following the thread…' : '…');
+        // A real ending, or a placeholder while the lazy second-choice body is
+        // still being generated. The distinction matters below: the placeholder
+        // must NOT count as the last page, or the reader reports the narrative
+        // complete against prose that has no ending.
+        const hasRealEnding = typeof currentEndingSegment.response === 'string'
+          && currentEndingSegment.response.trim().length > 0;
+        const endingText = hasRealEnding
+          ? currentEndingSegment.response
+          : (secondChoiceLoading ? 'Following the thread…' : '…');
         const endingDetails = currentEndingSegment.details || [];
         const endingPages = paginateNarrativeSegments([endingText], paginationParams);
 
@@ -662,7 +705,11 @@ export default function BranchingNarrativeReader({
             text: page.text,
             details: endingDetails,
             isLastOfSegment: idx === endingPages.length - 1,
-            isLastPage: idx === endingPages.length - 1,
+            // The placeholder finishes typing in a few hundred milliseconds; if
+            // it carried isLastPage, completion fired against it — the descend
+            // CTA appeared over a scene with no ending, and the Under-Map
+            // backfill ingested fragments from prose the player never read.
+            isLastPage: hasRealEnding && idx === endingPages.length - 1,
             globalIndex: pageIndex++,
           });
         });
@@ -968,7 +1015,7 @@ export default function BranchingNarrativeReader({
           />
 
           <ScrollView
-            style={{ flex: 1 }}
+            style={{ flex: 1, zIndex: 11 }}
             contentContainerStyle={{
               paddingHorizontal: NOIR_PADDING.horizontal,
               paddingVertical: NOIR_PADDING.vertical,
@@ -1000,13 +1047,14 @@ export default function BranchingNarrativeReader({
                     revealedDetails={revealedDetails}
                     textStyle={styles.noirText}
                     reducedMotion={reducedMotion}
+                    isActive={isActive}
                     dropCap={item.key === 'opening-0' || index === 0}
                   />
                 )}
 
                 {isPageCompleted && !isLastPage && item.isLastOfSegment && (
                   <View style={styles.nextPageCueContainer}>
-                    <PulsingArrow />
+                    <PulsingArrow reducedMotion={reducedMotion} />
                   </View>
                 )}
               </>
@@ -1019,21 +1067,32 @@ export default function BranchingNarrativeReader({
                 <Text style={[styles.choicePromptText, { fontSize: moderateScale(FONT_SIZES.sm) }]}>
                   {item.prompt}
                 </Text>
-                <View style={[styles.choiceButtonsRow, { gap: scaleSpacing(SPACING.sm) }]}>
-                  {item.options.map((option, optIndex) => (
-                    <ChoiceButton
-                      key={option.key}
-                      option={option}
-                      onSelect={item.segment === 'firstChoice' ? handleFirstChoice : handleSecondChoice}
-                      isSelected={item.segment === 'firstChoice' ? firstChoiceMade === option.key : secondChoiceMade === normalizePathKey(firstChoiceMade, option.key)}
-                      isDisabled={
-                        (item.segment === 'firstChoice' && firstChoiceMade && firstChoiceMade !== option.key) ||
-                        (item.segment === 'secondChoice' && secondChoiceMade && secondChoiceMade !== normalizePathKey(firstChoiceMade, option.key))
-                      }
-                      index={optIndex}
-                    />
-                  ))}
-                </View>
+                {/* canShowChoice was computed and never used, so a player could
+                    tap through the setup page mid-typewriter and commit a branch
+                    having read none of it. The fork now waits for the page
+                    before it. */}
+                {canShowChoice ? (
+                  <View style={[styles.choiceButtonsRow, { gap: scaleSpacing(SPACING.sm) }]}>
+                    {item.options.map((option, optIndex) => (
+                      <ChoiceButton
+                        key={option.key}
+                        option={option}
+                        onSelect={item.segment === 'firstChoice' ? handleFirstChoice : handleSecondChoice}
+                        isSelected={item.segment === 'firstChoice' ? firstChoiceMade === option.key : secondChoiceMade === normalizePathKey(firstChoiceMade, option.key)}
+                        isDisabled={
+                          (item.segment === 'firstChoice' && firstChoiceMade && firstChoiceMade !== option.key) ||
+                          (item.segment === 'secondChoice' && secondChoiceMade && secondChoiceMade !== normalizePathKey(firstChoiceMade, option.key))
+                        }
+                        index={optIndex}
+                        reducedMotion={reducedMotion}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={[styles.noirLabel, { textAlign: 'center', marginTop: 12 }]}>
+                    FINISH THE PAGE BEFORE YOU CHOOSE
+                  </Text>
+                )}
               </View>
             )}
           </ScrollView>
@@ -1171,7 +1230,7 @@ export default function BranchingNarrativeReader({
 
       {/* Observation Popup */}
       {activePopup && (
-        <ObservationPopup detail={activePopup} onDismiss={handlePopupDismiss} />
+        <ObservationPopup detail={activePopup} onDismiss={handlePopupDismiss} reducedMotion={reducedMotion} />
       )}
     </View>
   );
@@ -1219,12 +1278,16 @@ const styles = StyleSheet.create({
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
+  // The page-flip zones live in the OUTER MARGIN only, and sit below the
+  // content. At 20% width with zIndex 10 they covered roughly the first and last
+  // six characters of every line of prose, so tapping an anomaly that happened
+  // to sit at a line edge turned the page instead of collecting it, and on a
+  // choice page the left zone covered the A/B cards outright.
   tapZone: {
     position: "absolute",
     top: 0,
     bottom: 0,
-    width: "20%",
-    zIndex: 10,
+    width: NOIR_PADDING.horizontal,
   },
   tapZoneLeft: { left: 0 },
   tapZoneRight: { right: 0 },

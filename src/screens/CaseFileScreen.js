@@ -95,22 +95,35 @@ export default function CaseFileScreen({
   const reducedMotion = !!gameProgress?.settings?.reducedMotion;
 
   // Audio: Ambient Background
-  const [sound, setSound] = useState();
+  const ambienceVolume = gameProgress?.settings?.ambienceVolume;
 
   useEffect(() => {
+    // `cancelled` closes a real leak: the cleanup used to run while
+    // Audio.Sound.createAsync was still in flight, so `soundObject` was still
+    // null and there was nothing to unload. The sound then started with no
+    // handle and looped for the rest of the session. Opening the case file and
+    // immediately backing out was enough to trigger it, and each route that did
+    // so stacked another copy.
+    let cancelled = false;
     let soundObject = null;
-    
+
     async function loadAmbientSound() {
       try {
-        // Unload any existing sound first if necessary
-        if (soundObject) await soundObject.unloadAsync();
-        
         const { sound } = await Audio.Sound.createAsync(
            require("../../assets/audio/music/menu-ambient.mp3"),
-           { isLooping: true, volume: 0.15, shouldPlay: true }
+           {
+             isLooping: true,
+             // Honours the player's ambience setting instead of a hardcoded 0.15,
+             // which meant the slider in Settings did nothing on this screen.
+             volume: typeof ambienceVolume === 'number' ? ambienceVolume : 0.4,
+             shouldPlay: true,
+           }
         );
+        if (cancelled) {
+          await sound.unloadAsync();
+          return;
+        }
         soundObject = sound;
-        setSound(sound);
       } catch (error) {
         if (!ambientSoundWarned) {
           ambientSoundWarned = true;
@@ -118,15 +131,17 @@ export default function CaseFileScreen({
         }
       }
     }
-    
+
     loadAmbientSound();
-    
+
     return () => {
-       if (soundObject) {
-         soundObject.unloadAsync();
-       }
+      cancelled = true;
+      if (soundObject) {
+        soundObject.unloadAsync().catch(() => {});
+        soundObject = null;
+      }
     };
-  }, []);
+  }, [ambienceVolume]);
 
   const storyUnlockAt = storyCampaign?.nextStoryUnlockAt;
   const unlockTarget = storyUnlockAt || nextUnlockAt;
@@ -480,7 +495,14 @@ export default function CaseFileScreen({
   const [collectedEvidence, setCollectedEvidence] = useState([]);
   // EXAMINE: labels collected via tapping this visit, to avoid redundant ingests.
   const examinedLabelsRef = useRef(new Set());
-  useEffect(() => { examinedLabelsRef.current = new Set(); }, [caseNumber]);
+  // NOTE: keyed on activeCase?.caseNumber, not the `caseNumber` const, which is
+  // declared further down this same scope. Referencing it here relied on the
+  // preset downlevelling `const` to `var`; with real block scoping it is a
+  // ReferenceError on every render, and as written the dependency was always
+  // undefined, so the dedup set never reset between subchapters and a fragment
+  // re-collected in a later scene was silently skipped (never deepening into a
+  // motif).
+  useEffect(() => { examinedLabelsRef.current = new Set(); }, [activeCase?.caseNumber]);
 
   const handleExamineFragment = useCallback((frag) => {
     if (!frag || !frag.label || typeof onIngestFragments !== "function") return;
@@ -1361,6 +1383,7 @@ export default function CaseFileScreen({
                     <NarrativePager
                       pages={narrativePages}
                       palette={palette}
+                      reducedMotion={reducedMotion}
                       showDecisionPrompt={showDecisionPrompt}
                       onRevealDecision={handleRevealDecisionPanel}
                       onComplete={() => {

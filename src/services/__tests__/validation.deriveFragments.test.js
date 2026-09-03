@@ -293,8 +293,9 @@ describe('UNDER-MAP deduction fields survive parsing (Moves 1 & 2)', () => {
       relations: [],
     };
     expect(validationMethods._validateUnderMapPlayability(content)).toEqual([]);
-    // Rewritten to what the reader will actually find in the rendered prose.
-    expect(content.fragments[0].phrase).toBe('Silver\n  Staircase');
+    // A match that straddles a line break is unusable: pagination splits on
+    // newlines, so the reader could never find it. The tap target is dropped.
+    expect(content.fragments[0].phrase).toBe('');
   });
 
   test('a missing cross-chapter weave is deferred to a latent thread, not a hard failure', () => {
@@ -435,4 +436,19 @@ describe('echoes must be anchorable', () => {
       { nodeRef: 'The seal marks a threshold', line: 'It was warm again.' },
     ])).toEqual([{ nodeRef: 'The seal marks a threshold', line: 'It was warm again.' }]);
   });
+});
+
+test('a phrase differing only in case, on one line, is repaired to the prose casing', () => {
+  const content = {
+    title: 'x',
+    branchingNarrative: {
+      opening: { text: 'He watched the Silver Staircase turn back on itself.' },
+      firstChoice: { options: [] },
+      secondChoices: [],
+    },
+    fragments: [{ label: 'Silver Staircase', kind: 'place', phrase: 'silver  staircase' }],
+    relations: [],
+  };
+  expect(validationMethods._validateUnderMapPlayability(content)).toEqual([]);
+  expect(content.fragments[0].phrase).toBe('Silver Staircase');
 });

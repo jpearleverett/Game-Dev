@@ -75,6 +75,7 @@ export default function NarrativePager({
   onRevealDecision,
   showDecisionPrompt,
   style,
+  reducedMotion = false,
 }) {
   const { sizeClass, moderateScale, scaleSpacing, scaleRadius } = useResponsiveLayout();
   const compact = sizeClass === "xsmall" || sizeClass === "small";
@@ -166,6 +167,21 @@ export default function NarrativePager({
 
       playPageFlipSound();
 
+      if (reducedMotion) {
+        flipAnim.setValue(0);
+        if (listRef.current) {
+          try {
+            listRef.current.scrollToIndex({ index: targetIndex, animated: false });
+          } catch (e) {
+            if (pageWidth) {
+              listRef.current.scrollToOffset({ offset: targetIndex * (pageWidth + pageGap), animated: false });
+            }
+          }
+        }
+        setActivePage(targetIndex);
+        return;
+      }
+
       flipLockRef.current = true;
       flipAnim.setValue(0);
 
@@ -198,7 +214,7 @@ export default function NarrativePager({
       }
       setActivePage(targetIndex);
     },
-    [activePage, pages.length, flipAnim, pageWidth, pageGap]
+    [activePage, pages.length, flipAnim, pageWidth, pageGap, reducedMotion]
   );
 
   const flipRotation = flipAnim.interpolate({
@@ -234,8 +250,6 @@ export default function NarrativePager({
       onComplete();
     }
   }, [activePage, pages.length, onComplete]);
-
-  if (!pages.length) return null;
 
   const renderItem = useCallback(({ item, index }) => {
     const isLastPage = index === pages.length - 1;
@@ -322,6 +336,7 @@ export default function NarrativePager({
               delay={100}
               isActive={isActive}
               isFinished={completedPages.has(index)}
+              reducedMotion={reducedMotion}
               onComplete={() => setCompletedPages(prev => new Set(prev).add(index))}
               style={styles.noirText}
             />
@@ -371,6 +386,11 @@ export default function NarrativePager({
     onRevealDecision,
     pageHeight
   ]);
+
+  // Guarded AFTER the hooks: an early return above useCallback made this
+  // component's hook count depend on a prop, which is a crash the moment a
+  // mounted instance ever sees an empty pages array.
+  if (!pages.length) return null;
 
   return (
     <View

@@ -502,8 +502,15 @@ class ValidationMethods {
       if (at >= 0) {
         const start = flatToReal[at];
         const end = flatToReal[Math.min(at + needle.length - 1, flatToReal.length - 1)];
-        f.phrase = prose.slice(start, end + 1).trim();
-        return;
+        const located = prose.slice(start, end + 1).trim();
+        // The reader searches inside a paginated LINE, and pagination splits on
+        // newlines and trims each one, so a phrase that straddles a line break
+        // can never be found however faithfully it was repaired. Better to drop
+        // the tap target than to store one that cannot match.
+        if (!/[\r\n]/.test(located)) {
+          f.phrase = located;
+          return;
+        }
       }
 
       // Unlocatable: keep the fragment, lose the tap. Warned, not fatal.
