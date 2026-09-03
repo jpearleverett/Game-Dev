@@ -1641,7 +1641,13 @@ Jack adapts his approach to the situation. He can be patient when it serves him,
 ${context.decisionConsequences?.immediate?.length > 0 ? context.decisionConsequences.immediate.map(c => `- ${c}`).join('\n') : '- No previous decisions yet'}
 
 ### ONGOING EFFECTS FROM CHOICES
-${context.decisionConsequences?.ongoing?.length > 0 ? [...new Set(context.decisionConsequences.ongoing)].slice(0, 5).map(e => `- ${e}`).join('\n') : '- Starting fresh'}
+${context.decisionConsequences?.ongoing?.length > 0
+  // The list is built in chapter order, so slicing the FIRST five froze this
+  // block on chapters 1 and 2 for the rest of the run: by chapter 12 every
+  // mid-campaign choice's ongoing effect was invisible here. Keep the most
+  // RECENT, which is what a scene has to carry forward.
+  ? [...new Set(context.decisionConsequences.ongoing)].slice(-12).map(e => `- ${e}`).join('\n')
+  : '- Starting fresh'}
 
 ### Most recent player decision (let this drive this subchapter)
 ${context.lastDecision

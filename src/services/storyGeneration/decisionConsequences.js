@@ -62,8 +62,14 @@ function _ensureDecisionConsequencesFast(choiceHistory) {
       || (choice.optionKey === 'A' ? decisionData?.optionA : decisionData?.optionB)
       || null;
 
-    const title = chosen?.title || `Option ${choice.optionKey}`;
-    const focus = chosen?.focus || '';
+    // The choice record itself is the most reliable source: advanceWithDecision
+    // writes the title and focus the player actually sealed onto choiceHistory,
+    // and it survives without any entry lookup. The generated entry is the
+    // fallback for older saves that predate those fields.
+    // Empty when neither the choice record nor the entry knows what was chosen;
+    // the caller reads `derivedFromRealChoice` rather than pattern-matching prose.
+    const title = choice.optionTitle || chosen?.title || '';
+    const focus = choice.optionFocus || chosen?.focus || '';
     const stats = chosen?.stats || '';
 
     const ongoing = [];
@@ -82,25 +88,27 @@ function _ensureDecisionConsequencesFast(choiceHistory) {
       thoroughness: lowerFocus.includes('evidence') ? 10 : 0,
     };
 
-    // Make the "immediate" consequence feel concrete even without an LLM call.
-    // Titles are imperative; convert to an infinitive-ish phrase ("Confront the suspect" -> "confront the suspect").
-    const toAction = String(title || '')
-      .trim()
-      .replace(/^[A-Z]/, (m) => m.toLowerCase());
+    // A C-beat decision is a BELIEF, not an errand — "Blackwell is guiding you
+    // in", not "Confront the suspect". This lowercased the first letter and
+    // prefixed "Jack chose to", which was right for the retired action-framed
+    // decisions and produces "Jack chose to blackwell is guiding you in." for a
+    // belief: broken English, asserted to the model as canon on every request.
+    const cleanTitle = String(title || '').trim().replace(/[.]+$/, '');
     const focusSnippet = String(focus || '')
       .split('.')
       .map((s) => s.trim())
       .filter(Boolean)
       .slice(0, 2)
       .join('. ');
-    const immediate = toAction
-      ? `Jack chose to ${toAction}${focusSnippet ? `. ${focusSnippet}.` : '.'}`
-      : `Jack chose: ${title}`;
+    const immediate = cleanTitle
+      ? `Jack committed to the reading: "${cleanTitle}."${focusSnippet ? ` ${focusSnippet}.` : ''}`
+      : `Jack chose option ${choice.optionKey}.`;
 
     return {
       immediate,
       ongoing: ongoing.length > 0 ? ongoing.slice(0, 4) : ['This choice will shape what Jack can prove, and who will trust him.'],
       characterImpact,
+      derivedFromRealChoice: !!cleanTitle,
     };
   };
 
@@ -111,7 +119,23 @@ function _ensureDecisionConsequencesFast(choiceHistory) {
 
     const consequenceKey = `${caseNumber}_${optionKey}`;
 
-    // Already known?
+    // DERIVE FIRST. The static registry was consulted before this, and it holds a
+    // hardcoded 001C entry ("Jack chose the methodical, evidence-focused
+    // approach") left over from the whodunit design — so every run asserted that
+    // sentence to the model as the player's chapter-1 consequence, whichever
+    // belief they had actually sealed, and the real one never reached this block
+    // at all. Its own comment calls these "fallback templates"; they are treated
+    // as fallbacks now.
+    const derived = deriveFromDecisionEntry(choice);
+    if (derived.derivedFromRealChoice) {
+      DECISION_CONSEQUENCES[caseNumber] = DECISION_CONSEQUENCES[caseNumber] || {};
+      DECISION_CONSEQUENCES[caseNumber][optionKey] = derived;
+      ctx.decisionConsequencesByKey[consequenceKey] = derived;
+      continue;
+    }
+
+    // Nothing to derive from (a save with no title on the choice and no loadable
+    // entry): use the static template if one exists.
     if (DECISION_CONSEQUENCES[caseNumber]?.[optionKey]) {
       ctx.decisionConsequencesByKey[consequenceKey] = DECISION_CONSEQUENCES[caseNumber][optionKey];
       continue;
@@ -125,8 +149,7 @@ function _ensureDecisionConsequencesFast(choiceHistory) {
       continue;
     }
 
-    // Derive cheaply from decision metadata.
-    const derived = deriveFromDecisionEntry(choice);
+    // Last resort: keep the thin derivation rather than nothing.
     if (!DECISION_CONSEQUENCES[caseNumber]) DECISION_CONSEQUENCES[caseNumber] = {};
     DECISION_CONSEQUENCES[caseNumber][optionKey] = derived;
     ctx.decisionConsequencesByKey[consequenceKey] = derived;
