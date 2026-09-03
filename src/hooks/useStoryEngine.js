@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
 import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../data/storyContent';
 import { advanceWithDecision, CHAPTER_UNLOCK_DELAY_MS, FIRST_GATED_CHAPTER } from '../utils/storyAdvance';
@@ -6,7 +6,14 @@ import { log } from '../utils/llmTrace';
 
 export function useStoryEngine(progress, updateProgress) {
 
-  const storyCampaign = normalizeStoryCampaignShape(progress.storyCampaign);
+  // Memoized: normalizeStoryCampaignShape returned a fresh object on every
+  // render, so this reference changed every render, which invalidated
+  // StoryContext's value memo, which invalidated GameContext's, so every screen
+  // subscribed to the game context re-rendered on every render of any of them.
+  const storyCampaign = useMemo(
+    () => normalizeStoryCampaignShape(progress.storyCampaign),
+    [progress.storyCampaign],
+  );
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
     if (reset) {

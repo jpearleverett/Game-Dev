@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import {
   createBlankProgress,
   createBlankStoryCampaign,
@@ -103,6 +104,19 @@ export function usePersistence() {
     hydrate();
   }, []);
 
+  // Latest progress, readable from a flush that is not driven by the effect.
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+
+  const flushProgressNow = useCallback(() => {
+    if (!hydrationComplete) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    saveStoredProgress(progressRef.current);
+  }, [hydrationComplete]);
+
   // Auto-save on change with debouncing to prevent excessive writes
   useEffect(() => {
     if (!hydrationComplete) return;
@@ -114,16 +128,42 @@ export function usePersistence() {
 
     // Debounce the save operation
     saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
       saveStoredProgress(progress);
     }, SAVE_DEBOUNCE_MS);
 
-    // Cleanup on unmount or before next effect
+    // Cleanup before the next effect. Deliberately NOT cancelling on teardown
+    // without writing: the cleanup used to drop a pending save on unmount, so
+    // sealing a belief and immediately leaving lost it.
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+        saveStoredProgress(progressRef.current);
       }
     };
   }, [progress, hydrationComplete]);
+
+  // Backgrounding is the other way the debounced write was lost: the OS suspends
+  // the JS thread before a 500ms timer fires, so a belief sealed and then
+  // immediately backgrounded never reached storage and the player replayed the
+  // beat (regenerating a scene that no longer matched their map).
+  useEffect(() => {
+    if (!hydrationComplete) return undefined;
+    let sub = null;
+    try {
+      sub = AppState.addEventListener('change', (next) => {
+        if (next === 'inactive' || next === 'background') flushProgressNow();
+      });
+    } catch (e) {
+      // No AppState on this platform (or in a test renderer). The debounced save
+      // and the unmount flush still cover the common cases.
+      console.warn('[usePersistence] AppState unavailable; skipping background flush:', e?.message);
+    }
+    return () => {
+      try { sub?.remove?.(); } catch (_e) { /* nothing to remove */ }
+    };
+  }, [hydrationComplete, flushProgressNow]);
 
   const updateProgress = useCallback((updatesOrFn) => {
     setProgress((prev) => {
@@ -192,6 +232,7 @@ export function usePersistence() {
   return {
     progress,
     hydrationComplete,
+    flushProgressNow,
     updateProgress,
     updateSettings,
     markPrologueSeen,

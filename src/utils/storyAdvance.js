@@ -12,6 +12,7 @@
 // moving FORWARD makes the advance robust and idempotent.
 
 import { formatCaseNumber } from './gameLogic';
+import { STORY_STRUCTURE } from '../data/storyBible';
 import { computeBranchPathKey, parseCaseNumber } from '../data/storyContent';
 
 // Gate cadence: the seal→wait→verdict rhythm IS the retention heartbeat, so it
@@ -21,6 +22,7 @@ export const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;       // chapters 6+
 export const EARLY_CHAPTER_UNLOCK_DELAY_MS = 6 * 60 * 60 * 1000;  // chapters 3-5
 export const FIRST_GATED_CHAPTER = 3; // chapters 1-2 are never gated
 export const LONG_GATE_CHAPTER = 6;   // full-length gates from here
+export const TOTAL_CHAPTERS = STORY_STRUCTURE?.totalChapters || 12;
 
 function nextUnlockAt(nextChapter) {
   if (nextChapter < FIRST_GATED_CHAPTER) return null;
@@ -43,6 +45,26 @@ export function caseOrder(caseNumber) {
  */
 export function advanceWithDecision(current, { decisionCase, optionKey, optionTitle = null, optionFocus = null, timestamp }) {
   const { chapter } = parseCaseNumber(decisionCase);
+
+  // There is no chapter 13. TheoryScreen guards the finale on its own path, but
+  // the other callers (the post-puzzle decision, applyPreDecision, selectDecision)
+  // did not, and advancing past the last chapter produced an activeCaseNumber of
+  // "013A" that resolves to no case: the campaign is left pointing at content
+  // that cannot exist, behind a fresh 12-hour gate, with no way back.
+  if (chapter >= TOTAL_CHAPTERS) {
+    return {
+      ...current,
+      completedCaseNumbers: Array.from(new Set([...(current.completedCaseNumbers || []), decisionCase])),
+      preDecision: null,
+      awaitingDecision: false,
+      pendingDecisionCase: null,
+      lastDecision: { caseNumber: decisionCase, selectedAt: timestamp, optionKey, nextChapter: null, nextPathKey: current.currentPathKey || null },
+      completed: true,
+      completedAt: current.completedAt || timestamp,
+      nextStoryUnlockAt: null,
+    };
+  }
+
   const nextChapter = chapter + 1;
   const nextCaseNumber = formatCaseNumber(nextChapter, 1);
   const nextChoiceHistory = [

@@ -95,3 +95,35 @@ describe('gate cadence (seal -> wait -> verdict heartbeat)', () => {
     expect(long).toBeLessThan(12.5 * 3600000);
   });
 });
+
+describe('the campaign cannot advance past the last chapter', () => {
+  test('a decision on 012C completes the campaign instead of inventing 013A', () => {
+    // Nothing outside TheoryScreen guarded this, so the evidence-board and
+    // post-puzzle decision paths could leave the campaign pointing at a case
+    // that does not exist, behind a fresh 12-hour gate, with no way back.
+    const current = base({ chapter: 12, subchapter: 3, activeCaseNumber: '012C', currentPathKey: 'AB' });
+    const next = advanceWithDecision(current, {
+      decisionCase: '012C',
+      optionKey: 'A',
+      timestamp: '2026-01-01T00:00:00.000Z',
+    });
+    expect(next.completed).toBe(true);
+    expect(next.completedAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(next.activeCaseNumber).toBe('012C');
+    expect(next.chapter).toBe(12);
+    expect(next.nextStoryUnlockAt).toBeNull();
+    expect(next.completedCaseNumbers).toContain('012C');
+  });
+
+  test('a decision on any earlier chapter still advances normally', () => {
+    const current = base({ chapter: 11, subchapter: 3, activeCaseNumber: '011C' });
+    const next = advanceWithDecision(current, {
+      decisionCase: '011C',
+      optionKey: 'B',
+      timestamp: '2026-01-01T00:00:00.000Z',
+    });
+    expect(next.chapter).toBe(12);
+    expect(next.activeCaseNumber).toBe('012A');
+    expect(next.completed).toBeFalsy();
+  });
+});

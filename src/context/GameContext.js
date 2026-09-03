@@ -260,15 +260,18 @@ export function GameProvider({
   // Daily-hook: free bypass of the soft cadence. Clears the unlock timer and
   // continues immediately (skipLock), so an engaged player is never hard-walled.
   const pickUpTrailNow = useCallback(() => {
-    const current = normalizeStoryCampaignShape(progress.storyCampaign);
-    if (current.nextStoryUnlockAt) {
-      updateProgress({
+    // Functional: this rewrote the entire campaign from a render-time snapshot to
+    // clear one timestamp, reverting any Under-Map write that landed since.
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      if (!current.nextStoryUnlockAt) return null;
+      return {
         storyCampaign: { ...current, nextStoryUnlockAt: null },
         nextUnlockAt: null,
-      });
-    }
+      };
+    });
     return activateStoryCase({ mode: 'story', skipLock: true });
-  }, [progress.storyCampaign, updateProgress, activateStoryCase]);
+  }, [updateProgress, activateStoryCase]);
 
   const openStoryCase = useCallback((caseId) => {
       const targetCase = SEASON_ONE_CASES.find(c => c.id === caseId);
@@ -314,23 +317,26 @@ export function GameProvider({
           const { customerInfo } = await purchaseService.purchasePackage(bribePackage);
           
           if (customerInfo.entitlements.active['com.deadletters.bribe_clerk']?.isActive) {
-               const currentStory = normalizeStoryCampaignShape(progress.storyCampaign);
-               let updates = {
-                   storyCampaign: {
-                       ...currentStory,
-                       nextStoryUnlockAt: null 
+               // Read the campaign INSIDE the updater. The purchase flow above is
+               // an unbounded await during which the app can be backgrounded and
+               // generation can complete; writing back a snapshot taken before it
+               // discarded everything that landed in between.
+               let caseIdToActivate = null;
+               updateProgress((prev) => {
+                   const currentStory = normalizeStoryCampaignShape(prev.storyCampaign);
+                   const updates = {
+                       storyCampaign: { ...currentStory, nextStoryUnlockAt: null },
+                   };
+                   if (currentStory.activeCaseNumber) {
+                       const nextCase = SEASON_ONE_CASES.find(c => c.caseNumber === currentStory.activeCaseNumber);
+                       if (nextCase) {
+                           caseIdToActivate = nextCase.id;
+                           updates.currentCaseId = nextCase.id;
+                       }
                    }
-               };
-
-               if (currentStory.activeCaseNumber) {
-                   const nextCase = SEASON_ONE_CASES.find(c => c.caseNumber === currentStory.activeCaseNumber);
-                   if (nextCase) {
-                       setActiveCaseInternal(nextCase.id);
-                       updates.currentCaseId = nextCase.id;
-                   }
-               }
-               
-               updateProgress(updates);
+                   return updates;
+               });
+               if (caseIdToActivate) setActiveCaseInternal(caseIdToActivate);
                notificationHaptic(Haptics.NotificationFeedbackType.Success);
                return true;
           }
@@ -341,7 +347,7 @@ export function GameProvider({
           }
           return false;
       }
-  }, [progress.storyCampaign, updateProgress, setActiveCaseInternal]);
+  }, [updateProgress, setActiveCaseInternal]);
 
   const purchaseFullUnlock = useCallback(async () => {
        try {
@@ -355,14 +361,14 @@ export function GameProvider({
           const { customerInfo } = await purchaseService.purchasePackage(fullPackage);
           
           if (customerInfo.entitlements.active['com.deadletters.full_unlock']?.isActive) {
-               updateProgress({
+               updateProgress((prev) => ({
                    premiumUnlocked: true,
                    storyCampaign: {
-                       ...normalizeStoryCampaignShape(progress.storyCampaign),
+                       ...normalizeStoryCampaignShape(prev.storyCampaign),
                        fullUnlock: true,
-                       nextStoryUnlockAt: null
-                   }
-               });
+                       nextStoryUnlockAt: null,
+                   },
+               }));
                notificationHaptic(Haptics.NotificationFeedbackType.Success);
                return true;
           }
@@ -436,17 +442,12 @@ export function GameProvider({
           // Only update story state if we're solving the ACTUAL current story case.
           // This prevents state corruption when solving a non-story case while in story mode.
           if (isStoryCase && (mode === 'story' || nextStatus === STATUS.SOLVED)) {
-              const completedCaseNumbers = Array.from(
-                  new Set([...(currentStory.completedCaseNumbers || []), activeCase.caseNumber])
-              );
-              
-              const isFinalSubchapter = currentStory.subchapter >= 3; 
-              
-              let updatedStory = {
-                  ...currentStory,
-                  completedCaseNumbers,
-                  startedAt: currentStory.startedAt || nowIso,
-              };
+              // Derived from the case that was actually completed, not from the
+              // campaign's own position, for the same reason the advance is.
+              const isFinalSubchapter = parseCaseNumber(activeCase.caseNumber).subchapter >= 3;
+
+              let updatedStory = null;
+              let pendingDecisionOptions = {};
 
               if (isFinalSubchapter) {
                   // NARRATIVE-FIRST FLOW: Check if a pre-puzzle decision was made
@@ -464,7 +465,7 @@ export function GameProvider({
                   // No pre-decision: fall back to original flow (show decision after puzzle)
                   // Store the decision options so we can include title/focus in choice history
                   // This enables the LLM to know WHAT the player chose, not just "A" or "B"
-                  const pendingDecisionOptions = {};
+                  pendingDecisionOptions = {};
                   if (activeCase.storyDecision?.optionA) {
                     pendingDecisionOptions.A = {
                       title: activeCase.storyDecision.optionA.title,
@@ -494,28 +495,42 @@ export function GameProvider({
                       pendingDecisionOptions, // Store decision titles for LLM context
                       lastDecision: null,
                   };
-              } else {
-                  const nextSubchapter = currentStory.subchapter + 1;
-                  const nextCaseNumber = formatCaseNumber(currentStory.chapter, nextSubchapter);
-                  updatedStory = {
-                      ...updatedStory,
-                      subchapter: nextSubchapter,
-                      activeCaseNumber: nextCaseNumber,
-                      awaitingDecision: false,
-                      pendingDecisionCase: null,
-                  };
               }
 
-              updateProgress({
-                  storyCampaign: updatedStory,
-                  nextUnlockAt: updatedStory.nextStoryUnlockAt
+              // Functional, and derived from the COMPLETED case: this is the
+              // pair of invariants in CLAUDE.md §5, both of which this path was
+              // breaking. The object-merge write rebuilt the whole campaign from
+              // a render-time snapshot, so any Under-Map write that landed since
+              // (an EXAMINE tap, a probe, a descent) was silently reverted; and
+              // the next position came from current.subchapter rather than the
+              // case just finished, which makes any nav/campaign drift permanent.
+              updateProgress((prev) => {
+                  const latest = normalizeStoryCampaignShape(prev.storyCampaign);
+                  const merged = {
+                      ...latest,
+                      completedCaseNumbers: Array.from(
+                          new Set([...(latest.completedCaseNumbers || []), activeCase.caseNumber])
+                      ),
+                      startedAt: latest.startedAt || nowIso,
+                  };
+                  const advanced = isFinalSubchapter
+                      ? {
+                          ...merged,
+                          awaitingDecision: true,
+                          pendingDecisionCase: activeCase.caseNumber,
+                          pendingDecisionOptions,
+                          lastDecision: null,
+                      }
+                      : advanceSubchapter(merged, activeCase.caseNumber, { startedAt: nowIso });
+                  updatedStory = advanced;
+                  return { storyCampaign: advanced, nextUnlockAt: advanced.nextStoryUnlockAt };
               });
 
               // Keep the reducer's active case id in sync with the story position.
               // The evidence-board path previously advanced storyCampaign without
               // updating activeCaseId (unlike the logic-puzzle path), which left the
               // active case stale and could snap the player back to 001A.
-              if (updatedStory.activeCaseNumber && !updatedStory.awaitingDecision) {
+              if (updatedStory?.activeCaseNumber && !updatedStory.awaitingDecision) {
                   const advancedCase = getCaseByNumber(updatedStory.activeCaseNumber);
                   if (advancedCase?.id) {
                       setActiveCaseInternal(advancedCase.id);

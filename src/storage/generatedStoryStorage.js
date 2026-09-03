@@ -90,9 +90,19 @@ export function invalidateStoryCache() {
  * Uses in-memory cache to reduce deserialization overhead
  */
 export async function loadGeneratedStory() {
-  // Return cached version if still valid
   const now = Date.now();
-  if (storyCache && (now - storyCacheTimestamp) < CACHE_TTL_MS) {
+  // Return the cached version while it is fresh, and ALWAYS while it holds
+  // writes that have not reached storage yet.
+  //
+  // Without the isDirty clause this discarded generated chapters. A scene takes
+  // roughly 70 seconds to generate and the TTL is 30, so by the time a save
+  // lands the cache is nearly always past it. saveGeneratedChapter writes the
+  // entry into the cache, arms a debounced flush, and immediately kicks
+  // autoPruneIfNeeded, which calls straight back into here: the entry was
+  // overwritten by the on-disk copy and isDirty was cleared, so the pending
+  // flush had nothing to write. A and B subchapters (the ones that do not force
+  // an immediate flush) were routinely never persisted at all.
+  if (storyCache && (isDirty || (now - storyCacheTimestamp) < CACHE_TTL_MS)) {
     return storyCache;
   }
 
@@ -262,7 +272,9 @@ export async function saveGeneratedChapter(caseNumber, pathKey, entry) {
         scheduleDebouncedFlush();
       }
 
-      // Auto-prune if storage utilization is high (async, don't block save)
+      // Auto-prune if storage utilization is high (async, don't block save).
+      // It reads through loadGeneratedStory, which is now dirty-aware, so it can
+      // no longer clobber the write above.
       const currentChapter = entry.chapter || 2;
       autoPruneIfNeeded(pathKey, currentChapter, 80).then(result => {
         if (result.prunedCount > 0) {

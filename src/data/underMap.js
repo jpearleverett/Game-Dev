@@ -131,7 +131,42 @@ export const createBlankUnderMap = () => ({
   lastVisitedAt: null,
 });
 
+/**
+ * True when a map already satisfies every shape guarantee normalizeUnderMap
+ * makes, so normalizing it can return it unchanged.
+ *
+ * This matters for identity, not speed. normalizeUnderMap used to build a fresh
+ * object every time, so every helper's no-op path returned a NEW map, and every
+ * caller's `if (next === current.underMap) return null;` guard was unreachable.
+ * Re-tapping a phrase already collected, a probe that matched nothing, a foil
+ * claim that found nothing to claim: each still wrote a new campaign object,
+ * re-rendered every screen subscribed to the game context and re-persisted the
+ * whole progress blob.
+ */
+const isNormalizedUnderMap = (map) => (
+  !!map
+  && typeof map === 'object'
+  && Array.isArray(map.fragments)
+  && Array.isArray(map.relations)
+  && Array.isArray(map.latentRelations)
+  && Array.isArray(map.connections)
+  && Array.isArray(map.nodes)
+  && Array.isArray(map.theories)
+  && (map.foil === null || (!!map.foil && typeof map.foil === 'object'))
+  && Number.isFinite(map.flawlessStreak)
+  && Number.isFinite(map.bestFlawlessStreak)
+  && (map.dailyStir === null || (!!map.dailyStir && typeof map.dailyStir === 'object'))
+  && Number.isFinite(map.dailyStreak)
+  && Number.isFinite(map.bestDailyStreak)
+  && (map.lastDailyResolved === null || typeof map.lastDailyResolved === 'string')
+  && Number.isFinite(map.pendingProbeBonus)
+  && map.pendingProbeBonus >= 0
+  && map.pendingProbeBonus <= MAX_PROBE_BONUS
+  && (map.lastFoilClaimChapter === null || Number.isFinite(map.lastFoilClaimChapter))
+);
+
 export const normalizeUnderMap = (map) => {
+  if (isNormalizedUnderMap(map)) return map;
   const base = createBlankUnderMap();
   if (!map || typeof map !== 'object') return base;
   return {
@@ -207,12 +242,18 @@ export const addFragments = (map, fragments = []) => {
       const incomingCase = f.caseNumber || f.lastCaseNumber || null;
       const lastCase = existing.lastCaseNumber || existing.caseNumber || null;
       const sameScene = !!incomingCase && !!lastCase && incomingCase === lastCase;
+      const nextDetail = existing.detail || f.detail || '';
+      // A re-tap inside the same scene deepens nothing: same motif count, same
+      // scene, no new detail. Rewriting lastSeenAt for it produced a new map on
+      // every tap, which defeated every caller's no-op guard and re-persisted
+      // the whole progress blob for nothing.
+      if (sameScene && nextDetail === existing.detail) return;
       byId.set(f.id, {
         ...existing,
         seen: sameScene ? (existing.seen || 1) : (existing.seen || 1) + 1,
         lastCaseNumber: f.caseNumber || f.lastCaseNumber || existing.lastCaseNumber || existing.caseNumber || null,
         lastSeenAt: new Date().toISOString(),
-        detail: existing.detail || f.detail || '',
+        detail: nextDetail,
       });
       changed = true;
       return;
