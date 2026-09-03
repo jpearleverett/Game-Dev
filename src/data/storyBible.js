@@ -435,308 +435,291 @@ export const WRITING_STYLE = {
 // EXAMPLE PASSAGES - For Few-Shot Learning
 // ============================================================================
 export const EXAMPLE_PASSAGES = {
-  atmosphericOpening: `When Sean Devine and Jimmy Marcus were kids, their fathers worked together at the Coleman Candy plant and carried the stench of warm chocolate back home with them. It became a permanent character of their clothes, the beds they slept in, the vinyl backs of their car seats. Sean's kitchen smelled like a Fudgsicle, his bathroom like a Coleman Chew-Chew bar. By the time they were eleven, Sean and Jimmy had developed a hatred of sweets so total that they took their coffee black for the rest of their lives and never ate dessert.
+  atmosphericOpening: `The rain had been coming down since Tuesday, and the Underbridge Market wore it like a second roof. Water ran off the elevated tracks in ropes, struck the tarpaulins, traveled the length of them and fell again into the aisles, so that crossing the market meant crossing under three separate rains. Jack turned his collar up and got soaked anyway. Sodium light off the support pillars turned every puddle the color of weak tea. Down at the far end a generator coughed, caught, and settled into a hum.
 
-On Saturdays, Jimmy's father would drop by the Devines' to have a beer with Sean's father. He'd bring Jimmy with him, and as one beer turned into six, plus two or three shots of Dewar's, Jimmy and Sean would play in the backyard, sometimes with Dave Boyle, a kid with girl's wrists and weak eyes who was always telling jokes he'd learned from his uncles. From the other side of the kitchen window screen, they could hear the hiss of the beer can pull-tabs, bursts of hard, sudden laughter, and the heavy snap of Zippos as Mr. Devine and Mr. Marcus lit their Luckys.`,
+He had come for a name and a shoebox of somebody's undelivered mail. Two hundred dollars, cash, no finding anyone who did not want to be found. He counted stall numbers while he walked, because that was what his hands did when the rest of him had quit. The numbers were stenciled on the pillars in white paint gone gray with exhaust. Sixteen. Seventeen. Eighteen. Twenty.
 
-  dialogueExample: `"Sean sat on the back porch with Annabeth Marcus as she took tiny
-sips from a glass of white wine and smoked her cigarettes no more than
-halfway before she'd extinguish them, her face lit by the exposed bulb
-above them. It was a strong face, never pretty probably, but always striking.
-She was not unused to being stared at, Sean guessed, and yet she was
-probably oblivious as to why she was worth the trouble. She reminded Sean
-a bit of Jimmy's mother but without the air of resignation and defeat, and
-she reminded Sean of his own mother in her complete and effortless self-
-possession, reminded him of Jimmy, actually, in that way, as well. He could
-see Annabeth Marcus as being a fun woman, but never a frivolous one.
-"So," she said to Sean as he lit a cigarette for her, "what are you doing
-with your evening after you're released from comforting me?"
- "I'm not, "
- She waved it away. "I appreciate it. So what're you doing?"
- "Going to see my mother."
-"Really?"
- He nodded. "It's her birthday. Go celebrate it with her and the old man."
- "Uh-huh," she said. "And how long have you been divorced?"
- "It shows?"
- "You wear it like a suit."
- "Ah. Separated, actually, for a bit over a year."
- "She live here?"
- "Not anymore. She travels."
- "You said that with acid. 'Travels.'"
- "Did I?" He shrugged.
-She held up a hand. "I hate to keep doing this to you, getting my mind
-off Katie at your expense. So you don't have to answer any of my questions.
-I'm just nosy, and you're an interesting guy."
-He smiled. "No, I'm not. I'm actually very boring, Mrs. Marcus. You take
-away my job, and I disappear."
- "Annabeth," she said. "Call me that, would you?"
- "Sure."
-"I find it hard to believe, Trooper Devine, that you're boring. You know
-what's odd, though?"
- "What's that?"
-She turned in her chair and looked at him. "You don't strike me as the
-kind of guy who'd give someone phantom tickets."
- "Why's that?"
- "It seems childish," she said. "You don't seem like a childish man."
-Sean shrugged. In his experience, everyone was childish at one time or
-another. It's what you reverted to, particularly when the shit piled up.
-In more than a year, he'd never spoken to anyone about Lauren, not his
-parents, his few stray friends, not even the police psychologist the
-commander had made a brief and pointed mention of once Lauren's moving
-out had become common knowledge around the barracks. But here was
-Annabeth, a stranger who'd suffered a loss, and he could feel her probing
-for his loss, needing to see it or share it or something along those lines,
-needing to know, Sean figured, that she wasn't being singled out.
-"My wife's a stage manager," he said quietly. "For road shows, you
-know? Lord of the Dance toured the country last year, my wife stage-
-managed. That sort of thing. She's doing one now, Annie Get Your Gun,
-maybe. I'm not sure, to tell you the truth. Whatever they're recycling this
-year. We were a weird couple. I mean, our jobs, right, how further apart can
-you get?"
- "But you loved her," Annabeth said.
-He nodded. "Yeah. Still do." He took a breath, leaning back in his chair
-and sucking it down. "So the guy I gave the tickets to, he was…" Sean's
-mouth went dry and he shook his head, had the sudden urge to just get the
-hell off this porch and out of this house.
- "He was a rival?" Annabeth said, her voice delicate.
-Sean took a cigarette from the pack and lit one, nodding. "That's a nice
-word for it. Yeah, we'll say that. A rival. And my wife and I, we were going
-through some shit for a while. Neither of us was around much, and so on.
-And this, uh, rival, he moved in on her."
- "And you reacted badly," Annabeth said. A statement, not a question.
-Sean rolled his eyes in her direction. "You know anyone who reacts
-well?"
-Annabeth gave him a hard look, one that seemed to suggest that sarcasm
-was below him, or maybe just something she wasn't fan of in general.
- "You still love her, though."
-"Sure. Hell, I think she still loves me." He stubbed out his cigarette. "She
-calls me all the time. Calls me and doesn't talk."
- "Wait, she, "
- "I know," he said.
- ", calls you up and doesn't say a word?"
- "Yup. Been going on for about eight months now."
-Annabeth laughed. "No offense, but that's the weirdest thing I've heard in
-a while."
-"No argument." He watched a fly dart in and away from the bare
-lightbulb. "One of these days, I figure, she's gotta talk. That's what I'm
-holding out for."
-He heard his half-assed chuckle die in the night and the echo of it
-embarrassed him. So they sat in silence for a bit, smoking, listening to the
-buzz of the fly as it made its crazy darts toward the light.
-"What's her name?" Annabeth asked. "This whole time, you've never
-once said her name."
- "Lauren," he said. "Her name's Lauren."
- Her name hung in the air for a bit like the loose strand of a cobweb.
-"And you loved her since you were kids?”
-"Freshman year of college," he said. "Yeah, I guess we were kids."
-He could remember a November rainstorm, the two of them kissing for
-the first time in a doorway, the feel of goose bumps on her flesh, both of
-them shaking.
- "Maybe that's the problem," Annabeth said.
- Sean looked at her. "That we're not kids anymore?"
- "One of you, at least," she said.
- Sean didn't ask which one.
-"Jimmy told me you said Katie was planning to elope with Brendan
-Harris."
- Sean nodded.
- "Well, that's just it, isn't it?"
- He turned in his chair. "What?"
-She blew a stream of smoke up at the empty clotheslines. "These silly
-dreams you have when you're young. I mean, what, Katie and Brendan
-Harris were going to make a life in Las Vegas? How long would that little
-Eden have lasted? Maybe they'd be on their second trailer park, second kid,
-but it would hit them sooner or later, life isn't happily ever after and
-golden sunsets and shit like that. It's work. The person you love is rarely
-worthy of how big your love is. Because no one is worthy of that and
-maybe no one deserves the burden of it, either. You'll be let down. You'll be
-disappointed and have your trust broken and have a lot of real sucky days.
-You lose more than you win. You hate the person you love as much as you
-love him. But, shit, you roll up your sleeves and work, at everything, because that's what growing older is."
- "Annabeth," Sean said, "anyone ever tell you that you're a hard woman?"
-She turned her head to him, her eyes closed, a dreamy smile on her face.
-"All the time."`,
+He stopped and went back.
 
-  internalMonologue: `The first night Jimmy spent at Deer Island Correctional, he'd sat up all night, from nine to six, wondering if his cellmate would come for him. The guy had been a New Hampshire biker named Woodrell Daniels who'd crossed into Massachusetts one night on a methamphetamine deal, stopped in a bar for several whiskey nightcaps, and ended up blinding a guy with a pool stick. Woodrell Daniels was a big meat slab of a man covered in tattoos and knife scars, and he'd looked at Jimmy and let loose this dry whisper of a chuckle that went through Jimmy's heart like a length of pipe.
+Eighteen sold secondhand phone parts under a bare bulb. Twenty sold umbrellas, all of them black, all of them open and hanging upside down from a rail like a roost of bats. Between them the aisle simply continued. No gap in the paving. No seam where a stall had stood. The pillar between eighteen and twenty carried no stencil at all, only the ghost of one, a rectangle of concrete a shade cleaner than the concrete around it.
 
-"We'll see you later," Woodrell said at lights-out. "We'll see you later," he repeated, and let loose another of those whispery chuckles.
+"You're standing in the wet," the umbrella woman said. She had not looked up from her ledger.
 
-So Jimmy stayed up all night, listening for sudden creaks in the bunk above him, knowing he'd have to go for Woodrell's trachea if it came down to it, and wondering if he'd be capable of getting one good punch through Woodrell's massive arms. Hit the throat, he told himself. Hit the throat, hit the throat, hit the throat, oh Jesus, here he comes...
+"There's no nineteen."
 
-But it was just Woodrell rolling over in his sleep, creaking those springs, the weight of his body bulging down through the mattress until it hung over Jimmy like the belly of an elephant.
+"There's no nineteen," she agreed, and turned a page. "Never has been. You want a stall, the office is on Callow Street."
 
-Jimmy heard the prison as a living creature that night. A breathing engine. He heard rats fighting and chewing and screeching with a mad, high-pitched desperation. He heard whispers and moans and the seesaw creak of bedsprings going up and down, up and down. Water dripped and men talked in their sleep and a guard's shoes echoed from a distant hall. At four, he heard a scream, just one, that died so fast it lived longer in echo and memory than it ever had in reality, and Jimmy, at that moment, considered taking the pillow from under his head and pressing it to his own face.`,
+Jack put his hand flat against the clean rectangle. It was warmer than the rest of the pillar, the way stone holds afternoon after dark, and there had been no sun over Ashport in eleven days.
 
-  tenseMoment: `The beefy one crooked a finger at them, then wiggled it toward his chest until they stood in front of him. "Let me ask you something, okay?" He bent at his big belly and his huge head filled Sean's vision. "You guys think it's okay to fight in the middle of the street?"
+He thought of the 1974 plan he had pulled at the Civic Archive in March, the market laid out in a clerk's fine hand, thirty-one stalls, all of them numbered in sequence. He had filed it back himself. He remembered the order.
 
-Sean noticed a gold badge clipped to the belt buckle beside the big man's right hip.
+Under his palm, cut shallow into the concrete and filled with something that felt like wax, was a shape. Three strokes and a closed loop. He had seen it that morning, on the back of a black envelope, pressed into a seal that would not soften.`,
 
-"What's that?" The cop cupped a hand behind his ear.
+  dialogueExample: `The elevator opened directly into the room, which told Jack something about who else was allowed up here. Nobody. The glass ran floor to ceiling on three sides. Ashport lay below in wet orange smears, the river a black seam stitching the districts together.
 
-"No, sir."
+Victoria Blackwell was standing at the window with her back to him, holding a glass she had not drunk from.
 
-"No, sir."
+"You went to Kellerman Street," she said.
 
-"No, sir."
+"I went past it."
 
-"A pack of punks, huh? That what you are?" He jerked his big thumb back at the man in the passenger seat. "Me and my partner, we've had our fill of you East Bucky punks scaring decent people off the street. You know?"
+"Past." She turned the glass a quarter turn. "That's a careful word."
 
-Sean and Jimmy didn't say anything.
+Jack stayed near the elevator. There was a chair he did not sit in. "There's an etching on the third stair of the service stairwell. Cut, not drawn. Somebody took time over it."
 
-"We're sorry," Dave Boyle said, and looked like he was about to cry.
+"Somebody usually has."
 
-"You kids from this street?" the big cop asked. His eyes scanned the homes on the left side of the street like he knew every occupant, would bag them if they lied.
+"It matches a mark on a 1961 sewer survey. The survey is in the Civic Archive. The stairwell was poured in 1988."
 
-"Yup," Jimmy said, and looked back over his shoulder at Sean's house.
+She said nothing. Below them a train crossed the elevated line and the whole grid of reflections in the glass slid two inches to the left and settled.
 
-"Yes, sir," Sean said.
+"That's a filing problem," Jack said. "Not a mystery. A drawing gets copied. Somebody carries a motif forward. It happens."
 
-Dave didn't say anything.
+"Then you have your answer and you can go home." She finally faced him. Her eyes did the thing they did, which was to arrive somewhere a half second before the rest of her. "You didn't come here for an answer. You came for permission."
 
-The cop looked down at him. "Huh? You say something, kid?"
+He looked at his hands. He had been rolling the corner of his notebook between thumb and forefinger until the paper had gone soft. He stopped.
 
-"What?" Dave looked at Jimmy.
+"Tell me what's down there."
 
-"Don't look at him. Look at me." The big cop breathed loudly through his nostrils. "You live here, kid?"
+"I'll tell you three things and none of them are that." She set the glass on the sill without a sound. "One. Count before you cross. Whatever the number is, the number is the promise. Two. Never mark a threshold you have not already walked. Three. If the same sign meets you twice in one night, go home by a different street and do not look back at the second one."
 
-"Huh? No."
+"Those are rules."
 
-"No?" The cop bent over Dave. "Where you live, son?"
+"Yes."
 
-"Rester Street." Still looking at Jimmy.
+"I asked a question."
 
-"Flats trash in the Point?" The cop's cherry-red lips swiveled as if he were sucking a lollipop. "That can't be good for business, can it?"`,
+"You asked me to make it smaller." She smiled without warmth. "A map is a promise, Jack. Break it, and the city breaks back."
 
-  decisionSetup: `Jimmy looked up the street. "You know anyone on this street who leaves their keys in their car?"
+Rain crawled sideways on the glass. Twelve floors down, the streetlights held their halos steady, and Jack counted them without deciding to, and got a number he did not like.`,
 
-Sean did. Mr. Griffin left them under the seat, and Dottie Fiore left them in her glove compartment, and Old Man Makowski, the drunk who listened to Sinatra records too loud all hours of the day and night, left them in the ignition most times.
+  internalMonologue: `Murphy's closed at two, and the floorboards told him so, one board at a time, somebody walking the room killing lights. Then the building settled and the rain took over the sound.
 
-But as he followed Jimmy's gaze and picked out the cars that he knew held keys, Sean felt a dull ache grow behind his eyes, and in the hard sunlight bouncing off the trunks and hoods, he could feel the weight of the street, its homes, the entire Point and its expectations for him. He was not a kid who stole cars. He was a kid who'd go to college someday, make something of himself that was bigger and better than a foreman or a truck loader. That was the plan, and Sean believed that plans worked out if you were careful, if you were cautious. It was like sitting through a movie, no matter how boring or confusing, until the end. Because at the end, sometimes things were explained or the ending itself was cool enough that you felt like sitting through all the boring stuff had been worth it.
+Jack sat with the lamp pulled down low and the notebook open at a fresh page. He wrote the date. He wrote the weather, because weather was a fact and facts were free. He wrote: 18, 20, no 19, stencil ghost, pillar warm. He wrote: umbrella seller, ledger, did not look up. He did not write her face and he did not write where she parked the van she loaded at closing, though he had seen it and could have drawn the plate from memory.
 
-He almost said this to Jimmy, but Jimmy was already moving up the street, looking in car windows, Dave running alongside him.`,
+That was the rule. Things went in the book. People stayed out of it.
+
+The whiskey was in the drawer, and the drawer was open, and he had poured two fingers an hour ago and gotten through half of it, which counted as restraint. He turned the glass a quarter turn on the desk without lifting it. There was a ring under it going brown at the edges, a series, one ring a night, and he could have counted back through them the way a man counts rings in a stump, and would have arrived at a Tuesday in March two years ago, so he stopped.
+
+He wrote instead. Chalk or wax. Cut, not drawn. Cut means tools, means time, means somebody knelt there in the wet with a chisel and nobody in that market saw it or nobody said.
+
+Under that he wrote: WHO ISSUES STALL NUMBERS.
+
+That was a records question. Records questions had answers with dates on them, and file numbers, and a clerk's initials in the corner, and a person could spend three days inside a records question and never once give a stranger the address of a person who had gone to some trouble not to be found.
+
+The rain went sideways past the window and the neon from the bar sign came up through it, red, then off, then red.
+
+The Civic Archive opened at nine. Zoning would have the market plats going back to the thirties. He capped the pen and looked at the coat on the door and started counting the hours until nine.`,
+
+  tenseMoment: `The service door on the fourth floor of the Wexler Building had been unlocked for eleven minutes, and Jack had spent nine of them standing still.
+
+He counted the corridor again. Six doors, three to a side, a window at the far end with the rain crossing it sideways. Wet concrete. A radiator ticking behind the plaster.
+
+The trouble was the coat.
+
+It hung beside 4C, a man's oilskin, dark at the hem. When he came up the stairs it had been on the second hook. He was certain of that the way he was certain of a filing date: completely, with no way to prove it.
+
+Now it was on the third hook.
+
+He did the sensible things in order. He looked for a draft along the floor and found none. He tested the hooks and they were screwed tight into the plaster. He put two fingers on the oilskin. Cold. Damp on the outside only. Ashport rain went through a coat like that in a minute and left it heavy to the lining. This water sat on the surface the way water sits on something carried, not worn.
+
+He wrote the time in the notebook. 11:48. Then he listened to the building.
+
+The radiator ticked. Under it, a floor down or two, a door closed, and the sound came up late, as though the stairwell were longer than the four flights he had climbed.
+
+He turned back to the landing. His footprints lay there, drying at the edges. He had climbed on the left, by the rail, where the treads were quietest. The prints ran along the left. Then they crossed. Then they ran along the right, out to the corridor, in a clean unhurried line.
+
+He stood over them a while.
+
+There were explanations. Wet shoes. A shift of weight. A janitor with the same size feet and the same route on the same wet night.
+
+He put the notebook away without writing it down.
+
+At the end of the corridor the window held the hallway back at him: the doors, the coat, a man standing very straight in the frame. Nothing moved in it that was not him.
+
+He watched it anyway for a count of ten, to see which of them got tired of waiting first.`,
+
+  decisionSetup: `The chalk was fresh. Jack crouched and touched it and it came away on his fingertip, still damp, chalk and rain making a paste that smelled of the river.
+
+Three marks on the shutter of a stall that sold nothing but doorknobs. A hooked line, a break, a closed loop. He had photographed the same sequence on Tuesday, on a stanchion under the tracks a half mile east, and again on Thursday, cut into the mortar behind the laundromat on Pell. Same order. Same spacing, near enough that the difference sat inside his own hand's error.
+
+He took out the folded photocopy. Bramwell Street, zoning survey, 1961. The street had been closed and built over in 1968 and appeared on no map printed since. The surveyor's notation ran along its western edge in a neat draftsman's hand: a hooked line, a break, a closed loop.
+
+Behind him the market was packing up. Tarps came down, water sluiced off them, someone dragged a cage of pigeons across wet asphalt.
+
+Jack stood with the paper in one hand, the stall lamps swimming in the puddles, and made himself read it the way he read any series. A series has an order. The order tells you something.
+
+The marks had been ahead of him every time. Tuesday, Thursday, tonight, each one on a road he was already walking, set down before he arrived. Somebody was putting out lamps for a man coming home in the dark. Blackwell had told him to follow them. Blackwell had never once said where they went.
+
+But he had gone back to Pell on Friday and found a fourth mark on the wall opposite, facing the first, and outside the sequence. It was a tally. Four strokes, one crossed through. And that morning there had been chalk dust on the frame of his own door, at the height of his shoulder, as though something had been measured there and the number written down somewhere else.
+
+Lamps for a man walking home. Or stakes driven at the corners of a lot before the survey crew arrives.
+
+He stood with his hand still white to the knuckle and looked down the row of shutters at the doors he had already been shown.
+
+Which one was he standing inside?`,
 
   // ========== NEW A+ QUALITY EXAMPLES ==========
 
-  characterConfrontation: `Dave looked at Jimmy and then at Sean. His arm shot out awkwardly and hit Sean's shoulder. "Yeah, how come you don't want to do fun things?"
+  characterConfrontation: `The laundromat was empty except for one dryer turning nothing but its own heat. Nadia Prine had her back to him, feeding coins into a machine that was already running.
 
-Sean couldn't believe Dave had just hit him. Dave.
+"I want to ask about the wall again," Jack said.
 
-He punched Dave in the chest, and Dave sat down.
+"I told you. Kids."
 
-Jimmy pushed Sean. "What the hell you doing?"
+"You did." He set the notebook on the folding table and opened it flat so she could see the columns. "This is your paint. Ashport Hardware, Cutler Avenue. Eleven receipts in fourteen months, all the same grey, all quart tins. Nobody buys quarts eleven times. You buy quarts when you're covering the same square yard over and over."
 
-"He hit me," Sean said.
+The dryer stopped. The room got large around the silence.
 
-"He didn't hit you," Jimmy said.
+"March ninth," he said. "April sixth. May fourth. Then it slides. June first, June twenty-ninth. Twenty-eight days, every time, except the two you missed."
 
-Sean's eyes widened in disbelief and Jimmy's mimicked them.
+Her hands went still on the coin slot. She did not turn around.
 
-"He hit me."
+"Kids don't keep a calendar," Jack said. "You do."
 
-"He hit me," Jimmy said in a girl's voice, and pushed Sean again. "He's my fucking friend."
+"I'm closing."
 
-"So am I," Sean said.
+"It's four in the afternoon."
 
-"So am I," Jimmy said. "So am I, so am I, so am I."
+She turned then. He had been half expecting this and did not enjoy being right about it. There was no heat in her face at all. She had the flat, tidy look of a person who had been carrying the same weight every day for a long time and had built a routine around it the way you build a splint.
 
-Dave Boyle stood up and laughed.
+"The wall is a wall," she said.
 
-Sean said, "Cut it out."
+"Then let me photograph it."
 
-"Cut it out, cut it out, cut it out." Jimmy pushed Sean again, the heels of his hands digging into Sean's ribs. "Make me. You wanna make me?"
+"No."
 
-"You wanna make him?" And now Dave shoved Sean.
+"Nadia."
 
-Sean had no idea how this had happened. He couldn't even remember what had made Jimmy mad anymore or why Dave had been stupid enough to hit him in the first place. One second they were standing by the car. Now they were in the middle of the street and Jimmy was pushing him, his face screwed up and stunted, his eyes black and small, Dave starting to join in.`,
+"You want me to say a word." Her voice stayed low and level. "I'm not going to say it in my own shop. I have a lease. I have a girl in school on Bellamy."
 
-  emotionalRevelation: `"You find her? Is it her?" Jimmy yelled. "Is it?"
+Jack looked at the notebook, at his own handwriting, at fourteen months of somebody else's discipline reduced to a column of dates. He closed it.
 
-Sean stayed motionless, holding Jimmy's eyes with his own, locking them until Jimmy's surging stare saw what Sean had just seen, saw that it was over now, the worst fear had been realized.
+"What happens if you don't paint it?"
 
-Jimmy began to scream and ropes of spit shot from his mouth. Another cop came down the slope to help the one on top of Jimmy, and Sean turned away. Jimmy's scream blew out into the air as a low, guttural thing, nothing sharp or high-pitched to it, an animal's first stage of reckoning with grief.
+She picked up a lint tray and emptied it into the bin, and did it slowly, and put it back.
 
-Sean had heard the screams of a lot of victims' parents over the years. Always there was a plaintive character to them, a beseechment for God or reason to return, tell them it was all a dream. But Jimmy's scream had none of that, only love and rage, in equal quantity, shredding the birds from the trees and echoing into the Channel.
+"Come on a Tuesday," she said. "Any Tuesday. Not after dark, not on the twenty-eighth day, and not with a camera. Look at it and go."
 
-Sean went back over and looked down at Katie Marcus. Connolly, the newest member of the unit, came up beside him, and they looked down for a while without saying anything, and Jimmy Marcus's scream continued to echo behind them, growing hoarse now but no less anguished.`,
+"That's not an answer."
 
-  chaseSequence: `They were at South Station once, tossing an orange street hockey ball back and forth on the platform, and Jimmy missed Sean's throw and the ball bounced down onto the tracks. Before it occurred to Sean that Jimmy could even be thinking about it, Jimmy jumped off the platform and down onto the track, down there with the mice and the rats and the third rail.
+"That's the whole thing I have."
 
-People on the platform went nuts. They screamed at Jimmy. One woman turned the color of cigar ash as she bent at the knees and yelled, Get back up here, get back up here now, goddamnit! Sean heard a thick rumble that could have been a train entering the tunnel up at Washington Street or could have been trucks rolling along the street above, and the people on the platform heard it, too. They waved their arms, whipped their heads around to look for the subway police. One guy placed a forearm across his daughter's eyes.
+He stood in the doorway a moment. Through the back window the alley wall showed grey on grey, a fresh rectangle inside an older one.`,
 
-Jimmy kept his head down, peering into the darkness under the platform for the ball. He found it. He wiped some black grime off it with his shirtsleeve and ignored the people kneeling on the yellow line, extending their hands down toward the track.
+  emotionalRevelation: `The request slip was in the wrong pocket of the folder, behind the tab, the way a page slides when a file has been opened and closed too many times.
 
-Dave nudged Sean and said, "Whew, huh?" too loud.
+Jack pulled it out with two fingers. Civic Archive stock, pale green, the perforated stub still attached. Box 44, Series 9, Bramwell Street closures, 1961. His own printing in the requester line, dated the eleventh of March, two years ago. He remembered the day. Rain coming in sideways off the harbor, bad coffee, a client who paid cash and would not sit down.
 
-Jimmy walked along the center of the track toward the stairs at the far end of the platform, where the tunnel opened gaping and dark, and a heavier rumble shook the station, and people were jumping now, banging fists into their hips. Jimmy took his time, strolling really, then he looked back over his shoulder, caught Sean's eyes, and grinned.
+Under his name there was a second line he had never read.
 
-Dave said, "He's smiling. He's just nuts. You know?"`,
+Countersigned. The ink was silver and it did not sit flat on the paper. He turned the slip toward the desk lamp and the letters slid a quarter inch to the left, the way a coin moves under water. The date beside them was the ninth. Two days before the man ever walked into his office.
 
-  investigationScene: `Sean rolled off Jimmy and they both stood up, expecting to see the two cops again but seeing Mr. Devine instead, coming down the front steps toward them.
+Jack set the slip down. He put both hands on the desk, one on either side of it, and did not move them.
 
-"The hell you two doing?"
+He had carried the shape of that case for two years and he had it wrong in one place, and one place was enough. He had believed he took the job, pulled the file, found the address, gave it up. The order mattered. The order was the whole of it. A man had asked him to find someone. He had found him. The finding had been his.
 
-"Nothing."
+The file was pulled before the job existed.
 
-"Nothing." Sean's father frowned as he reached the sidewalk. "Get out of the middle of the street."
+His thumb went to the edge of the slip and pressed until the paper bowed. Downstairs Murphy's was doing its Thursday business, the low hum of a room full of people talking about nothing. Somebody laughed. The laugh came up through the floorboards and went out again.
 
-They reached the sidewalk beside him.
+He had not sold anyone. He had been handed a shovel and pointed at a patch of ground, and he had dug where he was pointed, and the thing he found had been put there for him to find.
 
-"Weren't there three of you?" Mr. Devine looked up the street. "Where's Dave?"
+He read the slip again. The silver had moved. It always moved. It would not hold still for a camera. Below his own printed name, in a hand he would come to know, it said WITH THANKS.`,
 
-"What?"
+  chaseSequence: `Jack took the stairwell at Corliss and Ninth two treads at a time.
 
-"Dave." Sean's father looked at Sean and Jimmy. "Wasn't Dave with you?"
+He counted going down. Habit, fifteen years old. Eleven to the half landing. Eleven to the door.
 
-"We were fighting in the street."
+Above him a door opened and did not close.
 
-"What?"
+He hit the street. Rain came at him level off the harbour. Neon bled up out of the wet asphalt, red then green, his own shape going along beside him in pieces.
 
-"We were fighting in the street and the cops came."
+Left on Corliss. He did not look back. Looking back costs a stride and buys nothing.
 
-"When was this?"
+The pedestrian tunnel under the freight cut was a hundred and eighty yards. He knew the number. He had traced it off a 1988 sheet with his thumb, the summer he was twenty-four and still filing for a living.
 
-"Like five minutes ago."
+He went in at a run.
 
-"Okay. So, the cops came."
+Tiles. Sodium light every twelve feet, so fifteen lamps, and he counted those too because his mouth was dry.
 
-"And they picked Dave up."
+Fifteen. Then sixteen. Then seventeen.
 
-Sean's father looked up and down the street again. "They what? They picked him up?"
+He slowed. He put a hand on the tile and kept moving, and the tile was cold and gritty and ordinary, and the lamps kept coming.
 
-"To take him home. I lied. I said I lived here. Dave said he lived in the Flats, and they, "
+Twenty-one.
 
-"What are you talking about? Sean, what'd the cops look like?"
+That was two hundred and fifty yards of tunnel under a cut a hundred and eighty yards wide. A surveyor's chain does not stretch. Land does not swell. Somebody built this in 1988. Somebody measured it. The measurement was on file.
 
-"Huh?"
+He came out the far end breathing hard.
 
-"Were they wearing uniforms?"
+Wrong side.
 
-"No. No, they, "
+The freight cut was still on his left. It had been on his left going in. Go under a thing and it changes sides. That is not opinion, that is the first page of anything.
 
-"Then how'd you know they were cops?"
+The elevated tracks ran above him, and the Underbridge stalls were folded shut beneath them, tarps roped down and going grey with rain.
 
-"I didn't. They..."
+Footsteps came out of the tunnel behind him. Unhurried. Not running, and not slowing either.
 
-"They what?"
+He went up the maintenance ladder to the track deck, coat snagging on every rung.
 
-"He had a badge," Jimmy said. "On his belt."
+The city opened out. Rooftops, water towers, the harbour a flat black plate at the edge of it.
 
-"What kind of badge?"
+He looked down at the tunnel mouth.
 
-"Gold?"
+Nobody came out.
 
-"Okay. But what'd it say on it?"
+He stood in the rain with the rail humming under his boots and did the arithmetic again. It came out the same. It kept coming out the same.`,
 
-"Say?"
+  investigationScene: `The Civic Archive gave him a reading table under a window that had not been washed since the building went municipal, and a cart with four flat boxes, and forty minutes before the desk closed.
 
-"The words. Were there words you could read?"
+Ashport Sanitary and Drainage Survey, 1953. Linen-backed sheets, one to a block group, forty of them.
 
-"No. I don't know."
+He worked through the box the way he had been taught: left thumb on the stack, sheets over one at a time, eyes on the top right corner where the draughtsman inked the number.
 
-Sean looked at his father. He didn't seem to know where to put his hands. He put them in his pockets, then he pulled them out, wiped them on his pants. He said, "I'll be damned," very softly, and he looked down to the end of the street as if Dave hovered at the corner, a dancing mirage just beyond Sean's field of vision.`,
+Seventeen. Eighteen. Twenty.
 
-  quietMoment: `Even after all the crying she'd done with Annabeth and Nadine and Sara. Even after she'd held Annabeth on the living room floor as her cousin shook for five violent minutes of heaving spasms. Even after she'd found Jimmy standing in the dark of Katie's bedroom, his daughter's pillow held up to his face. He hadn't been weeping or talking to himself or making any noise whatsoever. He merely stood with that pillow pressed to his face and breathed in the smell of his daughter's hair and cheeks, over and over. Inhale, exhale. Inhale, exhale...
+He went back and did it again slower, and got the same thing. Then he stopped looking at the numbers and started looking at the margins.
 
-Even after all that, it still hadn't sunk in entirely. Katie, she felt, would walk through that door any minute now, bounce into the kitchen and steal a piece of bacon from the plate on the stove. Katie couldn't be dead. She couldn't.`,
+Every sheet carried a neighbour key, a little cross of boxes: adjoins 12, adjoins 20, adjoins 26. Eighteen said it adjoined nineteen. Twenty said it adjoined nineteen. Nineteen was not in the box, and the index card taped inside the lid said the series ran one to thirty-nine.
+
+Thirty-nine. Not forty.
+
+Misfiled, then. Oversize sheets travelled; he had misfiled a hundred of them himself. He pulled the drawers on either side and the storm-sewer series above it and found nothing but storm sewers.
+
+Conservation, then. Linen backing failed at the folds and sheets went out for repair for years at a time. The repair log lived behind the desk and he asked for it and read it twice. No 1953 sanitary sheets, ever.
+
+A call slip, then. Somebody had it out. The request book went back to 1971 and the clerk let him take it to the table, and in fifty-four years nobody had asked for sheet nineteen. Nobody had asked for it because there was nothing to ask for.
+
+He sat with that.
+
+Then he looked at the index card again, at the typeface, at the ink. The other lids in the cart were typed on a machine with a chipped lower-case e. This one was clean. This one was newer.
+
+Somebody had not taken a sheet out of a series. Somebody had taken the number out of the count, and retyped the card so the count came out even, and left the neighbour keys alone because they were inked by hand in 1953 and could not be retyped without redrawing the city.
+
+Sheet nineteen covered eleven acres between Corliss, Ninth and the freight cut.
+
+Jack put his pencil down and did not pick it up again.`,
+
+  quietMoment: `The rain stopped a little after six, the way it did maybe twice a month, and the quiet it left behind had a sound of its own, gutters emptying, a pigeon walking the sill.
+
+Jack noticed the map because the light changed. Sheet four of nine, Ashport zoning, 1968, thumbtacked to the plaster since the week he moved in, and the bottom left corner had curled and cracked along the fold.
+
+He took it down with both hands, one at each top corner, and laid it face down on the desk after he had cleared the desk, which took longer than the repair would.
+
+The tin lived in the bottom drawer. Linen tape, a bone folder worn shiny at the tip, a soft brush he had walked out of the Records Office fifteen years ago and never once thought to return. He brushed the back of the sheet from the center outward, always outward, because that was how Doreen had taught him and Doreen had been right about everything to do with paper.
+
+He cut the tape with a blade instead of scissors. Scissors stretch it. He laid the piece across the split, thumbed it down, then went over it with the folder in slow passes until the crack stopped being a shadow.
+
+He waited the two minutes. He always waited the two minutes.
+
+Downstairs, the delivery came for Murphy's. Bottles in crates, the clatter going up through the floor, a man out on the wet sidewalk whistling something with no tune in it. A bus went by on Harrow with all its lights on and nobody riding. The whistling stopped, started again, moved off toward the corner.
+
+He made coffee in the pot with the cracked handle, poured one cup, put in the sugar and did not stir it, which was a thing he had started doing at some point and had never examined.
+
+Then he hung the map back up. Sheet four covered the old riverfront, streets that had been paved over before he was born, names nobody used. He had four, five, seven, and two others. He had never found three.
+
+He stepped back to the middle of the room and looked at it. The bottom edge sat a quarter inch low on the left. He drank his coffee and left it that way.`,
 };
 
 // ============================================================================
@@ -851,448 +834,141 @@ export const GENERATION_CONFIG = {
 // ============================================================================
 export const EXTENDED_STYLE_GROUNDING = {
   // A complete scene with rising tension (shows pacing, dialogue interleaved with action, psychological complicity)
-  tensionScene: `She found some plastic gloves under the sink, ones she used when cleaning the toilet, and she put them on and checked for any tears in the rubber. When she was satisfied there were none, she took his shirt from the sink and his jeans off the floor. The jeans were dark with blood, too, and left a smear on the white tile.
+  tensionScene: `The man worked the bottom landing of the Underbridge stairs like a tradesman on a schedule. Jack watched him from behind the fruit stalls, forty feet back, rain coming off the track bed above in long gray ropes.
 
-"How'd you get it on your jeans?"
+First the sweeping. A stiff brush, short strokes, corner outward, until the concrete showed its own color again. He bagged the sweepings. He did not shake the bag out into the gutter with the rest of the market's leavings. He knotted it twice and set it inside his coat.
 
-"What?"
+Then the scraping. A four inch blade held at a low angle, worked across the riser where somebody had chalked something before him. He took his time. He went back over the same six inches until the ghost of it was gone, then went over it again.
 
-"The blood."
+Jack counted. Eleven passes on a mark that had come off in three.
 
-He looked at them hanging from her hand. He looked at the floor. "I was kneeling over him." He shrugged. "I dunno. I guess it splashed up, like on the shirt."
+The man wet the concrete from a plastic bottle and dried it with a rag folded in quarters, refolding to a clean face each time, four faces, no repeats. He knelt. From a tin he took a length of blue chalk, squared at both ends, and a folding rule the color of old butter.
 
-"Oh."
+He measured from the wall. He measured from the stair nose. He wrote the two numbers on the back of his hand in pencil, checked them against a card from his pocket, and rubbed the card between his fingers until the ink was gray mud.
 
-He met her eyes. "Yeah. Oh."
+The first stroke went down in one motion, no hesitation in it, a man signing his own name for the ten thousandth time.
 
-"So," she said.
+Then he stopped and looked up the stairwell.
 
-"So."
+Nothing was there. Jack had been watching the top of the stairs for twenty minutes. The man looked anyway, the way you check a pot you know is not boiling, and went back to the chalk.
 
-"So, I'll wash these in the kitchen sink."
+Second stroke. Third. He left a gap where a fourth belonged.
 
-"Okay."
+He packed the tin. He stood, knees cracking, and walked backward up four steps before he turned around, and Jack wrote that down, backward, four, because it was the only part he could put a number on.
 
-"Okay," she said, and backed out of the bathroom, left him standing there, one hand fluttering under the water, waiting for it to get hot.
+The rain went on above them. Somebody two stalls over was selling brass hinges with no doors.
 
-In the kitchen, she dumped the clothes in the sink and ran the water, watched the blood and filmy chips of flesh and, oh Christ, pieces of brain, she was pretty sure, wash down the drain. It amazed her how much the human body could bleed. They said you had six pints in you, but to Celeste it always seemed like so much more.
+The man passed within six feet of Jack on his way out, smelling of wet chalk and clean laundry, and did not look at him.
 
-She held her gloved hands under the water and checked them again for holes. None. She poured dishwashing liquid all over the T-shirt and scoured it with steel wool, then squeezed it out and went through the whole process again until the water that dripped from the shirt when she squeezed was no longer pink but clear. She did the same with the jeans, and by that time Dave was out of the shower and sitting at the kitchen table with a towel wrapped around his waist, smoking one of the long white cigarettes her mother had left behind in the cupboard and drinking a beer, watching her.
-
-"Fucked up," he said softly.
-
-She nodded.
-
-"I mean, you know?" he whispered. "You go out, expecting one thing, a Saturday night, nice weather, and then..." He stood and came over by her, leaned against the oven, and watched her wring out the left leg of his jeans.
-
-"Why aren't you using the washing machine in the pantry?"
-
-She looked over at him. "Evidence, sweetie."
-
-"Evidence?"
-
-"Well, I dunno for sure, but I figure blood and...other stuff have a better chance of sticking to the insides of a washing machine than to a sink drain."
-
-He let out a low whistle. "Evidence."
-
-"Evidence," she said, giving in to a grin now, feeling conspiratorial, dangerous, part of something big and worthwhile.
-
-"Damn, babe," he said. "You're a genius."
-
-She finished wringing out the jeans and shut off the water, took a small bow.
-
-Four in the morning, and she was more awake than she'd been in years. She was Christmas-morning-when-you're-eight kind of awake. Her blood was caffeine.
-
-Your whole life, you wished for something like this. You told yourself you didn't, but you did. To be involved in a drama. And not the drama of unpaid bills and minor, shrieking marital squabbles. No. This was real life, but bigger than real life. This was hyper-real. Her husband may have killed a bad man. And if that bad man really was dead, the police would want to find out who did it. And if the trail actually led here, to Dave, they'd need evidence.
-
-Because it all came down to evidence. And she'd just washed the evidence down the kitchen sink drain and out into the dark sewers.`,
+The gap stayed empty on the riser. Jack did not go down and fill it in.`,
 
   // A revelation moment (shows how to deliver information that recontextualizes everything)
-  revelationScene: `Jimmy could hear them through the small speaker, whispering, giggling, and it horrified him to picture them and think of his sins at the same time.
+  revelationScene: `The dead end behind Cantwell Street had eleven steps down to a service door and nothing else in it worth a name.
 
-I killed a man. The wrong man.
+Jack counted them on the way down. Eleven. He wrote it in the notebook with the time, 2:14, and the weather, still raining, and he put his back to the door and counted them going up.
 
-It burned in him, that knowledge, that shame.
+Fourteen.
 
-I killed Dave Boyle.
+He did it again. Down, eleven. Up, fourteen. He stopped halfway and looked at his own boots on the tread and could not find the place where the extra three had gone in.
 
-It dripped, still burning, down into his belly. It drizzled through him.
+So he stopped counting and started measuring.
 
-I murdered. I murdered an innocent man.
+The tape hooked on the bottom nosing and ran up to the landing lip. Nine feet four. He walked it up, let the tape wind back, hooked it at the top and ran it down. Nine feet four. The steps agreed with each other. They only disagreed with him.
 
-"Oh, honey," Annabeth said, searching his face. "Oh, baby, what's wrong? Is it Katie? Baby, you look like you're dying."
+He photographed the wall. The flash came back off the wet brick in a white smear, and in the smear, low down where the mortar had been repointed, a shape sat in the joint. Three strokes and a gap. He had drawn that same figure eleven times in his notebook in the last four days and had never once seen it cut into anything.
 
-She came around the table, a fearsome mix of worry and love in her eyes. She straddled Jimmy and took his face in her hands and made him look in her eyes.
+He put his thumb on it. Cold, and deeper than a scratch, the edges soft the way old cut stone goes. The brick around it was newer than the mark.
 
-"Tell me. Tell me what's wrong."
+He took the chalk out of his coat.
 
-Jimmy wanted to hide from her. Her love hurt too much right now. He wanted to dissolve from her warm hands and find someplace dark and cavelike where no love or light could reach and he could curl into a ball and moan his grief and self-hatred into the black.
+Jack was not a superstitious man. He was a man who checked a series for the missing entry. He drew the fourth stroke into the gap, the way the mark itself was asking for, and he stepped back with the chalk still in his hand and his pen already uncapped to write down nothing happened.
 
-"Jimmy," she whispered. She kissed his eyelids. "Jimmy, talk to me. Please."`,
+The service door unlatched.
+
+No hand on it, no wind. The bolt withdrew into the door with the flat clean sound of a filing drawer coming open, and the door stood off its frame by two inches, and behind the two inches was not the utility corridor he had walked through in 1997 on a records survey and remembered as green paint over cinderblock.
+
+Behind it was a stair going down.
+
+Jack held the door at arm's length and leaned in as far as his shoulder and no further. Cold air came up it, dry, moving, smelling of chalk dust and cut brick.
+
+He counted the steps he could see. Eleven, and the light gave out.`,
 
   // A chapter ending (shows how to create that "one more chapter" compulsion)
-  chapterEnding: `An hour later, in Sean's kitchen, two other cops asked Sean and Jimmy a bunch of questions, and then a third guy showed up and drew sketches of the men in the brown car based on what Jimmy and Sean told them. The big blond cop looked meaner on the sketch pad, his face even bigger, but otherwise it was him. The second guy, the one who'd kept his eyes on the side-view, didn't look much like anything at all, a blur with black hair really, because Sean and Jimmy couldn't remember him too well.
+  chapterEnding: `It took the market forty minutes to decide nothing had happened.
 
-Jimmy's father showed up and stood in the corner of the kitchen looking mad and distracted, his eyes watery, weaving a bit as if the wall kept moving behind him. He didn't speak to Sean's father, and no one spoke to him. With his usual capacity for sudden movement muted, he seemed smaller to Sean, less real somehow, like if Sean looked away he'd look back to find him dissolved into the wallpaper.
+The tarps went back up. The generator caught on the third pull and the bulbs came on yellow, then white, and the woman who sold radio parts began laying them out again in rows on a square of grey felt. Nobody looked at the stairwell. That was the part Jack kept coming back to. Not one of them looked at it, and the not-looking was practiced, the way you do not look at a man asleep on a train.
 
-After they'd gone over it four or five times, everyone left, the cops, the guy who'd drawn on the pad, Jimmy and his father. Sean's mother went into her bedroom and shut the door, and Sean could hear muffled crying a few minutes later.
+He stayed until his knees ached. Ondrej's stall stood open the whole time with the cash tin on the counter in plain view, and nobody touched it, and nobody closed the shutter, and at ten past one somebody laid a tarp over the goods without a word and walked off.
 
-He sat out on the porch and his father told him he hadn't done anything wrong, that he and Jimmy were smart not to have gotten in that car. His father patted his knee and said things would turn out fine. Dave will be home tonight. You'll see.
+Jack wrote it down. Time, weather, the order the lights came back in. He wrote that Ondrej had gone down eleven steps and that he had counted them aloud from the top, and that on the twelfth there had been no sound of a foot, and no sound after that. He wrote that the stairwell was fourteen steps. He wrote that he had walked down it himself and come out into a service passage that smelled of hot iron and ended in a locked door with rust grown through the hinges.
 
-His father shut up then. He sipped his beer and sat with Sean, but Sean could feel he'd drifted away on him, was maybe in the back bedroom with Sean's mother, or down in the cellar building his birdhouses.
+He did not write what he thought. He had a rule about that.
 
-Sean looked up the street at the rows of cars, the shiny glint of them. He told himself that this, all of this, was part of some plan that made sense. He just couldn't see it yet. He would someday, though. The adrenaline that had been rushing through his body since Dave had been driven away and he and Jimmy had rolled on the street fighting finally flushed out through his pores like waste.
+The rain had thinned to a mist by the time he came up Pell. Murphy's was closing, chairs going up onto tables, the neon buzzing on its bad transformer. Upstairs he hung his coat on the back of the door and stood dripping in the dark before he went looking for the lamp.
 
-He saw the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
+He had touched the chalk at half past eleven. After that he had stood two hours in the rain with his hand bare, put it in his pocket, put it on the wet rail going down, washed it under a tap in the passage.
+
+The lamp came on.
+
+Across his palm the three marks lay where they had printed themselves, hooked line, break, closed loop, white and powder dry, while the water ran off his sleeve and pooled around his boots and would not go near them.`,
 
   // Dialogue under tension (shows subtext, what's unsaid, power dynamics)
-  dialogueUnderTension: `Sean could see what Jimmy had done, and Jimmy could see that knowledge appear in Sean.
+  dialogueUnderTension: `The market ran the length of four blocks under the elevated line, tarp roofs sweating, everything lit in the brown-gold of bulbs strung on extension cord. Jack found Renata Voss at the stall that sold nothing but keys.
 
-"You fucking did it, didn't you?" Sean said. "You killed him."
+"You're out late for a filing clerk," she said.
 
-Jimmy stood up, holding on to the banister. "Don't know what you're talking about."
+"So are you."
 
-"You killed both of them, Ray Harris and Dave Boyle. Jesus, Jimmy, I came down here thinking the whole idea was nuts, but I can see it in your face, man. You crazy, lunatic, fucking psycho piece of shit. You did it. You killed Dave. You killed Dave Boyle. Our friend, Jimmy."
+"I'm shopping." She lifted a key off the felt, a long brass one with a square bit, and held it up to the bulb. "Look at the wear. Somebody used this every day for thirty years."
 
-Jimmy snorted. "Our friend. Yeah, okay, Point Boy, he was your good buddy. Hung with him all the time, right?"
+"For what."
 
-Sean stepped into his face. "He was our friend, Jimmy. Remember?"
+"That's the part they don't sell you."
 
-Jimmy looked into Sean's eyes, wondered if he was going to take a swing at him.
+Above them a train came through, and the whole market went into its two seconds of noise, tarps shivering, the strung bulbs swinging their shadows across the tables. At the next stall a radio dropped into static and came back on a different station.
 
-"Last time I saw Dave," he said, "was at my house last night." He pushed Sean aside and crossed the street onto Gannon. "That's the last time I saw Dave."
+Jack waited for the quiet. "I pulled the plat books for Kessel Row."
 
-"You're full of shit."
+"Mm."
 
-He turned, arms wide as he looked back at Sean. "Then arrest me, you're so sure."
+"Fourteen buildings. The numbering runs one to fifteen."
 
-"I'll get the evidence," Sean said. "You know I will."
+Renata set the key down. She lined it up with the others, parallel, the way you square a stack of paper.
 
-"You'll get shit," Jimmy said. "Thanks for busting my daughter's killers, Sean. Really. Maybe if you'd been a little faster, though?" Jimmy shrugged and turned his back on him, started walking down Gannon Street.`,
+"Old surveys are full of that," she said.
+
+"They are."
+
+"Transcription. Two clerks, one ledger."
+
+"Sure."
+
+She picked up a second key. Her thumb moved on it. Three stalls down, a man in a wet coat had been sorting the same box of doorknobs for eleven minutes, and had not once picked one up.
+
+"Renata."
+
+"Don't." She said it pleasantly, smiling at the keys. "Not here. There are about forty people under this bridge and I know eleven of them."
+
+"I'm not asking you to say anything."
+
+"You're asking me to stand still while you say it, which is worse."
+
+The vendor came back with a paper cup of tea and put it down between them, and they both looked at it, and neither took it.
+
+"Buy something," Renata said. "You've been standing at a stall for ten minutes with your hands in your pockets."
+
+Jack bought the long brass key for four dollars. It was warm from the bulb.
+
+"When you're back at the Archive," he said, "the plat books are on the second tier."
+
+"I know where they are." She was already walking. "So does everyone else who ever wanted them."
+
+Behind him the radios came back into agreement.`,
 };
 
 // ============================================================================
 // ANNOTATED EXAMPLES - Teaching WHY techniques work
 // ============================================================================
-export const ANNOTATED_EXAMPLES = {
-  sensoryWorldBuildingExample: {
-    passage: `When Sean Devine and Jimmy Marcus were kids, their fathers worked together at the Coleman Candy plant and carried the stench of warm chocolate back home with them. It became a permanent character of their clothes, the beds they slept in, the vinyl backs of their car seats. Sean's kitchen smelled like a Fudgsicle, his bathroom like a Coleman Chew-Chew bar. By the time they were eleven, Sean and Jimmy had developed a hatred of sweets so total that they took their coffee black for the rest of their lives and never ate dessert.`,
-    annotations: [
-      'Opens with SENSORY DETAIL (chocolate smell) that establishes working-class world without stating it',
-      'The word "stench" instead of "scent" shows how environment becomes burden, not comfort',
-      '"Permanent character" personifies the smell, makes it a presence in their lives',
-      'Specific brand names (Fudgsicle, Coleman Chew-Chew) make the world concrete and real',
-      'Final sentence shows CONSEQUENCE of sensory experience - shaped them for life',
-      'Entire childhood and class position established through one smell in one paragraph',
-    ],
-  },
-
-  characterThroughActionExample: {
-    passage: `Jimmy kept his head down, peering into the darkness under the platform for the ball. He found it. He wiped some black grime off it with his shirtsleeve and ignored the people kneeling on the yellow line, extending their hands down toward the track.
-
-Dave nudged Sean and said, "Whew, huh?" too loud.
-
-Jimmy walked along the center of the track toward the stairs at the far end of the platform, where the tunnel opened gaping and dark, and a heavier rumble shook the station, and people were jumping now, banging fists into their hips. Jimmy took his time, strolling really, then he looked back over his shoulder, caught Sean's eyes, and grinned.`,
-    annotations: [
-      'Character revealed entirely through ACTION - no internal thoughts needed',
-      '"Ignored the people" shows Jimmy\'s defiance, his separation from normal fear',
-      'Dave\'s nervous reaction ("Whew, huh?" too loud) contrasts with Jimmy\'s calm',
-      '"Strolling really" - the adverb "really" shows even narrator is impressed/appalled',
-      'The backward glance and grin - Jimmy KNOWS what he\'s doing, courts danger deliberately',
-      'We understand Jimmy\'s psychology without a single line of internal monologue',
-    ],
-  },
-
-  crowdAsCharacterExample: {
-    passage: `People on the platform went nuts. They screamed at Jimmy. One woman turned the color of cigar ash as she bent at the knees and yelled, Get back up here, get back up here now, goddamnit! Sean heard a thick rumble that could have been a train entering the tunnel up at Washington Street or could have been trucks rolling along the street above, and the people on the platform heard it, too. They waved their arms, whipped their heads around to look for the subway police. One guy placed a forearm across his daughter's eyes.`,
-    annotations: [
-      'Crowd reaction SHOWS the danger Jimmy is in - we feel it through others\' fear',
-      '"Color of cigar ash" - specific, unexpected color comparison creates visual',
-      'Dialogue rendered without quotes ("Get back up here") merges into the chaos',
-      'Ambiguous rumble ("could have been...could have been") puts reader in uncertainty WITH Sean',
-      'Father covering daughter\'s eyes - visceral detail implying expected violence',
-      'Scene tension comes from WITNESSES, not narrator telling us it\'s tense',
-    ],
-  },
-
-  dialogueRevealingClassExample: {
-    passage: `"You remember what we talked about," his father said, and patted Sean's shoulder in dismissal.
-
-Sean left the tool room and walked through the cool basement wondering if what made him enjoy Jimmy's company was the same thing that made his father enjoy hanging out with Mr. Marcus, drinking Saturday into Sunday, laughing too hard and too suddenly, and if that was what his mother was afraid of.`,
-    annotations: [
-      'Father\'s brevity ("You remember what we talked about") shows working-class restraint',
-      'The pat is "dismissal" - physical gesture carries emotional weight without explanation',
-      'Sean\'s wondering is INDIRECT - he doesn\'t ask, he observes and infers',
-      '"Drinking Saturday into Sunday" - the preposition makes time blur like the drinking does',
-      '"Laughing too hard and too suddenly" - the excess signals something OFF about the friendship',
-      'Mother\'s unspoken fear becomes the real subject - what ISN\'T said matters most',
-    ],
-  },
-
-  threatThroughNormalityExample: {
-    passage: `It was a dark brown car, square and long like the kind police detectives drove, a Plymouth or something, and its bumper stopped by their legs and the two cops looked out through the windshield at them, their faces watery in the reflected trees that swam across the glass.
-
-Sean felt a sudden lurch in the morning, a shifting in the softness of it.`,
-    annotations: [
-      'Car described in mundane terms first - "Plymouth or something" - normalizing the threat',
-      '"Bumper stopped by their legs" - physical proximity creates implicit menace',
-      '"Faces watery in the reflected trees" - distortion suggests unreality, wrongness',
-      '"Sudden lurch in the morning" - not in his stomach, but in TIME ITSELF',
-      '"Shifting in the softness" - the day had been soft; now it hardens into danger',
-      'Threat announced not by what the men DO but by how the world FEELS different',
-    ],
-  },
-
-  complexEmotionThroughObjectExample: {
-    passage: `Jimmy took the glove and he felt bad about it. Sean would miss it. Jimmy took the glove and he felt good about it. Sean would miss it.
-
-Jimmy watched his father stumble ahead of him, the old fuck looking like he'd crumple and turn into a puddle of himself any second, and he hated Sean.
-
-He hated Sean and he'd been dumb to think they could have been friends, and he knew he'd hold on to this glove for the rest of his life, take care of it, never show it to anyone, and he'd never, not once, use the goddamn thing.`,
-    annotations: [
-      'Contradictory feelings stated back-to-back - "felt bad...felt good" - shows emotional complexity',
-      'Repeated "Sean would miss it" - same fact means different things depending on emotion',
-      'Hatred transferred to Sean when it belongs to the father - psychological displacement',
-      '"Hold on to this glove for the rest of his life" - the object becomes symbol of wound',
-      '"Never show it...never use it" - possession without use = pure pain, pure memory',
-      'A stolen glove carries the weight of class, friendship, family, shame, and defiance',
-    ],
-  },
-
-  waitingAsCharacterExample: {
-    passage: `Sean looked at the place where he, Jimmy, and Dave Boyle had fought by the Bel Air and he waited for the new hollow spaces formed as the adrenaline had left his body to fill back in. He waited for the plan to re-form and make sense. He waited and watched the street and felt its hum and waited some more until his father stood up and they went back inside.`,
-    annotations: [
-      '"Hollow spaces formed as adrenaline left" - physical sensation of emotional aftermath',
-      'Repetition of "waited" four times - the rhythm ENACTS the waiting, makes reader feel it',
-      '"The plan to re-form and make sense" - Sean believes in order, in things working out',
-      'Street has a "hum" - the ordinary world continues, indifferent to his trauma',
-      'No resolution comes - the waiting ends not with answer but with going back inside',
-      'Character revealed through what he HOPES FOR, not what he does',
-    ],
-  },
-
-  psychologicalComplicityExample: {
-    passage: `Four in the morning, and she was more awake than she'd been in years. She was Christmas-morning-when-you're-eight kind of awake. Her blood was caffeine.
-
-Your whole life, you wished for something like this. You told yourself you didn't, but you did. To be involved in a drama. And not the drama of unpaid bills and minor, shrieking marital squabbles. No. This was real life, but bigger than real life. This was hyper-real. Her husband may have killed a bad man. And if that bad man really was dead, the police would want to find out who did it.
-
-Because it all came down to evidence. And she'd just washed the evidence down the kitchen sink drain and out into the dark sewers.`,
-    annotations: [
-      '"Christmas-morning-when-you\'re-eight kind of awake" - disturbing simile makes complicity feel childlike, innocent',
-      'Shift to second person ("Your whole life") - implicates the READER in the dark fantasy',
-      '"You told yourself you didn\'t, but you did" - the brutal honesty about human nature',
-      '"Hyper-real" - she\'s experiencing her accessory-to-murder moment as heightened living',
-      'The mundane details (sink, sewers) ground the horror in domestic reality',
-      'No moral judgment from narrator - we watch her become complicit without authorial comment',
-      'Shows how ordinary people slide into darkness through small, practical steps',
-    ],
-  },
-
-  acceptingDarknessExample: {
-    passage: `And it occurred to him as he began to shave that he was evil. No big thing, really, no earth-shattering clang of bells erupting in his heart. Just that, an occurrence, a momentary realization that fell like gently grasping fingers through his chest.
-
-So I am then.
-
-He looked in the mirror and felt very little of anything at all. He loved his daughters and he loved his wife. And they loved him. He found certainty in them, complete certainty. Few men, few people, had that.
-
-He'd killed a man for a crime the man had probably not committed. If that weren't bad enough, he felt very little regret.
-
-He was evil? So be it. He could live with it because he had love in his heart and he had certainty. As trade-offs went, it wasn't half bad.`,
-    annotations: [
-      '"No big thing, really" - the casualness of self-damning realization is MORE chilling than drama',
-      '"Gently grasping fingers through his chest" - the evil arrives tenderly, not violently',
-      '"So I am then" - three words, isolated, accepting. No fight, no denial.',
-      'He weighs evil against love and certainty as if balancing a ledger - moral calculus',
-      '"Very little regret" - the absence of expected emotion reveals character depth',
-      '"As trade-offs went, it wasn\'t half bad" - the banality of accepted evil is the horror',
-      'Shows how monsters justify themselves through what they STILL possess, not what they\'ve lost',
-    ],
-  },
-
-  silentReconnectionExample: {
-    passage: `He said, "I'm sorry."
-
-And Lauren spoke. "For what?"
-
-"For putting it all on you."
-
-"Okay..."
-
-"Hey, "
-
-"Hey, "
-
-"You go ahead," he said.
-
-"I...hell, Sean, I'm sorry, too. I didn't mean to, "
-
-"It's okay," he said. "Really." He took a deep breath, sucking in the soiled, stale-sweat stench of his cruiser. "I want to see you. I want to see my daughter."
-
-And Lauren answered, "How do you know she's yours?"
-
-"She's mine."
-
-"But the blood test, "
-
-"She's mine," he said. "I don't need a blood test. Will you come home, Lauren? Will you?"`,
-    annotations: [
-      'After a year of silent phone calls, "I\'m sorry" breaks everything open - power of withheld words',
-      'Overlapping "Hey, " shows both trying to reconnect at once - rhythm of reconciliation',
-      '"Stale-sweat stench of his cruiser" - even transcendent moments grounded in sensory reality',
-      'Paternity question deflected by emotional certainty: "She\'s mine" - faith over fact',
-      'Repeated "She\'s mine" and "Will you?" - the desperation under the calm surface',
-      'The mundane setting (car, phone) makes the emotional stakes feel MORE real, not less',
-      'Resolution comes through vulnerability, not grand gesture',
-    ],
-  },
-
-  burnoutMonologueExample: {
-    passage: `Lately, though, he'd just been tired in general. Tired of people. Tired of books and TV and the nightly news and songs on the radio that sounded exactly like other songs on the radio he'd heard years before and hadn't liked much in the first place. He was tired of his clothes and tired of his hair and tired of other people's clothes and other people's hair. He was tired of wishing things made sense. Tired of office politics and who was screwing who, both figuratively and otherwise. He'd gotten to a point where he was pretty sure he'd heard everything anyone had to say on any given subject and so it seemed he spent his days listening to old recordings of things that hadn't seemed fresh the first time he'd heard them.
-
-Maybe he was simply tired of life, of the absolute effort it took to get up every goddamned morning and walk out into the same fucking day with only slight variations in the weather and the food.`,
-    annotations: [
-      'Anaphora ("Tired of...tired of...tired of") creates crushing rhythm of exhaustion',
-      'Exhaustion expands from specific (books, TV) to universal (life itself) - escalating despair',
-      '"Tired of his hair and tired of other people\'s hair" - the absurdist specificity makes it real',
-      '"Old recordings of things that hadn\'t seemed fresh the first time" - perception of repetition',
-      '"Same fucking day with only slight variations" - depression rendered as sameness, not sadness',
-      'No emotional words like "depressed" or "hopeless" - state shown through perception, not label',
-      'Shows burnout through what the character NOTICES, not what they feel',
-    ],
-  },
-
-  memoryErasureExample: {
-    passage: `They had never been friends. They had never played stickball and kick-the-can and 76 on Rester Street. They had never spent a year of Saturdays hanging with Sean Devine, playing war in the gravel pits off Harvest, jumping roof to roof from the industrial garages near Pope Park, watching Jaws together at the Charles, huddled down in their seats and screaming. They had never practiced skids on their bikes together or argued over who would be Starsky, who would be Hutch, and who would get stuck being Kolchak from The Night Stalker.`,
-    annotations: [
-      'Negation structure ("never...never...never") erases shared history line by line',
-      'Specific childhood memories (Starsky/Hutch, Jaws, kick-the-can) make the erasure painful',
-      'The more vivid the denied memory, the more we feel what\'s being lost',
-      'Psychological defense mechanism rendered as narrative technique',
-      'Reader knows these things DID happen - dramatic irony creates tension',
-      'Shows trauma response: rewriting history to survive the present',
-      'Each "never" is a small violence against the past',
-    ],
-  },
-
-  darkEmpowermentExample: {
-    passage: `He'd heard somewhere of ancient cultures that used to eat the hearts of the people they murdered. They ate the hearts, and the dead were subsumed into them. It gave them power, the power of two, the spirit of two. Dave felt that way. No, he hadn't eaten anyone's heart. He wasn't that fucked in the head. But he had felt the glory of the predator. He had murdered. And he had done right. And he had stilled the monster inside of him, the freak who longed to touch a young boy's hand and melt into his embrace.
-
-That freak was fucking gone now, man. Gone down to hell with Dave's victim.`,
-    annotations: [
-      '"Ancient cultures" reference gives murder a mythic, almost sacred justification',
-      '"Glory of the predator" - the word "glory" is chilling in this context',
-      '"He wasn\'t that fucked in the head" - the partial denial makes it worse, not better',
-      'Murder as therapy: he killed to silence his own inner monster',
-      '"Done right" - moral certainty after murder is more disturbing than guilt',
-      'The colloquial "fucking gone now, man" - casual tone about murder',
-      'Shows how perpetrators justify violence as self-improvement or purification',
-    ],
-  },
-
-  physicalDecayAsTraumaExample: {
-    passage: `Her skin was pale and her hair was speckled with dandruff and she kept pulling on her fingers as if trying to pop them from the sockets.
-
-She blinked at Sean. She said, "Hey, Trooper Devine."
-
-Sean held out his hand because she looked like she needed contact or she'd float away. "Hi, Celeste. Call me Sean. It's okay."
-
-She shook his hand. Her palm was clammy, her fingers hot, and she let go almost as soon as they'd touched.`,
-    annotations: [
-      'Physical deterioration (pale, dandruff) shows psychological collapse without stating it',
-      '"Pulling on her fingers as if trying to pop them from sockets" - self-harm impulse as tic',
-      '"Float away" - others can SEE her dissociation; it\'s visible, not internal',
-      'Contradictory sensations (clammy palm, hot fingers) show dysregulation',
-      'Immediate release of handshake - she can\'t sustain human contact',
-      'Her trauma shown entirely through physical description and brief action',
-      'The body keeps the score: grief manifests as decay',
-    ],
-  },
-
-  victimHumanizationExample: {
-    passage: `Underneath the blood on the body and pooled beneath it and the mildew clinging to the concrete around it, Sean could smell her perfume, just a hint of it, slightly sweet, slightly sensual, the lightest scent, which made him think of high school dates and dark cars, the panicky fumbling through fabric and the electric grazing of flesh.`,
-    annotations: [
-      'Perfume persists through blood and mildew - life asserting itself against death',
-      '"Slightly sweet, slightly sensual" - the victim was a person with desires, not just a body',
-      'Detective\'s memory triggered by scent - universal human experience',
-      '"High school dates and dark cars" - perfume connects to innocence, youth, first love',
-      '"Panicky fumbling...electric grazing" - sensory language resurrects the victim\'s aliveness',
-      'The paragraph moves from death (blood, mildew) to life (perfume, desire) - structural humanization',
-      'Shows how to honor the victim while describing crime scene - they were SOMEONE',
-    ],
-  },
-
-  // ========== REQUIRED BY StoryGenerationService.js ==========
-
-  physicalEmotionExample: {
-    passage: `Jimmy began to scream and ropes of spit shot from his mouth. Another cop came down the slope to help the one on top of Jimmy, and Sean turned away. Jimmy's scream blew out into the air as a low, guttural thing, nothing sharp or high-pitched to it, an animal's first stage of reckoning with grief.
-
-Sean had heard the screams of a lot of victims' parents over the years. Always there was a plaintive character to them, a beseechment for God or reason to return, tell them it was all a dream. But Jimmy's scream had none of that, only love and rage, in equal quantity, shredding the birds from the trees and echoing into the Channel.`,
-    annotations: [
-      '"Ropes of spit" - grief rendered through visceral, undignified physical detail',
-      '"Low, guttural thing" - sound described as object, as if grief has mass and shape',
-      '"Animal\'s first stage of reckoning" - dehumanization shows depth of loss',
-      'Comparison to other screams establishes narrator\'s experience, then subverts expectation',
-      '"No plaintive character...no beseechment" - defining by what\'s ABSENT',
-      '"Love and rage, in equal quantity" - the duality of grief made explicit',
-      '"Shredding the birds from the trees" - hyperbole that FEELS true, not exaggerated',
-      'Emotion externalized through physical effects on the world, not internal description',
-    ],
-  },
-
-  dialogueSubtextExample: {
-    passage: `"You still love her, though."
-"Sure. Hell, I think she still loves me." He stubbed out his cigarette. "She calls me all the time. Calls me and doesn't talk."
-"Wait, she, "
-"I know," he said.
-", calls you up and doesn't say a word?"
-"Yup. Been going on for about eight months now."
-Annabeth laughed. "No offense, but that's the weirdest thing I've heard in a while."
-"No argument." He watched a fly dart in and away from the bare lightbulb. "One of these days, I figure, she's gotta talk. That's what I'm holding out for."
-He heard his half-assed chuckle die in the night and the echo of it embarrassed him.`,
-    annotations: [
-      'Surface conversation about phone calls; actual subject is devotion and hope',
-      '"Calls me and doesn\'t talk" - the absurd detail reveals depth of connection',
-      'Annabeth\'s interruption ("Wait, she, ") shows genuine surprise, makes it real',
-      '"Eight months" - specific duration adds weight, shows this is an ongoing wound',
-      '"What I\'m holding out for" - vulnerability disguised as casual observation',
-      '"Half-assed chuckle died...embarrassed him" - self-awareness about exposing too much',
-      'Domestic detail (fly, lightbulb) grounds emotional revelation in mundane reality',
-      'He reveals his heart while pretending to share an amusing anecdote',
-    ],
-  },
-
-  tensionBuildingExample: {
-    passage: `It was a dark brown car, square and long like the kind police detectives drove, a Plymouth or something, and its bumper stopped by their legs and the two cops looked out through the windshield at them, their faces watery in the reflected trees that swam across the glass.
-
-Sean felt a sudden lurch in the morning, a shifting in the softness of it.
-
-The driver got out. He looked like a cop, blond crew cut, red face, white shirt, black-and-gold nylon tie, the heft of his gut dropping over his belt buckle like a stack of pancakes. The other one looked sick. He was skinny and tired-looking and stayed in his seat, one hand gripping his skull through greasy black hair, staring into the side-view mirror as the three boys came around near the driver's door.`,
-    annotations: [
-      '"Dark brown car" - mundane description normalizes the approaching threat',
-      '"Bumper stopped by their legs" - physical proximity creates implicit danger',
-      '"Faces watery in reflected trees" - distortion suggests something wrong, unreal',
-      '"Sudden lurch in the morning, shifting in softness" - threat changes TIME, not just mood',
-      'Cop described through cop-like details first, normalizing - then "looked sick" disrupts',
-      'Second man staying in car, gripping skull, staring at mirror - wrongness through behavior',
-      'Boys "came around" to the door - they approach the threat, not flee it',
-      'Tension built through accumulating wrong details, not through telling reader to be scared',
-    ],
-  },
-
-  chapterHookExample: {
-    passage: `Jimmy looked at the Flats spread out before him as he and the old man walked under the deep shade of the el tracks and neared the place where Crescent bottomed out and the freight trains rumbled past the old, ratty drive-in and the Penitentiary Channel beyond, and he knew, deep, deep in his chest, that they'd never see Dave Boyle again.`,
-    annotations: [
-      'Long sentence mimics walking, creates rhythm of approaching dread',
-      'Geographic specificity (Crescent, el tracks, Channel) grounds the revelation in place',
-      '"Penitentiary Channel" - the word "penitentiary" foreshadows imprisonment, punishment',
-      '"Deep, deep in his chest" - repetition emphasizes the physical weight of knowing',
-      '"They\'d never see Dave Boyle again" - declarative finality, no hedging',
-      'The certainty is FELT, not reasoned - makes it prophetic, inevitable',
-      'Chapter ends on loss becoming permanent - reader MUST continue to know what happened',
-      'The hook works because it confirms the reader\'s worst fear without explaining it',
-    ],
-  },
-};
 
 // ============================================================================
 // NEGATIVE EXAMPLES - What NOT to write (with explanations)
@@ -1583,7 +1259,6 @@ export default {
   CONSISTENCY_RULES,
   GENERATION_CONFIG,
   EXTENDED_STYLE_GROUNDING,
-  ANNOTATED_EXAMPLES,
   NEGATIVE_EXAMPLES,
   ENGAGEMENT_REQUIREMENTS,
   MICRO_TENSION_TECHNIQUES,

@@ -148,7 +148,8 @@ ${extendedExamples}
 }
 
 /**
- * Get or create cache for static content (beat-specific many-shot cached)
+ * Get or create the cache for static content (story bible, characters, craft,
+ * style exemplars).
  */
 async function _ensureStaticCache(beatType, chapterBeatType) {
   const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15);
@@ -177,9 +178,6 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
   // Create new cache
   console.log('[StoryGenerationService] 🔧 Creating static content cache...');
 
-  // Per Gemini implicit caching docs: "put large and common contents at the beginning"
-  // Many-shot examples (~20k tokens) are the largest stable content, so they go FIRST.
-  // This maximizes implicit cache hits across requests with similar prefixes.
   const staticParts = [];
   if (manyShotExamples) {
     staticParts.push('<many_shot_examples>');
@@ -212,8 +210,8 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
 
 /**
  * Get or create a chapter-start cache.
- * Includes the full static cache content PLUS beat-specific many-shot examples
- * and the story-so-far up to the end of the previous chapter.
+ * Includes the full static cache content plus the story-so-far up to the end of
+ * the previous chapter and this chapter's arc and outline.
  *
  * This reduces per-subchapter prompt size by moving the large shared prefix into an explicit cache.
  *
@@ -225,7 +223,11 @@ async function _ensureStaticCache(beatType, chapterBeatType) {
 async function _ensureChapterStartCache(chapter, subchapter, effectivePathKey, choiceHistory, context) {
   const beatType = this._getBeatType(chapter, subchapter);
   const chapterBeatType = STORY_STRUCTURE.chapterBeatTypes?.[chapter];
-  const rotationSeed = (Number.isFinite(chapter) ? chapter : 0) * 10 + (Number.isFinite(subchapter) ? subchapter : 0);
+  // Chapter-scoped, not subchapter-scoped. The cached content (static bible +
+  // the story up to the previous chapter + this chapter's arc and outline) is
+  // identical for A, B and C, so a per-subchapter seed built three byte-identical
+  // ~28k-token caches per chapter and paid for two of them on the critical path.
+  const rotationSeed = Number.isFinite(chapter) ? chapter : 0;
   const manyShotExamples = buildManyShotExamples(beatType, chapterBeatType, 15, { rotationSeed });
   const manyShotSignature = getManyShotSignature(beatType, chapterBeatType, Boolean(manyShotExamples), rotationSeed);
 
@@ -300,8 +302,6 @@ Opening mood: ${chapterOutline.openingMood || 'Unknown'}
 ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.length ? `Must reference:\n${chapterOutline.mustReference.slice(0, 8).map((x) => `- ${x}`).join('\n')}` : ''}` : '### Chapter Outline\n- (Not available)'}
 `;
 
-  // Per Gemini implicit caching docs: "put large and common contents at the beginning"
-  // Many-shot examples (~20k tokens) are the largest stable content, so they go FIRST.
   const chapterCacheParts = [];
   if (manyShotExamples) {
     chapterCacheParts.push('<many_shot_examples>');
@@ -644,7 +644,7 @@ function _buildDynamicPrompt(
   // NOTE: Many-shot examples are included in the cache (static or chapter-start).
   // They are NOT included here to avoid duplication. This is per Gemini best practices:
   // "put large and common contents at the beginning of your prompt" for implicit cache hits.
-  // The many-shot examples (~20k tokens) are the largest stable content, so they go in cache.
+  // Style exemplars live in the cache, not here.
 
   // NOTE: Dramatic irony section removed - LLM has creative freedom
 

@@ -7,7 +7,6 @@ import {
   MICRO_TENSION_TECHNIQUES,
   SENTENCE_RHYTHM,
 } from '../../data/storyBible';
-import { MANY_SHOT_METADATA, MANY_SHOT_SCENES } from '../../data/manyShot';
 import { TOTAL_CHAPTERS } from './constants';
 import { extractRecentDialogue } from './helpers';
 
@@ -305,7 +304,7 @@ ${revealTimingRules.map(rule => `- ${rule}`).join('\n')}
 <how_to_use_the_prompt>
 The user turn is a sequence of XML-delimited context blocks followed by a <task> block.
 Every block is authoritative. The blocks you may see are: story_bible, character_reference,
-craft_techniques, style_examples, voice_dna, many_shot_examples, character_knowledge,
+craft_techniques, style_examples, voice_dna, character_knowledge,
 story_context, active_threads, under_map_state, the_other_reader, scene_state,
 engagement_guidance, continuity_anchors, task.
 When two blocks pull in different directions, resolve in this order:
@@ -321,8 +320,8 @@ Each 380-420 word segment carries four beats of roughly 100-110 words, in this o
 3. Dialogue or interior reflection, a line of speech carrying subtext, or a close-third thought that exposes the stakes.
 4. Turn, a small revelation, complication, or hook that pulls toward the next beat.
 The length comes from dramatizing all four beats fully, not from padding one of them.
-The style and many-shot examples are excerpts chosen to show voice and craft; they are
-shorter than a segment and are not a length model.
+The style examples in <style_examples> are full segments at this exact length and shape.
+Match them.
 </segment_construction>
 
 <output_contract>
@@ -384,46 +383,55 @@ These are properties the finished prose must have, not steps to narrate.
 // FEW-SHOT EXAMPLES FOR STYLE GROUNDING
 // ============================================================================
 export const STYLE_EXAMPLES = `
-## EXAMPLE: ATMOSPHERIC OPENING (EXCELLENT)
-"${EXAMPLE_PASSAGES.atmosphericOpening}"
+<example kind="atmosphericOpening">
+${EXAMPLE_PASSAGES.atmosphericOpening}
+</example>
 
-## EXAMPLE: DIALOGUE (EXCELLENT)
-"${EXAMPLE_PASSAGES.dialogueExample}"
+<example kind="dialogueExample">
+${EXAMPLE_PASSAGES.dialogueExample}
+</example>
 
-## EXAMPLE: INTERNAL MONOLOGUE (EXCELLENT)
-"${EXAMPLE_PASSAGES.internalMonologue}"
+<example kind="internalMonologue">
+${EXAMPLE_PASSAGES.internalMonologue}
+</example>
 
-## EXAMPLE: TENSE MOMENT (EXCELLENT)
-"${EXAMPLE_PASSAGES.tenseMoment}"
+<example kind="tenseMoment">
+${EXAMPLE_PASSAGES.tenseMoment}
+</example>
 
-## EXAMPLE: CHARACTER CONFRONTATION (EXCELLENT)
-"${EXAMPLE_PASSAGES.characterConfrontation}"
+<example kind="characterConfrontation">
+${EXAMPLE_PASSAGES.characterConfrontation}
+</example>
 
-## EXAMPLE: EMOTIONAL REVELATION (EXCELLENT)
-"${EXAMPLE_PASSAGES.emotionalRevelation}"
+<example kind="emotionalRevelation">
+${EXAMPLE_PASSAGES.emotionalRevelation}
+</example>
 
-## EXAMPLE: CHASE/ACTION SEQUENCE (EXCELLENT)
-"${EXAMPLE_PASSAGES.chaseSequence}"
+<example kind="chaseSequence">
+${EXAMPLE_PASSAGES.chaseSequence}
+</example>
 
-## EXAMPLE: INVESTIGATION SCENE (EXCELLENT)
-"${EXAMPLE_PASSAGES.investigationScene}"
+<example kind="investigationScene">
+${EXAMPLE_PASSAGES.investigationScene}
+</example>
 
-## EXAMPLE: QUIET CHARACTER MOMENT (EXCELLENT)
-"${EXAMPLE_PASSAGES.quietMoment}"
+<example kind="quietMoment">
+${EXAMPLE_PASSAGES.quietMoment}
+</example>
 
-## EXAMPLE: DECISION SETUP (EXCELLENT)
-"${EXAMPLE_PASSAGES.decisionSetup}"
+<example kind="decisionSetup">
+${EXAMPLE_PASSAGES.decisionSetup}
+</example>
 
 ---
-Study these examples carefully. Note the:
-- Varied sentence lengths (punchy shorts mixed with longer flowing ones)
-- Sensory grounding (rain, neon, whiskey, smoke)
-- Metaphors that feel noir-specific, not generic
-- Dialogue that reveals character without exposition
-- Physical action interleaved with internal thought
-- Tension built through what's NOT said
-
-Your writing should feel like it belongs in the same novel as these passages. Match their VOICE and CRAFT, not their length: these are short excerpts, while each of your segments must run a full 380-420 words.
+These are Dead Letters scenes at exactly the length and shape your segments must have. What to take from them:
+- Sentence lengths that vary; short punchy lines set against longer ones.
+- Paragraphs that vary too, including one-line paragraphs used as a beat.
+- Sensory grounding in Ashport: rain, sodium light, wet concrete, reflections, paper and ink.
+- Jack reaching for the ordinary explanation first, and noticing what is missing from a series.
+- Dialogue that reveals character without explaining it, broken by what people do with their hands.
+- Feeling carried by an object or a behaviour rather than named.
+- Tension built out of what is not said.
 `;
 
 // ============================================================================
@@ -431,7 +439,7 @@ Your writing should feel like it belongs in the same novel as these passages. Ma
 // ============================================================================
 export const buildExtendedStyleExamples = () => {
   // Import dynamically to avoid circular dependencies
-  const { EXTENDED_STYLE_GROUNDING, ANNOTATED_EXAMPLES, NEGATIVE_EXAMPLES } = require('../../data/storyBible');
+  const { EXTENDED_STYLE_GROUNDING, NEGATIVE_EXAMPLES } = require('../../data/storyBible');
 
   return `
 ## EXTENDED EXAMPLE: COMPLETE TENSION SCENE
@@ -462,249 +470,44 @@ ${EXTENDED_STYLE_GROUNDING.dialogueUnderTension}
 
 ---
 
-## ANNOTATED EXAMPLE: Physical Emotion
-"${ANNOTATED_EXAMPLES.physicalEmotionExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.physicalEmotionExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Dialogue Subtext
-"${ANNOTATED_EXAMPLES.dialogueSubtextExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.dialogueSubtextExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Tension Building
-"${ANNOTATED_EXAMPLES.tensionBuildingExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.tensionBuildingExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Chapter Hook
-"${ANNOTATED_EXAMPLES.chapterHookExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.chapterHookExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Sensory World-Building
-"${ANNOTATED_EXAMPLES.sensoryWorldBuildingExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.sensoryWorldBuildingExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Character Through Action
-"${ANNOTATED_EXAMPLES.characterThroughActionExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.characterThroughActionExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Crowd As Character
-"${ANNOTATED_EXAMPLES.crowdAsCharacterExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.crowdAsCharacterExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Dialogue Revealing Class
-"${ANNOTATED_EXAMPLES.dialogueRevealingClassExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.dialogueRevealingClassExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Threat Through Normality
-"${ANNOTATED_EXAMPLES.threatThroughNormalityExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.threatThroughNormalityExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Complex Emotion Through Object
-"${ANNOTATED_EXAMPLES.complexEmotionThroughObjectExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.complexEmotionThroughObjectExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Waiting As Character
-"${ANNOTATED_EXAMPLES.waitingAsCharacterExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.waitingAsCharacterExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Psychological Complicity
-"${ANNOTATED_EXAMPLES.psychologicalComplicityExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.psychologicalComplicityExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Accepting Darkness
-"${ANNOTATED_EXAMPLES.acceptingDarknessExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.acceptingDarknessExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Silent Reconnection
-"${ANNOTATED_EXAMPLES.silentReconnectionExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.silentReconnectionExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Burnout Monologue
-"${ANNOTATED_EXAMPLES.burnoutMonologueExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.burnoutMonologueExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Memory Erasure
-"${ANNOTATED_EXAMPLES.memoryErasureExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.memoryErasureExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Dark Empowerment
-"${ANNOTATED_EXAMPLES.darkEmpowermentExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.darkEmpowermentExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Physical Decay As Trauma
-"${ANNOTATED_EXAMPLES.physicalDecayAsTraumaExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.physicalDecayAsTraumaExample.annotations.map(a => `- ${a}`).join('\n')}
-
-## ANNOTATED EXAMPLE: Victim Humanization
-"${ANNOTATED_EXAMPLES.victimHumanizationExample.passage}"
-
-WHY THIS WORKS:
-${ANNOTATED_EXAMPLES.victimHumanizationExample.annotations.map(a => `- ${a}`).join('\n')}
-
----
-
-## WHAT NOT TO WRITE - NEGATIVE EXAMPLES
-
-### BAD: Telling Instead of Showing
-"${NEGATIVE_EXAMPLES.tellDontShow.badVersion}"
-
-PROBLEMS:
-${NEGATIVE_EXAMPLES.tellDontShow.problems.map(p => `- ${p}`).join('\n')}
-
-### GOOD VERSION:
-"${NEGATIVE_EXAMPLES.tellDontShow.goodVersion}"
-
----
-
-### BAD: Overwritten Dialogue
-"${NEGATIVE_EXAMPLES.overwrittenDialogue.badVersion}"
-
-PROBLEMS:
-${NEGATIVE_EXAMPLES.overwrittenDialogue.problems.map(p => `- ${p}`).join('\n')}
-
-### GOOD VERSION:
-"${NEGATIVE_EXAMPLES.overwrittenDialogue.goodVersion}"
-
----
-
-### BAD: Flat Pacing
-"${NEGATIVE_EXAMPLES.flatPacing.badVersion}"
-
-PROBLEMS:
-${NEGATIVE_EXAMPLES.flatPacing.problems.map(p => `- ${p}`).join('\n')}
-
-### GOOD VERSION:
-"${NEGATIVE_EXAMPLES.flatPacing.goodVersion}"
-
----
-
-### BAD: Heavy Foreshadowing
-"${NEGATIVE_EXAMPLES.heavyForeshadowing.badVersion}"
-
-PROBLEMS:
-${NEGATIVE_EXAMPLES.heavyForeshadowing.problems.map(p => `- ${p}`).join('\n')}
-
-### GOOD VERSION:
-"${NEGATIVE_EXAMPLES.heavyForeshadowing.goodVersion}"
 `;
 };
 
 // ============================================================================
-// MANY-SHOT SCENE EXAMPLES - Pattern learning from Mystic River
+// MANY-SHOT SCENE EXAMPLES - retired, see buildManyShotExamples below
 // ============================================================================
-const getRotatedScenes = (scenes = [], takeCount, rotationSeed) => {
-  if (!Array.isArray(scenes) || scenes.length === 0) return [];
-  if (!Number.isFinite(rotationSeed) || rotationSeed <= 0) {
-    return scenes.slice(0, takeCount);
-  }
-  if (scenes.length <= takeCount) {
-    return scenes.slice(0, takeCount);
-  }
 
-  const offset = Math.abs(Math.floor(rotationSeed)) % scenes.length;
-  const rotated = [];
-  for (let i = 0; i < takeCount; i += 1) {
-    rotated.push(scenes[(offset + i) % scenes.length]);
-  }
-  return rotated;
-};
-
-export const buildManyShotExamples = (beatType, chapterBeatType, limit = 15, options = {}) => {
-  const { rotationSeed = null } = options;
-  const { categories } = getManyShotCategories(beatType, chapterBeatType);
-
-  // Get scenes from selected categories
-  const scenesPerCategory = Math.ceil(limit / categories.length);
-  const selectedScenes = categories.flatMap((category, idx) => {
-    const scenes = MANY_SHOT_SCENES[category] || [];
-    const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 13 : null;
-    return getRotatedScenes(scenes, scenesPerCategory, categorySeed);
-  }).slice(0, limit);
-
-  if (selectedScenes.length === 0 && categories.join('|') !== DEFAULT_MANY_SHOT_CATEGORIES.join('|')) {
-    const fallbackCategories = DEFAULT_MANY_SHOT_CATEGORIES;
-    const fallbackPerCategory = Math.ceil(limit / fallbackCategories.length);
-    const fallbackScenes = fallbackCategories.flatMap((category, idx) => {
-      const scenes = MANY_SHOT_SCENES[category] || [];
-      const categorySeed = Number.isFinite(rotationSeed) ? rotationSeed + idx * 17 : null;
-      return getRotatedScenes(scenes, fallbackPerCategory, categorySeed);
-    }).slice(0, limit);
-    if (fallbackScenes.length > 0) {
-      return `
-## MANY-SHOT LEARNING: ${fallbackCategories[0].toUpperCase()} SCENES
-Study these ${fallbackScenes.length} scene excerpts from Dennis Lehane's "Mystic River" to absorb patterns for ${fallbackCategories.map(c => {
-        const metadata = MANY_SHOT_METADATA[c];
-        return `${c} (${metadata?.totalExamples || 0} examples)`;
-      }).join(', ')}:
-
-${fallbackScenes.map((scene, i) => `---
-EXAMPLE ${i + 1}:
-${scene}
-`).join('\n')}
-
----
-These scenes demonstrate the natural rhythm, dialogue patterns, and emotional beats characteristic of masterful noir fiction. Let them guide your voice, pacing, and scene construction.
-`;
-    }
-  }
-
-  if (selectedScenes.length === 0) {
-    return ''; // No many-shot examples available
-  }
-
-  // Build the many-shot section
-  const categoryNames = categories.map(c => {
-    const metadata = MANY_SHOT_METADATA[c];
-    return `${c} (${metadata?.totalExamples || 0} examples)`;
-  }).join(', ');
-
-  return `
-## MANY-SHOT LEARNING: ${categories[0].toUpperCase()} SCENES
-Study these ${selectedScenes.length} scene excerpts from Dennis Lehane's "Mystic River" to absorb patterns for ${categoryNames}:
-
-${selectedScenes.map((scene, i) => `---
-EXAMPLE ${i + 1}:
-${scene}
-`).join('\n')}
-
----
-These scenes demonstrate the natural rhythm, dialogue patterns, and emotional beats characteristic of masterful noir fiction. Let them guide your voice, pacing, and scene construction.
-`;
+export const buildManyShotExamples = () => {
+  // Retired.
+  //
+  // This injected roughly 4,700 words per request: fifteen 300-word excerpts of
+  // Dennis Lehane's "Mystic River", introduced to the model as the scenes to
+  // "absorb patterns" from. Three problems, each on its own decisive.
+  //
+  // It was the wrong register. That corpus is 1990s Boston working-class crime
+  // drama; Dead Letters is a science-fiction mystery about mapping a hidden
+  // layer of a rain-soaked modern city. With this block dominating the prompt,
+  // the model matched what it was shown rather than what it was told.
+  //
+  // It was the wrong FORM. Every one of the 345 excerpts is a single unbroken
+  // paragraph with the dialogue run together (the chunker that built them
+  // collapsed newlines), and several open with OCR'd book front matter. The game
+  // renders prose in a paged reader, so a wall of text is the worst possible
+  // demonstration.
+  //
+  // And it was a copyrighted novel being sent verbatim to a model that is then
+  // asked to write in the same voice, which is both a legal exposure for a
+  // shipping product and a standing invitation to the recitation filter that the
+  // rest of this pipeline works hard to avoid.
+  //
+  // The style exemplars in storyBible.js now carry this job: fourteen original
+  // Dead Letters scenes at the real 380-420 word target, with real paragraph
+  // structure and no em dashes. Dropping this block also removes about 20k
+  // tokens from every cached prefix.
+  //
+  // Kept as a no-op rather than deleted so the cache-signature plumbing that
+  // reads its output keeps working.
+  return '';
 };
 
 // ============================================================================
