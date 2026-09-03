@@ -6,13 +6,12 @@ import { fillTemplate } from './helpers';
 import {
   DECISION_CONTENT_SCHEMA,
   DECISION_CONTENT_LAYER1_SCHEMA,
-  DECISION_ONLY_SCHEMA,
   PATHDECISIONS_ONLY_SCHEMA,
   STORY_CONTENT_SCHEMA,
   STORY_CONTENT_LAYER1_SCHEMA,
   SECOND_CHOICE_RESPONSES_SCHEMA,
 } from './schemas';
-import { isLayer1Partial, mergeSecondChoiceResponses } from './lazyBranching';
+
 import { isChapterStartCacheKey } from './promptAssembly';
 import {
   DECISION_SUBCHAPTER,
@@ -102,87 +101,13 @@ const normalizeBranchingChoices = (choices = []) => {
     .filter(Boolean);
 };
 
-/**
- * Generate decision structure first (Pass 1 of two-pass generation)
- * This ensures decisions are always complete and contextually appropriate,
- * preventing truncation from producing generic placeholder choices
- */
-async function _generateDecisionStructure(context, chapter) {
-  const { protagonist, setting } = ABSOLUTE_FACTS;
-  const decisionPrompt = `You are planning a critical decision point for Chapter ${chapter} of "Dead Letters."
+// NOTE: `_generateDecisionStructure` (a two-pass decision generator) used to sit
+// here. Generation went single-pass with context caching -- the decision field is
+// ordered before the narrative in the schema, so it can never be truncated away
+// -- and nothing has called this since. It carried its own prompt, its own schema
+// and a hand-written fallback decision that would have been indistinguishable
+// from generated content if anything ever had.
 
-## CURRENT STORY STATE
-${context.storySummary || `${protagonist.fullName} is investigating a pattern of symbols and disappearances in ${setting.city}.`}
-
-## RECENT EVENTS
-${context.previousChapterSummary || `${protagonist.fullName} received another dead letter with an impossible glyph string.`}
-
-## ACTIVE NARRATIVE THREADS
-${context.narrativeThreads?.filter(t => t.status === 'active').slice(0, 5).map(t => `- [${t.urgency}] ${t.description}`).join('\n') || '- No active threads'}
-
-## PATH PERSONALITY
-${protagonist.fullName} has been playing ${context.pathPersonality?.narrativeStyle || 'a balanced approach'}.
-Risk tolerance: ${context.pathPersonality?.riskTolerance || 'moderate'}
-
-## CHAPTER BEAT TYPE
-This chapter's required beat: ${STORY_STRUCTURE.chapterBeatTypes?.[chapter] || 'STANDARD'}
-
-## YOUR TASK
-Design a meaningful binary decision that:
-1. Emerges naturally from the story situation
-2. Has NO obvious "right" answer - both options have real costs
-3. Connects to themes of certainty vs doubt, perception vs reality, and the cost of following a pattern
-4. Fits the player's established personality while challenging them
-5. Creates genuinely different story branches
-
-Generate the decision structure FIRST. This will guide the narrative that leads to it.`;
-
-  console.log(`[StoryGenerationService] Two-pass generation: Generating decision structure for Chapter ${chapter}`);
-
-  const response = await llmService.complete(
-    [{ role: 'user', content: decisionPrompt }],
-    {
-      systemPrompt: 'You are a narrative designer creating morally complex choices for a mystery thriller. Every decision must have real stakes and no clear "correct" answer.',
-      maxTokens: GENERATION_CONFIG.maxTokens.outline,
-      responseSchema: DECISION_ONLY_SCHEMA,
-    }
-  );
-
-  try {
-    const parsed = typeof response.content === 'string'
-      ? JSON.parse(response.content)
-      : response.content;
-
-    console.log(`[StoryGenerationService] Decision structure generated: "${parsed.decision?.optionA?.title}" vs "${parsed.decision?.optionB?.title}"`);
-
-    return parsed;
-  } catch (error) {
-    console.error('[StoryGenerationService] Failed to parse decision structure:', error);
-    // Return a valid fallback structure
-    return {
-      decisionContext: 'Jack faces an impossible choice about the hidden world.',
-      decision: {
-        intro: 'What he has seen forces a belief about the Under-Map, and the reading he commits to will shape what it shows him next.',
-        optionA: {
-          key: 'A',
-          title: 'The map is reaching for you',
-          focus: 'It believes the hidden world is drawing Jack in deliberately, that he is being chosen. Risks trusting something that may only be baiting him deeper.',
-          personalityAlignment: 'balanced',
-          narrativeSetup: 'The signs all seem aimed at him, too precise to be accident.',
-        },
-        optionB: {
-          key: 'B',
-          title: 'You are a crack it leaks through',
-          focus: 'It believes Jack is an accident the hidden world is bleeding through, not an invitation. Risks treating a deliberate hand as mere chance.',
-          personalityAlignment: 'balanced',
-          narrativeSetup: 'The wrongness feels less like a summons and more like a wound.',
-        },
-      },
-      keyMoments: ['Building tension', 'Key revelation', 'Forced choice'],
-      emotionalArc: 'Tension building to difficult choice',
-    };
-  }
-}
 
 // ==========================================================================
 // GENERATION CONCURRENCY CONTROL
@@ -1550,7 +1475,6 @@ async function generateSecondChoiceResponses(afterChoice, branchingNarrative, op
 }
 
 export const generationMethods = {
-  _generateDecisionStructure,
   _waitForGenerationSlot,
   _acquireGenerationSlot,
   _releaseGenerationSlot,

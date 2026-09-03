@@ -185,7 +185,7 @@ async function resetGeneratedContent() {
   this.storyArc = null;
   this.indexedFacts = null;
   this.pathPersonality = null;
-  this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+  this.dynamicPersonalityCache = new Map();
   this._currentDynamicClusters = null;
   // The chapter-start prefix caches are keyed by the prior story text, which no
   // longer exists; keeping them would prime a fresh run with the old one.
@@ -219,7 +219,7 @@ function destroy() {
   this.consistencyLog = [];
   this.narrativeThreads = [];
   this.pathPersonality = null;
-  this.dynamicPersonalityCache = { choiceHistoryHash: null, personality: null, timestamp: null };
+  this.dynamicPersonalityCache = new Map();
   this.tokenUsage = { totalPromptTokens: 0, totalCachedTokens: 0, totalCompletionTokens: 0, totalTokens: 0, callCount: 0, sessionStart: Date.now() };
   this.isGenerating = false;
 

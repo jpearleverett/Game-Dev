@@ -46,11 +46,9 @@ class StoryGenerationService {
 
     // ========== Dynamic Personality Classification ==========
     // LLM-based player personality analysis (cached by choice history hash)
-    this.dynamicPersonalityCache = {
-      choiceHistoryHash: null,
-      personality: null,
-      timestamp: null,
-    };
+    // hash -> personality. Bounded; two speculative branches classify different
+    // histories concurrently, and a single-entry cache had them evict each other.
+    this.dynamicPersonalityCache = new Map();
 
     // ========== NEW: Story Arc Planning System ==========
     this.storyArc = null; // Global story arc generated at start for consistency

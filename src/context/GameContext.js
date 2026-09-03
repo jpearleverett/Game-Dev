@@ -633,6 +633,14 @@ export function GameProvider({
       if (!pendingDecisionOptions.A && sd?.options?.[0]) pendingDecisionOptions[sd.options[0].key || 'A'] = { title: sd.options[0].title, focus: sd.options[0].focus };
       if (!pendingDecisionOptions.B && sd?.options?.[1]) pendingDecisionOptions[sd.options[1].key || 'B'] = { title: sd.options[1].title, focus: sd.options[1].focus };
 
+      // Where the advance WILL land, derived from the completed case before the
+      // write. Reading it out of the updater assumed the updater had run by the
+      // time the next line executed, which React does not promise: a batched or
+      // deferred commit left this null and the active case was never switched.
+      const targetCaseNumber = isFinalSubchapter
+        ? formatCaseNumber(chapter + 1, 1)
+        : formatCaseNumber(chapter, subchapter + 1);
+      let didAdvance = false;
       let advancedCaseNumber = null;
       let checkpointPathKey = null;
 
@@ -654,6 +662,7 @@ export function GameProvider({
               optionFocus: pre.optionFocus,
               timestamp: pre.timestamp,
             });
+            didAdvance = true;
             advancedCaseNumber = updatedStory.activeCaseNumber;
             checkpointPathKey = updatedStory.currentPathKey;
             return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
@@ -676,18 +685,20 @@ export function GameProvider({
 
         if (targetOrder <= curOrder) return null; // already advanced past this subchapter
         const updatedStory = advanceSubchapter(current, caseNumber, { startedAt: nowIso });
+        didAdvance = true;
         advancedCaseNumber = updatedStory.activeCaseNumber;
         return { storyCampaign: updatedStory, nextUnlockAt: updatedStory.nextStoryUnlockAt };
       });
 
-      if (advancedCaseNumber) {
-        const nextCase = getCaseByNumber(advancedCaseNumber);
+      if (didAdvance || advancedCaseNumber) {
+        const landedOn = advancedCaseNumber || targetCaseNumber;
+        const nextCase = getCaseByNumber(landedOn);
         if (nextCase?.id) setActiveCaseInternal(nextCase.id);
         // Record the chapter boundary the player just crossed. Chapter Select
         // unlocks after the finale and lists all twelve chapters, but nothing
         // ever wrote a checkpoint, so every tap there found an empty list and
         // did nothing at all: no navigation, no message.
-        const advanced = parseCaseNumber(advancedCaseNumber);
+        const advanced = parseCaseNumber(landedOn);
         if (advanced.subchapter === 1 && advanced.chapter > 1) {
           saveChapterCheckpointRef.current?.(advanced.chapter, 1, checkpointPathKey || 'ROOT');
         }

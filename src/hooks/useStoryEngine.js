@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { normalizeStoryCampaignShape, computeStoryUnlockAt, formatCaseNumber } from '../utils/gameLogic';
 import { resolveStoryPathKey, getStoryEntry, computeBranchPathKey } from '../data/storyContent';
-import { advanceWithDecision, CHAPTER_UNLOCK_DELAY_MS, FIRST_GATED_CHAPTER } from '../utils/storyAdvance';
+import { advanceWithDecision, caseOrder, CHAPTER_UNLOCK_DELAY_MS, FIRST_GATED_CHAPTER } from '../utils/storyAdvance';
 import { log } from '../utils/llmTrace';
 
 export function useStoryEngine(progress, updateProgress) {
@@ -94,8 +94,13 @@ export function useStoryEngine(progress, updateProgress) {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       const preDecision = current.preDecision;
       if (!preDecision) return null;
-      if (preDecision.caseNumber !== current.activeCaseNumber) {
-        console.warn('[useStoryEngine] Pre-decision case mismatch:', preDecision.caseNumber, 'vs', current.activeCaseNumber);
+      // FORWARD-ONLY, not equality. An exact match against activeCaseNumber is
+      // the same guard that once stranded the campaign: any drift between the
+      // navigation and the campaign (a background write landing between the seal
+      // and this call) dropped the decision on the floor, and with it the whole
+      // advance. Only a decision the campaign has already moved PAST is stale.
+      if (caseOrder(preDecision.caseNumber) < caseOrder(current.activeCaseNumber)) {
+        console.warn('[useStoryEngine] Pre-decision is behind the campaign:', preDecision.caseNumber, 'vs', current.activeCaseNumber);
         return null;
       }
       const updatedStory = advanceWithDecision(current, {

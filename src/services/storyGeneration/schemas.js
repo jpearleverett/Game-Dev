@@ -530,6 +530,9 @@ export const SECOND_CHOICE_RESPONSES_SCHEMA = {
 // ============================================================================
 // DECISION-ONLY SCHEMA - Used for 2-pass generation (decision structure only)
 // ============================================================================
+// UNUSED since generation went single-pass (the decision field is ordered before
+// the narrative, so it cannot be truncated away). Kept as the shape a future
+// decision-only call would want; nothing imports it today.
 export const DECISION_ONLY_SCHEMA = {
   type: 'object',
   properties: {

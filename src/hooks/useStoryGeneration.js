@@ -1248,144 +1248,149 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
    * both paths are generated in TRUE parallel to eliminate cache miss latency.
    */
   const pregenerate = useCallback(async (currentChapter, pathKey, choiceHistory = []) => {
+    // Every other background path brackets itself with begin/endBackgroundGeneration,
+    // which restores the status on a depth counter. This one wrote
+    // setStatus(GENERATING) directly and never cleared it, so once a speculative
+    // pre-generation ran, the app reported "generating" for the rest of the
+    // session: the Desk's spinner never stopped and the overlay logic that keys
+    // off it could not tell a real wait from a finished one.
     if (!isConfigured || currentChapter >= 12) {
       return;
     }
+    beginBackgroundGeneration();
+    try {
 
-    // ========== TIER 1: Immediate next chapter (highest priority) ==========
-    const nextChapter = currentChapter + 1;
-    const firstCaseOfNextChapter = `${String(nextChapter).padStart(3, '0')}A`;
+      // ========== TIER 1: Immediate next chapter (highest priority) ==========
+      const nextChapter = currentChapter + 1;
+      const firstCaseOfNextChapter = `${String(nextChapter).padStart(3, '0')}A`;
 
-    // Predict which path player is more likely to choose
-    const prediction = predictNextPath(choiceHistory);
+      // Predict which path player is more likely to choose
+      const prediction = predictNextPath(choiceHistory);
 
-    // Store prediction for cache miss detection
-    lastPredictionRef.current = prediction;
+      // Store prediction for cache miss detection
+      lastPredictionRef.current = prediction;
 
-    // ========== BALANCED PLAYER DETECTION ==========
-    // For balanced players (low confidence OR explicitly balanced personality),
-    // generate BOTH paths immediately in true parallel to eliminate wait times
-    const isBalancedPlayer = prediction.playerPersonality === 'balanced' ||
-                             prediction.confidence < 0.70;
+      // ========== BALANCED PLAYER DETECTION ==========
+      // For balanced players (low confidence OR explicitly balanced personality),
+      // generate BOTH paths immediately in true parallel to eliminate wait times
+      const isBalancedPlayer = prediction.playerPersonality === 'balanced' ||
+                               prediction.confidence < 0.70;
 
-    // Check what needs generation upfront (parallel async checks)
-    const speculativeHistoryPrimary = [
-      ...choiceHistory,
-      {
-        caseNumber: formatCaseNumber(currentChapter, 3),
-        optionKey: prediction.primary,
-        timestamp: new Date().toISOString()
-      }
-    ];
-
-    const speculativeHistorySecondary = [
-      ...choiceHistory,
-      {
-        caseNumber: formatCaseNumber(currentChapter, 3),
-        optionKey: prediction.secondary,
-        timestamp: new Date().toISOString()
-      }
-    ];
-
-    // Compute cumulative branch keys for next chapter for each speculative decision.
-    const primaryNextPathKey = computeBranchPathKey(speculativeHistoryPrimary, nextChapter);
-    const secondaryNextPathKey = computeBranchPathKey(speculativeHistorySecondary, nextChapter);
-
-    const [needsPrimaryGen, needsSecondaryGen] = await Promise.all([
-      needsGeneration(firstCaseOfNextChapter, primaryNextPathKey),
-      needsGeneration(firstCaseOfNextChapter, secondaryNextPathKey),
-    ]);
-
-    // ========== SEQUENTIAL GENERATION FOR BALANCED PLAYERS ==========
-    // Mobile networks struggle with concurrent long-running requests, so we run them one at a time.
-    if (isBalancedPlayer) {
-      log.debug('useStoryGeneration', `Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}). Generating both paths.`);
-
-      setStatus(GENERATION_STATUS.GENERATING);
-      setGenerationType(GENERATION_TYPE.PRELOAD);
-
-      // Generate primary path first, then secondary
-      if (needsPrimaryGen) {
-        await generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
-      }
-      if (needsSecondaryGen) {
-        await generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
-      }
-    } else {
-      // ========== CONFIDENT PREDICTION: Prioritize primary path ==========
-      // Sequential generation to avoid overwhelming mobile networks
-      if (needsPrimaryGen) {
-        setStatus(GENERATION_STATUS.GENERATING);
-        setGenerationType(GENERATION_TYPE.PRELOAD);
-        await generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
-      }
-
-      // Generate secondary path if:
-      // 1. Primary is already generated, OR
-      // 2. Player has made many choices (has shown varied behavior)
-      const shouldGenerateSecondary = !needsPrimaryGen || choiceHistory.length >= 3;
-
-      if (shouldGenerateSecondary && needsSecondaryGen) {
-        setStatus(GENERATION_STATUS.GENERATING);
-        setGenerationType(GENERATION_TYPE.PRELOAD);
-        await generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
-      }
-    }
-
-    // ========== TIER 2: Two chapters ahead (lower priority, speculative) ==========
-    // Only generate if next chapter is already mostly ready and we're past early game
-    if (currentChapter >= 3 && nextChapter < 12 && !needsPrimaryGen) {
-      const twoAheadChapter = currentChapter + 2;
-      const firstCaseTwoAhead = `${String(twoAheadChapter).padStart(3, '0')}A`;
-
-      // Build speculative history for two chapters ahead (assume primary path for both)
-      const speculativeHistoryTier2 = [
+      // Check what needs generation upfront (parallel async checks)
+      const speculativeHistoryPrimary = [
         ...choiceHistory,
         {
           caseNumber: formatCaseNumber(currentChapter, 3),
           optionKey: prediction.primary,
           timestamp: new Date().toISOString()
-        },
+        }
+      ];
+
+      const speculativeHistorySecondary = [
+        ...choiceHistory,
         {
-          caseNumber: formatCaseNumber(nextChapter, 3),
-          optionKey: prediction.primary, // Assume same pattern continues
+          caseNumber: formatCaseNumber(currentChapter, 3),
+          optionKey: prediction.secondary,
           timestamp: new Date().toISOString()
         }
       ];
 
-      const tier2PathKey = computeBranchPathKey(speculativeHistoryTier2, twoAheadChapter);
-      const needsTier2Gen = await needsGeneration(firstCaseTwoAhead, tier2PathKey);
+      // Compute cumulative branch keys for next chapter for each speculative decision.
+      const primaryNextPathKey = computeBranchPathKey(speculativeHistoryPrimary, nextChapter);
+      const secondaryNextPathKey = computeBranchPathKey(speculativeHistorySecondary, nextChapter);
 
-      if (needsTier2Gen) {
-        // Use a slight delay to prioritize Tier 1 completion
-        // Track timeout for cleanup on unmount
-        const timeoutId = setTimeout(async () => {
-          pendingTimeoutsRef.current.delete(timeoutId);
+      const [needsPrimaryGen, needsSecondaryGen] = await Promise.all([
+        needsGeneration(firstCaseOfNextChapter, primaryNextPathKey),
+        needsGeneration(firstCaseOfNextChapter, secondaryNextPathKey),
+      ]);
 
-          // Guard against unmounted component
-          if (!isMountedRef.current) return;
+      // ========== SEQUENTIAL GENERATION FOR BALANCED PLAYERS ==========
+      // Mobile networks struggle with concurrent long-running requests, so we run them one at a time.
+      if (isBalancedPlayer) {
+        log.debug('useStoryGeneration', `Balanced player detected (confidence: ${prediction.confidence.toFixed(2)}). Generating both paths.`);
 
-          setGenerationType(GENERATION_TYPE.PRELOAD);
-          // Only generate first subchapter of Tier 2 to save resources
-          const tier2CaseNumber = firstCaseTwoAhead;
-          const { chapter: tier2Chapter, subchapter: tier2Sub } = parseCaseNumber(tier2CaseNumber);
-          try {
-            await storyGenerationService.generateSubchapter(
-              tier2Chapter,
-              tier2Sub,
-              tier2PathKey,
-              speculativeHistoryTier2,
-              withQualitySettings()
-            );
-          } catch (err) {
-            console.warn('[useStoryGeneration] Tier 2 pre-load failed:', err.message);
-          }
-        }, 5000); // 5 second delay to prioritize Tier 1
 
-        pendingTimeoutsRef.current.add(timeoutId);
+        // Generate primary path first, then secondary
+        if (needsPrimaryGen) {
+          await generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
+        }
+        if (needsSecondaryGen) {
+          await generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
+        }
+      } else {
+        // ========== CONFIDENT PREDICTION: Prioritize primary path ==========
+        // Sequential generation to avoid overwhelming mobile networks
+        if (needsPrimaryGen) {
+          await generateChapter(nextChapter, primaryNextPathKey, speculativeHistoryPrimary, { silent: true });
+        }
+
+        // Generate secondary path if:
+        // 1. Primary is already generated, OR
+        // 2. Player has made many choices (has shown varied behavior)
+        const shouldGenerateSecondary = !needsPrimaryGen || choiceHistory.length >= 3;
+
+        if (shouldGenerateSecondary && needsSecondaryGen) {
+          await generateChapter(nextChapter, secondaryNextPathKey, speculativeHistorySecondary, { silent: true });
+        }
       }
+
+      // ========== TIER 2: Two chapters ahead (lower priority, speculative) ==========
+      // Only generate if next chapter is already mostly ready and we're past early game
+      if (currentChapter >= 3 && nextChapter < 12 && !needsPrimaryGen) {
+        const twoAheadChapter = currentChapter + 2;
+        const firstCaseTwoAhead = `${String(twoAheadChapter).padStart(3, '0')}A`;
+
+        // Build speculative history for two chapters ahead (assume primary path for both)
+        const speculativeHistoryTier2 = [
+          ...choiceHistory,
+          {
+            caseNumber: formatCaseNumber(currentChapter, 3),
+            optionKey: prediction.primary,
+            timestamp: new Date().toISOString()
+          },
+          {
+            caseNumber: formatCaseNumber(nextChapter, 3),
+            optionKey: prediction.primary, // Assume same pattern continues
+            timestamp: new Date().toISOString()
+          }
+        ];
+
+        const tier2PathKey = computeBranchPathKey(speculativeHistoryTier2, twoAheadChapter);
+        const needsTier2Gen = await needsGeneration(firstCaseTwoAhead, tier2PathKey);
+
+        if (needsTier2Gen) {
+          // Use a slight delay to prioritize Tier 1 completion
+          // Track timeout for cleanup on unmount
+          const timeoutId = setTimeout(async () => {
+            pendingTimeoutsRef.current.delete(timeoutId);
+
+            // Guard against unmounted component
+            if (!isMountedRef.current) return;
+
+            setGenerationType(GENERATION_TYPE.PRELOAD);
+            // Only generate first subchapter of Tier 2 to save resources
+            const tier2CaseNumber = firstCaseTwoAhead;
+            const { chapter: tier2Chapter, subchapter: tier2Sub } = parseCaseNumber(tier2CaseNumber);
+            try {
+              await storyGenerationService.generateSubchapter(
+                tier2Chapter,
+                tier2Sub,
+                tier2PathKey,
+                speculativeHistoryTier2,
+                withQualitySettings()
+              );
+            } catch (err) {
+              console.warn('[useStoryGeneration] Tier 2 pre-load failed:', err.message);
+            }
+          }, 5000); // 5 second delay to prioritize Tier 1
+
+          pendingTimeoutsRef.current.add(timeoutId);
+        }
+      }
+    } finally {
+      endBackgroundGeneration();
     }
-  }, [isConfigured, needsGeneration, generateChapter, predictNextPath, withQualitySettings]);
+  }, [isConfigured, needsGeneration, generateChapter, predictNextPath, withQualitySettings, beginBackgroundGeneration, endBackgroundGeneration]);
 
   /**
    * Cancel ongoing generation

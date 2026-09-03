@@ -52,10 +52,10 @@ async function _classifyPersonalityDynamic(choiceHistory) {
 
   // Check cache - if choice history hasn't changed, use cached result
   const currentHash = this._hashChoiceHistory(choiceHistory);
-  if (this.dynamicPersonalityCache.choiceHistoryHash === currentHash &&
-      this.dynamicPersonalityCache.personality) {
+  const cached = this.dynamicPersonalityCache.get(currentHash);
+  if (cached) {
     log.debug('StoryGen', '🧠 Using cached personality classification');
-    return this.dynamicPersonalityCache.personality;
+    return cached;
   }
 
   log.debug('StoryGen', `🧠 Classifying player personality (${choiceHistory.length} choices)...`);
@@ -136,12 +136,14 @@ Respond with a JSON object containing:
       source: 'llm-dynamic',
     };
 
-    // Cache the result
-    this.dynamicPersonalityCache = {
-      choiceHistoryHash: currentHash,
-      personality,
-      timestamp: Date.now(),
-    };
+    // Cache the result. Keyed by hash and BOUNDED, because two speculative
+    // branches classify different histories concurrently: a single-entry cache
+    // meant each one evicted the other and both re-ran the round trip every time.
+    this.dynamicPersonalityCache.set(currentHash, personality);
+    if (this.dynamicPersonalityCache.size > 8) {
+      const oldest = this.dynamicPersonalityCache.keys().next().value;
+      this.dynamicPersonalityCache.delete(oldest);
+    }
 
     log.debug('StoryGen', `🧠 Personality: ${personality.dominantStyle} - "${personality.narrativeStyle}"${personality.characterInsight ? ` (${personality.characterInsight})` : ''}`);
 
@@ -240,4 +242,34 @@ export const personalityMethods = {
   _hashChoiceHistoryForCache,
   _classifyPersonalityDynamic,
   _analyzePathPersonality,
+  _cachedPersonalityFor,
+  _refreshPersonalityInBackground,
 };
+
+/**
+ * The classification already in hand for this history, or null. Synchronous.
+ */
+function _cachedPersonalityFor(choiceHistory) {
+  if (!choiceHistory || choiceHistory.length === 0) return null;
+  try {
+    return this.dynamicPersonalityCache.get(this._hashChoiceHistory(choiceHistory)) || null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+/**
+ * Warm the classification for NEXT time without blocking this generation.
+ *
+ * The classifier is a real LLM round trip and it ran first in buildStoryContext,
+ * before a single prompt block was assembled: every cache miss put a full
+ * request in front of the scene the player is waiting for, to choose an
+ * adjective. The keyword analyzer covers the gap in the meantime.
+ */
+function _refreshPersonalityInBackground(choiceHistory) {
+  if (!choiceHistory || choiceHistory.length === 0) return;
+  try {
+    if (this._cachedPersonalityFor(choiceHistory)) return;
+    this._classifyPersonalityDynamic(choiceHistory).catch(() => {});
+  } catch (_e) { /* never block generation on this */ }
+}

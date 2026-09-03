@@ -1261,8 +1261,15 @@ class LLMService {
         let data = null;
         let parsedHeartbeatCount = 0;
 
-        // Detect format: SSE has "data: " prefix, NDJSON doesn't
-        const isSSE = responseText.includes('data: ');
+        // Which framing this text uses. The react-native-sse transport hands back
+        // payloads with the "data: " prefix ALREADY stripped, so its text is
+        // NDJSON; only the raw-body transports carry SSE framing. This used to be
+        // a substring test over the whole response, so a scene whose prose
+        // happened to contain "data: " anywhere was parsed as SSE, every line
+        // failed to match, and the whole generation came back empty. Decide from
+        // the transport, and fall back to a line-anchored check.
+        const isSSE = streamingMethod !== 'sse'
+          && responseText.split('\n').some((line) => line.startsWith('data: '));
 
         if (isSSE) {
           // SSE format: split by double newlines, strip "data: " prefix

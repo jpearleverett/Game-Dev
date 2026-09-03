@@ -37,13 +37,14 @@ async function buildStoryContext(targetChapter, targetSubchapter, pathKey, choic
   // Analyze player's path personality for narrative consistency
   // Use dynamic LLM-based classification for richer personality insights
   // Falls back to keyword-based analysis if LLM fails
-  let pathPersonality;
-  try {
-    pathPersonality = await this._classifyPersonalityDynamic(choiceHistory);
-  } catch (error) {
-    console.warn('[StoryGenerationService] Dynamic personality classification failed, using keyword fallback');
-    pathPersonality = this._analyzePathPersonality(choiceHistory);
-  }
+  // Off the critical path. This awaited a full LLM round trip FIRST, before a
+  // single prompt block was assembled, so every cache miss put an extra request
+  // in front of the scene the player is waiting on — to choose an adjective. Use
+  // whatever classification is already in hand, fall back to the synchronous
+  // keyword analyzer, and warm the richer one for next time.
+  const pathPersonality = this._cachedPersonalityFor(choiceHistory)
+    || this._analyzePathPersonality(choiceHistory);
+  this._refreshPersonalityInBackground(choiceHistory);
   this.pathPersonality = pathPersonality;
 
   // Build cumulative decision consequences
