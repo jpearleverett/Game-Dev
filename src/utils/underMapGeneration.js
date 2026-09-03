@@ -1,4 +1,4 @@
-const UNDER_MAP_EMPTY_SIGNATURE = 'empty';
+export const UNDER_MAP_EMPTY_SIGNATURE = 'empty';
 const EMPTY_PARTS_SIGNATURE = ['', '', '', '', ''].join('::');
 
 export function underMapGenerationSignature(underMap) {

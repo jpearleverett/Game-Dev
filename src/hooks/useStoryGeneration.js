@@ -11,7 +11,7 @@ import { AppState } from 'react-native';
 import { storyGenerationService } from '../services/StoryGenerationService';
 import { llmService } from '../services/LLMService';
 import { createTraceId, llmTrace, log } from '../utils/llmTrace';
-import { compactUnderMapSignature, underMapGenerationSignature } from '../utils/underMapGeneration';
+import { compactUnderMapSignature, underMapGenerationSignature, UNDER_MAP_EMPTY_SIGNATURE } from '../utils/underMapGeneration';
 import {
   isDynamicChapter,
   hasStoryContent,
@@ -456,11 +456,17 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
     const { chapter, subchapter } = parseCaseNumber(caseNumber);
     const canonicalPathKey = computeBranchPathKey(choiceHistory, chapter) || pathKey;
     const contentKey = `${caseNumber}_${canonicalPathKey}`;
-    const requiredUnderMapSignature = generationOptions.requireFreshUnderMap && generationOptions.underMap
+    const rawRequiredSignature = generationOptions.requireFreshUnderMap && generationOptions.underMap
       ? underMapGenerationSignature(generationOptions.underMap)
       : generationOptions.requireFreshUnderMap
         ? generationOptions.requiredUnderMapSignature || null
         : null;
+    // A map with nothing in it constrains nothing, so demanding a match against
+    // the empty sentinel only guarantees a miss — which is every gate in
+    // chapters 1-2, the ones that decide whether a player keeps playing.
+    const requiredUnderMapSignature = rawRequiredSignature && rawRequiredSignature !== UNDER_MAP_EMPTY_SIGNATURE
+      ? rawRequiredSignature
+      : null;
 
     // Skip if not dynamic
     if (!isDynamicChapter(caseNumber)) {
@@ -539,11 +545,16 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         withQualitySettings({
           traceId,
           reason: 'immediate-generateForCase',
-          isUserFacing: true, // Never show fallback to player
+          // Never show a fallback to the player — and, since the slot queue now
+          // honours this, drain ahead of any speculative prefetch already queued.
+          isUserFacing: true,
           branchingChoices: effectiveBranchingChoices, // TRUE INFINITE BRANCHING
           underMap: generationOptions.underMap || underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
           forceRegenerate: !!requiredUnderMapSignature,
           refreshKey: requiredUnderMapSignature ? compactUnderMapSignature(requiredUnderMapSignature) : null,
+          // Let the service accept an entry that already satisfies this instead
+          // of forcing a duplicate generation of a scene that just landed.
+          requiredUnderMapSignature,
         })
       );
 
@@ -839,6 +850,17 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
 
     // Check if generation is needed (should be true since we don't prefetch anymore)
     const underMapSnapshot = options?.underMapSnapshot || null;
+    // This prefetch used to pass `underMap` but NO refreshKey, and never recorded
+    // the resulting signature. Both halves of that were fatal to its own purpose:
+    // the generation key stayed the bare `NNNX_PATH`, so a later signed prefetch
+    // for the same scene could not dedupe onto it; and because nothing wrote to
+    // generatedUnderMapSignaturesRef, the gate that consumes this scene could
+    // never accept it (the freshness check compares a RECORDED signature). So
+    // every A->B and B->C burned a full ~25s generation whose output was
+    // structurally unusable, while occupying one of only two slots — the slot
+    // the player's own request then queued behind.
+    const chainUnderMap = underMapSnapshot || underMapRef.current;
+    const chainSignature = chainUnderMap ? underMapGenerationSignature(chainUnderMap) : null;
     const needsGen = await needsGeneration(nextCaseNumber, pathKey);
 
     if (needsGen && isMountedRef.current) {
@@ -854,7 +876,8 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
           choiceHistory,
           withQualitySettings({
             branchingChoices,
-            underMap: underMapSnapshot || underMapRef.current, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+            underMap: chainUnderMap, // UNDER-MAP: steer next scene by collected fragments + sealed theory
+            refreshKey: chainSignature ? compactUnderMapSignature(chainSignature) : null,
             reason: underMapSnapshot
               ? 'triggerPrefetchAfterBranchingComplete:post-backfill-under-map'
               : 'triggerPrefetchAfterBranchingComplete:with-branching-context',
@@ -867,6 +890,11 @@ export function useStoryGeneration(storyCampaign, settings = {}) {
         const genDuration = Date.now() - genStartTime;
         if (entry && isMountedRef.current) {
           updateGeneratedCache(nextCaseNumber, pathKey, entry);
+          if (chainSignature) {
+            // Without this the scene is generated and stored but can never be
+            // ACCEPTED by a freshness-gated read.
+            generatedUnderMapSignaturesRef.current.set(`${nextCaseNumber}_${entry.pathKey || pathKey}`, chainSignature);
+          }
           console.log(`[useStoryGeneration] ✅ CHAIN COMPLETE: ${nextCaseNumber} generated in ${(genDuration/1000).toFixed(1)}s`);
         }
       } catch (err) {

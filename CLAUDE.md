@@ -336,6 +336,37 @@ behind cover the player is already spending:
 The cache-key contract these rely on lives in `src/utils/underMapGeneration.js`
 (`underMapGenerationSignature`).
 
+**GENERATION ECONOMY (measured on-device, 3.8 Flash).** A single A-beat transition
+generated the SAME scene THREE times in 51s and the player still waited 30s. Three
+independent mechanisms, all now fixed and guarded by `generationSlotPriority.test.js`:
+- **The A/B chain prefetch was unsigned.** `triggerPrefetchAfterBranchingComplete`
+  passed an `underMap` but no `refreshKey`, and never wrote to
+  `generatedUnderMapSignaturesRef`. Both halves were fatal to its own purpose: its
+  generation key stayed the bare `NNNX_PATH` so a later signed prefetch could not
+  dedupe onto it, and because no signature was recorded the freshness-gated read
+  could never ACCEPT its output. Every A→B and B→C burned a full ~25s generation
+  that was structurally unusable, while holding one of only two slots.
+- **The wait queue was strictly FIFO**, so the player's blocking request sat behind
+  speculative prefetches (5.2s of the 30s) — pure loss. `_releaseGenerationSlot` now
+  drains a `isUserFacing` waiter first. (The flag already existed and only affected
+  logging.) Do NOT "fix" this by raising `maxConcurrentGenerations`; 2 is the mobile
+  ceiling. Ordering is the lever.
+- **`forceRegenerate` skipped the post-wait existence re-check**, so a scene that
+  landed 2ms before the slot was granted was refused unseen and a third full
+  generation ran (25s of the 30s). What the gate actually needs is not "regenerate
+  regardless" but "an entry written against at least this Under-Map state", so the
+  signature is now stamped ONTO the stored entry (`storyEntry.underMapSignature` —
+  it is a field whitelist, invariant §5.3) and the re-check asks that question. This
+  also makes freshness survive a restart: it used to live only in a session-lifetime
+  ref, so every reload regenerated scenes already on disk.
+- ⚠️ **A canon-only signature (nodes/theories/foil, dropping fragments) was proposed
+  and REJECTED after review.** During a gated descent `resolveReading` touches only
+  nodes and connections, so canon and the full signature move in lockstep at exactly
+  the CONNECT gate the split was meant to fix — it would have loosened a real guard
+  and measured zero improvement. An empty map, however, genuinely constrains nothing,
+  so the `'empty'` sentinel is now treated as "no freshness requirement" (it is
+  truthy, and it is every gate in chapters 1-2).
+
 **LATENCY REALITY (on-device, 2026-06-09):** the above only hides generation when the
 generation FITS inside the cover window. On a Pixel 10 Pro a single scene takes **~70s**
 (measured on `gemini-3.5-flash`; `thinkingLevel: 'medium'`, ~84% cached prompt, ~3.9k completion
@@ -611,7 +642,8 @@ full-season state and asserts on the sentinels that come out:
 - **The verdict could land on the wrong belief.** `_normalizeBeliefResolution` snapped an
   unmatched chapter to `theories[0]`; with two outstanding that is a coin flip, and the
   prompt now asks for the OVERDUE one. It snaps only when unambiguous, else drops.
-- **Tests: 393.** New: `notificationsExpoGo` (pins the lazy expo-notifications import),
+- **Tests: 401.** New: `generationSlotPriority` (the slot economy + the three
+  fixes below), `notificationsExpoGo` (pins the lazy expo-notifications import),
   `audioController.expoAudio` (pins the expo-audio migration),
   `absoluteFillContract` (guards the removed `StyleSheet.absoluteFillObject`),
   `appConfigExtra` (the `extra` null-→-`{}` manifest contract), `lateChapterMemory`, `threadLedger`,

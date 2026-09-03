@@ -21,6 +21,7 @@ import {
 } from './constants';
 import { ABSOLUTE_FACTS, GENERATION_CONFIG, STORY_STRUCTURE } from '../../data/storyBible';
 import { saveGeneratedChapter } from '../../storage/generatedStoryStorage';
+import { underMapGenerationSignature } from '../../utils/underMapGeneration';
 
 // ==========================================================================
 // TWO-PASS DECISION GENERATION
@@ -117,10 +118,10 @@ const normalizeBranchingChoices = (choices = []) => {
  * Wait for a generation slot to become available
  * Called when we're at maxConcurrentGenerations capacity
  */
-async function _waitForGenerationSlot(generationKey) {
+async function _waitForGenerationSlot(generationKey, isUserFacing = false) {
   return new Promise((resolve, reject) => {
-    this.generationWaitQueue.push({ resolve, reject, key: generationKey });
-    console.log(`[StoryGenerationService] Generation ${generationKey} queued (${this.generationWaitQueue.length} waiting, ${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
+    this.generationWaitQueue.push({ resolve, reject, key: generationKey, isUserFacing });
+    console.log(`[StoryGenerationService] Generation ${generationKey} queued${isUserFacing ? ' (USER-FACING)' : ''} (${this.generationWaitQueue.length} waiting, ${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
   });
 }
 
@@ -129,7 +130,7 @@ async function _waitForGenerationSlot(generationKey) {
  * Returns true when slot is acquired
  * Throws if queue is too long (prevents queue explosion from aggressive prefetching)
  */
-async function _acquireGenerationSlot(generationKey) {
+async function _acquireGenerationSlot(generationKey, isUserFacing = false) {
   // Prevent queue explosion - reject if queue is already too long
   const MAX_QUEUE_SIZE = 6; // Allow some queuing but prevent explosion
   if (this.generationWaitQueue.length >= MAX_QUEUE_SIZE) {
@@ -144,7 +145,7 @@ async function _acquireGenerationSlot(generationKey) {
   }
 
   // At capacity - wait for a slot (sequential mode means waiting for current to finish)
-  await this._waitForGenerationSlot(generationKey);
+  await this._waitForGenerationSlot(generationKey, isUserFacing);
   this.activeGenerationCount++;
   console.log(`[StoryGenerationService] Acquired slot after wait for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active)`);
 }
@@ -156,10 +157,17 @@ function _releaseGenerationSlot(generationKey) {
   this.activeGenerationCount = Math.max(0, this.activeGenerationCount - 1);
   console.log(`[StoryGenerationService] Released slot for ${generationKey} (${this.activeGenerationCount}/${this.maxConcurrentGenerations} active, ${this.generationWaitQueue.length} waiting)`);
 
-  // Process next waiting generation if any
+  // Process next waiting generation if any. A player standing at a gate is
+  // drained before speculative work: the queue was strictly FIFO, so a
+  // user-facing request sat behind however many prefetches happened to be in
+  // flight — pure loss, since nothing the player can see is being produced by
+  // the work ahead of it. Raising maxConcurrentGenerations is NOT the fix (2 is
+  // the mobile ceiling, see CLAUDE.md); ordering is.
   if (this.generationWaitQueue.length > 0) {
-    const next = this.generationWaitQueue.shift();
-    console.log(`[StoryGenerationService] Unblocking queued generation: ${next.key}`);
+    let nextIndex = this.generationWaitQueue.findIndex((w) => w.isUserFacing);
+    if (nextIndex < 0) nextIndex = 0;
+    const [next] = this.generationWaitQueue.splice(nextIndex, 1);
+    console.log(`[StoryGenerationService] Unblocking queued generation: ${next.key}${next.isUserFacing ? ' (USER-FACING)' : ''}`);
     next.resolve();
   }
 }
@@ -199,6 +207,8 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // User-facing = player is actively waiting (clicked Continue)
   // Background = prefetching for future use
   // If user-facing, we NEVER show fallback - we throw errors and let UI handle retry
+  // Already threaded through by callers; until now it only affected logging and
+  // never the slot queue, so a player at a gate still waited behind speculation.
   const isUserFacing = options?.isUserFacing || false;
 
   // TRUE INFINITE BRANCHING: Get player's actual choices within subchapters
@@ -207,6 +217,10 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   const branchingChoices = normalizeBranchingChoices(options?.branchingChoices || []);
   const requestUnderMap = options?.underMap || null;
   const forceRegenerate = !!options?.forceRegenerate;
+  // What the CALLER actually needs, as opposed to the blunt "regenerate anyway":
+  // an entry written against at least this Under-Map state. Supplied by the
+  // freshness-gated call sites (the CONNECT gate and the THEORY cross).
+  const requiredUnderMapSignature = options?.requiredUnderMapSignature || null;
 
   // Deduplication: return the in-flight promise for this exact content.
   // A pending generation is only stale once it has actually settled without
@@ -247,12 +261,22 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
 
   const generationPromise = (async () => {
     // Acquire a generation slot (waits if at capacity)
-    await this._acquireGenerationSlot(generationKey);
+    await this._acquireGenerationSlot(generationKey, isUserFacing);
     holdsSlot = true;
 
     // Now that we have the slot, another request may have produced this content
-    // while we waited.
-    const existingAfterWait = forceRegenerate ? null : await this.getGeneratedEntryAsync(caseNumber, effectivePathKey);
+    // while we waited. `forceRegenerate` used to skip this check outright, which
+    // is how a player waiting at a gate was handed a fresh 25s generation two
+    // milliseconds after an equivalent scene landed in the cache. What the gate
+    // actually requires is not "regenerate no matter what" but "an entry written
+    // against at least this Under-Map state", so ask that question instead.
+    const satisfiesRequirement = (candidate) => {
+      if (!candidate) return false;
+      if (!requiredUnderMapSignature) return !forceRegenerate;
+      return candidate.underMapSignature === requiredUnderMapSignature;
+    };
+    const candidateAfterWait = await this.getGeneratedEntryAsync(caseNumber, effectivePathKey);
+    const existingAfterWait = satisfiesRequirement(candidateAfterWait) ? candidateAfterWait : null;
     if (existingAfterWait) {
       console.log(`[StoryGenerationService] Content already exists after wait for ${generationKey}, skipping generation`);
       llmTrace('StoryGenerationService', traceId, 'generation.skip.existsAfterWait', {
@@ -1208,6 +1232,12 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           ? this._generateBoardData(isDecisionPoint, generatedContent.pathDecisions || generatedContent.decision)
           : null,
         narrativeThreads: Array.isArray(generatedContent.narrativeThreads) ? generatedContent.narrativeThreads : [],
+        // The Under-Map state this scene was written against. Freshness used to
+        // be tracked only in a session-lifetime ref in useStoryGeneration, so an
+        // app restart, a Metro reload or an Android low-memory kill made every
+        // gate regenerate a scene already sitting on disk and already correct.
+        // Stored WITH the entry, the answer survives the process.
+        underMapSignature: requestUnderMap ? underMapGenerationSignature(requestUnderMap) : null,
         generatedAt: new Date().toISOString(),
         wordCount: generatedContent.narrative?.split(/\s+/).length || 0,
         // NOTE: the thought signature is intentionally NOT persisted on the entry —
