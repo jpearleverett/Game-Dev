@@ -1013,6 +1013,18 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
         }, 'debug');
       }
 
+      // A parse that fell all the way through to raw text is not a scene: no
+      // branching narrative, no fragments, no decision. Stored, it becomes a
+      // chapter with nothing to examine and no way forward, cached under its
+      // path key forever. Retry instead.
+      if (generatedContent?.isFallback) {
+        const parseErr = new Error(
+          `Generation produced no usable structure (${generatedContent.fallbackReason || 'parse failure'})`,
+        );
+        parseErr.retryable = true;
+        throw parseErr;
+      }
+
       // Build canonical narrative from branchingNarrative for validation/expansion
       // Uses opening + first choice (1A) + first ending (1A-2A) as the canonical path
       ensureCanonicalNarrative(generatedContent);
@@ -1383,11 +1395,17 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
   // to allow retries to complete. Adding buffer for network delays.
   // Formula: (300s * 2 attempts) + 60s buffer = 660s ≈ 11 minutes
   const GENERATION_TIMEOUT_MS = 11 * 60 * 1000; // 11 minutes (allows for 2 retries @ 300s each)
+  // The handle is kept so the loser of the race can be cancelled. Discarded, an
+  // eleven-minute timer stayed armed after every successful generation, holding
+  // its closure alive and eventually rejecting a promise nothing was waiting on.
+  let timeoutHandle = null;
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => {
+    timeoutHandle = setTimeout(() => {
       reject(new Error(`Generation timeout after ${GENERATION_TIMEOUT_MS / 1000}s for ${generationKey}`));
     }, GENERATION_TIMEOUT_MS);
   });
+  // An unobserved rejection from the loser is not an error condition.
+  timeoutPromise.catch(() => {});
 
   try {
     // Race between the actual generation and the timeout
@@ -1426,6 +1444,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
     // Throw error - caller (prefetch) will catch and log, player retries when needed
     throw e;
   } finally {
+    if (timeoutHandle) { clearTimeout(timeoutHandle); timeoutHandle = null; }
     // Release exactly what was acquired: the slot is taken inside the tracked
     // promise now, and _acquireGenerationSlot can throw (queue full) without
     // ever taking one.
@@ -1491,17 +1510,29 @@ async function generateSecondChoiceResponses(afterChoice, branchingNarrative, op
     '</output_contract>',
   ].join('\n');
 
-  const response = await llmService.complete(
-    [{ role: 'user', content: userPrompt }],
-    {
-      systemPrompt: buildMasterSystemPrompt(),
-      responseSchema: SECOND_CHOICE_RESPONSES_SCHEMA,
-      maxTokens: 16000,
-      thinkingLevel: 'low',
-      traceId: options.traceId || createTraceId(`scResp_${target}`),
-      requestContext: { secondChoiceResponsesFor: target, ...(options.requestContext || {}) },
-    },
-  );
+  // Layer 2 goes through the same slot discipline as a full subchapter. It used
+  // to call straight through, so it could run alongside BOTH full generations and
+  // put three concurrent requests on the wire from a device the limiter exists to
+  // keep at two — and it fires exactly when the player is waiting on the reader,
+  // which is the worst possible moment to be third in line at the API.
+  const slotKey = `l2_${target}_${options.traceId || 'anon'}`;
+  await this._acquireGenerationSlot(slotKey);
+  let response;
+  try {
+    response = await llmService.complete(
+      [{ role: 'user', content: userPrompt }],
+      {
+        systemPrompt: buildMasterSystemPrompt(),
+        responseSchema: SECOND_CHOICE_RESPONSES_SCHEMA,
+        maxTokens: 16000,
+        thinkingLevel: 'low',
+        traceId: options.traceId || createTraceId(`scResp_${target}`),
+        requestContext: { secondChoiceResponsesFor: target, ...(options.requestContext || {}) },
+      },
+    );
+  } finally {
+    this._releaseGenerationSlot(slotKey);
+  }
 
   let parsed;
   try {

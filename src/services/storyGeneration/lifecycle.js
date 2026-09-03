@@ -226,6 +226,11 @@ function destroy() {
   // Clear dynamic clusters
   this._currentDynamicClusters = null;
 
+  // The prompt-prefix caches, which are the largest thing this service holds.
+  this.chapterStartCacheKeys.clear();
+  this.chapterStartCacheContent.clear();
+  this.staticCacheKeysBySignature.clear();
+
   // Clear generation concurrency state
   // Reject any waiting generations to prevent hanging promises
   this.generationWaitQueue.forEach(({ reject, key }) => {

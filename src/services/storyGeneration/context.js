@@ -458,9 +458,17 @@ function _extractSceneState(previousChapters, currentChapter, currentSubchapter)
     night: /\b(night|midnight|dark|neon|streetlights|late)\b/i,
   };
 
+  // The scene's time of day is where it ENDS, so take the last mention rather
+  // than the last pattern in the object. Iterating and overwriting meant 'night'
+  // (declared last, and matching "dark" and "neon") won over an explicit
+  // "morning" in the closing paragraph on nearly every scene this game writes,
+  // and the next chapter was told to continue from a night it had left hours ago.
   let timeOfDay = 'night'; // Default thriller atmosphere
+  let latestTimeAt = -1;
   for (const [time, pattern] of Object.entries(timePatterns)) {
-    if (pattern.test(narrative)) {
+    const at = narrative.search(pattern);
+    if (at >= 0 && at > latestTimeAt) {
+      latestTimeAt = at;
       timeOfDay = time;
     }
   }
@@ -608,7 +616,10 @@ function _extractCharacterDialogueHistory(previousChapters) {
 
   // Patterns to identify Victoria speaking
   const speakerPatterns = [
-    { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell)\s+said/gi, /"[^"]+"\s+Victoria/gi, /"[^"]+"\s+Blackwell/gi] },
+    // No /g: these are boolean tests, and a module-level global regex carries
+    // lastIndex between calls, so .test() alternated true/false down the list of
+    // lines and attributed roughly half of Victoria's dialogue to nobody.
+    { name: 'Victoria Blackwell', patterns: [/(?:Victoria|Blackwell)\s+said/i, /"[^"]+"\s+Victoria/i, /"[^"]+"\s+Blackwell/i] },
   ];
 
   // Extract dialogue from each chapter

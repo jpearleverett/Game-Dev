@@ -223,7 +223,10 @@ class ValidationMethods {
         return extracted;
       }
 
-      // Last resort: use the raw content as narrative
+      // Last resort: raw content as narrative, MARKED. Unmarked, this shape
+      // reached the entry assembly and was stored as a real chapter: no
+      // branching narrative, no fragments, no decision — a scene with nothing to
+      // examine and no way forward, permanently cached under its path key.
       console.warn('[StoryGenerationService] Falling back to raw content as narrative');
       return {
         title: 'Untitled',
@@ -235,6 +238,8 @@ class ValidationMethods {
         briefing: { summary: '', objectives: [] },
         consistencyFacts: [],
         decision: null,
+        isFallback: true,
+        fallbackReason: 'json-parse-failure',
       };
     }
   }

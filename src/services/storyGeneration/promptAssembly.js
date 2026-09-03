@@ -347,11 +347,16 @@ ${Array.isArray(chapterOutline.mustReference) && chapterOutline.mustReference.le
     },
   });
 
-  // Store cache content locally for prompt logging
-  this.chapterStartCacheContent.set(cacheKey, {
-    systemInstruction: buildMasterSystemPrompt(),
-    content: chapterCacheContent,
-  });
+  // Store cache content locally for prompt logging — only when logging is ON.
+  // This kept a full copy of every chapter-start prefix (tens of thousands of
+  // tokens each) for the life of the session, for a debug reader that is off by
+  // default and never read them.
+  if (this.fullPromptLoggingEnabled) {
+    this.chapterStartCacheContent.set(cacheKey, {
+      systemInstruction: buildMasterSystemPrompt(),
+      content: chapterCacheContent,
+    });
+  }
 
   this.chapterStartCacheKeys.set(logicalKey, cacheKey);
   console.log(`[StoryGenerationService] ✅ Chapter-start cache created: ${cacheKey}`);
