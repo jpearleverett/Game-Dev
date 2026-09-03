@@ -238,6 +238,22 @@ docs/gemini_*.md                 Gemini API reference (caching/structured-output
   - Expo Go must be the **SDK 57** build (the current store build). Expo Go refuses
     to open a project whose SDK does not match it — that is what an
     "incompatible with this version of Expo Go" screen means.
+  - ⚠️ **Two Termux-specific startup messages, both understood:**
+    - *"It looks like you're trying to use TypeScript…"* — Expo globs the project for
+      `**/*.@(ts|tsx)` (ignoring `node_modules` and `*.d.ts`,
+      `TypeScriptProjectPrerequisite.js`). ONE stray `.ts` anywhere triggers it, and
+      **declining does not proceed** — it raises a `CommandError` and the server
+      exits. This project is pure JS, so either delete the stray file
+      (`find . -path ./node_modules -prune -o -name '*.ts' -print`) or set
+      `EXPO_NO_TYPESCRIPT_SETUP=1` in `.env` (verified: the server starts and serves
+      a correct SDK 57 manifest even with a stray `.ts` present).
+    - *"An unknown error occurred while installing React Native DevTools …
+      reading 'arm64'"* — **cosmetic, ignore it.** Termux reports
+      `process.platform === 'android'`, which is absent from the DevTools shell's
+      platform table, so the lookup throws. `dev-middleware` logs it and continues
+      (`createDevMiddleware.js`, the `fusebox_shell_preparation_attempt` /
+      `unexpected_error` branch); Metro starts normally. There is no opt-out flag.
+      The only thing lost is the RN DevTools debugger UI, which the game does not need.
   - A **fresh run** is required after generation/content changes (see the last bullet) —
     cached chapters replay the old prose.
 - **Verified boot facts (this pass, run rather than reasoned):**
