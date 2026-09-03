@@ -59,14 +59,21 @@ const STEPS = [
     icon: 'vector-line',
     title: 'Connect the Fragments',
     body:
-      'Tap two fragments that belong together. A true connection surfaces a hidden truth and moves the story forward.',
+      'Tap two fragments that belong together. A true connection surfaces a hidden truth. Probes are scarce — but a miss always whispers back which fragment still hums with something unfound.',
+  },
+  {
+    key: 'sense',
+    icon: 'radar',
+    title: 'Your Sense Sharpens',
+    body:
+      'The more truths you draw, the better Jack reads the dark — held fragments glimmer toward their hidden partners, and the map learns to forgive. Mapping the daily thread banks an extra probe for your next descent.',
   },
   {
     key: 'ready',
     icon: 'eye-circle-outline',
     title: 'Seal What You Believe',
     body:
-      'Each chapter ends by committing a belief about the hidden world. The next chapter bears that reading out — or proves how badly Ashport can lie.',
+      'Each chapter ends by committing a belief about the hidden world. Weigh which reading your own surfaced truths support — the next chapter bears it out, or proves how badly Ashport can lie. And somewhere out there, someone is reading the same signs the other way.',
   },
 ];
 

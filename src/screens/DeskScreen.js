@@ -47,6 +47,7 @@ export default function DeskScreen({
   onBribe,
   onDrawDailyStir,
   onResolveDailyStir,
+  onViewEnding,
 }) {
   const storyCampaign = progress.storyCampaign || {};
   const reducedMotion = !!progress?.settings?.reducedMotion;
@@ -100,27 +101,35 @@ export default function DeskScreen({
   }));
 
   const solved = activeCase?.id ? progress.solvedCaseIds.includes(activeCase.id) : false;
+  // POST-GAME: the campaign froze after the final belief was sealed (chapter 12).
+  const campaignDone = Boolean(storyCampaign.completed);
   const latestTheory = Array.isArray(underMap?.theories) && underMap.theories.length ? underMap.theories[0] : null;
-  const teaser = storyLocked && latestTheory?.interpretation
-    ? `When the lock lifts, Ashport tests what you believed: "${latestTheory.interpretation}".`
-    : !caseRead
-      ? 'Read the next letter. Sense the phrases that do not belong, and pin them to the Under-Map.'
-      : letter.toUpperCase() === 'C'
-        ? 'The chapter has shown its signs. Commit the belief the hidden world will answer.'
-        : 'The scene left fragments behind. Descend and connect them before they sink out of sight.';
-
-  const primaryLabel = storyLocked
-    ? 'Pick up the trail'
-    : solved
-      ? 'Review the case file'
+  const teaser = campaignDone
+    ? 'Twelve chapters mapped. The file is closed — but the city keeps what you read into it, and the map remembers you.'
+    : storyLocked && latestTheory?.interpretation
+      ? `Your reading is sealed: "${latestTheory.interpretation}". When the lock lifts, the city answers it.`
       : !caseRead
-        ? 'Read & sense anomalies'
+        ? 'Read the next letter. Sense the phrases that do not belong, and pin them to the Under-Map.'
         : letter.toUpperCase() === 'C'
-          ? 'Seal your belief'
-          : 'Descend into the Under-Map';
+          ? 'The chapter has shown its signs. Commit the belief the hidden world will answer.'
+          : 'The scene left fragments behind. Descend and connect them before they sink out of sight.';
+
+  const primaryLabel = campaignDone
+    ? 'Revisit the ending'
+    : storyLocked
+      ? 'Pick up the trail'
+      : solved
+        ? 'Review the case file'
+        : !caseRead
+          ? 'Read & sense anomalies'
+          : letter.toUpperCase() === 'C'
+            ? 'Seal your belief'
+            : 'Descend into the Under-Map';
 
   const tap = (cb) => () => { Haptics.selectionAsync().catch(() => {}); cb?.(); };
-  const onPrimary = storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
+  const onPrimary = campaignDone && onViewEnding
+    ? onViewEnding
+    : storyLocked && onPickUpTrail ? onPickUpTrail : onStartCase;
   const onDailyStirPress = tap(() => {
     onResolveDailyStir?.();
     onOpenCaseBoard?.();
@@ -168,7 +177,7 @@ export default function DeskScreen({
             <View style={styles.paper}>
               <RNImage source={NOISE} style={styles.paperGrain} resizeMode="repeat" pointerEvents="none" />
               <View style={styles.clip} pointerEvents="none" />
-              <View style={styles.stampOpen}><Text style={styles.stampOpenText}>{solved ? 'CLOSED' : 'OPEN'}</Text></View>
+              <View style={styles.stampOpen}><Text style={styles.stampOpenText}>{solved || campaignDone ? 'CLOSED' : 'OPEN'}</Text></View>
               <Text style={styles.typed}>CURRENT CASE FILE</Text>
               <Text style={styles.inkTitle}>{activeCase.title}</Text>
               <Text style={styles.teaser}>{teaser}</Text>
@@ -190,7 +199,9 @@ export default function DeskScreen({
                 <Text style={styles.btnStampArrow}>▸</Text>
               </PressableScale>
               {storyLocked && countdown ? (
-                <Text style={styles.lockNote}>Next chapter unlocks in {countdown}</Text>
+                <Text style={styles.lockNote}>
+                  {latestTheory?.interpretation ? `The city answers in ${countdown}` : `Next chapter unlocks in ${countdown}`}
+                </Text>
               ) : null}
               {storyLocked && onBribe ? (
                 <Pressable onPress={tap(onBribe)}><Text style={styles.bribeNote}>Bribe the clerk to rush it ($0.99)</Text></Pressable>

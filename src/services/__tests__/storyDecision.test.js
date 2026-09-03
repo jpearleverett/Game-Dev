@@ -35,13 +35,31 @@ describe('resolveStoryDecision', () => {
 });
 
 describe('decisionOptionsFrom', () => {
-  test('optionA/optionB schema -> keyed array', () => {
+  test('optionA/optionB schema -> keyed array (grounded null without a groundedKey)', () => {
     const out = decisionOptionsFrom({ optionA: { title: 'a', focus: 'fa' }, optionB: { title: 'b' } });
-    expect(out).toEqual([{ key: 'A', title: 'a', focus: 'fa' }, { key: 'B', title: 'b' }]);
+    expect(out).toEqual([
+      { key: 'A', title: 'a', focus: 'fa', grounded: null },
+      { key: 'B', title: 'b', grounded: null },
+    ]);
   });
   test('options array passes through; empty/undefined -> []', () => {
-    expect(decisionOptionsFrom({ options: [{ key: 'A', title: 'x' }] })).toEqual([{ key: 'A', title: 'x' }]);
+    expect(decisionOptionsFrom({ options: [{ key: 'A', title: 'x' }] })).toEqual([{ key: 'A', title: 'x', grounded: null }]);
     expect(decisionOptionsFrom(null)).toEqual([]);
     expect(decisionOptionsFrom({})).toEqual([]);
+  });
+  test('groundedKey marks the evidence-supported reading on its option', () => {
+    const out = decisionOptionsFrom({
+      groundedKey: 'B',
+      optionA: { title: 'a' },
+      optionB: { title: 'b' },
+    });
+    expect(out.find((o) => o.key === 'A').grounded).toBe(false);
+    expect(out.find((o) => o.key === 'B').grounded).toBe(true);
+    // Options-array form gets the same treatment.
+    const arr = decisionOptionsFrom({ groundedKey: 'A', options: [{ key: 'A', title: 'x' }, { key: 'B', title: 'y' }] });
+    expect(arr[0].grounded).toBe(true);
+    expect(arr[1].grounded).toBe(false);
+    // An invalid groundedKey degrades to null (no signal).
+    expect(decisionOptionsFrom({ groundedKey: 'Z', optionA: { title: 'a' } })[0].grounded).toBeNull();
   });
 });

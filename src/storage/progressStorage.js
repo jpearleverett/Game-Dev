@@ -60,6 +60,8 @@ export const createBlankStoryCampaign = () => ({
   startedAt: null,
   completedAt: null,
   completed: false,
+  // NEW GAME+: how many completed runs preceded this one (0 = first run).
+  ngPlus: 0,
   // Ending reached on completion
   endingId: null,
   endingReachedAt: null,
@@ -136,6 +138,9 @@ export const createBlankProgress = () => ({
   solvedCaseIds: [],
   failedCaseIds: [],
   seenBriefings: {},
+  // FIELD NOTES: one-time just-in-time lessons the player has been shown
+  // ({ [key]: isoTimestamp }). See src/data/fieldNotes.js.
+  seenLessons: {},
   streak: 0,
   bestStreak: 0,
   attemptsDistribution: {

@@ -734,7 +734,7 @@ async function generateSubchapter(chapter, subchapter, pathKey, choiceHistory = 
           // UNDER-MAP: weave the next chapter's decisions around the living map —
           // the fragments collected, truths revealed, and theory sealed.
           let basePathPrompt = pathDecisionsPrompt;
-          const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap);
+          const pdTheory = this._buildPlayerTheorySection?.(this.currentUnderMap, chapter);
           if (pdTheory) {
             basePathPrompt = `${basePathPrompt}\n\n<under_map_state>\n${pdTheory}\n</under_map_state>`;
           }

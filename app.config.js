@@ -59,6 +59,12 @@ export default {
       // Optional: App token for extra proxy authentication
       appToken: process.env.APP_TOKEN || null,
 
+      // ========== ANALYTICS (optional) ==========
+      // PostHog project API key + host. Without a key, analytics stay local
+      // (console only) — the game never blocks on this.
+      posthogApiKey: process.env.POSTHOG_API_KEY || null,
+      posthogHost: process.env.POSTHOG_HOST || null,
+
       // ========== DEVELOPMENT ONLY ==========
       // Direct API key - only use for local development
       // This gets embedded in the app and is NOT secure for distribution

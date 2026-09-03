@@ -91,3 +91,53 @@ export function selectEnding(map) {
 
   return { ...base, flavorLine, foilLine, clarity: cl };
 }
+
+/**
+ * The CLOSING REPORT — the case file's last page, composed deterministically
+ * from the player's actual run (their beliefs and verdicts, what recurred, who
+ * read against them). This is the personal artifact of the campaign: every line
+ * is the player's own story, in the register of a report Jack types up at the
+ * end. No LLM at the finale (stable, instant, testable).
+ *
+ * @returns {{ title: string, lines: string[] }}
+ */
+export function closingReport(map, ending = null) {
+  const theories = Array.isArray(map?.theories) ? map.theories : [];
+  const fragments = Array.isArray(map?.fragments) ? map.fragments : [];
+  const cl = clarity(map);
+  const lines = [];
+
+  // The record of readings, oldest first (theories are stored newest-first).
+  [...theories].reverse().forEach((t) => {
+    if (!t?.interpretation) return;
+    const verdict = t.correct === true ? 'HELD' : t.correct === false ? 'SUBVERTED' : 'UNANSWERED';
+    lines.push(`CH ${String(t.chapter ?? '?').padStart(2, '0')} — "${t.interpretation}" · ${verdict}`);
+  });
+
+  // What kept coming back.
+  const motifs = fragments.filter((f) => (f.seen || 1) > 1).sort((a, b) => (b.seen || 1) - (a.seen || 1));
+  if (motifs.length) {
+    const top = motifs.slice(0, 3).map((f) => `"${f.label}" (×${f.seen})`).join(', ');
+    lines.push(`What kept resurfacing: ${top}.`);
+  }
+
+  // The rival's last entry.
+  const fl = foil(map);
+  if (fl?.belief) {
+    const manifest = foilPresence(map) >= 2;
+    lines.push(manifest
+      ? `The Other Reader${fl.name ? `, ${fl.name},` : ''} held to "${fl.belief}" to the end.`
+      : `Somewhere in Ashport, someone still reads it as "${fl.belief}".`);
+  }
+
+  if (cl.resolved > 0) {
+    lines.push(`Final clarity: ${cl.correct} of ${cl.resolved} readings held true.`);
+  }
+
+  return {
+    title: ending?.variant === 'clear' ? 'CASE CLOSED — READ TRUE'
+      : ending?.variant === 'deceived' ? 'CASE CLOSED — MISREAD'
+      : 'CASE CLOSED',
+    lines,
+  };
+}

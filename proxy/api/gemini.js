@@ -85,8 +85,19 @@ export default async function handler(request) {
     );
   }
 
-  // Optional app token auth
+  // App token auth. Optional by default (back-compat with deployments that have
+  // no APP_TOKEN set), but settable to REQUIRED for production: with
+  // REQUIRE_APP_TOKEN=true the proxy refuses to run open — an unauthenticated
+  // public endpoint lets anyone with the URL burn the Gemini quota.
   const appToken = process.env.APP_TOKEN;
+  const requireToken = process.env.REQUIRE_APP_TOKEN === 'true';
+  if (requireToken && !appToken) {
+    console.error(`[${requestId}] REQUIRE_APP_TOKEN=true but APP_TOKEN is not configured`);
+    return Response.json(
+      { error: 'Server configuration error', requestId },
+      { status: 500, headers: corsHeaders }
+    );
+  }
   if (appToken) {
     const providedToken = request.headers.get('x-app-token');
     if (providedToken !== appToken) {
@@ -96,6 +107,9 @@ export default async function handler(request) {
         { status: 401, headers: corsHeaders }
       );
     }
+  } else {
+    // Surface the exposure in logs so an open deployment is visible, not silent.
+    console.warn(`[${requestId}] APP_TOKEN not set — proxy is running OPEN (set APP_TOKEN + REQUIRE_APP_TOKEN=true for production)`);
   }
 
   // Check for API key

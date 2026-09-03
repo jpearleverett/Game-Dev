@@ -14,13 +14,18 @@
 import { formatCaseNumber } from './gameLogic';
 import { computeBranchPathKey, parseCaseNumber } from '../data/storyContent';
 
-export const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;
-export const FIRST_GATED_CHAPTER = 6; // chapters 1-5 are never gated
+// Gate cadence: the seal→wait→verdict rhythm IS the retention heartbeat, so it
+// starts early (chapter 3) with a short, gentle gate while the habit forms, and
+// lengthens once the player is invested. Chapters 1-2 stay binge-able (the hook).
+export const CHAPTER_UNLOCK_DELAY_MS = 12 * 60 * 60 * 1000;       // chapters 6+
+export const EARLY_CHAPTER_UNLOCK_DELAY_MS = 6 * 60 * 60 * 1000;  // chapters 3-5
+export const FIRST_GATED_CHAPTER = 3; // chapters 1-2 are never gated
+export const LONG_GATE_CHAPTER = 6;   // full-length gates from here
 
 function nextUnlockAt(nextChapter) {
-  return nextChapter >= FIRST_GATED_CHAPTER
-    ? new Date(Date.now() + CHAPTER_UNLOCK_DELAY_MS).toISOString()
-    : null;
+  if (nextChapter < FIRST_GATED_CHAPTER) return null;
+  const delay = nextChapter >= LONG_GATE_CHAPTER ? CHAPTER_UNLOCK_DELAY_MS : EARLY_CHAPTER_UNLOCK_DELAY_MS;
+  return new Date(Date.now() + delay).toISOString();
 }
 
 /** Sortable order key for a case number, e.g. "002B" -> 2*10+2 = 22. */

@@ -72,3 +72,26 @@ describe('caseOrder (forward-only comparisons)', () => {
     expect(caseOrder('001A') < caseOrder('001B')).toBe(true);
   });
 });
+
+describe('gate cadence (seal -> wait -> verdict heartbeat)', () => {
+  const base = () => ({ choiceHistory: [], pathHistory: {}, completedCaseNumbers: [] });
+
+  test('chapters 1-2 stay binge-able; the gate starts at chapter 3', () => {
+    const intoCh2 = advanceWithDecision(base(), { decisionCase: '001C', optionKey: 'A', timestamp: 't' });
+    expect(intoCh2.nextStoryUnlockAt).toBeNull();
+    const intoCh3 = advanceWithDecision(base(), { decisionCase: '002C', optionKey: 'A', timestamp: 't' });
+    expect(intoCh3.nextStoryUnlockAt).not.toBeNull();
+  });
+
+  test('early gates are short (6h), long gates from chapter 6 (12h)', () => {
+    const now = Date.now();
+    const intoCh3 = advanceWithDecision(base(), { decisionCase: '002C', optionKey: 'A', timestamp: 't' });
+    const early = new Date(intoCh3.nextStoryUnlockAt).getTime() - now;
+    expect(early).toBeGreaterThan(5.5 * 3600000);
+    expect(early).toBeLessThan(6.5 * 3600000);
+    const intoCh6 = advanceWithDecision(base(), { decisionCase: '005C', optionKey: 'A', timestamp: 't' });
+    const long = new Date(intoCh6.nextStoryUnlockAt).getTime() - now;
+    expect(long).toBeGreaterThan(11.5 * 3600000);
+    expect(long).toBeLessThan(12.5 * 3600000);
+  });
+});

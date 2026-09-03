@@ -40,6 +40,18 @@ import {
   dailyStreak,
   dailyStirFragment,
   mapDepth,
+  senseTier,
+  attunedPartners,
+  missWhisper,
+  foilThreadsAhead,
+  pendingProbeBonus,
+  latentThreadCount,
+  latentFragmentIds,
+  claimByFoil,
+  seedNewGamePlus,
+  SENSE_TIER_THRESHOLDS,
+  MAX_PROBE_BONUS,
+  PROBE_BASE,
   FRAGMENT_KIND,
 } from '../../data/underMap';
 
@@ -327,9 +339,9 @@ describe('underMap — deduction', () => {
 
   test('probe budget scales with connectable fragments, shrinks as links are drawn', () => {
     const m = deductionSeed();
-    // 2 fragments participate in the single unfound relation -> base + floor(2/3) = 3.
+    // 2 fragments participate in the single unfound relation -> base + floor(2/3).
     expect(connectableFragmentCount(m)).toBe(2);
-    expect(probeBudgetFor(m)).toBe(3);
+    expect(probeBudgetFor(m)).toBe(PROBE_BASE);
     expect(sensedRelations(m)).toHaveLength(1);
 
     const drawn = resolveReading(m, STAIN, INK, 'The ink marks who carries it.').map;
@@ -600,5 +612,258 @@ describe('underMap — the foil (Other Reader)', () => {
     // no foil, or empty name -> no-op (no throw)
     expect(foil(nameFoil(createBlankUnderMap(), 'X'))).toBeNull();
     expect(nameFoil(m, '   ')).toEqual(m); // normalized clone, structurally unchanged
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sense tiers, miss whispers, probe economy, foil pressure (CONNECT-as-mastery)
+// ---------------------------------------------------------------------------
+
+describe('underMap — sense tiers & whispers', () => {
+  // Build a map with `n` drawn connections (n relations, all connected).
+  const withDrawn = (n) => {
+    let m = createBlankUnderMap();
+    const frags = [];
+    for (let i = 0; i < n + 1; i += 1) frags.push({ label: `Frag ${i}`, kind: 'phenomenon' });
+    m = addFragments(m, frags);
+    const rels = [];
+    for (let i = 0; i < n; i += 1) {
+      rels.push({ aLabel: `Frag ${i}`, bLabel: `Frag ${i + 1}`, revelation: `Truth ${i}.` });
+    }
+    m = addRelations(m, rels);
+    for (let i = 0; i < n; i += 1) {
+      const a = fragmentId('phenomenon', `Frag ${i}`);
+      const b = fragmentId('phenomenon', `Frag ${i + 1}`);
+      m = connectFragments(m, a, b).map;
+    }
+    return m;
+  };
+
+  test('senseTier climbs with truths drawn at the published thresholds', () => {
+    expect(senseTier(createBlankUnderMap())).toBe(0);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[0] - 1))).toBe(0);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[0]))).toBe(1);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[1]))).toBe(2);
+    expect(senseTier(withDrawn(SENSE_TIER_THRESHOLDS[2]))).toBe(3);
+  });
+
+  test('attunedPartners surfaces only still-hidden partners', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'The ink marks who carries it.' },
+      { aLabel: 'Silver ink that moves', bLabel: '14 Acheron Avenue', revelation: 'The ink pools toward the address.' },
+    ]);
+    const ink = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+    const stain = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+    const addr = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
+    expect(attunedPartners(m, ink).sort()).toEqual([addr, stain].sort());
+    // Draw one — it stops glimmering; the unfound one remains.
+    m = connectFragments(m, ink, stain).map;
+    expect(attunedPartners(m, ink)).toEqual([addr]);
+    expect(attunedPartners(m, null)).toEqual([]);
+  });
+
+  test('missWhisper reports honestly which fragments still hum', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'The ink marks who carries it.' },
+    ]);
+    const ink = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+    const customs = fragmentId(FRAGMENT_KIND.PLACE, 'Old Customs House');
+    // ink is in an unfound relation; customs is in none.
+    expect(missWhisper(m, ink, customs)).toEqual({ aLive: true, bLive: false });
+    // After drawing it, both lie quiet.
+    const stain = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+    m = connectFragments(m, ink, stain).map;
+    expect(missWhisper(m, ink, customs)).toEqual({ aLive: false, bLive: false });
+  });
+});
+
+describe('underMap — probe economy (daily thread pays the descent)', () => {
+  test('resolving the daily stir banks a probe bonus, capped', () => {
+    let m = seed();
+    m = drawDailyStir(m, '2026-06-09T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-09T09:00:00.000Z');
+    expect(pendingProbeBonus(m)).toBe(1);
+    m = drawDailyStir(m, '2026-06-10T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-10T09:00:00.000Z');
+    m = drawDailyStir(m, '2026-06-11T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-11T09:00:00.000Z');
+    expect(pendingProbeBonus(m)).toBe(MAX_PROBE_BONUS); // capped
+  });
+
+  test('the bonus raises the descent budget and is spent by recordDescent', () => {
+    let m = seed();
+    const base = probeBudgetFor(m);
+    m = drawDailyStir(m, '2026-06-09T08:00:00.000Z', () => 0);
+    m = resolveDailyStir(m, '2026-06-09T09:00:00.000Z');
+    expect(probeBudgetFor(m)).toBe(base + 1);
+    m = recordDescent(m, { hadMisstep: false });
+    expect(pendingProbeBonus(m)).toBe(0);
+    expect(probeBudgetFor(m)).toBe(base);
+  });
+
+  test('normalizeUnderMap clamps a corrupt bonus into range', () => {
+    expect(normalizeUnderMap({ pendingProbeBonus: 99 }).pendingProbeBonus).toBe(MAX_PROBE_BONUS);
+    expect(normalizeUnderMap({ pendingProbeBonus: -4 }).pendingProbeBonus).toBe(0);
+    expect(normalizeUnderMap({}).pendingProbeBonus).toBe(0);
+    expect(probeBudgetFor(createBlankUnderMap())).toBe(PROBE_BASE);
+  });
+});
+
+describe('underMap — foil pressure & grounded beliefs', () => {
+  const seal = (m, chapter, interpretation, rejected, grounded = null) =>
+    recordTheory(addFragments(m, [{ label: `t${chapter}`, kind: 'symbol' }]), {
+      chapter,
+      fragmentIds: [fragmentId('symbol', `t${chapter}`)],
+      interpretation,
+      rejected,
+      grounded,
+    });
+
+  test('foilThreadsAhead is 0 until the foil stirs, then honest and presence-scaled', () => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'A.' },
+      { aLabel: 'Old Customs House', bLabel: '14 Acheron Avenue', revelation: 'B.' },
+      { aLabel: 'Silver ink that moves', bLabel: '14 Acheron Avenue', revelation: 'C.' },
+    ]);
+    expect(foilThreadsAhead(m)).toBe(0); // no foil
+    m = seal(m, 1, 'mine', ['theirs']);
+    expect(foilThreadsAhead(m)).toBe(0); // presence 0
+    m = resolveTheory(m, 1, false); // subverted -> presence 1
+    expect(foilThreadsAhead(m)).toBe(2); // min(3 undiscovered, 1+1)
+    m = seal(m, 2, 'mine again', ['theirs again']);
+    m = resolveTheory(m, 2, false); // presence 2
+    expect(foilThreadsAhead(m)).toBe(3); // min(3, 3)
+    // Never exceeds what actually remains hidden.
+    const ink = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver ink that moves');
+    const stain = fragmentId(FRAGMENT_KIND.PHENOMENON, 'Silver stain on the courier');
+    m = connectFragments(m, ink, stain).map;
+    const addr = fragmentId(FRAGMENT_KIND.PLACE, '14 Acheron Avenue');
+    m = connectFragments(m, ink, addr).map;
+    const customs = fragmentId(FRAGMENT_KIND.PLACE, 'Old Customs House');
+    m = connectFragments(m, customs, addr).map;
+    expect(foilThreadsAhead(m)).toBe(0);
+  });
+
+  test('recordTheory stores the grounded flag tri-state', () => {
+    let m = seal(createBlankUnderMap(), 1, 'a', ['b'], true);
+    expect(m.theories[0].grounded).toBe(true);
+    m = seal(m, 2, 'c', ['d'], false);
+    expect(m.theories[0].grounded).toBe(false);
+    m = seal(m, 3, 'e', ['f']);
+    expect(m.theories[0].grounded).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Latent (dangling) threads, the foil's incursion, and New Game+
+// ---------------------------------------------------------------------------
+
+describe('underMap — latent threads (the open loop)', () => {
+  test('a relation with a missing endpoint is held latent, then promotes when the fragment arrives', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'The brass key', kind: 'symbol' }]);
+    // Authored against a fragment the player does NOT hold yet.
+    m = addRelations(m, [
+      { aLabel: 'The brass key', bLabel: 'The drowned door', revelation: 'The key was cut for a door underwater.' },
+    ], { caseNumber: '002A' });
+    expect(m.relations).toHaveLength(0);
+    expect(latentThreadCount(m)).toBe(1);
+    expect(latentFragmentIds(m).has(fragmentId('symbol', 'The brass key'))).toBe(true);
+    // The missing endpoint arrives a scene later -> the thread promotes itself.
+    m = addFragments(m, [{ label: 'The drowned door', kind: 'place' }]);
+    expect(latentThreadCount(m)).toBe(0);
+    expect(m.relations).toHaveLength(1);
+    expect(undiscoveredRelationCount(m)).toBe(1);
+    const key = fragmentId('symbol', 'The brass key');
+    const door = fragmentId('place', 'The drowned door');
+    expect(connectFragments(m, key, door).revealed.node.revelation).toContain('underwater');
+  });
+
+  test('latents dedupe by label pair and never duplicate an existing relation', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'A', kind: 'symbol' }]);
+    m = addRelations(m, [{ aLabel: 'A', bLabel: 'Z', revelation: 'r' }]);
+    m = addRelations(m, [{ aLabel: 'Z', bLabel: 'A', revelation: 'r again' }]); // reversed dup
+    expect(latentThreadCount(m)).toBe(1);
+    // Once promoted, re-adding the same relation by label is a no-op.
+    m = addFragments(m, [{ label: 'Z', kind: 'place' }]);
+    expect(m.relations).toHaveLength(1);
+    m = addRelations(m, [{ aLabel: 'A', bLabel: 'Z', revelation: 'r' }]);
+    expect(m.relations).toHaveLength(1);
+    expect(latentThreadCount(m)).toBe(0);
+  });
+
+  test('normalizeUnderMap defaults latentRelations for old saves', () => {
+    expect(normalizeUnderMap({}).latentRelations).toEqual([]);
+  });
+});
+
+describe('underMap — the foil claims the board (incursion)', () => {
+  const withFoilAt = (presence) => {
+    let m = seed();
+    m = addRelations(m, [
+      { aLabel: 'Silver stain on the courier', bLabel: 'Silver ink that moves', revelation: 'The ink marks who carries it.', falseReadings: ['It is just spilled ink.', 'The courier is careless.'] },
+      { aLabel: 'Old Customs House', bLabel: '14 Acheron Avenue', revelation: 'Both sit on the Under-Map.' },
+    ]);
+    m = recordTheory(addFragments(m, [{ label: 't', kind: 'symbol' }]), {
+      chapter: 1, fragmentIds: [fragmentId('symbol', 't')], interpretation: 'mine', rejected: ['theirs'],
+    });
+    for (let i = 0; i < presence; i += 1) {
+      m = recordTheory(m, { chapter: 2 + i, fragmentIds: [fragmentId('symbol', 't')], interpretation: 'x', rejected: ['y'] });
+      m = resolveTheory(m, 2 + i, false);
+    }
+    return m;
+  };
+
+  test('no claim below presence 2, and at most one claim per chapter', () => {
+    expect(claimByFoil(withFoilAt(1), { chapter: 3 }).claimed).toBeNull();
+    const m2 = withFoilAt(2);
+    const first = claimByFoil(m2, { chapter: 3 });
+    expect(first.claimed).not.toBeNull();
+    expect(claimByFoil(first.map, { chapter: 3 }).claimed).toBeNull(); // same chapter
+    expect(claimByFoil(first.map, { chapter: 4 }).claimed).not.toBeNull(); // next chapter ok
+  });
+
+  test('a claimed thread is drawn blurred in the foil ink, carrying their reading', () => {
+    const res = claimByFoil(withFoilAt(2), { chapter: 3 });
+    const { node } = res.claimed;
+    expect(node.foilClaimed).toBe(true);
+    expect(node.unresolvedReading).toBe(true);
+    expect(res.map.connections[0].foilClaimed).toBe(true);
+    // The claim counts as drawn: it reduces what remains undiscovered.
+    expect(undiscoveredRelationCount(res.map)).toBe(1);
+  });
+
+  test('reclaiming: the TRUE reading clears the foil ink (upgrade path)', () => {
+    const res = claimByFoil(withFoilAt(2), { chapter: 3 });
+    const rel = res.claimed.relation;
+    const back = resolveReading(res.map, rel.a, rel.b, rel.revelation);
+    expect(back.upgraded).toBe(true);
+    expect(back.reclaimed).toBe(true);
+    expect(back.map.nodes.find((n) => n.id === res.claimed.node.id).foilClaimed).toBe(false);
+    expect(back.map.connections.find((c) => c.relationId === rel.id).foilClaimed).toBe(false);
+  });
+});
+
+describe('underMap — New Game+ (the city remembers being read)', () => {
+  test('a completed run with a named foil seeds the next run at presence 1', () => {
+    let m = recordTheory(addFragments(createBlankUnderMap(), [{ label: 't', kind: 'symbol' }]), {
+      chapter: 1, fragmentIds: [fragmentId('symbol', 't')], interpretation: 'mine', rejected: ['The record is a stolen trap'],
+    });
+    m = resolveTheory(m, 1, false);
+    m = resolveTheory(recordTheory(m, { chapter: 2, fragmentIds: [fragmentId('symbol', 't')], interpretation: 'x', rejected: ['y'] }), 2, false);
+    m = nameFoil(m, 'The Cartographer');
+    const ng = seedNewGamePlus(m);
+    expect(ng.fragments).toEqual([]);
+    expect(ng.theories).toEqual([]);
+    // The foil's creed is whatever they LAST stood for (the latest rejected reading).
+    expect(ng.foil).toEqual({ belief: 'y', fromChapter: null, presence: 1, name: 'The Cartographer' });
+  });
+
+  test('no foil in the previous run -> a plain blank map', () => {
+    expect(seedNewGamePlus(createBlankUnderMap()).foil).toBeNull();
   });
 });

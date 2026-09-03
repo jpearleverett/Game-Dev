@@ -236,16 +236,24 @@ BAD examples (generic, not path-specific):
 Generate 9 pathDecisions objects with:
 1. pathKey: The path identifier (1A-2A through 1C-2C)
 2. intro: 1-2 sentences framing the climax question — what THIS path's discovery forces Jack to decide he believes about the hidden world
-3. optionA: A belief about the hidden world, key="A", title (3-8 words, declarative stance), focus (the reading + the direction committing to it pulls the story), personalityAlignment
-4. optionB: The opposed belief, key="B", title (3-8 words, declarative stance), focus (the reading + its direction), personalityAlignment
+3. optionA: A belief about the hidden world, key="A", title (3-8 words, declarative stance), focus (the reading + the direction committing to it pulls the story), personalityAlignment, evidence
+4. optionB: The opposed belief, key="B", title (3-8 words, declarative stance), focus (the reading + its direction), personalityAlignment, evidence
+5. groundedKey: "A" or "B" — REQUIRED, see below
 
 personalityAlignment MUST be one of: aggressive | methodical | balanced
+
+EVIDENCE-GROUNDED BELIEFS (this is what makes the player's mapping matter):
+- Exactly ONE option per path must be the better-supported reading of the truths the player has REVEALED on their Under-Map (listed in <under_map_state>). Set groundedKey to that option's key.
+- For each option, fill \`evidence\`: up to 2 short references (close paraphrases) of revealed truths that this reading leans on. An option may lean on the same truth read differently. Use an empty array when nothing applies.
+- The NON-grounded option must still be genuinely tempting — supported by mood, fear, or a seductive misreading — but strained by the facts. A player who mapped carefully should be able to FEEL which reading the truths favor; a player who mapped nothing should find them equally plausible.
+- If the player has revealed no truths yet, ground the option that this path's own discoveries favor.
 
 Before finalizing, verify:
 ✓ Each path's options reference what that path discovered
 ✓ No two paths have identical option titles
 ✓ The intro mentions the specific discovery or revelation
 ✓ Options feel like natural next steps given what Jack learned
+✓ Every path has groundedKey set, and the grounded option's evidence cites revealed truths where any exist
 </output_requirements>`;
 
 // ============================================================================

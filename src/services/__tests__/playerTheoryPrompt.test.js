@@ -16,6 +16,7 @@ import {
   connectFragments,
   recordTheory,
   fragmentId,
+  makeFragment,
 } from '../../data/underMap';
 import { getPuzzleMode, getPuzzleRouteName, PUZZLE_MODE } from '../../utils/puzzleMode';
 
@@ -67,6 +68,47 @@ describe('_buildPlayerTheorySection', () => {
     expect(out).toContain('beliefResolution');
     expect(out).toContain('chapter 1');
   });
+
+  test('grounded beliefs steer resolution: mapping well must buy clarity', () => {
+    const seal = (grounded) => {
+      let m = createBlankUnderMap();
+      m = addFragments(m, [{ label: 'The seal', kind: 'symbol' }]);
+      return recordTheory(m, {
+        chapter: 2,
+        fragmentIds: [fragmentId('symbol', 'The seal')],
+        interpretation: 'The map is reaching for me.',
+        grounded,
+      });
+    };
+    const held = build(seal(true));
+    expect(held).toContain('SUPPORTED');
+    expect(held).toContain('correct: true');
+    const against = build(seal(false));
+    expect(against).toContain('AGAINST');
+    expect(against).toContain('correct: false');
+    // No grounding signal -> neither directive appears.
+    const neutral = build(seal(null));
+    expect(neutral).not.toContain('SUPPORTED');
+    expect(neutral).not.toContain('AGAINST');
+  });
+
+  test('a stale unresolved belief gets a hard resolve-now instruction', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'The seal', kind: 'symbol' }]);
+    m = recordTheory(m, {
+      chapter: 2,
+      fragmentIds: [fragmentId('symbol', 'The seal')],
+      interpretation: 'The map is reaching for me.',
+    });
+    // Two chapters later, still unresolved -> this scene must answer it.
+    const stale = promptAssemblyMethods._buildPlayerTheorySection(m, 4);
+    expect(stale).toContain('unanswered since chapter 2');
+    expect(stale).toContain('THIS chapter');
+    // Fresh seal -> only the soft lifecycle nudge.
+    const fresh = promptAssemblyMethods._buildPlayerTheorySection(m, 3);
+    expect(fresh).not.toContain('unanswered since');
+    expect(fresh).toContain('within a chapter or two');
+  });
 });
 
 describe('_buildContinuityAnchorSection', () => {
@@ -109,5 +151,36 @@ describe('puzzle mode routing (CONNECT / THEORY)', () => {
 
   test('non-story mode stays on the evidence board', () => {
     expect(getPuzzleMode('001A', false)).toBe(PUZZLE_MODE.EVIDENCE);
+  });
+});
+
+describe('latent threads & the quake in <under_map_state>', () => {
+  test('dangling threads are listed with the missing label to pay off', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'The brass key', kind: 'symbol' }]);
+    m = addRelations(m, [
+      { aLabel: 'The brass key', bLabel: 'The drowned door', revelation: 'Cut for a door underwater.' },
+    ], { caseNumber: '002A' });
+    const out = promptAssemblyMethods._buildPlayerTheorySection(m, 2);
+    expect(out).toContain('Threads left hanging');
+    expect(out).toContain('missing: "The drowned door"');
+    expect(out).toContain('The brass key');
+  });
+
+  test('chapter 7 injects the quake against the oldest motif', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [makeFragment({ label: 'The closed eye', kind: 'symbol', caseNumber: '001A' })]);
+    m = addFragments(m, [makeFragment({ label: 'The closed eye', kind: 'symbol', caseNumber: '003B' })]); // motif
+    expect(promptAssemblyMethods._buildPlayerTheorySection(m, 7)).toContain('THE QUAKE');
+    expect(promptAssemblyMethods._buildPlayerTheorySection(m, 7)).toContain('The closed eye');
+    expect(promptAssemblyMethods._buildPlayerTheorySection(m, 6)).not.toContain('THE QUAKE');
+  });
+
+  test('every scene is asked to author one dangling thread', () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, [{ label: 'x', kind: 'symbol' }]);
+    const out = promptAssemblyMethods._buildPlayerTheorySection(m, 2);
+    expect(out).toContain('dangling thread');
+    expect(out.toLowerCase()).toContain('drift');
   });
 });

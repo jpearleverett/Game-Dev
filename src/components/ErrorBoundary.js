@@ -5,6 +5,7 @@ import { COLORS } from '../constants/colors';
 import { FONTS, FONT_SIZES } from '../constants/typography';
 import PrimaryButton from './PrimaryButton';
 import * as Updates from 'expo-updates';
+import { recordError } from '../services/ErrorReporting';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -18,8 +19,8 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    // In a real app, you would log this to your analytics service
-    // analytics.logError(error);
+    // Persist for post-hoc diagnosis (see src/services/ErrorReporting.js).
+    recordError(error, { fatal: true, source: 'error-boundary' });
   }
 
   handleRestart = async () => {

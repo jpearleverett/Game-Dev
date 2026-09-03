@@ -748,11 +748,20 @@ class ValidationMethods {
       return normalized;
     };
 
+    // EVIDENCE-GROUNDED BELIEFS: short references to revealed truths each reading
+    // leans on (surfaced on the Theory screen so mapping buys clarity).
+    const cleanEvidence = (arr) =>
+      (Array.isArray(arr) ? arr : [])
+        .map((s) => String(s || '').trim())
+        .filter(Boolean)
+        .slice(0, 2);
+
     const optionAObj = {
       key: decision.optionA?.key || 'A',
       title: decision.optionA?.title || 'Option A',
       focus: decision.optionA?.focus || '',
       personalityAlignment: normalizeAlignment(decision.optionA?.personalityAlignment),
+      evidence: cleanEvidence(decision.optionA?.evidence),
       consequence: null,
       stats: null,
       outcome: null,
@@ -765,6 +774,7 @@ class ValidationMethods {
       title: decision.optionB?.title || 'Option B',
       focus: decision.optionB?.focus || '',
       personalityAlignment: normalizeAlignment(decision.optionB?.personalityAlignment),
+      evidence: cleanEvidence(decision.optionB?.evidence),
       consequence: null,
       stats: null,
       outcome: null,
@@ -781,6 +791,9 @@ class ValidationMethods {
       options: [optionAObj, optionBObj],
       optionA: optionAObj,
       optionB: optionBObj,
+      // Which reading the player's revealed truths better support ('A' | 'B' | null).
+      // Drives theory.grounded at seal time, which steers beliefResolution.
+      groundedKey: decision.groundedKey === 'A' || decision.groundedKey === 'B' ? decision.groundedKey : null,
     };
   }
 

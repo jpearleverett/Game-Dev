@@ -21,6 +21,9 @@ import {
   drawDailyStir as umDrawStir,
   resolveDailyStir as umResolveStir,
   touchUnderMap as umTouch,
+  claimByFoil as umClaimByFoil,
+  seedNewGamePlus as umSeedNewGamePlus,
+  clarity as umClarity,
   motifCount,
   keystoneCount,
   mapDepth,
@@ -33,6 +36,12 @@ import { notificationHaptic, impactHaptic, Haptics } from '../utils/haptics';
 import { analytics } from '../services/AnalyticsService';
 import { createTraceId, llmTrace, log } from '../utils/llmTrace';
 import { purchaseService } from '../services/PurchaseService';
+import {
+  scheduleDailyStirReminder,
+  scheduleUnlockNotification,
+  cancelUnlockNotification,
+  installNotificationOpenListener,
+} from '../services/dailyStirNotifications';
 import { ACHIEVEMENTS } from '../data/achievementsData';
 import { useAudio } from './AudioContext';
 import { useStory } from './StoryContext';
@@ -62,6 +71,27 @@ export function GameProvider({
   useEffect(() => {
     analytics.init();
   }, []);
+
+  // RETENTION: local notifications (fully defensive no-ops on web / denial).
+  // 1) Daily stir reminder — the once-a-day "the map stirred" habit hook.
+  useEffect(() => {
+    if (hydrationComplete) scheduleDailyStirReminder();
+  }, [hydrationComplete]);
+  // 2) The unlock VERDICT hook: coming back to a verdict on your own sealed
+  // reading is a far stronger re-entry than "next chapter available". Scheduled
+  // at nextStoryUnlockAt; cancelled if the lock is consumed early (trail/bribe)
+  // or the campaign completes.
+  const nextStoryUnlockAtIso = progress?.storyCampaign?.nextStoryUnlockAt || null;
+  const latestSealedBelief = progress?.storyCampaign?.underMap?.theories?.[0]?.interpretation || null;
+  useEffect(() => {
+    if (!hydrationComplete) return;
+    if (nextStoryUnlockAtIso) scheduleUnlockNotification(nextStoryUnlockAtIso, latestSealedBelief);
+    else cancelUnlockNotification();
+  }, [hydrationComplete, nextStoryUnlockAtIso, latestSealedBelief]);
+  // 3) Measure whether the hooks WORK: app opens that came from a notification.
+  useEffect(() => installNotificationOpenListener(({ kind }) => {
+    analytics.logEvent('notification_open', { kind });
+  }), []);
 
   const {
     gameState,
@@ -205,7 +235,19 @@ export function GameProvider({
 
   const enterStoryCampaign = useCallback(({ reset = false } = {}) => {
     if (reset) {
-        updateProgress({ storyCampaign: normalizeStoryCampaignShape(null) });
+        // NEW GAME+: restarting after a COMPLETED run carries The Other Reader
+        // over (named, presence 1) — the city remembers being read. A restart
+        // mid-campaign stays a clean slate.
+        updateProgress((prev) => {
+          const old = normalizeStoryCampaignShape(prev.storyCampaign);
+          const fresh = normalizeStoryCampaignShape(null);
+          if (old.completed) {
+            fresh.underMap = umSeedNewGamePlus(old.underMap);
+            fresh.ngPlus = (old.ngPlus || 0) + 1;
+            analytics.logEvent('ng_plus_start', { run: fresh.ngPlus });
+          }
+          return { storyCampaign: fresh };
+        });
         return true;
     }
     return activateStoryCase({ mode: 'story' });
@@ -646,6 +688,9 @@ export function GameProvider({
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
+    if (frags.length) {
+      analytics.logEvent('examine_fragment', { count: frags.length, caseNumber: meta.caseNumber || null });
+    }
     return snapshotMap;
   }, [progress.storyCampaign, updateProgress]);
 
@@ -689,6 +734,35 @@ export function GameProvider({
     return result;
   }, [progress.storyCampaign, updateProgress, story]);
 
+  // FIELD NOTES: mark a one-time just-in-time lesson as shown (idempotent).
+  // Screens check progress.seenLessons[key] before surfacing a card.
+  const markLessonSeen = useCallback((key) => {
+    if (!key) return;
+    updateProgress((prev) => {
+      const seen = prev.seenLessons || {};
+      if (seen[key]) return null;
+      analytics.logEvent('field_note_shown', { key });
+      return { seenLessons: { ...seen, [key]: new Date().toISOString() } };
+    });
+  }, [updateProgress]);
+
+  // FOIL INCURSION: at presence >= 2, The Other Reader claims one hidden thread
+  // when a chapter's gated descent opens (at most once per chapter). Returns the
+  // claim ({ relation, node }) or null so the board can announce it.
+  const claimUnderMapByFoil = useCallback((chapter) => {
+    const current = normalizeStoryCampaignShape(progress.storyCampaign);
+    const probe = umClaimByFoil(current.underMap, { chapter });
+    if (!probe.claimed) return null;
+    updateProgress((prev) => {
+      const c = normalizeStoryCampaignShape(prev.storyCampaign);
+      const r = umClaimByFoil(c.underMap, { chapter });
+      if (!r.claimed) return null;
+      return { storyCampaign: { ...c, underMap: r.map } };
+    });
+    analytics.logEvent('foil_claim', { chapter });
+    return probe.claimed;
+  }, [progress.storyCampaign, updateProgress]);
+
   // Record a completed descent for the flawless-mapping streak (tense-but-forgiving).
   const recordUnderMapDescent = useCallback(({ hadMisstep = false } = {}) => {
     updateProgress((prev) => {
@@ -715,6 +789,7 @@ export function GameProvider({
       if (!hasUnresolved) return null;
       return { storyCampaign: { ...current, underMap: umResolveTheory(um, chapter, correct) } };
     });
+    analytics.logEvent('belief_resolved', { chapter, correct });
   }, [updateProgress]);
 
   // THE OTHER READER: pin the foil's name the first time a scene names them.
@@ -764,12 +839,54 @@ export function GameProvider({
       if (um === current.underMap) return null;
       return { storyCampaign: { ...current, underMap: um } };
     });
+    analytics.logEvent('theory_sealed', {
+      chapter: theory?.chapter ?? null,
+      grounded: theory?.grounded ?? null,
+    });
   }, [updateProgress]);
 
   const touchUnderMap = useCallback(() => {
     updateProgress((prev) => {
       const current = normalizeStoryCampaignShape(prev.storyCampaign);
       return { storyCampaign: { ...current, underMap: umTouch(current.underMap) } };
+    });
+  }, [updateProgress]);
+
+  // FINALE: after chapter 12's belief is sealed there is no chapter to advance to —
+  // the campaign freezes in its post-game state instead of erroring toward a
+  // nonexistent "013A". Marks the final case complete, clears the pre-decision so
+  // the Theory screen can't re-seal/re-trigger the ending, and stamps completion.
+  // Functional + idempotent (clobber-safe, per the campaign-advance invariant).
+  const markCampaignComplete = useCallback(({ caseNumber, endingId = null } = {}) => {
+    const nowIso = new Date().toISOString();
+    updateProgress((prev) => {
+      const current = normalizeStoryCampaignShape(prev.storyCampaign);
+      if (current.completed) return null;
+      const cl = umClarity(current.underMap);
+      analytics.logEvent('campaign_complete', {
+        endingId: endingId || null,
+        clarityRatio: cl.ratio,
+        resolvedBeliefs: cl.resolved,
+        ngPlus: current.ngPlus || 0,
+      });
+      return {
+        storyCampaign: {
+          ...current,
+          completedCaseNumbers: Array.from(new Set([
+            ...(current.completedCaseNumbers || []),
+            ...(caseNumber ? [caseNumber] : []),
+          ])),
+          preDecision: null,
+          awaitingDecision: false,
+          pendingDecisionCase: null,
+          nextStoryUnlockAt: null,
+          completed: true,
+          completedAt: nowIso,
+          endingId: endingId || current.endingId || null,
+          endingReachedAt: nowIso,
+        },
+        nextUnlockAt: null,
+      };
     });
   }, [updateProgress]);
 
@@ -1054,6 +1171,8 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    claimUnderMapByFoil,
+    markLessonSeen,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
@@ -1061,6 +1180,7 @@ export function GameProvider({
     recordUnderMapTheory,
     touchUnderMap,
     // Endings & Achievements
+    markCampaignComplete,
     unlockEnding,
     unlockAchievement,
     checkAchievements,
@@ -1076,6 +1196,8 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    claimUnderMapByFoil,
+    markLessonSeen,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
@@ -1103,6 +1225,7 @@ export function GameProvider({
     story,
     purchaseBribe,
     purchaseFullUnlock,
+    markCampaignComplete,
     unlockEnding,
     unlockAchievement,
     checkAchievements,
@@ -1119,6 +1242,8 @@ export function GameProvider({
     senseUnderMap,
     resolveUnderMapReading,
     recordUnderMapDescent,
+    claimUnderMapByFoil,
+    markLessonSeen,
     resolveUnderMapBelief,
     nameUnderMapFoil,
     drawUnderMapDailyStir,
