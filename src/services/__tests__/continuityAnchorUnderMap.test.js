@@ -165,3 +165,37 @@ describe('the canon block carries a whole season, not a window of it', () => {
     expect(anchor.split('\n').length).toBeLessThan(50);
   });
 });
+
+describe('the player\'s decision list is stated once per prompt', () => {
+  const { promptAssemblyMethods: pa } = require('../storyGeneration/promptAssembly');
+
+  const ctx = () => ({
+    previousChapters: [
+      { chapter: 1, subchapter: 3, title: 'One', narrative: 'The rain had not stopped since Tuesday.' },
+      { chapter: 2, subchapter: 3, title: 'Two', narrative: 'The mark was cut from inside the slab.' },
+    ],
+    playerChoices: [
+      { chapter: 1, optionKey: 'A', optionTitle: 'CHOICE-ONE', optionFocus: 'f1' },
+      { chapter: 2, optionKey: 'B', optionTitle: 'CHOICE-TWO', optionFocus: 'f2' },
+    ],
+    currentPosition: { chapter: 3, subchapter: 1, pathKey: 'AB' },
+  });
+
+  test('the cached half carries it', () => {
+    const cached = pa._buildStorySummarySection(ctx(), { maxChapter: 2 });
+    expect(cached).toContain('PLAYER CHOICE HISTORY');
+    expect(cached).toContain('CHOICE-ONE');
+  });
+
+  test('the dynamic delta does not repeat it', () => {
+    // Both halves reach the model in one request. This block ignored the window,
+    // so the complete decision list was emitted twice in a single prompt.
+    const delta = pa._buildStorySummarySection(ctx(), { minChapter: 3, maxChapter: 3 });
+    expect(delta).not.toContain('PLAYER CHOICE HISTORY');
+    expect(delta).not.toContain('CHOICE-ONE');
+  });
+
+  test('an uncached build still carries it', () => {
+    expect(pa._buildStorySummarySection(ctx())).toContain('PLAYER CHOICE HISTORY');
+  });
+});

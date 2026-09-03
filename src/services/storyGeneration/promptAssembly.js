@@ -1373,8 +1373,15 @@ function _buildStorySummarySection(context, { minChapter = 1, maxChapter = Infin
     summary += '\n---\n';
   }
 
-  // Add explicit player choice history section
-  if (context.playerChoices.length > 0) {
+  // Add explicit player choice history section — ONCE.
+  //
+  // With a chapter-start cache in play this builder runs twice for one request:
+  // over chapters 1..N-1 for the cached prefix, and over chapter N for the
+  // dynamic delta. This block ignored the window, so the complete decision list
+  // was emitted in both halves and the model read the player's whole history
+  // twice in a single prompt — the repetition Gemini 3.x over-analyzes, growing
+  // with the campaign. It belongs with the half that starts at the beginning.
+  if (minChapter <= 1 && context.playerChoices.length > 0) {
     summary += '\n### PLAYER CHOICE HISTORY (All decisions made)\n';
     context.playerChoices.forEach(choice => {
       const title = choice.optionTitle ? `: "${choice.optionTitle}"` : '';
