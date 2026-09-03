@@ -92,3 +92,30 @@ describe('Game Logic Utils', () => {
     });
   });
 });
+
+describe('formatCountdown', () => {
+  const { formatCountdown } = require('../caseFileHelpers');
+
+  test('counts down while the gate holds', () => {
+    const at = new Date(Date.now() + 2 * 3600000 + 61000).toISOString();
+    expect(formatCountdown(at)).toMatch(/^02:0[01]:\d\d$/);
+  });
+
+  test('returns null once the gate has passed, never a frozen string', () => {
+    // It used to return "Unlocking soon" forever past the target: truthy, so
+    // callers that gate on the countdown stayed gated, and callers that
+    // interpolate it rendered "The city answers in Unlocking soon".
+    expect(formatCountdown(new Date(Date.now() - 1000).toISOString())).toBeNull();
+    expect(formatCountdown(null)).toBeNull();
+    expect(formatCountdown('not a date')).toBeNull();
+  });
+
+  test('there is one implementation of it', () => {
+    const fs = require('fs');
+    const path = require('path');
+    ['screens/DeskScreen.js', 'screens/StoryCampaignScreen.js', 'screens/CaseFileScreen.js'].forEach((rel) => {
+      const src = fs.readFileSync(path.join(__dirname, '../..', rel), 'utf8');
+      expect(`${rel} declares its own: ${/function formatCountdown/.test(src)}`).toBe(`${rel} declares its own: false`);
+    });
+  });
+});

@@ -14,23 +14,13 @@ import { FONTS } from '../constants/typography';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import { createCasePalette } from '../theme/casePalette';
 import { mapDepth, foilPresence, dailyStirFragment, dailyStreak } from '../data/underMap';
+// One implementation of the gate countdown, shared with the Case File.
+import { formatCountdown } from '../utils/caseFileHelpers';
 
 const NOISE = require('../../assets/images/ui/backgrounds/noise-texture.png');
 const DEAD_LETTERS_LOGO = require('../../assets/images/ui/branding/logo.png');
 
 const BEATS = ['Read', 'Examine', 'Connect', 'Theory'];
-
-function formatCountdown(nextUnlockAt) {
-  if (!nextUnlockAt) return null;
-  const target = new Date(nextUnlockAt).getTime();
-  const now = Date.now();
-  if (target <= now) return 'Unlocking soon';
-  const diff = target - now;
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
 
 export default function DeskScreen({
   activeCase,

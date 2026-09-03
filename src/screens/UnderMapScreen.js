@@ -15,7 +15,7 @@ import {
   probeBudgetFor,
   pendingProbeBonus,
   senseTier,
-  attunedPartners,
+  attunedGlimmer,
   missWhisper,
   foilThreadsAhead,
   latentThreadCount,
@@ -24,7 +24,12 @@ import {
   isKeystone,
   FRAGMENT_KIND,
 } from '../data/underMap';
-import { descentStateFor as umDescentStateFor } from '../data/underMap';
+import {
+  descentStateFor as umDescentStateFor,
+  FREEFORM_DESCENT_KEY,
+  FREEFORM_PROBE_BASE,
+  unresolvedReadingCount,
+} from '../data/underMap';
 import { parseCaseNumber, formatCaseNumber } from '../data/storyContent';
 import { analytics } from '../services/AnalyticsService';
 import { FIELD_NOTES } from '../data/fieldNotes';
@@ -208,19 +213,27 @@ export default function UnderMapScreen({ navigation, route }) {
   // in component state, so the game's own advice ("Re-read the scene, then
   // return") refunded every probe, cleared the misstep flag, re-armed DEEPSIGHT
   // forgiveness and unlocked the pairs the player had just blurred.
+  // The board the Desk opens meters too, under its own key. It used to be
+  // completely unmetered ("review at leisure"), but it draws real connections
+  // into the same map, so a player could brute-force every pair from the Desk
+  // and arrive at the chapter's gated descent with the puzzle already solved.
+  const descentKey = asPuzzle ? gateCaseNumber : FREEFORM_DESCENT_KEY;
   const persistedDescent = useMemo(
-    () => umDescentStateFor(map, gateCaseNumber),
+    () => umDescentStateFor(map, descentKey),
     // Intentionally seeded once per gate, not per map write.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gateCaseNumber],
+    [descentKey],
   );
-  const [probeBudget] = useState(() => probeBudgetFor(map));
-  const [probeBonus] = useState(() => pendingProbeBonus(map));
+  // Frozen into the descent, not recomputed per mount: the budget shrinks as
+  // threads are drawn, so re-entering after a re-read used to hand the player a
+  // smaller budget than the one they had already spent against.
+  const [probeBudget] = useState(() => (
+    persistedDescent.probeBudget || (asPuzzle ? probeBudgetFor(map) : FREEFORM_PROBE_BASE)
+  ));
+  const [probeBonus] = useState(() => (asPuzzle ? pendingProbeBonus(map) : 0));
   const [probesUsed, setProbesUsed] = useState(() => persistedDescent.probesUsed);
   const probesLeft = Math.max(0, probeBudget - probesUsed);
-  // Probes only meter the gated A/B descent. The Desk-opened freeform map is for
-  // reviewing/connecting at leisure — no budget, no lockout there.
-  const probesEnabled = asPuzzle;
+  const probesEnabled = true;
   const [toast, setToast] = useState(null);
   const [revealsThisVisit, setRevealsThisVisit] = useState(0);
   const [continuing, setContinuing] = useState(false);
@@ -249,6 +262,12 @@ export default function UnderMapScreen({ navigation, route }) {
   const liveFragmentIds = useMemo(() => {
     const ids = new Set();
     sensedRelations(map).forEach((r) => { if (r.a) ids.add(r.a); if (r.b) ids.add(r.b); });
+    // A pair whose meaning the player blurred is CONNECTED, so sensedRelations
+    // drops it and both its fragments dimmed to "inert" — the game hid the one
+    // thing it was asking them to come back and finish.
+    (Array.isArray(map.connections) ? map.connections : []).forEach((c) => {
+      if (c && (c.unresolvedReading || c.foilClaimed)) { if (c.a) ids.add(c.a); if (c.b) ids.add(c.b); }
+    });
     return ids;
   }, [map]);
   const depth = mapDepth(map);
@@ -268,14 +287,19 @@ export default function UnderMapScreen({ navigation, route }) {
   // other end hasn't been collected yet. Drawn trailing off into the dark.
   const latentIds = useMemo(() => latentFragmentIds(map), [map]);
   const latentCount = latentThreadCount(map);
+  // Readings the player got wrong: connected, still unknown, and previously
+  // invisible anywhere in the UI.
+  const blurredCount = unresolvedReadingCount(map);
 
   const fragById = useCallback((id) => map.fragments.find((f) => f.id === id) || null, [map.fragments]);
 
-  // ATTUNED (tier 1+): while one fragment is held, its still-hidden partners
-  // glimmer — pre-guess information the player has EARNED by mapping.
+  // ATTUNED (tier 1+): while one fragment is held, the threads that answer it
+  // glimmer. A SUPERSET, narrowing as the sense is earned — naming the exact
+  // partners made the board answer itself, since holding a fragment is free and
+  // the probe is only charged on the second tap.
   const attunedIds = useMemo(() => {
     if (tier < 1 || selected.length !== 1) return new Set();
-    return new Set(attunedPartners(map, selected[0]));
+    return new Set(attunedGlimmer(map, selected[0], tier));
   }, [tier, selected, map]);
 
   // Honest sonar on a miss: a spent probe always teaches which of the two
@@ -383,8 +407,9 @@ export default function UnderMapScreen({ navigation, route }) {
       if (firstFree) firstMissForgivenRef.current = true;
       const spend = !(motifShield || firstFree);
       if (spend) setProbesUsed((n) => n + 1);
-      updateUnderMapDescent?.(gateCaseNumber, {
+      updateUnderMapDescent?.(descentKey, {
         probesUsed: probesUsed + (spend ? 1 : 0),
+        probeBudget,
         hadMisstep: true,
         firstMissForgiven: firstMissForgivenRef.current,
         blockedPairs: Array.from(blockedPairsRef.current),
@@ -448,13 +473,14 @@ export default function UnderMapScreen({ navigation, route }) {
       impactHaptic(Haptics.ImpactFeedbackStyle.Soft || Haptics.ImpactFeedbackStyle.Light);
       // The pair stays connected but its meaning is locked behind a re-read.
       blockedPairsRef.current.add(pairKeyOf(node.aId, node.bId));
-      updateUnderMapDescent?.(gateCaseNumber, {
+      updateUnderMapDescent?.(descentKey, {
+        probeBudget,
         hadMisstep: true,
         blockedPairs: Array.from(blockedPairsRef.current),
       });
       setNode((nd) => ({ ...nd, mode: 'blurred' }));
     }
-  }, [node, resolveUnderMapReading, triggerBloom, audio, asPuzzle]);
+  }, [node, resolveUnderMapReading, triggerBloom, audio, asPuzzle, descentKey, probeBudget, updateUnderMapDescent]);
 
   const closeNode = useCallback(() => { setNode(null); setSelected([]); }, []);
 
@@ -683,6 +709,11 @@ export default function UnderMapScreen({ navigation, route }) {
           {remaining > 0 ? (
             <Text style={styles.remainLabel}>{remaining} truth{remaining === 1 ? '' : 's'} still hidden in the dark</Text>
           ) : null}
+          {blurredCount > 0 ? (
+            <Text style={styles.blurredLabel}>
+              {blurredCount} reading{blurredCount === 1 ? '' : 's'} still blurred — re-read the scene, then settle {blurredCount === 1 ? 'it' : 'them'}
+            </Text>
+          ) : null}
           {latentCount > 0 ? (
             <Text style={styles.latentLabel}>
               {latentCount} thread{latentCount === 1 ? ' dives' : 's dive'} deeper — the other end isn’t here yet
@@ -875,6 +906,7 @@ const styles = StyleSheet.create({
   depthFill: { height: 6, borderRadius: 999, backgroundColor: COLORS.underViolet },
   depthLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underCyan },
   remainLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.textMuted },
+  blurredLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.kindPhenomenon, marginTop: 2 },
   latentLabel: { fontFamily: FONTS.mono, fontSize: 9.5, letterSpacing: 0.6, color: COLORS.underViolet, opacity: 0.9 },
   foilLabel: { fontFamily: FONTS.monoBold, fontSize: 9.5, letterSpacing: 1.2, color: COLORS.bloodRed, opacity: 0.92 },
 

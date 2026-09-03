@@ -569,7 +569,17 @@ export const readingChoices = (readings, rng = Math.random) => {
  * Record the outcome of a descent for the flawless-mapping streak. A descent
  * with any wrong probe resets the streak (soft sting); a clean one extends it.
  */
-export const EMPTY_DESCENT = { caseNumber: null, probesUsed: 0, hadMisstep: false, firstMissForgiven: false, blockedPairs: [] };
+// `probeBudget` is frozen INTO the descent. It used to be recomputed at every
+// mount from the live map while `probesUsed` was restored from here, and the
+// budget shrinks as threads are drawn — so a player who took the game's own
+// advice ("Re-read the scene, then return") came back to a smaller budget than
+// the one they had already spent against, sometimes to none at all.
+export const EMPTY_DESCENT = { caseNumber: null, probesUsed: 0, probeBudget: 0, hadMisstep: false, firstMissForgiven: false, blockedPairs: [] };
+
+// The freeform board (opened from the Desk) meters separately from a gated
+// descent: it is the daily on-ramp, not the chapter's puzzle.
+export const FREEFORM_DESCENT_KEY = 'freeform';
+export const FREEFORM_PROBE_BASE = 3;
 
 /** The persisted descent state for `caseNumber`, or a fresh one if the gate moved. */
 export const descentStateFor = (map, caseNumber) => {
@@ -579,6 +589,7 @@ export const descentStateFor = (map, caseNumber) => {
   return {
     caseNumber,
     probesUsed: Number.isFinite(d.probesUsed) ? d.probesUsed : 0,
+    probeBudget: Number.isFinite(d.probeBudget) ? d.probeBudget : 0,
     hadMisstep: !!d.hadMisstep,
     firstMissForgiven: !!d.firstMissForgiven,
     blockedPairs: Array.isArray(d.blockedPairs) ? d.blockedPairs : [],
@@ -593,6 +604,7 @@ export const updateDescentState = (map, caseNumber, patch = {}) => {
   const same = m.descent
     && m.descent.caseNumber === next.caseNumber
     && m.descent.probesUsed === next.probesUsed
+    && (m.descent.probeBudget || 0) === (next.probeBudget || 0)
     && !!m.descent.hadMisstep === next.hadMisstep
     && !!m.descent.firstMissForgiven === next.firstMissForgiven
     && Array.isArray(m.descent.blockedPairs)
@@ -1006,6 +1018,46 @@ export const attunedPartners = (map, fragmentId) => {
   return [...out];
 };
 
+/** Stable small hash, so a glimmer never reshuffles between renders. */
+const glimmerRank = (seed) => {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+};
+
+/** How many decoys the glimmer carries at each sense tier (index = tier). */
+export const GLIMMER_DECOYS = [0, 2, 1, 0];
+
+/**
+ * What ATTUNED actually shows when the player holds a fragment.
+ *
+ * `attunedPartners` alone named the exact partners, and holding a fragment costs
+ * nothing (the probe is charged on the SECOND tap), so from tier 1 onward the
+ * board answered itself: hold, read off the glimmer, connect, never miss. The
+ * probe economy, the whispers and the sense tiers above it all stopped mattering.
+ *
+ * The glimmer is a SUPERSET instead, and it narrows as the sense is earned: two
+ * decoys at tier 1, one at tier 2, none at DEEPSIGHT. Deterministic, so it is a
+ * reading of the board rather than a reroll.
+ */
+export const attunedGlimmer = (map, fragmentId, tier = 1) => {
+  const partners = attunedPartners(map, fragmentId);
+  if (!fragmentId || !partners.length) return partners;
+  const decoyCount = GLIMMER_DECOYS[Math.max(0, Math.min(GLIMMER_DECOYS.length - 1, tier))] || 0;
+  if (decoyCount <= 0) return partners;
+  const held = new Set([fragmentId, ...partners]);
+  const decoys = normalizeUnderMap(map).fragments
+    .filter((f) => !held.has(f.id))
+    .map((f) => ({ id: f.id, rank: glimmerRank(`${fragmentId}:${f.id}`) }))
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, decoyCount)
+    .map((f) => f.id);
+  return [...partners, ...decoys];
+};
+
 /**
  * Honest sonar for a missed probe: whether each fragment of the failed pair still
  * participates in ANY undiscovered relation ("live" = still hums with something
@@ -1068,7 +1120,17 @@ export const arcNodeCount = (map) =>
  */
 export const mapDepth = (map) => {
   const m = normalizeUnderMap(map);
-  const made = new Set(m.connections.map((c) => relationKey(c.a, c.b)));
+  // A blurred reading and a thread The Other Reader claimed are both CONNECTED
+  // and both still unknown, so counting them here reported a map as more drawn
+  // than it is: the depth meter rose for getting a meaning wrong, "the hidden
+  // world stands revealed" could fire over readings the player never resolved,
+  // and CHAPTER MAPPED CLEAN contradicted the reclaim prompt on the same screen.
+  // truthsDrawn (which feeds the sense tiers) already filters exactly this way.
+  const made = new Set(
+    m.connections
+      .filter((c) => !c.unresolvedReading && !c.foilClaimed)
+      .map((c) => relationKey(c.a, c.b)),
+  );
   const total = new Set(m.relations.map((r) => relationKey(r.a, r.b))).size;
   const drawn = m.relations.filter((r) => made.has(relationKey(r.a, r.b))).length;
   return { drawn, total, ratio: total > 0 ? Math.min(1, drawn / total) : 0 };

@@ -8,23 +8,11 @@ import BribeModal from '../components/BribeModal';
 import Reveal from '../components/motion/Reveal';
 import { useGame } from '../context/GameContext';
 import { COLORS } from '../constants/colors';
+import { formatCountdown } from '../utils/caseFileHelpers';
 import { FONTS, FONT_SIZES, LINE_HEIGHTS } from '../constants/typography';
 import { SPACING, RADIUS } from '../constants/layout';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 
-function formatCountdown(target) {
-  if (!target) return null;
-  const targetTime = new Date(target).getTime();
-  const now = Date.now();
-  if (targetTime <= now) return null;
-  const diff = targetTime - now;
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  return `${hours.toString().padStart(2, '0')}:${minutes
-    .toString()
-    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
 
 function useUnlockCountdown(target) {
   const [value, setValue] = useState(formatCountdown(target));

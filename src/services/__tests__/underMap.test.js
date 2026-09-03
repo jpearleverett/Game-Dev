@@ -330,8 +330,18 @@ describe('underMap — deduction', () => {
     expect(res.correctReading).toBe(false);
     expect(res.node.unresolvedReading).toBe(true);
     expect(unresolvedReadingCount(res.map)).toBe(1);
-    // Progress not lost: the connection counts toward depth.
-    expect(mapDepth(res.map).drawn).toBe(1);
+    // Progress is not LOST (the connection stands and can be upgraded), but a
+    // meaning the player got wrong is not a truth drawn: counting it made the
+    // depth meter rise for being wrong, let "the hidden world stands revealed"
+    // fire over unresolved readings, and had CHAPTER MAPPED CLEAN contradict the
+    // reclaim prompt on the same screen.
+    expect(res.map.connections).toHaveLength(1);
+    expect(mapDepth(res.map).drawn).toBe(0);
+
+    // ...and it counts the moment the reading is settled.
+    const upgraded = resolveReading(res.map, STAIN, INK, 'The ink marks who carries it.');
+    expect(unresolvedReadingCount(upgraded.map)).toBe(0);
+    expect(mapDepth(upgraded.map).drawn).toBe(1);
   });
 
   test('a blurred node upgrades to sharp when read correctly later', () => {
@@ -1124,5 +1134,67 @@ describe('the map survives its own limits and its own restarts', () => {
       chapter: 2, interpretation: 'The stair is a warning.', rejected: ['The stair is an invitation.'],
     });
     expect(m.foil.fromChapter).toBe(2);
+  });
+});
+
+describe('the board does not answer itself', () => {
+  const { attunedGlimmer, GLIMMER_DECOYS, FREEFORM_PROBE_BASE, FREEFORM_DESCENT_KEY } = require('../../data/underMap');
+
+  const board = () => {
+    let m = createBlankUnderMap();
+    m = addFragments(m, Array.from({ length: 9 }, (_, i) => ({ label: `Mark ${i}`, kind: FRAGMENT_KIND.SYMBOL })));
+    m = addRelations(m, [{ aLabel: 'Mark 0', bLabel: 'Mark 1', revelation: 'One hand cut both.' }]);
+    return m;
+  };
+
+  test('ATTUNED glimmers a superset, not the answer, until the sense is earned', () => {
+    // Holding a fragment is free (the probe is charged on the SECOND tap), so a
+    // glimmer that named the exact partner let the player read the answer off
+    // the board and never miss from tier 1 onward.
+    const m = board();
+    const held = m.fragments.find((f) => f.label === 'Mark 0').id;
+    const truth = m.fragments.find((f) => f.label === 'Mark 1').id;
+
+    const t1 = attunedGlimmer(m, held, 1);
+    expect(t1).toContain(truth);
+    expect(t1).toHaveLength(1 + GLIMMER_DECOYS[1]);
+
+    const t2 = attunedGlimmer(m, held, 2);
+    expect(t2).toContain(truth);
+    expect(t2.length).toBeLessThan(t1.length);
+
+    // DEEPSIGHT earns the exact reading.
+    expect(attunedGlimmer(m, held, 3)).toEqual([truth]);
+  });
+
+  test('the glimmer is a reading of the board, not a reroll', () => {
+    const m = board();
+    const held = m.fragments.find((f) => f.label === 'Mark 0').id;
+    expect(attunedGlimmer(m, held, 1)).toEqual(attunedGlimmer(m, held, 1));
+  });
+
+  test('a fragment with nothing left to find glimmers nothing', () => {
+    const m = board();
+    const lonely = m.fragments.find((f) => f.label === 'Mark 5').id;
+    expect(attunedGlimmer(m, lonely, 1)).toEqual([]);
+  });
+
+  test('the freeform board keeps its own descent, so it cannot be brute-forced', () => {
+    // It draws into the same map as the gated descent. Unmetered, a player could
+    // guess every pair from the Desk and arrive at the chapter's puzzle solved.
+    let m = board();
+    m = updateDescentState(m, FREEFORM_DESCENT_KEY, { probesUsed: 2, probeBudget: FREEFORM_PROBE_BASE });
+    expect(descentStateFor(m, FREEFORM_DESCENT_KEY).probesUsed).toBe(2);
+    // A gated descent is a different key and starts clean.
+    expect(descentStateFor(m, '002A').probesUsed).toBe(0);
+  });
+
+  test('a descent remembers the budget it started with', () => {
+    // The budget shrinks as threads are drawn, so recomputing it on re-entry
+    // handed the player back fewer probes than they had already spent.
+    let m = board();
+    m = updateDescentState(m, '002A', { probesUsed: 1, probeBudget: 5 });
+    expect(descentStateFor(m, '002A').probeBudget).toBe(5);
+    expect(descentStateFor(m, '002A').probesUsed).toBe(1);
   });
 });
